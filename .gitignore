@@ -1,0 +1,32 @@
+# Secrets & local env
+.env
+.env.local
+.env.*.local
+
+# Dependencies / build (Next.js — refined in scope 0.1)
+node_modules/
+.next/
+dist/
+*.tsbuildinfo
+
+# Test & coverage reports
+.reports/
+coverage/
+playwright-report/
+test-results/
+
+# Brainstorm mockups (local only)
+.superpowers/
+
+# Archived Python prototype — contains REAL bank data, never publish
+_archive_prototype/
+
+# MariaDB keyring (generated locally by scripts/init.sh)
+docker/mariadb/keyring/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*:Zone.Identifier
+*.Zone.Identifier
+.idea/
