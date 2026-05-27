@@ -8,9 +8,14 @@ FROM base AS deps
 COPY package.json package-lock.json ./
 RUN npm ci
 
-FROM base AS dev
+# Dev runs on glibc (Debian) so the host's bind-mounted node_modules
+# (built on the WSL/glibc host) are binary-compatible — native modules
+# like Prisma engines would break under alpine/musl.
+FROM node:24 AS dev
+WORKDIR /app
 ENV NODE_ENV=development
-COPY --from=deps /app/node_modules ./node_modules
+COPY package.json package-lock.json ./
+RUN npm ci
 COPY . .
 EXPOSE 3000
 CMD ["npm", "run", "dev"]
