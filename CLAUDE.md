@@ -7,7 +7,8 @@ Self-hosted, multi-user personal-finance app. ("Bilan" = French for "balance she
 1. **Roadmap & progress**: `PLAN.md` (phases → scopes). Progress is tracked by **GitHub issues**:
    - `gh issue list --state open` → remaining scopes
    - `gh issue list --state closed` → done
-2. **Detailed plan for the current phase**: `docs/superpowers/plans/YYYY-MM-DD-phase-N-*.md` (TDD, step-by-step). Phase 0: `2026-05-27-phase-0-bootstrap.md`. Plans for later phases are written **just before** starting that phase.
+2. **Detailed plan for the current phase**: `docs/superpowers/plans/YYYY-MM-DD-phase-N-*.md` (TDD, step-by-step). Phase 0: `2026-05-27-phase-0-bootstrap.md`.
+   - **Before starting a phase that has no detailed plan yet, generate it first** with the `superpowers:writing-plans` skill (input: the spec + that phase's scopes from `PLAN.md`), save it to `docs/superpowers/plans/`, then execute scope by scope. Do not start implementing a new phase without its detailed plan.
 3. **Full design spec**: `docs/superpowers/specs/2026-05-26-budget-app-design.md` (architecture, data model, security, etc.).
 4. **Visual design (pixel-perfect reference)**: `design/` — the "Bilan" design system. `design/project/tokens.css` is the source for the shadcn theme.
 
