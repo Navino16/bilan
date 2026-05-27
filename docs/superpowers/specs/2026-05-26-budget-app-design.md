@@ -13,7 +13,7 @@
 
 ### Background
 
-Personal finance tracking application. Replaces a Python prototype (`_archive_prototype/`) that parses CSV bank statements, categorizes transactions, and produces an HTML report.
+Personal finance tracking application. Supersedes an earlier throwaway Python script that parsed CSV bank statements, categorized transactions, and produced an HTML report.
 
 The new application is a full web app with multi-user support, real database, multiple import sources (CSV / PDF / manual), customizable categorization rules, and budgets.
 
@@ -37,7 +37,7 @@ The new application is a full web app with multi-user support, real database, mu
 - Multi-currency (EUR only).
 - Native mobile apps (responsive web is mobile-first).
 - Automatic bank-account connection (PSD2 / Open Banking) — manual imports only.
-- Migration of historical data from the Python prototype (user will re-import manually).
+- Automatic migration of historical data (user will re-import manually via CSV).
 
 ---
 
@@ -1102,7 +1102,7 @@ Documented for the future:
 
 - PDF parsing strategy (which bank format, OCR needed?): decided when actually seeing the user's bank PDF (Phase 4.3 spike).
 - OCR for scanned PDFs: only if a real need surfaces.
-- Migration from existing prototype data (3 CSVs in `_archive_prototype/`): user will re-import manually.
+- Historical data: no automatic migration — the user will re-import via CSV (Phase 4).
 - Production hosting: out of MVP scope, local Docker only.
 
 ---

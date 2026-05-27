@@ -72,7 +72,7 @@ Run (from the project root):
 ```bash
 npx create-next-app@latest . --ts --app --src-dir --tailwind --eslint --use-npm --no-import-alias --turbopack
 ```
-Expected: project files generated in the current directory (accept overwrite warnings only for non-spec files; keep `design/`, `docs/`, `PLAN.md`, `_archive_prototype/`).
+Expected: project files generated in the current directory (accept overwrite warnings only for non-spec files; keep `design/`, `docs/`, `PLAN.md`).
 
 - [ ] **Step 2: Pin Node + add tooling configs**
 
@@ -744,5 +744,5 @@ Expected: CI runs green on the PR (lint, build, test, integration, e2e).
 
 - After Task 0.3, the only models present are Group A (identity/RBAC). Later phases add their model groups via new migrations — do not pre-create them here.
 - The big config files (docker-compose, Dockerfile, CI YAML) are intentionally referenced from the spec to avoid drift; copy them verbatim and adjust only the placeholders called out (image name, owner).
-- If `create-next-app` overwrites `README.md` or `tsconfig.json` in a way that conflicts with later steps, re-apply the steps above; never delete `design/`, `docs/`, `PLAN.md`, or `_archive_prototype/`.
+- If `create-next-app` overwrites `README.md` or `tsconfig.json` in a way that conflicts with later steps, re-apply the steps above; never delete `design/`, `docs/`, or `PLAN.md`.
 - Acceptance for the whole phase: `npm run ci` passes locally, the stack boots via `npm run setup`, `/fr` and `/en` render the themed demo page, and CI is green on the PR.

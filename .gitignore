@@ -53,7 +53,5 @@ yarn-error.log*
 # ---- Project-specific (DO NOT publish) ----
 # Brainstorm mockups (local only)
 .superpowers/
-# Archived Python prototype — contains REAL bank data, never publish
-_archive_prototype/
 # MariaDB keyring (generated locally by scripts/init.sh)
 docker/mariadb/keyring/
