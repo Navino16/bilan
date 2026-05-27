@@ -123,6 +123,7 @@ Next.js 16.2 · React 19.2 · TypeScript 6 · Tailwind v4 · shadcn/ui (themed B
 
 ## Notes
 
+- **Branch protection**: deferred — rulesets require GitHub Pro on private repos. The reference ruleset (mirroring the `librarr` project: required checks, PR+review, squash, linear history, CodeQL) is saved in `scripts/github-ruleset.json`. Apply it (`gh api repos/Navino16/bilan/rulesets -X POST --input scripts/github-ruleset.json`) if the repo goes public or on a Pro plan. Until then, Git Flow discipline + CI are the safeguards.
 - PDF parsing details deferred to 4.3a spike (real bank PDFs).
 - Prototype data (`_archive_prototype/`) is **not** migrated — re-import manually via CSV (Phase 4).
 - Production hosting (Caddy, backups) documented in spec §8.9 / §6.11, out of MVP build scope.
