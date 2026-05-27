@@ -714,15 +714,29 @@ updates:
     target-branch: "develop"
 ```
 
-- [ ] **Step 6: Commit + open the first PR**
+- [ ] **Step 5b: Add GitHub issue + PR templates (from `librarr`)**
+
+Copy from the `librarr` project and adapt:
+- `.github/ISSUE_TEMPLATE/config.yml` — `blank_issues_enabled: false`
+- `.github/ISSUE_TEMPLATE/1.bug_report.yml` — bug report form; rename the "Librarr Version" input label to **"Bilan Version"**
+- `.github/ISSUE_TEMPLATE/2.feature_request.yml` — feature request form
+- `.github/PULL_REQUEST_TEMPLATE.md` — description / type of change / checklist (`npm run lint`, `npm test`) / related issues
+
+These apply to issues/PRs created via the GitHub UI (our scope-issues were created via `gh` and are unaffected).
+
+- [ ] **Step 6: Commit + open the PR**
+
+> The repo, `main`/`develop` branches, milestones and issues already exist (created during project bootstrap). This scope uses its own branch `feature/0.6-ci` per the one-scope-one-PR workflow.
 
 ```bash
+git checkout develop && git pull
+git checkout -b feature/0.6-ci
 git add -A
-git commit -m "ci: add ci and build workflows, playwright smoke test"
-git push -u origin develop   # after creating the GitHub repo + remote
+git commit -m "ci: add ci/build workflows, github templates, playwright smoke"
+git push -u origin feature/0.6-ci
+gh pr create --base develop --title "ci: workflows, github templates, playwright smoke" --label "phase-0,infra" --body "Closes #6 ..."
 ```
-Then create the Phase 0 issue + milestone, branch `feature/phase-0-bootstrap` if not already, and open a PR → `develop`.
-Expected: CI runs green (lint, build, test, integration, e2e).
+Expected: CI runs green on the PR (lint, build, test, integration, e2e).
 
 ---
 
