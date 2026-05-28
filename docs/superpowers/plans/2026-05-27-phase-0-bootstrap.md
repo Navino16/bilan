@@ -303,7 +303,7 @@ git commit -m "feat: docker compose stack and env validation"
 - Create: `prisma/schema.prisma`, `src/server/db/index.ts`, `prisma/seed.ts`
 - Test: `tests/integration/seed.test.ts`
 
-- [ ] **Step 1: Install Prisma + adapter**
+- [x] **Step 1: Install Prisma + adapter**
 
 Run:
 ```bash
@@ -311,11 +311,11 @@ npm i @prisma/client @prisma/adapter-mariadb
 npm i -D prisma tsx
 ```
 
-- [ ] **Step 2: Write schema (Better Auth base + RBAC)**
+- [x] **Step 2: Write schema (Better Auth base + RBAC)**
 
 Create `prisma/schema.prisma` with the generator/datasource header from **spec §8.6** and the **Group A models from spec §4.1** (`User`, `Session`, `AuthAccount`, `Verification`, `TwoFactor`, `Passkey`, `Role`, `Permission`, `RolePermission`, `UserRole`). Keep only Group A in this phase; later phases add their models.
 
-- [ ] **Step 3: Create the Prisma client**
+- [x] **Step 3: Create the Prisma client**
 
 Create `src/server/db/index.ts` with the exact content from **spec §8.6**:
 ```ts
@@ -328,7 +328,7 @@ export const db = (globalThis as { __db?: PrismaClient }).__db ?? new PrismaClie
 if (env.NODE_ENV !== "production") (globalThis as { __db?: PrismaClient }).__db = db;
 ```
 
-- [ ] **Step 4: First migration**
+- [x] **Step 4: First migration**
 
 Run:
 ```bash
@@ -336,7 +336,7 @@ npx prisma migrate dev --name init
 ```
 Expected: migration created and applied to `budget`; Prisma Client generated.
 
-- [ ] **Step 5: Write the failing seed test**
+- [x] **Step 5: Write the failing seed test**
 
 Create `tests/integration/seed.test.ts`:
 ```ts
@@ -364,12 +364,12 @@ describe("seedRolesAndPermissions", () => {
 });
 ```
 
-- [ ] **Step 6: Run to verify it fails**
+- [x] **Step 6: Run to verify it fails**
 
 Run: `DATABASE_URL=mysql://app:app_password@localhost:3307/budget_test npm run test:integration -- seed`
 Expected: FAIL — `seedRolesAndPermissions` not exported.
 
-- [ ] **Step 7: Implement the seed**
+- [x] **Step 7: Implement the seed**
 
 Create `prisma/seed.ts`:
 ```ts
@@ -417,7 +417,7 @@ if (process.argv[1]?.includes("seed")) {
 ```
 Add to `package.json`: `"prisma": { "seed": "tsx prisma/seed.ts" }` and scripts `"db:migrate": "prisma migrate dev"`, `"db:reset": "prisma migrate reset --force"`, `"db:studio": "prisma studio"`, `"db:up": "docker compose up -d mariadb mariadb-test"`.
 
-- [ ] **Step 8: Run to verify it passes**
+- [x] **Step 8: Run to verify it passes**
 
 Run:
 ```bash
@@ -426,7 +426,7 @@ DATABASE_URL=mysql://app:app_password@localhost:3307/budget_test npm run test:in
 ```
 Expected: PASS (2 tests).
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add -A

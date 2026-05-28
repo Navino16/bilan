@@ -44,13 +44,23 @@ for _ in $(seq 1 30); do
   sleep 2
 done
 
-# 4. Run migrations and seed (only once Prisma exists — added in scope 0.3).
-if [[ -f prisma/schema.prisma ]]; then
-  echo "==> Running prisma migrate deploy + seed"
+# Prisma Migrate creates a shadow database next to the target DB; the default
+# MARIADB_USER only has rights on its own database, so grant it global perms in dev.
+echo "==> Granting migration privileges to 'app' user"
+for svc in mariadb mariadb-test; do
+  docker compose exec -T "$svc" mariadb -uroot -proot_password \
+    -e "GRANT ALL PRIVILEGES ON *.* TO 'app'@'%'; FLUSH PRIVILEGES;" 2>/dev/null || true
+done
+
+# 4. Run migrations and seed.
+echo "==> Running prisma migrate deploy on budget"
+npx prisma migrate deploy
+
+echo "==> Running prisma migrate deploy on budget_test"
+DATABASE_URL="mysql://app:app_password@localhost:3307/budget_test" \
   npx prisma migrate deploy
-  npx prisma db seed
-else
-  echo "==> No prisma/schema.prisma yet — skipping migrate/seed (added in scope 0.3)"
-fi
+
+echo "==> Running prisma db seed on budget"
+npx prisma db seed
 
 echo "==> Setup complete. Run 'npm run dev'."

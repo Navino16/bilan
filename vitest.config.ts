@@ -7,6 +7,7 @@ export default defineConfig({
     globals: true,
     environment: "node",
     passWithNoTests: true,
+    setupFiles: ["tests/setup.ts"],
     include: ["tests/unit/**/*.test.ts", "tests/integration/**/*.test.ts"],
     reporters: ["default", ["junit", { outputFile: ".reports/junit.xml" }]],
     coverage: {
