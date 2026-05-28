@@ -66,7 +66,7 @@ tests/e2e/smoke.spec.ts
 **Files:**
 - Create: `package.json`, `tsconfig.json`, `next.config.ts`, `eslint.config.mjs`, `prettier.config.mjs`, `vitest.config.ts`, `.nvmrc`, `.editorconfig`, `.gitignore`, `src/app/layout.tsx`, `src/app/page.tsx`
 
-- [ ] **Step 1: Scaffold Next.js**
+- [x] **Step 1: Scaffold Next.js**
 
 Run (from the project root):
 ```bash
@@ -74,7 +74,7 @@ npx create-next-app@latest . --ts --app --src-dir --tailwind --eslint --use-npm 
 ```
 Expected: project files generated in the current directory (accept overwrite warnings only for non-spec files; keep `design/`, `docs/`, `PLAN.md`).
 
-- [ ] **Step 2: Pin Node + add tooling configs**
+- [x] **Step 2: Pin Node + add tooling configs**
 
 Create `.nvmrc`:
 ```
@@ -102,7 +102,7 @@ playwright-report/
 test-results/
 ```
 
-- [ ] **Step 3: Add Prettier + scripts**
+- [x] **Step 3: Add Prettier + scripts**
 
 Run:
 ```bash
@@ -132,7 +132,7 @@ Edit `package.json` `scripts` to include:
 }
 ```
 
-- [ ] **Step 4: Install + configure Vitest**
+- [x] **Step 4: Install + configure Vitest**
 
 Run:
 ```bash
@@ -156,7 +156,7 @@ export default defineConfig({
 ```
 Ensure `tsconfig.json` has `"strict": true` and path alias `"@/*": ["./src/*"]`.
 
-- [ ] **Step 5: Verify the toolchain**
+- [x] **Step 5: Verify the toolchain**
 
 Run: `npm run lint && npm run typecheck && npm run build`
 Expected: all succeed (Next builds the default page).
@@ -164,7 +164,7 @@ Expected: all succeed (Next builds the default page).
 Run: `npm test`
 Expected: "No test files found" (exit 0) — acceptable at this point.
 
-- [ ] **Step 6: Write the README (with an English note on the name)**
+- [x] **Step 6: Write the README (with an English note on the name)**
 
 Overwrite `README.md` with a project intro that explains the name for non-French speakers:
 ```markdown
@@ -188,7 +188,7 @@ npm run dev     # http://localhost:3000
 - Visual design reference: `design/`
 ```
 
-- [ ] **Step 7: Init git with Git Flow branches**
+- [x] **Step 7: Init git with Git Flow branches**
 
 Run:
 ```bash
@@ -208,7 +208,7 @@ Expected: `develop` is the current branch.
 - Create: `docker-compose.yml` (spec §8.2), `Dockerfile` (spec §8.3), `docker/mariadb/conf.d/encryption.cnf`, `scripts/init.sh` (spec §8.7), `.env.example` (spec §8.1)
 - Create + Test: `src/env.ts`, `tests/unit/env.test.ts`
 
-- [ ] **Step 1: Write the failing test for env validation**
+- [x] **Step 1: Write the failing test for env validation**
 
 Create `tests/unit/env.test.ts`:
 ```ts
@@ -238,12 +238,12 @@ describe("parseEnv", () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npm run test:unit -- env`
 Expected: FAIL — cannot import `parseEnv` from `@/env`.
 
-- [ ] **Step 3: Implement env validation**
+- [x] **Step 3: Implement env validation**
 
 Run: `npm i envalid`
 Create `src/env.ts`:
@@ -271,16 +271,16 @@ export const env = parseEnv(process.env);
 ```
 > Note: `DATABASE_URL` uses `url()`; `mysql://…` is accepted. If envalid's `url()` rejects the mysql scheme in your version, switch that line to `str()`.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `npm run test:unit -- env`
 Expected: PASS (3 tests).
 
-- [ ] **Step 5: Create Docker + env files**
+- [x] **Step 5: Create Docker + env files**
 
 Create `.env.example`, `docker-compose.yml`, `Dockerfile`, `docker/mariadb/conf.d/encryption.cnf`, and `scripts/init.sh` with the exact contents from **spec §8.1, §8.2, §8.3, §8.7**. Make `scripts/init.sh` executable: `chmod +x scripts/init.sh`.
 
-- [ ] **Step 6: Boot the stack**
+- [x] **Step 6: Boot the stack**
 
 Run: `npm run setup`
 Expected: `.env` generated with random secrets, MariaDB keyring created, `mariadb` + `mariadb-test` containers healthy.
@@ -288,7 +288,7 @@ Expected: `.env` generated with random secrets, MariaDB keyring created, `mariad
 Run: `docker compose up -d app && sleep 5 && curl -fsS http://localhost:3000 >/dev/null && echo OK`
 Expected: `OK`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -A
