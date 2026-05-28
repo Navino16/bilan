@@ -144,10 +144,8 @@ jobs:
 
       - run: npm ci
 
-      - name: Grant shadow-DB privileges to app user
-        run: |
-          mariadb -uroot -proot_password -h 127.0.0.1 -P 3307 \
-            -e "GRANT ALL PRIVILEGES ON *.* TO 'app'@'%'; FLUSH PRIVILEGES;"
+      - name: Generate Prisma client
+        run: npx prisma generate
 
       - name: Apply migrations
         run: npx prisma migrate deploy
