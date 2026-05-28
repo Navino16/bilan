@@ -441,7 +441,7 @@ git commit -m "feat: prisma schema with rbac models and seed"
 - Create: `src/server/crypto/keys.ts`, `src/server/crypto/encryption.ts`, `src/server/crypto/hmac.ts`
 - Test: `tests/unit/crypto/encryption.test.ts`, `tests/unit/crypto/hmac.test.ts`
 
-- [ ] **Step 1: Write the failing encryption test**
+- [x] **Step 1: Write the failing encryption test**
 
 Create `tests/unit/crypto/encryption.test.ts`:
 ```ts
@@ -466,12 +466,12 @@ describe("encryption", () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `npm run test:unit -- crypto/encryption`
 Expected: FAIL — module not found.
 
-- [ ] **Step 3: Implement encryption**
+- [x] **Step 3: Implement encryption**
 
 Create `src/server/crypto/encryption.ts`:
 ```ts
@@ -498,12 +498,12 @@ export function decrypt(stored: string, key: Buffer): string {
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `npm run test:unit -- crypto/encryption`
 Expected: PASS (3 tests).
 
-- [ ] **Step 5: Write the failing HMAC test**
+- [x] **Step 5: Write the failing HMAC test**
 
 Create `tests/unit/crypto/hmac.test.ts`:
 ```ts
@@ -525,12 +525,12 @@ describe("hmac search", () => {
 });
 ```
 
-- [ ] **Step 6: Run to verify it fails**
+- [x] **Step 6: Run to verify it fails**
 
 Run: `npm run test:unit -- crypto/hmac`
 Expected: FAIL — module not found.
 
-- [ ] **Step 7: Implement HMAC**
+- [x] **Step 7: Implement HMAC**
 
 Create `src/server/crypto/hmac.ts`:
 ```ts
@@ -553,12 +553,12 @@ export function hmacTokens(input: string, key: Buffer): string[] {
 }
 ```
 
-- [ ] **Step 8: Run to verify it passes**
+- [x] **Step 8: Run to verify it passes**
 
 Run: `npm run test:unit -- crypto/hmac`
 Expected: PASS (3 tests).
 
-- [ ] **Step 9: Add key loader**
+- [x] **Step 9: Add key loader**
 
 Create `src/server/crypto/keys.ts`:
 ```ts
@@ -568,7 +568,7 @@ export const dataKey = Buffer.from(env.DATA_ENCRYPTION_KEY, "base64");
 export const searchKey = Buffer.from(env.SEARCH_TOKEN_KEY, "base64");
 ```
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add -A
