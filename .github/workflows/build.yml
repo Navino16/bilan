@@ -213,6 +213,14 @@ jobs:
                   "labels": ["bug"]
                 },
                 {
+                  "title": "## 🔒 Security",
+                  "labels": ["security"]
+                },
+                {
+                  "title": "## 🔧 Infrastructure / CI",
+                  "labels": ["infra"]
+                },
+                {
                   "title": "## 📚 Documentation",
                   "labels": ["documentation"]
                 },
