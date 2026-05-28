@@ -649,7 +649,7 @@ git commit -m "feat: bilan theme, fonts, shadcn base, i18n fr/en"
 **Files:**
 - Create: `playwright.config.ts`, `tests/e2e/smoke.spec.ts`, `.github/workflows/ci.yml` (spec §7.6), `.github/workflows/build.yml` (spec §12.4), `.github/dependabot.yml`
 
-- [ ] **Step 1: Install Playwright**
+- [x] **Step 1: Install Playwright**
 
 Run:
 ```bash
@@ -657,7 +657,7 @@ npm i -D @playwright/test
 npx playwright install chromium --with-deps
 ```
 
-- [ ] **Step 2: Configure Playwright**
+- [x] **Step 2: Configure Playwright**
 
 Create `playwright.config.ts`:
 ```ts
@@ -677,7 +677,7 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 3: Write the smoke test**
+- [x] **Step 3: Write the smoke test**
 
 Create `tests/e2e/smoke.spec.ts`:
 ```ts
@@ -689,12 +689,12 @@ test("home page renders the app name", async ({ page }) => {
 });
 ```
 
-- [ ] **Step 4: Run the smoke test**
+- [x] **Step 4: Run the smoke test**
 
 Run: `npm run test:e2e -- --project=chromium`
 Expected: PASS (dev server auto-started).
 
-- [ ] **Step 5: Add CI workflows**
+- [x] **Step 5: Add CI workflows**
 
 Create `.github/workflows/ci.yml` and `.github/workflows/build.yml` with the exact contents specified in **spec §7.6 and §12.4** (adapted: image name `ghcr.io/<owner>/bilan`; the integration job adds a `mariadb:11` service and runs `prisma migrate deploy` + `npm run test:integration` with `DATABASE_URL`, `DATA_ENCRYPTION_KEY`, `SEARCH_TOKEN_KEY` from secrets/test values).
 Create `.github/dependabot.yml`:
@@ -714,7 +714,7 @@ updates:
     target-branch: "develop"
 ```
 
-- [ ] **Step 5b: Add GitHub issue + PR templates (from `librarr`)**
+- [x] **Step 5b: Add GitHub issue + PR templates (from `librarr`)**
 
 Copy from the `librarr` project and adapt:
 - `.github/ISSUE_TEMPLATE/config.yml` — `blank_issues_enabled: false`
@@ -724,7 +724,7 @@ Copy from the `librarr` project and adapt:
 
 These apply to issues/PRs created via the GitHub UI (our scope-issues were created via `gh` and are unaffected).
 
-- [ ] **Step 6: Commit + open the PR**
+- [x] **Step 6: Commit + open the PR**
 
 > The repo, `main`/`develop` branches, milestones and issues already exist (created during project bootstrap). This scope uses its own branch `feature/0.6-ci` per the one-scope-one-PR workflow.
 
