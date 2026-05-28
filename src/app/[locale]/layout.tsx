@@ -5,6 +5,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { hasLocale } from "next-intl";
 import { locales } from "@/i18n/config";
 import { mono, sans, serif } from "@/lib/fonts";
+import { themeBootstrapScript } from "@/lib/theme";
 
 export const metadata: Metadata = {
   title: "Bilan",
@@ -34,6 +35,9 @@ export default async function LocaleLayout({
       suppressHydrationWarning
       className={`${sans.variable} ${serif.variable} ${mono.variable} h-full antialiased`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
+      </head>
       <body className="bg-background text-foreground flex min-h-full flex-col font-sans">
         <NextIntlClientProvider locale={locale} messages={messages}>
           {children}
