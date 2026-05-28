@@ -4,7 +4,7 @@
     "tagline": "Your finances, settled."
   },
   "home": {
-    "intro": "Bilan is a self-hosted personal finance app — multi-account, multi-household. Scope 0.5 wires the theme, fonts, shadcn and i18n.",
+    "intro": "Bilan is a self-hosted personal finance app — multi-account, multi-household.",
     "themeToggleLabel": "Dark theme",
     "languageHint": "Switch language by visiting /fr or /en.",
     "previewHeading": "Design system preview",
