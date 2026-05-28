@@ -1,0 +1,19 @@
+{
+  "app": {
+    "name": "Bilan",
+    "tagline": "Vos finances, posées."
+  },
+  "home": {
+    "intro": "Bilan est une app personnelle de finances, multi-comptes et multi-foyers, auto-hébergée. Le scope 0.5 met en place le thème, les polices, shadcn et l'i18n.",
+    "themeToggleLabel": "Thème sombre",
+    "languageHint": "Changez la langue en visitant /fr ou /en.",
+    "previewHeading": "Aperçu du système de design",
+    "balanceLabel": "Solde courant",
+    "expenseLabel": "Dépenses du mois",
+    "incomeLabel": "Revenus du mois",
+    "demoButton": "Action principale",
+    "demoButtonSecondary": "Secondaire",
+    "demoBadgeIncome": "Revenu",
+    "demoBadgeExpense": "Dépense"
+  }
+}

@@ -1,26 +1,214 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-display: var(--font-display);
+  --font-heading: var(--font-display);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ─── Bilan tokens — light (default) ──────────────────────────────────────── */
+:root {
+  /* Surfaces / ink */
+  --paper: #f7f4ed;
+  --paper-2: #efebe1;
+  --paper-3: #e6e1d4;
+  --card-2: #fbf8f1;
+  --hairline: #e0daca;
+  --hairline-2: #d2caba;
+  --ink: #15130f;
+  --ink-2: #4a463e;
+  --ink-3: #807a6f;
+  --ink-4: #ada89b;
+
+  /* Brand */
+  --bilan-primary: #1f4d3a;
+  --bilan-primary-h: #25593f;
+  --bilan-primary-d: #173b2c;
+  --bilan-primary-soft: #dce6dd;
+  --bilan-primary-ink: #ffffff;
+
+  /* Semantic financial */
+  --income: #2d6b47;
+  --income-bg: #e1ecdf;
+  --expense: #b14a3b;
+  --expense-bg: #f3ddd3;
+  --warning: #b6841f;
+  --warning-bg: #f5e6c6;
+  --info: #2f5f8f;
+  --info-bg: #dde8f2;
+
+  /* Category palette */
+  --cat-groceries: #5e8c5a;
+  --cat-housing: #6e5b8c;
+  --cat-transport: #2f6b8f;
+  --cat-food: #c9763e;
+  --cat-leisure: #a86b9c;
+  --cat-health: #4f8c7b;
+  --cat-income: #2d6b47;
+  --cat-savings: #b68f36;
+  --cat-shopping: #8c5a3e;
+  --cat-bills: #4a6675;
+  --cat-other: #807a6f;
+
+  /* Shadcn bridge */
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: #ffffff;
+  --card-foreground: var(--ink);
+  --popover: #ffffff;
+  --popover-foreground: var(--ink);
+  --primary: var(--bilan-primary);
+  --primary-foreground: var(--bilan-primary-ink);
+  --secondary: var(--paper-2);
+  --secondary-foreground: var(--ink);
+  --muted: var(--paper-2);
+  --muted-foreground: var(--ink-3);
+  --accent: var(--bilan-primary-soft);
+  --accent-foreground: var(--bilan-primary-d);
+  --destructive: var(--expense);
+  --border: var(--hairline);
+  --input: var(--hairline);
+  --ring: var(--bilan-primary);
+  --chart-1: var(--cat-groceries);
+  --chart-2: var(--cat-housing);
+  --chart-3: var(--cat-transport);
+  --chart-4: var(--cat-food);
+  --chart-5: var(--cat-leisure);
+  --radius: 0.625rem;
+  --sidebar: var(--card-2);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--bilan-primary);
+  --sidebar-primary-foreground: var(--bilan-primary-ink);
+  --sidebar-accent: var(--paper-2);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--hairline);
+  --sidebar-ring: var(--bilan-primary);
+}
+
+/* ─── Bilan tokens — dark ─────────────────────────────────────────────────── */
+.dark {
+  --paper: #0f1114;
+  --paper-2: #15181c;
+  --paper-3: #1b1f24;
+  --card-2: #1e2329;
+  --hairline: #262b32;
+  --hairline-2: #333941;
+  --ink: #f3efe6;
+  --ink-2: #bdb8ac;
+  --ink-3: #8b867b;
+  --ink-4: #5c5950;
+
+  --bilan-primary: #6fbf95;
+  --bilan-primary-h: #7ecca3;
+  --bilan-primary-d: #5bab81;
+  --bilan-primary-soft: #1e2e27;
+  --bilan-primary-ink: #0f1114;
+
+  --income: #7bc799;
+  --income-bg: #1b2a22;
+  --expense: #d88871;
+  --expense-bg: #2e1e1a;
+  --warning: #d9b05a;
+  --warning-bg: #2c2516;
+  --info: #7aa8d4;
+  --info-bg: #1a2330;
+
+  --cat-groceries: #87bc83;
+  --cat-housing: #a18ac4;
+  --cat-transport: #65a4cc;
+  --cat-food: #e0996a;
+  --cat-leisure: #d29ec5;
+  --cat-health: #7cc0b0;
+  --cat-income: #7bc799;
+  --cat-savings: #dcba6b;
+  --cat-shopping: #c58e70;
+  --cat-bills: #82a0ae;
+  --cat-other: #8b867b;
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: #181c21;
+  --card-foreground: var(--ink);
+  --popover: #181c21;
+  --popover-foreground: var(--ink);
+  --primary: var(--bilan-primary);
+  --primary-foreground: var(--bilan-primary-ink);
+  --secondary: var(--paper-2);
+  --secondary-foreground: var(--ink);
+  --muted: var(--paper-2);
+  --muted-foreground: var(--ink-3);
+  --accent: var(--bilan-primary-soft);
+  --accent-foreground: var(--bilan-primary);
+  --destructive: var(--expense);
+  --border: var(--hairline);
+  --input: var(--hairline);
+  --ring: var(--bilan-primary);
+  --chart-1: var(--cat-groceries);
+  --chart-2: var(--cat-housing);
+  --chart-3: var(--cat-transport);
+  --chart-4: var(--cat-food);
+  --chart-5: var(--cat-leisure);
+  --sidebar: var(--card-2);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--bilan-primary);
+  --sidebar-primary-foreground: var(--bilan-primary-ink);
+  --sidebar-accent: var(--paper-2);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--hairline);
+  --sidebar-ring: var(--bilan-primary);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }

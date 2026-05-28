@@ -582,7 +582,7 @@ git commit -m "feat: aes-256-gcm encryption and hmac search primitives"
 **Files:**
 - Create: `src/lib/fonts.ts`, `src/app/globals.css`, `components.json`, `src/i18n/config.ts`, `src/i18n/request.ts`, `src/middleware.ts`, `messages/fr.json`, `messages/en.json`, `src/app/layout.tsx`, `src/app/[locale]/layout.tsx`, `src/app/[locale]/page.tsx`
 
-- [ ] **Step 1: Install deps**
+- [x] **Step 1: Install deps**
 
 Run:
 ```bash
@@ -592,7 +592,7 @@ npx shadcn@latest add button card badge switch
 ```
 Accept defaults; this creates `components.json` and `src/components/ui/*`.
 
-- [ ] **Step 2: Wire fonts**
+- [x] **Step 2: Wire fonts**
 
 Create `src/lib/fonts.ts`:
 ```ts
@@ -603,11 +603,11 @@ export const sans = IBM_Plex_Sans({ subsets: ["latin"], variable: "--font-sans",
 export const mono = IBM_Plex_Mono({ subsets: ["latin"], variable: "--font-mono", weight: ["400", "500", "600"] });
 ```
 
-- [ ] **Step 3: Map Bilan tokens into `globals.css`**
+- [x] **Step 3: Map Bilan tokens into `globals.css`**
 
 In `src/app/globals.css`, define the shadcn CSS variables (`--background`, `--foreground`, `--primary`, `--card`, `--border`, `--radius`, etc.) from the **light and dark values in `design/project/tokens.css`** (paper `#F7F4ED`, ink `#15130F`, primary `#1F4D3A`, etc.), plus the category palette and `--font-*` variables. Keep `tokens.css` open side-by-side and copy the values; both `:root` (light) and `[data-theme="dark"]`/`.dark` blocks.
 
-- [ ] **Step 4: i18n config + middleware**
+- [x] **Step 4: i18n config + middleware**
 
 Create `src/i18n/config.ts`:
 ```ts
@@ -619,23 +619,23 @@ Create `src/i18n/request.ts` (next-intl `getRequestConfig` loading `messages/<lo
 Create `messages/fr.json` and `messages/en.json` with at least `{ "app": { "name": "Bilan", "tagline": "..." } }`.
 Create `src/middleware.ts`: compose next-intl middleware (localePrefix "always") and append the security headers from **spec §6.6** (HSTS, X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy, Permissions-Policy, CSP). `matcher: ["/((?!api|_next|_vercel|.*\\..*).*)"]`.
 
-- [ ] **Step 5: Layouts + demo page**
+- [x] **Step 5: Layouts + demo page**
 
 Update `src/app/layout.tsx` to apply the font variables on `<html>`. Create `src/app/[locale]/layout.tsx` (NextIntlClientProvider + theme attribute) and `src/app/[locale]/page.tsx` rendering a heading in `--font-display`, a couple of shadcn `Button`/`Card`/`Badge` in Bilan colors, and a theme toggle `Switch` that flips `data-theme`.
 
-- [ ] **Step 6: Verify visually + headers**
+- [x] **Step 6: Verify visually + headers**
 
 Run: `npm run dev`
 Then: `curl -sI http://localhost:3000/fr | grep -i "x-frame-options"`
 Expected: `X-Frame-Options: DENY`.
 Open `http://localhost:3000/fr` and `…/en` — page renders in Bilan styling, theme toggle works, language differs.
 
-- [ ] **Step 7: Verify build + lint**
+- [x] **Step 7: Verify build + lint**
 
 Run: `npm run build && npm run lint && npm run typecheck`
 Expected: all pass.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add -A

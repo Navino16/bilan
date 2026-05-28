@@ -1,0 +1,19 @@
+{
+  "app": {
+    "name": "Bilan",
+    "tagline": "Your finances, settled."
+  },
+  "home": {
+    "intro": "Bilan is a self-hosted personal finance app — multi-account, multi-household. Scope 0.5 wires the theme, fonts, shadcn and i18n.",
+    "themeToggleLabel": "Dark theme",
+    "languageHint": "Switch language by visiting /fr or /en.",
+    "previewHeading": "Design system preview",
+    "balanceLabel": "Current balance",
+    "expenseLabel": "Month expenses",
+    "incomeLabel": "Month income",
+    "demoButton": "Primary action",
+    "demoButtonSecondary": "Secondary",
+    "demoBadgeIncome": "Income",
+    "demoBadgeExpense": "Expense"
+  }
+}
