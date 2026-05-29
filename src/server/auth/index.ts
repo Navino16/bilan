@@ -1,8 +1,12 @@
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { genericOAuth } from "better-auth/plugins";
 import { db } from "@/server/db";
 import { env } from "@/env";
+import { dataKey } from "@/server/crypto/keys";
+import { decrypt } from "@/server/crypto/encryption";
 import { appSettings } from "@/server/services/settings/app-settings";
+import { providerCache, resolveOidcProvider, type ResolvedOidc } from "./providers";
 import { authPlugins } from "./plugins";
 
 type Handler = ReturnType<typeof betterAuth>;
@@ -12,6 +16,38 @@ const CACHE_TTL_MS = 60_000;
 async function buildOptions(): Promise<BetterAuthOptions> {
   const credentialsEnabled = (await appSettings.get<boolean>("credentials_enabled")) ?? true;
   const minPasswordLength = (await appSettings.get<number>("min_password_length")) ?? 12;
+  const providers = await providerCache.get();
+
+  // Compose enabled providers out of the DB: Google as a built-in social
+  // provider, every "oidc" row as a generic-oauth config (one plugin, many
+  // configs). Adding/enabling a row + invalidateAuthCache() hot-reloads them.
+  const socialProviders: Record<string, { clientId: string; clientSecret: string }> = {};
+  const oidcProviders: ResolvedOidc[] = [];
+  for (const p of providers) {
+    if (p.type === "google" && p.clientId && p.clientSecretEnc) {
+      socialProviders.google = {
+        clientId: p.clientId,
+        clientSecret: decrypt(p.clientSecretEnc, dataKey),
+      };
+    }
+    const oidc = resolveOidcProvider(p);
+    if (oidc) oidcProviders.push(oidc);
+  }
+
+  const oidcPlugin =
+    oidcProviders.length > 0
+      ? [
+          genericOAuth({
+            config: oidcProviders.map((o) => ({
+              providerId: o.providerId,
+              discoveryUrl: `${o.issuer.replace(/\/$/, "")}/.well-known/openid-configuration`,
+              clientId: o.clientId,
+              clientSecret: o.clientSecret,
+              scopes: o.scopes,
+            })),
+          }),
+        ]
+      : [];
 
   return {
     appName: "Bilan",
@@ -29,6 +65,7 @@ async function buildOptions(): Promise<BetterAuthOptions> {
       minPasswordLength,
       autoSignIn: true,
     },
+    socialProviders,
     session: {
       expiresIn: 60 * 60 * 24 * 7, // 7 days
       updateAge: 60 * 60 * 24, // refresh after 1 day
@@ -39,7 +76,7 @@ async function buildOptions(): Promise<BetterAuthOptions> {
         sessionToken: { attributes: { sameSite: "strict", httpOnly: true } },
       },
     },
-    plugins: authPlugins,
+    plugins: [...authPlugins, ...oidcPlugin],
   };
 }
 
@@ -53,4 +90,5 @@ export async function getAuth(): Promise<Handler> {
 
 export function invalidateAuthCache(): void {
   cached = null;
+  providerCache.invalidate();
 }
