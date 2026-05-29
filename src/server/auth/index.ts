@@ -1,6 +1,7 @@
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { genericOAuth } from "better-auth/plugins";
+import { nextCookies } from "better-auth/next-js";
 import { db } from "@/server/db";
 import { env } from "@/env";
 import { dataKey } from "@/server/crypto/keys";
@@ -76,7 +77,10 @@ async function buildOptions(): Promise<BetterAuthOptions> {
         sessionToken: { attributes: { sameSite: "strict", httpOnly: true } },
       },
     },
-    plugins: [...authPlugins, ...oidcPlugin],
+    // nextCookies() must be last: it sets Better Auth's Set-Cookie headers on
+    // server-action / route-handler responses (so autoSignIn during setup
+    // actually establishes the session in the browser).
+    plugins: [...authPlugins, ...oidcPlugin, nextCookies()],
   };
 }
 

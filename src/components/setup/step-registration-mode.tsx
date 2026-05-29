@@ -2,24 +2,46 @@
 
 import { useActionState, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { setupRegistrationModeAction } from "@/server/transport/actions/setup";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { completeSetupAction } from "@/server/transport/actions/setup";
+import type { SetupData } from "./stepper";
 
 const MODES = ["INVITE_ONLY", "OPEN", "DISABLED"] as const;
 
-export function StepRegistrationMode({ onDone }: { onDone: () => void }) {
+export function StepRegistrationMode({
+  data,
+  onChange,
+  locale,
+}: {
+  data: SetupData;
+  onChange: (p: Partial<SetupData>) => void;
+  locale: string;
+}) {
   const t = useTranslations("setup.registration");
-  const [state, action, pending] = useActionState(setupRegistrationModeAction, null);
+  const router = useRouter();
+  const [state, action, pending] = useActionState(completeSetupAction, null);
 
   useEffect(() => {
-    if (state?.ok) onDone();
-  }, [state, onDone]);
+    if (state?.ok) router.push(`/${locale}/dashboard`);
+  }, [state, router, locale]);
 
   return (
     <form action={action} className="space-y-6">
-      <RadioGroup name="mode" defaultValue="INVITE_ONLY" className="gap-3">
+      {/* Account data collected in earlier steps; the user is created here. */}
+      <input type="hidden" name="name" value={data.name} />
+      <input type="hidden" name="email" value={data.email} />
+      <input type="hidden" name="password" value={data.password} />
+      <input type="hidden" name="locale" value={locale} />
+      <RadioGroup
+        name="mode"
+        value={data.mode}
+        onValueChange={(v) => onChange({ mode: v as SetupData["mode"] })}
+        className="gap-3"
+      >
         {MODES.map((mode) => (
           <Label
             key={mode}
@@ -36,6 +58,11 @@ export function StepRegistrationMode({ onDone }: { onDone: () => void }) {
           </Label>
         ))}
       </RadioGroup>
+      {state && !state.ok && (
+        <Alert variant="destructive">
+          <AlertDescription>{t("error")}</AlertDescription>
+        </Alert>
+      )}
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? t("submitting") : t("submit")}
       </Button>

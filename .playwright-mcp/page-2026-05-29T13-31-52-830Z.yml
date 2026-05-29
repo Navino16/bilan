@@ -1,0 +1,18 @@
+- generic [active] [ref=e1]:
+    - main [ref=e3]:
+        - generic [ref=e4]:
+            - heading "Bienvenue dans Bilan" [level=1] [ref=e5]
+            - paragraph [ref=e6]: Configurons votre instance. Cela ne prend qu'une minute.
+        - generic [ref=e7]:
+            - list [ref=e8]:
+                - listitem [ref=e9]: 1. Compte administrateur
+                - listitem [ref=e10]: 2. E-mail (SMTP)
+                - listitem [ref=e11]: 3. Connexion externe
+                - listitem [ref=e12]: 4. Inscriptions
+            - generic [ref=e35]:
+                - alert [ref=e36]:
+                    - generic [ref=e37]: L'envoi d'e-mails (réinitialisation de mot de passe, invitations) se configure plus tard dans les réglages d'administration.
+                - button "Continuer" [ref=e38]
+    - button "Open Next.js Dev Tools" [ref=e30] [cursor=pointer]:
+        - img [ref=e31]
+    - alert [ref=e34]

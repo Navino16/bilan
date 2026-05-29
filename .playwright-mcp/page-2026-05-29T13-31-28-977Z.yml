@@ -1,0 +1,25 @@
+- generic [active] [ref=e1]:
+    - main [ref=e3]:
+        - generic [ref=e4]:
+            - heading "Bienvenue dans Bilan" [level=1] [ref=e5]
+            - paragraph [ref=e6]: Configurons votre instance. Cela ne prend qu'une minute.
+        - generic [ref=e7]:
+            - list [ref=e8]:
+                - listitem [ref=e9]: 1. Compte administrateur
+                - listitem [ref=e10]: 2. E-mail (SMTP)
+                - listitem [ref=e11]: 3. Connexion externe
+                - listitem [ref=e12]: 4. Inscriptions
+            - generic [ref=e13]:
+                - generic [ref=e14]:
+                    - generic [ref=e15]: Nom
+                    - textbox "Nom" [ref=e16]
+                - generic [ref=e17]:
+                    - generic [ref=e18]: Adresse e-mail
+                    - textbox "Adresse e-mail" [ref=e19]
+                - generic [ref=e20]:
+                    - generic [ref=e21]: Mot de passe
+                    - textbox "Mot de passe" [ref=e22]
+                    - paragraph [ref=e23]: 12 caractères minimum.
+                - button "Créer le compte" [ref=e24]
+    - button "Open Next.js Dev Tools" [ref=e30] [cursor=pointer]:
+        - img [ref=e31]

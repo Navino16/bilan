@@ -30,9 +30,8 @@
       "email": "Adresse e-mail",
       "password": "Mot de passe",
       "passwordHint": "12 caractères minimum.",
-      "error": "Impossible de créer le compte. Vérifiez les champs et réessayez.",
-      "submit": "Créer le compte",
-      "submitting": "Création…"
+      "error": "Vérifiez les champs : nom requis, e-mail valide, mot de passe d'au moins 12 caractères.",
+      "submit": "Continuer"
     },
     "smtp": {
       "description": "L'envoi d'e-mails (réinitialisation de mot de passe, invitations) se configure plus tard dans les réglages d'administration.",
@@ -45,6 +44,7 @@
     "registration": {
       "submit": "Terminer",
       "submitting": "Enregistrement…",
+      "error": "La configuration a échoué. Vérifiez vos informations et réessayez.",
       "modes": {
         "INVITE_ONLY": {
           "label": "Sur invitation",
