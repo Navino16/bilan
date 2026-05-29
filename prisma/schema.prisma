@@ -18,6 +18,7 @@ model User {
   name             String?
   image            String?
   twoFactorEnabled Boolean   @default(false)
+  role             String? // Better Auth admin plugin (admin | user); RBAC permissions live in UserRole.
   banned           Boolean   @default(false)
   banReason        String?
   banExpires       DateTime?
@@ -29,6 +30,7 @@ model User {
   twoFactors    TwoFactor[]
   passkeys      Passkey[]
   roles         UserRole[]
+  preference    UserPreference?
 }
 
 model Session {
@@ -38,6 +40,7 @@ model Session {
   expiresAt DateTime
   ipAddress String?
   userAgent String?  @db.Text
+  impersonatedBy String? // Better Auth admin plugin (set during impersonation).
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -80,10 +83,11 @@ model Verification {
 }
 
 model TwoFactor {
-  id          String @id
+  id          String  @id
   userId      String
-  secret      String @db.Text
-  backupCodes String @db.Text
+  secret      String  @db.Text
+  backupCodes String  @db.Text
+  verified    Boolean @default(true)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -100,6 +104,7 @@ model Passkey {
   deviceType   String
   backedUp     Boolean  @default(false)
   transports   String?
+  aaguid       String?
   createdAt    DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -151,4 +156,81 @@ model UserRole {
 
   @@id([userId, roleId])
   @@index([roleId])
+}
+
+// ─── App configuration, audit & signup tokens (Phase 1) ──────────────────────
+
+model UserPreference {
+  userId          String  @id
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  locale          String  @default("fr")
+  theme           String  @default("system")
+  linkWindowDays  Int     @default(30)
+  linkMinAmount   Decimal @default(0) @db.Decimal(12, 2)
+  dashboardLayout Json?
+}
+
+model AuthProvider {
+  id              String   @id @default(cuid())
+  type            String // credentials | oidc | google
+  key             String   @unique
+  displayName     String
+  enabled         Boolean  @default(false)
+  issuer          String?
+  clientId        String?
+  clientSecretEnc String?  @db.Text
+  scopes          String?
+  config          Json?
+  updatedAt       DateTime @updatedAt
+  updatedById     String?
+}
+
+model SmtpConfig {
+  id          String   @id @default(cuid())
+  host        String
+  port        Int
+  secure      Boolean  @default(true)
+  username    String
+  passwordEnc String   @db.Text
+  fromAddress String
+  fromName    String?
+  enabled     Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+}
+
+model AppSetting {
+  key         String   @id
+  value       Json
+  isSecret    Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String?
+  entityId  String?
+  metadata  Json?
+  ipAddress String?
+  userAgent String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([entity, entityId])
+  @@index([action, createdAt])
+}
+
+model AdminSignupToken {
+  id          String    @id @default(cuid())
+  token       String    @unique
+  description String?
+  maxUses     Int?
+  usedCount   Int       @default(0)
+  expiresAt   DateTime?
+  createdById String
+  createdAt   DateTime  @default(now())
+  revokedAt   DateTime?
 }
