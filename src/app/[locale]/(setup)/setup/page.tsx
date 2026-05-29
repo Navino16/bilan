@@ -3,6 +3,10 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { db } from "@/server/db";
 import { Stepper } from "@/components/setup/stepper";
 
+// Depends on runtime DB state (User.count), so it must never be statically
+// prerendered at build time (no DB available then).
+export const dynamic = "force-dynamic";
+
 export default async function SetupPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);

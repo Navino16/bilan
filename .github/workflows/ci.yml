@@ -202,6 +202,12 @@ jobs:
       - name: Apply migrations
         run: npx prisma migrate deploy
 
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Seed e2e database (post-setup state)
+        run: npx tsx scripts/seed-e2e.ts
+
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
