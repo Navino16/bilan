@@ -15,5 +15,50 @@
     "demoButtonSecondary": "Secondaire",
     "demoBadgeIncome": "Revenu",
     "demoBadgeExpense": "Dépense"
+  },
+  "setup": {
+    "title": "Bienvenue dans Bilan",
+    "subtitle": "Configurons votre instance. Cela ne prend qu'une minute.",
+    "steps": {
+      "account": "Compte administrateur",
+      "smtp": "E-mail (SMTP)",
+      "oidc": "Connexion externe",
+      "registration": "Inscriptions"
+    },
+    "account": {
+      "name": "Nom",
+      "email": "Adresse e-mail",
+      "password": "Mot de passe",
+      "passwordHint": "12 caractères minimum.",
+      "error": "Impossible de créer le compte. Vérifiez les champs et réessayez.",
+      "submit": "Créer le compte",
+      "submitting": "Création…"
+    },
+    "smtp": {
+      "description": "L'envoi d'e-mails (réinitialisation de mot de passe, invitations) se configure plus tard dans les réglages d'administration.",
+      "skip": "Continuer"
+    },
+    "oidc": {
+      "description": "Les fournisseurs de connexion externe (Google, OIDC) s'ajoutent plus tard dans les réglages d'administration.",
+      "skip": "Continuer"
+    },
+    "registration": {
+      "submit": "Terminer",
+      "submitting": "Enregistrement…",
+      "modes": {
+        "INVITE_ONLY": {
+          "label": "Sur invitation",
+          "description": "Les nouveaux comptes nécessitent un jeton d'invitation. Recommandé."
+        },
+        "OPEN": {
+          "label": "Ouvertes",
+          "description": "N'importe qui peut créer un compte."
+        },
+        "DISABLED": {
+          "label": "Désactivées",
+          "description": "Seul un administrateur peut créer des comptes."
+        }
+      }
+    }
   }
 }

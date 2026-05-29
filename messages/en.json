@@ -15,5 +15,50 @@
     "demoButtonSecondary": "Secondary",
     "demoBadgeIncome": "Income",
     "demoBadgeExpense": "Expense"
+  },
+  "setup": {
+    "title": "Welcome to Bilan",
+    "subtitle": "Let's set up your instance. It only takes a minute.",
+    "steps": {
+      "account": "Admin account",
+      "smtp": "Email (SMTP)",
+      "oidc": "External login",
+      "registration": "Registrations"
+    },
+    "account": {
+      "name": "Name",
+      "email": "Email address",
+      "password": "Password",
+      "passwordHint": "At least 12 characters.",
+      "error": "Could not create the account. Check the fields and try again.",
+      "submit": "Create account",
+      "submitting": "Creating…"
+    },
+    "smtp": {
+      "description": "Email delivery (password resets, invitations) is configured later in the admin settings.",
+      "skip": "Continue"
+    },
+    "oidc": {
+      "description": "External login providers (Google, OIDC) are added later in the admin settings.",
+      "skip": "Continue"
+    },
+    "registration": {
+      "submit": "Finish",
+      "submitting": "Saving…",
+      "modes": {
+        "INVITE_ONLY": {
+          "label": "Invite only",
+          "description": "New accounts require an invitation token. Recommended."
+        },
+        "OPEN": {
+          "label": "Open",
+          "description": "Anyone can create an account."
+        },
+        "DISABLED": {
+          "label": "Disabled",
+          "description": "Only an admin can create accounts."
+        }
+      }
+    }
   }
 }
