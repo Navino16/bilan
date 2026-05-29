@@ -19,6 +19,11 @@ updates:
       interval: "weekly"
     target-branch: "develop"
     open-pull-requests-limit: 20
+    # @types/node tracks the Node runtime major (24.x; see engines.node in
+    # package.json). Never bump it past the runtime — block major updates.
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       code-dependencies:
         applies-to: version-updates
