@@ -22,6 +22,15 @@ CMD ["npm", "run", "dev"]
 
 FROM base AS builder
 ENV NEXT_TELEMETRY_DISABLED=1
+# Build-time-only dummy env: `next build` evaluates server route modules (e.g.
+# /api/auth) that import the Prisma db and run env validation. No DB/secret is
+# used at build (the adapter connects lazily); real values are injected at
+# runtime. These ENV vars do not reach the final image (prod stage is FROM base).
+ENV APP_URL=http://localhost:3000
+ENV DATABASE_URL=mysql://app:app_password@localhost:3306/budget
+ENV AUTH_SECRET=build_time_dummy_secret_padding_padding_padding
+ENV DATA_ENCRYPTION_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+ENV SEARCH_TOKEN_KEY=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBA=
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate || true

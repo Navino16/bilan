@@ -76,6 +76,12 @@ jobs:
 
       - name: Build
         run: npm run build
+        # The /api/auth route module imports the Prisma db at load time, so
+        # `next build` page-data collection validates DATABASE_URL. No DB is
+        # contacted during build (the adapter connects lazily); a well-formed
+        # dummy URL is enough to pass env validation.
+        env:
+          DATABASE_URL: mysql://app:app_password@localhost:3306/budget
 
   test:
     name: Test (unit + coverage)
