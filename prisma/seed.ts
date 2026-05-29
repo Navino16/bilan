@@ -39,9 +39,26 @@ export async function seedRolesAndPermissions(db: PrismaClient): Promise<void> {
   }
 }
 
+const APP_SETTINGS: { key: string; value: unknown; isSecret?: boolean }[] = [
+  { key: "registration_mode", value: "INVITE_ONLY" }, // OPEN | INVITE_ONLY | DISABLED
+  { key: "min_password_length", value: 12 },
+  { key: "credentials_enabled", value: true },
+  { key: "app_name", value: "Bilan" },
+];
+
+export async function seedAppSettings(db: PrismaClient): Promise<void> {
+  for (const s of APP_SETTINGS) {
+    await db.appSetting.upsert({
+      where: { key: s.key },
+      create: { key: s.key, value: s.value as never, isSecret: s.isSecret ?? false },
+      update: {},
+    });
+  }
+}
+
 if (process.argv[1]?.includes("seed")) {
   const db = new PrismaClient();
-  seedRolesAndPermissions(db)
+  Promise.all([seedRolesAndPermissions(db), seedAppSettings(db)])
     .then(() => db.$disconnect())
     .catch((e) => {
       console.error(e);
