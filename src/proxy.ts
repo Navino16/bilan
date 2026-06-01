@@ -36,6 +36,21 @@ const SECURITY_HEADERS: Record<string, string> = {
 // page; once setup is done, /setup permanently 404s.
 const setupPath = /^\/(fr|en)\/setup(\/|$)/;
 
+// Spec §3.2 — authenticated areas. The proxy only performs a cheap presence
+// check on the session cookie (UX fast-path: unauthenticated requests get a 307
+// to /login without a DB round-trip). The authoritative check is the
+// (authenticated) layout's requireSession(). The __Secure- prefix lands once the
+// deployment is on HTTPS (Better Auth toggles it from the request protocol).
+const authedPath =
+  /^\/(fr|en)\/(dashboard|transactions|accounts|budgets|categories|groups|import|settings|admin)(\/|$)/;
+
+function hasSessionCookie(req: NextRequest): boolean {
+  return (
+    req.cookies.has("better-auth.session_token") ||
+    req.cookies.has("__Secure-better-auth.session_token")
+  );
+}
+
 export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -47,6 +62,13 @@ export default async function middleware(req: NextRequest) {
     }
   } else if (setupPath.test(pathname)) {
     return new Response("Not found", { status: 404 });
+  }
+
+  const authedMatch = authedPath.exec(pathname);
+  if (authedMatch && !hasSessionCookie(req)) {
+    const url = req.nextUrl.clone();
+    url.pathname = `/${authedMatch[1]}/login`;
+    return Response.redirect(url, 307);
   }
 
   const response = intlMiddleware(req);

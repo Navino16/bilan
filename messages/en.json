@@ -72,6 +72,36 @@
     "message": "You don't have access to this page.",
     "back": "Back to dashboard"
   },
+  "shell": {
+    "tagline": "Finances · 2026",
+    "themeToggle": "Dark theme",
+    "openMenu": "Open menu",
+    "groups": {
+      "workspace": "Workspace",
+      "account": "Account"
+    },
+    "nav": {
+      "dashboard": "Dashboard",
+      "transactions": "Transactions",
+      "budgets": "Budgets",
+      "settings": "Settings",
+      "admin": "Administration"
+    },
+    "userMenu": {
+      "settings": "Settings",
+      "logout": "Sign out"
+    }
+  },
+  "dashboard": {
+    "greeting": "Hello, {name}",
+    "subtitle": "Here's an overview of your finances.",
+    "comingSoon": "Coming soon",
+    "cards": {
+      "balance": { "label": "Current balance" },
+      "expenses": { "label": "This month's expenses" },
+      "income": { "label": "This month's income" }
+    }
+  },
   "admin": {
     "title": "Administration",
     "nav": {
