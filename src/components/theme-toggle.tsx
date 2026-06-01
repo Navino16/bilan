@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { Switch } from "@/components/ui/switch";
-import { THEME_STORAGE_KEY } from "@/lib/theme";
+import { THEME_COOKIE } from "@/lib/theme";
 
 export function ThemeToggle({ label }: { label: string }) {
-  // The blocking script in `<head>` has already applied the `.dark` class
-  // before hydration; read it from the DOM so the Switch is in sync on mount.
+  // The server set the `.dark` class on <html> from the theme cookie; read it
+  // back from the DOM so the Switch reflects the current theme on mount.
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
@@ -17,7 +17,9 @@ export function ThemeToggle({ label }: { label: string }) {
   function toggle(next: boolean) {
     setIsDark(next);
     document.documentElement.classList.toggle("dark", next);
-    window.localStorage.setItem(THEME_STORAGE_KEY, next ? "dark" : "light");
+    // Persist for one year; the server reads this cookie on the next request to
+    // SSR the right theme with no flash.
+    document.cookie = `${THEME_COOKIE}=${next ? "dark" : "light"}; path=/; max-age=31536000; samesite=lax`;
   }
 
   return (

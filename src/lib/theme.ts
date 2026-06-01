@@ -1,5 +1,7 @@
-export const THEME_STORAGE_KEY = "bilan-theme";
-
-// Runs synchronously in <head> before the first paint to avoid a light-theme
-// flash on reload when the user previously chose dark.
-export const themeBootstrapScript = `(function(){try{var t=localStorage.getItem('${THEME_STORAGE_KEY}');var d=t==='dark'||(t===null&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}})();`;
+// Theme preference lives in a cookie (not localStorage) so the server can read
+// it in the locale layout and render the correct `.dark` class in the initial
+// HTML. That means no pre-paint bootstrap script is needed — which avoids both a
+// theme flash and React 19's "script tag while rendering" warning for inline
+// scripts. Values: "dark" | "light" (absent → light).
+export const THEME_COOKIE = "bilan-theme";
+export type Theme = "dark" | "light";

@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { hasLocale } from "next-intl";
 import { locales } from "@/i18n/config";
 import { mono, sans, serif } from "@/lib/fonts";
-import { themeBootstrapScript } from "@/lib/theme";
+import { THEME_COOKIE } from "@/lib/theme";
 
 export const metadata: Metadata = {
   title: "Bilan",
@@ -29,15 +30,19 @@ export default async function LocaleLayout({
   setRequestLocale(locale);
   const messages = await getMessages();
 
+  // Read the theme from the cookie and render the `.dark` class server-side, so
+  // the initial HTML already has the right theme — no pre-paint script, no flash,
+  // and no React 19 inline-<script> warning.
+  const isDark = (await cookies()).get(THEME_COOKIE)?.value === "dark";
+
   return (
     <html
       lang={locale}
       suppressHydrationWarning
-      className={`${sans.variable} ${serif.variable} ${mono.variable} h-full antialiased`}
+      className={`${sans.variable} ${serif.variable} ${mono.variable} h-full antialiased ${
+        isDark ? "dark" : ""
+      }`}
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
-      </head>
       <body className="bg-background text-foreground flex min-h-full flex-col font-sans">
         <NextIntlClientProvider locale={locale} messages={messages}>
           {children}
