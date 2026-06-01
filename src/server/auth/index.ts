@@ -7,6 +7,7 @@ import { env } from "@/env";
 import { dataKey } from "@/server/crypto/keys";
 import { decrypt } from "@/server/crypto/encryption";
 import { appSettings } from "@/server/services/settings/app-settings";
+import { logEvent } from "@/server/services/audit";
 import { providerCache, resolveOidcProvider, type ResolvedOidc } from "./providers";
 import { authPlugins } from "./plugins";
 
@@ -79,6 +80,16 @@ async function buildOptions(): Promise<BetterAuthOptions> {
       enabled: credentialsEnabled,
       minPasswordLength,
       autoSignIn: true,
+      // Deliver the reset link. The token is a credential, so it is NEVER
+      // persisted (audit records only the userId/event) and only surfaced on the
+      // dev console. Production must configure SMTP (8.4) for real delivery.
+      sendResetPassword: async ({ user, token }) => {
+        if (env.NODE_ENV === "development") {
+          const url = `${env.APP_URL.replace(/\/$/, "")}/fr/reset/${token}`;
+          console.info(`[bilan][dev] password reset link for ${user.email}: ${url}`);
+        }
+        await logEvent({ action: "auth.password.reset_requested", userId: user.id });
+      },
     },
     socialProviders,
     session: {

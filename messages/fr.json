@@ -3,6 +3,65 @@
     "name": "Bilan",
     "tagline": "Vos finances, posées."
   },
+  "auth": {
+    "login": {
+      "title": "Connexion",
+      "subtitle": "Accédez à votre espace Bilan.",
+      "email": "Adresse e-mail",
+      "password": "Mot de passe",
+      "forgot": "Mot de passe oublié ?",
+      "submit": "Se connecter",
+      "submitting": "Connexion…",
+      "noAccount": "Pas encore de compte ?",
+      "registerLink": "Créer un compte",
+      "error": {
+        "rateLimited": "Trop de tentatives. Réessayez plus tard.",
+        "badCredentials": "E-mail ou mot de passe incorrect."
+      }
+    },
+    "register": {
+      "title": "Créer un compte",
+      "subtitle": "Rejoignez votre instance Bilan.",
+      "name": "Nom",
+      "email": "Adresse e-mail",
+      "password": "Mot de passe",
+      "passwordHint": "12 caractères minimum.",
+      "submit": "Créer le compte",
+      "submitting": "Création…",
+      "haveAccount": "Déjà un compte ?",
+      "loginLink": "Se connecter",
+      "error": {
+        "closed": "Les inscriptions sont fermées sur cette instance.",
+        "rateLimited": "Trop de tentatives. Réessayez plus tard.",
+        "failed": "Impossible de créer le compte. Vérifiez vos informations."
+      }
+    },
+    "reset": {
+      "title": "Réinitialiser le mot de passe",
+      "subtitle": "Saisissez votre e-mail pour recevoir un lien.",
+      "email": "Adresse e-mail",
+      "submit": "Envoyer le lien",
+      "submitting": "Envoi…",
+      "sent": "Si un compte existe pour cet e-mail, un lien de réinitialisation a été envoyé.",
+      "backToLogin": "Retour à la connexion",
+      "error": {
+        "rateLimited": "Trop de tentatives. Réessayez plus tard.",
+        "invalid": "Adresse e-mail invalide."
+      }
+    },
+    "resetConfirm": {
+      "title": "Nouveau mot de passe",
+      "subtitle": "Choisissez un nouveau mot de passe.",
+      "password": "Nouveau mot de passe",
+      "passwordHint": "12 caractères minimum.",
+      "submit": "Réinitialiser",
+      "submitting": "Réinitialisation…",
+      "error": {
+        "invalidToken": "Ce lien est invalide ou expiré. Refaites une demande.",
+        "invalid": "Vérifiez le mot de passe (12 caractères minimum)."
+      }
+    }
+  },
   "home": {
     "intro": "Bilan est une app personnelle de finances, multi-comptes et multi-foyers, auto-hébergée.",
     "themeToggleLabel": "Thème sombre",
