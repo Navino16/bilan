@@ -30,10 +30,16 @@
       "submitting": "Creating…",
       "haveAccount": "Already have an account?",
       "loginLink": "Sign in",
+      "closed": "Registration is closed on this instance.",
+      "token": "Invitation token",
+      "tokenHint": "Provided by an administrator.",
       "error": {
-        "closed": "Registration is closed on this instance.",
-        "rateLimited": "Too many attempts. Try again later.",
-        "failed": "Could not create the account. Check your details."
+        "INVALID": "Check the fields you entered.",
+        "DISABLED": "Registration is closed on this instance.",
+        "TOKEN_REQUIRED": "An invitation token is required.",
+        "BAD_TOKEN": "Invalid or expired invitation token.",
+        "RATE_LIMITED": "Too many attempts. Try again later.",
+        "FAILED": "Could not create the account. Check your details."
       }
     },
     "reset": {
@@ -59,6 +65,55 @@
       "error": {
         "invalidToken": "This link is invalid or expired. Request a new one.",
         "invalid": "Check the password (at least 12 characters)."
+      }
+    }
+  },
+  "forbidden": {
+    "message": "You don't have access to this page.",
+    "back": "Back to dashboard"
+  },
+  "admin": {
+    "title": "Administration",
+    "nav": {
+      "users": "Users",
+      "signupTokens": "Invitation tokens"
+    },
+    "users": {
+      "createTitle": "Create a user",
+      "listTitle": "Users",
+      "name": "Name",
+      "email": "Email address",
+      "role": "Role",
+      "roleUser": "User",
+      "roleAdmin": "Administrator",
+      "create": "Create",
+      "creating": "Creating…",
+      "created": "User created. A password-setup link has been sent to them.",
+      "empty": "No users.",
+      "error": {
+        "UNAUTHORIZED": "You don't have permission to create users.",
+        "INVALID": "Check the fields you entered.",
+        "FAILED": "Creation failed (the email may already exist)."
+      }
+    },
+    "signupTokens": {
+      "createTitle": "Create a token",
+      "listTitle": "Tokens",
+      "description": "Description",
+      "descriptionPlaceholder": "e.g. finance team",
+      "maxUses": "Max uses",
+      "create": "Create",
+      "creating": "Creating…",
+      "revoke": "Revoke",
+      "empty": "No tokens.",
+      "uses": "{used}/{max} uses",
+      "statusActive": "Active",
+      "statusRevoked": "Revoked",
+      "statusExpired": "Expired",
+      "statusUsedUp": "Used up",
+      "error": {
+        "UNAUTHORIZED": "You don't have permission to manage tokens.",
+        "INVALID": "Invalid value."
       }
     }
   },

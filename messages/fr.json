@@ -30,10 +30,16 @@
       "submitting": "Création…",
       "haveAccount": "Déjà un compte ?",
       "loginLink": "Se connecter",
+      "closed": "Les inscriptions sont fermées sur cette instance.",
+      "token": "Jeton d'invitation",
+      "tokenHint": "Fourni par un administrateur.",
       "error": {
-        "closed": "Les inscriptions sont fermées sur cette instance.",
-        "rateLimited": "Trop de tentatives. Réessayez plus tard.",
-        "failed": "Impossible de créer le compte. Vérifiez vos informations."
+        "INVALID": "Vérifiez les champs saisis.",
+        "DISABLED": "Les inscriptions sont fermées sur cette instance.",
+        "TOKEN_REQUIRED": "Un jeton d'invitation est requis.",
+        "BAD_TOKEN": "Jeton d'invitation invalide ou expiré.",
+        "RATE_LIMITED": "Trop de tentatives. Réessayez plus tard.",
+        "FAILED": "Impossible de créer le compte. Vérifiez vos informations."
       }
     },
     "reset": {
@@ -59,6 +65,55 @@
       "error": {
         "invalidToken": "Ce lien est invalide ou expiré. Refaites une demande.",
         "invalid": "Vérifiez le mot de passe (12 caractères minimum)."
+      }
+    }
+  },
+  "forbidden": {
+    "message": "Vous n'avez pas accès à cette page.",
+    "back": "Retour au tableau de bord"
+  },
+  "admin": {
+    "title": "Administration",
+    "nav": {
+      "users": "Utilisateurs",
+      "signupTokens": "Jetons d'invitation"
+    },
+    "users": {
+      "createTitle": "Créer un utilisateur",
+      "listTitle": "Utilisateurs",
+      "name": "Nom",
+      "email": "Adresse e-mail",
+      "role": "Rôle",
+      "roleUser": "Utilisateur",
+      "roleAdmin": "Administrateur",
+      "create": "Créer",
+      "creating": "Création…",
+      "created": "Utilisateur créé. Un lien de définition du mot de passe lui a été envoyé.",
+      "empty": "Aucun utilisateur.",
+      "error": {
+        "UNAUTHORIZED": "Vous n'avez pas la permission de créer des utilisateurs.",
+        "INVALID": "Vérifiez les champs saisis.",
+        "FAILED": "Échec de la création (l'e-mail existe peut-être déjà)."
+      }
+    },
+    "signupTokens": {
+      "createTitle": "Créer un jeton",
+      "listTitle": "Jetons",
+      "description": "Description",
+      "descriptionPlaceholder": "ex. équipe finance",
+      "maxUses": "Utilisations max",
+      "create": "Créer",
+      "creating": "Création…",
+      "revoke": "Révoquer",
+      "empty": "Aucun jeton.",
+      "uses": "{used}/{max} utilisations",
+      "statusActive": "Actif",
+      "statusRevoked": "Révoqué",
+      "statusExpired": "Expiré",
+      "statusUsedUp": "Épuisé",
+      "error": {
+        "UNAUTHORIZED": "Vous n'avez pas la permission de gérer les jetons.",
+        "INVALID": "Valeur invalide."
       }
     }
   },

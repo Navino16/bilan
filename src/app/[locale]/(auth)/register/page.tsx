@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getCurrentUser } from "@/server/auth/permissions";
+import { appSettings } from "@/server/services/settings/app-settings";
 import { RegisterForm } from "@/components/auth/register-form";
 
 // Reads the session (DB) to bounce already-authenticated users, so it must be dynamic.
@@ -14,6 +15,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ local
   // Already authenticated → no reason to show the register page.
   if (await getCurrentUser()) redirect(`/${locale}/dashboard`);
   const t = await getTranslations("auth.register");
+  const mode = (await appSettings.get<string>("registration_mode")) ?? "INVITE_ONLY";
 
   return (
     <main className="space-y-6">
@@ -22,7 +24,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ local
         <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
       </header>
       <Suspense>
-        <RegisterForm locale={locale} />
+        <RegisterForm locale={locale} mode={mode} />
       </Suspense>
       <p className="text-muted-foreground text-center text-sm">
         {t("haveAccount")}{" "}

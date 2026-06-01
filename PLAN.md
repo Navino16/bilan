@@ -41,7 +41,7 @@ Next.js 16.2 · React 19.2 · TypeScript 6 · Tailwind v4 · shadcn/ui (themed B
 - [x] **1.2 — Dynamic OIDC providers from DB.** `AuthProvider` model, cached provider builder, `invalidateAuthCache()`. _AC: enabling an OIDC provider row makes its login button appear without restart (test via cache invalidation)._
 - [x] **1.3 — Setup wizard.** `/setup` gated on `User.count()===0`: create first user → `SUPER_ADMIN`, seed default categories per locale, create `UserPreference`, optional SMTP/OIDC, choose registration mode. _AC: e2e covers first-run; `/setup` 404s once a user exists._
 - [x] **1.4 — Auth UI (login/register/reset).** Bilan-styled pages, server actions, error states, lockout after 5 fails. _AC: e2e login success + rate-limit lockout._
-- [ ] **1.5 — Registration modes + admin user creation.** `OPEN`/`INVITE_ONLY`/`DISABLED` enforcement, `AdminSignupToken`, `/admin/users` create-by-admin with setup-account magic link. _AC: each mode behaves per spec §5.3 (integration + e2e)._
+- [x] **1.5 — Registration modes + admin user creation.** `OPEN`/`INVITE_ONLY`/`DISABLED` enforcement, `AdminSignupToken`, `/admin/users` create-by-admin with setup-account magic link. _AC: each mode behaves per spec §5.3 (integration + e2e)._
 - [ ] **1.6 — RBAC enforcement + app shell.** Permission checks middleware, protected `(authenticated)` layout, sidebar (desktop) + bottom nav/drawer (mobile) per Bilan `chrome.jsx`, theme toggle. _AC: non-admin blocked from `/admin`; nav renders both breakpoints (e2e mobile + desktop)._
 
 ---

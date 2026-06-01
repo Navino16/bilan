@@ -5,6 +5,7 @@ import { env } from "@/env";
 import { getAuth } from "@/server/auth";
 import { loginLimiter, registerLimiter, resetLimiter } from "@/server/auth/rate-limit";
 import { appSettings } from "@/server/services/settings/app-settings";
+import { consumeSignupToken } from "@/server/services/signup-tokens";
 import { logEvent } from "@/server/services/audit";
 import {
   loginSchema,
@@ -63,10 +64,20 @@ export async function registerAction(
   if (!bucket.allowed)
     return { ok: false, error: "RATE_LIMITED", retryAfter: bucket.retryAfterSec };
 
-  // Default-closed: only OPEN registration is allowed here. INVITE_ONLY token
-  // validation + admin-token flow land in scope 1.5.
+  // Enforce the configured registration mode — default-deny: anything that is
+  // not explicitly OPEN or INVITE_ONLY (including an unexpected/corrupt value) is
+  // treated as DISABLED.
   const mode = (await appSettings.get<string>("registration_mode")) ?? "INVITE_ONLY";
-  if (mode !== "OPEN") return { ok: false, error: "REGISTRATION_CLOSED" };
+  if (mode === "OPEN") {
+    // no token required
+  } else if (mode === "INVITE_ONLY") {
+    const token = parsed.data.adminToken?.trim();
+    if (!token) return { ok: false, error: "TOKEN_REQUIRED" };
+    const consumed = await consumeSignupToken(token);
+    if (!consumed.ok) return { ok: false, error: "BAD_TOKEN" };
+  } else {
+    return { ok: false, error: "DISABLED" };
+  }
 
   try {
     const auth = await getAuth();
