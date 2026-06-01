@@ -32,12 +32,28 @@ export type ResolvedOidc = {
   clientSecret: string;
   issuer: string;
   scopes: string[];
+  pkce?: boolean;
+  authorizationUrl?: string;
+  tokenUrl?: string;
+  userInfoUrl?: string;
+  mapName?: string;
+  mapEmail?: string;
 };
 
-/** Decrypt clientSecretEnc into a structure ready to feed Better Auth. */
+type AdvancedConfig = {
+  pkce?: boolean;
+  authorizationUrl?: string;
+  tokenUrl?: string;
+  userInfoUrl?: string;
+  mapName?: string;
+  mapEmail?: string;
+};
+
+/** Decrypt clientSecretEnc and merge the advanced `config` into a structure ready to feed Better Auth. */
 export function resolveOidcProvider(row: AuthProvider): ResolvedOidc | null {
   if (row.type !== "oidc") return null;
   if (!row.issuer || !row.clientId || !row.clientSecretEnc) return null;
+  const cfg = (row.config ?? {}) as AdvancedConfig;
   return {
     providerId: row.key,
     clientId: row.clientId,
@@ -46,5 +62,11 @@ export function resolveOidcProvider(row: AuthProvider): ResolvedOidc | null {
     scopes: row.scopes
       ? row.scopes.split(",").map((s) => s.trim())
       : ["openid", "email", "profile"],
+    pkce: cfg.pkce,
+    authorizationUrl: cfg.authorizationUrl,
+    tokenUrl: cfg.tokenUrl,
+    userInfoUrl: cfg.userInfoUrl,
+    mapName: cfg.mapName,
+    mapEmail: cfg.mapEmail,
   };
 }

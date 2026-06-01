@@ -15,5 +15,80 @@
     "demoButtonSecondary": "Secondaire",
     "demoBadgeIncome": "Revenu",
     "demoBadgeExpense": "Dépense"
+  },
+  "setup": {
+    "title": "Bienvenue dans Bilan",
+    "subtitle": "Configurons votre instance. Cela ne prend qu'une minute.",
+    "steps": {
+      "account": "Compte administrateur",
+      "smtp": "E-mail (SMTP)",
+      "oidc": "Connexion externe",
+      "registration": "Inscriptions"
+    },
+    "account": {
+      "name": "Nom",
+      "email": "Adresse e-mail",
+      "password": "Mot de passe",
+      "passwordHint": "12 caractères minimum.",
+      "error": "Vérifiez les champs : nom requis, e-mail valide, mot de passe d'au moins 12 caractères.",
+      "submit": "Continuer"
+    },
+    "smtp": {
+      "description": "Optionnel — pour l'envoi d'e-mails (réinitialisation de mot de passe, invitations). Laissez vide pour configurer plus tard dans l'administration.",
+      "host": "Serveur",
+      "port": "Port",
+      "username": "Identifiant",
+      "password": "Mot de passe",
+      "fromAddress": "Adresse d'expéditeur",
+      "fromName": "Nom d'expéditeur",
+      "secure": "Connexion sécurisée (TLS)",
+      "error": "Champs SMTP incomplets : serveur, port, identifiant, mot de passe et adresse d'expéditeur valide sont requis.",
+      "save": "Enregistrer et continuer",
+      "skip": "Passer"
+    },
+    "oidc": {
+      "description": "Optionnel — connexion via un fournisseur externe (Google, OIDC). Laissez vide pour en ajouter plus tard dans l'administration.",
+      "redirectUri": "URL de redirection",
+      "redirectUriHint": "À enregistrer comme URI de redirection autorisée chez votre fournisseur d'identité.",
+      "displayName": "Nom affiché",
+      "issuer": "Issuer (URL)",
+      "clientId": "Client ID",
+      "clientSecret": "Client secret",
+      "scopes": "Scopes",
+      "test": "Tester la connexion",
+      "testing": "Test en cours…",
+      "testOk": "Discovery OIDC valide ✓",
+      "testFailed": "Échec du test",
+      "advanced": "Options avancées",
+      "pkce": "Activer PKCE",
+      "endpointsHint": "Renseignez ces endpoints uniquement si la découverte automatique (.well-known) de votre fournisseur ne fonctionne pas.",
+      "authorizationUrl": "URL d'autorisation",
+      "tokenUrl": "URL de token",
+      "userInfoUrl": "URL userinfo",
+      "mapName": "Claim pour le nom",
+      "mapEmail": "Claim pour l'e-mail",
+      "error": "Champs OIDC incomplets : une URL d'issuer valide, le client ID et le client secret sont requis.",
+      "save": "Enregistrer et continuer",
+      "skip": "Passer"
+    },
+    "registration": {
+      "submit": "Terminer",
+      "submitting": "Enregistrement…",
+      "error": "La configuration a échoué. Vérifiez vos informations et réessayez.",
+      "modes": {
+        "INVITE_ONLY": {
+          "label": "Sur invitation",
+          "description": "Les nouveaux comptes nécessitent un jeton d'invitation. Recommandé."
+        },
+        "OPEN": {
+          "label": "Ouvertes",
+          "description": "N'importe qui peut créer un compte."
+        },
+        "DISABLED": {
+          "label": "Désactivées",
+          "description": "Seul un administrateur peut créer des comptes."
+        }
+      }
+    }
   }
 }

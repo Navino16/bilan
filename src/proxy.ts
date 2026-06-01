@@ -1,6 +1,7 @@
 import createIntlMiddleware from "next-intl/middleware";
 import type { NextRequest } from "next/server";
 import { defaultLocale, locales } from "@/i18n/config";
+import { isSetupNeededCached } from "@/server/services/setup-status";
 
 const intlMiddleware = createIntlMiddleware({
   locales: [...locales],
@@ -31,7 +32,23 @@ const SECURITY_HEADERS: Record<string, string> = {
   ].join("; "),
 };
 
-export default function middleware(req: NextRequest) {
+// Spec §3.5 / §5.1 — until the first user exists, /setup is the only reachable
+// page; once setup is done, /setup permanently 404s.
+const setupPath = /^\/(fr|en)\/setup(\/|$)/;
+
+export default async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  if (await isSetupNeededCached()) {
+    if (!setupPath.test(pathname)) {
+      const url = req.nextUrl.clone();
+      url.pathname = `/${defaultLocale}/setup`;
+      return Response.redirect(url, 307);
+    }
+  } else if (setupPath.test(pathname)) {
+    return new Response("Not found", { status: 404 });
+  }
+
   const response = intlMiddleware(req);
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
     response.headers.set(name, value);

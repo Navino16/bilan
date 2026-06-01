@@ -15,5 +15,80 @@
     "demoButtonSecondary": "Secondary",
     "demoBadgeIncome": "Income",
     "demoBadgeExpense": "Expense"
+  },
+  "setup": {
+    "title": "Welcome to Bilan",
+    "subtitle": "Let's set up your instance. It only takes a minute.",
+    "steps": {
+      "account": "Admin account",
+      "smtp": "Email (SMTP)",
+      "oidc": "External login",
+      "registration": "Registrations"
+    },
+    "account": {
+      "name": "Name",
+      "email": "Email address",
+      "password": "Password",
+      "passwordHint": "At least 12 characters.",
+      "error": "Check the fields: name required, valid email, password of at least 12 characters.",
+      "submit": "Continue"
+    },
+    "smtp": {
+      "description": "Optional — for sending emails (password resets, invitations). Leave blank to configure later in admin settings.",
+      "host": "Host",
+      "port": "Port",
+      "username": "Username",
+      "password": "Password",
+      "fromAddress": "From address",
+      "fromName": "From name",
+      "secure": "Secure connection (TLS)",
+      "error": "Incomplete SMTP fields: host, port, username, password and a valid from address are required.",
+      "save": "Save and continue",
+      "skip": "Skip"
+    },
+    "oidc": {
+      "description": "Optional — log in via an external provider (Google, OIDC). Leave blank to add one later in admin settings.",
+      "redirectUri": "Redirect URL",
+      "redirectUriHint": "Register this as an allowed redirect URI in your identity provider.",
+      "displayName": "Display name",
+      "issuer": "Issuer (URL)",
+      "clientId": "Client ID",
+      "clientSecret": "Client secret",
+      "scopes": "Scopes",
+      "test": "Test connection",
+      "testing": "Testing…",
+      "testOk": "OIDC discovery valid ✓",
+      "testFailed": "Test failed",
+      "advanced": "Advanced options",
+      "pkce": "Enable PKCE",
+      "endpointsHint": "Only set these endpoints if your provider's automatic (.well-known) discovery doesn't work.",
+      "authorizationUrl": "Authorization URL",
+      "tokenUrl": "Token URL",
+      "userInfoUrl": "Userinfo URL",
+      "mapName": "Name claim",
+      "mapEmail": "Email claim",
+      "error": "Incomplete OIDC fields: a valid issuer URL, client ID and client secret are required.",
+      "save": "Save and continue",
+      "skip": "Skip"
+    },
+    "registration": {
+      "submit": "Finish",
+      "submitting": "Saving…",
+      "error": "Setup failed. Check your details and try again.",
+      "modes": {
+        "INVITE_ONLY": {
+          "label": "Invite only",
+          "description": "New accounts require an invitation token. Recommended."
+        },
+        "OPEN": {
+          "label": "Open",
+          "description": "Anyone can create an account."
+        },
+        "DISABLED": {
+          "label": "Disabled",
+          "description": "Only an admin can create accounts."
+        }
+      }
+    }
   }
 }

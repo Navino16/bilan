@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 
 const PERMISSIONS = [
   { key: "admin.settings.write", scope: "admin", description: "Edit app settings" },
@@ -56,8 +57,12 @@ export async function seedAppSettings(db: PrismaClient): Promise<void> {
   }
 }
 
-if (process.argv[1]?.includes("seed")) {
-  const db = new PrismaClient();
+if (process.argv[1]?.endsWith("seed.ts")) {
+  // The Prisma client is driver-adapter-based (MariaDB), so the CLI entrypoint
+  // must construct it with the adapter too — `new PrismaClient()` alone throws.
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL is required to seed");
+  const db = new PrismaClient({ adapter: new PrismaMariaDb(url) });
   Promise.all([seedRolesAndPermissions(db), seedAppSettings(db)])
     .then(() => db.$disconnect())
     .catch((e) => {

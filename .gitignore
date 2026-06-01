@@ -55,3 +55,6 @@ yarn-error.log*
 .superpowers/
 # MariaDB keyring (generated locally by scripts/init.sh)
 docker/mariadb/keyring/
+
+# Playwright MCP debug artifacts
+.playwright-mcp/

@@ -1,6 +1,7 @@
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { genericOAuth } from "better-auth/plugins";
+import { nextCookies } from "better-auth/next-js";
 import { db } from "@/server/db";
 import { env } from "@/env";
 import { dataKey } from "@/server/crypto/keys";
@@ -12,6 +13,32 @@ import { authPlugins } from "./plugins";
 type Handler = ReturnType<typeof betterAuth>;
 let cached: { handler: Handler; builtAt: number } | null = null;
 const CACHE_TTL_MS = 60_000;
+
+// Map a resolved OIDC row to a generic-oauth config entry. discoveryUrl is the
+// default; explicit endpoints (when set) override it. A claim mapping builds a
+// mapProfileToUser so the admin can pick which userinfo claims feed name/email.
+function toOAuthConfig(o: ResolvedOidc) {
+  const mapProfileToUser =
+    o.mapName || o.mapEmail
+      ? (profile: Record<string, unknown>) => ({
+          ...(o.mapName ? { name: profile[o.mapName] as string } : {}),
+          ...(o.mapEmail ? { email: profile[o.mapEmail] as string } : {}),
+        })
+      : undefined;
+
+  return {
+    providerId: o.providerId,
+    discoveryUrl: `${o.issuer.replace(/\/$/, "")}/.well-known/openid-configuration`,
+    clientId: o.clientId,
+    clientSecret: o.clientSecret,
+    scopes: o.scopes,
+    ...(o.pkce ? { pkce: true } : {}),
+    ...(o.authorizationUrl ? { authorizationUrl: o.authorizationUrl } : {}),
+    ...(o.tokenUrl ? { tokenUrl: o.tokenUrl } : {}),
+    ...(o.userInfoUrl ? { userInfoUrl: o.userInfoUrl } : {}),
+    ...(mapProfileToUser ? { mapProfileToUser } : {}),
+  };
+}
 
 async function buildOptions(): Promise<BetterAuthOptions> {
   const credentialsEnabled = (await appSettings.get<boolean>("credentials_enabled")) ?? true;
@@ -35,19 +62,7 @@ async function buildOptions(): Promise<BetterAuthOptions> {
   }
 
   const oidcPlugin =
-    oidcProviders.length > 0
-      ? [
-          genericOAuth({
-            config: oidcProviders.map((o) => ({
-              providerId: o.providerId,
-              discoveryUrl: `${o.issuer.replace(/\/$/, "")}/.well-known/openid-configuration`,
-              clientId: o.clientId,
-              clientSecret: o.clientSecret,
-              scopes: o.scopes,
-            })),
-          }),
-        ]
-      : [];
+    oidcProviders.length > 0 ? [genericOAuth({ config: oidcProviders.map(toOAuthConfig) })] : [];
 
   return {
     appName: "Bilan",
@@ -76,7 +91,10 @@ async function buildOptions(): Promise<BetterAuthOptions> {
         sessionToken: { attributes: { sameSite: "strict", httpOnly: true } },
       },
     },
-    plugins: [...authPlugins, ...oidcPlugin],
+    // nextCookies() must be last: it sets Better Auth's Set-Cookie headers on
+    // server-action / route-handler responses (so autoSignIn during setup
+    // actually establishes the session in the browser).
+    plugins: [...authPlugins, ...oidcPlugin, nextCookies()],
   };
 }
 
