@@ -1,6 +1,7 @@
 "use server";
 
 import { lookup } from "node:dns/promises";
+import { request as httpsRequest } from "node:https";
 import { z } from "zod";
 import { completeSetup } from "@/server/services/bootstrap";
 import { isSetupNeeded } from "@/server/services/setup-status";
@@ -50,6 +51,55 @@ export type OidcTestResult =
   | { ok: true; authorizationEndpoint: string; tokenEndpoint: string; userinfoEndpoint?: string }
   | { ok: false; error: string };
 
+// GET an https URL with the TCP connection PINNED to a pre-verified IP (no
+// second DNS resolution → defeats DNS-rebinding TOCTOU), while keeping SNI /
+// cert validation against the real hostname. Redirects are not followed and the
+// body is size-capped.
+function getPinned(
+  url: URL,
+  host: string,
+  ip: string,
+  family: number,
+): Promise<{ status: number; body: string }> {
+  return new Promise((resolve, reject) => {
+    const req = httpsRequest(
+      url,
+      {
+        method: "GET",
+        servername: host,
+        // Node may call lookup with { all: true } (autoSelectFamily) expecting an
+        // array, or in single mode expecting (address, family). Support both.
+        lookup: (_hostname, opts, cb) =>
+          (opts as { all?: boolean })?.all
+            ? (cb as unknown as (e: null, a: { address: string; family: number }[]) => void)(null, [
+                { address: ip, family },
+              ])
+            : cb(null, ip, family),
+        timeout: 5000,
+        headers: { Host: host, Accept: "application/json" },
+      },
+      (res) => {
+        const status = res.statusCode ?? 0;
+        if (status < 200 || status >= 300) {
+          res.resume();
+          resolve({ status, body: "" });
+          return;
+        }
+        let body = "";
+        res.setEncoding("utf8");
+        res.on("data", (c: string) => {
+          body += c;
+          if (body.length > 1_000_000) req.destroy(new Error("body too large"));
+        });
+        res.on("end", () => resolve({ status, body }));
+      },
+    );
+    req.on("timeout", () => req.destroy(new Error("timeout")));
+    req.on("error", reject);
+    req.end();
+  });
+}
+
 // Probes an OIDC issuer's discovery document so the admin can validate the SSO
 // config before saving. Read-only; stores nothing. Authorized for the first-run
 // installer (setup not yet done) or an authenticated admin afterwards.
@@ -73,26 +123,24 @@ export async function testOidcConnectionAction(issuerInput: string): Promise<Oid
   if (url.protocol !== "https:") return { ok: false, error: "HTTPS_REQUIRED" };
   if (isUnsafeHost(url.hostname)) return { ok: false, error: "UNSAFE_HOST" };
 
-  // Resolve the hostname and reject if ANY address is internal — defeats a
-  // public hostname that points at an internal/metadata IP.
+  // Resolve the hostname and reject if ANY address is internal, then pin the
+  // request to the verified address so undici/Node can't re-resolve to a
+  // different (internal) IP between the check and the connection.
   const host = url.hostname.replace(/^\[|\]$/g, "");
+  let pinned: { address: string; family: number };
   try {
     const addrs = await lookup(host, { all: true });
+    if (addrs.length === 0) return { ok: false, error: "UNREACHABLE" };
     if (addrs.some((a) => isUnsafeIp(a.address))) return { ok: false, error: "UNSAFE_HOST" };
+    pinned = { address: addrs[0].address, family: addrs[0].family };
   } catch {
     return { ok: false, error: "UNREACHABLE" };
   }
 
   try {
-    // redirect: "manual" — a discovery document is served directly; refusing to
-    // follow redirects stops a public issuer from bouncing us to an internal host.
-    const res = await fetch(url, {
-      method: "GET",
-      redirect: "manual",
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) return { ok: false, error: "UNREACHABLE" };
-    const doc = (await res.json()) as Record<string, unknown>;
+    const res = await getPinned(url, host, pinned.address, pinned.family);
+    if (res.status < 200 || res.status >= 300) return { ok: false, error: "UNREACHABLE" };
+    const doc = JSON.parse(res.body) as Record<string, unknown>;
     const authorizationEndpoint = doc.authorization_endpoint;
     const tokenEndpoint = doc.token_endpoint;
     if (typeof authorizationEndpoint !== "string" || typeof tokenEndpoint !== "string") {
