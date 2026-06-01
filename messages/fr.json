@@ -72,6 +72,36 @@
     "message": "Vous n'avez pas accès à cette page.",
     "back": "Retour au tableau de bord"
   },
+  "shell": {
+    "tagline": "Finances · 2026",
+    "themeToggle": "Thème sombre",
+    "openMenu": "Ouvrir le menu",
+    "groups": {
+      "workspace": "Espace",
+      "account": "Compte"
+    },
+    "nav": {
+      "dashboard": "Tableau de bord",
+      "transactions": "Transactions",
+      "budgets": "Budgets",
+      "settings": "Préférences",
+      "admin": "Administration"
+    },
+    "userMenu": {
+      "settings": "Préférences",
+      "logout": "Se déconnecter"
+    }
+  },
+  "dashboard": {
+    "greeting": "Bonjour, {name}",
+    "subtitle": "Voici un aperçu de vos finances.",
+    "comingSoon": "Bientôt disponible",
+    "cards": {
+      "balance": { "label": "Solde courant" },
+      "expenses": { "label": "Dépenses du mois" },
+      "income": { "label": "Revenus du mois" }
+    }
+  },
   "admin": {
     "title": "Administration",
     "nav": {
