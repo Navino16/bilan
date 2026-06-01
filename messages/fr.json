@@ -34,12 +34,28 @@
       "submit": "Continuer"
     },
     "smtp": {
-      "description": "L'envoi d'e-mails (réinitialisation de mot de passe, invitations) se configure plus tard dans les réglages d'administration.",
-      "skip": "Continuer"
+      "description": "Optionnel — pour l'envoi d'e-mails (réinitialisation de mot de passe, invitations). Laissez vide pour configurer plus tard dans l'administration.",
+      "host": "Serveur",
+      "port": "Port",
+      "username": "Identifiant",
+      "password": "Mot de passe",
+      "fromAddress": "Adresse d'expéditeur",
+      "fromName": "Nom d'expéditeur",
+      "secure": "Connexion sécurisée (TLS)",
+      "error": "Champs SMTP incomplets : serveur, port, identifiant, mot de passe et adresse d'expéditeur valide sont requis.",
+      "save": "Enregistrer et continuer",
+      "skip": "Passer"
     },
     "oidc": {
-      "description": "Les fournisseurs de connexion externe (Google, OIDC) s'ajoutent plus tard dans les réglages d'administration.",
-      "skip": "Continuer"
+      "description": "Optionnel — connexion via un fournisseur externe (Google, OIDC). Laissez vide pour en ajouter plus tard dans l'administration.",
+      "displayName": "Nom affiché",
+      "issuer": "Issuer (URL)",
+      "clientId": "Client ID",
+      "clientSecret": "Client secret",
+      "scopes": "Scopes",
+      "error": "Champs OIDC incomplets : une URL d'issuer valide, le client ID et le client secret sont requis.",
+      "save": "Enregistrer et continuer",
+      "skip": "Passer"
     },
     "registration": {
       "submit": "Terminer",

@@ -31,11 +31,24 @@ export function StepRegistrationMode({
 
   return (
     <form action={action} className="space-y-6">
-      {/* Account data collected in earlier steps; the user is created here. */}
+      {/* All data collected in earlier steps; user + optional SMTP/OIDC are
+          created atomically here. */}
       <input type="hidden" name="name" value={data.name} />
       <input type="hidden" name="email" value={data.email} />
       <input type="hidden" name="password" value={data.password} />
       <input type="hidden" name="locale" value={locale} />
+      <input type="hidden" name="smtp_host" value={data.smtp.host} />
+      <input type="hidden" name="smtp_port" value={data.smtp.port} />
+      <input type="hidden" name="smtp_secure" value={String(data.smtp.secure)} />
+      <input type="hidden" name="smtp_username" value={data.smtp.username} />
+      <input type="hidden" name="smtp_password" value={data.smtp.password} />
+      <input type="hidden" name="smtp_fromAddress" value={data.smtp.fromAddress} />
+      <input type="hidden" name="smtp_fromName" value={data.smtp.fromName} />
+      <input type="hidden" name="oidc_displayName" value={data.oidc.displayName} />
+      <input type="hidden" name="oidc_issuer" value={data.oidc.issuer} />
+      <input type="hidden" name="oidc_clientId" value={data.oidc.clientId} />
+      <input type="hidden" name="oidc_clientSecret" value={data.oidc.clientSecret} />
+      <input type="hidden" name="oidc_scopes" value={data.oidc.scopes} />
       <RadioGroup
         name="mode"
         value={data.mode}

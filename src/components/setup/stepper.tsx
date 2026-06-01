@@ -10,11 +10,49 @@ import { StepRegistrationMode } from "./step-registration-mode";
 const ORDER = ["account", "smtp", "oidc", "registration"] as const;
 type Step = (typeof ORDER)[number];
 
+export type SmtpData = {
+  host: string;
+  port: string;
+  secure: boolean;
+  username: string;
+  password: string;
+  fromAddress: string;
+  fromName: string;
+};
+
+export type OidcData = {
+  displayName: string;
+  issuer: string;
+  clientId: string;
+  clientSecret: string;
+  scopes: string;
+};
+
 export type SetupData = {
   name: string;
   email: string;
   password: string;
   mode: "OPEN" | "INVITE_ONLY" | "DISABLED";
+  smtp: SmtpData;
+  oidc: OidcData;
+};
+
+const EMPTY_SMTP: SmtpData = {
+  host: "",
+  port: "587",
+  secure: true,
+  username: "",
+  password: "",
+  fromAddress: "",
+  fromName: "",
+};
+
+const EMPTY_OIDC: OidcData = {
+  displayName: "",
+  issuer: "",
+  clientId: "",
+  clientSecret: "",
+  scopes: "openid,email,profile",
 };
 
 export function Stepper({ locale }: { locale: string }) {
@@ -25,6 +63,8 @@ export function Stepper({ locale }: { locale: string }) {
     email: "",
     password: "",
     mode: "INVITE_ONLY",
+    smtp: EMPTY_SMTP,
+    oidc: EMPTY_OIDC,
   });
   const idx = ORDER.indexOf(current);
 
@@ -49,8 +89,20 @@ export function Stepper({ locale }: { locale: string }) {
         ))}
       </ol>
       {current === "account" && <StepAccount data={data} onChange={patch} onNext={next} />}
-      {current === "smtp" && <StepSmtp onSkip={next} />}
-      {current === "oidc" && <StepOidc onSkip={next} />}
+      {current === "smtp" && (
+        <StepSmtp
+          data={data.smtp}
+          onChange={(p) => patch({ smtp: { ...data.smtp, ...p } })}
+          onNext={next}
+        />
+      )}
+      {current === "oidc" && (
+        <StepOidc
+          data={data.oidc}
+          onChange={(p) => patch({ oidc: { ...data.oidc, ...p } })}
+          onNext={next}
+        />
+      )}
       {current === "registration" && (
         <StepRegistrationMode data={data} onChange={patch} locale={locale} />
       )}

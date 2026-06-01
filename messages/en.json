@@ -34,12 +34,28 @@
       "submit": "Continue"
     },
     "smtp": {
-      "description": "Email delivery (password resets, invitations) is configured later in the admin settings.",
-      "skip": "Continue"
+      "description": "Optional — for sending emails (password resets, invitations). Leave blank to configure later in admin settings.",
+      "host": "Host",
+      "port": "Port",
+      "username": "Username",
+      "password": "Password",
+      "fromAddress": "From address",
+      "fromName": "From name",
+      "secure": "Secure connection (TLS)",
+      "error": "Incomplete SMTP fields: host, port, username, password and a valid from address are required.",
+      "save": "Save and continue",
+      "skip": "Skip"
     },
     "oidc": {
-      "description": "External login providers (Google, OIDC) are added later in the admin settings.",
-      "skip": "Continue"
+      "description": "Optional — log in via an external provider (Google, OIDC). Leave blank to add one later in admin settings.",
+      "displayName": "Display name",
+      "issuer": "Issuer (URL)",
+      "clientId": "Client ID",
+      "clientSecret": "Client secret",
+      "scopes": "Scopes",
+      "error": "Incomplete OIDC fields: a valid issuer URL, client ID and client secret are required.",
+      "save": "Save and continue",
+      "skip": "Skip"
     },
     "registration": {
       "submit": "Finish",
