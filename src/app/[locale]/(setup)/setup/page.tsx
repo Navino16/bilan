@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { db } from "@/server/db";
+import { env } from "@/env";
 import { Stepper } from "@/components/setup/stepper";
 
 // Depends on runtime DB state (User.count), so it must never be statically
@@ -17,13 +18,14 @@ export default async function SetupPage({ params }: { params: Promise<{ locale: 
   if (userCount > 0) redirect(`/${locale}`);
 
   const t = await getTranslations("setup");
+  const oidcCallbackUrl = `${env.APP_URL.replace(/\/$/, "")}/api/auth/oauth2/callback/oidc`;
   return (
     <main className="space-y-6">
       <header className="space-y-1">
         <h1 className="font-display text-4xl">{t("title")}</h1>
         <p className="text-muted-foreground">{t("subtitle")}</p>
       </header>
-      <Stepper locale={locale} />
+      <Stepper locale={locale} oidcCallbackUrl={oidcCallbackUrl} />
     </main>
   );
 }

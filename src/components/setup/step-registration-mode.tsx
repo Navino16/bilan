@@ -49,6 +49,12 @@ export function StepRegistrationMode({
       <input type="hidden" name="oidc_clientId" value={data.oidc.clientId} />
       <input type="hidden" name="oidc_clientSecret" value={data.oidc.clientSecret} />
       <input type="hidden" name="oidc_scopes" value={data.oidc.scopes} />
+      <input type="hidden" name="oidc_pkce" value={String(data.oidc.pkce)} />
+      <input type="hidden" name="oidc_authorizationUrl" value={data.oidc.authorizationUrl} />
+      <input type="hidden" name="oidc_tokenUrl" value={data.oidc.tokenUrl} />
+      <input type="hidden" name="oidc_userInfoUrl" value={data.oidc.userInfoUrl} />
+      <input type="hidden" name="oidc_mapName" value={data.oidc.mapName} />
+      <input type="hidden" name="oidc_mapEmail" value={data.oidc.mapEmail} />
       <RadioGroup
         name="mode"
         value={data.mode}

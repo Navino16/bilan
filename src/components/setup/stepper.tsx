@@ -26,6 +26,12 @@ export type OidcData = {
   clientId: string;
   clientSecret: string;
   scopes: string;
+  pkce: boolean;
+  authorizationUrl: string;
+  tokenUrl: string;
+  userInfoUrl: string;
+  mapName: string;
+  mapEmail: string;
 };
 
 export type SetupData = {
@@ -53,9 +59,15 @@ const EMPTY_OIDC: OidcData = {
   clientId: "",
   clientSecret: "",
   scopes: "openid,email,profile",
+  pkce: true,
+  authorizationUrl: "",
+  tokenUrl: "",
+  userInfoUrl: "",
+  mapName: "",
+  mapEmail: "",
 };
 
-export function Stepper({ locale }: { locale: string }) {
+export function Stepper({ locale, oidcCallbackUrl }: { locale: string; oidcCallbackUrl: string }) {
   const t = useTranslations("setup.steps");
   const [current, setCurrent] = useState<Step>("account");
   const [data, setData] = useState<SetupData>({
@@ -101,6 +113,7 @@ export function Stepper({ locale }: { locale: string }) {
           data={data.oidc}
           onChange={(p) => patch({ oidc: { ...data.oidc, ...p } })}
           onNext={next}
+          callbackUrl={oidcCallbackUrl}
         />
       )}
       {current === "registration" && (
