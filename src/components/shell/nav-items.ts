@@ -5,6 +5,7 @@ import {
   Settings,
   ShieldCheck,
   Target,
+  Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -24,6 +25,7 @@ export const WORKSPACE_NAV: NavItem[] = [
   { key: "transactions", href: "/transactions", icon: ArrowRightLeft },
   { key: "budgets", href: "/budgets", icon: Target },
   { key: "accounts", href: "/accounts", icon: Landmark },
+  { key: "groups", href: "/groups", icon: Users },
 ];
 
 /** Account-level destinations — the "Compte" group in the design. */
