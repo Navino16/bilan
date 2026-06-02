@@ -4,6 +4,7 @@ import { getAuth } from "@/server/auth";
 import { grantRole } from "@/server/services/users/roles";
 import { logEvent } from "@/server/services/audit";
 import { isSetupNeeded } from "@/server/services/setup-status";
+import { seedDefaultCategories } from "@/server/services/categories/seed-defaults";
 
 export { isSetupNeeded };
 
@@ -22,6 +23,7 @@ export async function completeSetup(
     create: { userId: res.user.id, locale: input.locale ?? "fr" },
     update: { locale: input.locale ?? "fr" },
   });
+  await seedDefaultCategories(res.user.id, input.locale ?? "fr", db);
   await logEvent({ userId: res.user.id, action: "auth.signup", metadata: { via: "setup" } });
   return { userId: res.user.id };
 }
