@@ -85,7 +85,7 @@ playwright.config.ts                                  # +setup project + storage
 - Modify: `prisma/schema.prisma` (+`BankAccount`, +`User.accounts`), `scripts/seed-e2e.ts`, `playwright.config.ts`, `.gitignore`, `src/components/shell/nav-items.ts`, `messages/fr.json`, `messages/en.json`
 - Create: `src/server/services/accounts/iban.ts`, `src/server/services/accounts/index.ts`, `src/lib/validation/account.ts`, `src/server/transport/actions/accounts.ts`, `src/components/accounts/{account-form,account-list}.tsx`, `src/app/[locale]/(authenticated)/accounts/page.tsx`, `src/components/ui/dialog.tsx` (shadcn), `tests/unit/services/iban.test.ts`, `tests/integration/accounts.test.ts`, `tests/e2e/auth.setup.ts`, `tests/e2e/accounts.spec.ts`
 
-- [ ] **Step 1: Add the `BankAccount` model + migration**
+- [x] **Step 1: Add the `BankAccount` model + migration**
 
 In `prisma/schema.prisma`, add the `accounts` relation to `User` (inside the `User` block, next to `roles`/`preference`):
 ```prisma
@@ -115,13 +115,13 @@ model BankAccount {
 }
 ```
 
-- [ ] **Step 2: Generate the migration and client**
+- [x] **Step 2: Generate the migration and client**
 
 Run: `npm run db:migrate -- --name phase_2_1_accounts`
 Expected: a new folder `prisma/migrations/<ts>_phase_2_1_accounts/` with `CREATE TABLE BankAccount`, and `prisma generate` runs. Then `npx prisma generate`.
 Verify: `npx prisma validate` → "The schema is valid".
 
-- [ ] **Step 3: IBAN helpers — write the failing unit test**
+- [x] **Step 3: IBAN helpers — write the failing unit test**
 
 Create `tests/unit/services/iban.test.ts`:
 ```ts
@@ -154,12 +154,12 @@ describe("maskIban", () => {
 });
 ```
 
-- [ ] **Step 4: Run it to confirm it fails**
+- [x] **Step 4: Run it to confirm it fails**
 
 Run: `npm run test:unit -- iban`
 Expected: FAIL — module `@/server/services/accounts/iban` not found.
 
-- [ ] **Step 5: Implement the IBAN helpers**
+- [x] **Step 5: Implement the IBAN helpers**
 
 Create `src/server/services/accounts/iban.ts`:
 ```ts
@@ -190,12 +190,12 @@ export function maskIban(raw: string): string {
 }
 ```
 
-- [ ] **Step 6: Run it to confirm it passes**
+- [x] **Step 6: Run it to confirm it passes**
 
 Run: `npm run test:unit -- iban`
 Expected: PASS (3 suites).
 
-- [ ] **Step 7: Shared validation schema**
+- [x] **Step 7: Shared validation schema**
 
 Create `src/lib/validation/account.ts`:
 ```ts
@@ -231,7 +231,7 @@ export const accountInputSchema = z.object({
 export type AccountInput = z.infer<typeof accountInputSchema>;
 ```
 
-- [ ] **Step 8: Accounts service — write the failing integration test**
+- [x] **Step 8: Accounts service — write the failing integration test**
 
 Create `tests/integration/accounts.test.ts`:
 ```ts
@@ -320,12 +320,12 @@ describe("accounts service", () => {
 });
 ```
 
-- [ ] **Step 9: Run it to confirm it fails**
+- [x] **Step 9: Run it to confirm it fails**
 
 Run: `npm run test:integration -- accounts`
 Expected: FAIL — `@/server/services/accounts` not found.
 
-- [ ] **Step 10: Implement the accounts service**
+- [x] **Step 10: Implement the accounts service**
 
 Create `src/server/services/accounts/index.ts`:
 ```ts
@@ -441,12 +441,12 @@ export async function listVisibleForUser(userId: string): Promise<VisibleAccount
 }
 ```
 
-- [ ] **Step 11: Run it to confirm it passes**
+- [x] **Step 11: Run it to confirm it passes**
 
 Run: `npm run test:integration -- accounts`
 Expected: PASS (5 tests).
 
-- [ ] **Step 12: Server Actions for accounts**
+- [x] **Step 12: Server Actions for accounts**
 
 Create `src/server/transport/actions/accounts.ts`:
 > **Cache convention (from Phase 1):** actions do **not** call `revalidatePath`; the client form refreshes the server component with `router.refresh()` on `state.ok` (see `create-user-form.tsx`). Keep that pattern here.
@@ -524,12 +524,12 @@ export async function archiveAccountAction(
 }
 ```
 
-- [ ] **Step 13: Add the shadcn `dialog` component**
+- [x] **Step 13: Add the shadcn `dialog` component**
 
 Run: `printf 'N\n' | npx shadcn@latest add dialog` (answer **N** to any "overwrite button.tsx" prompt — keep the existing themed button).
 Verify: `src/components/ui/dialog.tsx` exists. Note it is Base UI–based (`render` prop, not `asChild`), like the Phase 1 `dropdown-menu`/`sheet`.
 
-- [ ] **Step 14: Accounts i18n + nav entry**
+- [x] **Step 14: Accounts i18n + nav entry**
 
 In `src/components/shell/nav-items.ts`, add `Wallet`-style entries. Import `Wallet` is already used for transactions; use `Landmark` for accounts:
 ```ts
@@ -567,7 +567,7 @@ In `messages/fr.json` and `messages/en.json`, add the nav key under `shell.nav` 
 ```
 en mirrors with English strings (`shell.nav.accounts` = "Accounts"; types Checking/Savings/Credit/Other; etc.). Add `"accounts": "Comptes"` / `"Accounts"` under `shell.nav`.
 
-- [ ] **Step 15: Accounts UI — list + create/edit form**
+- [x] **Step 15: Accounts UI — list + create/edit form**
 
 Create `src/components/accounts/account-form.tsx` (client, used for both create and edit; renders a `Dialog` triggered by a button; mirrors `create-user-form.tsx` patterns — `useActionState`, `Alert`, native `<select>` for type, color `<input type="color">`). Create `src/components/accounts/account-list.tsx` (renders the cards + an edit `AccountForm` per row + an archive form-button). Create `src/app/[locale]/(authenticated)/accounts/page.tsx`:
 ```tsx
@@ -597,7 +597,7 @@ export default async function AccountsPage({ params }: { params: Promise<{ local
 ```
 The full `account-form.tsx`/`account-list.tsx` markup follows the Phase 1 form conventions (shadcn `Dialog`, `Input`, `Label`, `Button`, `Alert`; `useActionState(createAccountAction|updateAccountAction, null)`; on `state.ok` close dialog + `router.refresh()`). Each card shows the color dot, name, `t('types.'+type)`, `bankName`, `ibanMasked`, and — when `access !== 'OWNER'` — a `Badge` with `t('access.'+access)` and `t('sharedBy', { name: ownerName })`. Owner-only rows show Edit + Archive; non-OWNER rows show no mutate controls (this becomes meaningful in 2.4).
 
-- [ ] **Step 16: E2E auth fixture — credentialed seed users**
+- [x] **Step 16: E2E auth fixture — credentialed seed users**
 
 Modify `scripts/seed-e2e.ts` so the e2e DB has signed-in-able users. Set registration open and create three credentialed users via the real Better Auth API, then grant ADMIN:
 ```ts
@@ -630,7 +630,7 @@ async function ensureUsers() {
 ```
 Call `ensureUsers()` from `main()`. (Idempotent: skips users that already exist.)
 
-- [ ] **Step 17: Playwright `storageState` setup project**
+- [x] **Step 17: Playwright `storageState` setup project**
 
 Add to `.gitignore`:
 ```
@@ -667,7 +667,7 @@ projects: [
 ```
 (Authenticated specs opt in per-file via `test.use({ storageState: "tests/e2e/.auth/owner.json" })`; unauthenticated specs like `smoke` leave it unset.)
 
-- [ ] **Step 18: E2E — accounts CRUD (now runnable)**
+- [x] **Step 18: E2E — accounts CRUD (now runnable)**
 
 Create `tests/e2e/accounts.spec.ts`:
 ```ts
@@ -693,7 +693,7 @@ test("unauthenticated /accounts redirects to login", async ({ page }) => {
 });
 ```
 
-- [ ] **Step 19: Full check + commit**
+- [x] **Step 19: Full check + commit**
 
 Run: `npm run ci` (lint + typecheck + unit/integration) then `npm run test:e2e -- --project=chromium`.
 Expected: all green. Commit:

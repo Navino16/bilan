@@ -207,6 +207,8 @@ jobs:
 
       - name: Seed e2e database (post-setup state)
         run: npx tsx scripts/seed-e2e.ts
+        env:
+          NODE_ENV: test
 
       - name: Install Playwright browsers
         run: npx playwright install chromium webkit --with-deps
