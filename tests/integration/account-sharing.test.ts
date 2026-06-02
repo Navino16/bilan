@@ -7,6 +7,7 @@ import {
   revokeShare,
   getEffectiveAccess,
   canWriteAccount,
+  listAccountsSharedWithGroup,
   AccountAccessError,
 } from "@/server/services/accounts/sharing";
 
@@ -66,6 +67,12 @@ describe("account sharing & permissions", () => {
     expect(await canWriteAccount(memberId, acc.id)).toBe(true);
     expect(await getEffectiveAccess(strangerId, acc.id)).toBeNull();
     expect((await listVisibleForUser(strangerId)).some((a) => a.id === acc.id)).toBe(false);
+
+    // The group's members see the account in the group's shared-accounts list.
+    const groupShared = await listAccountsSharedWithGroup(grp.id, { id: memberId });
+    expect(groupShared.some((a) => a.id === acc.id && a.permission === "WRITE")).toBe(true);
+    // A non-member can't list the group's shared accounts.
+    await expect(listAccountsSharedWithGroup(grp.id, { id: strangerId })).rejects.toThrow();
   });
 
   it("only the owner can share; revoke removes visibility", async () => {

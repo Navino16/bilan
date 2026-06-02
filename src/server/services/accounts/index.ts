@@ -23,6 +23,7 @@ export type VisibleAccount = {
   balance: number; // displayed balance: opening balance for now, + transactions later
   ibanMasked: string | null;
   access: AccountAccess;
+  sharedCount: number; // groups this account is shared with (owner view only; 0 otherwise)
   ownerName: string | null; // null when the viewer owns it
 };
 
@@ -126,6 +127,7 @@ export async function getAccountIban(id: string, userId: string): Promise<string
 export async function listVisibleForUser(userId: string): Promise<VisibleAccount[]> {
   const owned = await db.bankAccount.findMany({
     where: { ownerId: userId, archived: false },
+    include: { _count: { select: { shares: true } } },
     orderBy: { createdAt: "desc" },
   });
   const shared = await db.bankAccount.findMany({
@@ -152,6 +154,7 @@ export async function listVisibleForUser(userId: string): Promise<VisibleAccount
     balance: Number(a.initialBalance),
     ibanMasked: a.ibanEnc ? maskIban(decrypt(a.ibanEnc, dataKey)) : null,
     access: "OWNER",
+    sharedCount: a._count.shares,
     ownerName: null,
   }));
 
@@ -166,6 +169,7 @@ export async function listVisibleForUser(userId: string): Promise<VisibleAccount
     balance: Number(a.initialBalance),
     ibanMasked: null, // shared viewers never see the IBAN
     access: a.shares.some((s) => s.permission === "WRITE") ? "WRITE" : "READ",
+    sharedCount: 0,
     ownerName: a.owner.name ?? a.owner.email,
   }));
 

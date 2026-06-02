@@ -193,8 +193,12 @@ export function AccountList({
                   <div className="min-w-0 space-y-0.5">
                     <div className="flex items-center gap-2">
                       <span className="truncate font-medium">{a.name}</span>
-                      {a.access !== "OWNER" && (
+                      {a.access !== "OWNER" ? (
                         <Badge variant="secondary">{t(`access.${a.access}`)}</Badge>
+                      ) : a.sharedCount > 0 ? (
+                        <Badge variant="secondary">{t("shared")}</Badge>
+                      ) : (
+                        <Badge variant="outline">{t("private")}</Badge>
                       )}
                     </div>
                     {a.bankName && (

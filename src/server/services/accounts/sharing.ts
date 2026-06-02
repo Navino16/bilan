@@ -1,8 +1,20 @@
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import { AccountAccessError, type AccountAccess } from "@/server/services/accounts";
+import { requireGroupRole } from "@/server/services/groups/roles";
 
 export { AccountAccessError } from "@/server/services/accounts";
+
+export type SharedAccount = {
+  id: string;
+  name: string;
+  type: string;
+  bankName: string | null;
+  color: string | null;
+  balance: number;
+  permission: SharePermission;
+  ownerName: string;
+};
 
 const PERMISSIONS = ["READ", "WRITE"] as const;
 export type SharePermission = (typeof PERMISSIONS)[number];
@@ -66,6 +78,29 @@ export async function revokeShare(
 export async function listSharesForAccount(accountId: string, actor: { id: string }) {
   await ownedOrThrow(accountId, actor.id);
   return db.accountShare.findMany({ where: { accountId }, include: { group: true } });
+}
+
+// Accounts shared with a group, visible to its members (for the group detail page).
+export async function listAccountsSharedWithGroup(
+  groupId: string,
+  actor: { id: string },
+): Promise<SharedAccount[]> {
+  await requireGroupRole(groupId, actor.id, "MEMBER");
+  const shares = await db.accountShare.findMany({
+    where: { groupId, account: { archived: false } },
+    include: { account: { include: { owner: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+  return shares.map((s) => ({
+    id: s.account.id,
+    name: s.account.name,
+    type: s.account.type,
+    bankName: s.account.bankName,
+    color: s.account.color,
+    balance: Number(s.account.initialBalance),
+    permission: s.permission as SharePermission,
+    ownerName: s.account.owner.name ?? s.account.owner.email,
+  }));
 }
 
 // Highest access the user has on the account: OWNER > WRITE > READ > null.
