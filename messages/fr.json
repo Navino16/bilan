@@ -128,6 +128,11 @@
     "showIban": "Afficher l'IBAN",
     "hideIban": "Masquer l'IBAN",
     "sharedBy": "Partagé par {name}",
+    "share": "Partager",
+    "shareTitle": "Partager le compte",
+    "shareSubtitle": "Choisissez les foyers et leur niveau d'accès.",
+    "noGroups": "Vous n'appartenez à aucun foyer.",
+    "permNone": "Aucun",
     "access": { "OWNER": "Propriétaire", "WRITE": "Écriture", "READ": "Lecture" },
     "types": { "CHECKING": "Courant", "SAVINGS": "Épargne", "CREDIT": "Crédit", "OTHER": "Autre" },
     "error": {

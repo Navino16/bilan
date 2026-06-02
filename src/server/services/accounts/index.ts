@@ -121,14 +121,27 @@ export async function getAccountIban(id: string, userId: string): Promise<string
   return formatIban(decrypt(acc.ibanEnc, dataKey));
 }
 
-// Phase 2.1: owned, non-archived accounts only. Extended in 2.4 to merge in
-// accounts shared via the viewer's groups.
+// Owned (non-archived) accounts plus accounts shared via the viewer's groups.
+// Owner access wins; shared viewers never receive the IBAN.
 export async function listVisibleForUser(userId: string): Promise<VisibleAccount[]> {
   const owned = await db.bankAccount.findMany({
     where: { ownerId: userId, archived: false },
     orderBy: { createdAt: "desc" },
   });
-  return owned.map((a) => ({
+  const shared = await db.bankAccount.findMany({
+    where: {
+      archived: false,
+      ownerId: { not: userId },
+      shares: { some: { group: { members: { some: { userId } } } } },
+    },
+    include: {
+      owner: true,
+      shares: { where: { group: { members: { some: { userId } } } } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const ownedView: VisibleAccount[] = owned.map((a) => ({
     id: a.id,
     name: a.name,
     type: a.type,
@@ -141,4 +154,20 @@ export async function listVisibleForUser(userId: string): Promise<VisibleAccount
     access: "OWNER",
     ownerName: null,
   }));
+
+  const sharedView: VisibleAccount[] = shared.map((a) => ({
+    id: a.id,
+    name: a.name,
+    type: a.type,
+    bankName: a.bankName,
+    color: a.color,
+    icon: a.icon,
+    archived: a.archived,
+    balance: Number(a.initialBalance),
+    ibanMasked: null, // shared viewers never see the IBAN
+    access: a.shares.some((s) => s.permission === "WRITE") ? "WRITE" : "READ",
+    ownerName: a.owner.name ?? a.owner.email,
+  }));
+
+  return [...ownedView, ...sharedView];
 }

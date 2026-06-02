@@ -37,10 +37,36 @@ async function ensureUsers(): Promise<void> {
   }
 }
 
+// A deterministic household (owner = OWNER, member = MEMBER) so account-sharing
+// e2e can share into a known group without depending on the 2.3 invitation UI.
+const SHARED_GROUP_ID = "e2e-shared-group";
+
+async function ensureSharedGroup(): Promise<void> {
+  const owner = await db.user.findUnique({ where: { email: "owner@e2e.local" } });
+  const member = await db.user.findUnique({ where: { email: "member@e2e.local" } });
+  if (!owner || !member) return;
+  await db.group.upsert({
+    where: { id: SHARED_GROUP_ID },
+    update: {},
+    create: { id: SHARED_GROUP_ID, name: "E2E Shared", createdById: owner.id },
+  });
+  await db.groupMember.upsert({
+    where: { groupId_userId: { groupId: SHARED_GROUP_ID, userId: owner.id } },
+    update: {},
+    create: { groupId: SHARED_GROUP_ID, userId: owner.id, role: "OWNER" },
+  });
+  await db.groupMember.upsert({
+    where: { groupId_userId: { groupId: SHARED_GROUP_ID, userId: member.id } },
+    update: {},
+    create: { groupId: SHARED_GROUP_ID, userId: member.id, role: "MEMBER" },
+  });
+}
+
 async function main(): Promise<void> {
   await seedRolesAndPermissions(db);
   await seedAppSettings(db);
   await ensureUsers();
+  await ensureSharedGroup();
 }
 
 main()

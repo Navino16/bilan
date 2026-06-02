@@ -2,6 +2,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Plus } from "lucide-react";
 import { requireSession } from "@/server/auth/permissions";
 import { listVisibleForUser } from "@/server/services/accounts";
+import { listGroupsForUser } from "@/server/services/groups";
 import { AccountList } from "@/components/accounts/account-list";
 import { AccountForm } from "@/components/accounts/account-form";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ export default async function AccountsPage({ params }: { params: Promise<{ local
   const user = await requireSession();
   const t = await getTranslations("accounts");
   const accounts = await listVisibleForUser(user.id);
+  const groups = (await listGroupsForUser(user.id)).map((g) => ({ id: g.id, name: g.name }));
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6">
@@ -29,7 +31,7 @@ export default async function AccountsPage({ params }: { params: Promise<{ local
           }
         />
       </header>
-      <AccountList accounts={accounts} />
+      <AccountList accounts={accounts} groups={groups} />
     </div>
   );
 }

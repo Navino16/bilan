@@ -53,7 +53,7 @@ Next.js 16.2 · React 19.2 · TypeScript 6 · Tailwind v4 · shadcn/ui (themed B
 - [x] **2.1 — BankAccount CRUD.** Model + migration, service (encrypted IBAN + hash), `/app/accounts` list + create/edit/archive (modal desktop / bottom sheet mobile). _AC: service unit + integration tests; e2e create/edit/archive._
 - [x] **2.2 — Groups & membership.** `Group`, `GroupMember` models, `/app/groups` CRUD, roles OWNER/ADMIN/MEMBER. _AC: integration tests for membership rules._
 - [x] **2.3 — Invitations (email + code).** `GroupInvitation`, email via SMTP (mocked in tests), accept by token/code, pending-invite for non-users. _AC: integration invite→accept flow; e2e invite by code._
-- [ ] **2.4 — Account sharing & permissions.** `AccountShare`, `permissions.service` (`listVisibleForUser`, WRITE checks), share UI. _AC: user B sees shared account, respects READ/WRITE (integration + e2e)._
+- [x] **2.4 — Account sharing & permissions.** `AccountShare`, `permissions.service` (`listVisibleForUser`, WRITE checks), share UI. _AC: user B sees shared account, respects READ/WRITE (integration + e2e)._
 
 ---
 

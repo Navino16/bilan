@@ -1364,7 +1364,7 @@ Append to `tests/e2e/groups.spec.ts` a flow: admin (storageState `admin.json`) c
 - Modify: `prisma/schema.prisma` (+`AccountShare`, +`BankAccount.shares`, +`Group.accountShares`), `src/server/services/accounts/index.ts` (extend `listVisibleForUser`), `src/server/transport/actions/accounts.ts` (+share/revoke actions), `src/components/accounts/account-list.tsx` (+share control, respect access), `messages/{fr,en}.json`
 - Create: `src/server/services/accounts/sharing.ts`, `src/components/accounts/share-dialog.tsx`, `tests/integration/account-sharing.test.ts`, e2e additions in `tests/e2e/accounts.spec.ts`
 
-- [ ] **Step 1: Add `AccountShare` model + migration**
+- [x] **Step 1: Add `AccountShare` model + migration**
 
 Add to `BankAccount`: `shares AccountShare[]`. Add to `Group`: `accountShares AccountShare[]`. Append:
 ```prisma
@@ -1385,7 +1385,7 @@ model AccountShare {
 ```
 Run: `npm run db:migrate -- --name phase_2_4_account_shares`; `npx prisma generate`; `npx prisma validate`.
 
-- [ ] **Step 2: Sharing service — write the failing integration test**
+- [x] **Step 2: Sharing service — write the failing integration test**
 
 Create `tests/integration/account-sharing.test.ts`:
 ```ts
@@ -1469,12 +1469,12 @@ describe("account sharing & permissions", () => {
 });
 ```
 
-- [ ] **Step 3: Run it to confirm it fails**
+- [x] **Step 3: Run it to confirm it fails**
 
 Run: `npm run test:integration -- account-sharing`
 Expected: FAIL — `@/server/services/accounts/sharing` not found.
 
-- [ ] **Step 4: Implement the sharing service**
+- [x] **Step 4: Implement the sharing service**
 
 Create `src/server/services/accounts/sharing.ts`:
 ```ts
@@ -1571,7 +1571,7 @@ export async function canReadAccount(userId: string, accountId: string): Promise
 }
 ```
 
-- [ ] **Step 5: Extend `listVisibleForUser` to merge shared accounts**
+- [x] **Step 5: Extend `listVisibleForUser` to merge shared accounts**
 
 In `src/server/services/accounts/index.ts`, replace the `listVisibleForUser` body so it returns owned (non-archived) accounts **plus** accounts shared via the viewer's groups, de-duplicated (owner access wins). Keep the existing `VisibleAccount` shape:
 ```ts
@@ -1624,22 +1624,22 @@ export async function listVisibleForUser(userId: string): Promise<VisibleAccount
 ```
 (`maskIban`, `decrypt`, `dataKey` are already imported in this file from Task 2.1.)
 
-- [ ] **Step 6: Run it to confirm it passes**
+- [x] **Step 6: Run it to confirm it passes**
 
 Run: `npm run test:integration -- account-sharing accounts`
 Expected: PASS (both files — confirms the 2.1 list test still holds and the 2.4 sharing tests pass).
 
-- [ ] **Step 7: Share actions + UI**
+- [x] **Step 7: Share actions + UI**
 
 In `src/server/transport/actions/accounts.ts`, add `shareAccountAction` and `revokeShareAction` (read `accountId`, `groupId`, `permission` from `FormData`; `requireSession`; call the sharing service; map `AccountAccessError` → `FORBIDDEN`/`INVALID`; return `{ ok }` and let the form `router.refresh()`). Create `src/components/accounts/share-dialog.tsx` — a `Dialog` (owner-only) listing the user's groups (`listGroupsForUser`, passed in as a prop from the server page) with a permission `<select>` and current shares + revoke. Wire it into `account-list.tsx` so owner rows get a "Share" button; non-OWNER rows already render no mutate controls. Add the relevant `accounts.share.*` i18n keys to both message files.
 
-- [ ] **Step 8: E2E — shared account visible to a member, READ is read-only**
+- [x] **Step 8: E2E — shared account visible to a member, READ is read-only**
 
 Extend `tests/e2e/accounts.spec.ts`: as `owner`, create an account and share it (READ) with a group the `member` belongs to (seed the membership in `seed-e2e.ts`, or create the group + invitation in-test); then in a `member.json` context, assert the account is listed with a "Lecture" badge and **no** Edit/Archive button. (Use a second `browser.newContext({ storageState: "tests/e2e/.auth/member.json" })`.)
 
 > **Fixture note:** add the `member` user to a shared group in `seed-e2e.ts` (e.g. an `e2e-shared-group` owned by `owner` with `member` as MEMBER) so the e2e has a deterministic group to share into without depending on 2.3's invitation UI.
 
-- [ ] **Step 9: Full check + commit**
+- [x] **Step 9: Full check + commit**
 
 `npm run ci` then `npm run test:e2e`. Commit `feat: share accounts with groups under READ/WRITE permissions`, push, PR (`--label "enhancement,phase-2,backend,security"`, `Closes #16`).
 

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, MoreVertical, Pencil, Archive } from "lucide-react";
+import { Eye, EyeOff, MoreVertical, Pencil, Archive, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { AccountForm } from "@/components/accounts/account-form";
+import { ShareDialog, type ShareGroup } from "@/components/accounts/share-dialog";
 import type { VisibleAccount } from "@/server/services/accounts";
 import { archiveAccountAction, revealAccountIbanAction } from "@/server/transport/actions/accounts";
 
@@ -66,10 +67,11 @@ type EditableAccount = {
   balance: number;
 };
 
-function RowActions({ account }: { account: EditableAccount }) {
+function RowActions({ account, groups }: { account: EditableAccount; groups: ShareGroup[] }) {
   const t = useTranslations("accounts");
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   function archive() {
@@ -97,6 +99,10 @@ function RowActions({ account }: { account: EditableAccount }) {
             <Pencil />
             {t("edit")}
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setShareOpen(true)}>
+            <Share2 />
+            {t("share")}
+          </DropdownMenuItem>
           <DropdownMenuItem variant="destructive" onClick={archive}>
             <Archive />
             {t("archive")}
@@ -104,11 +110,24 @@ function RowActions({ account }: { account: EditableAccount }) {
         </DropdownMenuContent>
       </DropdownMenu>
       <AccountForm mode="edit" account={account} open={editOpen} onOpenChange={setEditOpen} />
+      <ShareDialog
+        accountId={account.id}
+        accountName={account.name}
+        groups={groups}
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+      />
     </>
   );
 }
 
-export function AccountList({ accounts }: { accounts: VisibleAccount[] }) {
+export function AccountList({
+  accounts,
+  groups,
+}: {
+  accounts: VisibleAccount[];
+  groups: ShareGroup[];
+}) {
   const t = useTranslations("accounts");
   const money = useMoney();
   const total = accounts.reduce((sum, a) => sum + a.balance, 0);
@@ -210,6 +229,7 @@ export function AccountList({ accounts }: { accounts: VisibleAccount[] }) {
                       color: a.color,
                       balance: a.balance,
                     }}
+                    groups={groups}
                   />
                 )}
               </div>
