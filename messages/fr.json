@@ -175,6 +175,41 @@
       "FAILED": "Échec. Réessayez."
     }
   },
+  "invitations": {
+    "invite": "Inviter",
+    "inviteTitle": "Inviter un membre",
+    "email": "Adresse e-mail",
+    "emailPlaceholder": "membre@exemple.com",
+    "role": "Rôle",
+    "send": "Envoyer l'invitation",
+    "sending": "Envoi…",
+    "pending": "Invitations en attente",
+    "code": "Code",
+    "expiresAt": "Expire le {date}",
+    "revoke": "Révoquer",
+    "revokeConfirm": "Révoquer cette invitation ?",
+    "noPending": "Aucune invitation en attente.",
+    "pendingForYou": "Invitations en attente pour vous",
+    "fromGroup": "Foyer « {group} »",
+    "joinByCode": "Rejoindre avec un code",
+    "joinPlaceholder": "Code à 6 caractères",
+    "join": "Rejoindre",
+    "joining": "…",
+    "joinTitle": "Rejoindre le foyer",
+    "joinPrompt": "Vous avez été invité à rejoindre « {group} ».",
+    "accept": "Accepter l'invitation",
+    "accepting": "…",
+    "invalidLink": "Cette invitation est introuvable, expirée ou déjà utilisée.",
+    "error": {
+      "NOT_FOUND": "Invitation introuvable.",
+      "EXPIRED": "Cette invitation a expiré.",
+      "ALREADY_USED": "Cette invitation a déjà été utilisée.",
+      "ALREADY_MEMBER": "Cette personne fait déjà partie du foyer.",
+      "FORBIDDEN": "Action non autorisée.",
+      "INVALID": "Vérifiez les champs.",
+      "FAILED": "Échec. Réessayez."
+    }
+  },
   "dashboard": {
     "greeting": "Bonjour, {name}",
     "subtitle": "Voici un aperçu de vos finances.",

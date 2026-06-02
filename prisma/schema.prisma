@@ -31,8 +31,9 @@ model User {
   passkeys      Passkey[]
   roles            UserRole[]
   preference       UserPreference?
-  accounts         BankAccount[]   @relation("AccountOwner")
+  accounts         BankAccount[]     @relation("AccountOwner")
   groupMemberships GroupMember[]
+  sentInvitations  GroupInvitation[] @relation("InvitedBy")
 }
 
 model Session {
@@ -269,7 +270,8 @@ model Group {
   createdAt   DateTime @default(now())
   archived    Boolean  @default(false)
 
-  members GroupMember[]
+  members     GroupMember[]
+  invitations GroupInvitation[]
 }
 
 model GroupMember {
@@ -284,4 +286,24 @@ model GroupMember {
 
   @@unique([groupId, userId])
   @@index([userId])
+}
+
+model GroupInvitation {
+  id           String    @id @default(cuid())
+  groupId      String
+  email        String
+  invitedById  String
+  role         String    @default("MEMBER")
+  token        String    @unique
+  code         String    @unique
+  expiresAt    DateTime
+  acceptedAt   DateTime?
+  acceptedById String?
+  createdAt    DateTime  @default(now())
+
+  group     Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  invitedBy User  @relation("InvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([groupId])
 }
