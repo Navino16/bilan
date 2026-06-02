@@ -189,6 +189,8 @@
     "revoke": "Révoquer",
     "revokeConfirm": "Révoquer cette invitation ?",
     "noPending": "Aucune invitation en attente.",
+    "pendingForYou": "Invitations en attente pour vous",
+    "fromGroup": "Foyer « {group} »",
     "joinByCode": "Rejoindre avec un code",
     "joinPlaceholder": "Code à 6 caractères",
     "join": "Rejoindre",
@@ -202,6 +204,7 @@
       "NOT_FOUND": "Invitation introuvable.",
       "EXPIRED": "Cette invitation a expiré.",
       "ALREADY_USED": "Cette invitation a déjà été utilisée.",
+      "ALREADY_MEMBER": "Cette personne fait déjà partie du foyer.",
       "FORBIDDEN": "Action non autorisée.",
       "INVALID": "Vérifiez les champs.",
       "FAILED": "Échec. Réessayez."

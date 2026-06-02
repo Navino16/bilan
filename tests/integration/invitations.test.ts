@@ -88,4 +88,22 @@ describe("invitations service", () => {
       createInvitation({ groupId: g.id, email: "x@bilan.local", role: "MEMBER" }, { id: invitee }),
     ).rejects.toBeTruthy();
   });
+
+  it("rejects inviting someone as OWNER", async () => {
+    const g = await createGroup({ name: "Owner invite group" }, owner);
+    await expect(
+      createInvitation({ groupId: g.id, email: "x@bilan.local", role: "OWNER" }, { id: owner }),
+    ).rejects.toBeInstanceOf(InvitationError);
+  });
+
+  it("rejects inviting an existing member (including yourself)", async () => {
+    const g = await createGroup({ name: "Self invite group" }, owner);
+    // owner inviting their own email — already a member
+    await expect(
+      createInvitation(
+        { groupId: g.id, email: "inv-owner@bilan.local", role: "MEMBER" },
+        { id: owner },
+      ),
+    ).rejects.toBeInstanceOf(InvitationError);
+  });
 });

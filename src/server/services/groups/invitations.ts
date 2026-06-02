@@ -3,7 +3,11 @@ import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import { sendMail } from "@/server/services/mail/mailer";
 import { env } from "@/env";
-import { GROUP_ROLES, type GroupRole } from "@/lib/validation/group";
+import {
+  INVITABLE_GROUP_ROLES,
+  type GroupRole,
+  type InvitableGroupRole,
+} from "@/lib/validation/group";
 import { requireGroupRole } from "./roles";
 
 export class InvitationError extends Error {}
@@ -21,10 +25,22 @@ export async function createInvitation(
   input: { groupId: string; email: string; role: GroupRole },
   actor: { id: string },
 ): Promise<{ id: string; token: string; code: string }> {
-  if (!GROUP_ROLES.includes(input.role)) throw new InvitationError("INVALID");
+  if (!INVITABLE_GROUP_ROLES.includes(input.role as InvitableGroupRole)) {
+    throw new InvitationError("INVALID");
+  }
   await requireGroupRole(input.groupId, actor.id, "ADMIN");
   const email = input.email.trim().toLowerCase();
   if (!email) throw new InvitationError("INVALID");
+
+  // Don't invite someone who already belongs to the group (this also covers
+  // inviting yourself, since the inviter is necessarily a member).
+  const existingUser = await db.user.findUnique({ where: { email } });
+  if (existingUser) {
+    const membership = await db.groupMember.findUnique({
+      where: { groupId_userId: { groupId: input.groupId, userId: existingUser.id } },
+    });
+    if (membership) throw new InvitationError("ALREADY_MEMBER");
+  }
 
   const token = randomBytes(32).toString("base64url");
   const code = makeCode();

@@ -50,6 +50,8 @@ test.describe("groups", () => {
     });
     const mp = await memberCtx.newPage();
     await mp.goto("/fr/groups");
+    // The pending-invitations banner surfaces the invite addressed to this email.
+    await expect(mp.getByText(new RegExp(name))).toBeVisible();
     await mp.fill('input[name="code"]', code);
     await mp.getByRole("button", { name: /^rejoindre$/i }).click();
     await mp.waitForURL(/\/groups\/[a-z0-9]+$/i);

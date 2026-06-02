@@ -189,6 +189,8 @@
     "revoke": "Revoke",
     "revokeConfirm": "Revoke this invitation?",
     "noPending": "No pending invitations.",
+    "pendingForYou": "Pending invitations for you",
+    "fromGroup": "Household “{group}”",
     "joinByCode": "Join with a code",
     "joinPlaceholder": "6-character code",
     "join": "Join",
@@ -202,6 +204,7 @@
       "NOT_FOUND": "Invitation not found.",
       "EXPIRED": "This invitation has expired.",
       "ALREADY_USED": "This invitation was already used.",
+      "ALREADY_MEMBER": "This person is already in the household.",
       "FORBIDDEN": "Action not allowed.",
       "INVALID": "Check the fields.",
       "FAILED": "Failed. Please retry."

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { GROUP_ROLES } from "@/lib/validation/group";
+import { INVITABLE_GROUP_ROLES } from "@/lib/validation/group";
 import {
   createInvitationAction,
   type InvitationActionState,
@@ -50,7 +50,7 @@ export function InviteForm({ groupId }: { groupId: string }) {
           defaultValue="MEMBER"
           className="border-input bg-background h-8 w-full rounded-lg border px-2.5 text-sm sm:w-32"
         >
-          {GROUP_ROLES.map((r) => (
+          {INVITABLE_GROUP_ROLES.map((r) => (
             <option key={r} value={r}>
               {tg(`roles.${r}`)}
             </option>
