@@ -39,5 +39,7 @@ export function buildSecureFields(input: {
 // Manual entries pass no externalId (no auto-dedup) — this is for CSV/PDF (Phase 4).
 export function computeExternalId(date: Date, amount: number, rawLabel: string): string {
   const day = date.toISOString().slice(0, 10);
-  return createHash("sha256").update(`${day}|${amount.toFixed(2)}|${rawLabel}`).digest("hex");
+  return createHash("sha256")
+    .update(`${day}|${amount.toFixed(2)}|${rawLabel}`)
+    .digest("hex");
 }
