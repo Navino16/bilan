@@ -4,6 +4,7 @@ import { requireSession } from "@/server/auth/permissions";
 import { listGroupsForUser } from "@/server/services/groups";
 import { GroupList } from "@/components/groups/group-list";
 import { GroupForm } from "@/components/groups/group-form";
+import { JoinByCode } from "@/components/groups/join-by-code";
 import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,7 @@ export default async function GroupsPage({ params }: { params: Promise<{ locale:
   setRequestLocale(locale);
   const user = await requireSession();
   const t = await getTranslations("groups");
+  const ti = await getTranslations("invitations");
   const groups = await listGroupsForUser(user.id);
 
   return (
@@ -33,6 +35,10 @@ export default async function GroupsPage({ params }: { params: Promise<{ locale:
         />
       </header>
       <GroupList groups={groups} />
+      <section className="border-border space-y-2 rounded-lg border border-dashed p-4">
+        <h2 className="text-sm font-medium">{ti("joinByCode")}</h2>
+        <JoinByCode />
+      </section>
     </div>
   );
 }

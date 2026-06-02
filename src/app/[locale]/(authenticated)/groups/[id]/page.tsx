@@ -4,9 +4,12 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ChevronLeft, Pencil } from "lucide-react";
 import { requireSession } from "@/server/auth/permissions";
 import { getGroupDetail, GroupAccessError } from "@/server/services/groups";
+import { listInvitations } from "@/server/services/groups/invitations";
 import type { GroupRole } from "@/server/services/groups/roles";
 import { MemberList } from "@/components/groups/member-list";
 import { GroupForm } from "@/components/groups/group-form";
+import { InviteForm } from "@/components/groups/invite-form";
+import { InvitationsList } from "@/components/groups/invitations-list";
 import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +36,17 @@ export default async function GroupDetailPage({
 
   const viewerRole = group.members.find((m) => m.userId === user.id)?.role ?? "MEMBER";
   const canEdit = RANK[viewerRole] >= RANK.ADMIN;
+
+  const ti = await getTranslations("invitations");
+  const pending = canEdit
+    ? (await listInvitations(id, { id: user.id })).map((inv) => ({
+        id: inv.id,
+        email: inv.email,
+        role: inv.role,
+        code: inv.code,
+        expiresAt: inv.expiresAt.toISOString(),
+      }))
+    : [];
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
@@ -74,6 +88,17 @@ export default async function GroupDetailPage({
           viewerRole={viewerRole}
         />
       </section>
+
+      {canEdit && (
+        <section className="space-y-3">
+          <h2 className="text-lg font-medium">{ti("invite")}</h2>
+          <InviteForm groupId={group.id} />
+          <div className="space-y-2 pt-2">
+            <h3 className="text-muted-foreground text-sm font-medium">{ti("pending")}</h3>
+            <InvitationsList invitations={pending} />
+          </div>
+        </section>
+      )}
     </div>
   );
 }

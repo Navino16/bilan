@@ -1070,7 +1070,7 @@ Run: `npm run ci` then `npm run test:e2e -- --project=chromium`. Commit `feat: g
 - Modify: `prisma/schema.prisma` (+`GroupInvitation`, +`Group.invitations`, +`User.sentInvitations`), `package.json` (+`nodemailer`), `messages/{fr,en}.json`, `src/app/[locale]/(authenticated)/groups/[id]/page.tsx` (add invite UI), `src/app/[locale]/(authenticated)/groups/page.tsx` (add join-by-code)
 - Create: `src/server/services/mail/mailer.ts`, `src/server/services/groups/invitations.ts`, `src/server/transport/actions/invitations.ts`, `src/components/groups/{invite-form,invitations-list,join-by-code}.tsx`, `src/app/[locale]/(authenticated)/groups/join/[token]/page.tsx`, `tests/integration/invitations.test.ts`
 
-- [ ] **Step 1: Add `GroupInvitation` model + migration**
+- [x] **Step 1: Add `GroupInvitation` model + migration**
 
 Add to `Group`: `invitations GroupInvitation[]`. Add to `User`: `sentInvitations GroupInvitation[] @relation("InvitedBy")`. Append:
 ```prisma
@@ -1096,11 +1096,11 @@ model GroupInvitation {
 ```
 Run: `npm run db:migrate -- --name phase_2_3_invitations`; `npx prisma generate`; `npx prisma validate`.
 
-- [ ] **Step 2: Install nodemailer**
+- [x] **Step 2: Install nodemailer**
 
 Run: `npm i nodemailer && npm i -D @types/nodemailer`.
 
-- [ ] **Step 3: Mailer (SMTP-from-DB, dev fallback)**
+- [x] **Step 3: Mailer (SMTP-from-DB, dev fallback)**
 
 Create `src/server/services/mail/mailer.ts`:
 ```ts
@@ -1140,7 +1140,7 @@ export async function sendMail(opts: {
 }
 ```
 
-- [ ] **Step 4: Invitations service — write the failing integration test**
+- [x] **Step 4: Invitations service — write the failing integration test**
 
 Create `tests/integration/invitations.test.ts`:
 ```ts
@@ -1210,12 +1210,12 @@ describe("invitations service", () => {
 });
 ```
 
-- [ ] **Step 5: Run it to confirm it fails**
+- [x] **Step 5: Run it to confirm it fails**
 
 Run: `npm run test:integration -- invitations`
 Expected: FAIL — `@/server/services/groups/invitations` not found.
 
-- [ ] **Step 6: Implement the invitations service**
+- [x] **Step 6: Implement the invitations service**
 
 Create `src/server/services/groups/invitations.ts`:
 ```ts
@@ -1335,22 +1335,22 @@ export async function pendingInvitationsForEmail(email: string) {
 }
 ```
 
-- [ ] **Step 7: Run it to confirm it passes**
+- [x] **Step 7: Run it to confirm it passes**
 
 Run: `npm run test:integration -- invitations`
 Expected: PASS (4 tests).
 
-- [ ] **Step 8: Server Actions + UI**
+- [x] **Step 8: Server Actions + UI**
 
 Create `src/server/transport/actions/invitations.ts` (`createInvitationAction`, `revokeInvitationAction`, `acceptInvitationAction`) following the established pattern (`requireSession`; map `InvitationError`/`GroupAccessError` → error codes; return `{ ok }` and let forms `router.refresh()`; `acceptInvitationAction` reads `code` (or `token`) from `FormData`, calls `acceptInvitation` with the session user's `{ id, email }`, and on success `redirect`s to `/[locale]/groups/[joined groupId]`).
 
 Add UI: `invite-form.tsx` (email + role, in the group `[id]` page, ADMIN+ only), `invitations-list.tsx` (pending invites with code + revoke), `join-by-code.tsx` (on `/groups`, a code field → `acceptInvitationAction`). Create `src/app/[locale]/(authenticated)/groups/join/[token]/page.tsx` — server component: `requireSession()`, looks up the invitation by token for display, renders a confirm button that submits `acceptInvitationAction` with the token. Add an `invitations` namespace to `messages/{fr,en}.json` (invite, email, role, send, sending, pending, code, revoke, join, joinByCode, accept, accepted, error.{NOT_FOUND,EXPIRED,ALREADY_USED,FORBIDDEN,INVALID,FAILED}).
 
-- [ ] **Step 9: E2E — invite by code (two users)**
+- [x] **Step 9: E2E — invite by code (two users)**
 
 Append to `tests/e2e/groups.spec.ts` a flow: admin (storageState `admin.json`) creates a group + invitation, reads the displayed code from the pending-invitations list; then a second context using `member.json` opens `/fr/groups`, enters the code, and asserts the group appears. (Use `test.step` + a fresh `browser.newContext({ storageState })` for the member, since a single test needs both identities.)
 
-- [ ] **Step 10: Full check + commit**
+- [x] **Step 10: Full check + commit**
 
 `npm run ci` then `npm run test:e2e -- --project=chromium`. Commit `feat: group invitations by email and code`, push, PR (`Closes #15`).
 

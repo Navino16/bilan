@@ -175,6 +175,38 @@
       "FAILED": "Failed. Please retry."
     }
   },
+  "invitations": {
+    "invite": "Invite",
+    "inviteTitle": "Invite a member",
+    "email": "Email address",
+    "emailPlaceholder": "member@example.com",
+    "role": "Role",
+    "send": "Send invitation",
+    "sending": "Sending…",
+    "pending": "Pending invitations",
+    "code": "Code",
+    "expiresAt": "Expires {date}",
+    "revoke": "Revoke",
+    "revokeConfirm": "Revoke this invitation?",
+    "noPending": "No pending invitations.",
+    "joinByCode": "Join with a code",
+    "joinPlaceholder": "6-character code",
+    "join": "Join",
+    "joining": "…",
+    "joinTitle": "Join the household",
+    "joinPrompt": "You were invited to join “{group}”.",
+    "accept": "Accept invitation",
+    "accepting": "…",
+    "invalidLink": "This invitation cannot be found, has expired, or was already used.",
+    "error": {
+      "NOT_FOUND": "Invitation not found.",
+      "EXPIRED": "This invitation has expired.",
+      "ALREADY_USED": "This invitation was already used.",
+      "FORBIDDEN": "Action not allowed.",
+      "INVALID": "Check the fields.",
+      "FAILED": "Failed. Please retry."
+    }
+  },
   "dashboard": {
     "greeting": "Hello, {name}",
     "subtitle": "Here's an overview of your finances.",
