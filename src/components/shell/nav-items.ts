@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   Settings,
   ShieldCheck,
+  Tags,
   Target,
   Users,
 } from "lucide-react";
@@ -25,6 +26,7 @@ export const WORKSPACE_NAV: NavItem[] = [
   { key: "transactions", href: "/transactions", icon: ArrowRightLeft },
   { key: "budgets", href: "/budgets", icon: Target },
   { key: "accounts", href: "/accounts", icon: Landmark },
+  { key: "categories", href: "/categories", icon: Tags },
   { key: "groups", href: "/groups", icon: Users },
 ];
 

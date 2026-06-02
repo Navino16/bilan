@@ -1,0 +1,24 @@
+import { z } from "zod";
+
+export const CATEGORY_NAME_MAX = 60;
+
+const emptyToUndefined = (v: unknown) => (typeof v === "string" && v.trim() === "" ? undefined : v);
+
+// A category is owned by the current user (personal) when `groupId` is absent,
+// or by a group when `groupId` is set. The XOR (userId vs groupId) is resolved
+// in the service from the session + this field, and enforced by a DB CHECK.
+export const categoryInputSchema = z.object({
+  name: z.string().trim().min(1).max(CATEGORY_NAME_MAX),
+  color: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .regex(/^#[0-9a-fA-F]{6}$/)
+      .optional(),
+  ),
+  icon: z.preprocess(emptyToUndefined, z.string().trim().max(50).optional()),
+  parentId: z.preprocess(emptyToUndefined, z.string().trim().optional()),
+  groupId: z.preprocess(emptyToUndefined, z.string().trim().optional()),
+});
+
+export type CategoryInput = z.input<typeof categoryInputSchema>;

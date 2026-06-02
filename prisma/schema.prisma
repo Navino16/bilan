@@ -34,6 +34,7 @@ model User {
   accounts         BankAccount[]     @relation("AccountOwner")
   groupMemberships GroupMember[]
   sentInvitations  GroupInvitation[] @relation("InvitedBy")
+  categories       Category[]
 }
 
 model Session {
@@ -274,6 +275,7 @@ model Group {
   members       GroupMember[]
   invitations   GroupInvitation[]
   accountShares AccountShare[]
+  categories    Category[]
 }
 
 model GroupMember {
@@ -323,4 +325,27 @@ model AccountShare {
 
   @@unique([accountId, groupId])
   @@index([groupId])
+}
+
+model Category {
+  id       String     @id @default(cuid())
+  name     String
+  color    String?
+  icon     String?
+  parentId String?
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryHierarchy")
+
+  // Owner XOR (User or Group) — enforced at the service layer + a DB CHECK.
+  userId  String?
+  groupId String?
+  user    User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group   Group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([groupId])
+  @@index([parentId])
 }

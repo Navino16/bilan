@@ -8,6 +8,7 @@ import { dataKey } from "@/server/crypto/keys";
 import { decrypt } from "@/server/crypto/encryption";
 import { appSettings } from "@/server/services/settings/app-settings";
 import { logEvent } from "@/server/services/audit";
+import { seedDefaultCategories } from "@/server/services/categories/seed-defaults";
 import { providerCache, resolveOidcProvider, type ResolvedOidc } from "./providers";
 import { authPlugins } from "./plugins";
 
@@ -76,6 +77,22 @@ async function buildOptions(): Promise<BetterAuthOptions> {
     // auth namespace. In better-auth >= 1.6 model renaming moved from the
     // adapter `schema` config to the top-level model options.
     account: { modelName: "authAccount" },
+    databaseHooks: {
+      user: {
+        create: {
+          // Seed the default category set for every new account. Locale is not
+          // known here (UserPreference is written separately) so default to fr;
+          // failures must never block signup.
+          after: async (user) => {
+            try {
+              await seedDefaultCategories(user.id, "fr");
+            } catch {
+              // best-effort
+            }
+          },
+        },
+      },
+    },
     emailAndPassword: {
       enabled: credentialsEnabled,
       minPasswordLength,

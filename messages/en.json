@@ -85,6 +85,7 @@
       "transactions": "Transactions",
       "budgets": "Budgets",
       "accounts": "Accounts",
+      "categories": "Categories",
       "groups": "Households",
       "settings": "Settings",
       "admin": "Administration"
@@ -144,6 +145,38 @@
       "INVALID_IBAN": "Invalid IBAN.",
       "FORBIDDEN": "Action not allowed.",
       "FAILED": "Failed. Please retry."
+    }
+  },
+  "categories": {
+    "title": "Categories",
+    "subtitle": "Organize your spending and income. A category belongs to you or to a household.",
+    "empty": "No categories yet.",
+    "create": "New category",
+    "createTitle": "Add a category",
+    "editTitle": "Edit category",
+    "name": "Name",
+    "namePlaceholder": "Groceries",
+    "color": "Color",
+    "icon": "Icon",
+    "parent": "Parent category",
+    "noParent": "None (root)",
+    "scope": "Scope",
+    "scopePersonal": "Personal",
+    "scopeGroup": "Household",
+    "default": "Default",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this category? Sub-categories become roots and transactions are uncategorized.",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "createCta": "Create",
+    "error": {
+      "INVALID": "Check the fields.",
+      "INVALID_PARENT": "Invalid parent category.",
+      "FORBIDDEN": "Not allowed.",
+      "NOT_FOUND": "Category not found.",
+      "FAILED": "Failed. Try again."
     }
   },
   "groups": {
