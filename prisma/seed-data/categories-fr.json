@@ -1,0 +1,45 @@
+[
+  {
+    "name": "Revenus",
+    "icon": "💰",
+    "color": "#16a34a",
+    "children": ["Salaire", "Remboursements", "Autres revenus"]
+  },
+  {
+    "name": "Alimentation",
+    "icon": "🛒",
+    "color": "#f59e0b",
+    "children": ["Courses", "Restaurants", "Café & snacks"]
+  },
+  {
+    "name": "Logement",
+    "icon": "🏠",
+    "color": "#2563eb",
+    "children": ["Loyer & prêt", "Charges", "Électricité & gaz", "Internet & téléphone"]
+  },
+  {
+    "name": "Transport",
+    "icon": "🚗",
+    "color": "#0891b2",
+    "children": ["Carburant", "Transports en commun", "Entretien véhicule"]
+  },
+  {
+    "name": "Loisirs",
+    "icon": "🎉",
+    "color": "#9333ea",
+    "children": ["Sorties", "Abonnements", "Voyages"]
+  },
+  {
+    "name": "Santé",
+    "icon": "🩺",
+    "color": "#dc2626",
+    "children": ["Médecin", "Pharmacie", "Mutuelle"]
+  },
+  {
+    "name": "Achats",
+    "icon": "🛍️",
+    "color": "#db2777",
+    "children": ["Vêtements", "Maison", "High-tech"]
+  },
+  { "name": "Divers", "icon": "📦", "color": "#64748b", "children": [] }
+]
