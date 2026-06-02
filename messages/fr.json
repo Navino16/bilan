@@ -85,6 +85,7 @@
       "transactions": "Transactions",
       "budgets": "Budgets",
       "accounts": "Comptes",
+      "categories": "Catégories",
       "groups": "Foyers",
       "settings": "Préférences",
       "admin": "Administration"
@@ -143,6 +144,38 @@
       "INVALID": "Vérifiez les champs.",
       "INVALID_IBAN": "IBAN invalide.",
       "FORBIDDEN": "Action non autorisée.",
+      "FAILED": "Échec. Réessayez."
+    }
+  },
+  "categories": {
+    "title": "Catégories",
+    "subtitle": "Organisez vos dépenses et revenus. Une catégorie appartient à vous ou à un foyer.",
+    "empty": "Aucune catégorie.",
+    "create": "Nouvelle catégorie",
+    "createTitle": "Ajouter une catégorie",
+    "editTitle": "Modifier la catégorie",
+    "name": "Nom",
+    "namePlaceholder": "Courses",
+    "color": "Couleur",
+    "icon": "Icône",
+    "parent": "Catégorie parente",
+    "noParent": "Aucune (racine)",
+    "scope": "Portée",
+    "scopePersonal": "Personnelle",
+    "scopeGroup": "Foyer",
+    "default": "Par défaut",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "deleteConfirm": "Supprimer cette catégorie ? Les sous-catégories deviendront des racines et les transactions seront décatégorisées.",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "createCta": "Créer",
+    "error": {
+      "INVALID": "Vérifiez les champs.",
+      "INVALID_PARENT": "Catégorie parente invalide.",
+      "FORBIDDEN": "Action non autorisée.",
+      "NOT_FOUND": "Catégorie introuvable.",
       "FAILED": "Échec. Réessayez."
     }
   },
