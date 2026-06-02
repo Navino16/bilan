@@ -1,4 +1,11 @@
-import { ArrowRightLeft, LayoutDashboard, Settings, ShieldCheck, Target } from "lucide-react";
+import {
+  ArrowRightLeft,
+  Landmark,
+  LayoutDashboard,
+  Settings,
+  ShieldCheck,
+  Target,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export type NavItem = {
@@ -16,6 +23,7 @@ export const WORKSPACE_NAV: NavItem[] = [
   { key: "dashboard", href: "/dashboard", icon: LayoutDashboard },
   { key: "transactions", href: "/transactions", icon: ArrowRightLeft },
   { key: "budgets", href: "/budgets", icon: Target },
+  { key: "accounts", href: "/accounts", icon: Landmark },
 ];
 
 /** Account-level destinations — the "Compte" group in the design. */
