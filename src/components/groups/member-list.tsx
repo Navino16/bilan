@@ -38,6 +38,10 @@ export function MemberList({
 
   const canManageRoles = viewerRole === "OWNER";
   const canRemove = RANK[viewerRole] >= RANK.ADMIN;
+  // The last owner can't leave (the service blocks it) — they must delete the
+  // group instead, so don't offer "Leave" in that case.
+  const ownerCount = members.filter((m) => m.role === "OWNER").length;
+  const isLastOwner = viewerRole === "OWNER" && ownerCount <= 1;
 
   function run(action: () => Promise<{ ok: boolean; error?: string } | null>, after?: () => void) {
     startTransition(async () => {
@@ -144,10 +148,12 @@ export function MemberList({
       {error && <p className="text-destructive text-sm">{t(`error.${error}`)}</p>}
 
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" disabled={pending} onClick={leave}>
-          <LogOut />
-          {t("leave")}
-        </Button>
+        {!isLastOwner && (
+          <Button variant="outline" size="sm" disabled={pending} onClick={leave}>
+            <LogOut />
+            {t("leave")}
+          </Button>
+        )}
         {viewerRole === "OWNER" && (
           <Button variant="ghost" size="sm" disabled={pending} onClick={destroy}>
             <Trash2 />
