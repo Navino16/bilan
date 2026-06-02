@@ -15,7 +15,10 @@ function DropdownMenuPortal({ ...props }: MenuPrimitive.Portal.Props) {
 }
 
 function DropdownMenuTrigger({ ...props }: MenuPrimitive.Trigger.Props) {
-  return <MenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />;
+  // No `data-slot` here: triggers render via `render={<Button/>}`, which already
+  // sets `data-slot="button"`; a second source makes Base UI's render merge
+  // non-deterministic across SSR/CSR → hydration mismatch.
+  return <MenuPrimitive.Trigger {...props} />;
 }
 
 function DropdownMenuContent({

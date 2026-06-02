@@ -29,9 +29,10 @@ model User {
   authAccounts  AuthAccount[]
   twoFactors    TwoFactor[]
   passkeys      Passkey[]
-  roles         UserRole[]
-  preference    UserPreference?
-  accounts      BankAccount[] @relation("AccountOwner")
+  roles            UserRole[]
+  preference       UserPreference?
+  accounts         BankAccount[]   @relation("AccountOwner")
+  groupMemberships GroupMember[]
 }
 
 model Session {
@@ -256,4 +257,31 @@ model BankAccount {
 
   @@index([ownerId])
   @@index([ibanHash])
+}
+
+// ─── Group B — Households & membership (Phase 2) ─────────────────────────────
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdById String
+  createdAt   DateTime @default(now())
+  archived    Boolean  @default(false)
+
+  members GroupMember[]
+}
+
+model GroupMember {
+  id       String   @id @default(cuid())
+  groupId  String
+  userId   String
+  role     String // OWNER | ADMIN | MEMBER
+  joinedAt DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
 }

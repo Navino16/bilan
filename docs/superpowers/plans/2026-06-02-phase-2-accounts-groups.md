@@ -713,7 +713,7 @@ Then push + open the PR (`--base develop --label "enhancement,phase-2,frontend,b
 - Modify: `prisma/schema.prisma` (+`Group`, +`GroupMember`, +`User.groupMemberships`), `src/components/shell/nav-items.ts`, `messages/{fr,en}.json`
 - Create: `src/server/services/groups/roles.ts`, `src/server/services/groups/index.ts`, `src/server/transport/actions/groups.ts`, `src/components/groups/{group-form,group-list,member-list}.tsx`, `src/app/[locale]/(authenticated)/groups/page.tsx`, `src/app/[locale]/(authenticated)/groups/[id]/page.tsx`, `tests/integration/groups.test.ts`, `tests/e2e/groups.spec.ts`
 
-- [ ] **Step 1: Add `Group` + `GroupMember` models + migration**
+- [x] **Step 1: Add `Group` + `GroupMember` models + migration**
 
 Add to `User`:
 ```prisma
@@ -750,7 +750,7 @@ model GroupMember {
 ```
 Run: `npm run db:migrate -- --name phase_2_2_groups`; then `npx prisma generate` and `npx prisma validate`.
 
-- [ ] **Step 2: Group roles helper**
+- [x] **Step 2: Group roles helper**
 
 Create `src/server/services/groups/roles.ts`:
 ```ts
@@ -789,7 +789,7 @@ export async function countOwners(groupId: string): Promise<number> {
 }
 ```
 
-- [ ] **Step 3: Groups service — write the failing integration test**
+- [x] **Step 3: Groups service — write the failing integration test**
 
 Create `tests/integration/groups.test.ts`:
 ```ts
@@ -875,12 +875,12 @@ describe("groups service", () => {
 });
 ```
 
-- [ ] **Step 4: Run it to confirm it fails**
+- [x] **Step 4: Run it to confirm it fails**
 
 Run: `npm run test:integration -- groups`
 Expected: FAIL — `@/server/services/groups` not found.
 
-- [ ] **Step 5: Implement the groups service**
+- [x] **Step 5: Implement the groups service**
 
 Create `src/server/services/groups/index.ts`:
 ```ts
@@ -1017,16 +1017,16 @@ export async function leaveGroup(groupId: string, userId: string): Promise<void>
 }
 ```
 
-- [ ] **Step 6: Run it to confirm it passes**
+- [x] **Step 6: Run it to confirm it passes**
 
 Run: `npm run test:integration -- groups`
 Expected: PASS (5 tests).
 
-- [ ] **Step 7: Server Actions for groups**
+- [x] **Step 7: Server Actions for groups**
 
 Create `src/server/transport/actions/groups.ts` mirroring `accounts.ts`: `createGroupAction`, `updateGroupAction`, `deleteGroupAction`, `changeMemberRoleAction`, `removeMemberAction`, `leaveGroupAction`. Each `requireSession()`, reads `FormData`, calls the service in a `try/catch` mapping `GroupAccessError` → `{ ok:false, error: e.message }` (one of `FORBIDDEN`/`INVALID`/`LAST_OWNER`/`NOT_MEMBER`), and returns `{ ok:true }` (no `revalidatePath` — the forms call `router.refresh()`, as in Phase 1). State type `GroupActionState = { ok:true } | { ok:false; error:string } | null`.
 
-- [ ] **Step 8: Groups UI + nav + i18n**
+- [x] **Step 8: Groups UI + nav + i18n**
 
 In `nav-items.ts`, add to `WORKSPACE_NAV` after `accounts`:
 ```ts
@@ -1036,7 +1036,7 @@ Add `shell.nav.groups` and a `groups` namespace to both message files (title, cr
 
 Create `src/app/[locale]/(authenticated)/groups/page.tsx` (server; `requireSession`; `listGroupsForUser`; renders `GroupList` + a `GroupForm` create dialog) and `src/app/[locale]/(authenticated)/groups/[id]/page.tsx` (server; `getGroupDetail(id, user.id)` wrapped in `try/catch` → `notFound()` on `GroupAccessError`; renders `MemberList` with role controls visible only when the viewer is OWNER/ADMIN). Components `group-form.tsx`, `group-list.tsx`, `member-list.tsx` follow the Phase 1 form/list conventions (`useActionState`, `Dialog`, `Alert`, native `<select>` for roles).
 
-- [ ] **Step 9: E2E — create a group**
+- [x] **Step 9: E2E — create a group**
 
 Create `tests/e2e/groups.spec.ts`:
 ```ts
@@ -1056,7 +1056,7 @@ test.describe("groups", () => {
 });
 ```
 
-- [ ] **Step 10: Full check + commit**
+- [x] **Step 10: Full check + commit**
 
 Run: `npm run ci` then `npm run test:e2e -- --project=chromium`. Commit `feat: groups and role-based membership`, push, PR (`--label "enhancement,phase-2,backend"`, body `Closes #14`).
 

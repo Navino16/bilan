@@ -12,7 +12,10 @@ function Dialog({ ...props }: DialogPrimitive.Root.Props) {
 }
 
 function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
-  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
+  // No `data-slot` here: triggers are rendered via `render={<Button/>}` and the
+  // Button already sets `data-slot="button"`. Two sources make Base UI's render
+  // merge non-deterministic across SSR/CSR → hydration mismatch on `data-slot`.
+  return <DialogPrimitive.Trigger {...props} />;
 }
 
 function DialogClose({ ...props }: DialogPrimitive.Close.Props) {
