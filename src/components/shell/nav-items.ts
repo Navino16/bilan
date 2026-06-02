@@ -34,5 +34,15 @@ export const ACCOUNT_NAV: NavItem[] = [
   { key: "admin", href: "/admin", icon: ShieldCheck, permission: "admin.settings.write" },
 ];
 
-/** Four primary tabs surfaced in the mobile bottom bar. */
-export const BOTTOM_NAV: NavItem[] = [...WORKSPACE_NAV, ACCOUNT_NAV[0]];
+/**
+ * Five primary tabs surfaced in the mobile bottom bar. Kept explicit (not derived
+ * from WORKSPACE_NAV) so secondary destinations like "groups"/admin stay out of
+ * the bottom bar and live only in the left drawer / sidebar.
+ */
+export const BOTTOM_NAV: NavItem[] = [
+  { key: "dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { key: "transactions", href: "/transactions", icon: ArrowRightLeft },
+  { key: "budgets", href: "/budgets", icon: Target },
+  { key: "accounts", href: "/accounts", icon: Landmark },
+  { key: "settings", href: "/settings", icon: Settings },
+];
