@@ -23,6 +23,42 @@ test.describe("accounts", () => {
     // assert the first match is visible.
     await expect(page.getByText(name).first()).toBeVisible();
   });
+
+  test("share an account READ with a household; member sees it read-only", async ({
+    page,
+    browser,
+  }) => {
+    const name = `Partagé ${Date.now()}`;
+    // Owner creates an account.
+    await page.goto("/fr/accounts");
+    await page.getByRole("button", { name: /nouveau compte/i }).click();
+    await page.fill('input[name="name"]', name);
+    await page.fill('input[name="initialBalance"]', "100");
+    await page.getByRole("button", { name: /créer le compte/i }).click();
+    // The name also appears in the global-balance card legend, so take the last
+    // match (the account card comes after the total card).
+    const card = page.locator('[data-slot="card"]').filter({ hasText: name }).last();
+    await expect(card).toBeVisible();
+
+    // Open the card's kebab → Share, then grant READ to the seeded "E2E Shared".
+    await card.getByRole("button", { name: /modifier/i }).click();
+    await page.getByRole("menuitem", { name: /partager/i }).click();
+    await page.getByLabel("E2E Shared").selectOption("READ");
+    await expect(page.getByLabel("E2E Shared")).toHaveValue("READ");
+
+    // The member of that household sees the account read-only (no mutate menu).
+    const memberCtx = await browser.newContext({
+      storageState: "tests/e2e/.auth/member.json",
+      baseURL: "http://localhost:3000",
+    });
+    const mp = await memberCtx.newPage();
+    await mp.goto("/fr/accounts");
+    const mcard = mp.locator('[data-slot="card"]').filter({ hasText: name }).last();
+    await expect(mcard).toBeVisible();
+    await expect(mcard.getByText(/lecture/i)).toBeVisible();
+    await expect(mcard.getByRole("button", { name: /modifier/i })).toHaveCount(0);
+    await memberCtx.close();
+  });
 });
 
 test("unauthenticated /accounts redirects to login", async ({ page }) => {

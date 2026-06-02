@@ -254,7 +254,8 @@ model BankAccount {
   archived  Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  owner User @relation("AccountOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  owner  User           @relation("AccountOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  shares AccountShare[]
 
   @@index([ownerId])
   @@index([ibanHash])
@@ -270,8 +271,9 @@ model Group {
   createdAt   DateTime @default(now())
   archived    Boolean  @default(false)
 
-  members     GroupMember[]
-  invitations GroupInvitation[]
+  members       GroupMember[]
+  invitations   GroupInvitation[]
+  accountShares AccountShare[]
 }
 
 model GroupMember {
@@ -305,5 +307,20 @@ model GroupInvitation {
   invitedBy User  @relation("InvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
 
   @@index([email])
+  @@index([groupId])
+}
+
+model AccountShare {
+  id          String   @id @default(cuid())
+  accountId   String
+  groupId     String
+  permission  String // READ | WRITE
+  createdById String
+  createdAt   DateTime @default(now())
+
+  account BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  group   Group       @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, groupId])
   @@index([groupId])
 }
