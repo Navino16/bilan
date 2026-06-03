@@ -2,6 +2,7 @@ import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import { buildSecureFields, computeExternalId } from "@/server/services/transactions/secure-fields";
 import { suggest } from "@/server/services/categorization";
+import { deriveType } from "./derive-type";
 import type { CommitSummary, NormalizedRow } from "./types";
 
 // Dedups against existing `(accountId, externalId)` rows (and in-file dupes),
@@ -39,7 +40,7 @@ export async function insertRows(
         accountId: target.accountId,
         date: row.date,
         amount: row.amount,
-        type: "OTHER",
+        type: deriveType(row.rawLabel),
         labelEnc: secure.labelEnc,
         labelHash: secure.labelHash,
         rawLabelEnc: secure.rawLabelEnc,

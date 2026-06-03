@@ -10,9 +10,9 @@ export class RuleAccessError extends Error {}
 export type Suggestion = { categoryId: string | null; ruleId: string | null };
 export type Scope = { userId: string };
 
-// Suggests a category for a label by matching the user's own + their groups'
-// enabled rules, highest priority first. Used by manual entry (3.4) and import (4.x).
-export async function suggest(rawLabel: string, scope: Scope): Promise<Suggestion> {
+// Loads the user's own + their groups' enabled rules once, highest priority
+// first. Shared by suggest (single) and suggestMany (batch import preview).
+async function loadRules(scope: Scope): Promise<Rule[]> {
   const memberships = await db.groupMember.findMany({
     where: { userId: scope.userId },
     select: { groupId: true },
@@ -22,7 +22,7 @@ export async function suggest(rawLabel: string, scope: Scope): Promise<Suggestio
     where: { enabled: true, OR: [{ userId: scope.userId }, { groupId: { in: groupIds } }] },
     orderBy: { priority: "desc" },
   });
-  const rules: Rule[] = rows.map((r) => ({
+  return rows.map((r) => ({
     id: r.id,
     categoryId: r.categoryId,
     pattern: r.pattern,
@@ -30,8 +30,24 @@ export async function suggest(rawLabel: string, scope: Scope): Promise<Suggestio
     caseSensitive: r.caseSensitive,
     priority: r.priority,
   }));
+}
+
+function match(rules: Rule[], rawLabel: string): Suggestion {
   const hit = pickByPriority(rules, rawLabel);
   return hit ? { categoryId: hit.categoryId, ruleId: hit.id } : { categoryId: null, ruleId: null };
+}
+
+// Suggests a category for a label by matching the user's own + their groups'
+// enabled rules, highest priority first. Used by manual entry (3.4) and import (4.x).
+export async function suggest(rawLabel: string, scope: Scope): Promise<Suggestion> {
+  return match(await loadRules(scope), rawLabel);
+}
+
+// Batch variant: loads the rules ONCE then matches every label. Used by the
+// import preview so N rows don't trigger N rule loads.
+export async function suggestMany(rawLabels: string[], scope: Scope): Promise<Suggestion[]> {
+  const rules = await loadRules(scope);
+  return rawLabels.map((label) => match(rules, label));
 }
 
 export async function createRule(input: RuleInput, actor: { id: string }): Promise<{ id: string }> {
