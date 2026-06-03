@@ -31,10 +31,11 @@ model User {
   passkeys         Passkey[]
   roles            UserRole[]
   preference       UserPreference?
-  accounts         BankAccount[]     @relation("AccountOwner")
+  accounts         BankAccount[]        @relation("AccountOwner")
   groupMemberships GroupMember[]
-  sentInvitations  GroupInvitation[] @relation("InvitedBy")
+  sentInvitations  GroupInvitation[]    @relation("InvitedBy")
   categories       Category[]
+  rules            CategorizationRule[]
 }
 
 model Session {
@@ -277,6 +278,7 @@ model Group {
   invitations   GroupInvitation[]
   accountShares AccountShare[]
   categories    Category[]
+  rules         CategorizationRule[]
 }
 
 model GroupMember {
@@ -329,14 +331,15 @@ model AccountShare {
 }
 
 model Category {
-  id           String        @id @default(cuid())
+  id           String               @id @default(cuid())
   name         String
   color        String?
   icon         String?
   parentId     String?
-  parent       Category?     @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
-  children     Category[]    @relation("CategoryHierarchy")
+  parent       Category?            @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children     Category[]           @relation("CategoryHierarchy")
   transactions Transaction[]
+  rules        CategorizationRule[]
 
   // Owner XOR (User or Group) — enforced at the service layer (a DB CHECK is
   // impossible on MariaDB: error 1901 on a FK column with a referential action).
@@ -396,4 +399,30 @@ model TransactionSearchToken {
 
   @@index([tokenHash])
   @@index([transactionId])
+}
+
+model CategorizationRule {
+  id            String  @id @default(cuid())
+  pattern       String
+  matchType     String // CONTAINS | EXACT | STARTS_WITH | REGEX
+  caseSensitive Boolean @default(false)
+  priority      Int     @default(100)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  // Scope XOR (User or Group) — enforced at the service layer (a DB CHECK is
+  // impossible on MariaDB: error 1901 on a FK column with a referential action).
+  userId  String?
+  groupId String?
+  user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group   Group?  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([groupId])
+  @@index([categoryId])
 }
