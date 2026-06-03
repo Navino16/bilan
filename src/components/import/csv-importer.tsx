@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Upload } from "lucide-react";
@@ -25,6 +25,7 @@ type Summary = { importedRows: number; skippedRows: number };
 
 export function CsvImporter({ accounts }: { accounts: { id: string; name: string }[] }) {
   const t = useTranslations("import");
+  const locale = useLocale();
   const router = useRouter();
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -71,7 +72,7 @@ export function CsvImporter({ accounts }: { accounts: { id: string; name: string
         <p className="text-sm">
           {t("summary", { imported: summary.importedRows, skipped: summary.skippedRows })}
         </p>
-        <Button render={<Link href="/transactions" />}>{t("viewTransactions")}</Button>
+        <Button render={<Link href={`/${locale}/transactions`} />}>{t("viewTransactions")}</Button>
       </div>
     );
   }

@@ -228,14 +228,14 @@ gh pr create --base develop --title "feat: manual entry from accounts" --label "
 
 ### Step 1: Install papaparse
 
-- [ ] **Step 1**
+- [x] **Step 1**
 
 Run: `npm install papaparse && npm install -D @types/papaparse`
 Expected: both added to `package.json`.
 
 ### Step 2: Write the failing CSV-parse unit test
 
-- [ ] **Step 2** — Create `tests/unit/services/csv-parse.test.ts`:
+- [x] **Step 2** — Create `tests/unit/services/csv-parse.test.ts`:
 
 ```typescript
 import { describe, it, expect } from "vitest";
@@ -304,12 +304,12 @@ describe("mapRows", () => {
 
 ### Step 3: Run to verify it fails
 
-- [ ] **Step 3** — Run: `npm run test:unit -- csv-parse`
+- [x] **Step 3** — Run: `npm run test:unit -- csv-parse`
 Expected: FAIL — `Cannot find module '@/server/services/imports/csv-parse'`.
 
 ### Step 4: Implement the import types
 
-- [ ] **Step 4** — Create `src/server/services/imports/types.ts`:
+- [x] **Step 4** — Create `src/server/services/imports/types.ts`:
 
 ```typescript
 // One bank movement after source-specific parsing, before encryption/insert.
@@ -353,7 +353,7 @@ export type CommitSummary = {
 
 ### Step 5: Implement csv-parse
 
-- [ ] **Step 5** — Create `src/server/services/imports/csv-parse.ts`:
+- [x] **Step 5** — Create `src/server/services/imports/csv-parse.ts`:
 
 ```typescript
 import Papa from "papaparse";
@@ -455,12 +455,12 @@ export function mapRows(rows: RawRow[], mapping: CsvMapping): NormalizedRow[] {
 
 ### Step 6: Run to verify it passes
 
-- [ ] **Step 6** — Run: `npm run test:unit -- csv-parse`
+- [x] **Step 6** — Run: `npm run test:unit -- csv-parse`
 Expected: PASS (all cases).
 
 ### Step 7: Commit
 
-- [ ] **Step 7**
+- [x] **Step 7**
 
 ```bash
 git add package.json package-lock.json src/server/services/imports/types.ts src/server/services/imports/csv-parse.ts tests/unit/services/csv-parse.test.ts
@@ -469,7 +469,7 @@ git commit -m "feat: add CSV parser, column-mapping detection and row normalizer
 
 ### Step 8: Add the ImportBatch model + Transaction link
 
-- [ ] **Step 8** — In `prisma/schema.prisma`:
+- [x] **Step 8** — In `prisma/schema.prisma`:
 
 Add to `BankAccount` relations (after `transactions Transaction[]`):
 
@@ -518,7 +518,7 @@ model ImportBatch {
 
 ### Step 9: Generate + apply the migration
 
-- [ ] **Step 9**
+- [x] **Step 9**
 
 Run: `npm run db:migrate -- --name phase_4_2_imports`
 Expected: migration created + applied to dev DB.
@@ -531,7 +531,7 @@ Expected: fresh client; Vitest cache cleared.
 
 ### Step 10: Commit schema + migration
 
-- [ ] **Step 10**
+- [x] **Step 10**
 
 ```bash
 git add prisma/schema.prisma prisma/migrations
@@ -540,7 +540,7 @@ git commit -m "feat: add ImportBatch model and Transaction.importBatchId"
 
 ### Step 11: Add the import validation module
 
-- [ ] **Step 11** — Create `src/lib/validation/import.ts`:
+- [x] **Step 11** — Create `src/lib/validation/import.ts`:
 
 ```typescript
 import { z } from "zod";
@@ -567,7 +567,7 @@ export type CsvMappingInput = z.input<typeof csvMappingSchema>;
 
 ### Step 12: Write the failing commit-pipeline integration test
 
-- [ ] **Step 12** — Create `tests/integration/imports-csv.test.ts`:
+- [x] **Step 12** — Create `tests/integration/imports-csv.test.ts`:
 
 ```typescript
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
@@ -656,12 +656,12 @@ describe("CSV import pipeline", () => {
 
 ### Step 13: Run to verify it fails
 
-- [ ] **Step 13** — Run: `npm run test:integration -- imports-csv`
+- [x] **Step 13** — Run: `npm run test:integration -- imports-csv`
 Expected: FAIL — `Cannot find module '@/server/services/imports'`.
 
 ### Step 14: Implement the shared commit pipeline
 
-- [ ] **Step 14** — Create `src/server/services/imports/commit.ts`:
+- [x] **Step 14** — Create `src/server/services/imports/commit.ts`:
 
 ```typescript
 import { db } from "@/server/db";
@@ -753,7 +753,7 @@ export async function commitRows(
 
 ### Step 15: Implement the imports service (CSV orchestration)
 
-- [ ] **Step 15** — Create `src/server/services/imports/index.ts`:
+- [x] **Step 15** — Create `src/server/services/imports/index.ts`:
 
 ```typescript
 import { createHash } from "node:crypto";
@@ -835,12 +835,12 @@ export async function getBatchForUser(batchId: string, userId: string) {
 
 ### Step 16: Run to verify it passes
 
-- [ ] **Step 16** — Run: `npm run test:integration -- imports-csv`
+- [x] **Step 16** — Run: `npm run test:integration -- imports-csv`
 Expected: PASS (4 tests).
 
 ### Step 17: Commit
 
-- [ ] **Step 17**
+- [x] **Step 17**
 
 ```bash
 git add src/lib/validation/import.ts src/server/services/imports/commit.ts src/server/services/imports/index.ts tests/integration/imports-csv.test.ts
@@ -849,7 +849,7 @@ git commit -m "feat: add CSV import service (batch, preview, commit with dedup +
 
 ### Step 18: Implement the upload + preview Route Handler
 
-- [ ] **Step 18** — Create `src/app/api/import/csv/route.ts`:
+- [x] **Step 18** — Create `src/app/api/import/csv/route.ts`:
 
 ```typescript
 import { getCurrentUser } from "@/server/auth/permissions";
@@ -889,7 +889,7 @@ export async function POST(req: Request): Promise<Response> {
 
 ### Step 19: Implement the commit Route Handler
 
-- [ ] **Step 19** — Create `src/app/api/import/csv/[batchId]/commit/route.ts`:
+- [x] **Step 19** — Create `src/app/api/import/csv/[batchId]/commit/route.ts`:
 
 ```typescript
 import { getCurrentUser } from "@/server/auth/permissions";
@@ -918,7 +918,7 @@ export async function POST(
 
 ### Step 20: Add the `import` i18n namespace + nav entry
 
-- [ ] **Step 20** — In `messages/fr.json` add a top-level `"import"` namespace:
+- [x] **Step 20** — In `messages/fr.json` add a top-level `"import"` namespace:
 
 ```json
   "import": {
@@ -1004,7 +1004,7 @@ Add the nav label under `shell.nav` in both files: `"import": "Importer"` (fr) /
 
 ### Step 21: Build the CSV importer UI
 
-- [ ] **Step 21** — Create `src/components/import/csv-importer.tsx` (client). It owns the three phases (upload → review → done) and calls the Route Handlers with `fetch`.
+- [x] **Step 21** — Create `src/components/import/csv-importer.tsx` (client). It owns the three phases (upload → review → done) and calls the Route Handlers with `fetch`.
 
 ```typescript
 "use client";
@@ -1169,7 +1169,7 @@ export function CsvImporter({ accounts }: { accounts: { id: string; name: string
 
 ### Step 22: Build the import page
 
-- [ ] **Step 22** — Create `src/app/[locale]/(authenticated)/import/csv/page.tsx`:
+- [x] **Step 22** — Create `src/app/[locale]/(authenticated)/import/csv/page.tsx`:
 
 ```typescript
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -1202,14 +1202,14 @@ export default async function ImportCsvPage({ params }: { params: Promise<{ loca
 
 ### Step 23: Typecheck + CI
 
-- [ ] **Step 23**
+- [x] **Step 23**
 
 Run: `npm run typecheck` → PASS.
 Run: `npm run ci` → PASS (lint + typecheck + unit + integration).
 
 ### Step 24: Write the e2e
 
-- [ ] **Step 24** — Create `tests/e2e/import-csv.spec.ts`:
+- [x] **Step 24** — Create `tests/e2e/import-csv.spec.ts`:
 
 ```typescript
 import { test, expect } from "@playwright/test";
@@ -1250,7 +1250,7 @@ test.describe("CSV import", () => {
 
 ### Step 25: Run e2e + commit, push, PR
 
-- [ ] **Step 25**
+- [x] **Step 25**
 
 Run: `npm run test:e2e -- import-csv --project=chromium`
 Expected: PASS (chromium).
