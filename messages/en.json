@@ -107,6 +107,7 @@
     "createCta": "Create account",
     "cancel": "Cancel",
     "edit": "Edit",
+    "addTransaction": "Add a transaction",
     "archive": "Archive",
     "archiveConfirm": "Archive this account? It will be hidden but its transactions are kept.",
     "name": "Account name",

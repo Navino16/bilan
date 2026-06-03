@@ -2,7 +2,9 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Plus } from "lucide-react";
 import { requireSession } from "@/server/auth/permissions";
 import { listVisibleForUser } from "@/server/services/accounts";
+import { listForUser } from "@/server/services/categories";
 import { listGroupsForUser } from "@/server/services/groups";
+import { flattenCategories } from "@/components/transactions/category-tree";
 import { AccountList } from "@/components/accounts/account-list";
 import { AccountForm } from "@/components/accounts/account-form";
 import { Button } from "@/components/ui/button";
@@ -15,6 +17,7 @@ export default async function AccountsPage({ params }: { params: Promise<{ local
   const user = await requireSession();
   const t = await getTranslations("accounts");
   const accounts = await listVisibleForUser(user.id);
+  const categories = flattenCategories(await listForUser(user.id));
   const groups = (await listGroupsForUser(user.id)).map((g) => ({ id: g.id, name: g.name }));
 
   return (
@@ -31,7 +34,7 @@ export default async function AccountsPage({ params }: { params: Promise<{ local
           }
         />
       </header>
-      <AccountList accounts={accounts} groups={groups} />
+      <AccountList accounts={accounts} groups={groups} categories={categories} />
     </div>
   );
 }

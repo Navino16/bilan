@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, MoreVertical, Pencil, Archive, Share2 } from "lucide-react";
+import { Eye, EyeOff, MoreVertical, Pencil, Archive, Share2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AccountForm } from "@/components/accounts/account-form";
 import { ShareDialog, type ShareGroup } from "@/components/accounts/share-dialog";
+import { TransactionForm } from "@/components/transactions/transaction-form";
+import type { FlatCategory } from "@/components/transactions/category-tree";
 import type { VisibleAccount } from "@/server/services/accounts";
 import { archiveAccountAction, revealAccountIbanAction } from "@/server/transport/actions/accounts";
 
@@ -124,12 +126,17 @@ function RowActions({ account, groups }: { account: EditableAccount; groups: Sha
 export function AccountList({
   accounts,
   groups,
+  categories,
 }: {
   accounts: VisibleAccount[];
   groups: ShareGroup[];
+  categories: FlatCategory[];
 }) {
   const t = useTranslations("accounts");
   const money = useMoney();
+  const writableAccounts = accounts
+    .filter((a) => a.access === "OWNER" || a.access === "WRITE")
+    .map((a) => ({ id: a.id, name: a.name }));
   const total = accounts.reduce((sum, a) => sum + a.balance, 0);
   const positive = accounts.filter((a) => a.balance > 0);
   const positiveTotal = positive.reduce((sum, a) => sum + a.balance, 0);
@@ -223,19 +230,33 @@ export function AccountList({
                     {a.ibanMasked && <IbanReveal id={a.id} masked={a.ibanMasked} />}
                   </div>
                 </div>
-                {a.access === "OWNER" && (
-                  <RowActions
-                    account={{
-                      id: a.id,
-                      name: a.name,
-                      type: a.type,
-                      bankName: a.bankName,
-                      color: a.color,
-                      balance: a.balance,
-                    }}
-                    groups={groups}
-                  />
-                )}
+                <div className="flex items-center gap-1">
+                  {(a.access === "OWNER" || a.access === "WRITE") && (
+                    <TransactionForm
+                      accounts={writableAccounts}
+                      categories={categories}
+                      defaultAccountId={a.id}
+                      trigger={
+                        <Button variant="ghost" size="icon-sm" aria-label={t("addTransaction")}>
+                          <Plus />
+                        </Button>
+                      }
+                    />
+                  )}
+                  {a.access === "OWNER" && (
+                    <RowActions
+                      account={{
+                        id: a.id,
+                        name: a.name,
+                        type: a.type,
+                        bankName: a.bankName,
+                        color: a.color,
+                        balance: a.balance,
+                      }}
+                      groups={groups}
+                    />
+                  )}
+                </div>
               </div>
             </Card>
           ))}
