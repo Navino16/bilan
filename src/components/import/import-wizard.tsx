@@ -8,6 +8,7 @@ import { Upload, ChevronRight } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { overline } from "@/components/transactions/bits";
+import { CategoryCombobox } from "@/components/transactions/category-combobox";
 import { Stepper, FieldMap, CheckRow } from "./wizard-bits";
 import { CSV_FIELDS } from "@/lib/validation/import";
 import type { FlatCategory } from "@/components/transactions/category-tree";
@@ -184,24 +185,15 @@ export function ImportWizard({
 
   const steps = [t("steps.file"), t("steps.read"), t("steps.match"), t("steps.validate")];
 
-  // Editable category per row (overrides the suggestion). Value defaults to the
-  // suggestion; "" = Sans catégorie.
+  // Editable category per row (overrides the suggestion), using the same combobox
+  // as the transactions screen. Defaults to the suggestion; "" = Sans catégorie.
   function categorySelect(r: PreviewRow) {
-    const value = overrides[r.externalId] ?? r.suggestedCategoryId ?? "";
     return (
-      <select
-        aria-label={t("colCategory")}
-        value={value}
-        onChange={(e) => setOverrides((o) => ({ ...o, [r.externalId]: e.target.value }))}
-        className="border-input bg-card h-7 w-full max-w-[170px] rounded-md border px-1.5 text-xs"
-      >
-        <option value="">{t("noCategory")}</option>
-        {categories.map((c) => (
-          <option key={c.id} value={c.id}>
-            {`${" ".repeat(c.depth * 2)}${c.name}`}
-          </option>
-        ))}
-      </select>
+      <CategoryCombobox
+        categories={categories}
+        defaultValue={r.suggestedCategoryId ?? ""}
+        onChange={(id) => setOverrides((o) => ({ ...o, [r.externalId]: id }))}
+      />
     );
   }
 
