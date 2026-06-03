@@ -83,6 +83,7 @@
     "nav": {
       "dashboard": "Dashboard",
       "transactions": "Transactions",
+      "import": "Import",
       "budgets": "Budgets",
       "accounts": "Accounts",
       "categories": "Categories",
@@ -245,6 +246,37 @@
       "FORBIDDEN": "Not allowed.",
       "NOT_FOUND": "Transaction not found.",
       "FAILED": "Failed. Try again."
+    }
+  },
+  "import": {
+    "title": "Import",
+    "subtitle": "Import your transactions from a file exported by your bank.",
+    "csvTab": "CSV",
+    "pdfTab": "PDF",
+    "account": "Account",
+    "chooseFile": "Choose a file",
+    "drop": "Drop a CSV file here, or click to browse.",
+    "mapping": "Column mapping",
+    "colDate": "Date",
+    "colLabel": "Label",
+    "colAmount": "Amount",
+    "colDebit": "Debit",
+    "colCredit": "Credit",
+    "colType": "Type",
+    "none": "—",
+    "preview": "Preview",
+    "rowsDetected": "{count, plural, one {# row detected} other {# rows detected}}",
+    "commit": "Import",
+    "importing": "Importing…",
+    "summary": "{imported} imported · {skipped} skipped (duplicates)",
+    "viewTransactions": "View transactions",
+    "error": {
+      "INVALID": "Check the file and account.",
+      "BAD_TYPE": "Unsupported file type.",
+      "TOO_LARGE": "File too large (5 MB max).",
+      "FORBIDDEN": "Not allowed.",
+      "PARSE_FAILED": "Could not read the file.",
+      "COMMIT_FAILED": "Import failed. Try again."
     }
   },
   "groups": {

@@ -83,6 +83,7 @@
     "nav": {
       "dashboard": "Tableau de bord",
       "transactions": "Transactions",
+      "import": "Importer",
       "budgets": "Budgets",
       "accounts": "Comptes",
       "categories": "Catégories",
@@ -245,6 +246,37 @@
       "FORBIDDEN": "Action non autorisée.",
       "NOT_FOUND": "Transaction introuvable.",
       "FAILED": "Échec. Réessayez."
+    }
+  },
+  "import": {
+    "title": "Importer",
+    "subtitle": "Importez vos opérations depuis un fichier de votre banque.",
+    "csvTab": "CSV",
+    "pdfTab": "PDF",
+    "account": "Compte",
+    "chooseFile": "Choisir un fichier",
+    "drop": "Déposez un fichier CSV ici, ou cliquez pour parcourir.",
+    "mapping": "Correspondance des colonnes",
+    "colDate": "Date",
+    "colLabel": "Libellé",
+    "colAmount": "Montant",
+    "colDebit": "Débit",
+    "colCredit": "Crédit",
+    "colType": "Type",
+    "none": "—",
+    "preview": "Aperçu",
+    "rowsDetected": "{count, plural, one {# ligne détectée} other {# lignes détectées}}",
+    "commit": "Importer",
+    "importing": "Import en cours…",
+    "summary": "{imported} importées · {skipped} ignorées (doublons)",
+    "viewTransactions": "Voir les transactions",
+    "error": {
+      "INVALID": "Vérifiez le fichier et le compte.",
+      "BAD_TYPE": "Format de fichier non supporté.",
+      "TOO_LARGE": "Fichier trop volumineux (5 Mo max).",
+      "FORBIDDEN": "Action non autorisée.",
+      "PARSE_FAILED": "Impossible de lire le fichier.",
+      "COMMIT_FAILED": "Échec de l'import. Réessayez."
     }
   },
   "groups": {
