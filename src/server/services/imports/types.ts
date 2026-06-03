@@ -1,0 +1,37 @@
+// One bank movement after source-specific parsing, before encryption/insert.
+// Shared by the CSV (4.2) and PDF (4.3b) pipelines.
+export type NormalizedRow = {
+  date: Date;
+  amount: number; // signed: negative = expense, positive = income
+  rawLabel: string;
+};
+
+// CSV column mapping: either a single signed `amount` column, or a
+// `debit`/`credit` pair (French bank exports). `type` is optional.
+export type CsvMapping = {
+  date: string;
+  label: string;
+  amount?: string;
+  debit?: string;
+  credit?: string;
+  type?: string;
+};
+
+export type PreviewRow = NormalizedRow & {
+  suggestedCategoryId: string | null;
+};
+
+export type ImportPreview = {
+  batchId: string;
+  headers: string[];
+  mapping: CsvMapping;
+  totalRows: number;
+  preview: PreviewRow[]; // first 50 normalized rows
+};
+
+export type CommitSummary = {
+  batchId: string;
+  totalRows: number;
+  importedRows: number;
+  skippedRows: number;
+};
