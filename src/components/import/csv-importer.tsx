@@ -80,8 +80,8 @@ export function CsvImporter({ accounts }: { accounts: { id: string; name: string
   if (!preview) {
     return (
       <div className="space-y-4">
-        <label className="block space-y-1.5">
-          <span className="text-muted-foreground text-[0.7rem] font-medium tracking-[0.14em] uppercase">
+        <label className="block space-y-2">
+          <span className="text-muted-foreground block text-[0.7rem] font-medium tracking-[0.14em] uppercase">
             {t("account")}
           </span>
           <select
