@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Upload, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { overline, Pill, CategoryChip } from "@/components/transactions/bits";
 import { Stepper, FieldMap, CheckRow } from "./wizard-bits";
@@ -198,9 +198,9 @@ export function ImportWizard({
           <p className="text-sm">
             {t("summary", { imported: summary.importedRows, skipped: summary.skippedRows })}
           </p>
-          <Button nativeButton={false} render={<Link href={`/${locale}/transactions`} />}>
+          <Link href={`/${locale}/transactions`} className={buttonVariants()}>
             {t("viewTransactions")}
-          </Button>
+          </Link>
         </Card>
       ) : !preview ? (
         <div className="max-w-xl space-y-4">

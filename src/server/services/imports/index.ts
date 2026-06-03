@@ -6,7 +6,9 @@ import { csvMappingSchema, type CsvMappingInput } from "@/lib/validation/import"
 import { parseCsv, detectMapping, mapRows } from "./csv-parse";
 import { commitRows, insertRows, finalizeBatch, type CommitOptions } from "./commit";
 import { buildPreview } from "./preview";
-import { parsePdf, type BankKey } from "./pdf";
+// `parsePdf` is imported dynamically inside createPdfBatch so the CSV path never
+// loads pdfjs/pdf-parse (heavy; would slow the CSV route's cold start).
+import type { BankKey } from "./pdf";
 import type { CsvMapping, ImportPreview, CommitSummary, PreviewRow } from "./types";
 
 export class ImportAccessError extends Error {}
@@ -115,6 +117,7 @@ export async function createPdfBatch(
   actor: { id: string },
 ): Promise<{ id: string; bank: BankKey | null }> {
   if (!(await canWriteAccount(actor.id, input.accountId))) throw new ImportAccessError("FORBIDDEN");
+  const { parsePdf } = await import("./pdf");
   const { bank, products } = await parsePdf(input.buffer);
   const metaProducts: PdfMetaProduct[] = products.map((p) => ({
     key: p.key,
