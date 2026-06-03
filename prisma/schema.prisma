@@ -259,6 +259,7 @@ model BankAccount {
   owner        User           @relation("AccountOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   shares       AccountShare[]
   transactions Transaction[]
+  imports      ImportBatch[]
 
   @@index([ownerId])
   @@index([ibanHash])
@@ -380,6 +381,9 @@ model Transaction {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  importBatchId String?
+  importBatch   ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+
   account      BankAccount              @relation(fields: [accountId], references: [id], onDelete: Cascade)
   searchTokens TransactionSearchToken[]
 
@@ -389,6 +393,7 @@ model Transaction {
   @@index([labelHash])
   @@index([rawLabelHash])
   @@index([date])
+  @@index([importBatchId])
 }
 
 model TransactionSearchToken {
@@ -399,6 +404,28 @@ model TransactionSearchToken {
 
   @@index([tokenHash])
   @@index([transactionId])
+}
+
+model ImportBatch {
+  id           String    @id @default(cuid())
+  accountId    String
+  source       String // CSV | PDF | MANUAL
+  filename     String?
+  filenameHash String?
+  status       String // PENDING | PARSING | REVIEW | COMPLETED | FAILED
+  totalRows    Int       @default(0)
+  importedRows Int       @default(0)
+  skippedRows  Int       @default(0)
+  errorMessage String?
+  metadata     Json?
+  createdById  String
+  createdAt    DateTime  @default(now())
+  completedAt  DateTime?
+
+  account      BankAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([accountId, createdAt])
 }
 
 model CategorizationRule {
