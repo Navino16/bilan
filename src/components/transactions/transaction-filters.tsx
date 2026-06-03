@@ -2,16 +2,20 @@
 
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { Tag, ChevronDown, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { TRANSACTION_TYPES } from "@/lib/validation/transaction";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { SegmentedTabs } from "./bits";
+import type { FlatCategory } from "./category-picker";
 
-export function TransactionFilters({
-  accounts,
-  categories,
-}: {
-  accounts: { id: string; name: string }[];
-  categories: { id: string; name: string; depth: number }[];
-}) {
+type Direction = "" | "in" | "out";
+
+export function TransactionFilters({ categories }: { categories: FlatCategory[] }) {
   const t = useTranslations("transactions");
   const router = useRouter();
   const pathname = usePathname();
@@ -24,54 +28,62 @@ export function TransactionFilters({
     router.replace(`${pathname}?${next.toString()}`);
   }
 
+  const dir = (params.get("dir") ?? "") as Direction;
+  const activeCat = params.get("categoryId") ?? "";
+  const activeCatName = categories.find((c) => c.id === activeCat)?.name ?? t("allCategories");
+
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+    <div className="flex flex-wrap items-center gap-2">
       <Input
         type="search"
         placeholder={t("searchPlaceholder")}
         defaultValue={params.get("search") ?? ""}
         onChange={(e) => setParam("search", e.target.value)}
         aria-label={t("search")}
+        className="h-8 w-full sm:w-56"
       />
-      <select
-        aria-label={t("account")}
-        defaultValue={params.get("accountId") ?? ""}
-        onChange={(e) => setParam("accountId", e.target.value)}
-        className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-      >
-        <option value="">{t("allAccounts")}</option>
-        {accounts.map((a) => (
-          <option key={a.id} value={a.id}>
-            {a.name}
-          </option>
-        ))}
-      </select>
-      <select
-        aria-label={t("category")}
-        defaultValue={params.get("categoryId") ?? ""}
-        onChange={(e) => setParam("categoryId", e.target.value)}
-        className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-      >
-        <option value="">{t("allCategories")}</option>
-        {categories.map((c) => (
-          <option key={c.id} value={c.id}>
-            {`${"  ".repeat(c.depth)}${c.name}`}
-          </option>
-        ))}
-      </select>
-      <select
-        aria-label={t("type")}
-        defaultValue={params.get("type") ?? ""}
-        onChange={(e) => setParam("type", e.target.value)}
-        className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-      >
-        <option value="">{t("allTypes")}</option>
-        {TRANSACTION_TYPES.map((ty) => (
-          <option key={ty} value={ty}>
-            {t(`types.${ty}`)}
-          </option>
-        ))}
-      </select>
+
+      <SegmentedTabs<Direction>
+        items={[
+          { id: "", label: t("tab.all") },
+          { id: "in", label: t("tab.in") },
+          { id: "out", label: t("tab.out") },
+        ]}
+        value={dir}
+        onChange={(v) => setParam("dir", v)}
+      />
+
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <button
+              type="button"
+              className="border-border bg-card text-muted-foreground hover:text-foreground inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[0.8rem]"
+            />
+          }
+        >
+          <Tag className="size-3.5" />
+          <span className="max-w-32 truncate">{activeCatName}</span>
+          <ChevronDown className="size-3.5" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="max-h-80 w-56 overflow-auto">
+          <DropdownMenuItem onClick={() => setParam("categoryId", "")}>
+            <span className="flex-1">{t("allCategories")}</span>
+            {!activeCat && <Check className="size-3.5" />}
+          </DropdownMenuItem>
+          {categories.map((c) => (
+            <DropdownMenuItem key={c.id} onClick={() => setParam("categoryId", c.id)}>
+              <span
+                aria-hidden
+                className="size-2 shrink-0 rounded-full"
+                style={{ marginLeft: c.depth * 10, background: c.color ?? "var(--ink-3)" }}
+              />
+              <span className="flex-1 truncate">{c.name}</span>
+              {activeCat === c.id && <Check className="size-3.5" />}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

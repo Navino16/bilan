@@ -74,6 +74,20 @@ describe("listTransactions", () => {
     expect(bySearch.items.map((i) => i.label)).toEqual(["Leclerc Drive"]);
   });
 
+  it("matches multi-word search as an AND of tokens", async () => {
+    // Both words present on the same transaction.
+    const both = await listTransactions(owner, { search: "leclerc drive" });
+    expect(both.items.map((i) => i.label)).toEqual(["Leclerc Drive"]);
+
+    // Words living on different transactions → no single row carries both.
+    const none = await listTransactions(owner, { search: "leclerc salaire" });
+    expect(none.items).toEqual([]);
+
+    // A query made only of too-short words matches nothing (not everything).
+    const tooShort = await listTransactions(owner, { search: "ab" });
+    expect(tooShort.items).toEqual([]);
+  });
+
   it("lets a READ member see shared-account transactions but not write", async () => {
     const { items } = await listTransactions(member, {});
     expect(items.length).toBe(3);

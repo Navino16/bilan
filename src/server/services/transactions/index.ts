@@ -1,6 +1,6 @@
 import { db } from "@/server/db";
 import { decrypt } from "@/server/crypto/encryption";
-import { hmacForSearch } from "@/server/crypto/hmac";
+import { hmacForSearch, tokenize } from "@/server/crypto/hmac";
 import { dataKey, searchKey } from "@/server/crypto/keys";
 import { logEvent } from "@/server/services/audit";
 import { canWriteAccount, canReadAccount } from "@/server/services/accounts/sharing";
@@ -21,6 +21,7 @@ export type TransactionView = {
   amount: number;
   type: string;
   label: string;
+  rawLabel: string;
   note: string | null;
   categoryId: string | null;
   manuallyCategorized: boolean;
@@ -85,6 +86,7 @@ export async function getTransactionForUser(
     amount: Number(row.amount),
     type: row.type,
     label: decrypt(row.labelEnc, dataKey),
+    rawLabel: decrypt(row.rawLabelEnc, dataKey),
     note: row.noteEnc ? decrypt(row.noteEnc, dataKey) : null,
     categoryId: row.categoryId,
     manuallyCategorized: row.manuallyCategorized,
@@ -97,6 +99,7 @@ export type TransactionFilters = {
   accountId?: string;
   categoryId?: string;
   type?: TransactionType;
+  direction?: "in" | "out"; // amount sign filter (Entrées / Sorties)
   from?: Date;
   to?: Date;
   search?: string; // single normalized word → token match
@@ -121,14 +124,26 @@ export async function listTransactions(
   const where: Record<string, unknown> = { accountId: { in: accountIds } };
   if (filters.categoryId) where.categoryId = filters.categoryId;
   if (filters.type) where.type = filters.type;
+  if (filters.direction) where.amount = filters.direction === "in" ? { gt: 0 } : { lt: 0 };
   if (filters.from || filters.to) {
     where.date = {
       ...(filters.from ? { gte: filters.from } : {}),
       ...(filters.to ? { lte: filters.to } : {}),
     };
   }
-  if (filters.search?.trim()) {
-    where.searchTokens = { some: { tokenHash: hmacForSearch(filters.search, searchKey) } };
+  const query = filters.search?.trim();
+  if (query) {
+    // Multi-word AND: the row must carry a token for every normalized word in
+    // the query (words < 3 chars are dropped — same rule as indexing). A query
+    // made only of too-short words matches nothing rather than everything.
+    const words = tokenize(query);
+    if (words.length === 0) {
+      where.id = "__no_searchable_word__";
+    } else {
+      where.AND = words.map((w) => ({
+        searchTokens: { some: { tokenHash: hmacForSearch(w, searchKey) } },
+      }));
+    }
   }
 
   const [rows, total] = await Promise.all([
@@ -148,6 +163,7 @@ export async function listTransactions(
     amount: Number(row.amount),
     type: row.type,
     label: decrypt(row.labelEnc, dataKey),
+    rawLabel: decrypt(row.rawLabelEnc, dataKey),
     note: row.noteEnc ? decrypt(row.noteEnc, dataKey) : null,
     categoryId: row.categoryId,
     manuallyCategorized: row.manuallyCategorized,

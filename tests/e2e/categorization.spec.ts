@@ -18,12 +18,15 @@ test.describe("categorization learning", () => {
 
     const row = page.locator('[data-slot="transaction-row"]').filter({ hasText: label }).first();
     await expect(row).toBeVisible();
-    // Pick the first real category in the row's select.
-    await row.locator("select").selectOption({ index: 1 });
+    // Open the detail panel, open its category combobox and pick the first real
+    // category (menu item 0 is "no category").
+    await row.click();
+    await page.locator('[data-slot="category-combobox"]').click();
+    await page.getByRole("menuitem").nth(1).click();
 
-    // The "create a rule?" dialog appears.
-    await expect(page.getByRole("dialog")).toContainText(/créer une règle/i);
+    // The "create a rule?" learning dialog appears; confirm it.
+    await expect(page.getByText(/créer une règle pour les transactions/i)).toBeVisible();
     await page.getByRole("button", { name: /créer la règle/i }).click();
-    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.getByText(/créer une règle pour les transactions/i)).toHaveCount(0);
   });
 });

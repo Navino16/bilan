@@ -16,7 +16,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { CategoryPicker, type FlatCategory } from "./category-picker";
+import { type FlatCategory } from "./category-picker";
+import { CategoryCombobox } from "./category-combobox";
 import { TRANSACTION_TYPES } from "@/lib/validation/transaction";
 import {
   createTransactionAction,
@@ -123,7 +124,7 @@ export function TransactionForm({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="tx-category">{t("category")}</Label>
-                <CategoryPicker name="categoryId" categories={categories} />
+                <CategoryCombobox name="categoryId" categories={categories} />
               </div>
             </div>
             <div className="space-y-2">

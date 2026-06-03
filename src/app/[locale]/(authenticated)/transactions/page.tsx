@@ -5,11 +5,14 @@ import { listTransactions } from "@/server/services/transactions";
 import { listForUser } from "@/server/services/categories";
 import { listVisibleForUser } from "@/server/services/accounts";
 import { flattenCategories } from "@/components/transactions/category-tree";
-import { TransactionList, type ListItem } from "@/components/transactions/transaction-list";
+import {
+  TransactionList,
+  type ListItem,
+  type AccountOption,
+} from "@/components/transactions/transaction-list";
 import { TransactionFilters } from "@/components/transactions/transaction-filters";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import { Button } from "@/components/ui/button";
-import { TRANSACTION_TYPES, type TransactionType } from "@/lib/validation/transaction";
 
 export const dynamic = "force-dynamic";
 
@@ -26,54 +29,56 @@ export default async function TransactionsPage({
   const user = await requireSession();
   const t = await getTranslations("transactions");
 
-  const type =
-    sp.type && (TRANSACTION_TYPES as readonly string[]).includes(sp.type)
-      ? (sp.type as TransactionType)
-      : undefined;
+  const direction = sp.dir === "in" || sp.dir === "out" ? sp.dir : undefined;
 
-  const [{ items }, tree, accounts] = await Promise.all([
+  const [{ items, total }, tree, accounts] = await Promise.all([
     listTransactions(user.id, {
-      accountId: sp.accountId,
       categoryId: sp.categoryId,
-      type,
+      direction,
       search: sp.search,
-      from: sp.from ? new Date(sp.from) : undefined,
-      to: sp.to ? new Date(sp.to) : undefined,
     }),
     listForUser(user.id),
     listVisibleForUser(user.id),
   ]);
 
   const flatCategories = flattenCategories(tree);
-  const accountOptions = accounts.map((a) => ({ id: a.id, name: a.name }));
+  const accountOptions: AccountOption[] = accounts.map((a) => ({
+    id: a.id,
+    name: a.name,
+    color: a.color,
+    bankName: a.bankName,
+  }));
+  const formAccounts = accounts.map((a) => ({ id: a.id, name: a.name }));
   const listItems: ListItem[] = items.map((i) => ({
     id: i.id,
     date: i.date.toISOString(),
     amount: i.amount,
     type: i.type,
     label: i.label,
+    rawLabel: i.rawLabel,
+    note: i.note,
+    accountId: i.accountId,
     accountName: i.accountName,
     categoryId: i.categoryId,
   }));
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6">
-      <header className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl">{t("title")}</h1>
-          <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
+    <div className="mx-auto w-full max-w-4xl space-y-5">
+      <header className="flex items-end justify-between gap-3">
+        <div className="space-y-1">
+          <div className="text-muted-foreground text-[0.7rem] font-medium tracking-[0.14em] uppercase">
+            {t("opCount", { count: total })}
+          </div>
+          <h1 className="font-display text-3xl leading-none">{t("title")}</h1>
         </div>
         {accountOptions.length === 0 ? (
-          // No writable account yet: a plain disabled button. Never feed a
-          // disabled element into DialogTrigger — Base UI resolves the trigger's
-          // disabled state on the client only, which hydration-mismatches.
           <Button disabled>
             <Plus />
             {t("create")}
           </Button>
         ) : (
           <TransactionForm
-            accounts={accountOptions}
+            accounts={formAccounts}
             categories={flatCategories}
             trigger={
               <Button>
@@ -84,8 +89,8 @@ export default async function TransactionsPage({
           />
         )}
       </header>
-      <TransactionFilters accounts={accountOptions} categories={flatCategories} />
-      <TransactionList items={listItems} categories={flatCategories} />
+      <TransactionFilters categories={flatCategories} />
+      <TransactionList items={listItems} categories={flatCategories} accounts={accountOptions} />
     </div>
   );
 }

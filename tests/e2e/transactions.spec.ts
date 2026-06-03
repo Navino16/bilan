@@ -21,7 +21,7 @@ test.describe("transactions", () => {
     await expect(row.first()).toBeVisible();
 
     // Token search (first distinctive word).
-    await page.getByPlaceholder(/un mot/i).fill("boulangerie");
+    await page.getByRole("searchbox").fill("boulangerie");
     await expect(
       page.locator('[data-slot="transaction-row"]').filter({ hasText: label }).first(),
     ).toBeVisible();
