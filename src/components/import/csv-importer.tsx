@@ -80,14 +80,14 @@ export function CsvImporter({ accounts }: { accounts: { id: string; name: string
   if (!preview) {
     return (
       <div className="space-y-4">
-        <label className="block space-y-2">
-          <span className="text-muted-foreground block text-[0.7rem] font-medium tracking-[0.14em] uppercase">
+        <label className="flex items-center gap-3">
+          <span className="text-muted-foreground text-[0.7rem] font-medium tracking-[0.14em] uppercase">
             {t("account")}
           </span>
           <select
             value={accountId}
             onChange={(e) => setAccountId(e.target.value)}
-            className="border-input bg-background h-9 w-full max-w-sm rounded-md border px-3 text-sm"
+            className="border-input bg-background h-9 w-auto min-w-48 max-w-sm rounded-md border px-3 text-sm"
           >
             {accounts.map((a) => (
               <option key={a.id} value={a.id}>
