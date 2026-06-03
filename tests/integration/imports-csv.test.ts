@@ -90,4 +90,53 @@ describe("CSV import pipeline", () => {
     expect(summary.importedRows).toBe(0);
     expect(summary.skippedRows).toBe(2);
   });
+
+  it("honours per-row edits: category override + excluded row", async () => {
+    const cat = await db.category.create({ data: { userId: owner, name: "Courses" } });
+    const csv = `Date;Libellé;Débit;Crédit
+10/04/2026;CB EDIT KEEP;11,11;
+11/04/2026;CB EDIT DROP;22,22;`;
+    const batch = await createCsvBatch(
+      { accountId, filename: "edit.csv", text: csv },
+      { id: owner },
+    );
+    const preview = await previewCsvBatch(batch.id, owner);
+    const keep = preview.preview.find((r) => r.rawLabel === "CB EDIT KEEP")!;
+    const drop = preview.preview.find((r) => r.rawLabel === "CB EDIT DROP")!;
+
+    const summary = await commitCsvBatch(
+      batch.id,
+      preview.mapping,
+      { id: owner },
+      { overrides: { [keep.externalId]: cat.id }, excludedIds: [drop.externalId] },
+    );
+    expect(summary.importedRows).toBe(1);
+
+    const rows = await db.transaction.findMany({ where: { importBatchId: batch.id } });
+    expect(rows).toHaveLength(1);
+    expect(decrypt(rows[0].rawLabelEnc, dataKey)).toBe("CB EDIT KEEP");
+    expect(rows[0].categoryId).toBe(cat.id);
+    expect(rows[0].manuallyCategorized).toBe(true);
+  });
+
+  it("drops an override category the actor does not own (IDOR guard)", async () => {
+    const foreign = await db.category.create({ data: { userId: stranger, name: "Stranger cat" } });
+    const csv = `Date;Libellé;Débit;Crédit\n12/04/2026;CB IDOR ${Date.now()};5,00;`;
+    const batch = await createCsvBatch(
+      { accountId, filename: "idor.csv", text: csv },
+      { id: owner },
+    );
+    const preview = await previewCsvBatch(batch.id, owner);
+    const row = preview.preview[0];
+
+    await commitCsvBatch(
+      batch.id,
+      preview.mapping,
+      { id: owner },
+      { autoCategorize: false, overrides: { [row.externalId]: foreign.id } },
+    );
+    const tx = await db.transaction.findFirstOrThrow({ where: { importBatchId: batch.id } });
+    expect(tx.categoryId).toBeNull(); // foreign category dropped
+    expect(tx.manuallyCategorized).toBe(false);
+  });
 });

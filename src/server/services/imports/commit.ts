@@ -9,7 +9,13 @@ import type { CommitSummary, NormalizedRow } from "./types";
 // encrypts labels, writes per-word search tokens, auto-categorizes, and inserts.
 // Does NOT touch the ImportBatch row — callers finalize counters/status. Reused
 // by CSV (one account) and PDF (one call per mapped product/account).
-export type CommitOptions = { autoCategorize?: boolean };
+export type CommitOptions = {
+  autoCategorize?: boolean;
+  // Per-row category override, keyed by externalId (from the editable preview).
+  overrides?: Record<string, string>;
+  // externalIds the user unchecked in the preview — skipped entirely.
+  excludedIds?: string[];
+};
 
 export async function insertRows(
   target: { batchId: string; accountId: string },
@@ -18,6 +24,27 @@ export async function insertRows(
   opts: CommitOptions = {},
 ): Promise<{ imported: number; skipped: number; total: number }> {
   const autoCategorize = opts.autoCategorize ?? true;
+  const overrides = opts.overrides ?? {};
+  const excluded = new Set(opts.excludedIds ?? []);
+
+  // Validate client-supplied override category IDs against the categories the
+  // actor can actually use (own + their groups') — never trust them blindly
+  // (IDOR). Unknown/foreign IDs are dropped (treated as no override).
+  const overrideIds = [...new Set(Object.values(overrides).filter(Boolean))];
+  const allowedCategoryIds = overrideIds.length
+    ? new Set(
+        (
+          await db.category.findMany({
+            where: {
+              id: { in: overrideIds },
+              OR: [{ userId: actor.id }, { group: { members: { some: { userId: actor.id } } } }],
+            },
+            select: { id: true },
+          })
+        ).map((c) => c.id),
+      )
+    : new Set<string>();
+
   const withIds = rows.map((r) => ({
     row: r,
     externalId: computeExternalId(r.date, r.amount, r.rawLabel),
@@ -31,6 +58,7 @@ export async function insertRows(
   let imported = 0;
   let skipped = 0;
   for (const { row, externalId } of withIds) {
+    if (excluded.has(externalId)) continue; // user unchecked this row in the preview
     if (seen.has(externalId)) {
       skipped++;
       continue;
@@ -38,9 +66,11 @@ export async function insertRows(
     seen.add(externalId);
 
     const secure = buildSecureFields({ label: row.rawLabel, rawLabel: row.rawLabel });
-    const categoryId = autoCategorize
-      ? (await suggest(row.rawLabel, { userId: actor.id })).categoryId
-      : null;
+    const rawOverride = overrides[externalId];
+    const override = rawOverride && allowedCategoryIds.has(rawOverride) ? rawOverride : undefined;
+    const categoryId =
+      override ??
+      (autoCategorize ? (await suggest(row.rawLabel, { userId: actor.id })).categoryId : null);
     await db.transaction.create({
       data: {
         accountId: target.accountId,
@@ -53,7 +83,7 @@ export async function insertRows(
         rawLabelHash: secure.rawLabelHash,
         noteEnc: null,
         categoryId,
-        manuallyCategorized: false,
+        manuallyCategorized: Boolean(override),
         externalId,
         importBatchId: target.batchId,
         createdById: actor.id,

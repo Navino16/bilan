@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@/server/auth/permissions";
-import { createPdfBatch, previewPdfBatch, ImportAccessError } from "@/server/services/imports";
+import { ImportAccessError } from "@/server/services/imports";
+import { createPdfBatch, previewPdfBatch } from "@/server/services/imports/pdf-service";
 
 export const runtime = "nodejs";
 

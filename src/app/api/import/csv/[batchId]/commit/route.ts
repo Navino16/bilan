@@ -19,6 +19,8 @@ export async function POST(
       { id: user.id },
       {
         autoCategorize: body.autoCategorize ?? true,
+        overrides: body.overrides ?? {},
+        excludedIds: body.excludedIds ?? [],
       },
     );
     return Response.json(summary);

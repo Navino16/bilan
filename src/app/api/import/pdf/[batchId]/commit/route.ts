@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@/server/auth/permissions";
-import { commitPdfBatch, ImportAccessError } from "@/server/services/imports";
+import { ImportAccessError } from "@/server/services/imports";
+import { commitPdfBatch } from "@/server/services/imports/pdf-service";
 
 export const runtime = "nodejs";
 
@@ -19,7 +20,11 @@ export async function POST(
       batchId,
       body.mapping as Record<string, string>,
       { id: user.id },
-      { autoCategorize: body.autoCategorize ?? true },
+      {
+        autoCategorize: body.autoCategorize ?? true,
+        overrides: body.overrides ?? {},
+        excludedIds: body.excludedIds ?? [],
+      },
     );
     return Response.json(summary);
   } catch (e) {

@@ -1,19 +1,21 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Upload, ChevronRight } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { overline, Pill, CategoryChip } from "@/components/transactions/bits";
+import { overline } from "@/components/transactions/bits";
+import { CategoryCombobox } from "@/components/transactions/category-combobox";
 import { Stepper, FieldMap, CheckRow } from "./wizard-bits";
 import { CSV_FIELDS } from "@/lib/validation/import";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 
 type Account = { id: string; name: string; bankName: string | null };
 type PreviewRow = {
+  externalId: string;
   date: string;
   amount: number;
   rawLabel: string;
@@ -64,13 +66,15 @@ export function ImportWizard({
   const router = useRouter();
   const money = new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" });
   const dayMonth = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" });
-  const catById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
 
   const [file, setFile] = useState<File | null>(null);
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
   const [preview, setPreview] = useState<Preview | null>(null);
   const [columns, setColumns] = useState<Record<string, string>>({});
   const [productAccount, setProductAccount] = useState<Record<string, string>>({});
+  // Per-row edits keyed by externalId: category override + exclusion.
+  const [overrides, setOverrides] = useState<Record<string, string>>({});
+  const [excluded, setExcluded] = useState<Record<string, boolean>>({});
   const [autoCategorize, setAutoCategorize] = useState(true);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -95,6 +99,8 @@ export function ImportWizard({
         return;
       }
       setPreview(data);
+      setOverrides({});
+      setExcluded({});
       setColumns(
         Object.fromEntries(Object.entries(data.mapping ?? {}).filter(([, v]) => v)) as Record<
           string,
@@ -126,6 +132,8 @@ export function ImportWizard({
     setPreview(null);
     setColumns({});
     setProductAccount({});
+    setOverrides({});
+    setExcluded({});
     setError(null);
   }
 
@@ -136,12 +144,14 @@ export function ImportWizard({
       const url = isPdf
         ? `/api/import/pdf/${preview.batchId}/commit`
         : `/api/import/csv/${preview.batchId}/commit`;
+      const excludedIds = Object.keys(excluded).filter((id) => excluded[id]);
+      const edits = { autoCategorize, overrides, excludedIds };
       const body = isPdf
         ? {
             mapping: Object.fromEntries(Object.entries(productAccount).filter(([, v]) => v)),
-            autoCategorize,
+            ...edits,
           }
-        : { mapping: columns, autoCategorize };
+        : { mapping: columns, ...edits };
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -175,10 +185,31 @@ export function ImportWizard({
 
   const steps = [t("steps.file"), t("steps.read"), t("steps.match"), t("steps.validate")];
 
-  function categoryCell(id: string | null) {
-    const c = id ? catById.get(id) : undefined;
-    if (!c) return <Pill>{t("noCategory")}</Pill>;
-    return <CategoryChip name={c.name} color={c.color} />;
+  // Editable category per row (overrides the suggestion), using the same combobox
+  // as the transactions screen. Defaults to the suggestion; "" = Sans catégorie.
+  function categorySelect(r: PreviewRow) {
+    return (
+      <CategoryCombobox
+        categories={categories}
+        defaultValue={r.suggestedCategoryId ?? ""}
+        onChange={(id) => setOverrides((o) => ({ ...o, [r.externalId]: id }))}
+      />
+    );
+  }
+
+  // Include/exclude checkbox per row (checked = will be imported).
+  function includeCheckbox(externalId: string) {
+    const checked = !excluded[externalId];
+    return (
+      <input
+        type="checkbox"
+        aria-label={t("include")}
+        checked={checked}
+        onChange={() => setExcluded((x) => ({ ...x, [externalId]: checked }))}
+        className="size-4 shrink-0 cursor-pointer"
+        style={{ accentColor: "var(--primary)" }}
+      />
+    );
   }
 
   return (
@@ -367,7 +398,8 @@ export function ImportWizard({
                     </select>
                   </div>
                 )}
-                <div className="text-muted-foreground bg-muted/60 hidden grid-cols-[64px_1fr_minmax(0,150px)_96px_104px] gap-3 border-y px-5 py-2.5 text-[11px] tracking-[0.08em] uppercase md:grid">
+                <div className="text-muted-foreground bg-muted/60 hidden grid-cols-[28px_56px_1fr_minmax(0,160px)_76px_96px] items-center gap-3 border-y px-5 py-2.5 text-[11px] tracking-[0.08em] uppercase md:grid">
+                  <span aria-hidden />
                   <span>{t("colDate")}</span>
                   <span>{t("colRawLabel")}</span>
                   <span>{t("colCategory")}</span>
@@ -395,17 +427,22 @@ export function ImportWizard({
                       style={r.isDuplicate ? { background: "var(--warning-bg)" } : undefined}
                     >
                       {/* Desktop grid */}
-                      <div className="hidden grid-cols-[64px_1fr_minmax(0,150px)_96px_104px] items-center gap-3 px-5 py-2.5 md:grid">
+                      <div
+                        className={`hidden grid-cols-[28px_56px_1fr_minmax(0,160px)_76px_96px] items-center gap-3 px-5 py-2 md:grid ${
+                          excluded[r.externalId] ? "opacity-45" : ""
+                        }`}
+                      >
+                        {includeCheckbox(r.externalId)}
                         <span className="text-muted-foreground text-xs">
                           {dayMonth.format(new Date(r.date))}
                         </span>
-                        <span className="text-muted-foreground truncate font-mono text-[12.5px]">
-                          {r.rawLabel}
-                        </span>
                         <span className="flex min-w-0 items-center gap-2">
-                          {categoryCell(r.suggestedCategoryId)}
+                          <span className="text-muted-foreground truncate font-mono text-[12.5px]">
+                            {r.rawLabel}
+                          </span>
                           {dupBadge}
                         </span>
+                        <span className="min-w-0">{categorySelect(r)}</span>
                         <span className="text-muted-foreground text-[11.5px]">
                           {tType(`types.${r.type}`)}
                         </span>
@@ -418,22 +455,31 @@ export function ImportWizard({
                       </div>
 
                       {/* Mobile compact */}
-                      <div className="flex flex-col gap-1.5 px-4 py-3 md:hidden">
-                        <div className="flex items-start justify-between gap-3">
-                          <span className="truncate font-mono text-[12.5px]">{r.rawLabel}</span>
-                          <span
-                            className="shrink-0 text-sm font-medium tabular-nums"
-                            style={r.amount > 0 ? { color: "var(--income)" } : undefined}
-                          >
-                            {money.format(r.amount)}
-                          </span>
-                        </div>
-                        <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
-                          <span className="tabular-nums">{dayMonth.format(new Date(r.date))}</span>
-                          <span aria-hidden>·</span>
-                          <span>{tType(`types.${r.type}`)}</span>
-                          {categoryCell(r.suggestedCategoryId)}
-                          {dupBadge}
+                      <div
+                        className={`flex gap-3 px-4 py-3 md:hidden ${
+                          excluded[r.externalId] ? "opacity-45" : ""
+                        }`}
+                      >
+                        <div className="pt-0.5">{includeCheckbox(r.externalId)}</div>
+                        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                          <div className="flex items-start justify-between gap-3">
+                            <span className="truncate font-mono text-[12.5px]">{r.rawLabel}</span>
+                            <span
+                              className="shrink-0 text-sm font-medium tabular-nums"
+                              style={r.amount > 0 ? { color: "var(--income)" } : undefined}
+                            >
+                              {money.format(r.amount)}
+                            </span>
+                          </div>
+                          <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
+                            <span className="tabular-nums">
+                              {dayMonth.format(new Date(r.date))}
+                            </span>
+                            <span aria-hidden>·</span>
+                            <span>{tType(`types.${r.type}`)}</span>
+                            {dupBadge}
+                          </div>
+                          <div className="flex items-center">{categorySelect(r)}</div>
                         </div>
                       </div>
                     </div>

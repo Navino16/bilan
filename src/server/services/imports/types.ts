@@ -26,7 +26,10 @@ export type CsvMapping = {
 };
 
 // Enriched row shown in the import preview (date serialized to ISO over the wire).
+// `externalId` is the stable dedup key; the client uses it to key per-row edits
+// (category override / exclusion) sent back at commit.
 export type PreviewRow = {
+  externalId: string;
   date: string;
   amount: number;
   rawLabel: string;

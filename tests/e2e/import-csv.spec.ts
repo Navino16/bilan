@@ -31,14 +31,30 @@ test.describe("CSV import (wizard)", () => {
       timeout: 15_000,
     });
 
-    await page.getByRole("button", { name: /valider l'import/i }).click();
-    await page.getByRole("link", { name: /voir les transactions/i }).click();
+    // Exclude the second row (the credit) before validating.
+    await page
+      .locator('[data-slot="import-preview-row"]')
+      .filter({ hasText: `VIR IMPORT ${stamp}` })
+      .locator('input[type="checkbox"]:visible')
+      .uncheck();
 
+    const committed = page.waitForResponse(
+      (r) => r.url().includes("/commit") && r.request().method() === "POST",
+      { timeout: 30_000 },
+    );
+    await page.getByRole("button", { name: /valider l'import/i }).click();
+    await committed;
+    await page.getByRole("link", { name: /voir les transactions/i }).click({ timeout: 15_000 });
+
+    // The kept row is imported; the excluded one is not.
     await expect(
       page
         .locator('[data-slot="transaction-row"]')
         .filter({ hasText: `CB IMPORT ${stamp}` })
         .first(),
     ).toBeVisible();
+    await expect(
+      page.locator('[data-slot="transaction-row"]').filter({ hasText: `VIR IMPORT ${stamp}` }),
+    ).toHaveCount(0);
   });
 });

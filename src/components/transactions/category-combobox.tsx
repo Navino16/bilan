@@ -20,7 +20,9 @@ export function CategoryCombobox({
   defaultValue,
   onChange,
 }: {
-  name: string;
+  // When set, mirrors the value into a hidden input (form-field use). Omit for a
+  // purely controlled chooser (e.g. the import preview rows).
+  name?: string;
   categories: FlatCategory[];
   defaultValue?: string | null;
   onChange?: (id: string) => void;
@@ -36,7 +38,7 @@ export function CategoryCombobox({
 
   return (
     <>
-      <input type="hidden" name={name} value={value} />
+      {name && <input type="hidden" name={name} value={value} />}
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
