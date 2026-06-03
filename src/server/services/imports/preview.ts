@@ -5,21 +5,20 @@ import { deriveType } from "./derive-type";
 import type { NormalizedRow, PreviewRow } from "./types";
 
 export type PreviewResult = {
-  rows: PreviewRow[]; // first `limit` rows, enriched
+  rows: PreviewRow[]; // ALL rows, enriched (the preview is editable, so every row is shown)
   totalRows: number;
   duplicateCount: number; // over ALL rows: already present in the destination account
   autoCategorizedCount: number; // over ALL rows: a rule matched
 };
 
 // Enriches parsed rows for the import preview against a destination account:
-// per-row type + suggested category + duplicate flag, plus whole-set counts.
-// `(accountId, externalId)` existence drives the duplicate flag; suggestions are
-// matched in one rules-load via suggestMany.
+// per-row externalId + type + suggested category + duplicate flag, plus
+// whole-set counts. `(accountId, externalId)` existence drives the duplicate
+// flag; suggestions are matched in one rules-load via suggestMany.
 export async function buildPreview(
   accountId: string,
   rows: NormalizedRow[],
   userId: string,
-  limit = 50,
 ): Promise<PreviewResult> {
   const externalIds = rows.map((r) => computeExternalId(r.date, r.amount, r.rawLabel));
   const existing = externalIds.length
@@ -41,7 +40,8 @@ export async function buildPreview(
     if (suggestions[i].categoryId) autoCategorizedCount++;
   }
 
-  const previewRows: PreviewRow[] = rows.slice(0, limit).map((r, i) => ({
+  const previewRows: PreviewRow[] = rows.map((r, i) => ({
+    externalId: externalIds[i],
     date: r.date.toISOString(),
     amount: r.amount,
     rawLabel: r.rawLabel,

@@ -269,6 +269,7 @@
     "previewMeta": "{dup} doublons potentiels · {cat} catégorisées automatiquement",
     "validate": "Valider l'import",
     "cancel": "Annuler",
+    "include": "Inclure cette ligne",
     "duplicate": "doublon",
     "noCategory": "Sans catégorie",
     "colRawLabel": "Libellé brut",

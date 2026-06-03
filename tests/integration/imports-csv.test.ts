@@ -90,4 +90,32 @@ describe("CSV import pipeline", () => {
     expect(summary.importedRows).toBe(0);
     expect(summary.skippedRows).toBe(2);
   });
+
+  it("honours per-row edits: category override + excluded row", async () => {
+    const cat = await db.category.create({ data: { userId: owner, name: "Courses" } });
+    const csv = `Date;Libellé;Débit;Crédit
+10/04/2026;CB EDIT KEEP;11,11;
+11/04/2026;CB EDIT DROP;22,22;`;
+    const batch = await createCsvBatch(
+      { accountId, filename: "edit.csv", text: csv },
+      { id: owner },
+    );
+    const preview = await previewCsvBatch(batch.id, owner);
+    const keep = preview.preview.find((r) => r.rawLabel === "CB EDIT KEEP")!;
+    const drop = preview.preview.find((r) => r.rawLabel === "CB EDIT DROP")!;
+
+    const summary = await commitCsvBatch(
+      batch.id,
+      preview.mapping,
+      { id: owner },
+      { overrides: { [keep.externalId]: cat.id }, excludedIds: [drop.externalId] },
+    );
+    expect(summary.importedRows).toBe(1);
+
+    const rows = await db.transaction.findMany({ where: { importBatchId: batch.id } });
+    expect(rows).toHaveLength(1);
+    expect(decrypt(rows[0].rawLabelEnc, dataKey)).toBe("CB EDIT KEEP");
+    expect(rows[0].categoryId).toBe(cat.id);
+    expect(rows[0].manuallyCategorized).toBe(true);
+  });
 });

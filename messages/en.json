@@ -269,6 +269,7 @@
     "previewMeta": "{dup} potential duplicates · {cat} auto-categorised",
     "validate": "Validate import",
     "cancel": "Cancel",
+    "include": "Include this row",
     "duplicate": "duplicate",
     "noCategory": "Uncategorised",
     "colRawLabel": "Raw label",
