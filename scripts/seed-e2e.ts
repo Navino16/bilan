@@ -62,11 +62,26 @@ async function ensureSharedGroup(): Promise<void> {
   });
 }
 
+// A deterministic bank account for the owner so transaction e2e (manual entry,
+// search, recategorize) has somewhere to write. Idempotent on a fixed id.
+const OWNER_ACCOUNT_ID = "e2e-owner-account";
+
+async function ensureOwnerAccount(): Promise<void> {
+  const owner = await db.user.findUnique({ where: { email: "owner@e2e.local" } });
+  if (!owner) return;
+  await db.bankAccount.upsert({
+    where: { id: OWNER_ACCOUNT_ID },
+    update: {},
+    create: { id: OWNER_ACCOUNT_ID, ownerId: owner.id, name: "E2E Courant", type: "CHECKING" },
+  });
+}
+
 async function main(): Promise<void> {
   await seedRolesAndPermissions(db);
   await seedAppSettings(db);
   await ensureUsers();
   await ensureSharedGroup();
+  await ensureOwnerAccount();
 }
 
 main()

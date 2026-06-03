@@ -179,6 +179,57 @@
       "FAILED": "Failed. Try again."
     }
   },
+  "transactions": {
+    "title": "Transactions",
+    "subtitle": "Your operations across all visible accounts.",
+    "empty": "No transactions yet.",
+    "create": "New transaction",
+    "createTitle": "Add a transaction",
+    "account": "Account",
+    "date": "Date",
+    "amount": "Amount",
+    "type": "Type",
+    "label": "Label",
+    "labelPlaceholder": "Carrefour City",
+    "note": "Note",
+    "category": "Category",
+    "noCategory": "Uncategorized",
+    "search": "Search",
+    "searchPlaceholder": "One word (≥ 3 letters)",
+    "filters": "Filters",
+    "allAccounts": "All accounts",
+    "allCategories": "All categories",
+    "allTypes": "All types",
+    "from": "From",
+    "to": "To",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "createCta": "Add",
+    "types": {
+      "CARD": "Card",
+      "TRANSFER": "Transfer",
+      "DIRECT_DEBIT": "Direct debit",
+      "CHEQUE": "Cheque",
+      "ATM": "ATM",
+      "OTHER": "Other"
+    },
+    "rulePrompt": {
+      "title": "Create a rule?",
+      "body": "Automatically categorize future transactions containing \"{pattern}\" as {category}?",
+      "pattern": "Pattern",
+      "scope": "Scope",
+      "scopePersonal": "My accounts",
+      "decline": "No thanks",
+      "confirm": "Create rule"
+    },
+    "error": {
+      "INVALID": "Check the fields.",
+      "FORBIDDEN": "Not allowed.",
+      "NOT_FOUND": "Transaction not found.",
+      "FAILED": "Failed. Try again."
+    }
+  },
   "groups": {
     "title": "Households",
     "subtitle": "Share accounts and budgets with your household.",

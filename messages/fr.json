@@ -179,6 +179,57 @@
       "FAILED": "Échec. Réessayez."
     }
   },
+  "transactions": {
+    "title": "Transactions",
+    "subtitle": "Vos opérations sur tous les comptes visibles.",
+    "empty": "Aucune transaction.",
+    "create": "Nouvelle transaction",
+    "createTitle": "Ajouter une transaction",
+    "account": "Compte",
+    "date": "Date",
+    "amount": "Montant",
+    "type": "Type",
+    "label": "Libellé",
+    "labelPlaceholder": "Carrefour City",
+    "note": "Note",
+    "category": "Catégorie",
+    "noCategory": "Sans catégorie",
+    "search": "Rechercher",
+    "searchPlaceholder": "Un mot (≥ 3 lettres)",
+    "filters": "Filtres",
+    "allAccounts": "Tous les comptes",
+    "allCategories": "Toutes les catégories",
+    "allTypes": "Tous les types",
+    "from": "Du",
+    "to": "Au",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "createCta": "Ajouter",
+    "types": {
+      "CARD": "Carte",
+      "TRANSFER": "Virement",
+      "DIRECT_DEBIT": "Prélèvement",
+      "CHEQUE": "Chèque",
+      "ATM": "Retrait",
+      "OTHER": "Autre"
+    },
+    "rulePrompt": {
+      "title": "Créer une règle ?",
+      "body": "Catégoriser automatiquement les futures transactions contenant « {pattern} » comme {category} ?",
+      "pattern": "Motif",
+      "scope": "Portée",
+      "scopePersonal": "Mes comptes",
+      "decline": "Non merci",
+      "confirm": "Créer la règle"
+    },
+    "error": {
+      "INVALID": "Vérifiez les champs.",
+      "FORBIDDEN": "Action non autorisée.",
+      "NOT_FOUND": "Transaction introuvable.",
+      "FAILED": "Échec. Réessayez."
+    }
+  },
   "groups": {
     "title": "Foyers",
     "subtitle": "Partagez des comptes et des budgets avec votre foyer.",
