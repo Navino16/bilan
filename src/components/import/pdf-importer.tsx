@@ -139,8 +139,8 @@ export function PdfImporter({ accounts }: { accounts: { id: string; name: string
               </select>
             </label>
           </div>
-          <div className="border-border overflow-hidden rounded-lg border">
-            {product.preview.slice(0, 10).map((r, i) => (
+          <div className="border-border max-h-80 overflow-y-auto rounded-lg border">
+            {product.preview.map((r, i) => (
               <div
                 key={i}
                 data-slot="import-preview-row"
@@ -159,6 +159,11 @@ export function PdfImporter({ accounts }: { accounts: { id: string; name: string
               </div>
             ))}
           </div>
+          {product.totalRows > product.preview.length && (
+            <p className="text-muted-foreground text-xs">
+              {t("moreRows", { count: product.totalRows - product.preview.length })}
+            </p>
+          )}
         </div>
       ))}
       {error && <p className="text-destructive text-sm">{t(`error.${error}`)}</p>}

@@ -276,6 +276,7 @@
     "supportedBanks": "Banques prises en charge : {list}",
     "targetAccount": "Compte de destination",
     "ignoreProduct": "Ne pas importer",
+    "moreRows": "… et {count} autres lignes seront importées (aperçu limité).",
     "banks": { "revolut": "Revolut", "lcl": "LCL" },
     "products": { "compte": "Compte courant", "depot": "Dépôt", "default": "Compte" },
     "error": {
