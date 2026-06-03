@@ -26,6 +26,25 @@ export async function insertRows(
   const autoCategorize = opts.autoCategorize ?? true;
   const overrides = opts.overrides ?? {};
   const excluded = new Set(opts.excludedIds ?? []);
+
+  // Validate client-supplied override category IDs against the categories the
+  // actor can actually use (own + their groups') — never trust them blindly
+  // (IDOR). Unknown/foreign IDs are dropped (treated as no override).
+  const overrideIds = [...new Set(Object.values(overrides).filter(Boolean))];
+  const allowedCategoryIds = overrideIds.length
+    ? new Set(
+        (
+          await db.category.findMany({
+            where: {
+              id: { in: overrideIds },
+              OR: [{ userId: actor.id }, { group: { members: { some: { userId: actor.id } } } }],
+            },
+            select: { id: true },
+          })
+        ).map((c) => c.id),
+      )
+    : new Set<string>();
+
   const withIds = rows.map((r) => ({
     row: r,
     externalId: computeExternalId(r.date, r.amount, r.rawLabel),
@@ -47,7 +66,8 @@ export async function insertRows(
     seen.add(externalId);
 
     const secure = buildSecureFields({ label: row.rawLabel, rawLabel: row.rawLabel });
-    const override = overrides[externalId];
+    const rawOverride = overrides[externalId];
+    const override = rawOverride && allowedCategoryIds.has(rawOverride) ? rawOverride : undefined;
     const categoryId =
       override ??
       (autoCategorize ? (await suggest(row.rawLabel, { userId: actor.id })).categoryId : null);

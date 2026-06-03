@@ -118,4 +118,25 @@ describe("CSV import pipeline", () => {
     expect(rows[0].categoryId).toBe(cat.id);
     expect(rows[0].manuallyCategorized).toBe(true);
   });
+
+  it("drops an override category the actor does not own (IDOR guard)", async () => {
+    const foreign = await db.category.create({ data: { userId: stranger, name: "Stranger cat" } });
+    const csv = `Date;Libellé;Débit;Crédit\n12/04/2026;CB IDOR ${Date.now()};5,00;`;
+    const batch = await createCsvBatch(
+      { accountId, filename: "idor.csv", text: csv },
+      { id: owner },
+    );
+    const preview = await previewCsvBatch(batch.id, owner);
+    const row = preview.preview[0];
+
+    await commitCsvBatch(
+      batch.id,
+      preview.mapping,
+      { id: owner },
+      { autoCategorize: false, overrides: { [row.externalId]: foreign.id } },
+    );
+    const tx = await db.transaction.findFirstOrThrow({ where: { importBatchId: batch.id } });
+    expect(tx.categoryId).toBeNull(); // foreign category dropped
+    expect(tx.manuallyCategorized).toBe(false);
+  });
 });
