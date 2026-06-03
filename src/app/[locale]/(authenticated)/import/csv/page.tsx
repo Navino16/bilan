@@ -1,6 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { requireSession } from "@/server/auth/permissions";
 import { listVisibleForUser } from "@/server/services/accounts";
+import { ImportTabs } from "@/components/import/import-tabs";
 import { CsvImporter } from "@/components/import/csv-importer";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,7 @@ export default async function ImportCsvPage({ params }: { params: Promise<{ loca
         <h1 className="font-display text-3xl">{t("title")}</h1>
         <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
       </header>
+      <ImportTabs />
       <CsvImporter accounts={accounts} />
     </div>
   );
