@@ -6,6 +6,10 @@ export type NormalizedRow = {
   rawLabel: string;
 };
 
+// A statement parses into one or more products (e.g. Revolut bundles a current
+// account + a vault in one PDF). Each is mapped to a target account at commit.
+export type ParsedProduct = { key: string; rows: NormalizedRow[] };
+
 // CSV column mapping: either a single signed `amount` column, or a
 // `debit`/`credit` pair (French bank exports). `type` is optional.
 export type CsvMapping = {
