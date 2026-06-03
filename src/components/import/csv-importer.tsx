@@ -87,7 +87,7 @@ export function CsvImporter({ accounts }: { accounts: { id: string; name: string
           <select
             value={accountId}
             onChange={(e) => setAccountId(e.target.value)}
-            className="border-input bg-background h-9 w-auto min-w-48 max-w-sm rounded-md border px-3 text-sm"
+            className="border-input bg-background h-9 w-auto max-w-sm min-w-48 rounded-md border px-3 text-sm"
           >
             {accounts.map((a) => (
               <option key={a.id} value={a.id}>
