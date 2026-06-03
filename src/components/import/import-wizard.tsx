@@ -187,7 +187,7 @@ export function ImportWizard({
           <p className="text-sm">
             {t("summary", { imported: summary.importedRows, skipped: summary.skippedRows })}
           </p>
-          <Button render={<Link href={`/${locale}/transactions`} />}>
+          <Button nativeButton={false} render={<Link href={`/${locale}/transactions`} />}>
             {t("viewTransactions")}
           </Button>
         </Card>
