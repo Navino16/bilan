@@ -13,7 +13,14 @@ export async function POST(
   const body = await req.json().catch(() => null);
   if (!body?.mapping) return Response.json({ error: "INVALID" }, { status: 400 });
   try {
-    const summary = await commitCsvBatch(batchId, body.mapping, { id: user.id });
+    const summary = await commitCsvBatch(
+      batchId,
+      body.mapping,
+      { id: user.id },
+      {
+        autoCategorize: body.autoCategorize ?? true,
+      },
+    );
     return Response.json(summary);
   } catch (e) {
     if (e instanceof ImportAccessError)

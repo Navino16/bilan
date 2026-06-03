@@ -9,11 +9,15 @@ import type { CommitSummary, NormalizedRow } from "./types";
 // encrypts labels, writes per-word search tokens, auto-categorizes, and inserts.
 // Does NOT touch the ImportBatch row — callers finalize counters/status. Reused
 // by CSV (one account) and PDF (one call per mapped product/account).
+export type CommitOptions = { autoCategorize?: boolean };
+
 export async function insertRows(
   target: { batchId: string; accountId: string },
   rows: NormalizedRow[],
   actor: { id: string },
+  opts: CommitOptions = {},
 ): Promise<{ imported: number; skipped: number; total: number }> {
+  const autoCategorize = opts.autoCategorize ?? true;
   const withIds = rows.map((r) => ({
     row: r,
     externalId: computeExternalId(r.date, r.amount, r.rawLabel),
@@ -34,7 +38,9 @@ export async function insertRows(
     seen.add(externalId);
 
     const secure = buildSecureFields({ label: row.rawLabel, rawLabel: row.rawLabel });
-    const suggestion = await suggest(row.rawLabel, { userId: actor.id });
+    const categoryId = autoCategorize
+      ? (await suggest(row.rawLabel, { userId: actor.id })).categoryId
+      : null;
     await db.transaction.create({
       data: {
         accountId: target.accountId,
@@ -46,7 +52,7 @@ export async function insertRows(
         rawLabelEnc: secure.rawLabelEnc,
         rawLabelHash: secure.rawLabelHash,
         noteEnc: null,
-        categoryId: suggestion.categoryId,
+        categoryId,
         manuallyCategorized: false,
         externalId,
         importBatchId: target.batchId,
@@ -95,7 +101,13 @@ export async function commitRows(
   batch: { id: string; accountId: string },
   rows: NormalizedRow[],
   actor: { id: string },
+  opts: CommitOptions = {},
 ): Promise<CommitSummary> {
-  const totals = await insertRows({ batchId: batch.id, accountId: batch.accountId }, rows, actor);
+  const totals = await insertRows(
+    { batchId: batch.id, accountId: batch.accountId },
+    rows,
+    actor,
+    opts,
+  );
   return finalizeBatch(batch.id, totals, actor);
 }

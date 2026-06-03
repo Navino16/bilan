@@ -1,3 +1,7 @@
+import type { TransactionInput } from "@/lib/validation/transaction";
+
+type TxType = TransactionInput["type"];
+
 // One bank movement after source-specific parsing, before encryption/insert.
 // Shared by the CSV (4.2) and PDF (4.3b) pipelines.
 export type NormalizedRow = {
@@ -21,16 +25,27 @@ export type CsvMapping = {
   type?: string;
 };
 
-export type PreviewRow = NormalizedRow & {
+// Enriched row shown in the import preview (date serialized to ISO over the wire).
+export type PreviewRow = {
+  date: string;
+  amount: number;
+  rawLabel: string;
+  type: TxType;
   suggestedCategoryId: string | null;
+  isDuplicate: boolean;
 };
 
 export type ImportPreview = {
   batchId: string;
+  source: "CSV";
+  filename: string | null;
+  fileSizeBytes: number | null;
   headers: string[];
   mapping: CsvMapping;
   totalRows: number;
-  preview: PreviewRow[]; // first 50 normalized rows
+  duplicateCount: number;
+  autoCategorizedCount: number;
+  preview: PreviewRow[]; // first 50 enriched rows
 };
 
 export type CommitSummary = {

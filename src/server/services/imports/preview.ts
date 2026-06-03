@@ -2,17 +2,7 @@ import { db } from "@/server/db";
 import { computeExternalId } from "@/server/services/transactions/secure-fields";
 import { suggestMany } from "@/server/services/categorization";
 import { deriveType } from "./derive-type";
-import type { NormalizedRow } from "./types";
-import type { TransactionInput } from "@/lib/validation/transaction";
-
-export type PreviewRow = {
-  date: string; // ISO
-  amount: number;
-  rawLabel: string;
-  type: TransactionInput["type"];
-  suggestedCategoryId: string | null;
-  isDuplicate: boolean;
-};
+import type { NormalizedRow, PreviewRow } from "./types";
 
 export type PreviewResult = {
   rows: PreviewRow[]; // first `limit` rows, enriched

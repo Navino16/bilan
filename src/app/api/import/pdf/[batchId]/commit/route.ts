@@ -15,9 +15,12 @@ export async function POST(
     return Response.json({ error: "INVALID" }, { status: 400 });
   }
   try {
-    const summary = await commitPdfBatch(batchId, body.mapping as Record<string, string>, {
-      id: user.id,
-    });
+    const summary = await commitPdfBatch(
+      batchId,
+      body.mapping as Record<string, string>,
+      { id: user.id },
+      { autoCategorize: body.autoCategorize ?? true },
+    );
     return Response.json(summary);
   } catch (e) {
     if (e instanceof ImportAccessError)
