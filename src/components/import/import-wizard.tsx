@@ -436,13 +436,13 @@ export function ImportWizard({
                         <span className="text-muted-foreground text-xs">
                           {dayMonth.format(new Date(r.date))}
                         </span>
-                        <span className="text-muted-foreground truncate font-mono text-[12.5px]">
-                          {r.rawLabel}
-                        </span>
-                        <span className="flex min-w-0 items-center gap-1.5">
-                          {categorySelect(r)}
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span className="text-muted-foreground truncate font-mono text-[12.5px]">
+                            {r.rawLabel}
+                          </span>
                           {dupBadge}
                         </span>
+                        <span className="min-w-0">{categorySelect(r)}</span>
                         <span className="text-muted-foreground text-[11.5px]">
                           {tType(`types.${r.type}`)}
                         </span>
