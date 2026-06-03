@@ -28,6 +28,7 @@ export async function POST(req: Request): Promise<Response> {
   } catch (e) {
     if (e instanceof ImportAccessError)
       return Response.json({ error: "FORBIDDEN" }, { status: 403 });
+    console.error("[import/pdf] parse failed:", e);
     return Response.json({ error: "PARSE_FAILED" }, { status: 422 });
   }
 }
