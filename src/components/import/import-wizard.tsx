@@ -183,7 +183,7 @@ export function ImportWizard({
       <Stepper steps={steps} current={step} />
 
       {summary ? (
-        <Card className="space-y-3">
+        <Card className="space-y-3 p-6">
           <p className="text-sm">
             {t("summary", { imported: summary.importedRows, skipped: summary.skippedRows })}
           </p>
@@ -222,7 +222,7 @@ export function ImportWizard({
       ) : (
         <div className="grid gap-4 md:grid-cols-[320px_1fr]">
           {/* Sidebar */}
-          <Card className="h-fit gap-0 space-y-5">
+          <Card className="h-fit gap-0 space-y-5 p-5">
             <div>
               <div className={`${overline} mb-2`}>{t("fileSection")}</div>
               <div className="bg-muted/60 flex items-center gap-2.5 rounded-lg p-2.5">
