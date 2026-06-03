@@ -72,7 +72,7 @@ Next.js 16.2 · React 19.2 · TypeScript 6 · Tailwind v4 · shadcn/ui (themed B
 
 **Milestone goal:** import transactions from CSV (and PDF after a spike), with dedup and categorization.
 
-- [ ] **4.1 — Manual entry form polish.** (If not fully covered by 3.4) full validation, account preselect. _AC: e2e from account page._
+- [x] **4.1 — Manual entry form polish.** (If not fully covered by 3.4) full validation, account preselect. _AC: e2e from account page._
 - [ ] **4.2 — CSV import.** `ImportBatch`, `/api/import/csv` (upload, parse w/ papaparse, mapping detection), preview UI, dedup `(accountId, externalId)`, batch commit + tokens + categorization. _AC: integration full import + dedup re-import (0 imported); e2e upload→preview→commit._
 - [ ] **4.3a — PDF spike.** Install `pdf-parse`, run on user's real bank PDFs in `samples/`, document the extracted structure. _AC: a short findings note committed; decision on parser approach._
 - [ ] **4.3b — PDF import.** Parser based on 4.3a, `/api/import/pdf`, same preview + dedup + categorization pipeline. _AC: integration parse sample → transactions; e2e upload→commit._

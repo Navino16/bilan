@@ -71,7 +71,7 @@
 
 ### Step 1: Add the i18n string
 
-- [ ] **Step 1** — In `messages/fr.json`, under the `accounts` namespace add:
+- [x] **Step 1** — In `messages/fr.json`, under the `accounts` namespace add:
 
 ```json
     "addTransaction": "Saisir une transaction",
@@ -85,7 +85,7 @@ In `messages/en.json`, under `accounts`:
 
 ### Step 2: Pass categories to the account list
 
-- [ ] **Step 2** — In `src/app/[locale]/(authenticated)/accounts/page.tsx`, import the category tree + flattener and pass a flat list to `AccountList`.
+- [x] **Step 2** — In `src/app/[locale]/(authenticated)/accounts/page.tsx`, import the category tree + flattener and pass a flat list to `AccountList`.
 
 Add imports near the top:
 
@@ -108,7 +108,7 @@ Pass it to the list:
 
 ### Step 3: Render an "add transaction" trigger per writable account
 
-- [ ] **Step 3** — In `src/components/accounts/account-list.tsx`:
+- [x] **Step 3** — In `src/components/accounts/account-list.tsx`:
 
 Add imports:
 
@@ -155,12 +155,12 @@ Inside each account card, in the actions area (next to `RowActions`, rendered fo
 
 ### Step 4: Typecheck
 
-- [ ] **Step 4** — Run: `npm run typecheck`
+- [x] **Step 4** — Run: `npm run typecheck`
 Expected: PASS.
 
 ### Step 5: Commit
 
-- [ ] **Step 5**
+- [x] **Step 5**
 
 ```bash
 git add src/app/\[locale\]/\(authenticated\)/accounts/page.tsx src/components/accounts/account-list.tsx messages
@@ -169,7 +169,7 @@ git commit -m "feat: add a transaction directly from an account card"
 
 ### Step 6: Write the e2e
 
-- [ ] **Step 6** — Create `tests/e2e/manual-entry.spec.ts`:
+- [x] **Step 6** — Create `tests/e2e/manual-entry.spec.ts`:
 
 ```typescript
 import { test, expect } from "@playwright/test";
@@ -202,7 +202,7 @@ test.describe("manual entry from accounts", () => {
 
 ### Step 7: Run e2e + CI, commit, push, PR
 
-- [ ] **Step 7**
+- [x] **Step 7**
 
 Run: `npm run test:e2e -- manual-entry --project=chromium`
 Expected: PASS.
