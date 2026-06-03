@@ -1,9 +1,6 @@
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
-import {
-  buildSecureFields,
-  computeExternalId,
-} from "@/server/services/transactions/secure-fields";
+import { buildSecureFields, computeExternalId } from "@/server/services/transactions/secure-fields";
 import { suggest } from "@/server/services/categorization";
 import type { CommitSummary, NormalizedRow } from "./types";
 

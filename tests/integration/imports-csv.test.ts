@@ -43,7 +43,10 @@ describe("CSV import pipeline", () => {
   });
 
   it("previews with a detected mapping and per-row suggestions", async () => {
-    const batch = await createCsvBatch({ accountId, filename: "march.csv", text: CSV }, { id: owner });
+    const batch = await createCsvBatch(
+      { accountId, filename: "march.csv", text: CSV },
+      { id: owner },
+    );
     const preview = await previewCsvBatch(batch.id, owner);
     expect(preview.totalRows).toBe(2);
     expect(preview.mapping.date).toBe("Date");
@@ -53,7 +56,10 @@ describe("CSV import pipeline", () => {
   });
 
   it("commits rows: encrypts labels, writes tokens, sets counters and status", async () => {
-    const batch = await createCsvBatch({ accountId, filename: "march2.csv", text: CSV }, { id: owner });
+    const batch = await createCsvBatch(
+      { accountId, filename: "march2.csv", text: CSV },
+      { id: owner },
+    );
     const preview = await previewCsvBatch(batch.id, owner);
     const summary = await commitCsvBatch(batch.id, preview.mapping, { id: owner });
     expect(summary.importedRows).toBe(2);
@@ -75,7 +81,10 @@ describe("CSV import pipeline", () => {
   });
 
   it("dedups a re-import of the same file: 0 imported, all skipped", async () => {
-    const batch = await createCsvBatch({ accountId, filename: "march3.csv", text: CSV }, { id: owner });
+    const batch = await createCsvBatch(
+      { accountId, filename: "march3.csv", text: CSV },
+      { id: owner },
+    );
     const preview = await previewCsvBatch(batch.id, owner);
     const summary = await commitCsvBatch(batch.id, preview.mapping, { id: owner });
     expect(summary.importedRows).toBe(0);
