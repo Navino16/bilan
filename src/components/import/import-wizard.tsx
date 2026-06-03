@@ -351,52 +351,78 @@ export function ImportWizard({
                     </select>
                   </div>
                 )}
-                <div className="text-muted-foreground bg-muted/60 grid grid-cols-[64px_1fr_minmax(0,150px)_96px_104px] gap-3 border-y px-5 py-2.5 text-[11px] tracking-[0.08em] uppercase">
+                <div className="text-muted-foreground bg-muted/60 hidden grid-cols-[64px_1fr_minmax(0,150px)_96px_104px] gap-3 border-y px-5 py-2.5 text-[11px] tracking-[0.08em] uppercase md:grid">
                   <span>{t("colDate")}</span>
                   <span>{t("colRawLabel")}</span>
                   <span>{t("colCategory")}</span>
                   <span>{t("colType")}</span>
                   <span className="text-right">{t("colAmount")}</span>
                 </div>
-                {product.preview.map((r, i) => (
-                  <div
-                    key={i}
-                    data-slot="import-preview-row"
-                    className="grid grid-cols-[64px_1fr_minmax(0,150px)_96px_104px] items-center gap-3 border-b px-5 py-2.5 last:border-b-0"
-                    style={r.isDuplicate ? { background: "var(--warning-bg)" } : undefined}
-                  >
-                    <span className="text-muted-foreground text-xs">
-                      {dayMonth.format(new Date(r.date))}
-                    </span>
-                    <span className="text-muted-foreground truncate font-mono text-[12.5px]">
-                      {r.rawLabel}
-                    </span>
-                    <span className="flex min-w-0 items-center gap-2">
-                      {categoryCell(r.suggestedCategoryId)}
-                      {r.isDuplicate && (
-                        <span
-                          className="inline-flex h-5 shrink-0 items-center gap-1 rounded-full px-2 text-[0.65rem] font-medium"
-                          style={{ color: "var(--warning)", background: "var(--warning-bg)" }}
-                        >
-                          <span
-                            className="size-1.5 rounded-full"
-                            style={{ background: "var(--warning)" }}
-                          />
-                          {t("duplicate")}
-                        </span>
-                      )}
-                    </span>
-                    <span className="text-muted-foreground text-[11.5px]">
-                      {tType(`types.${r.type}`)}
-                    </span>
+                {product.preview.map((r, i) => {
+                  const dupBadge = r.isDuplicate ? (
                     <span
-                      className="text-right text-sm font-medium tabular-nums"
-                      style={r.amount > 0 ? { color: "var(--income)" } : undefined}
+                      className="inline-flex h-5 shrink-0 items-center gap-1 rounded-full px-2 text-[0.65rem] font-medium"
+                      style={{ color: "var(--warning)", background: "var(--warning-bg)" }}
                     >
-                      {money.format(r.amount)}
+                      <span
+                        className="size-1.5 rounded-full"
+                        style={{ background: "var(--warning)" }}
+                      />
+                      {t("duplicate")}
                     </span>
-                  </div>
-                ))}
+                  ) : null;
+                  return (
+                    <div
+                      key={i}
+                      data-slot="import-preview-row"
+                      className="border-b last:border-b-0"
+                      style={r.isDuplicate ? { background: "var(--warning-bg)" } : undefined}
+                    >
+                      {/* Desktop grid */}
+                      <div className="hidden grid-cols-[64px_1fr_minmax(0,150px)_96px_104px] items-center gap-3 px-5 py-2.5 md:grid">
+                        <span className="text-muted-foreground text-xs">
+                          {dayMonth.format(new Date(r.date))}
+                        </span>
+                        <span className="text-muted-foreground truncate font-mono text-[12.5px]">
+                          {r.rawLabel}
+                        </span>
+                        <span className="flex min-w-0 items-center gap-2">
+                          {categoryCell(r.suggestedCategoryId)}
+                          {dupBadge}
+                        </span>
+                        <span className="text-muted-foreground text-[11.5px]">
+                          {tType(`types.${r.type}`)}
+                        </span>
+                        <span
+                          className="text-right text-sm font-medium tabular-nums"
+                          style={r.amount > 0 ? { color: "var(--income)" } : undefined}
+                        >
+                          {money.format(r.amount)}
+                        </span>
+                      </div>
+
+                      {/* Mobile compact */}
+                      <div className="flex flex-col gap-1.5 px-4 py-3 md:hidden">
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="truncate font-mono text-[12.5px]">{r.rawLabel}</span>
+                          <span
+                            className="shrink-0 text-sm font-medium tabular-nums"
+                            style={r.amount > 0 ? { color: "var(--income)" } : undefined}
+                          >
+                            {money.format(r.amount)}
+                          </span>
+                        </div>
+                        <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
+                          <span className="tabular-nums">{dayMonth.format(new Date(r.date))}</span>
+                          <span aria-hidden>·</span>
+                          <span>{tType(`types.${r.type}`)}</span>
+                          {categoryCell(r.suggestedCategoryId)}
+                          {dupBadge}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
                 {product.totalRows > product.preview.length && (
                   <div className="text-muted-foreground border-b px-5 py-3 text-center text-xs last:border-b-0">
                     {t("moreRows", { count: product.totalRows - product.preview.length })}
