@@ -1,11 +1,13 @@
 export const SUPPORTED_BANKS = ["revolut", "lcl"] as const;
 export type BankKey = (typeof SUPPORTED_BANKS)[number];
 
-// Fingerprints observed in the 4.3a samples (text extracted by pdf-parse):
-// Revolut → "Revolut Bank UAB"; LCL → BIC "CRLYFRPP" or "Crédit Lyonnais"/"CREDIT LYONNAIS".
+// Fingerprints must match the statement ISSUER, never transaction content (an
+// LCL statement can carry a "VIR REVOLUT" line, so a bare /revolut/ would
+// misdetect it). Revolut → issuer legal name "Revolut Bank UAB"; LCL → BIC
+// "CRLYFRPP" or the bank name "Crédit Lyonnais"/"CREDIT LYONNAIS".
 const FINGERPRINTS: Array<{ bank: BankKey; re: RegExp }> = [
-  { bank: "revolut", re: /revolut/i },
-  { bank: "lcl", re: /\bCRLYFRPP\b|cr[ée]dit\s+lyonnais|\bLCL\b/i },
+  { bank: "revolut", re: /Revolut Bank UAB/i },
+  { bank: "lcl", re: /\bCRLYFRPP\b|cr[ée]dit\s+lyonnais/i },
 ];
 
 export function detectBank(text: string): BankKey | null {

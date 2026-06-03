@@ -9,6 +9,9 @@ describe("detectBank", () => {
     expect(detectBank("… BIC : CRLYFRPP … RELEVE DE COMPTE …")).toBe("lcl");
     expect(detectBank("CREDIT LYONNAIS\nNANTES BOILEAU")).toBe("lcl");
   });
+  it("matches the issuer, not transaction content (an LCL statement citing Revolut stays LCL)", () => {
+    expect(detectBank("CREDIT LYONNAIS\nBIC : CRLYFRPP\nVIR REVOLUT**1234 05/04/26")).toBe("lcl");
+  });
   it("returns null for an unknown bank", () => {
     expect(detectBank("Generic statement from Some Other Bank")).toBeNull();
   });
