@@ -1275,14 +1275,14 @@ gh pr create --base develop --title "feat: CSV import" --label "enhancement,phas
 
 ### Step 1: Install pdf-parse
 
-- [ ] **Step 1**
+- [x] **Step 1**
 
 Run: `npm install pdf-parse`
 Expected: added to `package.json`.
 
 ### Step 2: Add a samples directory (real PDFs git-ignored)
 
-- [ ] **Step 2** — Create `samples/README.md`:
+- [x] **Step 2** — Create `samples/README.md`:
 
 ```markdown
 # Import samples
@@ -1302,7 +1302,7 @@ Create `samples/.gitignore`:
 
 ### Step 3: Write the spike script
 
-- [ ] **Step 3** — Create `scripts/pdf-spike.ts`:
+- [x] **Step 3** — Create `scripts/pdf-spike.ts`:
 
 ```typescript
 import { readdirSync, readFileSync } from "node:fs";
@@ -1334,14 +1334,14 @@ main().catch((e) => {
 
 ### Step 4: Run the spike on real PDFs
 
-- [ ] **Step 4** — Ask the user to drop one or more real bank PDF statements into `samples/`.
+- [x] **Step 4** — Ask the user to drop one or more real bank PDF statements into `samples/`.
 
 Run: `npx tsx scripts/pdf-spike.ts`
 Expected: prints page counts + extracted text per file. Read the output and note: are rows on one line each? Where are date/label/amount? Is text columnar or interleaved? Are amounts grouped as debit/credit? Is any file scanned (empty text → OCR needed)?
 
 ### Step 5: Write the findings note + decision
 
-- [ ] **Step 5** — Create `docs/superpowers/notes/2026-MM-DD-pdf-parsing-findings.md` (use today's date) documenting:
+- [x] **Step 5** — Create `docs/superpowers/notes/2026-MM-DD-pdf-parsing-findings.md` (use today's date) documenting:
   - For each sample: bank, page count, whether text extraction works (or it's scanned).
   - The line/column structure of a transaction row (with a redacted example line).
   - A regex or line-grammar sketch for `parsePdf` → `NormalizedRow[]`.
@@ -1349,7 +1349,7 @@ Expected: prints page counts + extracted text per file. Read the output and note
 
 ### Step 6: Commit + PR
 
-- [ ] **Step 6**
+- [x] **Step 6**
 
 ```bash
 git add package.json package-lock.json samples/README.md samples/.gitignore scripts/pdf-spike.ts docs/superpowers/notes
