@@ -149,6 +149,46 @@
       "FAILED": "Échec. Réessayez."
     }
   },
+  "rules": {
+    "pageTitle": "Catégories & règles",
+    "overline": "Organisation",
+    "tabCategories": "Catégories",
+    "tabRules": "Règles",
+    "new": "Nouvelle règle",
+    "empty": "Aucune règle. Créez-en une pour catégoriser automatiquement vos imports et saisies.",
+    "colPriority": "Prio.",
+    "colPattern": "Motif",
+    "colMatch": "Type",
+    "colTarget": "Cible",
+    "colScope": "Portée",
+    "scopePersonal": "Perso",
+    "match": {
+      "CONTAINS": "Contient",
+      "EXACT": "Égal",
+      "STARTS_WITH": "Commence par",
+      "REGEX": "Regex"
+    },
+    "createTitle": "Nouvelle règle",
+    "editTitle": "Modifier la règle",
+    "pattern": "Motif",
+    "patternPlaceholder": "carrefour",
+    "matchType": "Correspondance",
+    "category": "Catégorie",
+    "priority": "Priorité",
+    "caseSensitive": "Sensible à la casse",
+    "scope": "Portée",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "deleteConfirm": "Supprimer cette règle ?",
+    "disabled": "désactivée",
+    "error": {
+      "INVALID": "Vérifiez les champs.",
+      "FORBIDDEN": "Action non autorisée.",
+      "FAILED": "Échec. Réessayez."
+    }
+  },
   "categories": {
     "title": "Catégories",
     "subtitle": "Organisez vos dépenses et revenus. Une catégorie appartient à vous ou à un foyer.",

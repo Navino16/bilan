@@ -149,6 +149,46 @@
       "FAILED": "Failed. Please retry."
     }
   },
+  "rules": {
+    "pageTitle": "Categories & rules",
+    "overline": "Organisation",
+    "tabCategories": "Categories",
+    "tabRules": "Rules",
+    "new": "New rule",
+    "empty": "No rules yet. Create one to auto-categorise your imports and entries.",
+    "colPriority": "Prio.",
+    "colPattern": "Pattern",
+    "colMatch": "Type",
+    "colTarget": "Target",
+    "colScope": "Scope",
+    "scopePersonal": "Personal",
+    "match": {
+      "CONTAINS": "Contains",
+      "EXACT": "Equals",
+      "STARTS_WITH": "Starts with",
+      "REGEX": "Regex"
+    },
+    "createTitle": "New rule",
+    "editTitle": "Edit rule",
+    "pattern": "Pattern",
+    "patternPlaceholder": "carrefour",
+    "matchType": "Match",
+    "category": "Category",
+    "priority": "Priority",
+    "caseSensitive": "Case-sensitive",
+    "scope": "Scope",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this rule?",
+    "disabled": "disabled",
+    "error": {
+      "INVALID": "Check the fields.",
+      "FORBIDDEN": "Not allowed.",
+      "FAILED": "Failed. Try again."
+    }
+  },
   "categories": {
     "title": "Categories",
     "subtitle": "Organize your spending and income. A category belongs to you or to a household.",
