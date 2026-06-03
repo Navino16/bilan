@@ -2,7 +2,8 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "@/server/db";
 import { decrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
-import { previewPdfBatch, commitPdfBatch, ImportAccessError } from "@/server/services/imports";
+import { ImportAccessError } from "@/server/services/imports";
+import { previewPdfBatch, commitPdfBatch } from "@/server/services/imports/pdf-service";
 
 const owner = "pdf_owner";
 const stranger = "pdf_stranger";
