@@ -28,7 +28,11 @@ describe("parseLclItems", () => {
   it("pairs rows by y and signs amounts by the DEBIT/CREDIT column anchor", () => {
     expect(parseLclItems(ITEMS)).toEqual([
       { date: new Date("2026-04-07T00:00:00.000Z"), amount: 300, rawLabel: "VIREMENT JOHN DOE" },
-      { date: new Date("2026-04-08T00:00:00.000Z"), amount: -93.39, rawLabel: "CB SUPERMARKET 02/04/26" },
+      {
+        date: new Date("2026-04-08T00:00:00.000Z"),
+        amount: -93.39,
+        rawLabel: "CB SUPERMARKET 02/04/26",
+      },
     ]);
   });
 

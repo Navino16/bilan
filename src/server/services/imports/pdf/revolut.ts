@@ -37,7 +37,8 @@ function readOpenings(lines: string[]): { compte: number | null; depot: number |
   let compte: number | null = null;
   let depot: number | null = null;
   for (const line of lines) {
-    if (/^Compte \(Compte courant\)/i.test(line)) compte = toNumber(line.match(FIRST_AMOUNT)?.[1] ?? "0");
+    if (/^Compte \(Compte courant\)/i.test(line))
+      compte = toNumber(line.match(FIRST_AMOUNT)?.[1] ?? "0");
     else if (/^Dépôt\b/i.test(line)) depot = toNumber(line.match(FIRST_AMOUNT)?.[1] ?? "0");
   }
   return { compte, depot };
@@ -79,5 +80,7 @@ export function parseRevolutText(text: string): ParsedProduct[] {
     prev = balance;
   }
 
-  return [...products.entries()].filter(([, rows]) => rows.length).map(([key, rows]) => ({ key, rows }));
+  return [...products.entries()]
+    .filter(([, rows]) => rows.length)
+    .map(([key, rows]) => ({ key, rows }));
 }

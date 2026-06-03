@@ -105,7 +105,11 @@ export async function createPdfBatch(
   const { bank, products } = await parsePdf(input.buffer);
   const metaProducts: PdfMetaProduct[] = products.map((p) => ({
     key: p.key,
-    rows: p.rows.map((r) => ({ date: r.date.toISOString(), amount: r.amount, rawLabel: r.rawLabel })),
+    rows: p.rows.map((r) => ({
+      date: r.date.toISOString(),
+      amount: r.amount,
+      rawLabel: r.rawLabel,
+    })),
   }));
   const total = metaProducts.reduce((n, p) => n + p.rows.length, 0);
   const batch = await db.importBatch.create({
@@ -120,7 +124,12 @@ export async function createPdfBatch(
       metadata: { bank, products: metaProducts } as never,
     },
   });
-  await logEvent({ userId: actor.id, action: "import.created", entity: "ImportBatch", entityId: batch.id });
+  await logEvent({
+    userId: actor.id,
+    action: "import.created",
+    entity: "ImportBatch",
+    entityId: batch.id,
+  });
   return { id: batch.id, bank };
 }
 

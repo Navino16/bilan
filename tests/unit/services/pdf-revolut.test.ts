@@ -23,7 +23,11 @@ describe("parseRevolutText", () => {
     const products = parseRevolutText(FIXTURE);
     expect(products.map((p) => p.key)).toEqual(["compte", "depot"]);
     expect(products[0].rows).toEqual([
-      { date: new Date("2025-01-03T00:00:00.000Z"), amount: 30, rawLabel: "Paiement reçu de JOHN DOE" },
+      {
+        date: new Date("2025-01-03T00:00:00.000Z"),
+        amount: 30,
+        rawLabel: "Paiement reçu de JOHN DOE",
+      },
       { date: new Date("2025-01-05T00:00:00.000Z"), amount: -20, rawLabel: "To Jane Doe" },
     ]);
     expect(products[1].rows).toEqual([

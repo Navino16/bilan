@@ -29,7 +29,13 @@ export async function extractItems(buffer: Buffer): Promise<TextItem[]> {
     for (const raw of content.items) {
       const it = raw as { str: string; transform: number[] };
       const str = it.str.trim();
-      if (str) items.push({ str, x: Math.round(it.transform[4]), y: Math.round(it.transform[5]), page: p });
+      if (str)
+        items.push({
+          str,
+          x: Math.round(it.transform[4]),
+          y: Math.round(it.transform[5]),
+          page: p,
+        });
     }
     page.cleanup();
   }

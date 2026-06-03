@@ -17,7 +17,10 @@ export async function parsePdf(
   const bank = detectBank(text);
   if (bank === "revolut") return { bank, products: parseRevolutText(text) };
   if (bank === "lcl") {
-    return { bank, products: [{ key: "default", rows: parseLclItems(await extractItems(buffer)) }] };
+    return {
+      bank,
+      products: [{ key: "default", rows: parseLclItems(await extractItems(buffer)) }],
+    };
   }
   return { bank: null, products: [{ key: "default", rows: parseGenericText(text) }] };
 }

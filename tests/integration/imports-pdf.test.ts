@@ -10,8 +10,14 @@ let courantId: string;
 let depotId: string;
 
 const PRODUCTS = [
-  { key: "compte", rows: [{ date: "2025-01-03T00:00:00.000Z", amount: 30, rawLabel: "VIR JOHN DOE" }] },
-  { key: "depot", rows: [{ date: "2025-01-10T00:00:00.000Z", amount: 50, rawLabel: "VERSEMENT DEPOT" }] },
+  {
+    key: "compte",
+    rows: [{ date: "2025-01-03T00:00:00.000Z", amount: 30, rawLabel: "VIR JOHN DOE" }],
+  },
+  {
+    key: "depot",
+    rows: [{ date: "2025-01-10T00:00:00.000Z", amount: 50, rawLabel: "VERSEMENT DEPOT" }],
+  },
 ];
 
 async function seedBatch(): Promise<string> {
@@ -32,8 +38,12 @@ beforeAll(async () => {
   await db.user.deleteMany({ where: { id: { in: [owner, stranger] } } });
   await db.user.create({ data: { id: owner, email: "pdf-owner@bilan.local" } });
   await db.user.create({ data: { id: stranger, email: "pdf-stranger@bilan.local" } });
-  courantId = (await db.bankAccount.create({ data: { ownerId: owner, name: "Courant", type: "CHECKING" } })).id;
-  depotId = (await db.bankAccount.create({ data: { ownerId: owner, name: "Dépôt", type: "SAVINGS" } })).id;
+  courantId = (
+    await db.bankAccount.create({ data: { ownerId: owner, name: "Courant", type: "CHECKING" } })
+  ).id;
+  depotId = (
+    await db.bankAccount.create({ data: { ownerId: owner, name: "Dépôt", type: "SAVINGS" } })
+  ).id;
 });
 
 afterAll(async () => {
