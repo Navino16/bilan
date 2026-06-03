@@ -64,3 +64,6 @@ tests/e2e/.auth
 
 # Local design reference drops
 /img.png
+
+# Local dev-only seed helper (per user request, never commit)
+scripts/seed-dev-user.ts
