@@ -1362,125 +1362,734 @@ gh pr create --base develop --title "chore: PDF parsing spike" --label "infra,ph
 
 ---
 
-## Task 4.3b — PDF import
+## Task 4.3b — PDF import (per-bank registry + generic fallback, per-product mapping)
 
 **Branch:** `feature/4.3b-pdf-import`
-**Goal:** A `parsePdf` based on the 4.3a findings that yields `NormalizedRow[]`, wired into the **same** preview/commit pipeline as CSV (reusing `commitRows`), exposed at `/api/import/pdf` and a PDF source in the importer UI.
+**Goal:** Import bank-statement PDFs into the **same** commit pipeline as CSV (reusing the dedup/encrypt/categorize insert), via a **per-bank parser registry** (`Revolut`, `LCL`) with a **generic fallback**, exposed at `/api/import/pdf` and a PDF tab in the importer UI. A statement is parsed into one or more **products** (Revolut bundles `Compte courant` + `Dépôt` in one PDF); the user **maps each product to a target account (or ignores it)** before commit — products are never merged into one account. Grounded in the 4.3a findings (`docs/superpowers/notes/2026-06-03-pdf-parsing-findings.md`).
 
-> The exact `parsePdf` body depends on the 4.3a note. Below is the structure + tests; replace the line-parsing regex with the grammar decided in 4.3a. The test runs against a **committed text fixture** (the extracted-text shape), not a binary PDF, so it is deterministic and contains no personal data.
+**Architecture (from 4.3a):**
+- `pdf-parse@2` (`PDFParse` class) extracts **text**; `pdfjs-dist` (transitive) extracts **positioned items** (`{ str, x, y, page }`) for column-based banks.
+- `parsePdf(buffer)` → `extractText` → `detectBank(text)` → dispatch: **Revolut** parses text into per-product row sets (sign from each product's running-balance delta), **LCL** parses positioned items (single product; sign from the amount's x vs the `DEBIT`/`CREDIT` header anchors), **unknown** → `parseGenericText` (single product, best-effort).
+- The batch stores the **parsed products** (`{ key, rows }[]`, not the binary) in `ImportBatch.metadata`; commit revives them and, per product mapped to an account, calls the shared insert.
+- `commit.ts` is refactored into `insertRows` (dedup + encrypt + categorize + insert, no batch finalize) reused by CSV (`commitRows` = `insertRows` + finalize) and by PDF (`insertRows` per product, then finalize once).
 
-**Files:** see File Structure above.
+**Files:**
+- Modify: `src/server/services/imports/types.ts` — add `ParsedProduct`.
+- Modify: `src/server/services/imports/commit.ts` — extract `insertRows`; `commitRows` builds on it.
+- Create: `src/server/services/imports/pdf/extract.ts` — `TextItem`, `extractText`, `extractItems`.
+- Create: `src/server/services/imports/pdf/detect.ts` — `BankKey`, `SUPPORTED_BANKS`, `detectBank`.
+- Create: `src/server/services/imports/pdf/revolut.ts` — `parseRevolutText` (→ `ParsedProduct[]`).
+- Create: `src/server/services/imports/pdf/lcl.ts` — `parseLclItems` (→ `NormalizedRow[]`).
+- Create: `src/server/services/imports/pdf/generic.ts` — `parseGenericText` (→ `NormalizedRow[]`).
+- Create: `src/server/services/imports/pdf/index.ts` — `parsePdf` (→ `{ bank, products }`).
+- Modify: `src/server/services/imports/index.ts` — `createPdfBatch`, `previewPdfBatch`, `commitPdfBatch`, `PdfPreview`.
+- Create: `src/app/api/import/pdf/route.ts`, `src/app/api/import/pdf/[batchId]/commit/route.ts`.
+- Create: `src/components/import/pdf-importer.tsx`, `src/components/import/import-tabs.tsx`.
+- Create: `src/app/[locale]/(authenticated)/import/pdf/page.tsx`.
+- Modify: `src/app/[locale]/(authenticated)/import/csv/page.tsx` (add tabs), `messages/{fr,en}.json`.
+- Test: `tests/unit/services/pdf-detect.test.ts`, `pdf-revolut.test.ts`, `pdf-lcl.test.ts`, `pdf-generic.test.ts`, `tests/integration/imports-pdf.test.ts`, `tests/e2e/import-pdf.spec.ts`.
 
-### Step 1: Write the failing parser unit test
+> **No real bank PDF is committed.** Parsers are unit-tested against **redacted text / coordinate fixtures**; the service is integration-tested by seeding `metadata.products` (no PDF, no personal data); the e2e is a UI smoke (no upload).
 
-- [ ] **Step 1** — Create `tests/unit/services/pdf-parse.test.ts`. Replace `FIXTURE` with a redacted real extracted-text snippet from the 4.3a note, and the expectations with its true values.
+### Step 1: Verify pdfjs resolves
+
+- [x] **Step 1** — `pdfjs-dist` ships with `pdf-parse`. Confirm the legacy build resolves:
+
+Run: `node -e "require.resolve('pdfjs-dist/legacy/build/pdf.mjs') && console.log('ok')"`
+Expected: `ok`.
+
+### Step 2: Add `ParsedProduct` to the shared types
+
+- [x] **Step 2** — In `src/server/services/imports/types.ts`, add:
+
+```typescript
+// A statement parses into one or more products (e.g. Revolut bundles a current
+// account + a vault in one PDF). Each is mapped to a target account at commit.
+export type ParsedProduct = { key: string; rows: NormalizedRow[] };
+```
+
+### Step 3: Write the failing `detectBank` test
+
+- [x] **Step 3** — Create `tests/unit/services/pdf-detect.test.ts`:
 
 ```typescript
 import { describe, it, expect } from "vitest";
-import { parsePdfText } from "@/server/services/imports/pdf-parse";
+import { detectBank } from "@/server/services/imports/pdf/detect";
 
-// Extracted-text shape observed in the 4.3a spike (redacted, representative).
-const FIXTURE = `RELEVE DE COMPTE
-01/02/2026 CB CARREFOUR CITY 42,90
-03/02/2026 VIR SEPA SALAIRE 2 450,00
-SOLDE 2407,10`;
-
-describe("parsePdfText", () => {
-  it("extracts transaction rows from the statement text", () => {
-    const rows = parsePdfText(FIXTURE);
-    expect(rows).toHaveLength(2);
-    expect(rows[0]).toEqual({
-      date: new Date("2026-02-01T00:00:00.000Z"),
-      amount: -42.9,
-      rawLabel: "CB CARREFOUR CITY",
-    });
-    expect(rows[1].amount).toBe(2450);
+describe("detectBank", () => {
+  it("detects Revolut from the issuer fingerprint", () => {
+    expect(detectBank("… Revolut Bank UAB est un établissement de crédit …")).toBe("revolut");
   });
-
-  it("ignores non-transaction lines (headers, balance)", () => {
-    expect(parsePdfText("RELEVE\nSOLDE 1,00").length).toBe(0);
+  it("detects LCL from the BIC / bank name", () => {
+    expect(detectBank("… BIC : CRLYFRPP … RELEVE DE COMPTE …")).toBe("lcl");
+    expect(detectBank("CREDIT LYONNAIS\nNANTES BOILEAU")).toBe("lcl");
+  });
+  it("returns null for an unknown bank", () => {
+    expect(detectBank("Generic statement from Some Other Bank")).toBeNull();
   });
 });
 ```
 
-> Sign of debit vs credit is bank-specific (column position, +/- sign, or a separate debit/credit area). Encode the rule from 4.3a here. If the statement has no sign and relies on a debit/credit column, parse accordingly so expenses come out negative.
+### Step 4: Run to verify it fails
 
-### Step 2: Run to verify it fails
+- [x] **Step 4** — Run: `npm run test:unit -- pdf-detect`
+Expected: FAIL — `Cannot find module '@/server/services/imports/pdf/detect'`.
 
-- [ ] **Step 2** — Run: `npm run test:unit -- pdf-parse`
-Expected: FAIL — `Cannot find module '@/server/services/imports/pdf-parse'`.
+### Step 5: Implement `detect.ts`
 
-### Step 3: Implement the PDF parser
-
-- [ ] **Step 3** — Create `src/server/services/imports/pdf-parse.ts`. Reuse the normalizers from `csv-parse`. The `parsePdfText` line grammar below is a starting point — **adjust to the 4.3a findings.**
+- [x] **Step 5** — Create `src/server/services/imports/pdf/detect.ts`:
 
 ```typescript
-import { normalizeAmount, normalizeDate } from "./csv-parse";
-import type { NormalizedRow } from "./types";
+export const SUPPORTED_BANKS = ["revolut", "lcl"] as const;
+export type BankKey = (typeof SUPPORTED_BANKS)[number];
 
-// Line grammar (adjust per the 4.3a findings note): "<dd/mm/yyyy> <label...> <amount>".
-// Amount sign convention is bank-specific — see the note.
-const LINE = /^(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+(-?[\d  ]+[.,]\d{2})$/;
+// Fingerprints observed in the 4.3a samples (text extracted by pdf-parse):
+// Revolut → "Revolut Bank UAB"; LCL → BIC "CRLYFRPP" or "Crédit Lyonnais"/"CREDIT LYONNAIS".
+const FINGERPRINTS: Array<{ bank: BankKey; re: RegExp }> = [
+  { bank: "revolut", re: /revolut/i },
+  { bank: "lcl", re: /\bCRLYFRPP\b|cr[ée]dit\s+lyonnais|\bLCL\b/i },
+];
 
-export function parsePdfText(text: string): NormalizedRow[] {
+export function detectBank(text: string): BankKey | null {
+  for (const { bank, re } of FINGERPRINTS) {
+    if (re.test(text)) return bank;
+  }
+  return null;
+}
+```
+
+### Step 6: Run to verify it passes
+
+- [x] **Step 6** — Run: `npm run test:unit -- pdf-detect`
+Expected: PASS.
+
+### Step 7: Write the failing Revolut parser test (per-product)
+
+- [x] **Step 7** — Create `tests/unit/services/pdf-revolut.test.ts`. Redacted text shape with **both products**:
+
+```typescript
+import { describe, it, expect } from "vitest";
+import { parseRevolutText } from "@/server/services/imports/pdf/revolut";
+
+// Redacted Revolut layout (real structure, fake data). Two products:
+//  Compte courant: opening 100,00 → +30 (bal 130) → −20 (bal 110)
+//  Dépôt:          opening 0,00   → +50 (bal 50)
+const FIXTURE = `Résumé du solde
+Produit Solde d'ouverture Argent sortant Argent entrant Solde de
+Compte (Compte courant) 100,00€ 20,00€ 30,00€ 110,00€
+Dépôt 0,00€ 0,00€ 50,00€ 50,00€
+Total 100,00€ 20,00€ 80,00€ 160,00€
+Transactions du compte : du 1 janvier 2025 au 3 juin 2026
+Date Description Argent sortant Argent entrant Solde
+3 janv. 2025 Paiement reçu de JOHN DOE 30,00€ 130,00€
+Référence : test
+5 janv. 2025 To Jane Doe 20,00€ 110,00€
+Transactions de dépôt de 1 janvier 2025 à 3 juin 2026
+Date Description Argent sortant Argent entrant Solde
+10 janv. 2025 Versement vers Dépôt 50,00€ 50,00€`;
+
+describe("parseRevolutText", () => {
+  it("splits products and signs rows from each product's balance delta", () => {
+    const products = parseRevolutText(FIXTURE);
+    expect(products.map((p) => p.key)).toEqual(["compte", "depot"]);
+    expect(products[0].rows).toEqual([
+      { date: new Date("2025-01-03T00:00:00.000Z"), amount: 30, rawLabel: "Paiement reçu de JOHN DOE" },
+      { date: new Date("2025-01-05T00:00:00.000Z"), amount: -20, rawLabel: "To Jane Doe" },
+    ]);
+    expect(products[1].rows).toEqual([
+      { date: new Date("2025-01-10T00:00:00.000Z"), amount: 50, rawLabel: "Versement vers Dépôt" },
+    ]);
+  });
+
+  it("returns no products when there are no transaction sections", () => {
+    expect(parseRevolutText("Date Description Argent sortant Argent entrant Solde")).toEqual([]);
+  });
+});
+```
+
+### Step 8: Run to verify it fails
+
+- [x] **Step 8** — Run: `npm run test:unit -- pdf-revolut`
+Expected: FAIL — `Cannot find module '@/server/services/imports/pdf/revolut'`.
+
+### Step 9: Implement `revolut.ts`
+
+- [x] **Step 9** — Create `src/server/services/imports/pdf/revolut.ts`:
+
+```typescript
+import type { NormalizedRow, ParsedProduct } from "../types";
+
+const FR_MONTHS: Record<string, number> = {
+  "janv.": 1, "févr.": 2, mars: 3, "avr.": 4, mai: 5, juin: 6,
+  "juil.": 7, août: 8, "sept.": 9, "oct.": 10, "nov.": 11, "déc.": 12,
+};
+
+const ROW = /^(\d{1,2}) ([A-Za-zà-ÿ.]+) (\d{4}) (.+)$/; // "<d> <month> <yyyy> <desc…>"
+const FIRST_AMOUNT = /(\d[\d  ]*,\d{2})€/;
+const AMOUNT = /(\d[\d  ]*,\d{2})€/g;
+
+function toNumber(s: string): number {
+  return Number(s.replace(/[  ]/g, "").replace(",", "."));
+}
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+function parseFrDate(day: string, month: string, year: string): Date | null {
+  const m = FR_MONTHS[month.toLowerCase()];
+  if (!m) return null;
+  return new Date(`${year}-${String(m).padStart(2, "0")}-${day.padStart(2, "0")}T00:00:00.000Z`);
+}
+
+// Opening balance per product, from the "Résumé du solde" table (first amount on
+// the product's row), so each section's first row can be signed by its delta.
+function readOpenings(lines: string[]): { compte: number | null; depot: number | null } {
+  let compte: number | null = null;
+  let depot: number | null = null;
+  for (const line of lines) {
+    if (/^Compte \(Compte courant\)/i.test(line)) compte = toNumber(line.match(FIRST_AMOUNT)?.[1] ?? "0");
+    else if (/^Dépôt\b/i.test(line)) depot = toNumber(line.match(FIRST_AMOUNT)?.[1] ?? "0");
+  }
+  return { compte, depot };
+}
+
+export function parseRevolutText(text: string): ParsedProduct[] {
+  const lines = text
+    .split("\n")
+    .map((l) => l.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+  const openings = readOpenings(lines);
+  const products = new Map<string, NormalizedRow[]>();
+  let key: string | null = null;
+  let prev: number | null = null;
+
+  for (const line of lines) {
+    if (/^Transactions du compte/i.test(line)) {
+      key = "compte";
+      prev = openings.compte;
+      if (!products.has(key)) products.set(key, []);
+      continue;
+    }
+    if (/^Transactions de dépôt/i.test(line)) {
+      key = "depot";
+      prev = openings.depot;
+      if (!products.has(key)) products.set(key, []);
+      continue;
+    }
+    const m = ROW.exec(line);
+    if (!m || key == null || prev == null || !FR_MONTHS[m[2].toLowerCase()]) continue;
+    const amounts = [...line.matchAll(AMOUNT)].map((a) => toNumber(a[1]));
+    if (amounts.length < 2) continue; // need movement + balance
+    const balance = amounts[amounts.length - 1];
+    const date = parseFrDate(m[1], m[2], m[3]);
+    if (!date) continue;
+    const rawLabel = m[4].replace(AMOUNT, "").replace(/€/g, "").replace(/\s+/g, " ").trim();
+    if (!rawLabel) continue;
+    products.get(key)!.push({ date, amount: round2(balance - prev), rawLabel });
+    prev = balance;
+  }
+
+  return [...products.entries()].filter(([, rows]) => rows.length).map(([key, rows]) => ({ key, rows }));
+}
+```
+
+### Step 10: Run to verify it passes
+
+- [x] **Step 10** — Run: `npm run test:unit -- pdf-revolut`
+Expected: PASS.
+
+### Step 11: Write the failing LCL parser test
+
+- [x] **Step 11** — Create `tests/unit/services/pdf-lcl.test.ts`. Redacted **coordinate** snapshot (real x/y anchors from 4.3a):
+
+```typescript
+import { describe, it, expect } from "vitest";
+import { parseLclItems } from "@/server/services/imports/pdf/lcl";
+import type { TextItem } from "@/server/services/imports/pdf/extract";
+
+// Real LCL anchors (4.3a): DATE x≈42, LIBELLE x≈75/197, VALEUR x≈366,
+// DEBIT header x=433 (amounts ≈455), CREDIT header x=504 (amounts ≈531).
+// Row 1 → credit (+300), row 2 → debit (−93,39); ANCIEN SOLDE has no value date → skipped.
+const ITEMS: TextItem[] = [
+  { str: "DATE", x: 42, y: 402, page: 1 },
+  { str: "LIBELLE", x: 197, y: 402, page: 1 },
+  { str: "VALEUR", x: 365, y: 402, page: 1 },
+  { str: "DEBIT", x: 433, y: 402, page: 1 },
+  { str: "CREDIT", x: 504, y: 402, page: 1 },
+  { str: "03.04", x: 42, y: 378, page: 1 },
+  { str: "ANCIEN SOLDE", x: 286, y: 378, page: 1 },
+  { str: "1 095,88", x: 523, y: 378, page: 1 },
+  { str: "07.04", x: 43, y: 354, page: 1 },
+  { str: "VIREMENT JOHN DOE", x: 75, y: 354, page: 1 },
+  { str: "07.04.26", x: 366, y: 354, page: 1 },
+  { str: "300,00", x: 531, y: 354, page: 1 },
+  { str: "08.04", x: 43, y: 330, page: 1 },
+  { str: "CB SUPERMARKET 02/04/26", x: 75, y: 330, page: 1 },
+  { str: "08.04.26", x: 366, y: 330, page: 1 },
+  { str: "93,39", x: 458, y: 330, page: 1 },
+];
+
+describe("parseLclItems", () => {
+  it("pairs rows by y and signs amounts by the DEBIT/CREDIT column anchor", () => {
+    expect(parseLclItems(ITEMS)).toEqual([
+      { date: new Date("2026-04-07T00:00:00.000Z"), amount: 300, rawLabel: "VIREMENT JOHN DOE" },
+      { date: new Date("2026-04-08T00:00:00.000Z"), amount: -93.39, rawLabel: "CB SUPERMARKET 02/04/26" },
+    ]);
+  });
+
+  it("skips the ANCIEN SOLDE row and the header", () => {
+    expect(parseLclItems(ITEMS).some((r) => r.rawLabel.includes("SOLDE"))).toBe(false);
+  });
+});
+```
+
+### Step 12: Run to verify it fails
+
+- [x] **Step 12** — Run: `npm run test:unit -- pdf-lcl`
+Expected: FAIL — `Cannot find module '@/server/services/imports/pdf/lcl'`.
+
+### Step 13: Implement `extract.ts` (declares `TextItem`) and `lcl.ts`
+
+- [x] **Step 13** — Create `src/server/services/imports/pdf/extract.ts`:
+
+```typescript
+import { PDFParse } from "pdf-parse";
+import { getDocument, VerbosityLevel } from "pdfjs-dist/legacy/build/pdf.mjs";
+
+// One positioned text fragment. x = transform[4], y = transform[5] in PDF
+// user-space (origin bottom-left).
+export type TextItem = { str: string; x: number; y: number; page: number };
+
+// Concatenated text (pdf-parse@2 class API) — for line-based banks + detection.
+export async function extractText(buffer: Buffer): Promise<string> {
+  const parser = new PDFParse({ data: new Uint8Array(buffer) });
+  try {
+    return (await parser.getText()).text;
+  } finally {
+    await parser.destroy();
+  }
+}
+
+// Positioned items across all pages (pdfjs directly) — for column-based banks.
+// verbosity=ERRORS silences harmless "standardFontDataUrl" warnings.
+export async function extractItems(buffer: Buffer): Promise<TextItem[]> {
+  const doc = await getDocument({
+    data: new Uint8Array(buffer),
+    verbosity: VerbosityLevel.ERRORS,
+  }).promise;
+  const items: TextItem[] = [];
+  for (let p = 1; p <= doc.numPages; p++) {
+    const page = await doc.getPage(p);
+    const content = await page.getTextContent();
+    for (const raw of content.items) {
+      const it = raw as { str: string; transform: number[] };
+      const str = it.str.trim();
+      if (str) items.push({ str, x: Math.round(it.transform[4]), y: Math.round(it.transform[5]), page: p });
+    }
+    page.cleanup();
+  }
+  await doc.destroy();
+  return items;
+}
+```
+
+Create `src/server/services/imports/pdf/lcl.ts`:
+
+```typescript
+import type { NormalizedRow } from "../types";
+import type { TextItem } from "./extract";
+
+const OP_DATE = /^(\d{2})\.(\d{2})$/; //         operation date "07.04" (DATE band, x<70)
+const VAL_DATE = /^(\d{2})\.(\d{2})\.(\d{2})$/; // value date "07.04.26" (VALEUR band)
+const AMOUNT = /^-?[\d  ]+,\d{2}$/; //           "1 095,88" / "93,39"
+
+function toNumber(s: string): number {
+  return Number(s.replace(/[  ]/g, "").replace(",", "."));
+}
+
+// Groups a page's items into visual rows by y (nearest existing row within 2 units).
+function groupByRow(items: TextItem[]): TextItem[][] {
+  const rows: { y: number; items: TextItem[] }[] = [];
+  for (const it of items) {
+    const row = rows.find((r) => Math.abs(r.y - it.y) <= 2);
+    if (row) row.items.push(it);
+    else rows.push({ y: it.y, items: [it] });
+  }
+  return rows.map((r) => r.items);
+}
+
+export function parseLclItems(items: TextItem[]): NormalizedRow[] {
   const out: NormalizedRow[] = [];
-  for (const line of text.split("\n")) {
-    const m = LINE.exec(line.trim());
+  const pages = new Map<number, TextItem[]>();
+  for (const it of items) pages.set(it.page, [...(pages.get(it.page) ?? []), it]);
+
+  for (const pageItems of pages.values()) {
+    const debitH = pageItems.find((i) => i.str === "DEBIT");
+    const creditH = pageItems.find((i) => i.str === "CREDIT");
+    if (!debitH || !creditH) continue; // page has no transaction table
+
+    for (const row of groupByRow(pageItems)) {
+      const sorted = [...row].sort((a, b) => a.x - b.x);
+      const op = sorted.find((i) => i.x < 70 && OP_DATE.test(i.str));
+      const val = sorted.find((i) => i.x >= 340 && i.x < 420 && VAL_DATE.test(i.str));
+      const amt = sorted.find((i) => i.x >= 420 && AMOUNT.test(i.str));
+      if (!op || !val || !amt) continue; // skips header, ANCIEN/NOUVEAU SOLDE, footers
+
+      const label = sorted
+        .filter((i) => i.x >= 70 && i.x < 340)
+        .map((i) => i.str)
+        .join(" ")
+        .trim();
+      if (!label || /\bSOLDE\b/i.test(label)) continue;
+
+      const vm = VAL_DATE.exec(val.str)!;
+      const om = OP_DATE.exec(op.str)!;
+      const year = 2000 + Number(vm[3]); // value date carries the year; op date the day/month
+      const date = new Date(`${year}-${om[2]}-${om[1]}T00:00:00.000Z`);
+
+      const magnitude = toNumber(amt.str);
+      const isCredit = Math.abs(amt.x - creditH.x) < Math.abs(amt.x - debitH.x);
+      out.push({ date, amount: isCredit ? magnitude : -magnitude, rawLabel: label });
+    }
+  }
+  return out;
+}
+```
+
+### Step 14: Run to verify it passes
+
+- [x] **Step 14** — Run: `npm run test:unit -- pdf-lcl`
+Expected: PASS.
+
+### Step 15: Write + pass the generic fallback test
+
+- [x] **Step 15** — Create `tests/unit/services/pdf-generic.test.ts`:
+
+```typescript
+import { describe, it, expect } from "vitest";
+import { parseGenericText } from "@/server/services/imports/pdf/generic";
+
+describe("parseGenericText", () => {
+  it("best-effort extracts <dd/mm/yyyy> <label> <amount> lines, sign as printed", () => {
+    const rows = parseGenericText("01/02/2026 ACME STORE -12,34\n03/02/2026 SALARY 2 450,00\nheader line");
+    expect(rows).toEqual([
+      { date: new Date("2026-02-01T00:00:00.000Z"), amount: -12.34, rawLabel: "ACME STORE" },
+      { date: new Date("2026-02-03T00:00:00.000Z"), amount: 2450, rawLabel: "SALARY" },
+    ]);
+  });
+});
+```
+
+Create `src/server/services/imports/pdf/generic.ts`:
+
+```typescript
+import { normalizeAmount, normalizeDate } from "../csv-parse";
+import type { NormalizedRow } from "../types";
+
+// Best-effort, bank-agnostic line grammar: "<dd/mm/yyyy> <label…> <amount>".
+// Sign is taken as printed (no column info) — the preview lets the user fix it.
+const LINE = /^(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+(-?[\d  ]+[.,]\d{2})\s*€?$/;
+
+export function parseGenericText(text: string): NormalizedRow[] {
+  const out: NormalizedRow[] = [];
+  for (const raw of text.split("\n")) {
+    const m = LINE.exec(raw.trim());
     if (!m) continue;
     const date = normalizeDate(m[1]);
     const amount = normalizeAmount(m[3]);
     const rawLabel = m[2].trim();
     if (!date || amount == null || !rawLabel) continue;
-    // Per 4.3a: a debit is negative. If the statement shows bare positives in a
-    // debit column, negate here. Default below assumes a signed amount.
     out.push({ date, amount, rawLabel });
   }
   return out;
 }
+```
 
-// Extracts text from a PDF buffer, then parses rows. Kept separate so the pure
-// `parsePdfText` is unit-testable without a binary fixture.
-export async function parsePdf(buffer: Buffer): Promise<NormalizedRow[]> {
-  const pdf = (await import("pdf-parse")).default;
-  const data = await pdf(buffer);
-  return parsePdfText(data.text);
+Run: `npm run test:unit -- pdf-generic`
+Expected: PASS.
+
+### Step 16: Implement `parsePdf` orchestrator
+
+- [x] **Step 16** — Create `src/server/services/imports/pdf/index.ts`:
+
+```typescript
+import { extractText, extractItems } from "./extract";
+import { detectBank, type BankKey } from "./detect";
+import { parseRevolutText } from "./revolut";
+import { parseLclItems } from "./lcl";
+import { parseGenericText } from "./generic";
+import type { ParsedProduct } from "../types";
+
+export { SUPPORTED_BANKS, type BankKey } from "./detect";
+
+// Loads a PDF, detects the bank, dispatches to the matching parser (or the
+// generic fallback). Single-product banks (LCL, generic) yield one "default"
+// product; Revolut yields one product per statement section.
+export async function parsePdf(
+  buffer: Buffer,
+): Promise<{ bank: BankKey | null; products: ParsedProduct[] }> {
+  const text = await extractText(buffer);
+  const bank = detectBank(text);
+  if (bank === "revolut") return { bank, products: parseRevolutText(text) };
+  if (bank === "lcl") {
+    return { bank, products: [{ key: "default", rows: parseLclItems(await extractItems(buffer)) }] };
+  }
+  return { bank: null, products: [{ key: "default", rows: parseGenericText(text) }] };
 }
 ```
 
-### Step 4: Run to verify it passes
+### Step 17: Refactor `commit.ts` — extract `insertRows`
 
-- [ ] **Step 4** — Run: `npm run test:unit -- pdf-parse`
-Expected: PASS.
-
-### Step 5: Commit
-
-- [ ] **Step 5**
-
-```bash
-git add src/server/services/imports/pdf-parse.ts tests/unit/services/pdf-parse.test.ts
-git commit -m "feat: add PDF statement parser"
-```
-
-### Step 6: Add createPdfBatch + commitPdfBatch to the imports service
-
-- [ ] **Step 6** — In `src/server/services/imports/index.ts` add a PDF path that stores the extracted **text** (not the binary) in the batch and reuses `mapRows`-free `parsePdfText` + `commitRows`.
-
-Add imports at the top:
+- [x] **Step 17** — In `src/server/services/imports/commit.ts`, split the insert loop out of `commitRows` so PDF can insert per product without finalizing the batch each time. Replace the file body with:
 
 ```typescript
-import { parsePdfText } from "./pdf-parse";
-```
+import { db } from "@/server/db";
+import { logEvent } from "@/server/services/audit";
+import { buildSecureFields, computeExternalId } from "@/server/services/transactions/secure-fields";
+import { suggest } from "@/server/services/categorization";
+import type { CommitSummary, NormalizedRow } from "./types";
 
-Add these exports:
-
-```typescript
-// PDF: we extract text in the route (Node runtime), store it in the batch, and
-// parse rows from text in preview/commit so the pipeline mirrors CSV.
-export async function createPdfBatch(
-  input: { accountId: string; filename: string; text: string },
+// Dedups against existing `(accountId, externalId)` rows (and in-file dupes),
+// encrypts labels, writes per-word search tokens, auto-categorizes, and inserts.
+// Does NOT touch the ImportBatch row — callers finalize counters/status. Reused
+// by CSV (one account) and PDF (one call per mapped product/account).
+export async function insertRows(
+  target: { batchId: string; accountId: string },
+  rows: NormalizedRow[],
   actor: { id: string },
-): Promise<{ id: string }> {
+): Promise<{ imported: number; skipped: number; total: number }> {
+  const withIds = rows.map((r) => ({
+    row: r,
+    externalId: computeExternalId(r.date, r.amount, r.rawLabel),
+  }));
+  const existing = await db.transaction.findMany({
+    where: { accountId: target.accountId, externalId: { in: withIds.map((w) => w.externalId) } },
+    select: { externalId: true },
+  });
+  const seen = new Set(existing.map((e) => e.externalId));
+
+  let imported = 0;
+  let skipped = 0;
+  for (const { row, externalId } of withIds) {
+    if (seen.has(externalId)) {
+      skipped++;
+      continue;
+    }
+    seen.add(externalId);
+
+    const secure = buildSecureFields({ label: row.rawLabel, rawLabel: row.rawLabel });
+    const suggestion = await suggest(row.rawLabel, { userId: actor.id });
+    await db.transaction.create({
+      data: {
+        accountId: target.accountId,
+        date: row.date,
+        amount: row.amount,
+        type: "OTHER",
+        labelEnc: secure.labelEnc,
+        labelHash: secure.labelHash,
+        rawLabelEnc: secure.rawLabelEnc,
+        rawLabelHash: secure.rawLabelHash,
+        noteEnc: null,
+        categoryId: suggestion.categoryId,
+        manuallyCategorized: false,
+        externalId,
+        importBatchId: target.batchId,
+        createdById: actor.id,
+        searchTokens: { create: secure.tokens.map((tokenHash) => ({ tokenHash })) },
+      },
+    });
+    imported++;
+  }
+  return { imported, skipped, total: rows.length };
+}
+
+// Finalizes an ImportBatch after inserts: sets COMPLETED + counters, audit-logs.
+export async function finalizeBatch(
+  batchId: string,
+  totals: { imported: number; skipped: number; total: number },
+  actor: { id: string },
+): Promise<CommitSummary> {
+  const updated = await db.importBatch.update({
+    where: { id: batchId },
+    data: {
+      status: "COMPLETED",
+      totalRows: totals.total,
+      importedRows: totals.imported,
+      skippedRows: totals.skipped,
+      completedAt: new Date(),
+    },
+  });
+  await logEvent({
+    userId: actor.id,
+    action: "import.committed",
+    entity: "ImportBatch",
+    entityId: batchId,
+    metadata: { imported: totals.imported, skipped: totals.skipped, total: totals.total },
+  });
+  return {
+    batchId: updated.id,
+    totalRows: totals.total,
+    importedRows: totals.imported,
+    skippedRows: totals.skipped,
+  };
+}
+
+// CSV path: insert into the batch's single account, then finalize.
+export async function commitRows(
+  batch: { id: string; accountId: string },
+  rows: NormalizedRow[],
+  actor: { id: string },
+): Promise<CommitSummary> {
+  const totals = await insertRows({ batchId: batch.id, accountId: batch.accountId }, rows, actor);
+  return finalizeBatch(batch.id, totals, actor);
+}
+```
+
+> `commitRows` keeps its exact 4.2 signature/behaviour, so `commitCsvBatch` and `tests/integration/imports-csv.test.ts` are unaffected.
+
+### Step 18: Run the CSV integration test to confirm no regression
+
+- [x] **Step 18** — Run: `npm run test:integration -- imports-csv`
+Expected: PASS (4 tests) — the refactor preserved CSV behaviour.
+
+### Step 19: Write the failing PDF service integration test
+
+- [x] **Step 19** — Create `tests/integration/imports-pdf.test.ts`. It seeds `metadata.products` (a parsed-PDF stand-in) and commits with a **per-product → account mapping** across **two** accounts:
+
+```typescript
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { db } from "@/server/db";
+import { decrypt } from "@/server/crypto/encryption";
+import { dataKey } from "@/server/crypto/keys";
+import { previewPdfBatch, commitPdfBatch, ImportAccessError } from "@/server/services/imports";
+
+const owner = "pdf_owner";
+const stranger = "pdf_stranger";
+let courantId: string;
+let depotId: string;
+
+const PRODUCTS = [
+  { key: "compte", rows: [{ date: "2025-01-03T00:00:00.000Z", amount: 30, rawLabel: "VIR JOHN DOE" }] },
+  { key: "depot", rows: [{ date: "2025-01-10T00:00:00.000Z", amount: 50, rawLabel: "VERSEMENT DEPOT" }] },
+];
+
+async function seedBatch(): Promise<string> {
+  const b = await db.importBatch.create({
+    data: {
+      accountId: courantId,
+      source: "PDF",
+      filename: "revolut.pdf",
+      status: "REVIEW",
+      createdById: owner,
+      metadata: { bank: "revolut", products: PRODUCTS } as never,
+    },
+  });
+  return b.id;
+}
+
+beforeAll(async () => {
+  await db.user.deleteMany({ where: { id: { in: [owner, stranger] } } });
+  await db.user.create({ data: { id: owner, email: "pdf-owner@bilan.local" } });
+  await db.user.create({ data: { id: stranger, email: "pdf-stranger@bilan.local" } });
+  courantId = (await db.bankAccount.create({ data: { ownerId: owner, name: "Courant", type: "CHECKING" } })).id;
+  depotId = (await db.bankAccount.create({ data: { ownerId: owner, name: "Dépôt", type: "SAVINGS" } })).id;
+});
+
+afterAll(async () => {
+  await db.transaction.deleteMany({ where: { accountId: { in: [courantId, depotId] } } });
+  await db.importBatch.deleteMany({ where: { accountId: { in: [courantId, depotId] } } });
+  await db.bankAccount.deleteMany({ where: { ownerId: { in: [owner, stranger] } } });
+  await db.user.deleteMany({ where: { id: { in: [owner, stranger] } } });
+  await db.$disconnect();
+});
+
+describe("PDF import pipeline", () => {
+  it("forbids preview for a user who cannot write the account", async () => {
+    const id = await seedBatch();
+    await expect(previewPdfBatch(id, stranger)).rejects.toBeInstanceOf(ImportAccessError);
+  });
+
+  it("previews products with the detected bank and suggestions", async () => {
+    const id = await seedBatch();
+    const preview = await previewPdfBatch(id, owner);
+    expect(preview.bank).toBe("revolut");
+    expect(preview.products.map((p) => p.key)).toEqual(["compte", "depot"]);
+    expect(preview.products[0].preview[0].amount).toBe(30);
+  });
+
+  it("commits each product to its mapped account; an unmapped product is skipped", async () => {
+    const id = await seedBatch();
+    const summary = await commitPdfBatch(id, { compte: courantId }, { id: owner }); // depot unmapped → ignored
+    expect(summary.importedRows).toBe(1);
+    const courantRows = await db.transaction.findMany({ where: { accountId: courantId } });
+    const depotRows = await db.transaction.findMany({ where: { accountId: depotId } });
+    expect(courantRows).toHaveLength(1);
+    expect(depotRows).toHaveLength(0);
+    expect(decrypt(courantRows[0].rawLabelEnc, dataKey)).toContain("JOHN DOE");
+  });
+
+  it("maps both products to distinct accounts in one pass", async () => {
+    const id = await seedBatch();
+    const summary = await commitPdfBatch(id, { compte: courantId, depot: depotId }, { id: owner });
+    expect(summary.importedRows).toBe(1); // courant row deduped (imported in the previous test); depot is new
+    expect(summary.skippedRows).toBe(1);
+    const depotRows = await db.transaction.findMany({ where: { accountId: depotId } });
+    expect(depotRows).toHaveLength(1);
+    expect(Number(depotRows[0].amount)).toBe(50);
+  });
+
+  it("rejects a mapping to an account the actor cannot write", async () => {
+    const id = await seedBatch();
+    await expect(commitPdfBatch(id, { compte: "nope" }, { id: owner })).rejects.toBeInstanceOf(
+      ImportAccessError,
+    );
+  });
+});
+```
+
+> The 4th test's `importedRows` reflects dedup: the `compte` row was already imported into `courant` by the 3rd test (same `(accountId, externalId)`), so only the new `depot` row inserts. Asserting `depotRows.length === 1` is the load-bearing check.
+
+### Step 20: Run to verify it fails
+
+- [x] **Step 20** — Run: `npm run test:integration -- imports-pdf`
+Expected: FAIL — `previewPdfBatch`/`commitPdfBatch` not exported.
+
+### Step 21: Add PDF methods to the imports service
+
+- [x] **Step 21** — In `src/server/services/imports/index.ts`:
+
+Update the commit import to include the new helpers:
+
+```typescript
+import { commitRows, insertRows, finalizeBatch } from "./commit";
+import { parsePdf, type BankKey } from "./pdf";
+```
+
+Add the types + methods:
+
+```typescript
+type PdfMetaRow = { date: string; amount: number; rawLabel: string };
+type PdfMetaProduct = { key: string; rows: PdfMetaRow[] };
+export type PdfPreview = {
+  batchId: string;
+  bank: BankKey | null;
+  products: Array<{
+    key: string;
+    totalRows: number;
+    preview: Array<PdfMetaRow & { suggestedCategoryId: string | null }>;
+  }>;
+};
+
+export async function createPdfBatch(
+  input: { accountId: string; filename: string; buffer: Buffer },
+  actor: { id: string },
+): Promise<{ id: string; bank: BankKey | null }> {
   if (!(await canWriteAccount(actor.id, input.accountId))) throw new ImportAccessError("FORBIDDEN");
+  const { bank, products } = await parsePdf(input.buffer);
+  const metaProducts: PdfMetaProduct[] = products.map((p) => ({
+    key: p.key,
+    rows: p.rows.map((r) => ({ date: r.date.toISOString(), amount: r.amount, rawLabel: r.rawLabel })),
+  }));
+  const total = metaProducts.reduce((n, p) => n + p.rows.length, 0);
   const batch = await db.importBatch.create({
     data: {
       accountId: input.accountId,
@@ -1488,98 +2097,86 @@ export async function createPdfBatch(
       filename: input.filename,
       filenameHash: createHash("sha256").update(input.filename).digest("hex"),
       status: "REVIEW",
+      totalRows: total,
       createdById: actor.id,
-      metadata: { text: input.text } as never,
+      metadata: { bank, products: metaProducts } as never,
     },
   });
   await logEvent({ userId: actor.id, action: "import.created", entity: "ImportBatch", entityId: batch.id });
-  return { id: batch.id };
+  return { id: batch.id, bank };
 }
 
-export async function previewPdfBatch(batchId: string, userId: string) {
+function readPdfMeta(meta: unknown): { bank: BankKey | null; products: PdfMetaProduct[] } {
+  const m = meta as { bank?: BankKey | null; products?: PdfMetaProduct[] } | null;
+  return { bank: m?.bank ?? null, products: m?.products ?? [] };
+}
+
+export async function previewPdfBatch(batchId: string, userId: string): Promise<PdfPreview> {
   const batch = await loadBatch(batchId, userId);
-  const text = (batch.metadata as { text?: string } | null)?.text ?? "";
-  const rows = parsePdfText(text);
-  await db.importBatch.update({ where: { id: batchId }, data: { totalRows: rows.length } });
-  const preview = await Promise.all(
-    rows.slice(0, 50).map(async (r) => ({
-      ...r,
-      suggestedCategoryId: (await suggest(r.rawLabel, { userId })).categoryId,
+  const { bank, products } = readPdfMeta(batch.metadata);
+  const previewed = await Promise.all(
+    products.map(async (p) => ({
+      key: p.key,
+      totalRows: p.rows.length,
+      preview: await Promise.all(
+        p.rows.slice(0, 50).map(async (r) => ({
+          ...r,
+          suggestedCategoryId: (await suggest(r.rawLabel, { userId })).categoryId,
+        })),
+      ),
     })),
   );
-  return { batchId, totalRows: rows.length, preview };
+  return { batchId, bank, products: previewed };
 }
 
-export async function commitPdfBatch(batchId: string, actor: { id: string }) {
+// `mapping` is { [productKey]: accountId }; a product with no entry is ignored.
+export async function commitPdfBatch(
+  batchId: string,
+  mapping: Record<string, string>,
+  actor: { id: string },
+): Promise<CommitSummary> {
   const batch = await loadBatch(batchId, actor.id);
-  const text = (batch.metadata as { text?: string } | null)?.text ?? "";
-  const rows = parsePdfText(text);
-  return commitRows({ id: batch.id, accountId: batch.accountId }, rows, actor);
+  const { products } = readPdfMeta(batch.metadata);
+  const totals = { imported: 0, skipped: 0, total: 0 };
+  for (const product of products) {
+    const accountId = mapping[product.key];
+    if (!accountId) continue; // ignored
+    if (!(await canWriteAccount(actor.id, accountId))) throw new ImportAccessError("FORBIDDEN");
+    const rows = product.rows.map((r) => ({
+      date: new Date(r.date),
+      amount: r.amount,
+      rawLabel: r.rawLabel,
+    }));
+    const r = await insertRows({ batchId: batch.id, accountId }, rows, actor);
+    totals.imported += r.imported;
+    totals.skipped += r.skipped;
+    totals.total += r.total;
+  }
+  return finalizeBatch(batch.id, totals, actor);
 }
 ```
 
-### Step 7: Write the failing PDF integration test
+### Step 22: Run to verify it passes
 
-- [ ] **Step 7** — Create `tests/integration/imports-pdf.test.ts` (mirrors the CSV test; uses the extracted-text path via `createPdfBatch`):
+- [x] **Step 22** — Run: `npm run test:integration -- imports-pdf`
+Expected: PASS (5 tests).
 
-```typescript
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { db } from "@/server/db";
-import { createPdfBatch, commitPdfBatch } from "@/server/services/imports";
+### Step 23: Commit the parsers + service
 
-const owner = "pdf_owner";
-let accountId: string;
-const TEXT = `RELEVE DE COMPTE
-05/03/2026 CB CARREFOUR CITY 82,37
-06/03/2026 VIR SEPA SALAIRE 2 450,00`;
+- [x] **Step 23**
 
-beforeAll(async () => {
-  await db.user.deleteMany({ where: { id: owner } });
-  await db.user.create({ data: { id: owner, email: "pdf-owner@bilan.local" } });
-  accountId = (await db.bankAccount.create({ data: { ownerId: owner, name: "Courant", type: "CHECKING" } })).id;
-});
-
-afterAll(async () => {
-  await db.transaction.deleteMany({ where: { accountId } });
-  await db.importBatch.deleteMany({ where: { accountId } });
-  await db.bankAccount.deleteMany({ where: { ownerId: owner } });
-  await db.user.deleteMany({ where: { id: owner } });
-  await db.$disconnect();
-});
-
-describe("PDF import pipeline", () => {
-  it("parses the statement text and commits transactions", async () => {
-    const batch = await createPdfBatch({ accountId, filename: "releve.pdf", text: TEXT }, { id: owner });
-    const summary = await commitPdfBatch(batch.id, { id: owner });
-    expect(summary.importedRows).toBe(2);
-    const rows = await db.transaction.findMany({ where: { importBatchId: batch.id } });
-    expect(rows).toHaveLength(2);
-  });
-
-  it("dedups a re-import: 0 imported", async () => {
-    const batch = await createPdfBatch({ accountId, filename: "releve2.pdf", text: TEXT }, { id: owner });
-    const summary = await commitPdfBatch(batch.id, { id: owner });
-    expect(summary.importedRows).toBe(0);
-    expect(summary.skippedRows).toBe(2);
-  });
-});
+```bash
+git add src/server/services/imports/pdf src/server/services/imports/types.ts src/server/services/imports/commit.ts src/server/services/imports/index.ts tests/unit/services/pdf-*.test.ts tests/integration/imports-pdf.test.ts
+git commit -m "feat: add PDF statement parsers (Revolut, LCL, generic) + per-product import service"
 ```
 
-> Adjust `TEXT` + expectations to match the grammar finalized in 4.3a/4.3b Step 1.
+### Step 24: Add the Route Handlers
 
-### Step 8: Run to verify it passes
-
-- [ ] **Step 8** — Run: `npm run test:integration -- imports-pdf`
-Expected: PASS.
-
-### Step 9: Implement the PDF upload Route Handler
-
-- [ ] **Step 9** — Create `src/app/api/import/pdf/route.ts`:
+- [x] **Step 24** — Create `src/app/api/import/pdf/route.ts`:
 
 ```typescript
 import { getCurrentUser } from "@/server/auth/permissions";
 import { createPdfBatch, previewPdfBatch, ImportAccessError } from "@/server/services/imports";
-import { parsePdf } from "@/server/services/imports/pdf-parse";
 
 export const runtime = "nodejs";
 
@@ -1588,22 +2185,20 @@ const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 export async function POST(req: Request): Promise<Response> {
   const user = await getCurrentUser();
   if (!user) return Response.json({ error: "UNAUTHORIZED" }, { status: 401 });
+
   const form = await req.formData();
   const file = form.get("file");
   const accountId = String(form.get("accountId") ?? "");
   if (!(file instanceof File) || !accountId) return Response.json({ error: "INVALID" }, { status: 400 });
   if (file.size > MAX_BYTES) return Response.json({ error: "TOO_LARGE" }, { status: 413 });
-  if (!file.name.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf") {
+  const name = file.name.toLowerCase();
+  if (!name.endsWith(".pdf") && file.type !== "application/pdf") {
     return Response.json({ error: "BAD_TYPE" }, { status: 415 });
   }
+
+  const buffer = Buffer.from(await file.arrayBuffer());
   try {
-    // Extract text here (Node runtime), reuse the same text → rows pipeline.
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const rows = await parsePdf(buffer); // also validates it parses
-    const data = (await import("pdf-parse")).default;
-    const text = (await data(buffer)).text;
-    void rows;
-    const batch = await createPdfBatch({ accountId, filename: file.name, text }, { id: user.id });
+    const batch = await createPdfBatch({ accountId, filename: file.name, buffer }, { id: user.id });
     const preview = await previewPdfBatch(batch.id, user.id);
     return Response.json(preview);
   } catch (e) {
@@ -1613,11 +2208,7 @@ export async function POST(req: Request): Promise<Response> {
 }
 ```
 
-> Simplify the double parse: extract `text` once, pass to `createPdfBatch`; `previewPdfBatch` re-parses rows from the stored text. (The `parsePdf` call above is only to fail fast on an unreadable PDF — collapse it if redundant after 4.3a.)
-
-### Step 10: Implement the PDF commit Route Handler
-
-- [ ] **Step 10** — Create `src/app/api/import/pdf/[batchId]/commit/route.ts`:
+Create `src/app/api/import/pdf/[batchId]/commit/route.ts`:
 
 ```typescript
 import { getCurrentUser } from "@/server/auth/permissions";
@@ -1626,14 +2217,18 @@ import { commitPdfBatch, ImportAccessError } from "@/server/services/imports";
 export const runtime = "nodejs";
 
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ batchId: string }> },
 ): Promise<Response> {
   const user = await getCurrentUser();
   if (!user) return Response.json({ error: "UNAUTHORIZED" }, { status: 401 });
   const { batchId } = await params;
+  const body = await req.json().catch(() => null);
+  if (!body?.mapping || typeof body.mapping !== "object") {
+    return Response.json({ error: "INVALID" }, { status: 400 });
+  }
   try {
-    const summary = await commitPdfBatch(batchId, { id: user.id });
+    const summary = await commitPdfBatch(batchId, body.mapping as Record<string, string>, { id: user.id });
     return Response.json(summary);
   } catch (e) {
     if (e instanceof ImportAccessError) return Response.json({ error: "FORBIDDEN" }, { status: 403 });
@@ -1642,20 +2237,315 @@ export async function POST(
 }
 ```
 
-### Step 11: Add a PDF source to the importer UI
+### Step 25: Add PDF i18n keys
 
-- [ ] **Step 11** — Add a `/import/pdf` page mirroring the CSV page, and a `PdfImporter` (or generalize `CsvImporter` with a `source` prop: different `accept`, endpoints, and no mapping step for PDF — it commits directly after preview). Minimal approach: create `src/components/import/pdf-importer.tsx` modeled on `CsvImporter` but posting to `/api/import/pdf` and `/api/import/pdf/[batchId]/commit` (no mapping selects; preview → commit). Add `src/app/[locale]/(authenticated)/import/pdf/page.tsx` and a tab/link between CSV and PDF in both pages (using `import.csvTab` / `import.pdfTab`).
+- [x] **Step 25** — In `messages/fr.json`, add to the `import` namespace (after `viewTransactions`):
 
-### Step 12: Typecheck + CI + e2e
+```json
+    "pdfDrop": "Déposez un relevé PDF ici, ou cliquez pour parcourir.",
+    "bankDetected": "Banque détectée : {bank}",
+    "bankUnknown": "Banque non reconnue — vérifiez les lignes ci-dessous avant d'importer.",
+    "supportedBanks": "Banques prises en charge : {list}",
+    "targetAccount": "Compte de destination",
+    "ignoreProduct": "Ne pas importer",
+    "banks": { "revolut": "Revolut", "lcl": "LCL" },
+    "products": { "compte": "Compte courant", "depot": "Dépôt", "default": "Compte" },
+```
 
-- [ ] **Step 12**
+In `messages/en.json`, mirror:
 
-Run: `npm run ci` → PASS.
+```json
+    "pdfDrop": "Drop a PDF statement here, or click to browse.",
+    "bankDetected": "Detected bank: {bank}",
+    "bankUnknown": "Bank not recognised — review the rows below before importing.",
+    "supportedBanks": "Supported banks: {list}",
+    "targetAccount": "Target account",
+    "ignoreProduct": "Don't import",
+    "banks": { "revolut": "Revolut", "lcl": "LCL" },
+    "products": { "compte": "Current account", "depot": "Deposit", "default": "Account" },
+```
 
-Create `tests/e2e/import-pdf.spec.ts` only if a deterministic PDF fixture is available (generating a PDF in-test is heavy). Otherwise rely on the integration test for the pipeline and add an e2e that asserts the `/fr/import/pdf` page renders + redirects when unauthenticated:
+### Step 26: Add the import tabs + PDF importer + page
+
+- [x] **Step 26** — Create `src/components/import/import-tabs.tsx`:
+
+```tsx
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
+
+export function ImportTabs() {
+  const t = useTranslations("import");
+  const locale = useLocale();
+  const pathname = usePathname();
+  const tabs = [
+    { key: "csvTab", href: `/${locale}/import/csv` },
+    { key: "pdfTab", href: `/${locale}/import/pdf` },
+  ];
+  return (
+    <div className="border-border flex gap-1 border-b">
+      {tabs.map((tab) => {
+        const active = pathname === tab.href;
+        return (
+          <Link
+            key={tab.key}
+            href={tab.href}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              "-mb-px border-b-2 px-4 py-2 text-sm transition-colors",
+              active
+                ? "border-primary text-foreground font-medium"
+                : "text-muted-foreground hover:text-foreground border-transparent",
+            )}
+          >
+            {t(tab.key)}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+```
+
+Create `src/components/import/pdf-importer.tsx`:
+
+```tsx
+"use client";
+
+import { useState, useTransition } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { SUPPORTED_BANKS } from "@/server/services/imports/pdf/detect";
+
+type PreviewRow = { date: string; amount: number; rawLabel: string; suggestedCategoryId: string | null };
+type Product = { key: string; totalRows: number; preview: PreviewRow[] };
+type Preview = { batchId: string; bank: string | null; products: Product[] };
+type Summary = { importedRows: number; skippedRows: number };
+
+export function PdfImporter({ accounts }: { accounts: { id: string; name: string }[] }) {
+  const t = useTranslations("import");
+  const locale = useLocale();
+  const router = useRouter();
+  const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
+  const [preview, setPreview] = useState<Preview | null>(null);
+  const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const supported = SUPPORTED_BANKS.map((b) => t(`banks.${b}`)).join(", ");
+  const productLabel = (key: string) => (key === "default" ? t("products.default") : t(`products.${key}`));
+
+  async function onFile(file: File) {
+    setError(null);
+    const fd = new FormData();
+    fd.set("file", file);
+    fd.set("accountId", accountId);
+    const res = await fetch("/api/import/pdf", { method: "POST", body: fd });
+    const data = (await res.json()) as Preview & { error?: string };
+    if (!res.ok) return setError(data.error ?? "PARSE_FAILED");
+    setPreview(data);
+    // Default: first product → the upload account, others → ignored.
+    setMapping(Object.fromEntries(data.products.map((p, i) => [p.key, i === 0 ? accountId : ""])));
+  }
+
+  function commit() {
+    if (!preview) return;
+    const picked = Object.fromEntries(Object.entries(mapping).filter(([, v]) => v));
+    startTransition(async () => {
+      const res = await fetch(`/api/import/pdf/${preview.batchId}/commit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mapping: picked }),
+      });
+      const data = await res.json();
+      if (!res.ok) return setError(data.error ?? "COMMIT_FAILED");
+      setSummary(data);
+      router.refresh();
+    });
+  }
+
+  if (summary) {
+    return (
+      <div className="border-border space-y-3 rounded-xl border p-6">
+        <p className="text-sm">{t("summary", { imported: summary.importedRows, skipped: summary.skippedRows })}</p>
+        <Button render={<Link href={`/${locale}/transactions`} />}>{t("viewTransactions")}</Button>
+      </div>
+    );
+  }
+
+  if (!preview) {
+    return (
+      <div className="space-y-4">
+        <label className="flex items-center gap-3">
+          <span className="text-muted-foreground text-[0.7rem] font-medium tracking-[0.14em] uppercase">
+            {t("account")}
+          </span>
+          <select
+            value={accountId}
+            onChange={(e) => setAccountId(e.target.value)}
+            className="border-input bg-background h-9 w-auto min-w-48 max-w-sm rounded-md border px-3 text-sm"
+          >
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="text-muted-foreground text-xs">{t("supportedBanks", { list: supported })}</p>
+        <label className="border-border hover:bg-muted/40 flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed px-6 py-12 text-center">
+          <Upload className="text-muted-foreground size-6" />
+          <span className="text-muted-foreground text-sm">{t("pdfDrop")}</span>
+          <input
+            type="file"
+            accept=".pdf,application/pdf"
+            className="hidden"
+            onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
+          />
+        </label>
+        {error && <p className="text-destructive text-sm">{t(`error.${error}`)}</p>}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <p className="text-sm">
+        {preview.bank ? t("bankDetected", { bank: t(`banks.${preview.bank}`) }) : t("bankUnknown")}
+      </p>
+      {preview.products.map((product) => (
+        <div key={product.key} data-slot="pdf-product" className="border-border space-y-3 rounded-xl border p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span className="font-medium">
+              {productLabel(product.key)} · {t("rowsDetected", { count: product.totalRows })}
+            </span>
+            <label className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground text-xs">{t("targetAccount")}</span>
+              <select
+                value={mapping[product.key] ?? ""}
+                onChange={(e) => setMapping((m) => ({ ...m, [product.key]: e.target.value }))}
+                className="border-input bg-background h-9 w-auto min-w-44 rounded-md border px-2 text-sm"
+              >
+                <option value="">{t("ignoreProduct")}</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="border-border overflow-hidden rounded-lg border">
+            {product.preview.slice(0, 10).map((r, i) => (
+              <div
+                key={i}
+                data-slot="import-preview-row"
+                className="flex items-center gap-3 border-b px-4 py-2 text-sm last:border-b-0"
+              >
+                <span className="text-muted-foreground w-24 text-xs tabular-nums">{r.date.slice(0, 10)}</span>
+                <span className="flex-1 truncate">{r.rawLabel}</span>
+                <span className="tabular-nums" style={r.amount > 0 ? { color: "var(--income)" } : undefined}>
+                  {r.amount.toFixed(2)} €
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+      {error && <p className="text-destructive text-sm">{t(`error.${error}`)}</p>}
+      <Button onClick={commit} disabled={pending}>
+        {pending ? t("importing") : t("commit")}
+      </Button>
+    </div>
+  );
+}
+```
+
+Create `src/app/[locale]/(authenticated)/import/pdf/page.tsx`:
+
+```tsx
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { requireSession } from "@/server/auth/permissions";
+import { listVisibleForUser } from "@/server/services/accounts";
+import { ImportTabs } from "@/components/import/import-tabs";
+import { PdfImporter } from "@/components/import/pdf-importer";
+
+export const dynamic = "force-dynamic";
+
+export default async function ImportPdfPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const user = await requireSession();
+  const t = await getTranslations("import");
+  const accounts = (await listVisibleForUser(user.id))
+    .filter((a) => a.access === "OWNER" || a.access === "WRITE")
+    .map((a) => ({ id: a.id, name: a.name }));
+
+  return (
+    <div className="mx-auto w-full max-w-3xl space-y-6">
+      <header className="space-y-1">
+        <h1 className="font-display text-3xl">{t("title")}</h1>
+        <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
+      </header>
+      <ImportTabs />
+      <PdfImporter accounts={accounts} />
+    </div>
+  );
+}
+```
+
+> `SUPPORTED_BANKS` is a plain `const` in `detect.ts` (no `@/server/db` import) → safe in a client bundle (same rule as `@/lib/validation/*`, see `[[project_dev-e2e-ops]]`). If a later edit makes `detect.ts` pull in server-only code, move `SUPPORTED_BANKS` to `@/lib/validation/import`.
+
+### Step 27: Add the tabs to the CSV page
+
+- [x] **Step 27** — In `src/app/[locale]/(authenticated)/import/csv/page.tsx`, render the tabs above `<CsvImporter />`:
+
+```tsx
+import { ImportTabs } from "@/components/import/import-tabs";
+```
+
+```tsx
+      <ImportTabs />
+      <CsvImporter accounts={accounts} />
+```
+
+### Step 28: Typecheck + CI
+
+- [x] **Step 28**
+
+Run: `npm run typecheck` → PASS (if `.next/dev/types` is stale, trigger a recompile first: `curl -s -o /dev/null http://localhost:3000/fr/import/pdf`).
+Run: `npm run ci` → PASS (lint + typecheck + unit + integration).
+
+### Step 29: Write the e2e (UI smoke, no binary upload)
+
+- [x] **Step 29** — Create `tests/e2e/import-pdf.spec.ts`:
 
 ```typescript
 import { test, expect } from "@playwright/test";
+
+test.describe("PDF import", () => {
+  test.use({ storageState: "tests/e2e/.auth/owner.json" });
+  test.skip(
+    ({ browserName }) => browserName === "webkit",
+    "Mobile dialog refinement deferred to Phase 8.3",
+  );
+
+  test("PDF tab shows supported banks and an upload affordance", async ({ page }) => {
+    await page.goto("/fr/import/csv");
+    await page.getByRole("link", { name: /^pdf$/i }).click();
+    await expect(page).toHaveURL(/\/import\/pdf$/);
+    await expect(page.getByText(/banques prises en charge/i)).toBeVisible();
+    await expect(page.getByText(/Revolut/)).toBeVisible();
+    await expect(page.locator('input[type="file"]')).toHaveCount(1);
+  });
+});
 
 test("unauthenticated /import/pdf redirects to login", async ({ page }) => {
   await page.goto("/fr/import/pdf");
@@ -1665,13 +2555,13 @@ test("unauthenticated /import/pdf redirects to login", async ({ page }) => {
 
 Run: `npm run test:e2e -- import-pdf --project=chromium` → PASS.
 
-### Step 13: Commit, push, PR
+### Step 30: Commit, push, PR
 
-- [ ] **Step 13**
+- [x] **Step 30**
 
 ```bash
-git add src/server/services/imports/index.ts src/app/api/import/pdf src/app/\[locale\]/\(authenticated\)/import/pdf src/components/import tests
-git commit -m "feat: PDF import (parser + route handlers + UI) reusing the CSV pipeline"
+git add src/app/api/import/pdf "src/app/[locale]/(authenticated)/import" src/components/import messages tests/e2e/import-pdf.spec.ts
+git commit -m "feat: PDF import UI (tabs, upload, per-product account mapping, commit)"
 git push -u origin feature/4.3b-pdf-import
 gh pr create --base develop --title "feat: PDF import" --label "enhancement,phase-4,frontend,backend" --body "Closes #24"
 ```
@@ -1684,7 +2574,7 @@ gh pr create --base develop --title "feat: PDF import" --label "enhancement,phas
 - 4.1 Manual entry polish + account preselect + e2e from account page → Task 4.1 (reuses the 3.4 `TransactionForm` with `defaultAccountId`). ✅
 - 4.2 `ImportBatch`, `/api/import/csv` (upload, papaparse, mapping detection), preview UI, dedup `(accountId, externalId)`, batch commit + tokens + categorization → Task 4.2 (`csv-parse` pure + unit-tested, `commitRows` shared pipeline integration-tested for import + dedup re-import, route handlers, importer UI, e2e upload→preview→commit). ✅
 - 4.3a PDF spike (install pdf-parse, run on real PDFs, findings note + decision) → Task 4.3a. ✅
-- 4.3b PDF import (parser from 4.3a, `/api/import/pdf`, same preview+dedup+categorization pipeline) → Task 4.3b (`parsePdfText` pure + unit-tested against a text fixture, reuses `commitRows`, integration parse→tx + dedup). ✅
+- 4.3b PDF import (parsers from 4.3a, `/api/import/pdf`, same dedup+categorization insert) → Task 4.3b (per-bank registry: Revolut text+balance-delta yielding per-product row sets, LCL pdfjs-coordinate sign, generic fallback; `commit.ts` refactored into `insertRows`+`finalizeBatch` so CSV is unchanged and PDF inserts per mapped product; user maps each product→account or ignores; pure parsers unit-tested against redacted text/coordinate fixtures; integration seeds `metadata.products` and commits across two accounts; UI adds CSV/PDF tabs + per-product account selectors). ✅
 
 **Type consistency:** `NormalizedRow { date, amount, rawLabel }` is the single contract between parsers (`csv-parse.mapRows`, `pdf-parse.parsePdfText`) and `commitRows`. `CsvMapping` shared between `detectMapping`/`mapRows`/`csvMappingSchema`. `ImportAccessError` thrown by the service, mapped to 403 in every route. `commitRows(batch:{id,accountId}, rows, actor)` signature matches both CSV and PDF callers. `suggest(rawLabel, { userId })` and `buildSecureFields`/`computeExternalId` reused unchanged from Phase 3.
 
@@ -1693,7 +2583,7 @@ gh pr create --base develop --title "feat: PDF import" --label "enhancement,phas
 - Imported rows use the bank label as both `label` and `rawLabel`; `type` defaults to `OTHER` (CSV `type` column mapping can refine this later — left simple).
 - `commitRows` inserts per-row (N creates) for clarity over a raw bulk insert; fine for statement-sized files.
 - PDF e2e uses a redirect-only smoke test unless a deterministic PDF fixture exists; the parse→commit path is covered by the integration test against a text fixture.
-- `parsePdfText`'s line grammar is a placeholder to be finalized from the 4.3a findings before implementing 4.3b Step 3.
+- PDF banks: Revolut signs from the running-balance delta (sortant/entrant ambiguous in text); LCL signs from the amount's x vs the DEBIT/CREDIT header anchors (text/getTable lose the columns — pdfjs items required); unknown banks use a best-effort generic parser that feeds the preview for user review. The batch stores parsed rows in `metadata.rows` (not the binary).
 
 **Before each PR:** `git checkout develop && git pull`, delete merged branches, branch `feature/4.x-...`, run `npm run ci`, GPG-sign commits (ask the user to unlock GPG if signing fails), open the PR with `Closes #<issue>` and the required type label (`enhancement`/`infra`) plus phase/area labels. After a migration, also deploy it to the test DB (3307), regenerate the client, clear the Vitest cache, and restart the app container (see Conventions).
 ```
