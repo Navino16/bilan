@@ -179,6 +179,73 @@
       "FAILED": "Failed. Try again."
     }
   },
+  "transactions": {
+    "title": "Transactions",
+    "subtitle": "Your operations across all visible accounts.",
+    "empty": "No transactions yet.",
+    "create": "New transaction",
+    "createTitle": "Add a transaction",
+    "account": "Account",
+    "date": "Date",
+    "amount": "Amount",
+    "type": "Type",
+    "label": "Label",
+    "labelPlaceholder": "Carrefour City",
+    "note": "Note",
+    "category": "Category",
+    "noCategory": "Uncategorized",
+    "search": "Search",
+    "searchPlaceholder": "Search keywords…",
+    "filters": "Filters",
+    "allAccounts": "All accounts",
+    "allCategories": "All categories",
+    "allTypes": "All types",
+    "opCount": "{count, plural, one {# transaction} other {# transactions}}",
+    "tab": { "all": "All", "in": "Income", "out": "Expenses" },
+    "detailOverline": "Transaction",
+    "originalLabel": "Original label",
+    "notePlaceholder": "No note.",
+    "selectCategory": "Choose a category",
+    "close": "Close",
+    "from": "From",
+    "to": "To",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "createCta": "Add",
+    "types": {
+      "CARD": "Card",
+      "TRANSFER": "Transfer",
+      "DIRECT_DEBIT": "Direct debit",
+      "CHEQUE": "Cheque",
+      "ATM": "ATM",
+      "OTHER": "Other"
+    },
+    "rulePrompt": {
+      "learning": "Learning",
+      "title": "Create a rule for similar transactions?",
+      "body": "Automatically categorize future transactions containing \"{pattern}\" as {category}?",
+      "pattern": "Pattern",
+      "matchType": "Match type",
+      "match": {
+        "CONTAINS": "Contains",
+        "STARTS_WITH": "Starts with",
+        "EXACT": "Equals",
+        "REGEX": "Regex"
+      },
+      "scope": "Scope",
+      "scopePersonal": "My accounts",
+      "existingNote": "Existing transactions will not be re-categorized automatically.",
+      "decline": "No thanks",
+      "confirm": "Create rule"
+    },
+    "error": {
+      "INVALID": "Check the fields.",
+      "FORBIDDEN": "Not allowed.",
+      "NOT_FOUND": "Transaction not found.",
+      "FAILED": "Failed. Try again."
+    }
+  },
   "groups": {
     "title": "Households",
     "subtitle": "Share accounts and budgets with your household.",

@@ -1,9 +1,15 @@
 import { db } from "@/server/db";
 import { decrypt } from "@/server/crypto/encryption";
-import { dataKey } from "@/server/crypto/keys";
+import { hmacForSearch, tokenize } from "@/server/crypto/hmac";
+import { dataKey, searchKey } from "@/server/crypto/keys";
 import { logEvent } from "@/server/services/audit";
 import { canWriteAccount, canReadAccount } from "@/server/services/accounts/sharing";
-import { transactionInputSchema, type TransactionInput } from "@/lib/validation/transaction";
+import { listVisibleForUser } from "@/server/services/accounts";
+import {
+  transactionInputSchema,
+  type TransactionInput,
+  type TransactionType,
+} from "@/lib/validation/transaction";
 import { buildSecureFields, computeExternalId } from "./secure-fields";
 
 export class TransactionAccessError extends Error {}
@@ -15,6 +21,7 @@ export type TransactionView = {
   amount: number;
   type: string;
   label: string;
+  rawLabel: string;
   note: string | null;
   categoryId: string | null;
   manuallyCategorized: boolean;
@@ -79,10 +86,112 @@ export async function getTransactionForUser(
     amount: Number(row.amount),
     type: row.type,
     label: decrypt(row.labelEnc, dataKey),
+    rawLabel: decrypt(row.rawLabelEnc, dataKey),
     note: row.noteEnc ? decrypt(row.noteEnc, dataKey) : null,
     categoryId: row.categoryId,
     manuallyCategorized: row.manuallyCategorized,
   };
+}
+
+export type TransactionListItem = TransactionView & { accountName: string };
+
+export type TransactionFilters = {
+  accountId?: string;
+  categoryId?: string;
+  type?: TransactionType;
+  direction?: "in" | "out"; // amount sign filter (Entrées / Sorties)
+  from?: Date;
+  to?: Date;
+  search?: string; // single normalized word → token match
+  take?: number;
+  skip?: number;
+};
+
+// Lists transactions across every account visible to the user (owned + shared),
+// decrypted, newest first. `search` matches one normalized word via the HMAC
+// token index (no plaintext ever touches the query).
+export async function listTransactions(
+  userId: string,
+  filters: TransactionFilters,
+): Promise<{ items: TransactionListItem[]; total: number }> {
+  const visible = await listVisibleForUser(userId);
+  const visibleIds = visible.map((a) => a.id);
+  const accountName = new Map(visible.map((a) => [a.id, a.name]));
+  const accountIds =
+    filters.accountId && visibleIds.includes(filters.accountId) ? [filters.accountId] : visibleIds;
+  if (accountIds.length === 0) return { items: [], total: 0 };
+
+  const where: Record<string, unknown> = { accountId: { in: accountIds } };
+  if (filters.categoryId) where.categoryId = filters.categoryId;
+  if (filters.type) where.type = filters.type;
+  if (filters.direction) where.amount = filters.direction === "in" ? { gt: 0 } : { lt: 0 };
+  if (filters.from || filters.to) {
+    where.date = {
+      ...(filters.from ? { gte: filters.from } : {}),
+      ...(filters.to ? { lte: filters.to } : {}),
+    };
+  }
+  const query = filters.search?.trim();
+  if (query) {
+    // Multi-word AND: the row must carry a token for every normalized word in
+    // the query (words < 3 chars are dropped — same rule as indexing). A query
+    // made only of too-short words matches nothing rather than everything.
+    const words = tokenize(query);
+    if (words.length === 0) {
+      where.id = "__no_searchable_word__";
+    } else {
+      where.AND = words.map((w) => ({
+        searchTokens: { some: { tokenHash: hmacForSearch(w, searchKey) } },
+      }));
+    }
+  }
+
+  const [rows, total] = await Promise.all([
+    db.transaction.findMany({
+      where,
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+      take: filters.take ?? 100,
+      skip: filters.skip ?? 0,
+    }),
+    db.transaction.count({ where }),
+  ]);
+
+  const items: TransactionListItem[] = rows.map((row) => ({
+    id: row.id,
+    accountId: row.accountId,
+    date: row.date,
+    amount: Number(row.amount),
+    type: row.type,
+    label: decrypt(row.labelEnc, dataKey),
+    rawLabel: decrypt(row.rawLabelEnc, dataKey),
+    note: row.noteEnc ? decrypt(row.noteEnc, dataKey) : null,
+    categoryId: row.categoryId,
+    manuallyCategorized: row.manuallyCategorized,
+    accountName: accountName.get(row.accountId) ?? "",
+  }));
+  return { items, total };
+}
+
+// Sets a transaction's category (manual override). Requires WRITE on the account.
+export async function recategorizeTransaction(
+  id: string,
+  categoryId: string | null,
+  actor: { id: string },
+): Promise<void> {
+  const row = await db.transaction.findUnique({ where: { id } });
+  if (!row) throw new TransactionAccessError("NOT_FOUND");
+  if (!(await canWriteAccount(actor.id, row.accountId)))
+    throw new TransactionAccessError("FORBIDDEN");
+  await db.transaction.update({
+    where: { id },
+    data: { categoryId, manuallyCategorized: true },
+  });
+  await logEvent({
+    userId: actor.id,
+    action: "transaction.recategorized",
+    entity: "Transaction",
+    entityId: id,
+  });
 }
 
 export { computeExternalId };
