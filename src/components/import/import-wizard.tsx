@@ -118,6 +118,17 @@ export function ImportWizard({
     if (file) void upload(file, next); // re-detect duplicates against the new account
   }
 
+  // Discard the current file/preview and return to the File step. Nothing is
+  // committed, so no transactions are touched (the parsed batch row is left
+  // untouched and simply abandoned).
+  function reset() {
+    setFile(null);
+    setPreview(null);
+    setColumns({});
+    setProductAccount({});
+    setError(null);
+  }
+
   function commit() {
     if (!preview) return;
     startTransition(async () => {
@@ -324,10 +335,15 @@ export function ImportWizard({
                   {t("previewMeta", { dup: dupCount, cat: catCount })}
                 </div>
               </div>
-              <Button size="sm" onClick={commit} disabled={pending}>
-                {pending ? t("importing") : t("validate")}
-                <ChevronRight />
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="ghost" onClick={reset} disabled={pending}>
+                  {t("cancel")}
+                </Button>
+                <Button size="sm" onClick={commit} disabled={pending}>
+                  {pending ? t("importing") : t("validate")}
+                  <ChevronRight />
+                </Button>
+              </div>
             </div>
 
             {products.map((product) => (
