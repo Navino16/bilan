@@ -1,0 +1,73 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import { SegmentedTabs } from "@/components/transactions/bits";
+import { PERIOD_PRESETS, presetPeriod, toIsoDay, type PeriodPreset } from "@/lib/period";
+
+// The preset whose range matches the current from/to (so the segmented control
+// reflects the active window), or null for a custom range.
+function activePreset(from: string, to: string): PeriodPreset | null {
+  for (const preset of PERIOD_PRESETS) {
+    const p = presetPeriod(preset);
+    if (toIsoDay(p.from) === from && toIsoDay(p.to) === to) return preset;
+  }
+  return null;
+}
+
+export function PeriodPicker({ from, to }: { from: string; to: string }) {
+  const t = useTranslations("dashboard");
+  const router = useRouter();
+  const pathname = usePathname();
+  const [customOpen, setCustomOpen] = useState(false);
+  const [start, setStart] = useState(from);
+  const [end, setEnd] = useState(to);
+
+  function applyPreset(preset: PeriodPreset) {
+    setCustomOpen(false);
+    const p = presetPeriod(preset);
+    router.push(`${pathname}?from=${toIsoDay(p.from)}&to=${toIsoDay(p.to)}`);
+  }
+  function applyCustom() {
+    if (start && end && start <= end) router.push(`${pathname}?from=${start}&to=${end}`);
+  }
+
+  const active = activePreset(from, to);
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <SegmentedTabs<PeriodPreset | "custom" | "">
+        items={[
+          ...PERIOD_PRESETS.map((p) => ({ id: p, label: t(`preset.${p}`) })),
+          { id: "custom", label: t("preset.custom") },
+        ]}
+        value={customOpen ? "custom" : (active ?? "")}
+        onChange={(id) =>
+          id === "custom" ? setCustomOpen((v) => !v) : applyPreset(id as PeriodPreset)
+        }
+      />
+      {customOpen && (
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
+            className="border-input bg-card h-8 rounded-md border px-2 text-sm shadow-sm"
+          />
+          <span className="text-muted-foreground">–</span>
+          <input
+            type="date"
+            value={end}
+            onChange={(e) => setEnd(e.target.value)}
+            className="border-input bg-card h-8 rounded-md border px-2 text-sm shadow-sm"
+          />
+          <Button size="sm" onClick={applyCustom}>
+            {t("apply")}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}

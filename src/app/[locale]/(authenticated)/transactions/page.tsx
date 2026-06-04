@@ -5,6 +5,7 @@ import { listTransactions } from "@/server/services/transactions";
 import { listForUser } from "@/server/services/categories";
 import { listVisibleForUser } from "@/server/services/accounts";
 import { flattenCategories } from "@/components/transactions/category-tree";
+import { parsePeriodParams } from "@/lib/period";
 import {
   TransactionList,
   type ListItem,
@@ -30,12 +31,17 @@ export default async function TransactionsPage({
   const t = await getTranslations("transactions");
 
   const direction = sp.dir === "in" || sp.dir === "out" ? sp.dir : undefined;
+  // A from/to range narrows the list; with no params the list stays unfiltered
+  // (all transactions), preserving the default "show everything" behaviour.
+  const period = sp.from || sp.to ? parsePeriodParams({ from: sp.from, to: sp.to }) : undefined;
 
   const [{ items, total }, tree, accounts] = await Promise.all([
     listTransactions(user.id, {
       categoryId: sp.categoryId,
       direction,
       search: sp.search,
+      from: period?.from,
+      to: period?.to,
     }),
     listForUser(user.id),
     listVisibleForUser(user.id),
@@ -89,7 +95,7 @@ export default async function TransactionsPage({
           />
         )}
       </header>
-      <TransactionFilters categories={flatCategories} />
+      <TransactionFilters categories={flatCategories} from={sp.from} to={sp.to} />
       <TransactionList items={listItems} categories={flatCategories} accounts={accountOptions} />
     </div>
   );

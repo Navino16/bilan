@@ -440,7 +440,15 @@
     "dayByDay": "Dépenses jour par jour",
     "recent": "Transactions récentes",
     "seeAll": "Tout voir",
-    "noRecent": "Aucune transaction sur cette période."
+    "noRecent": "Aucune transaction sur cette période.",
+    "preset": {
+      "this-month": "Ce mois",
+      "last-month": "Mois dernier",
+      "this-quarter": "Trimestre",
+      "this-year": "Année",
+      "custom": "Personnalisé"
+    },
+    "apply": "Appliquer"
   },
   "admin": {
     "title": "Administration",

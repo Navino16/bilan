@@ -4,10 +4,11 @@ import { Card } from "@/components/ui/card";
 import { overline, CategoryAvatar } from "@/components/transactions/bits";
 import { Donut, MiniBars } from "./charts";
 import { PeriodNav } from "./period-nav";
+import { PeriodPicker } from "./period-picker";
 import type { DashboardData } from "@/server/services/dashboard";
 import type { Period } from "@/lib/period";
 import type { FlatCategory } from "@/components/transactions/category-tree";
-import { formatMonthLabel } from "@/lib/period";
+import { formatMonthLabel, toIsoDay } from "@/lib/period";
 
 const DEFAULT_COLOR = "#2563eb";
 
@@ -70,7 +71,10 @@ export async function DashboardView({
             {t("txCount", { count: data.totals.count })}
           </p>
         </div>
-        <PeriodNav period={period} />
+        <div className="flex flex-wrap items-center gap-2">
+          <PeriodPicker from={toIsoDay(period.from)} to={toIsoDay(period.to)} />
+          <PeriodNav period={period} />
+        </div>
       </header>
 
       {/* KPI row */}

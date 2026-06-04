@@ -37,4 +37,11 @@ test.describe("dashboard", () => {
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(current ?? "");
     await expect(page.getByRole("button", { name: "next", exact: true })).toBeDisabled();
   });
+
+  test("switching a preset updates the URL and reloads the dashboard", async ({ page }) => {
+    await page.goto("/fr/dashboard");
+    await page.getByRole("button", { name: /trimestre/i }).click();
+    await expect(page).toHaveURL(/\?from=.*&to=/);
+    await expect(page.getByText("Revenus", { exact: true })).toBeVisible();
+  });
 });
