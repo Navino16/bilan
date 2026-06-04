@@ -30,9 +30,13 @@ async function tx(date: string, amount: number, label: string, categoryId: strin
 beforeAll(async () => {
   await db.user.deleteMany({ where: { id: owner } });
   await db.user.create({ data: { id: owner, email: "dash-owner@bilan.local" } });
-  accountId = (await db.bankAccount.create({ data: { ownerId: owner, name: "Courant", type: "CHECKING" } })).id;
-  catA = (await db.category.create({ data: { userId: owner, name: "Courses", color: "#11aa11" } })).id;
-  catB = (await db.category.create({ data: { userId: owner, name: "Loyer", color: "#aa1111" } })).id;
+  accountId = (
+    await db.bankAccount.create({ data: { ownerId: owner, name: "Courant", type: "CHECKING" } })
+  ).id;
+  catA = (await db.category.create({ data: { userId: owner, name: "Courses", color: "#11aa11" } }))
+    .id;
+  catB = (await db.category.create({ data: { userId: owner, name: "Loyer", color: "#aa1111" } }))
+    .id;
   // March 2026
   await tx("2026-03-02T00:00:00.000Z", -40, "CB CARREFOUR", catA);
   await tx("2026-03-02T00:00:00.000Z", -10, "CB FRANPRIX", catA);

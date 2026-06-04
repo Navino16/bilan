@@ -52,7 +52,7 @@
 
 ### Step 1: Write the failing period-lib test
 
-- [ ] **Step 1** — Create `tests/unit/lib/period.test.ts`:
+- [x] **Step 1** — Create `tests/unit/lib/period.test.ts`:
 
 ```typescript
 import { describe, it, expect } from "vitest";
@@ -101,12 +101,12 @@ describe("parsePeriodParams", () => {
 
 ### Step 2: Run to verify it fails
 
-- [ ] **Step 2** — Run: `npm run test:unit -- period`
+- [x] **Step 2** — Run: `npm run test:unit -- period`
 Expected: FAIL — `Cannot find module '@/lib/period'`.
 
 ### Step 3: Implement `src/lib/period.ts`
 
-- [ ] **Step 3** — Create `src/lib/period.ts`:
+- [x] **Step 3** — Create `src/lib/period.ts`:
 
 ```typescript
 // A reporting window. `year`/`month` (1-12) are set only when the window is a
@@ -187,12 +187,12 @@ export function formatMonthLabel(p: Period, locale: string): string {
 
 ### Step 4: Run to verify it passes
 
-- [ ] **Step 4** — Run: `npm run test:unit -- period`
+- [x] **Step 4** — Run: `npm run test:unit -- period`
 Expected: PASS.
 
 ### Step 5: Commit
 
-- [ ] **Step 5**
+- [x] **Step 5**
 
 ```bash
 git add src/lib/period.ts tests/unit/lib/period.test.ts
@@ -201,7 +201,7 @@ git commit -m "feat: add period helpers (month range, previous month, param pars
 
 ### Step 6: Write the failing dashboard-service integration test
 
-- [ ] **Step 6** — Create `tests/integration/dashboard.test.ts`:
+- [x] **Step 6** — Create `tests/integration/dashboard.test.ts`:
 
 ```typescript
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
@@ -291,12 +291,12 @@ describe("getDashboard", () => {
 
 ### Step 7: Run to verify it fails
 
-- [ ] **Step 7** — Run: `npm run test:integration -- dashboard`
+- [x] **Step 7** — Run: `npm run test:integration -- dashboard`
 Expected: FAIL — `Cannot find module '@/server/services/dashboard'`.
 
 ### Step 8: Implement the dashboard service
 
-- [ ] **Step 8** — Create `src/server/services/dashboard/index.ts`:
+- [x] **Step 8** — Create `src/server/services/dashboard/index.ts`:
 
 ```typescript
 import { db } from "@/server/db";
@@ -399,12 +399,12 @@ export async function getDashboard(
 
 ### Step 9: Run to verify it passes
 
-- [ ] **Step 9** — Run: `npm run test:integration -- dashboard`
+- [x] **Step 9** — Run: `npm run test:integration -- dashboard`
 Expected: PASS (3 tests).
 
 ### Step 10: Commit
 
-- [ ] **Step 10**
+- [x] **Step 10**
 
 ```bash
 git add src/server/services/dashboard/index.ts tests/integration/dashboard.test.ts
@@ -413,7 +413,7 @@ git commit -m "feat: add dashboard aggregation service (totals, by-category, dai
 
 ### Step 11: Add the SVG charts
 
-- [ ] **Step 11** — Create `src/components/dashboard/charts.tsx` (pure SVG, no `"use client"` — safe to render in a Server Component):
+- [x] **Step 11** — Create `src/components/dashboard/charts.tsx` (pure SVG, no `"use client"` — safe to render in a Server Component):
 
 ```tsx
 // Dependency-free SVG charts ported from the design (no recharts).
@@ -509,7 +509,7 @@ export function MiniBars({
 
 ### Step 12: Build the dashboard view
 
-- [ ] **Step 12** — Create `src/components/dashboard/dashboard-view.tsx` (Server Component — receives resolved data + the locale/labels it needs):
+- [x] **Step 12** — Create `src/components/dashboard/dashboard-view.tsx` (Server Component — receives resolved data + the locale/labels it needs):
 
 ```tsx
 import { getTranslations } from "next-intl/server";
@@ -679,7 +679,7 @@ export async function DashboardView({
 
 ### Step 13: Build the period nav
 
-- [ ] **Step 13** — Create `src/components/dashboard/period-nav.tsx` (client; month prev/next via URL params):
+- [x] **Step 13** — Create `src/components/dashboard/period-nav.tsx` (client; month prev/next via URL params):
 
 ```tsx
 "use client";
@@ -718,7 +718,7 @@ export function PeriodNav({ period }: { period: Period }) {
 
 ### Step 14: Add the dashboard i18n
 
-- [ ] **Step 14** — In `messages/fr.json`, replace the `dashboard` namespace contents with (keep the key `dashboard`):
+- [x] **Step 14** — In `messages/fr.json`, replace the `dashboard` namespace contents with (keep the key `dashboard`):
 
 ```json
   "dashboard": {
@@ -766,7 +766,7 @@ In `messages/en.json`, mirror:
 
 ### Step 15: Replace the dashboard page
 
-- [ ] **Step 15** — Replace `src/app/[locale]/(authenticated)/dashboard/page.tsx`:
+- [x] **Step 15** — Replace `src/app/[locale]/(authenticated)/dashboard/page.tsx`:
 
 ```tsx
 import { setRequestLocale } from "next-intl/server";
@@ -804,14 +804,14 @@ export default async function DashboardPage({
 
 ### Step 16: Typecheck + CI
 
-- [ ] **Step 16**
+- [x] **Step 16**
 
 Run: `npm run typecheck` → PASS (if `.next/dev/types` is stale after the route change, trigger a recompile: `curl -s -o /dev/null http://localhost:3000/fr/dashboard`).
 Run: `npm run ci` → PASS.
 
 ### Step 17: Write the e2e
 
-- [ ] **Step 17** — Create `tests/e2e/dashboard.spec.ts`:
+- [x] **Step 17** — Create `tests/e2e/dashboard.spec.ts`:
 
 ```typescript
 import { test, expect } from "@playwright/test";
@@ -836,7 +836,7 @@ test.describe("dashboard", () => {
 
 ### Step 18: Run e2e + commit, push, PR
 
-- [ ] **Step 18**
+- [x] **Step 18**
 
 Run: `npm run test:e2e -- dashboard --project=chromium` → PASS.
 Run: `npm run ci` → PASS.

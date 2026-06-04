@@ -426,14 +426,21 @@
     }
   },
   "dashboard": {
-    "greeting": "Bonjour, {name}",
-    "subtitle": "Voici un aperçu de vos finances.",
-    "comingSoon": "Bientôt disponible",
-    "cards": {
-      "balance": { "label": "Solde courant" },
-      "expenses": { "label": "Dépenses du mois" },
-      "income": { "label": "Revenus du mois" }
-    }
+    "overline": "Vue d'ensemble",
+    "txCount": "{count, plural, one {# transaction} other {# transactions}}",
+    "kpi": { "income": "Revenus", "expense": "Dépenses", "net": "Solde net" },
+    "vsPrev": "{arrow} {pct} % vs période précédente",
+    "noPrev": "Pas de période précédente",
+    "breakdown": "Répartition",
+    "byCategory": "Dépenses par catégorie",
+    "spentThisPeriod": "dépensés sur la période",
+    "noExpenses": "Aucune dépense sur cette période.",
+    "noCategory": "Sans catégorie",
+    "daily": "Quotidien",
+    "dayByDay": "Dépenses jour par jour",
+    "recent": "Transactions récentes",
+    "seeAll": "Tout voir",
+    "noRecent": "Aucune transaction sur cette période."
   },
   "admin": {
     "title": "Administration",

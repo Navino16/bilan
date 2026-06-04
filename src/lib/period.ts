@@ -8,7 +8,8 @@ export type Period = {
   month: number | null;
 };
 
-const daysInMonth = (year: number, month: number) => new Date(Date.UTC(year, month, 0)).getUTCDate();
+const daysInMonth = (year: number, month: number) =>
+  new Date(Date.UTC(year, month, 0)).getUTCDate();
 
 // Whole calendar month, month is 1-12.
 export function monthPeriod(year: number, month: number): Period {
@@ -22,7 +23,11 @@ export function monthPeriod(year: number, month: number): Period {
 }
 
 // Shifts a {year, month} by `delta` months, wrapping the year.
-export function addMonths(year: number, month: number, delta: number): { year: number; month: number } {
+export function addMonths(
+  year: number,
+  month: number,
+  delta: number,
+): { year: number; month: number } {
   const zero = year * 12 + (month - 1) + delta;
   return { year: Math.floor(zero / 12), month: (((zero % 12) + 12) % 12) + 1 };
 }
@@ -70,5 +75,9 @@ export function toIsoDay(d: Date): string {
 // "Mai 2026" — localized month + year label for a month period.
 export function formatMonthLabel(p: Period, locale: string): string {
   const d = p.year && p.month ? new Date(Date.UTC(p.year, p.month - 1, 1)) : p.from;
-  return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric", timeZone: "UTC" }).format(d);
+  return new Intl.DateTimeFormat(locale, {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(d);
 }

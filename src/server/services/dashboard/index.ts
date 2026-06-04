@@ -31,7 +31,12 @@ async function totalsFor(accountIds: string[], period: Period): Promise<Dashboar
     if (a >= 0) income += a;
     else expense += -a;
   }
-  return { income: round2(income), expense: round2(expense), net: round2(income - expense), count: rows.length };
+  return {
+    income: round2(income),
+    expense: round2(expense),
+    net: round2(income - expense),
+    count: rows.length,
+  };
 }
 
 export async function getDashboard(

@@ -1,34 +1,31 @@
-import { getTranslations, setRequestLocale } from "next-intl/server";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { setRequestLocale } from "next-intl/server";
 import { requireSession } from "@/server/auth/permissions";
+import { listForUser } from "@/server/services/categories";
+import { flattenCategories } from "@/components/transactions/category-tree";
+import { getDashboard } from "@/server/services/dashboard";
+import { parsePeriodParams, previousMonthPeriod } from "@/lib/period";
+import { DashboardView } from "@/components/dashboard/dashboard-view";
 
-export default async function DashboardPage({ params }: { params: Promise<{ locale: string }> }) {
+export const dynamic = "force-dynamic";
+
+export default async function DashboardPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ from?: string; to?: string }>;
+}) {
   const { locale } = await params;
+  const sp = await searchParams;
   setRequestLocale(locale);
   const user = await requireSession();
-  const t = await getTranslations("dashboard");
-  const name = user.name?.trim() || user.email;
 
-  const placeholders = ["balance", "expenses", "income"] as const;
+  const period = parsePeriodParams({ from: sp.from, to: sp.to });
+  const previous = previousMonthPeriod(period);
+  const [data, categories] = await Promise.all([
+    getDashboard(user.id, period, previous),
+    listForUser(user.id).then(flattenCategories),
+  ]);
 
-  return (
-    <div className="mx-auto w-full max-w-5xl space-y-8">
-      <header className="space-y-1">
-        <h1 className="font-display text-3xl">{t("greeting", { name })}</h1>
-        <p className="text-muted-foreground">{t("subtitle")}</p>
-      </header>
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        {placeholders.map((key) => (
-          <Card key={key}>
-            <CardHeader>
-              <CardDescription>{t(`cards.${key}.label`)}</CardDescription>
-              <CardTitle className="font-display text-2xl">—</CardTitle>
-            </CardHeader>
-            <CardContent className="text-muted-foreground text-sm">{t("comingSoon")}</CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
+  return <DashboardView data={data} period={period} categories={categories} locale={locale} />;
 }
