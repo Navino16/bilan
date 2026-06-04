@@ -3,7 +3,7 @@ import { requireSession } from "@/server/auth/permissions";
 import { listForUser } from "@/server/services/categories";
 import { flattenCategories } from "@/components/transactions/category-tree";
 import { getDashboard } from "@/server/services/dashboard";
-import { parsePeriodParams, previousMonthPeriod } from "@/lib/period";
+import { parsePeriodParams, previousMonthPeriod, clampPeriodToNow } from "@/lib/period";
 import { DashboardView } from "@/components/dashboard/dashboard-view";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export default async function DashboardPage({
   setRequestLocale(locale);
   const user = await requireSession();
 
-  const period = parsePeriodParams({ from: sp.from, to: sp.to });
+  const period = clampPeriodToNow(parsePeriodParams({ from: sp.from, to: sp.to }));
   const previous = previousMonthPeriod(period);
   const [data, categories] = await Promise.all([
     getDashboard(user.id, period, previous),

@@ -79,6 +79,19 @@ export function parsePeriodParams(
   return monthPeriod(fb.year, fb.month);
 }
 
+// Clamps a period so it never extends past the current month — a direct URL to a
+// future range (e.g. ?from=2027-01-01) snaps back, since there's no future data
+// to show. A fully-future window resets to the current month; one that merely
+// spills over has its upper bound trimmed to the end of the current month.
+export function clampPeriodToNow(p: Period, now: Date = new Date()): Period {
+  const current = monthPeriod(now.getUTCFullYear(), now.getUTCMonth() + 1);
+  if (p.from.getTime() > current.to.getTime()) return current;
+  if (p.to.getTime() > current.to.getTime()) {
+    return { from: p.from, to: current.to, year: null, month: null };
+  }
+  return p;
+}
+
 // ISO day (YYYY-MM-DD) of a date's UTC calendar day — for building ?from/?to links.
 export function toIsoDay(d: Date): string {
   return d.toISOString().slice(0, 10);

@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { monthPeriod, addMonths, previousMonthPeriod, parsePeriodParams } from "@/lib/period";
+import {
+  monthPeriod,
+  addMonths,
+  previousMonthPeriod,
+  parsePeriodParams,
+  clampPeriodToNow,
+} from "@/lib/period";
 
 describe("monthPeriod", () => {
   it("returns the inclusive UTC bounds of a month", () => {
@@ -51,5 +57,34 @@ describe("parsePeriodParams", () => {
   it("keeps a non-whole-month range as a custom period", () => {
     const p = parsePeriodParams({ from: "2026-05-01", to: "2026-05-30" });
     expect(p.month).toBeNull();
+  });
+});
+
+describe("clampPeriodToNow", () => {
+  const now = new Date("2026-06-15T12:00:00.000Z");
+
+  it("snaps a fully-future month back to the current month", () => {
+    const p = clampPeriodToNow(monthPeriod(2027, 1), now);
+    expect(p.year).toBe(2026);
+    expect(p.month).toBe(6);
+  });
+
+  it("leaves a past month untouched", () => {
+    const p = clampPeriodToNow(monthPeriod(2026, 5), now);
+    expect(p.month).toBe(5);
+  });
+
+  it("leaves the current month untouched", () => {
+    const p = clampPeriodToNow(monthPeriod(2026, 6), now);
+    expect(p.month).toBe(6);
+  });
+
+  it("clamps a range that spills into the future to the end of the current month", () => {
+    const p = clampPeriodToNow(
+      { from: new Date("2026-05-10T00:00:00.000Z"), to: new Date("2026-08-20T23:59:59.999Z"), year: null, month: null },
+      now,
+    );
+    expect(p.from.toISOString()).toBe("2026-05-10T00:00:00.000Z");
+    expect(p.to.toISOString()).toBe("2026-06-30T23:59:59.999Z");
   });
 });

@@ -23,4 +23,14 @@ test.describe("dashboard", () => {
     await page.getByRole("button", { name: "next", exact: true }).click();
     await expect(heading).toHaveText(before ?? "");
   });
+
+  test("snaps a direct future URL back to the current month", async ({ page }) => {
+    await page.goto("/fr/dashboard");
+    const current = await page.getByRole("heading", { level: 1 }).textContent();
+
+    // A hand-crafted future range must not render an empty future month.
+    await page.goto("/fr/dashboard?from=2099-01-01&to=2099-01-31");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(current ?? "");
+    await expect(page.getByRole("button", { name: "next", exact: true })).toBeDisabled();
+  });
 });
