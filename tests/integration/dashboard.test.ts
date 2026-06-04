@@ -75,13 +75,29 @@ describe("getDashboard", () => {
     expect(data.byCategory[1]).toEqual({ categoryId: catA, amount: 50 });
   });
 
-  it("returns a per-day expense trace and recent transactions", async () => {
+  it("returns a per-day expense trace and recent transactions for a month", async () => {
     const period = monthPeriod(2026, 3);
     const data = await getDashboard(owner, period, previousMonthPeriod(period));
-    const day2 = data.daily.find((d) => d.date === "2026-03-02");
+    expect(data.trace.granularity).toBe("day");
+    const day2 = data.trace.points.find((d) => d.date === "2026-03-02");
     expect(day2?.amount).toBe(50);
-    expect(data.daily).toHaveLength(31); // one entry per day of March
+    expect(data.trace.points).toHaveLength(31); // one entry per day of March
     expect(data.recent.length).toBeGreaterThan(0);
     expect(data.recent[0].label).toBeTruthy(); // decrypted
+  });
+
+  it("aggregates the trace by month for periods longer than ~6 weeks", async () => {
+    const q1 = {
+      from: new Date("2026-01-01T00:00:00.000Z"),
+      to: new Date("2026-03-31T23:59:59.999Z"),
+      year: null,
+      month: null,
+    };
+    const data = await getDashboard(owner, q1, previousMonthPeriod(monthPeriod(2026, 1)));
+    expect(data.trace.granularity).toBe("month");
+    expect(data.trace.points).toHaveLength(3); // Jan, Feb, Mar
+    expect(data.trace.points.find((p) => p.date === "2026-01-01")?.amount).toBe(0);
+    expect(data.trace.points.find((p) => p.date === "2026-02-01")?.amount).toBe(500);
+    expect(data.trace.points.find((p) => p.date === "2026-03-01")?.amount).toBe(750);
   });
 });

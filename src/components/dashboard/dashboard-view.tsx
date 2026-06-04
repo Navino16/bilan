@@ -38,6 +38,18 @@ export async function DashboardView({
   const catById = new Map(categories.map((c) => [c.id, c]));
   const label = formatPeriodLabel(period, locale);
 
+  // The trace buckets by day (short spans) or by month (quarter/year); the title
+  // and axis labels follow suit.
+  const isMonthlyTrace = data.trace.granularity === "month";
+  const monthShort = new Intl.DateTimeFormat(locale, { month: "short", timeZone: "UTC" });
+  const traceAxis = (p?: { date: string }) =>
+    !p
+      ? ""
+      : isMonthlyTrace
+        ? monthShort.format(new Date(`${p.date}T00:00:00.000Z`))
+        : p.date.slice(8, 10);
+  const tracePoints = data.trace.points;
+
   const kpis = [
     {
       key: "income",
@@ -138,16 +150,18 @@ export async function DashboardView({
           )}
         </Card>
 
-        {/* Daily trace */}
+        {/* Expense trace (day-by-day or month-by-month) */}
         <Card className="gap-4 p-6">
           <div>
-            <div className={overline}>{t("daily")}</div>
-            <div className="font-display text-xl">{t("dayByDay")}</div>
+            <div className={overline}>{t(isMonthlyTrace ? "monthly" : "daily")}</div>
+            <div className="font-display text-xl">
+              {t(isMonthlyTrace ? "monthByMonth" : "dayByDay")}
+            </div>
           </div>
-          <MiniBars values={data.daily.map((d) => d.amount)} />
+          <MiniBars values={tracePoints.map((p) => p.amount)} />
           <div className="text-muted-foreground flex justify-between text-[11px]">
-            <span>{data.daily[0]?.date.slice(8, 10)}</span>
-            <span>{data.daily[data.daily.length - 1]?.date.slice(8, 10)}</span>
+            <span>{traceAxis(tracePoints[0])}</span>
+            <span>{traceAxis(tracePoints[tracePoints.length - 1])}</span>
           </div>
         </Card>
       </div>

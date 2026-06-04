@@ -67,6 +67,9 @@ test.describe("dashboard", () => {
     await expect(heading).toHaveText(/^\d{4}$/);
     const thisYear = Number(await heading.textContent());
 
+    // A year-long trace switches from day-by-day to month-by-month.
+    await expect(page.getByText("Dépenses par mois")).toBeVisible();
+
     // Previous arrow steps a full calendar year back (still "YYYY").
     await page.getByRole("button", { name: "prev", exact: true }).click();
     await expect(heading).toHaveText(String(thisYear - 1));

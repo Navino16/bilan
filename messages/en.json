@@ -438,6 +438,8 @@
     "noCategory": "Uncategorised",
     "daily": "Daily",
     "dayByDay": "Day-by-day spending",
+    "monthly": "Monthly",
+    "monthByMonth": "Monthly spending",
     "recent": "Recent transactions",
     "seeAll": "See all",
     "noRecent": "No transactions this period.",
