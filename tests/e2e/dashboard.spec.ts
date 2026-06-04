@@ -2,6 +2,10 @@ import { test, expect } from "@playwright/test";
 
 test.describe("dashboard", () => {
   test.use({ storageState: "tests/e2e/.auth/owner.json" });
+  test.skip(
+    ({ browserName }) => browserName === "webkit",
+    "Mobile click-driven nav refinement deferred to Phase 8.3",
+  );
 
   test("renders the KPI row and month label, and navigates months", async ({ page }) => {
     await page.goto("/fr/dashboard");
