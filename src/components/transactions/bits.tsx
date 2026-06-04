@@ -83,7 +83,7 @@ export function SegmentedTabs<T extends string>({
           aria-pressed={value === it.id}
           onClick={() => onChange(it.id)}
           className={cn(
-            "h-7 rounded-md px-3 text-[0.8rem] font-medium transition-colors",
+            "h-7 shrink-0 rounded-md px-3 text-[0.8rem] font-medium whitespace-nowrap transition-colors",
             value === it.id
               ? "bg-card text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground",

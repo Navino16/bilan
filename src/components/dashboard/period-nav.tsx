@@ -20,7 +20,7 @@ export function PeriodNav({ period }: { period: Period }) {
   const nextDisabled = shiftPeriod(period, 1).from.getTime() > new Date().getTime();
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex shrink-0 items-center gap-1">
       <Button variant="ghost" size="icon-sm" aria-label="prev" onClick={() => go(-1)}>
         <ChevronLeft />
       </Button>

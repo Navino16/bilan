@@ -7,6 +7,19 @@ test.describe("dashboard", () => {
     "Mobile click-driven nav refinement deferred to Phase 8.3",
   );
 
+  test("the period selector fits a narrow viewport without horizontal overflow", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/fr/dashboard");
+    await expect(page.getByText("Revenus", { exact: true })).toBeVisible();
+    // The preset bar scrolls internally; the page itself must not overflow.
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+
   test("renders the KPI row and month label, and navigates months", async ({ page }) => {
     await page.goto("/fr/dashboard");
     await expect(page.getByText("Revenus", { exact: true })).toBeVisible();
@@ -48,8 +61,12 @@ test.describe("dashboard", () => {
     page,
   }) => {
     await page.goto("/fr/dashboard");
-    await page.getByRole("button", { name: /trimestre/i }).click();
-    await expect(page).toHaveURL(/\?from=.*&to=/);
+    // Retry the (idempotent) preset click until it lands, absorbing the
+    // hydration race on the freshly-loaded page.
+    await expect(async () => {
+      await page.getByRole("button", { name: /trimestre/i }).click();
+      await expect(page).toHaveURL(/\?from=.*&to=/);
+    }).toPass();
 
     // The quarter heading shows the span (e.g. "avr. – juin 2026"), not "T2".
     const heading = page.getByRole("heading", { level: 1 });
@@ -70,7 +87,11 @@ test.describe("dashboard", () => {
     const now = new Date();
     const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-15`;
     await page.goto("/fr/transactions");
-    await page.getByRole("button", { name: /nouvelle transaction/i }).click();
+    // Open the dialog, retrying until the form shows (hydration race on load).
+    await expect(async () => {
+      await page.getByRole("button", { name: /nouvelle transaction/i }).click();
+      await expect(page.locator('input[name="date"]')).toBeVisible();
+    }).toPass();
     await page.fill('input[name="date"]', day);
     await page.fill('input[name="amount"]', "-1234");
     await page.fill('input[name="label"]', label);
@@ -86,7 +107,11 @@ test.describe("dashboard", () => {
 
   test("the year preset shows just the year and steps year by year", async ({ page }) => {
     await page.goto("/fr/dashboard");
-    await page.getByRole("button", { name: /^année$/i }).click();
+    // Retry the (idempotent) preset click until it lands (hydration race).
+    await expect(async () => {
+      await page.getByRole("button", { name: /^année$/i }).click();
+      await expect(page).toHaveURL(/\?from=.*&to=/);
+    }).toPass();
 
     // Just the year — not a clamped range like "janv. – juin 2026".
     const heading = page.getByRole("heading", { level: 1 });

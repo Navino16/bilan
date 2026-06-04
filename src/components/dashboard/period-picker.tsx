@@ -37,19 +37,23 @@ export function PeriodPicker({ from, to }: { from: string; to: string }) {
   const active = activePreset(from, to);
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <SegmentedTabs<PeriodPreset | "custom" | "">
-        items={[
-          ...PERIOD_PRESETS.map((p) => ({ id: p, label: t(`preset.${p}`) })),
-          { id: "custom", label: t("preset.custom") },
-        ]}
-        value={customOpen ? "custom" : (active ?? "")}
-        onChange={(id) =>
-          id === "custom" ? setCustomOpen((v) => !v) : applyPreset(id as PeriodPreset)
-        }
-      />
+    <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-none sm:flex-row sm:flex-wrap sm:items-center">
+      {/* Presets scroll horizontally on narrow screens instead of overflowing the bar. */}
+      <div className="-mx-0.5 max-w-full [scrollbar-width:none] overflow-x-auto px-0.5 [&::-webkit-scrollbar]:hidden">
+        <SegmentedTabs<PeriodPreset | "custom" | "">
+          className="w-max"
+          items={[
+            ...PERIOD_PRESETS.map((p) => ({ id: p, label: t(`preset.${p}`) })),
+            { id: "custom", label: t("preset.custom") },
+          ]}
+          value={customOpen ? "custom" : (active ?? "")}
+          onChange={(id) =>
+            id === "custom" ? setCustomOpen((v) => !v) : applyPreset(id as PeriodPreset)
+          }
+        />
+      </div>
       {customOpen && (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <input
             type="date"
             value={start}

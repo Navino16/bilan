@@ -91,7 +91,7 @@ export async function DashboardView({
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
+      <header className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <div className="space-y-1">
           <div className={overline}>{t("overline")}</div>
           <h1 className="font-display text-4xl leading-none">{label}</h1>
@@ -99,7 +99,7 @@ export async function DashboardView({
             {t("txCount", { count: data.totals.count })}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
           <PeriodPicker from={toIsoDay(period.from)} to={toIsoDay(period.to)} />
           <PeriodNav period={period} />
         </div>
