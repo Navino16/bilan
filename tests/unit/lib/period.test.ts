@@ -5,6 +5,9 @@ import {
   previousMonthPeriod,
   parsePeriodParams,
   clampPeriodToNow,
+  presetPeriod,
+  previousPeriod,
+  PERIOD_PRESETS,
 } from "@/lib/period";
 
 describe("monthPeriod", () => {
@@ -91,5 +94,46 @@ describe("clampPeriodToNow", () => {
     );
     expect(p.from.toISOString()).toBe("2026-05-10T00:00:00.000Z");
     expect(p.to.toISOString()).toBe("2026-06-30T23:59:59.999Z");
+  });
+});
+
+describe("presetPeriod", () => {
+  const now = new Date("2026-05-15T12:00:00.000Z");
+  it("this-month spans the current calendar month", () => {
+    const p = presetPeriod("this-month", now);
+    expect(p.from.toISOString()).toBe("2026-05-01T00:00:00.000Z");
+    expect(p.month).toBe(5);
+  });
+  it("last-month spans the previous calendar month", () => {
+    const p = presetPeriod("last-month", now);
+    expect(p.month).toBe(4);
+  });
+  it("this-quarter spans Apr–Jun for May", () => {
+    const p = presetPeriod("this-quarter", now);
+    expect(p.from.toISOString()).toBe("2026-04-01T00:00:00.000Z");
+    expect(p.to.toISOString()).toBe("2026-06-30T23:59:59.999Z");
+    expect(p.month).toBeNull();
+  });
+  it("this-year spans the calendar year", () => {
+    const p = presetPeriod("this-year", now);
+    expect(p.from.toISOString()).toBe("2026-01-01T00:00:00.000Z");
+    expect(p.to.toISOString()).toBe("2026-12-31T23:59:59.999Z");
+  });
+  it("exposes the preset ids", () => {
+    expect(PERIOD_PRESETS).toContain("this-quarter");
+  });
+});
+
+describe("previousPeriod", () => {
+  it("returns the same-length window immediately before a custom range", () => {
+    const p = previousPeriod({
+      from: new Date("2026-05-10T00:00:00.000Z"),
+      to: new Date("2026-05-20T23:59:59.999Z"),
+      year: null,
+      month: null,
+    });
+    // 11-day window → previous 11 days ending the day before `from`.
+    expect(p.to.toISOString().slice(0, 10)).toBe("2026-05-09");
+    expect(p.from.toISOString().slice(0, 10)).toBe("2026-04-29");
   });
 });

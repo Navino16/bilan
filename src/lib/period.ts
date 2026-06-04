@@ -106,3 +106,53 @@ export function formatMonthLabel(p: Period, locale: string): string {
     timeZone: "UTC",
   }).format(d);
 }
+
+export const PERIOD_PRESETS = ["this-month", "last-month", "this-quarter", "this-year"] as const;
+export type PeriodPreset = (typeof PERIOD_PRESETS)[number];
+
+// A preset window relative to `now` (UTC). Month presets carry year/month;
+// quarter/year are custom (month = null).
+export function presetPeriod(preset: PeriodPreset, now: Date = new Date()): Period {
+  const y = now.getUTCFullYear();
+  const m = now.getUTCMonth() + 1;
+  switch (preset) {
+    case "this-month":
+      return monthPeriod(y, m);
+    case "last-month": {
+      const p = addMonths(y, m, -1);
+      return monthPeriod(p.year, p.month);
+    }
+    case "this-quarter": {
+      const startMonth = Math.floor((m - 1) / 3) * 3 + 1;
+      const lastDay = daysInMonth(y, startMonth + 2);
+      return {
+        from: new Date(Date.UTC(y, startMonth - 1, 1, 0, 0, 0, 0)),
+        to: new Date(Date.UTC(y, startMonth + 1, lastDay, 23, 59, 59, 999)),
+        year: null,
+        month: null,
+      };
+    }
+    case "this-year":
+      return {
+        from: new Date(Date.UTC(y, 0, 1, 0, 0, 0, 0)),
+        to: new Date(Date.UTC(y, 11, 31, 23, 59, 59, 999)),
+        year: null,
+        month: null,
+      };
+  }
+}
+
+// Same-length window immediately before `p` (for the custom-range delta).
+export function previousPeriod(p: Period): Period {
+  if (p.year && p.month) return previousMonthPeriod(p);
+  const dayMs = 86_400_000;
+  const lengthDays = Math.round((p.to.getTime() - p.from.getTime() + 1) / dayMs);
+  const toDay = new Date(p.from.getTime() - dayMs);
+  const fromDay = new Date(toDay.getTime() - (lengthDays - 1) * dayMs);
+  return {
+    from: new Date(`${toIsoDay(fromDay)}T00:00:00.000Z`),
+    to: new Date(`${toIsoDay(toDay)}T23:59:59.999Z`),
+    year: null,
+    month: null,
+  };
+}
