@@ -81,7 +81,12 @@ describe("clampPeriodToNow", () => {
 
   it("clamps a range that spills into the future to the end of the current month", () => {
     const p = clampPeriodToNow(
-      { from: new Date("2026-05-10T00:00:00.000Z"), to: new Date("2026-08-20T23:59:59.999Z"), year: null, month: null },
+      {
+        from: new Date("2026-05-10T00:00:00.000Z"),
+        to: new Date("2026-08-20T23:59:59.999Z"),
+        year: null,
+        month: null,
+      },
       now,
     );
     expect(p.from.toISOString()).toBe("2026-05-10T00:00:00.000Z");
