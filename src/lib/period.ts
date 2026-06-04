@@ -107,6 +107,39 @@ export function formatMonthLabel(p: Period, locale: string): string {
   }).format(d);
 }
 
+const capitalize = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+
+// A clear, compact header label for any period:
+// month → "Mai 2026", whole year → "2026", whole quarter → "T2 2026" (fr) /
+// "Q2 2026" (en), anything else → a localized date range ("10–30 avr. 2026").
+export function formatPeriodLabel(p: Period, locale: string): string {
+  if (p.year && p.month) return capitalize(formatMonthLabel(p, locale));
+
+  const fy = p.from.getUTCFullYear();
+  const ty = p.to.getUTCFullYear();
+  const fm = p.from.getUTCMonth(); // 0-based
+  const tm = p.to.getUTCMonth();
+  const fd = p.from.getUTCDate();
+  const td = p.to.getUTCDate();
+
+  // Whole calendar year → "2026".
+  if (fy === ty && fm === 0 && fd === 1 && tm === 11 && td === 31) return String(fy);
+
+  // Whole quarter (1st of a quarter-start month → last day of its 3rd month).
+  if (fy === ty && fm % 3 === 0 && fd === 1 && tm === fm + 2 && td === daysInMonth(ty, tm + 1)) {
+    const quarter = Math.floor(fm / 3) + 1;
+    return `${locale.startsWith("fr") ? "T" : "Q"}${quarter} ${fy}`;
+  }
+
+  // Arbitrary range — Intl collapses the shared parts ("10–30 avr. 2026").
+  return new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).formatRange(p.from, p.to);
+}
+
 export const PERIOD_PRESETS = ["this-month", "last-month", "this-quarter", "this-year"] as const;
 export type PeriodPreset = (typeof PERIOD_PRESETS)[number];
 

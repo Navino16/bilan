@@ -38,10 +38,14 @@ test.describe("dashboard", () => {
     await expect(page.getByRole("button", { name: "next", exact: true })).toBeDisabled();
   });
 
-  test("switching a preset updates the URL and reloads the dashboard", async ({ page }) => {
+  test("switching a preset updates the URL, the heading and reloads the dashboard", async ({
+    page,
+  }) => {
     await page.goto("/fr/dashboard");
     await page.getByRole("button", { name: /trimestre/i }).click();
     await expect(page).toHaveURL(/\?from=.*&to=/);
+    // Quarter/year render a clear label (e.g. "T2 2026"), not the start month.
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^T[1-4] \d{4}$/);
     await expect(page.getByText("Revenus", { exact: true })).toBeVisible();
   });
 });

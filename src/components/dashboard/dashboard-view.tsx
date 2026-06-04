@@ -8,7 +8,7 @@ import { PeriodPicker } from "./period-picker";
 import type { DashboardData } from "@/server/services/dashboard";
 import type { Period } from "@/lib/period";
 import type { FlatCategory } from "@/components/transactions/category-tree";
-import { formatMonthLabel, toIsoDay } from "@/lib/period";
+import { formatPeriodLabel, toIsoDay } from "@/lib/period";
 
 const DEFAULT_COLOR = "#2563eb";
 
@@ -36,7 +36,7 @@ export async function DashboardView({
     maximumFractionDigits: 0,
   });
   const catById = new Map(categories.map((c) => [c.id, c]));
-  const label = formatMonthLabel(period, locale);
+  const label = formatPeriodLabel(period, locale);
 
   const kpis = [
     {
@@ -66,7 +66,7 @@ export async function DashboardView({
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-1">
           <div className={overline}>{t("overline")}</div>
-          <h1 className="font-display text-4xl leading-none capitalize">{label}</h1>
+          <h1 className="font-display text-4xl leading-none">{label}</h1>
           <p className="text-muted-foreground text-sm">
             {t("txCount", { count: data.totals.count })}
           </p>

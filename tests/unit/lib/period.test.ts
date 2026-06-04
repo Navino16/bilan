@@ -8,6 +8,7 @@ import {
   presetPeriod,
   previousPeriod,
   PERIOD_PRESETS,
+  formatPeriodLabel,
 } from "@/lib/period";
 
 describe("monthPeriod", () => {
@@ -135,5 +136,39 @@ describe("previousPeriod", () => {
     // 11-day window → previous 11 days ending the day before `from`.
     expect(p.to.toISOString().slice(0, 10)).toBe("2026-05-09");
     expect(p.from.toISOString().slice(0, 10)).toBe("2026-04-29");
+  });
+});
+
+describe("formatPeriodLabel", () => {
+  it("labels a whole month with a capitalised month + year", () => {
+    expect(formatPeriodLabel(monthPeriod(2026, 5), "fr")).toBe("Mai 2026");
+  });
+
+  it("labels a whole calendar year with just the year", () => {
+    expect(
+      formatPeriodLabel(presetPeriod("this-year", new Date("2026-03-01T00:00:00.000Z")), "fr"),
+    ).toBe("2026");
+  });
+
+  it("labels a whole quarter as Tn (fr) / Qn (en)", () => {
+    const q = presetPeriod("this-quarter", new Date("2026-05-15T00:00:00.000Z"));
+    expect(formatPeriodLabel(q, "fr")).toBe("T2 2026");
+    expect(formatPeriodLabel(q, "en")).toBe("Q2 2026");
+  });
+
+  it("labels an arbitrary range as a localized date range", () => {
+    const label = formatPeriodLabel(
+      {
+        from: new Date("2026-04-10T00:00:00.000Z"),
+        to: new Date("2026-04-30T23:59:59.999Z"),
+        year: null,
+        month: null,
+      },
+      "fr",
+    );
+    expect(label).toMatch(/10/);
+    expect(label).toMatch(/30/);
+    expect(label).toMatch(/avr/i);
+    expect(label).toMatch(/2026/);
   });
 });
