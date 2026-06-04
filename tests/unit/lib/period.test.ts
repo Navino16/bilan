@@ -9,6 +9,7 @@ import {
   previousPeriod,
   PERIOD_PRESETS,
   formatPeriodLabel,
+  shiftPeriod,
 } from "@/lib/period";
 
 describe("monthPeriod", () => {
@@ -150,10 +151,16 @@ describe("formatPeriodLabel", () => {
     ).toBe("2026");
   });
 
-  it("labels a whole quarter as Tn (fr) / Qn (en)", () => {
+  it("labels a whole quarter as a month range so the span is clear", () => {
     const q = presetPeriod("this-quarter", new Date("2026-05-15T00:00:00.000Z"));
-    expect(formatPeriodLabel(q, "fr")).toBe("T2 2026");
-    expect(formatPeriodLabel(q, "en")).toBe("Q2 2026");
+    const fr = formatPeriodLabel(q, "fr");
+    expect(fr).toMatch(/avr/i);
+    expect(fr).toMatch(/juin/i);
+    expect(fr).toMatch(/2026/);
+    expect(fr).not.toMatch(/T2/);
+    const en = formatPeriodLabel(q, "en");
+    expect(en).toMatch(/apr/i);
+    expect(en).toMatch(/jun/i);
   });
 
   it("labels an arbitrary range as a localized date range", () => {
@@ -170,5 +177,48 @@ describe("formatPeriodLabel", () => {
     expect(label).toMatch(/30/);
     expect(label).toMatch(/avr/i);
     expect(label).toMatch(/2026/);
+  });
+});
+
+describe("shiftPeriod", () => {
+  it("steps a month period by one calendar month", () => {
+    expect(shiftPeriod(monthPeriod(2026, 6), 1)).toMatchObject({ year: 2026, month: 7 });
+    expect(shiftPeriod(monthPeriod(2026, 1), -1)).toMatchObject({ year: 2025, month: 12 });
+  });
+
+  it("steps a whole year by one year", () => {
+    const year = presetPeriod("this-year", new Date("2026-03-01T00:00:00.000Z"));
+    const next = shiftPeriod(year, 1);
+    expect(next.from.toISOString()).toBe("2027-01-01T00:00:00.000Z");
+    expect(next.to.toISOString()).toBe("2027-12-31T23:59:59.999Z");
+  });
+
+  it("steps a whole quarter by one quarter, staying aligned", () => {
+    const q2 = presetPeriod("this-quarter", new Date("2026-05-15T00:00:00.000Z"));
+    const q3 = shiftPeriod(q2, 1);
+    expect(q3.from.toISOString()).toBe("2026-07-01T00:00:00.000Z");
+    expect(q3.to.toISOString()).toBe("2026-09-30T23:59:59.999Z");
+    const q1 = shiftPeriod(q2, -1);
+    expect(q1.from.toISOString()).toBe("2026-01-01T00:00:00.000Z");
+    expect(q1.to.toISOString()).toBe("2026-03-31T23:59:59.999Z");
+  });
+
+  it("steps a quarter across a year boundary", () => {
+    const q4 = presetPeriod("this-quarter", new Date("2026-11-15T00:00:00.000Z"));
+    const q1Next = shiftPeriod(q4, 1);
+    expect(q1Next.from.toISOString()).toBe("2027-01-01T00:00:00.000Z");
+    expect(q1Next.to.toISOString()).toBe("2027-03-31T23:59:59.999Z");
+  });
+
+  it("shifts an arbitrary range by its own length", () => {
+    const range = {
+      from: new Date("2026-04-10T00:00:00.000Z"),
+      to: new Date("2026-04-20T23:59:59.999Z"),
+      year: null,
+      month: null,
+    };
+    const prev = shiftPeriod(range, -1);
+    expect(prev.from.toISOString().slice(0, 10)).toBe("2026-03-30");
+    expect(prev.to.toISOString().slice(0, 10)).toBe("2026-04-09");
   });
 });

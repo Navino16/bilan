@@ -38,14 +38,23 @@ test.describe("dashboard", () => {
     await expect(page.getByRole("button", { name: "next", exact: true })).toBeDisabled();
   });
 
-  test("switching a preset updates the URL, the heading and reloads the dashboard", async ({
+  test("switching to the quarter preset shows a date-range heading and steps by quarter", async ({
     page,
   }) => {
     await page.goto("/fr/dashboard");
     await page.getByRole("button", { name: /trimestre/i }).click();
     await expect(page).toHaveURL(/\?from=.*&to=/);
-    // Quarter/year render a clear label (e.g. "T2 2026"), not the start month.
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^T[1-4] \d{4}$/);
+
+    // The quarter heading shows the span (e.g. "avr. – juin 2026"), not "T2".
+    const heading = page.getByRole("heading", { level: 1 });
+    await expect(heading).toContainText("2026");
+    await expect(heading).toHaveText(/[–—-]/);
+    const quarterLabel = await heading.textContent();
+
+    // The arrows step by the selected granularity → a different quarter range.
+    await page.getByRole("button", { name: "prev", exact: true }).click();
+    await expect(heading).not.toHaveText(quarterLabel ?? "");
+    await expect(heading).toHaveText(/[–—-]/);
     await expect(page.getByText("Revenus", { exact: true })).toBeVisible();
   });
 });
