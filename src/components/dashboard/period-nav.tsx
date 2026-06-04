@@ -10,8 +10,13 @@ export function PeriodNav({ period }: { period: Period }) {
   const pathname = usePathname();
 
   // Month nav only makes sense for a whole-month period; fall back to "now".
-  const year = period.year ?? new Date().getUTCFullYear();
-  const month = period.month ?? new Date().getUTCMonth() + 1;
+  const now = new Date();
+  const year = period.year ?? now.getUTCFullYear();
+  const month = period.month ?? now.getUTCMonth() + 1;
+
+  // No point browsing into the future (no data yet) — disable "next" once we're
+  // on the current month or later.
+  const atCurrentMonth = year * 12 + month >= now.getUTCFullYear() * 12 + (now.getUTCMonth() + 1);
 
   function go(delta: number) {
     const next = addMonths(year, month, delta);
@@ -24,7 +29,13 @@ export function PeriodNav({ period }: { period: Period }) {
       <Button variant="ghost" size="icon-sm" aria-label="prev" onClick={() => go(-1)}>
         <ChevronLeft />
       </Button>
-      <Button variant="ghost" size="icon-sm" aria-label="next" onClick={() => go(1)}>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label="next"
+        onClick={() => go(1)}
+        disabled={atCurrentMonth}
+      >
         <ChevronRight />
       </Button>
     </div>

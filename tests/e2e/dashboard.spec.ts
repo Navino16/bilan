@@ -9,6 +9,9 @@ test.describe("dashboard", () => {
     await expect(page.getByText("Dépenses", { exact: true })).toBeVisible();
     await expect(page.getByText("Solde net", { exact: true })).toBeVisible();
 
+    // The default view is the current month — there's no future to browse into.
+    await expect(page.getByRole("button", { name: "next", exact: true })).toBeDisabled();
+
     const heading = page.getByRole("heading", { level: 1 });
     const before = await heading.textContent();
     await page.getByRole("button", { name: "prev", exact: true }).click();
