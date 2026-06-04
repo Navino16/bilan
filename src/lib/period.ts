@@ -52,6 +52,18 @@ function customPeriod(fromDay: string, toDay: string): Period {
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
+// A range covering exactly one calendar month (1st → last day) is treated as a
+// month period so `year`/`month` are set and month nav keeps stepping correctly
+// (otherwise the round-trip through ?from/?to loses the month and nav falls back
+// to "now"). Returns null for any other range.
+function wholeMonthOf(fromDay: string, toDay: string): Period | null {
+  const [fy, fm, fd] = fromDay.split("-").map(Number);
+  const [ty, tm, td] = toDay.split("-").map(Number);
+  if (fd !== 1 || fy !== ty || fm !== tm) return null;
+  if (td !== daysInMonth(fy, fm)) return null;
+  return monthPeriod(fy, fm);
+}
+
 // Resolves the active period from URL params. `?from`/`?to` (ISO days) define a
 // custom range; otherwise fall back to `fallbackMonth` (defaults to "now" UTC).
 export function parsePeriodParams(
@@ -60,7 +72,7 @@ export function parsePeriodParams(
 ): Period {
   const { from, to } = params;
   if (from && to && ISO_DAY.test(from) && ISO_DAY.test(to) && from <= to) {
-    return customPeriod(from, to);
+    return wholeMonthOf(from, to) ?? customPeriod(from, to);
   }
   const now = new Date();
   const fb = fallbackMonth ?? { year: now.getUTCFullYear(), month: now.getUTCMonth() + 1 };

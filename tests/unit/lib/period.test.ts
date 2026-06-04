@@ -39,4 +39,17 @@ describe("parsePeriodParams", () => {
     expect(p.month).toBe(5);
     expect(p.from.toISOString()).toBe("2026-05-01T00:00:00.000Z");
   });
+
+  it("recognises a from/to range that spans a whole calendar month", () => {
+    // Month nav pushes ?from=YYYY-MM-01&to=YYYY-MM-<last> — these must round-trip
+    // back to a month period so prev/next keep stepping by one calendar month.
+    const p = parsePeriodParams({ from: "2026-05-01", to: "2026-05-31" });
+    expect(p.year).toBe(2026);
+    expect(p.month).toBe(5);
+  });
+
+  it("keeps a non-whole-month range as a custom period", () => {
+    const p = parsePeriodParams({ from: "2026-05-01", to: "2026-05-30" });
+    expect(p.month).toBeNull();
+  });
 });

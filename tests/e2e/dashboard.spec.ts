@@ -11,8 +11,13 @@ test.describe("dashboard", () => {
 
     const heading = page.getByRole("heading", { level: 1 });
     const before = await heading.textContent();
-    await page.getByRole("button", { name: "prev" }).click();
+    await page.getByRole("button", { name: "prev", exact: true }).click();
     await expect(page).toHaveURL(/\?from=.*&to=/);
     await expect(heading).not.toHaveText(before ?? "");
+
+    // Stepping back then forward must return to the starting month (a whole-month
+    // ?from/?to range round-trips to a month period, so nav stays one month apart).
+    await page.getByRole("button", { name: "next", exact: true }).click();
+    await expect(heading).toHaveText(before ?? "");
   });
 });
