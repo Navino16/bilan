@@ -17,15 +17,21 @@ test.describe("dashboard", () => {
     await expect(page.getByRole("button", { name: "next", exact: true })).toBeDisabled();
 
     const heading = page.getByRole("heading", { level: 1 });
-    const before = await heading.textContent();
-    await page.getByRole("button", { name: "prev", exact: true }).click();
-    await expect(page).toHaveURL(/\?from=.*&to=/);
-    await expect(heading).not.toHaveText(before ?? "");
+    // Absorb the initial hydration race (a click before PeriodNav hydrates is a
+    // no-op): retry "prev" until it actually navigates. Lands on a past month.
+    await expect(async () => {
+      await page.getByRole("button", { name: "prev", exact: true }).click();
+      await expect(page).toHaveURL(/\?from=.*&to=/);
+    }).toPass();
 
-    // Stepping back then forward must return to the starting month (a whole-month
-    // ?from/?to range round-trips to a month period, so nav stays one month apart).
+    // From a hydrated page, stepping forward then back must return to the same
+    // month — the whole-month ?from/?to range round-trips to a month period, so
+    // nav stays exactly one month apart (regression: next used to overshoot).
+    const base = await heading.textContent();
     await page.getByRole("button", { name: "next", exact: true }).click();
-    await expect(heading).toHaveText(before ?? "");
+    await expect(heading).not.toHaveText(base ?? "");
+    await page.getByRole("button", { name: "prev", exact: true }).click();
+    await expect(heading).toHaveText(base ?? "");
   });
 
   test("snaps a direct future URL back to the current month", async ({ page }) => {
@@ -56,6 +62,26 @@ test.describe("dashboard", () => {
     await expect(heading).not.toHaveText(quarterLabel ?? "");
     await expect(heading).toHaveText(/[–—-]/);
     await expect(page.getByText("Revenus", { exact: true })).toBeVisible();
+  });
+
+  test("shows the average and peak-bucket stats once there is spending", async ({ page }) => {
+    // Seed a current-month expense so the trace has a non-empty peak.
+    const label = `Loyer ${Date.now()}`;
+    const now = new Date();
+    const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-15`;
+    await page.goto("/fr/transactions");
+    await page.getByRole("button", { name: /nouvelle transaction/i }).click();
+    await page.fill('input[name="date"]', day);
+    await page.fill('input[name="amount"]', "-1234");
+    await page.fill('input[name="label"]', label);
+    await page.getByRole("button", { name: /^ajouter$/i }).click();
+    await expect(
+      page.locator('[data-slot="transaction-row"]').filter({ hasText: label }).first(),
+    ).toBeVisible({ timeout: 15_000 });
+
+    await page.goto("/fr/dashboard");
+    await expect(page.getByText("Moy. / jour")).toBeVisible();
+    await expect(page.getByText("Plus gros jour")).toBeVisible();
   });
 
   test("the year preset shows just the year and steps year by year", async ({ page }) => {

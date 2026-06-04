@@ -5,10 +5,18 @@ import type { Period } from "@/lib/period";
 
 export type DashboardTotals = { income: number; expense: number; net: number; count: number };
 export type TracePoint = { date: string; amount: number };
+// The highest-spend bucket: its date, amount, and the category that drove it.
+export type TracePeak = { date: string; amount: number; categoryId: string | null };
 // The expense trace adapts its bucket size to the period length so a year or
 // quarter doesn't render 365 one-pixel bars: ≤ ~6 weeks → one bucket per day,
-// longer → one per calendar month.
-export type DashboardTrace = { granularity: "day" | "month"; points: TracePoint[] };
+// longer → one per calendar month. `avg` is the mean spend per bucket and `peak`
+// is the biggest bucket (null when nothing was spent).
+export type DashboardTrace = {
+  granularity: "day" | "month";
+  points: TracePoint[];
+  avg: number;
+  peak: TracePeak | null;
+};
 export type DashboardData = {
   totals: DashboardTotals;
   previous: Pick<DashboardTotals, "income" | "expense" | "net">;
@@ -20,7 +28,35 @@ export type DashboardData = {
 // Above this span the daily trace becomes unreadable → switch to monthly buckets.
 const DAILY_TRACE_MAX_DAYS = 45;
 
-type ExpenseRow = { amount: unknown; date: Date };
+type ExpenseRow = { amount: unknown; date: Date; categoryId: string | null };
+
+// Mean spend per bucket + the biggest bucket and the category that drove it.
+function summarize(
+  granularity: "day" | "month",
+  points: TracePoint[],
+  rows: ExpenseRow[],
+  keyOf: (d: Date) => string,
+): DashboardTrace {
+  const avg = points.length ? round2(points.reduce((s, p) => s + p.amount, 0) / points.length) : 0;
+
+  const top = points.reduce<TracePoint | null>((a, p) => (a && a.amount >= p.amount ? a : p), null);
+  let peak: TracePeak | null = null;
+  if (top && top.amount > 0) {
+    const byCat = new Map<string | null, number>();
+    for (const r of rows) {
+      if (keyOf(r.date) === top.date) {
+        byCat.set(r.categoryId, (byCat.get(r.categoryId) ?? 0) - Number(r.amount));
+      }
+    }
+    const topCat = [...byCat.entries()].reduce<[string | null, number] | null>(
+      (a, e) => (a && a[1] >= e[1] ? a : e),
+      null,
+    );
+    peak = { date: top.date, amount: top.amount, categoryId: topCat ? topCat[0] : null };
+  }
+
+  return { granularity, points, avg, peak };
+}
 
 // One bucket per UTC day of the period.
 function dailyTrace(rows: ExpenseRow[], period: Period): DashboardTrace {
@@ -35,12 +71,13 @@ function dailyTrace(rows: ExpenseRow[], period: Period): DashboardTrace {
   }
   const points = [...byDay.entries()].map(([date, amount]) => ({ date, amount: round2(amount) }));
   points.sort((a, b) => a.date.localeCompare(b.date));
-  return { granularity: "day", points };
+  return summarize("day", points, rows, dayKey);
 }
 
 // One bucket per calendar month spanned by the period (keyed by its 1st day).
 function monthlyTrace(rows: ExpenseRow[], period: Period): DashboardTrace {
   const monthKey = (y: number, m: number) => `${y}-${String(m + 1).padStart(2, "0")}-01`;
+  const dateKey = (d: Date) => monthKey(d.getUTCFullYear(), d.getUTCMonth());
   const byMonth = new Map<string, number>();
   let y = period.from.getUTCFullYear();
   let m = period.from.getUTCMonth();
@@ -54,12 +91,12 @@ function monthlyTrace(rows: ExpenseRow[], period: Period): DashboardTrace {
     }
   }
   for (const r of rows) {
-    const k = monthKey(r.date.getUTCFullYear(), r.date.getUTCMonth());
+    const k = dateKey(r.date);
     if (byMonth.has(k)) byMonth.set(k, byMonth.get(k)! - Number(r.amount));
   }
   const points = [...byMonth.entries()].map(([date, amount]) => ({ date, amount: round2(amount) }));
   points.sort((a, b) => a.date.localeCompare(b.date));
-  return { granularity: "month", points };
+  return summarize("month", points, rows, dateKey);
 }
 
 function round2(n: number): number {

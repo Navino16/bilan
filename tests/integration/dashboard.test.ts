@@ -86,6 +86,13 @@ describe("getDashboard", () => {
     expect(data.recent[0].label).toBeTruthy(); // decrypted
   });
 
+  it("reports the average per bucket and the peak bucket with its top category", async () => {
+    const period = monthPeriod(2026, 3);
+    const data = await getDashboard(owner, period, previousMonthPeriod(period));
+    expect(data.trace.avg).toBeCloseTo(750 / 31, 2); // total expense / days in March
+    expect(data.trace.peak).toEqual({ date: "2026-03-05", amount: 700, categoryId: catB });
+  });
+
   it("aggregates the trace by month for periods longer than ~6 weeks", async () => {
     const q1 = {
       from: new Date("2026-01-01T00:00:00.000Z"),
@@ -99,5 +106,7 @@ describe("getDashboard", () => {
     expect(data.trace.points.find((p) => p.date === "2026-01-01")?.amount).toBe(0);
     expect(data.trace.points.find((p) => p.date === "2026-02-01")?.amount).toBe(500);
     expect(data.trace.points.find((p) => p.date === "2026-03-01")?.amount).toBe(750);
+    expect(data.trace.avg).toBeCloseTo((0 + 500 + 750) / 3, 2);
+    expect(data.trace.peak).toEqual({ date: "2026-03-01", amount: 750, categoryId: catB });
   });
 });

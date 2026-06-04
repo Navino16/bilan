@@ -38,8 +38,8 @@ export async function DashboardView({
   const catById = new Map(categories.map((c) => [c.id, c]));
   const label = formatPeriodLabel(period, locale);
 
-  // The trace buckets by day (short spans) or by month (quarter/year); the title
-  // and axis labels follow suit.
+  // The trace buckets by day (short spans) or by month (quarter/year); the title,
+  // axis labels and the avg/peak stats follow suit.
   const isMonthlyTrace = data.trace.granularity === "month";
   const monthShort = new Intl.DateTimeFormat(locale, { month: "short", timeZone: "UTC" });
   const traceAxis = (p?: { date: string }) =>
@@ -49,6 +49,22 @@ export async function DashboardView({
         ? monthShort.format(new Date(`${p.date}T00:00:00.000Z`))
         : p.date.slice(8, 10);
   const tracePoints = data.trace.points;
+
+  // Compact money for the secondary stats ("1,2 k €"); the peak's day/month label.
+  const moneyCompact = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: "EUR",
+    notation: "compact",
+    maximumFractionDigits: 1,
+  });
+  const peakDateFmt = new Intl.DateTimeFormat(
+    locale,
+    isMonthlyTrace
+      ? { month: "short", year: "numeric", timeZone: "UTC" }
+      : { day: "numeric", month: "short", timeZone: "UTC" },
+  );
+  const peak = data.trace.peak;
+  const peakCatName = peak?.categoryId ? catById.get(peak.categoryId)?.name : undefined;
 
   const kpis = [
     {
@@ -163,6 +179,26 @@ export async function DashboardView({
             <span>{traceAxis(tracePoints[0])}</span>
             <span>{traceAxis(tracePoints[tracePoints.length - 1])}</span>
           </div>
+          {peak && (
+            <div className="grid grid-cols-2 gap-3 border-t pt-3">
+              <div className="space-y-0.5">
+                <div className={overline}>{t(isMonthlyTrace ? "avgPerMonth" : "avgPerDay")}</div>
+                <div className="font-display text-xl tabular-nums">
+                  {moneyCompact.format(data.trace.avg)}
+                </div>
+              </div>
+              <div className="space-y-0.5">
+                <div className={overline}>{t(isMonthlyTrace ? "peakMonth" : "peakDay")}</div>
+                <div className="font-display text-xl tabular-nums">
+                  {moneyCompact.format(peak.amount)}
+                </div>
+                <div className="text-muted-foreground truncate text-[11.5px]">
+                  {peakDateFmt.format(new Date(`${peak.date}T00:00:00.000Z`))}
+                  {peakCatName ? ` · ${peakCatName}` : ""}
+                </div>
+              </div>
+            </div>
+          )}
         </Card>
       </div>
 
