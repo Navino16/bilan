@@ -57,4 +57,18 @@ test.describe("dashboard", () => {
     await expect(heading).toHaveText(/[–—-]/);
     await expect(page.getByText("Revenus", { exact: true })).toBeVisible();
   });
+
+  test("the year preset shows just the year and steps year by year", async ({ page }) => {
+    await page.goto("/fr/dashboard");
+    await page.getByRole("button", { name: /^année$/i }).click();
+
+    // Just the year — not a clamped range like "janv. – juin 2026".
+    const heading = page.getByRole("heading", { level: 1 });
+    await expect(heading).toHaveText(/^\d{4}$/);
+    const thisYear = Number(await heading.textContent());
+
+    // Previous arrow steps a full calendar year back (still "YYYY").
+    await page.getByRole("button", { name: "prev", exact: true }).click();
+    await expect(heading).toHaveText(String(thisYear - 1));
+  });
 });

@@ -84,18 +84,12 @@ describe("clampPeriodToNow", () => {
     expect(p.month).toBe(6);
   });
 
-  it("clamps a range that spills into the future to the end of the current month", () => {
-    const p = clampPeriodToNow(
-      {
-        from: new Date("2026-05-10T00:00:00.000Z"),
-        to: new Date("2026-08-20T23:59:59.999Z"),
-        year: null,
-        month: null,
-      },
-      now,
-    );
-    expect(p.from.toISOString()).toBe("2026-05-10T00:00:00.000Z");
-    expect(p.to.toISOString()).toBe("2026-06-30T23:59:59.999Z");
+  it("keeps a period that contains now but extends into the future (current year/quarter)", () => {
+    // The current year: Jan→Dec; its later months are simply empty, not trimmed.
+    const year = presetPeriod("this-year", now);
+    const p = clampPeriodToNow(year, now);
+    expect(p.from.toISOString()).toBe("2026-01-01T00:00:00.000Z");
+    expect(p.to.toISOString()).toBe("2026-12-31T23:59:59.999Z");
   });
 });
 

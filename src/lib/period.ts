@@ -79,16 +79,14 @@ export function parsePeriodParams(
   return monthPeriod(fb.year, fb.month);
 }
 
-// Clamps a period so it never extends past the current month — a direct URL to a
-// future range (e.g. ?from=2027-01-01) snaps back, since there's no future data
-// to show. A fully-future window resets to the current month; one that merely
-// spills over has its upper bound trimmed to the end of the current month.
+// Guards against browsing an ENTIRELY future window (a direct URL to e.g.
+// ?from=2099-01-01, or a future month): it snaps back to the current month.
+// A period that merely extends into the future — the current year or quarter,
+// whose later months simply haven't happened yet — is kept intact so its label
+// and granularity-aware navigation stay correct (its future months render empty).
 export function clampPeriodToNow(p: Period, now: Date = new Date()): Period {
   const current = monthPeriod(now.getUTCFullYear(), now.getUTCMonth() + 1);
   if (p.from.getTime() > current.to.getTime()) return current;
-  if (p.to.getTime() > current.to.getTime()) {
-    return { from: p.from, to: current.to, year: null, month: null };
-  }
   return p;
 }
 
