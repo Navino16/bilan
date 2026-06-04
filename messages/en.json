@@ -426,14 +426,21 @@
     }
   },
   "dashboard": {
-    "greeting": "Hello, {name}",
-    "subtitle": "Here's an overview of your finances.",
-    "comingSoon": "Coming soon",
-    "cards": {
-      "balance": { "label": "Current balance" },
-      "expenses": { "label": "This month's expenses" },
-      "income": { "label": "This month's income" }
-    }
+    "overline": "Overview",
+    "txCount": "{count, plural, one {# transaction} other {# transactions}}",
+    "kpi": { "income": "Income", "expense": "Expenses", "net": "Net balance" },
+    "vsPrev": "{arrow} {pct} % vs previous period",
+    "noPrev": "No previous period",
+    "breakdown": "Breakdown",
+    "byCategory": "Spending by category",
+    "spentThisPeriod": "spent this period",
+    "noExpenses": "No spending this period.",
+    "noCategory": "Uncategorised",
+    "daily": "Daily",
+    "dayByDay": "Day-by-day spending",
+    "recent": "Recent transactions",
+    "seeAll": "See all",
+    "noRecent": "No transactions this period."
   },
   "admin": {
     "title": "Administration",
