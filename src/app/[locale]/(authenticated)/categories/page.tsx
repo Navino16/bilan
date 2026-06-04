@@ -1,10 +1,11 @@
-import { getTranslations, setRequestLocale } from "next-intl/server";
-import { Plus } from "lucide-react";
+import { setRequestLocale } from "next-intl/server";
 import { requireSession } from "@/server/auth/permissions";
 import { listForUser } from "@/server/services/categories";
-import { CategoryList } from "@/components/categories/category-list";
-import { CategoryForm } from "@/components/categories/category-form";
-import { Button } from "@/components/ui/button";
+import { listRulesForUser } from "@/server/services/categorization";
+import { listGroupsForUser } from "@/server/services/groups";
+import { flattenCategories } from "@/components/transactions/category-tree";
+import { CategoriesView } from "@/components/categories/categories-view";
+import type { RuleMatchType } from "@/lib/validation/rule";
 
 export const dynamic = "force-dynamic";
 
@@ -12,29 +13,26 @@ export default async function CategoriesPage({ params }: { params: Promise<{ loc
   const { locale } = await params;
   setRequestLocale(locale);
   const user = await requireSession();
-  const t = await getTranslations("categories");
   const tree = await listForUser(user.id);
-  const parents = tree.map((n) => ({ id: n.id, name: n.name }));
+  const flatCategories = flattenCategories(tree);
+  const ruleRows = await listRulesForUser(user.id);
+  const groups = (await listGroupsForUser(user.id)).map((g) => ({ id: g.id, name: g.name }));
+
+  const rules = ruleRows.map((r) => ({
+    id: r.id,
+    pattern: r.pattern,
+    matchType: r.matchType as RuleMatchType,
+    caseSensitive: r.caseSensitive,
+    priority: r.priority,
+    enabled: r.enabled,
+    categoryId: r.categoryId,
+    categoryName: r.category?.name ?? null,
+    categoryColor: r.category?.color ?? null,
+    groupId: r.groupId,
+    groupName: r.group?.name ?? null,
+  }));
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6">
-      <header className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl">{t("title")}</h1>
-          <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
-        </div>
-        <CategoryForm
-          mode="create"
-          parents={parents}
-          trigger={
-            <Button>
-              <Plus />
-              {t("create")}
-            </Button>
-          }
-        />
-      </header>
-      <CategoryList tree={tree} />
-    </div>
+    <CategoriesView tree={tree} flatCategories={flatCategories} rules={rules} groups={groups} />
   );
 }

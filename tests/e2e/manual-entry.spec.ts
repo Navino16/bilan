@@ -20,10 +20,14 @@ test.describe("manual entry from accounts", () => {
     await page.fill('input[name="label"]', label);
     await page.getByRole("button", { name: /^ajouter$/i }).click();
 
-    // It lands in the transactions list.
+    // Wait for the create to finish — the dialog closes on success — before
+    // navigating, otherwise the goto races/aborts the server action.
+    await expect(page.locator('input[name="label"]')).toBeHidden();
+
+    // It lands in the transactions list (allow for a cold /transactions compile).
     await page.goto("/fr/transactions");
     await expect(
       page.locator('[data-slot="transaction-row"]').filter({ hasText: label }).first(),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15_000 });
   });
 });
