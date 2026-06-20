@@ -6,6 +6,7 @@ import { getAuth } from "@/server/auth";
 import { loginLimiter, registerLimiter, resetLimiter } from "@/server/auth/rate-limit";
 import { appSettings } from "@/server/services/settings/app-settings";
 import { consumeSignupToken, refundSignupToken } from "@/server/services/signup-tokens";
+import { userExistsByEmail } from "@/server/services/users/lookup";
 import { logEvent } from "@/server/services/audit";
 import {
   loginSchema,
@@ -81,6 +82,11 @@ export async function registerAction(
     return { ok: false, error: "DISABLED" };
   }
 
+  // Whether the address already had an account before this attempt — used below
+  // to tell whether a failed signup actually created a user, so a consumed
+  // single-use invite is only refunded when this attempt created nothing.
+  const emailExistedBefore = consumedToken ? await userExistsByEmail(parsed.data.email) : false;
+
   try {
     const auth = await getAuth();
     await auth.api.signUpEmail({
@@ -90,10 +96,15 @@ export async function registerAction(
     await logEvent({ action: "auth.register.success", metadata: { email: parsed.data.email } });
     return { ok: true };
   } catch {
-    // The signup failed (e.g. duplicate email, weak password), so give the
-    // invite token its use back — otherwise a single-use invite is permanently
-    // burned by a recoverable typo.
-    if (consumedToken) await refundSignupToken(consumedToken);
+    // Signup failed (duplicate email, weak password, …). Refund the invite token
+    // only if no user was created by THIS attempt — otherwise a recoverable typo
+    // would permanently burn a single-use invite. If the user row was already
+    // created before the throw, the token stays consumed (no double-use bypass).
+    if (consumedToken) {
+      const createdByThisAttempt =
+        !emailExistedBefore && (await userExistsByEmail(parsed.data.email));
+      if (!createdByThisAttempt) await refundSignupToken(consumedToken);
+    }
     await logEvent({ action: "auth.register.failed", metadata: { email: parsed.data.email } });
     return { ok: false, error: "FAILED" };
   }
