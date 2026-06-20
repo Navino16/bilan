@@ -3,6 +3,7 @@ import { logEvent } from "@/server/services/audit";
 import {
   GROUP_ROLES,
   GroupAccessError,
+  RANK,
   type GroupRole,
   countOwners,
   getMembership,
@@ -116,9 +117,15 @@ export async function removeMember(
   targetUserId: string,
   actor: { id: string },
 ): Promise<void> {
-  await requireGroupRole(groupId, actor.id, "ADMIN");
+  const actorRole = await requireGroupRole(groupId, actor.id, "ADMIN");
   const target = await getMembership(groupId, targetUserId);
   if (!target) throw new GroupAccessError("NOT_MEMBER");
+  // An ADMIN may only remove members ranked strictly below them (i.e. MEMBERs);
+  // only an OWNER can remove other ADMINs or OWNERs. This mirrors changeMemberRole,
+  // which requires OWNER, so an ADMIN can neither demote nor evict a peer/superior.
+  if (actorRole !== "OWNER" && RANK[target.role] >= RANK[actorRole]) {
+    throw new GroupAccessError("FORBIDDEN");
+  }
   if (target.role === "OWNER" && (await countOwners(groupId)) <= 1) {
     throw new GroupAccessError("LAST_OWNER");
   }
