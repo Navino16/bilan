@@ -2,10 +2,8 @@ import {
   ArrowRightLeft,
   Landmark,
   LayoutDashboard,
-  Settings,
   ShieldCheck,
   Tags,
-  Target,
   Upload,
   Users,
 } from "lucide-react";
@@ -26,15 +24,17 @@ export const WORKSPACE_NAV: NavItem[] = [
   { key: "dashboard", href: "/dashboard", icon: LayoutDashboard },
   { key: "transactions", href: "/transactions", icon: ArrowRightLeft },
   { key: "import", href: "/import", icon: Upload },
-  { key: "budgets", href: "/budgets", icon: Target },
   { key: "accounts", href: "/accounts", icon: Landmark },
   { key: "categories", href: "/categories", icon: Tags },
   { key: "groups", href: "/groups", icon: Users },
 ];
 
-/** Account-level destinations — the "Compte" group in the design. */
+/**
+ * Account-level destinations — the "Compte" group in the design. The user
+ * preferences page (/settings) is not built yet, so it stays out of the nav
+ * until it ships (see PLAN.md); a link to it would 404.
+ */
 export const ACCOUNT_NAV: NavItem[] = [
-  { key: "settings", href: "/settings", icon: Settings },
   { key: "admin", href: "/admin", icon: ShieldCheck, permission: "admin.settings.write" },
 ];
 
@@ -46,7 +46,7 @@ export const ACCOUNT_NAV: NavItem[] = [
 export const BOTTOM_NAV: NavItem[] = [
   { key: "dashboard", href: "/dashboard", icon: LayoutDashboard },
   { key: "transactions", href: "/transactions", icon: ArrowRightLeft },
-  { key: "budgets", href: "/budgets", icon: Target },
+  { key: "import", href: "/import", icon: Upload },
   { key: "accounts", href: "/accounts", icon: Landmark },
-  { key: "settings", href: "/settings", icon: Settings },
+  { key: "categories", href: "/categories", icon: Tags },
 ];
