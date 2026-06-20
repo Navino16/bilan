@@ -5,7 +5,7 @@ import { env } from "@/env";
 import { getAuth } from "@/server/auth";
 import { loginLimiter, registerLimiter, resetLimiter } from "@/server/auth/rate-limit";
 import { appSettings } from "@/server/services/settings/app-settings";
-import { consumeSignupToken } from "@/server/services/signup-tokens";
+import { consumeSignupToken, refundSignupToken } from "@/server/services/signup-tokens";
 import { logEvent } from "@/server/services/audit";
 import {
   loginSchema,
@@ -68,6 +68,7 @@ export async function registerAction(
   // not explicitly OPEN or INVITE_ONLY (including an unexpected/corrupt value) is
   // treated as DISABLED.
   const mode = (await appSettings.get<string>("registration_mode")) ?? "INVITE_ONLY";
+  let consumedToken: string | null = null;
   if (mode === "OPEN") {
     // no token required
   } else if (mode === "INVITE_ONLY") {
@@ -75,6 +76,7 @@ export async function registerAction(
     if (!token) return { ok: false, error: "TOKEN_REQUIRED" };
     const consumed = await consumeSignupToken(token);
     if (!consumed.ok) return { ok: false, error: "BAD_TOKEN" };
+    consumedToken = token;
   } else {
     return { ok: false, error: "DISABLED" };
   }
@@ -88,6 +90,10 @@ export async function registerAction(
     await logEvent({ action: "auth.register.success", metadata: { email: parsed.data.email } });
     return { ok: true };
   } catch {
+    // The signup failed (e.g. duplicate email, weak password), so give the
+    // invite token its use back — otherwise a single-use invite is permanently
+    // burned by a recoverable typo.
+    if (consumedToken) await refundSignupToken(consumedToken);
     await logEvent({ action: "auth.register.failed", metadata: { email: parsed.data.email } });
     return { ok: false, error: "FAILED" };
   }
