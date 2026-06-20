@@ -5,6 +5,7 @@ import { dataKey, searchKey } from "@/server/crypto/keys";
 import { logEvent } from "@/server/services/audit";
 import { canWriteAccount, canReadAccount } from "@/server/services/accounts/sharing";
 import { listVisibleForUser } from "@/server/services/accounts";
+import { assertCategoryAssignable, CategoryAccessError } from "@/server/services/categories";
 import {
   transactionInputSchema,
   type TransactionInput,
@@ -13,6 +14,20 @@ import {
 import { buildSecureFields, computeExternalId } from "./secure-fields";
 
 export class TransactionAccessError extends Error {}
+
+// Rejects a categoryId the actor may not attach (forged id outside their own /
+// group-visible categories), surfacing it as a transaction-level FORBIDDEN.
+async function assertAssignableCategory(
+  categoryId: string | null | undefined,
+  actorId: string,
+): Promise<void> {
+  try {
+    await assertCategoryAssignable(categoryId, actorId);
+  } catch (e) {
+    if (e instanceof CategoryAccessError) throw new TransactionAccessError("FORBIDDEN");
+    throw e;
+  }
+}
 
 export type TransactionView = {
   id: string;
@@ -40,6 +55,7 @@ export async function createTransaction(
   if (!(await canWriteAccount(actor.id, data.accountId))) {
     throw new TransactionAccessError("FORBIDDEN");
   }
+  await assertAssignableCategory(data.categoryId, actor.id);
   const rawLabel = data.rawLabel?.trim() ? data.rawLabel : data.label;
   const secure = buildSecureFields({ label: data.label, rawLabel, note: data.note });
   const externalId = opts.externalId ?? null; // manual entries have no externalId (no auto-dedup)
@@ -182,6 +198,7 @@ export async function recategorizeTransaction(
   if (!row) throw new TransactionAccessError("NOT_FOUND");
   if (!(await canWriteAccount(actor.id, row.accountId)))
     throw new TransactionAccessError("FORBIDDEN");
+  await assertAssignableCategory(categoryId, actor.id);
   await db.transaction.update({
     where: { id },
     data: { categoryId, manuallyCategorized: true },
