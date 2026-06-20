@@ -1,3 +1,4 @@
+import { utcDayFromParts } from "../csv-parse";
 import type { NormalizedRow, ParsedProduct } from "../types";
 
 const FR_MONTHS: Record<string, number> = {
@@ -28,7 +29,7 @@ function round2(n: number): number {
 function parseFrDate(day: string, month: string, year: string): Date | null {
   const m = FR_MONTHS[month.toLowerCase()];
   if (!m) return null;
-  return new Date(`${year}-${String(m).padStart(2, "0")}-${day.padStart(2, "0")}T00:00:00.000Z`);
+  return utcDayFromParts(Number(year), m, Number(day));
 }
 
 // Opening balance per product, from the "Résumé du solde" table (first amount on
