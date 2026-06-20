@@ -19,6 +19,13 @@ describe("normalizeAmount", () => {
     expect(normalizeAmount("")).toBeNull();
     expect(normalizeAmount("abc")).toBeNull();
   });
+
+  it("handles thousands separators (grouping is the non-decimal separator)", () => {
+    expect(normalizeAmount("1.234,56")).toBe(1234.56); // FR: dot grouping, comma decimal
+    expect(normalizeAmount("1,234.56")).toBe(1234.56); // US: comma grouping, dot decimal
+    expect(normalizeAmount("-1.234.567,89")).toBe(-1234567.89);
+    expect(normalizeAmount("2450")).toBe(2450); // no separator at all
+  });
 });
 
 describe("normalizeDate", () => {
@@ -58,5 +65,14 @@ describe("mapRows", () => {
     const rows = [{ Date: "xx", Libellé: "X", Débit: "1", Crédit: "" }];
     const mapping = { date: "Date", label: "Libellé", debit: "Débit", credit: "Crédit" } as const;
     expect(mapRows(rows, mapping)).toEqual([]);
+  });
+
+  it("uses the credit when the unused debit column carries a literal zero", () => {
+    // Many bank CSVs print "0,00" in the empty column instead of leaving it blank.
+    const rows = [{ Date: "03/02/2026", Libellé: "VIR SALAIRE", Débit: "0,00", Crédit: "2450,00" }];
+    const mapping = { date: "Date", label: "Libellé", debit: "Débit", credit: "Crédit" } as const;
+    expect(mapRows(rows, mapping)).toEqual([
+      { date: new Date("2026-02-03T00:00:00.000Z"), amount: 2450, rawLabel: "VIR SALAIRE" },
+    ]);
   });
 });

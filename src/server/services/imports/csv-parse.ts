@@ -48,10 +48,19 @@ export function detectMapping(headers: string[]): CsvMapping {
   };
 }
 
-// "1 234,56" / "42,90" / "-7.5" → number; "" / garbage → null.
+// "1 234,56" / "42,90" / "-7.5" / "1.234,56" / "1,234.56" → number; "" / garbage
+// → null. The decimal separator is taken to be the LAST `.` or `,`; any earlier
+// `.`/`,` are thousands grouping and stripped. `\s` covers regular, non-breaking
+// and narrow spaces, so space-grouped amounts are handled too.
 export function normalizeAmount(raw: string): number | null {
-  const s = raw.replace(/\s/g, "").replace(/ /g, "").replace(",", ".");
+  let s = raw.replace(/\s/g, "");
   if (s === "") return null;
+  const decimalPos = Math.max(s.lastIndexOf(","), s.lastIndexOf("."));
+  if (decimalPos >= 0) {
+    const intPart = s.slice(0, decimalPos).replace(/[.,]/g, "");
+    const fracPart = s.slice(decimalPos + 1);
+    s = `${intPart}.${fracPart}`;
+  }
   const n = Number(s);
   return Number.isFinite(n) ? n : null;
 }
@@ -81,8 +90,12 @@ export function mapRows(rows: RawRow[], mapping: CsvMapping): NormalizedRow[] {
     } else {
       const debit = mapping.debit ? normalizeAmount(row[mapping.debit] ?? "") : null;
       const credit = mapping.credit ? normalizeAmount(row[mapping.credit] ?? "") : null;
-      if (debit != null) amount = -Math.abs(debit);
-      else if (credit != null) amount = Math.abs(credit);
+      // A literal "0,00" in the unused column is treated as absent: many bank
+      // CSVs fill the empty side with zero rather than leaving it blank, so we
+      // pick whichever side carries a non-zero value.
+      if (debit) amount = -Math.abs(debit);
+      else if (credit) amount = Math.abs(credit);
+      else if (debit === 0 || credit === 0) amount = 0;
     }
     if (amount == null) continue;
 
