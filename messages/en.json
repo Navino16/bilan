@@ -438,9 +438,23 @@
     "noCategory": "Uncategorised",
     "daily": "Daily",
     "dayByDay": "Day-by-day spending",
+    "monthly": "Monthly",
+    "monthByMonth": "Monthly spending",
+    "avgPerDay": "Avg / day",
+    "avgPerMonth": "Avg / month",
+    "peakDay": "Biggest day",
+    "peakMonth": "Biggest month",
     "recent": "Recent transactions",
     "seeAll": "See all",
-    "noRecent": "No transactions this period."
+    "noRecent": "No transactions this period.",
+    "preset": {
+      "this-month": "This month",
+      "last-month": "Last month",
+      "this-quarter": "Quarter",
+      "this-year": "Year",
+      "custom": "Custom"
+    },
+    "apply": "Apply"
   },
   "admin": {
     "title": "Administration",

@@ -79,16 +79,14 @@ export function parsePeriodParams(
   return monthPeriod(fb.year, fb.month);
 }
 
-// Clamps a period so it never extends past the current month — a direct URL to a
-// future range (e.g. ?from=2027-01-01) snaps back, since there's no future data
-// to show. A fully-future window resets to the current month; one that merely
-// spills over has its upper bound trimmed to the end of the current month.
+// Guards against browsing an ENTIRELY future window (a direct URL to e.g.
+// ?from=2099-01-01, or a future month): it snaps back to the current month.
+// A period that merely extends into the future — the current year or quarter,
+// whose later months simply haven't happened yet — is kept intact so its label
+// and granularity-aware navigation stay correct (its future months render empty).
 export function clampPeriodToNow(p: Period, now: Date = new Date()): Period {
   const current = monthPeriod(now.getUTCFullYear(), now.getUTCMonth() + 1);
   if (p.from.getTime() > current.to.getTime()) return current;
-  if (p.to.getTime() > current.to.getTime()) {
-    return { from: p.from, to: current.to, year: null, month: null };
-  }
   return p;
 }
 
@@ -105,4 +103,148 @@ export function formatMonthLabel(p: Period, locale: string): string {
     year: "numeric",
     timeZone: "UTC",
   }).format(d);
+}
+
+const capitalize = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+
+// A clear, compact header label for any period:
+// month → "Mai 2026", whole year → "2026", a range spanning whole months
+// (e.g. a quarter) → "avr. – juin 2026", anything else → "10–30 avr. 2026".
+export function formatPeriodLabel(p: Period, locale: string): string {
+  if (p.year && p.month) return capitalize(formatMonthLabel(p, locale));
+
+  const fy = p.from.getUTCFullYear();
+  const ty = p.to.getUTCFullYear();
+  const fm = p.from.getUTCMonth(); // 0-based
+  const tm = p.to.getUTCMonth();
+  const fd = p.from.getUTCDate();
+  const td = p.to.getUTCDate();
+
+  // Whole calendar year → "2026".
+  if (fy === ty && fm === 0 && fd === 1 && tm === 11 && td === 31) return String(fy);
+
+  // A range spanning whole months (1st → last day), e.g. a quarter → a month
+  // range so it's clear from when to when, without redundant day numbers.
+  if (fd === 1 && td === daysInMonth(ty, tm + 1)) {
+    return new Intl.DateTimeFormat(locale, {
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    }).formatRange(p.from, p.to);
+  }
+
+  // Arbitrary range — Intl collapses the shared parts ("10–30 avr. 2026").
+  return new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).formatRange(p.from, p.to);
+}
+
+export const PERIOD_PRESETS = ["this-month", "last-month", "this-quarter", "this-year"] as const;
+export type PeriodPreset = (typeof PERIOD_PRESETS)[number];
+
+// A preset window relative to `now` (UTC). Month presets carry year/month;
+// quarter/year are custom (month = null).
+export function presetPeriod(preset: PeriodPreset, now: Date = new Date()): Period {
+  const y = now.getUTCFullYear();
+  const m = now.getUTCMonth() + 1;
+  switch (preset) {
+    case "this-month":
+      return monthPeriod(y, m);
+    case "last-month": {
+      const p = addMonths(y, m, -1);
+      return monthPeriod(p.year, p.month);
+    }
+    case "this-quarter": {
+      const startMonth = Math.floor((m - 1) / 3) * 3 + 1;
+      const lastDay = daysInMonth(y, startMonth + 2);
+      return {
+        from: new Date(Date.UTC(y, startMonth - 1, 1, 0, 0, 0, 0)),
+        to: new Date(Date.UTC(y, startMonth + 1, lastDay, 23, 59, 59, 999)),
+        year: null,
+        month: null,
+      };
+    }
+    case "this-year":
+      return {
+        from: new Date(Date.UTC(y, 0, 1, 0, 0, 0, 0)),
+        to: new Date(Date.UTC(y, 11, 31, 23, 59, 59, 999)),
+        year: null,
+        month: null,
+      };
+  }
+}
+
+// Same-length window immediately before `p` (for the custom-range delta).
+export function previousPeriod(p: Period): Period {
+  if (p.year && p.month) return previousMonthPeriod(p);
+  const dayMs = 86_400_000;
+  const lengthDays = Math.round((p.to.getTime() - p.from.getTime() + 1) / dayMs);
+  const toDay = new Date(p.from.getTime() - dayMs);
+  const fromDay = new Date(toDay.getTime() - (lengthDays - 1) * dayMs);
+  return {
+    from: new Date(`${toIsoDay(fromDay)}T00:00:00.000Z`),
+    to: new Date(`${toIsoDay(toDay)}T23:59:59.999Z`),
+    year: null,
+    month: null,
+  };
+}
+
+// Builds a whole quarter from its 1-based start month.
+function quarterFrom(year: number, startMonth: number): Period {
+  const lastDay = daysInMonth(year, startMonth + 2);
+  return {
+    from: new Date(Date.UTC(year, startMonth - 1, 1, 0, 0, 0, 0)),
+    to: new Date(Date.UTC(year, startMonth + 1, lastDay, 23, 59, 59, 999)),
+    year: null,
+    month: null,
+  };
+}
+
+// Steps a period by one unit of ITS OWN granularity (so the dashboard arrows
+// move month-by-month on a month, quarter-by-quarter on a quarter, year-by-year
+// on a year, and by the window length on an arbitrary range).
+export function shiftPeriod(p: Period, dir: 1 | -1): Period {
+  if (p.year && p.month) {
+    const m = addMonths(p.year, p.month, dir);
+    return monthPeriod(m.year, m.month);
+  }
+
+  const fy = p.from.getUTCFullYear();
+  const ty = p.to.getUTCFullYear();
+  const fm = p.from.getUTCMonth(); // 0-based
+  const tm = p.to.getUTCMonth();
+  const fd = p.from.getUTCDate();
+  const td = p.to.getUTCDate();
+
+  // Whole year → previous/next year.
+  if (fy === ty && fm === 0 && fd === 1 && tm === 11 && td === 31) {
+    const y = fy + dir;
+    return {
+      from: new Date(Date.UTC(y, 0, 1, 0, 0, 0, 0)),
+      to: new Date(Date.UTC(y, 11, 31, 23, 59, 59, 999)),
+      year: null,
+      month: null,
+    };
+  }
+
+  // Whole quarter → previous/next quarter (kept aligned to Jan/Apr/Jul/Oct).
+  if (fy === ty && fm % 3 === 0 && fd === 1 && tm === fm + 2 && td === daysInMonth(ty, tm + 1)) {
+    const start = addMonths(fy, fm + 1, dir * 3);
+    return quarterFrom(start.year, start.month);
+  }
+
+  // Arbitrary range → shift both bounds by the window length.
+  const dayMs = 86_400_000;
+  const lengthDays = Math.round((p.to.getTime() - p.from.getTime() + 1) / dayMs);
+  const from = new Date(p.from.getTime() + dir * lengthDays * dayMs);
+  const to = new Date(p.to.getTime() + dir * lengthDays * dayMs);
+  return {
+    from: new Date(`${toIsoDay(from)}T00:00:00.000Z`),
+    to: new Date(`${toIsoDay(to)}T23:59:59.999Z`),
+    year: null,
+    month: null,
+  };
 }

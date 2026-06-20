@@ -438,9 +438,23 @@
     "noCategory": "Sans catégorie",
     "daily": "Quotidien",
     "dayByDay": "Dépenses jour par jour",
+    "monthly": "Mensuel",
+    "monthByMonth": "Dépenses par mois",
+    "avgPerDay": "Moy. / jour",
+    "avgPerMonth": "Moy. / mois",
+    "peakDay": "Plus gros jour",
+    "peakMonth": "Plus gros mois",
     "recent": "Transactions récentes",
     "seeAll": "Tout voir",
-    "noRecent": "Aucune transaction sur cette période."
+    "noRecent": "Aucune transaction sur cette période.",
+    "preset": {
+      "this-month": "Ce mois",
+      "last-month": "Mois dernier",
+      "this-quarter": "Trimestre",
+      "this-year": "Année",
+      "custom": "Personnalisé"
+    },
+    "apply": "Appliquer"
   },
   "admin": {
     "title": "Administration",

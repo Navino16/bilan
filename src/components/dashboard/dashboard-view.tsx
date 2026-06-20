@@ -4,10 +4,11 @@ import { Card } from "@/components/ui/card";
 import { overline, CategoryAvatar } from "@/components/transactions/bits";
 import { Donut, MiniBars } from "./charts";
 import { PeriodNav } from "./period-nav";
+import { PeriodPicker } from "./period-picker";
 import type { DashboardData } from "@/server/services/dashboard";
 import type { Period } from "@/lib/period";
 import type { FlatCategory } from "@/components/transactions/category-tree";
-import { formatMonthLabel } from "@/lib/period";
+import { formatPeriodLabel, toIsoDay } from "@/lib/period";
 
 const DEFAULT_COLOR = "#2563eb";
 
@@ -35,7 +36,35 @@ export async function DashboardView({
     maximumFractionDigits: 0,
   });
   const catById = new Map(categories.map((c) => [c.id, c]));
-  const label = formatMonthLabel(period, locale);
+  const label = formatPeriodLabel(period, locale);
+
+  // The trace buckets by day (short spans) or by month (quarter/year); the title,
+  // axis labels and the avg/peak stats follow suit.
+  const isMonthlyTrace = data.trace.granularity === "month";
+  const monthShort = new Intl.DateTimeFormat(locale, { month: "short", timeZone: "UTC" });
+  const traceAxis = (p?: { date: string }) =>
+    !p
+      ? ""
+      : isMonthlyTrace
+        ? monthShort.format(new Date(`${p.date}T00:00:00.000Z`))
+        : p.date.slice(8, 10);
+  const tracePoints = data.trace.points;
+
+  // Compact money for the secondary stats ("1,2 k €"); the peak's day/month label.
+  const moneyCompact = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: "EUR",
+    notation: "compact",
+    maximumFractionDigits: 1,
+  });
+  const peakDateFmt = new Intl.DateTimeFormat(
+    locale,
+    isMonthlyTrace
+      ? { month: "short", year: "numeric", timeZone: "UTC" }
+      : { day: "numeric", month: "short", timeZone: "UTC" },
+  );
+  const peak = data.trace.peak;
+  const peakCatName = peak?.categoryId ? catById.get(peak.categoryId)?.name : undefined;
 
   const kpis = [
     {
@@ -62,15 +91,18 @@ export async function DashboardView({
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
+      <header className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <div className="space-y-1">
           <div className={overline}>{t("overline")}</div>
-          <h1 className="font-display text-4xl leading-none capitalize">{label}</h1>
+          <h1 className="font-display text-4xl leading-none">{label}</h1>
           <p className="text-muted-foreground text-sm">
             {t("txCount", { count: data.totals.count })}
           </p>
         </div>
-        <PeriodNav period={period} />
+        <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+          <PeriodPicker from={toIsoDay(period.from)} to={toIsoDay(period.to)} />
+          <PeriodNav period={period} />
+        </div>
       </header>
 
       {/* KPI row */}
@@ -134,17 +166,39 @@ export async function DashboardView({
           )}
         </Card>
 
-        {/* Daily trace */}
+        {/* Expense trace (day-by-day or month-by-month) */}
         <Card className="gap-4 p-6">
           <div>
-            <div className={overline}>{t("daily")}</div>
-            <div className="font-display text-xl">{t("dayByDay")}</div>
+            <div className={overline}>{t(isMonthlyTrace ? "monthly" : "daily")}</div>
+            <div className="font-display text-xl">
+              {t(isMonthlyTrace ? "monthByMonth" : "dayByDay")}
+            </div>
           </div>
-          <MiniBars values={data.daily.map((d) => d.amount)} />
+          <MiniBars values={tracePoints.map((p) => p.amount)} />
           <div className="text-muted-foreground flex justify-between text-[11px]">
-            <span>{data.daily[0]?.date.slice(8, 10)}</span>
-            <span>{data.daily[data.daily.length - 1]?.date.slice(8, 10)}</span>
+            <span>{traceAxis(tracePoints[0])}</span>
+            <span>{traceAxis(tracePoints[tracePoints.length - 1])}</span>
           </div>
+          {peak && (
+            <div className="grid grid-cols-2 gap-3 border-t pt-3">
+              <div className="space-y-0.5">
+                <div className={overline}>{t(isMonthlyTrace ? "avgPerMonth" : "avgPerDay")}</div>
+                <div className="font-display text-xl tabular-nums">
+                  {moneyCompact.format(data.trace.avg)}
+                </div>
+              </div>
+              <div className="space-y-0.5">
+                <div className={overline}>{t(isMonthlyTrace ? "peakMonth" : "peakDay")}</div>
+                <div className="font-display text-xl tabular-nums">
+                  {moneyCompact.format(peak.amount)}
+                </div>
+                <div className="text-muted-foreground truncate text-[11.5px]">
+                  {peakDateFmt.format(new Date(`${peak.date}T00:00:00.000Z`))}
+                  {peakCatName ? ` · ${peakCatName}` : ""}
+                </div>
+              </div>
+            </div>
+          )}
         </Card>
       </div>
 

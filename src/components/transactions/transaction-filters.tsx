@@ -11,11 +11,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SegmentedTabs } from "./bits";
+import { PeriodPicker } from "@/components/dashboard/period-picker";
 import type { FlatCategory } from "./category-picker";
 
 type Direction = "" | "in" | "out";
 
-export function TransactionFilters({ categories }: { categories: FlatCategory[] }) {
+export function TransactionFilters({
+  categories,
+  from,
+  to,
+}: {
+  categories: FlatCategory[];
+  from?: string;
+  to?: string;
+}) {
   const t = useTranslations("transactions");
   const router = useRouter();
   const pathname = usePathname();
@@ -34,6 +43,8 @@ export function TransactionFilters({ categories }: { categories: FlatCategory[] 
 
   return (
     <div className="flex flex-wrap items-center gap-2">
+      <PeriodPicker from={from ?? ""} to={to ?? ""} />
+
       <Input
         type="search"
         placeholder={t("searchPlaceholder")}

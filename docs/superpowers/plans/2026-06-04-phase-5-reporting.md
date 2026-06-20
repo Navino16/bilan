@@ -857,7 +857,7 @@ gh pr create --base develop --title "feat: dashboard" --label "enhancement,phase
 
 ### Step 1: Extend the period-lib test
 
-- [ ] **Step 1** — Append to `tests/unit/lib/period.test.ts`:
+- [x] **Step 1** — Append to `tests/unit/lib/period.test.ts`:
 
 ```typescript
 import { presetPeriod, previousPeriod, PERIOD_PRESETS } from "@/lib/period";
@@ -906,12 +906,12 @@ describe("previousPeriod", () => {
 
 ### Step 2: Run to verify it fails
 
-- [ ] **Step 2** — Run: `npm run test:unit -- period`
+- [x] **Step 2** — Run: `npm run test:unit -- period`
 Expected: FAIL — `presetPeriod`/`previousPeriod`/`PERIOD_PRESETS` not exported.
 
 ### Step 3: Extend `src/lib/period.ts`
 
-- [ ] **Step 3** — Append to `src/lib/period.ts`:
+- [x] **Step 3** — Append to `src/lib/period.ts`:
 
 ```typescript
 export const PERIOD_PRESETS = ["this-month", "last-month", "this-quarter", "this-year"] as const;
@@ -969,12 +969,12 @@ export function previousPeriod(p: Period): Period {
 
 ### Step 4: Run to verify it passes
 
-- [ ] **Step 4** — Run: `npm run test:unit -- period`
+- [x] **Step 4** — Run: `npm run test:unit -- period`
 Expected: PASS.
 
 ### Step 5: Commit
 
-- [ ] **Step 5**
+- [x] **Step 5**
 
 ```bash
 git add src/lib/period.ts tests/unit/lib/period.test.ts
@@ -983,7 +983,7 @@ git commit -m "feat: add period presets (month/quarter/year) and same-length pre
 
 ### Step 6: Build the period picker
 
-- [ ] **Step 6** — Create `src/components/dashboard/period-picker.tsx` (client):
+- [x] **Step 6** — Create `src/components/dashboard/period-picker.tsx` (client):
 
 ```tsx
 "use client";
@@ -1048,7 +1048,7 @@ export function PeriodPicker({ from, to }: { from: string; to: string }) {
 
 ### Step 7: Add picker i18n
 
-- [ ] **Step 7** — Add to the `dashboard` namespace (both `messages/fr.json` and `messages/en.json`):
+- [x] **Step 7** — Add to the `dashboard` namespace (both `messages/fr.json` and `messages/en.json`):
 
 fr:
 ```json
@@ -1063,7 +1063,7 @@ en:
 
 ### Step 8: Use the picker on the dashboard + previous-period for custom
 
-- [ ] **Step 8** — In `src/components/dashboard/dashboard-view.tsx`, import and render `PeriodPicker` next to `PeriodNav` in the header (the month chevrons stay for quick month stepping; the picker handles presets/custom):
+- [x] **Step 8** — In `src/components/dashboard/dashboard-view.tsx`, import and render `PeriodPicker` next to `PeriodNav` in the header (the month chevrons stay for quick month stepping; the picker handles presets/custom):
 
 ```tsx
 import { PeriodPicker } from "./period-picker";
@@ -1090,7 +1090,7 @@ import { parsePeriodParams, previousPeriod } from "@/lib/period";
 
 ### Step 9: Wire the transactions list to the period
 
-- [ ] **Step 9** — In `src/app/[locale]/(authenticated)/transactions/page.tsx`, read `from`/`to` from `searchParams`, pass to `listTransactions`, and pass the current range to the filters component. Find where `searchParams` (`sp`) is read and the `listTransactions` filters are built; add:
+- [x] **Step 9** — In `src/app/[locale]/(authenticated)/transactions/page.tsx`, read `from`/`to` from `searchParams`, pass to `listTransactions`, and pass the current range to the filters component. Find where `searchParams` (`sp`) is read and the `listTransactions` filters are built; add:
 
 ```tsx
 import { parsePeriodParams } from "@/lib/period";
@@ -1112,14 +1112,14 @@ import { PeriodPicker } from "@/components/dashboard/period-picker";
 
 ### Step 10: Typecheck + CI
 
-- [ ] **Step 10**
+- [x] **Step 10**
 
 Run: `npm run typecheck` → PASS.
 Run: `npm run ci` → PASS.
 
 ### Step 11: Extend the e2e
 
-- [ ] **Step 11** — Add to `tests/e2e/dashboard.spec.ts`:
+- [x] **Step 11** — Add to `tests/e2e/dashboard.spec.ts`:
 
 ```typescript
   test("switching a preset updates the URL and reloads the dashboard", async ({ page }) => {
@@ -1134,7 +1134,7 @@ Run: `npm run test:e2e -- dashboard --project=chromium` → PASS.
 
 ### Step 12: Commit, push, PR
 
-- [ ] **Step 12**
+- [x] **Step 12**
 
 ```bash
 git add src/lib/period.ts src/components/dashboard "src/app/[locale]/(authenticated)" src/components/transactions/transaction-filters.tsx messages tests
