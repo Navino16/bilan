@@ -24,7 +24,14 @@ export function BudgetsView({
   const t = useTranslations("budgets");
   const locale = useLocale();
   const nf = new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" });
-  const df = new Intl.DateTimeFormat(locale, { day: "2-digit", month: "short", year: "numeric" });
+  // periodStart/periodEnd are UTC-bounded semantic dates — format in UTC so
+  // server and client agree (periodEnd sits at 23:59:59.999Z).
+  const df = new Intl.DateTimeFormat(locale, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-5">
