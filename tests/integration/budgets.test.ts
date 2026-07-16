@@ -10,7 +10,6 @@ import {
 
 const owner = "bud_owner";
 const stranger = "bud_stranger";
-let accountId: string;
 let catId: string;
 let groupId: string;
 
@@ -19,9 +18,7 @@ beforeAll(async () => {
     await db.user.deleteMany({ where: { id } });
     await db.user.create({ data: { id, email: `${id}@bilan.local` } });
   }
-  accountId = (
-    await db.bankAccount.create({ data: { ownerId: owner, name: "Courant", type: "CHECKING" } })
-  ).id;
+  await db.bankAccount.create({ data: { ownerId: owner, name: "Courant", type: "CHECKING" } });
   catId = (await db.category.create({ data: { userId: owner, name: "Courses" } })).id;
   const g = await db.group.create({ data: { name: "Foyer Bud", createdById: owner } });
   groupId = g.id;
@@ -86,7 +83,10 @@ describe("createBudget", () => {
 
   it("rejects periodEnd before periodStart", async () => {
     await expect(
-      createBudget({ ...baseInput, periodStart: "2026-03-31", periodEnd: "2026-03-01" }, { id: owner }),
+      createBudget(
+        { ...baseInput, periodStart: "2026-03-31", periodEnd: "2026-03-01" },
+        { id: owner },
+      ),
     ).rejects.toBeInstanceOf(BudgetAccessError);
   });
 });
@@ -104,7 +104,11 @@ describe("listBudgetsForUser / update / delete", () => {
 
   it("updates name + lines, replacing the line set", async () => {
     const { id } = await createBudget(baseInput, { id: owner });
-    await updateBudget(id, { ...baseInput, name: "Mars v2", lines: [{ plannedAmount: 500 }] }, { id: owner });
+    await updateBudget(
+      id,
+      { ...baseInput, name: "Mars v2", lines: [{ plannedAmount: 500 }] },
+      { id: owner },
+    );
     const row = await db.budget.findUniqueOrThrow({ where: { id }, include: { lines: true } });
     expect(row.name).toBe("Mars v2");
     expect(row.lines).toHaveLength(1);
@@ -113,7 +117,9 @@ describe("listBudgetsForUser / update / delete", () => {
 
   it("forbids updating/deleting a budget the actor does not own", async () => {
     const { id } = await createBudget(baseInput, { id: owner });
-    await expect(updateBudget(id, baseInput, { id: stranger })).rejects.toBeInstanceOf(BudgetAccessError);
+    await expect(updateBudget(id, baseInput, { id: stranger })).rejects.toBeInstanceOf(
+      BudgetAccessError,
+    );
     await expect(deleteBudget(id, { id: stranger })).rejects.toBeInstanceOf(BudgetAccessError);
     await deleteBudget(id, { id: owner });
     expect(await db.budget.findUnique({ where: { id } })).toBeNull();
