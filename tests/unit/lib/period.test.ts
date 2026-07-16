@@ -132,6 +132,25 @@ describe("previousPeriod", () => {
     expect(p.to.toISOString().slice(0, 10)).toBe("2026-05-09");
     expect(p.from.toISOString().slice(0, 10)).toBe("2026-04-29");
   });
+
+  it("returns the previous calendar month for a month period", () => {
+    const p = previousPeriod(monthPeriod(2026, 1));
+    expect(p).toMatchObject({ year: 2025, month: 12 });
+  });
+
+  it("returns the aligned previous quarter for a whole-quarter period", () => {
+    const q2 = presetPeriod("this-quarter", new Date("2026-05-15T00:00:00.000Z"));
+    const prev = previousPeriod(q2);
+    expect(prev.from.toISOString()).toBe("2026-01-01T00:00:00.000Z");
+    expect(prev.to.toISOString()).toBe("2026-03-31T23:59:59.999Z");
+  });
+
+  it("returns the previous calendar year for a whole-year period", () => {
+    const year = presetPeriod("this-year", new Date("2026-03-01T00:00:00.000Z"));
+    const prev = previousPeriod(year);
+    expect(prev.from.toISOString()).toBe("2025-01-01T00:00:00.000Z");
+    expect(prev.to.toISOString()).toBe("2025-12-31T23:59:59.999Z");
+  });
 });
 
 describe("formatPeriodLabel", () => {

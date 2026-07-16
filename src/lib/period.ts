@@ -177,19 +177,13 @@ export function presetPeriod(preset: PeriodPreset, now: Date = new Date()): Peri
   }
 }
 
-// Same-length window immediately before `p` (for the custom-range delta).
+// The window immediately before `p`, for the "vs previous" delta. Stepping back
+// by one unit of the period's own granularity keeps calendar windows aligned:
+// the previous month/quarter/year (not a fixed day count, which would drift a
+// quarter onto the wrong boundary and a year across a leap-year boundary). For
+// an arbitrary range this is still the same-length window ending the day before.
 export function previousPeriod(p: Period): Period {
-  if (p.year && p.month) return previousMonthPeriod(p);
-  const dayMs = 86_400_000;
-  const lengthDays = Math.round((p.to.getTime() - p.from.getTime() + 1) / dayMs);
-  const toDay = new Date(p.from.getTime() - dayMs);
-  const fromDay = new Date(toDay.getTime() - (lengthDays - 1) * dayMs);
-  return {
-    from: new Date(`${toIsoDay(fromDay)}T00:00:00.000Z`),
-    to: new Date(`${toIsoDay(toDay)}T23:59:59.999Z`),
-    year: null,
-    month: null,
-  };
+  return shiftPeriod(p, -1);
 }
 
 // Builds a whole quarter from its 1-based start month.
