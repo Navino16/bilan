@@ -1,6 +1,9 @@
 import { db } from "@/server/db";
 import { requireGroupRole } from "@/server/services/groups/roles";
 import { logEvent } from "@/server/services/audit";
+import { listVisibleForUser } from "@/server/services/accounts";
+import { collapseLinkedRows } from "@/lib/links";
+import { lineStatus, type LineStatus } from "@/lib/budgets";
 import { budgetInputSchema, type BudgetInput } from "@/lib/validation/budget";
 
 export class BudgetAccessError extends Error {}
@@ -168,4 +171,152 @@ export async function listBudgetsForUser(userId: string): Promise<BudgetListItem
     recurring: b.recurring,
     plannedTotal: Math.round(b.lines.reduce((s, l) => s + Number(l.plannedAmount), 0) * 100) / 100,
   }));
+}
+
+type BudgetRow = {
+  id: string;
+  amount: number;
+  date: Date;
+  categoryId: string | null;
+  accountId: string;
+  linkId: string | null;
+};
+
+// A user may READ a budget they own or that belongs to a group they're in.
+async function readableOrThrow(id: string, userId: string) {
+  const b = await db.budget.findUnique({ where: { id }, include: { lines: true } });
+  if (!b) throw new BudgetAccessError("NOT_FOUND");
+  if (b.groupId) {
+    try {
+      await requireGroupRole(b.groupId, userId, "MEMBER");
+    } catch {
+      throw new BudgetAccessError("FORBIDDEN");
+    }
+  } else if (b.userId !== userId) {
+    throw new BudgetAccessError("FORBIDDEN");
+  }
+  return b;
+}
+
+// Loads the budget's candidate rows once: transactions visible to `viewerId`
+// within the period, plus this budget's INCLUDE/EXCLUDE assignments.
+async function loadBudgetRows(
+  budget: { id: string; periodStart: Date; periodEnd: Date },
+  viewerId: string,
+): Promise<{
+  rows: BudgetRow[];
+  excluded: Set<string>;
+  includedIds: Set<string>;
+}> {
+  const accountIds = (await listVisibleForUser(viewerId)).map((a) => a.id);
+  const rows: BudgetRow[] =
+    accountIds.length === 0
+      ? []
+      : (
+          await db.transaction.findMany({
+            where: {
+              accountId: { in: accountIds },
+              date: { gte: budget.periodStart, lte: budget.periodEnd },
+            },
+            select: {
+              id: true,
+              amount: true,
+              date: true,
+              categoryId: true,
+              accountId: true,
+              linkMembership: { select: { linkId: true } },
+            },
+          })
+        ).map((r) => ({
+          id: r.id,
+          amount: Number(r.amount),
+          date: r.date,
+          categoryId: r.categoryId,
+          accountId: r.accountId,
+          linkId: r.linkMembership?.linkId ?? null,
+        }));
+
+  const assignments = await db.budgetAssignment.findMany({
+    where: { budgetId: budget.id },
+    select: { transactionId: true, mode: true },
+  });
+  const excluded = new Set(
+    assignments.filter((a) => a.mode === "EXCLUDE").map((a) => a.transactionId),
+  );
+  const includedIds = new Set(
+    assignments.filter((a) => a.mode === "INCLUDE").map((a) => a.transactionId),
+  );
+  return { rows, excluded, includedIds };
+}
+
+// Computes one line's spend against a preloaded candidate set (spec §5.7).
+export function computeLine(
+  line: { categoryId: string | null; accountId: string | null; plannedAmount: number },
+  loaded: { rows: BudgetRow[]; excluded: Set<string>; includedIds: Set<string> },
+): LineStatus {
+  const matched = loaded.rows.filter((r) => {
+    if (loaded.excluded.has(r.id)) return false;
+    if (loaded.includedIds.has(r.id)) return true; // explicit include wins
+    if (line.categoryId && r.categoryId !== line.categoryId) return false;
+    if (line.accountId && r.accountId !== line.accountId) return false;
+    // A line with neither filter auto-matches nothing.
+    return line.categoryId != null || line.accountId != null;
+  });
+  const collapsed = collapseLinkedRows(matched);
+  const sumEffective = collapsed.reduce((s, r) => s + r.amount, 0);
+  const spent = Math.round(-sumEffective * 100) / 100;
+  return lineStatus(Number(line.plannedAmount), spent);
+}
+
+export type BudgetDetail = {
+  id: string;
+  name: string;
+  description: string | null;
+  scope: BudgetScope;
+  periodType: string;
+  periodStart: Date;
+  periodEnd: Date;
+  recurring: boolean;
+  lines: (LineStatus & {
+    id: string;
+    categoryId: string | null;
+    accountId: string | null;
+    label: string | null;
+  })[];
+  plannedTotal: number;
+  spentTotal: number;
+};
+
+export async function getBudgetDetail(id: string, viewerId: string): Promise<BudgetDetail> {
+  const b = await readableOrThrow(id, viewerId);
+  // Compute against the transactions visible to the budget's owner scope: for a
+  // group budget that is the group's shared accounts; for a personal budget it
+  // is the owner's own visible set. Use the budget owner as the viewer.
+  const ownerViewer = b.userId ?? viewerId;
+  const loaded = await loadBudgetRows(b, ownerViewer);
+  const lines = b.lines.map((l) => ({
+    id: l.id,
+    categoryId: l.categoryId,
+    accountId: l.accountId,
+    label: l.label,
+    ...computeLine(
+      { categoryId: l.categoryId, accountId: l.accountId, plannedAmount: Number(l.plannedAmount) },
+      loaded,
+    ),
+  }));
+  const plannedTotal = Math.round(lines.reduce((s, l) => s + l.plannedAmount, 0) * 100) / 100;
+  const spentTotal = Math.round(lines.reduce((s, l) => s + l.spent, 0) * 100) / 100;
+  return {
+    id: b.id,
+    name: b.name,
+    description: b.description,
+    scope: b.groupId ? "GROUP" : "USER",
+    periodType: b.periodType,
+    periodStart: b.periodStart,
+    periodEnd: b.periodEnd,
+    recurring: b.recurring,
+    lines,
+    plannedTotal,
+    spentTotal,
+  };
 }
