@@ -6,6 +6,7 @@ import { listTransactions } from "@/server/services/transactions";
 import { listForUser } from "@/server/services/categories";
 import { listVisibleForUser } from "@/server/services/accounts";
 import { listLinkedTxIds } from "@/server/services/links";
+import { listAssignableBudgets } from "@/server/services/budgets";
 import { flattenCategories } from "@/components/transactions/category-tree";
 import { parsePeriodParams } from "@/lib/period";
 import {
@@ -37,7 +38,7 @@ export default async function TransactionsPage({
   // (all transactions), preserving the default "show everything" behaviour.
   const period = sp.from || sp.to ? parsePeriodParams({ from: sp.from, to: sp.to }) : undefined;
 
-  const [{ items, total }, tree, accounts, linkedIds] = await Promise.all([
+  const [{ items, total }, tree, accounts, linkedIds, budgets] = await Promise.all([
     listTransactions(user.id, {
       categoryId: sp.categoryId,
       direction,
@@ -48,6 +49,7 @@ export default async function TransactionsPage({
     listForUser(user.id),
     listVisibleForUser(user.id),
     listLinkedTxIds(user.id),
+    listAssignableBudgets(user.id),
   ]);
 
   const flatCategories = flattenCategories(tree);
@@ -108,7 +110,12 @@ export default async function TransactionsPage({
         </div>
       </header>
       <TransactionFilters categories={flatCategories} from={sp.from} to={sp.to} />
-      <TransactionList items={listItems} categories={flatCategories} accounts={accountOptions} />
+      <TransactionList
+        items={listItems}
+        categories={flatCategories}
+        accounts={accountOptions}
+        budgets={budgets}
+      />
     </div>
   );
 }

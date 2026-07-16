@@ -255,6 +255,17 @@
       "planned": "Prévu",
       "remaining": "Reste {amount}",
       "overBy": "Dépassé de {amount}"
+    },
+    "assign": {
+      "title": "Assigner à un budget",
+      "choose": "Choisir un budget",
+      "include": "Inclure",
+      "exclude": "Exclure",
+      "remove": "Retirer",
+      "none": "Aucun budget",
+      "assigned": "Assignée",
+      "modeINCLUDE": "Incluse",
+      "modeEXCLUDE": "Exclue"
     }
   },
   "categories": {

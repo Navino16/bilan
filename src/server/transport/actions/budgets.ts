@@ -1,10 +1,15 @@
 "use server";
 
 import { requireSession } from "@/server/auth/permissions";
+import { db } from "@/server/db";
+import { canReadAccount } from "@/server/services/accounts/sharing";
 import {
   createBudget,
   updateBudget,
   deleteBudget,
+  assignTransaction,
+  unassignTransaction,
+  listAssignmentsForTx,
   BudgetAccessError,
 } from "@/server/services/budgets";
 import { budgetInputSchema } from "@/lib/validation/budget";
@@ -79,4 +84,57 @@ export async function deleteBudgetAction(
   } catch (e) {
     return { ok: false, error: mapError(e) };
   }
+}
+
+export async function assignTransactionAction(
+  _prev: BudgetActionState,
+  formData: FormData,
+): Promise<BudgetActionState> {
+  const user = await requireSession();
+  const budgetId = String(formData.get("budgetId") ?? "");
+  const transactionId = String(formData.get("transactionId") ?? "");
+  const mode = String(formData.get("mode") ?? "");
+  if (!budgetId || !transactionId || (mode !== "INCLUDE" && mode !== "EXCLUDE")) {
+    return { ok: false, error: "INVALID" };
+  }
+  try {
+    await assignTransaction({ budgetId, transactionId, mode }, { id: user.id });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: mapError(e) };
+  }
+}
+
+export async function unassignTransactionAction(
+  _prev: BudgetActionState,
+  formData: FormData,
+): Promise<BudgetActionState> {
+  const user = await requireSession();
+  const budgetId = String(formData.get("budgetId") ?? "");
+  const transactionId = String(formData.get("transactionId") ?? "");
+  if (!budgetId || !transactionId) return { ok: false, error: "INVALID" };
+  try {
+    await unassignTransaction({ budgetId, transactionId }, { id: user.id });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: mapError(e) };
+  }
+}
+
+// Lazy per-transaction fetch for the detail panel: which budgets the tx is
+// currently assigned to (INCLUDE/EXCLUDE). Requires a session AND that the
+// caller can read the transaction's account — otherwise a session holder could
+// enumerate any transaction id and learn its budget assignments (IDOR).
+export async function listAssignmentsForTxAction(
+  transactionId: string,
+): Promise<{ budgetId: string; mode: string }[]> {
+  const user = await requireSession();
+  if (!transactionId) return [];
+  const txRow = await db.transaction.findUnique({
+    where: { id: transactionId },
+    select: { accountId: true },
+  });
+  if (!txRow) return [];
+  if (!(await canReadAccount(user.id, txRow.accountId))) return [];
+  return listAssignmentsForTx(transactionId);
 }
