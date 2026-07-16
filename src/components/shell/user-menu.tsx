@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -41,10 +40,6 @@ export function UserMenu({ user }: { user: { name?: string | null; email: string
           <span className="truncate text-sm font-medium">{display}</span>
           <span className="text-muted-foreground truncate text-xs font-normal">{user.email}</span>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem render={<Link href={`/${locale}/settings`} />}>
-          {t("settings")}
-        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>{t("logout")}</DropdownMenuItem>
       </DropdownMenuContent>
