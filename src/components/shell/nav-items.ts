@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   ShieldCheck,
   Tags,
+  Target,
   Upload,
   Users,
 } from "lucide-react";
@@ -24,6 +25,7 @@ export const WORKSPACE_NAV: NavItem[] = [
   { key: "dashboard", href: "/dashboard", icon: LayoutDashboard },
   { key: "transactions", href: "/transactions", icon: ArrowRightLeft },
   { key: "import", href: "/import", icon: Upload },
+  { key: "budgets", href: "/budgets", icon: Target },
   { key: "accounts", href: "/accounts", icon: Landmark },
   { key: "categories", href: "/categories", icon: Tags },
   { key: "groups", href: "/groups", icon: Users },
@@ -46,7 +48,7 @@ export const ACCOUNT_NAV: NavItem[] = [
 export const BOTTOM_NAV: NavItem[] = [
   { key: "dashboard", href: "/dashboard", icon: LayoutDashboard },
   { key: "transactions", href: "/transactions", icon: ArrowRightLeft },
-  { key: "import", href: "/import", icon: Upload },
+  { key: "budgets", href: "/budgets", icon: Target },
   { key: "accounts", href: "/accounts", icon: Landmark },
   { key: "categories", href: "/categories", icon: Tags },
 ];
