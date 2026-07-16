@@ -108,10 +108,14 @@ type AggRow = CollapsibleRow & { accountId: string };
 
 // Loads the period's rows over CLEAR columns only (amount/date/categoryId +
 // link id) and collapses links: balanced groups drop out, unbalanced groups
-// become one net row on their primary. Labels stay encrypted; only `recent`
-// decrypts (via listTransactions).
-async function loadRows(accountIds: string[], period: Period): Promise<AggRow[]> {
-  if (accountIds.length === 0) return [];
+// become one net row on their primary. `count` is the number of REAL
+// transactions in the period (pre-collapse) — a linked pair is still two
+// transactions the user made. Labels stay encrypted; only `recent` decrypts.
+async function loadRows(
+  accountIds: string[],
+  period: Period,
+): Promise<{ rows: AggRow[]; count: number }> {
+  if (accountIds.length === 0) return { rows: [], count: 0 };
   const rows = await db.transaction.findMany({
     where: { accountId: { in: accountIds }, date: { gte: period.from, lte: period.to } },
     select: {
@@ -123,7 +127,7 @@ async function loadRows(accountIds: string[], period: Period): Promise<AggRow[]>
       linkMembership: { select: { linkId: true } },
     },
   });
-  return collapseLinkedRows(
+  const collapsed = collapseLinkedRows(
     rows.map((r) => ({
       id: r.id,
       amount: Number(r.amount),
@@ -133,9 +137,10 @@ async function loadRows(accountIds: string[], period: Period): Promise<AggRow[]>
       linkId: r.linkMembership?.linkId ?? null,
     })),
   );
+  return { rows: collapsed, count: rows.length };
 }
 
-function totalsOf(rows: AggRow[]): DashboardTotals {
+function totalsOf(rows: AggRow[], count: number): DashboardTotals {
   let income = 0;
   let expense = 0;
   for (const r of rows) {
@@ -146,7 +151,7 @@ function totalsOf(rows: AggRow[]): DashboardTotals {
     income: round2(income),
     expense: round2(expense),
     net: round2(income - expense),
-    count: rows.length,
+    count,
   };
 }
 
@@ -157,13 +162,16 @@ export async function getDashboard(
 ): Promise<DashboardData> {
   const accountIds = (await listVisibleForUser(userId)).map((a) => a.id);
 
-  const rows = await loadRows(accountIds, period);
-  const prevRows = await loadRows(accountIds, previous);
-  const totals = totalsOf(rows);
-  const prev = totalsOf(prevRows);
+  // Independent queries for the two periods → run them together.
+  const [current, previousLoaded] = await Promise.all([
+    loadRows(accountIds, period),
+    loadRows(accountIds, previous),
+  ]);
+  const totals = totalsOf(current.rows, current.count);
+  const prev = totalsOf(previousLoaded.rows, previousLoaded.count);
 
   // Expenses (post-collapse) for by-category + trace.
-  const expenseRows: ExpenseRow[] = rows
+  const expenseRows: ExpenseRow[] = current.rows
     .filter((r) => r.amount < 0)
     .map((r) => ({ amount: r.amount, date: r.date, categoryId: r.categoryId }));
 

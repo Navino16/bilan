@@ -88,6 +88,23 @@ describe("findSuggestedPairs", () => {
     const pairs = findSuggestedPairs(rows, { windowDays: 60, minAmount: 0, ignored: new Set() });
     expect(pairs[0].key).toBe("exp|ref"); // |50| beats |3|
   });
+
+  it("falls back to a non-ignored negative when the closest one is ignored", () => {
+    // A +50 whose CLOSEST negative (day 1) forms an ignored pair, and a farther
+    // non-ignored negative (day 5) still within the window → the farther pair
+    // must still be suggested, not suppressed by the unrelated dismissal.
+    const withAlt = [
+      { id: "pos", amount: 50, date: new Date("2026-03-01T00:00:00.000Z") },
+      { id: "near", amount: -50, date: new Date("2026-03-02T00:00:00.000Z") }, // closest, ignored
+      { id: "far", amount: -50, date: new Date("2026-03-06T00:00:00.000Z") }, // valid alternative
+    ];
+    const pairs = findSuggestedPairs(withAlt, {
+      windowDays: 30,
+      minAmount: 0,
+      ignored: new Set(["near|pos"]),
+    });
+    expect(pairs.map((p) => p.key)).toContain("far|pos");
+  });
 });
 
 describe("collapseLinkedRows", () => {

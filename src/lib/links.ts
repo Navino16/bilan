@@ -64,13 +64,13 @@ export function findSuggestedPairs(
     for (const neg of negatives) {
       if (used.has(neg.id)) continue;
       if (Math.abs(pos.amount + neg.amount) >= EPSILON) continue; // not opposite
+      if (opts.ignored.has(pairKeyOf(pos.id, neg.id))) continue; // dismissed → skip, try next
       const dayDelta = Math.round(Math.abs(pos.date.getTime() - neg.date.getTime()) / DAY_MS);
       if (dayDelta > opts.windowDays) continue;
       if (!best || dayDelta < best.dayDelta) best = { neg, dayDelta };
     }
     if (!best) continue;
     const key = pairKeyOf(pos.id, best.neg.id);
-    if (opts.ignored.has(key)) continue;
     used.add(pos.id);
     used.add(best.neg.id);
     pairs.push({
