@@ -30,37 +30,41 @@ function Row({ item }: { item: SuggestionItem }) {
   }, [linkState, ignoreState, router]);
 
   return (
-    <Card data-slot="suggestion-row" className="flex flex-wrap items-center gap-3 p-4">
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">{money.format(item.amount)}</div>
-        <div className="text-muted-foreground truncate text-[12px]">
-          {item.negativeLabel} ↔ {item.positiveLabel} · {t("pairWithin", { days: item.dayDelta })}
+    // The flex row lives on an inner div: shadcn `Card` sets `flex-col` on its
+    // own element, which would otherwise stack the amount + buttons vertically.
+    <Card data-slot="suggestion-row" className="p-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium">{money.format(item.amount)}</div>
+          <div className="text-muted-foreground truncate text-[12px]">
+            {item.negativeLabel} ↔ {item.positiveLabel} · {t("pairWithin", { days: item.dayDelta })}
+          </div>
         </div>
+        <form action={linkAction}>
+          <input
+            type="hidden"
+            name="transactionIds"
+            value={`${item.positiveId},${item.negativeId}`}
+          />
+          <button
+            type="submit"
+            disabled={linkPending}
+            className="bg-primary text-primary-foreground inline-flex h-8 items-center rounded-lg px-3 text-[0.8rem] font-medium disabled:opacity-50"
+          >
+            {t("link")}
+          </button>
+        </form>
+        <form action={ignoreAction}>
+          <input type="hidden" name="pairKey" value={item.key} />
+          <button
+            type="submit"
+            disabled={ignorePending}
+            className="border-border text-muted-foreground hover:text-foreground inline-flex h-8 items-center rounded-lg border px-3 text-[0.8rem] disabled:opacity-50"
+          >
+            {t("ignore")}
+          </button>
+        </form>
       </div>
-      <form action={linkAction}>
-        <input
-          type="hidden"
-          name="transactionIds"
-          value={`${item.positiveId},${item.negativeId}`}
-        />
-        <button
-          type="submit"
-          disabled={linkPending}
-          className="bg-primary text-primary-foreground inline-flex h-8 items-center rounded-lg px-3 text-[0.8rem] font-medium disabled:opacity-50"
-        >
-          {t("link")}
-        </button>
-      </form>
-      <form action={ignoreAction}>
-        <input type="hidden" name="pairKey" value={item.key} />
-        <button
-          type="submit"
-          disabled={ignorePending}
-          className="border-border text-muted-foreground hover:text-foreground inline-flex h-8 items-center rounded-lg border px-3 text-[0.8rem] disabled:opacity-50"
-        >
-          {t("ignore")}
-        </button>
-      </form>
     </Card>
   );
 }

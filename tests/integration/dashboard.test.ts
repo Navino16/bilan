@@ -138,6 +138,8 @@ describe("getDashboard link-aware totals", () => {
     expect(data.totals.income).toBe(0);
     expect(data.totals.expense).toBe(50);
     expect(data.totals.net).toBe(-50);
+    // count reflects the REAL transactions in the period (4), not collapsed rows.
+    expect(data.totals.count).toBe(4);
     // The collapsed −50 lands on catB (the primary's category).
     expect(data.byCategory).toEqual([{ categoryId: catB, amount: 50 }]);
 
