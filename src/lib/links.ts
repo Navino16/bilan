@@ -84,3 +84,39 @@ export function findSuggestedPairs(
 
   return pairs.sort((a, b) => b.amount - a.amount || a.dayDelta - b.dayDelta);
 }
+
+// A transaction row tagged with its link membership (null = not linked).
+export type CollapsibleRow = {
+  id: string;
+  amount: number;
+  date: Date;
+  categoryId: string | null;
+  linkId: string | null;
+};
+
+// Collapses links for aggregation: unlinked rows pass through; a balanced group
+// is dropped; an unbalanced group becomes one synthetic row = its primary with
+// amount replaced by the group's net sum. See plan §"Period boundary".
+export function collapseLinkedRows<T extends CollapsibleRow>(rows: T[]): T[] {
+  const groups = new Map<string, T[]>();
+  const out: T[] = [];
+
+  for (const r of rows) {
+    if (r.linkId == null) {
+      out.push(r);
+      continue;
+    }
+    const g = groups.get(r.linkId);
+    if (g) g.push(r);
+    else groups.set(r.linkId, [r]);
+  }
+
+  for (const members of groups.values()) {
+    const amounts = members.map((m) => m.amount);
+    if (isBalanced(amounts)) continue; // balanced → excluded
+    const primary = pickPrimary(members);
+    out.push({ ...primary, amount: netSum(amounts) });
+  }
+
+  return out;
+}
