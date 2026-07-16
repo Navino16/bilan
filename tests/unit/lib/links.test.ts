@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { netSum, isBalanced, pickPrimary, pairKeyOf, findSuggestedPairs } from "@/lib/links";
+import {
+  netSum,
+  isBalanced,
+  pickPrimary,
+  pairKeyOf,
+  findSuggestedPairs,
+  collapseLinkedRows,
+} from "@/lib/links";
 
 describe("netSum", () => {
   it("sums signed amounts", () => {
@@ -80,5 +87,62 @@ describe("findSuggestedPairs", () => {
   it("sorts by absolute amount desc then day-delta asc", () => {
     const pairs = findSuggestedPairs(rows, { windowDays: 60, minAmount: 0, ignored: new Set() });
     expect(pairs[0].key).toBe("exp|ref"); // |50| beats |3|
+  });
+});
+
+describe("collapseLinkedRows", () => {
+  const base = (
+    over: Partial<{
+      id: string;
+      amount: number;
+      date: Date;
+      categoryId: string | null;
+      linkId: string | null;
+    }>,
+  ) => ({
+    id: "x",
+    amount: -10,
+    date: new Date("2026-03-02T00:00:00.000Z"),
+    categoryId: null as string | null,
+    linkId: null as string | null,
+    ...over,
+  });
+
+  it("keeps unlinked rows unchanged", () => {
+    const rows = [base({ id: "a", amount: -10 }), base({ id: "b", amount: 5 })];
+    const out = collapseLinkedRows(rows);
+    expect(out).toHaveLength(2);
+  });
+
+  it("drops a balanced link entirely", () => {
+    const rows = [
+      base({ id: "a", amount: -50, linkId: "L1", categoryId: "groc" }),
+      base({ id: "b", amount: 50, linkId: "L1" }),
+    ];
+    expect(collapseLinkedRows(rows)).toHaveLength(0);
+  });
+
+  it("collapses an unbalanced link to the net on the primary", () => {
+    const rows = [
+      base({
+        id: "a",
+        amount: -50,
+        linkId: "L1",
+        categoryId: "groc",
+        date: new Date("2026-03-01T00:00:00.000Z"),
+      }),
+      base({
+        id: "b",
+        amount: 30,
+        linkId: "L1",
+        categoryId: "ref",
+        date: new Date("2026-03-05T00:00:00.000Z"),
+      }),
+    ];
+    const out = collapseLinkedRows(rows);
+    expect(out).toHaveLength(1);
+    expect(out[0].id).toBe("a"); // primary = largest |amount|
+    expect(out[0].amount).toBe(-20); // net
+    expect(out[0].categoryId).toBe("groc"); // primary's category
   });
 });

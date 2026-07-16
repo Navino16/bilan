@@ -1,6 +1,7 @@
 import { db } from "@/server/db";
 import { listVisibleForUser } from "@/server/services/accounts";
 import { listTransactions, type TransactionListItem } from "@/server/services/transactions";
+import { collapseLinkedRows, type CollapsibleRow } from "@/lib/links";
 import type { Period } from "@/lib/period";
 
 export type DashboardTotals = { income: number; expense: number; net: number; count: number };
@@ -28,7 +29,7 @@ export type DashboardData = {
 // Above this span the daily trace becomes unreadable → switch to monthly buckets.
 const DAILY_TRACE_MAX_DAYS = 45;
 
-type ExpenseRow = { amount: unknown; date: Date; categoryId: string | null };
+type ExpenseRow = { amount: number; date: Date; categoryId: string | null };
 
 // Mean spend per bucket + the biggest bucket and the category that drove it.
 function summarize(
@@ -103,20 +104,43 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-// Aggregates over CLEAR columns only (amount/date/categoryId) — labels stay
-// encrypted; only `recent` decrypts (via listTransactions).
-async function totalsFor(accountIds: string[], period: Period): Promise<DashboardTotals> {
-  if (accountIds.length === 0) return { income: 0, expense: 0, net: 0, count: 0 };
+type AggRow = CollapsibleRow & { accountId: string };
+
+// Loads the period's rows over CLEAR columns only (amount/date/categoryId +
+// link id) and collapses links: balanced groups drop out, unbalanced groups
+// become one net row on their primary. Labels stay encrypted; only `recent`
+// decrypts (via listTransactions).
+async function loadRows(accountIds: string[], period: Period): Promise<AggRow[]> {
+  if (accountIds.length === 0) return [];
   const rows = await db.transaction.findMany({
     where: { accountId: { in: accountIds }, date: { gte: period.from, lte: period.to } },
-    select: { amount: true },
+    select: {
+      id: true,
+      amount: true,
+      date: true,
+      categoryId: true,
+      accountId: true,
+      linkMembership: { select: { linkId: true } },
+    },
   });
+  return collapseLinkedRows(
+    rows.map((r) => ({
+      id: r.id,
+      amount: Number(r.amount),
+      date: r.date,
+      categoryId: r.categoryId,
+      accountId: r.accountId,
+      linkId: r.linkMembership?.linkId ?? null,
+    })),
+  );
+}
+
+function totalsOf(rows: AggRow[]): DashboardTotals {
   let income = 0;
   let expense = 0;
   for (const r of rows) {
-    const a = Number(r.amount);
-    if (a >= 0) income += a;
-    else expense += -a;
+    if (r.amount >= 0) income += r.amount;
+    else expense += -r.amount;
   }
   return {
     income: round2(income),
@@ -133,21 +157,15 @@ export async function getDashboard(
 ): Promise<DashboardData> {
   const accountIds = (await listVisibleForUser(userId)).map((a) => a.id);
 
-  const totals = await totalsFor(accountIds, period);
-  const prev = await totalsFor(accountIds, previous);
+  const rows = await loadRows(accountIds, period);
+  const prevRows = await loadRows(accountIds, previous);
+  const totals = totalsOf(rows);
+  const prev = totalsOf(prevRows);
 
-  // Expenses in the period (clear columns) for by-category + daily.
-  const expenseRows =
-    accountIds.length === 0
-      ? []
-      : await db.transaction.findMany({
-          where: {
-            accountId: { in: accountIds },
-            date: { gte: period.from, lte: period.to },
-            amount: { lt: 0 },
-          },
-          select: { amount: true, date: true, categoryId: true },
-        });
+  // Expenses (post-collapse) for by-category + trace.
+  const expenseRows: ExpenseRow[] = rows
+    .filter((r) => r.amount < 0)
+    .map((r) => ({ amount: r.amount, date: r.date, categoryId: r.categoryId }));
 
   // By category, highest spend first.
   const byCat = new Map<string | null, number>();
