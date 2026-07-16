@@ -5,20 +5,45 @@ import {
   updateBudget,
   deleteBudget,
   listBudgetsForUser,
+  getBudgetDetail,
   BudgetAccessError,
 } from "@/server/services/budgets";
+import { buildSecureFields } from "@/server/services/transactions/secure-fields";
+import { createLink } from "@/server/services/links";
 
 const owner = "bud_owner";
 const stranger = "bud_stranger";
+let accountId: string;
 let catId: string;
 let groupId: string;
+
+async function tx(date: string, amount: number, categoryId: string | null): Promise<string> {
+  const s = buildSecureFields({ label: "T", rawLabel: "T" });
+  const row = await db.transaction.create({
+    data: {
+      accountId,
+      date: new Date(date),
+      amount,
+      type: "OTHER",
+      labelEnc: s.labelEnc,
+      labelHash: s.labelHash,
+      rawLabelEnc: s.rawLabelEnc,
+      rawLabelHash: s.rawLabelHash,
+      categoryId,
+      createdById: owner,
+    },
+  });
+  return row.id;
+}
 
 beforeAll(async () => {
   for (const id of [owner, stranger]) {
     await db.user.deleteMany({ where: { id } });
     await db.user.create({ data: { id, email: `${id}@bilan.local` } });
   }
-  await db.bankAccount.create({ data: { ownerId: owner, name: "Courant", type: "CHECKING" } });
+  accountId = (
+    await db.bankAccount.create({ data: { ownerId: owner, name: "Courant", type: "CHECKING" } })
+  ).id;
   catId = (await db.category.create({ data: { userId: owner, name: "Courses" } })).id;
   const g = await db.group.create({ data: { name: "Foyer Bud", createdById: owner } });
   groupId = g.id;
@@ -123,5 +148,60 @@ describe("listBudgetsForUser / update / delete", () => {
     await expect(deleteBudget(id, { id: stranger })).rejects.toBeInstanceOf(BudgetAccessError);
     await deleteBudget(id, { id: owner });
     expect(await db.budget.findUnique({ where: { id } })).toBeNull();
+  });
+});
+
+describe("getBudgetDetail / computeLine", () => {
+  beforeEach(async () => {
+    await db.budgetAssignment.deleteMany({});
+    await db.transactionLinkMember.deleteMany({});
+    await db.transactionLink.deleteMany({});
+    await db.transaction.deleteMany({ where: { accountId } });
+  });
+
+  it("sums matching expenses per line (category filter), link-aware, with status", async () => {
+    await tx("2026-03-03T00:00:00.000Z", -40, catId);
+    await tx("2026-03-10T00:00:00.000Z", -80, catId);
+    await tx("2026-03-12T00:00:00.000Z", -20, null); // no category → not matched
+    const { id } = await createBudget(
+      { ...baseInput, lines: [{ categoryId: catId, plannedAmount: 100 }] },
+      { id: owner },
+    );
+    const detail = await getBudgetDetail(id, owner);
+    expect(detail.lines[0].spent).toBe(120); // 40 + 80
+    expect(detail.lines[0].status).toBe("OVER");
+  });
+
+  it("EXCLUDE removes a matching tx; INCLUDE adds a non-matching one", async () => {
+    const a = await tx("2026-03-03T00:00:00.000Z", -40, catId); // matches, will EXCLUDE
+    await tx("2026-03-05T00:00:00.000Z", -30, catId); // matches, stays
+    const c = await tx("2026-03-06T00:00:00.000Z", -25, null); // no cat, will INCLUDE
+    const { id } = await createBudget(
+      { ...baseInput, lines: [{ categoryId: catId, plannedAmount: 100 }] },
+      { id: owner },
+    );
+    await db.budgetAssignment.create({
+      data: { budgetId: id, transactionId: a, mode: "EXCLUDE", assignedById: owner },
+    });
+    await db.budgetAssignment.create({
+      data: { budgetId: id, transactionId: c, mode: "INCLUDE", assignedById: owner },
+    });
+    const detail = await getBudgetDetail(id, owner);
+    expect(detail.lines[0].spent).toBe(55); // 30 (kept) + 25 (included) − 40 (excluded)
+  });
+
+  it("excludes a balanced link and collapses an unbalanced one to its net", async () => {
+    const e1 = await tx("2026-03-03T00:00:00.000Z", -50, catId);
+    const r1 = await tx("2026-03-04T00:00:00.000Z", 50, catId); // balanced pair → 0
+    const e2 = await tx("2026-03-10T00:00:00.000Z", -80, catId);
+    const r2 = await tx("2026-03-11T00:00:00.000Z", 30, catId); // net −50
+    await createLink({ transactionIds: [e1, r1], userId: owner });
+    await createLink({ transactionIds: [e2, r2], userId: owner });
+    const { id } = await createBudget(
+      { ...baseInput, lines: [{ categoryId: catId, plannedAmount: 100 }] },
+      { id: owner },
+    );
+    const detail = await getBudgetDetail(id, owner);
+    expect(detail.lines[0].spent).toBe(50); // balanced dropped; unbalanced net 50
   });
 });

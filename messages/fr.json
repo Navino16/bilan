@@ -140,8 +140,17 @@
     "shareSubtitle": "Choisissez les foyers et leur niveau d'accès.",
     "noGroups": "Vous n'appartenez à aucun foyer.",
     "permNone": "Aucun",
-    "access": { "OWNER": "Propriétaire", "WRITE": "Écriture", "READ": "Lecture" },
-    "types": { "CHECKING": "Courant", "SAVINGS": "Épargne", "CREDIT": "Crédit", "OTHER": "Autre" },
+    "access": {
+      "OWNER": "Propriétaire",
+      "WRITE": "Écriture",
+      "READ": "Lecture"
+    },
+    "types": {
+      "CHECKING": "Courant",
+      "SAVINGS": "Épargne",
+      "CREDIT": "Crédit",
+      "OTHER": "Autre"
+    },
     "error": {
       "INVALID": "Vérifiez les champs.",
       "INVALID_IBAN": "IBAN invalide.",
@@ -235,6 +244,17 @@
       "FORBIDDEN": "Action non autorisée.",
       "NOT_FOUND": "Budget introuvable.",
       "FAILED": "Échec. Réessayez."
+    },
+    "status": {
+      "OK": "Dans le budget",
+      "WARN": "Bientôt atteint",
+      "OVER": "Dépassé"
+    },
+    "detail": {
+      "spent": "Dépensé",
+      "planned": "Prévu",
+      "remaining": "Reste {amount}",
+      "overBy": "Dépassé de {amount}"
     }
   },
   "categories": {
@@ -291,7 +311,11 @@
     "allCategories": "Toutes les catégories",
     "allTypes": "Tous les types",
     "opCount": "{count, plural, one {# opération} other {# opérations}}",
-    "tab": { "all": "Toutes", "in": "Entrées", "out": "Sorties" },
+    "tab": {
+      "all": "Toutes",
+      "in": "Entrées",
+      "out": "Sorties"
+    },
     "detailOverline": "Transaction",
     "originalLabel": "Libellé d'origine",
     "notePlaceholder": "Aucune note.",
@@ -409,8 +433,15 @@
     "targetAccount": "Compte de destination",
     "ignoreProduct": "Ne pas importer",
     "moreRows": "… et {count} autres lignes seront importées (aperçu limité).",
-    "banks": { "revolut": "Revolut", "lcl": "LCL" },
-    "products": { "compte": "Compte courant", "depot": "Dépôt", "default": "Compte" },
+    "banks": {
+      "revolut": "Revolut",
+      "lcl": "LCL"
+    },
+    "products": {
+      "compte": "Compte courant",
+      "depot": "Dépôt",
+      "default": "Compte"
+    },
     "error": {
       "INVALID": "Vérifiez le fichier et le compte.",
       "BAD_TYPE": "Format de fichier non supporté.",
@@ -449,7 +480,11 @@
     "delete": "Supprimer le foyer",
     "deleteConfirm": "Supprimer définitivement ce foyer ? Les partages associés seront retirés.",
     "back": "Retour aux foyers",
-    "roles": { "OWNER": "Propriétaire", "ADMIN": "Admin", "MEMBER": "Membre" },
+    "roles": {
+      "OWNER": "Propriétaire",
+      "ADMIN": "Admin",
+      "MEMBER": "Membre"
+    },
     "error": {
       "FORBIDDEN": "Action non autorisée.",
       "INVALID": "Vérifiez les champs.",
@@ -496,7 +531,11 @@
   "dashboard": {
     "overline": "Vue d'ensemble",
     "txCount": "{count, plural, one {# transaction} other {# transactions}}",
-    "kpi": { "income": "Revenus", "expense": "Dépenses", "net": "Solde net" },
+    "kpi": {
+      "income": "Revenus",
+      "expense": "Dépenses",
+      "net": "Solde net"
+    },
     "vsPrev": "{arrow} {pct} % vs période précédente",
     "noPrev": "Pas de période précédente",
     "breakdown": "Répartition",
