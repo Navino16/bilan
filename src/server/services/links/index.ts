@@ -1,17 +1,27 @@
 import { db } from "@/server/db";
 import { listVisibleForUser } from "@/server/services/accounts";
+import { canWriteAccount } from "@/server/services/accounts/sharing";
 import { listTransactions } from "@/server/services/transactions";
 import { logEvent } from "@/server/services/audit";
 import { findSuggestedPairs, pairKeyOf, type SuggestedPair } from "@/lib/links";
 
 export class LinkAccessError extends Error {}
 
-// Account ids the user may see (owned + shared). Reused for every link op.
+// Account ids the user may see (owned + shared). Reused for read-only link ops.
 async function visibleAccountIds(userId: string): Promise<Set<string>> {
   return new Set((await listVisibleForUser(userId)).map((a) => a.id));
 }
 
-// Creates a link over 2+ transactions, all visible to the user and none already
+// Throws unless the user has WRITE on every account in `accountIds`. Linking
+// mutates the owner's aggregates (a balanced link drops from their totals), so
+// it must be gated on write access — not mere read visibility.
+async function assertCanWriteAll(userId: string, accountIds: Iterable<string>): Promise<void> {
+  for (const accId of new Set(accountIds)) {
+    if (!(await canWriteAccount(userId, accId))) throw new LinkAccessError("FORBIDDEN");
+  }
+}
+
+// Creates a link over 2+ transactions, all WRITABLE by the user and none already
 // linked. Throws LinkAccessError otherwise.
 export async function createLink(input: {
   transactionIds: string[];
@@ -21,16 +31,18 @@ export async function createLink(input: {
   const ids = [...new Set(input.transactionIds)];
   if (ids.length < 2) throw new LinkAccessError("TOO_FEW");
 
-  const visible = await visibleAccountIds(input.userId);
   const rows = await db.transaction.findMany({
     where: { id: { in: ids } },
     select: { id: true, accountId: true, linkMembership: { select: { linkId: true } } },
   });
   if (rows.length !== ids.length) throw new LinkAccessError("NOT_FOUND");
   for (const r of rows) {
-    if (!visible.has(r.accountId)) throw new LinkAccessError("FORBIDDEN");
     if (r.linkMembership) throw new LinkAccessError("ALREADY_LINKED");
   }
+  await assertCanWriteAll(
+    input.userId,
+    rows.map((r) => r.accountId),
+  );
 
   const link = await db.transactionLink.create({
     data: {
@@ -49,11 +61,19 @@ export async function createLink(input: {
   return { id: link.id };
 }
 
-// Deletes a link the user created (members are freed via cascade).
+// Deletes a link (members are freed via cascade). Any user with WRITE on all of
+// the link's transactions may unlink — including the account owner, not only the
+// user who created the link.
 export async function deleteLink(linkId: string, userId: string): Promise<void> {
-  const link = await db.transactionLink.findUnique({ where: { id: linkId } });
+  const link = await db.transactionLink.findUnique({
+    where: { id: linkId },
+    include: { members: { select: { transaction: { select: { accountId: true } } } } },
+  });
   if (!link) throw new LinkAccessError("NOT_FOUND");
-  if (link.createdById !== userId) throw new LinkAccessError("FORBIDDEN");
+  await assertCanWriteAll(
+    userId,
+    link.members.map((m) => m.transaction.accountId),
+  );
   await db.transactionLink.delete({ where: { id: linkId } });
   await logEvent({ userId, action: "link.deleted", entity: "TransactionLink", entityId: linkId });
 }
