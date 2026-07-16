@@ -62,7 +62,12 @@ export async function createBudget(
       },
     },
   });
-  await logEvent({ userId: actor.id, action: "budget.created", entity: "Budget", entityId: budget.id });
+  await logEvent({
+    userId: actor.id,
+    action: "budget.created",
+    entity: "Budget",
+    entityId: budget.id,
+  });
   return { id: budget.id };
 }
 
@@ -142,7 +147,10 @@ export type BudgetListItem = {
 
 // The user's own budgets + those of groups they belong to (not archived).
 export async function listBudgetsForUser(userId: string): Promise<BudgetListItem[]> {
-  const memberships = await db.groupMember.findMany({ where: { userId }, select: { groupId: true } });
+  const memberships = await db.groupMember.findMany({
+    where: { userId },
+    select: { groupId: true },
+  });
   const groupIds = memberships.map((m) => m.groupId);
   const rows = await db.budget.findMany({
     where: { archived: false, OR: [{ userId }, { groupId: { in: groupIds } }] },
