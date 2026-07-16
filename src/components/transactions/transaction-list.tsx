@@ -126,7 +126,9 @@ export function TransactionList({
       groups.push(g);
     }
     g.rows.push(it);
-    g.total += it.amount;
+    // Linked rows are excluded from the day subtotal — their net is reflected on
+    // the dashboard; showing the gross sum here would double-count refunds.
+    if (!it.linked) g.total += it.amount;
   }
 
   function recategorize(it: ListItem, categoryId: string) {

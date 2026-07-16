@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "@/server/db";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
 import { getDashboard } from "@/server/services/dashboard";
+import { createLink } from "@/server/services/links";
 import { monthPeriod, previousMonthPeriod } from "@/lib/period";
 
 const owner = "dash_owner";
@@ -108,5 +109,43 @@ describe("getDashboard", () => {
     expect(data.trace.points.find((p) => p.date === "2026-03-01")?.amount).toBe(750);
     expect(data.trace.avg).toBeCloseTo((0 + 500 + 750) / 3, 2);
     expect(data.trace.peak).toEqual({ date: "2026-03-01", amount: 750, categoryId: catB });
+  });
+});
+
+describe("getDashboard link-aware totals", () => {
+  it("excludes a balanced link and collapses an unbalanced one to its net", async () => {
+    // April 2026, isolated from the other tests' March data.
+    const period = monthPeriod(2026, 4);
+
+    // Balanced refund pair (−50 / +50) → must NOT affect totals.
+    await tx("2026-04-03T00:00:00.000Z", -50, "CB BALANCED", catA);
+    await tx("2026-04-04T00:00:00.000Z", 50, "REMB BALANCED", null);
+
+    // Unbalanced pair (−80 spend / +30 partial refund) → net −50 on the primary (catB).
+    await tx("2026-04-10T00:00:00.000Z", -80, "CB PARTIAL", catB);
+    await tx("2026-04-12T00:00:00.000Z", 30, "REMB PARTIAL", null);
+
+    const all = await db.transaction.findMany({
+      where: { accountId, date: { gte: period.from, lte: period.to } },
+      select: { id: true, amount: true },
+    });
+    const find = (amt: number) => all.find((r) => Number(r.amount) === amt)!.id;
+    await createLink({ transactionIds: [find(-50), find(50)], userId: owner });
+    await createLink({ transactionIds: [find(-80), find(30)], userId: owner });
+
+    const data = await getDashboard(owner, period, previousMonthPeriod(period));
+    // Balanced pair contributes nothing; unbalanced collapses to a −50 expense.
+    expect(data.totals.income).toBe(0);
+    expect(data.totals.expense).toBe(50);
+    expect(data.totals.net).toBe(-50);
+    // The collapsed −50 lands on catB (the primary's category).
+    expect(data.byCategory).toEqual([{ categoryId: catB, amount: 50 }]);
+
+    // Cleanup so other tests' assumptions about the dataset hold.
+    await db.transactionLinkMember.deleteMany({});
+    await db.transactionLink.deleteMany({});
+    await db.transaction.deleteMany({
+      where: { accountId, date: { gte: period.from, lte: period.to } },
+    });
   });
 });

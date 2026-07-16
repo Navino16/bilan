@@ -94,7 +94,7 @@ Next.js 16.2 · React 19.2 · TypeScript 6 · Tailwind v4 · shadcn/ui (themed B
 
 - [x] **6.1 — Link model + manual linking.** `TransactionLink`, `TransactionLinkMember`, link-mode UI (visible-tx selection), one-link-per-tx constraint. _AC: unit (primary/net-sum/balanced) + e2e manual link._
 - [x] **6.2 — Auto suggestions.** `links.service.suggestPairs` (±window, min amount from `UserPreference`), `IgnoredLinkSuggestion`, suggestions panel accept/ignore. _AC: unit pairing logic; e2e accept + persisted ignore._
-- [ ] **6.3 — Link-aware totals.** Balanced groups excluded; unbalanced → primary gets net sum. Apply in dashboard + transactions display. _AC: integration totals with mixed links match expected._
+- [x] **6.3 — Link-aware totals.** Balanced groups excluded; unbalanced → primary gets net sum. Apply in dashboard + transactions display. _AC: integration totals with mixed links match expected._
 
 ---
 
