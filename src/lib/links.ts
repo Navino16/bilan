@@ -29,3 +29,58 @@ export function pickPrimary<T extends LinkMemberRow>(members: T[]): T {
     return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
   })[0];
 }
+
+const DAY_MS = 86_400_000;
+
+// Canonical key for an unordered pair of transaction ids.
+export function pairKeyOf(a: string, b: string): string {
+  return a < b ? `${a}|${b}` : `${b}|${a}`;
+}
+
+export type SuggestedPair = {
+  key: string;
+  positiveId: string;
+  negativeId: string;
+  amount: number; // absolute value of the matched amount
+  dayDelta: number;
+};
+
+// Pairs each positive amount with an equal-and-opposite negative within the day
+// window, above the minimum, not already ignored. Greedy: each transaction is
+// used in at most one pair (largest amounts first). Pure — no DB.
+export function findSuggestedPairs(
+  rows: LinkMemberRow[],
+  opts: { windowDays: number; minAmount: number; ignored: Set<string> },
+): SuggestedPair[] {
+  const positives = rows.filter((r) => r.amount > 0).sort((a, b) => b.amount - a.amount);
+  const negatives = rows.filter((r) => r.amount < 0);
+  const used = new Set<string>();
+  const pairs: SuggestedPair[] = [];
+
+  for (const pos of positives) {
+    if (used.has(pos.id)) continue;
+    if (pos.amount < opts.minAmount) continue;
+    let best: { neg: LinkMemberRow; dayDelta: number } | null = null;
+    for (const neg of negatives) {
+      if (used.has(neg.id)) continue;
+      if (Math.abs(pos.amount + neg.amount) >= EPSILON) continue; // not opposite
+      const dayDelta = Math.round(Math.abs(pos.date.getTime() - neg.date.getTime()) / DAY_MS);
+      if (dayDelta > opts.windowDays) continue;
+      if (!best || dayDelta < best.dayDelta) best = { neg, dayDelta };
+    }
+    if (!best) continue;
+    const key = pairKeyOf(pos.id, best.neg.id);
+    if (opts.ignored.has(key)) continue;
+    used.add(pos.id);
+    used.add(best.neg.id);
+    pairs.push({
+      key,
+      positiveId: pos.id,
+      negativeId: best.neg.id,
+      amount: Math.round(pos.amount * 100) / 100,
+      dayDelta: best.dayDelta,
+    });
+  }
+
+  return pairs.sort((a, b) => b.amount - a.amount || a.dayDelta - b.dayDelta);
+}
