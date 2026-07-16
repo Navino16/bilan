@@ -6,6 +6,9 @@ import {
   deleteBudget,
   listBudgetsForUser,
   getBudgetDetail,
+  assignTransaction,
+  unassignTransaction,
+  listAssignableBudgets,
   BudgetAccessError,
 } from "@/server/services/budgets";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
@@ -203,5 +206,57 @@ describe("getBudgetDetail / computeLine", () => {
     );
     const detail = await getBudgetDetail(id, owner);
     expect(detail.lines[0].spent).toBe(50); // balanced dropped; unbalanced net 50
+  });
+});
+
+describe("assignTransaction", () => {
+  beforeEach(async () => {
+    await db.budgetAssignment.deleteMany({});
+    await db.transaction.deleteMany({ where: { accountId } });
+  });
+
+  it("INCLUDE makes a non-matching tx count toward the budget; unassign reverts it", async () => {
+    const t = await tx("2026-03-06T00:00:00.000Z", -25, null); // no category
+    const { id } = await createBudget(
+      { ...baseInput, lines: [{ categoryId: catId, plannedAmount: 100 }] },
+      { id: owner },
+    );
+    let detail = await getBudgetDetail(id, owner);
+    expect(detail.lines[0].spent).toBe(0); // doesn't match the category
+
+    await assignTransaction({ budgetId: id, transactionId: t, mode: "INCLUDE" }, { id: owner });
+    detail = await getBudgetDetail(id, owner);
+    expect(detail.lines[0].spent).toBe(25);
+
+    await unassignTransaction({ budgetId: id, transactionId: t }, { id: owner });
+    detail = await getBudgetDetail(id, owner);
+    expect(detail.lines[0].spent).toBe(0);
+  });
+
+  it("re-assigning the same tx updates the mode (unique per budget+tx)", async () => {
+    const t = await tx("2026-03-06T00:00:00.000Z", -40, catId);
+    const { id } = await createBudget(
+      { ...baseInput, lines: [{ categoryId: catId, plannedAmount: 100 }] },
+      { id: owner },
+    );
+    await assignTransaction({ budgetId: id, transactionId: t, mode: "EXCLUDE" }, { id: owner });
+    expect((await getBudgetDetail(id, owner)).lines[0].spent).toBe(0);
+    await assignTransaction({ budgetId: id, transactionId: t, mode: "INCLUDE" }, { id: owner });
+    expect((await getBudgetDetail(id, owner)).lines[0].spent).toBe(40);
+    expect(await db.budgetAssignment.count({ where: { budgetId: id, transactionId: t } })).toBe(1);
+  });
+
+  it("rejects assigning a tx the actor cannot see, or to a budget they can't manage", async () => {
+    const t = await tx("2026-03-06T00:00:00.000Z", -40, catId);
+    const { id } = await createBudget(baseInput, { id: owner });
+    await expect(
+      assignTransaction({ budgetId: id, transactionId: t, mode: "INCLUDE" }, { id: stranger }),
+    ).rejects.toBeInstanceOf(BudgetAccessError);
+  });
+
+  it("lists budgets the actor may assign to (own + group budgets they're a member of)", async () => {
+    await createBudget(baseInput, { id: owner });
+    const list = await listAssignableBudgets(owner);
+    expect(list.length).toBeGreaterThanOrEqual(1);
   });
 });

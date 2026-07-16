@@ -2,6 +2,7 @@ import { db } from "@/server/db";
 import { requireGroupRole } from "@/server/services/groups/roles";
 import { logEvent } from "@/server/services/audit";
 import { listVisibleForUser } from "@/server/services/accounts";
+import { canReadAccount } from "@/server/services/accounts/sharing";
 import { collapseLinkedRows } from "@/lib/links";
 import { lineStatus, type LineStatus } from "@/lib/budgets";
 import { budgetInputSchema, type BudgetInput } from "@/lib/validation/budget";
@@ -319,4 +320,88 @@ export async function getBudgetDetail(id: string, viewerId: string): Promise<Bud
     plannedTotal,
     spentTotal,
   };
+}
+
+export async function assignTransaction(
+  input: { budgetId: string; transactionId: string; mode: "INCLUDE" | "EXCLUDE" },
+  actor: { id: string },
+): Promise<void> {
+  if (input.mode !== "INCLUDE" && input.mode !== "EXCLUDE") throw new BudgetAccessError("INVALID");
+  await readableOrThrow(input.budgetId, actor.id);
+  const txRow = await db.transaction.findUnique({
+    where: { id: input.transactionId },
+    select: { accountId: true },
+  });
+  if (!txRow) throw new BudgetAccessError("NOT_FOUND");
+  if (!(await canReadAccount(actor.id, txRow.accountId))) throw new BudgetAccessError("FORBIDDEN");
+
+  await db.budgetAssignment.upsert({
+    where: {
+      budgetId_transactionId: {
+        budgetId: input.budgetId,
+        transactionId: input.transactionId,
+      },
+    },
+    update: { mode: input.mode, assignedById: actor.id },
+    create: {
+      budgetId: input.budgetId,
+      transactionId: input.transactionId,
+      mode: input.mode,
+      assignedById: actor.id,
+    },
+  });
+  await logEvent({
+    userId: actor.id,
+    action: "budget.assignment.create",
+    entity: "BudgetAssignment",
+    entityId: `${input.budgetId}:${input.transactionId}`,
+    metadata: { mode: input.mode },
+  });
+}
+
+export async function unassignTransaction(
+  input: { budgetId: string; transactionId: string },
+  actor: { id: string },
+): Promise<void> {
+  await readableOrThrow(input.budgetId, actor.id);
+  await db.budgetAssignment
+    .delete({
+      where: {
+        budgetId_transactionId: { budgetId: input.budgetId, transactionId: input.transactionId },
+      },
+    })
+    .catch(() => undefined);
+  await logEvent({
+    userId: actor.id,
+    action: "budget.assignment.delete",
+    entity: "BudgetAssignment",
+    entityId: `${input.budgetId}:${input.transactionId}`,
+  });
+}
+
+// Budgets the actor may assign a transaction to: their own + their groups'.
+export async function listAssignableBudgets(
+  userId: string,
+): Promise<{ id: string; name: string; scope: BudgetScope }[]> {
+  const memberships = await db.groupMember.findMany({
+    where: { userId },
+    select: { groupId: true },
+  });
+  const groupIds = memberships.map((m) => m.groupId);
+  const rows = await db.budget.findMany({
+    where: { archived: false, OR: [{ userId }, { groupId: { in: groupIds } }] },
+    select: { id: true, name: true, groupId: true },
+    orderBy: { periodStart: "desc" },
+  });
+  return rows.map((b) => ({ id: b.id, name: b.name, scope: b.groupId ? "GROUP" : "USER" }));
+}
+
+// The assignments on a transaction (for the detail panel to show current state).
+export async function listAssignmentsForTx(
+  transactionId: string,
+): Promise<{ budgetId: string; mode: string }[]> {
+  return db.budgetAssignment.findMany({
+    where: { transactionId },
+    select: { budgetId: true, mode: true },
+  });
 }
