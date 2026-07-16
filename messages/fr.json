@@ -297,6 +297,15 @@
       "hint": "Sélectionnez au moins deux transactions à lier.",
       "createdOk": "Transactions liées.",
       "failed": "Échec de la liaison."
+    },
+    "suggestions": {
+      "title": "Suggestions de liens",
+      "subtitle": "{count, plural, =0 {Aucune suggestion} one {# paire suggérée} other {# paires suggérées}}",
+      "open": "Suggestions",
+      "pairWithin": "à {days, plural, one {# jour} other {# jours}} d'écart",
+      "link": "Lier",
+      "ignore": "Ignorer",
+      "empty": "Aucune paire à suggérer pour le moment."
     }
   },
   "import": {

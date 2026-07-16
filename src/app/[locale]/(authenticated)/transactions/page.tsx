@@ -1,4 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import Link from "next/link";
 import { Plus } from "lucide-react";
 import { requireSession } from "@/server/auth/permissions";
 import { listTransactions } from "@/server/services/transactions";
@@ -80,23 +81,31 @@ export default async function TransactionsPage({
           </div>
           <h1 className="font-display text-3xl leading-none">{t("title")}</h1>
         </div>
-        {accountOptions.length === 0 ? (
-          <Button disabled>
-            <Plus />
-            {t("create")}
-          </Button>
-        ) : (
-          <TransactionForm
-            accounts={formAccounts}
-            categories={flatCategories}
-            trigger={
-              <Button>
-                <Plus />
-                {t("create")}
-              </Button>
-            }
-          />
-        )}
+        <div className="flex items-center gap-4">
+          <Link
+            href={`/${locale}/transactions/suggestions`}
+            className="text-primary text-sm hover:underline"
+          >
+            {t("suggestions.open")}
+          </Link>
+          {accountOptions.length === 0 ? (
+            <Button disabled>
+              <Plus />
+              {t("create")}
+            </Button>
+          ) : (
+            <TransactionForm
+              accounts={formAccounts}
+              categories={flatCategories}
+              trigger={
+                <Button>
+                  <Plus />
+                  {t("create")}
+                </Button>
+              }
+            />
+          )}
+        </div>
       </header>
       <TransactionFilters categories={flatCategories} from={sp.from} to={sp.to} />
       <TransactionList items={listItems} categories={flatCategories} accounts={accountOptions} />

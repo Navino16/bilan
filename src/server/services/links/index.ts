@@ -1,6 +1,8 @@
 import { db } from "@/server/db";
 import { listVisibleForUser } from "@/server/services/accounts";
+import { listTransactions } from "@/server/services/transactions";
 import { logEvent } from "@/server/services/audit";
+import { findSuggestedPairs, pairKeyOf, type SuggestedPair } from "@/lib/links";
 
 export class LinkAccessError extends Error {}
 
@@ -79,3 +81,56 @@ export async function getLinkForTx(transactionId: string, userId: string): Promi
   if (!member || !visible.has(member.transaction.accountId)) return null;
   return member.linkId;
 }
+
+export type SuggestedPairView = SuggestedPair & {
+  positiveLabel: string;
+  negativeLabel: string;
+  date: string; // ISO day of the negative (expense) leg
+};
+
+// Suggests +X/-X pairs over the user's visible, not-yet-linked transactions,
+// within UserPreference.linkWindowDays / linkMinAmount, excluding ignored pairs.
+export async function suggestPairs(userId: string): Promise<SuggestedPairView[]> {
+  const pref = await db.userPreference.findUnique({ where: { userId } });
+  const windowDays = pref?.linkWindowDays ?? 30;
+  const minAmount = pref ? Number(pref.linkMinAmount) : 0;
+
+  // Visible transactions (decrypted) minus those already in a link.
+  const linked = await listLinkedTxIds(userId);
+  const { items } = await listTransactions(userId, { take: 5000 });
+  const candidates = items.filter((t) => !linked.has(t.id));
+
+  const ignoredRows = await db.ignoredLinkSuggestion.findMany({
+    where: { userId },
+    select: { pairKey: true },
+  });
+  const ignored = new Set(ignoredRows.map((r) => r.pairKey));
+
+  const rows = candidates.map((t) => ({ id: t.id, amount: t.amount, date: t.date }));
+  const pairs = findSuggestedPairs(rows, { windowDays, minAmount, ignored });
+
+  const byId = new Map(candidates.map((t) => [t.id, t]));
+  return pairs.map((p) => ({
+    ...p,
+    positiveLabel: byId.get(p.positiveId)?.label ?? "",
+    negativeLabel: byId.get(p.negativeId)?.label ?? "",
+    date: (byId.get(p.negativeId)?.date ?? new Date()).toISOString().slice(0, 10),
+  }));
+}
+
+// Records that the user dismissed a suggested pair so it stops resurfacing.
+export async function ignoreSuggestion(userId: string, pairKey: string): Promise<void> {
+  await db.ignoredLinkSuggestion.upsert({
+    where: { userId_pairKey: { userId, pairKey } },
+    update: {},
+    create: { userId, pairKey },
+  });
+  await logEvent({
+    userId,
+    action: "link.suggestionIgnored",
+    entity: "IgnoredLinkSuggestion",
+    entityId: pairKey,
+  });
+}
+
+export { pairKeyOf };

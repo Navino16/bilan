@@ -1,7 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { db } from "@/server/db";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
-import { createLink, deleteLink, listLinkedTxIds, LinkAccessError } from "@/server/services/links";
+import {
+  createLink,
+  deleteLink,
+  listLinkedTxIds,
+  suggestPairs,
+  ignoreSuggestion,
+  LinkAccessError,
+} from "@/server/services/links";
 
 const owner = "link_owner";
 const stranger = "link_stranger";
@@ -42,12 +49,14 @@ beforeAll(async () => {
 beforeEach(async () => {
   await db.transactionLinkMember.deleteMany({});
   await db.transactionLink.deleteMany({});
+  await db.ignoredLinkSuggestion.deleteMany({ where: { userId: { in: [owner, stranger] } } });
   await db.transaction.deleteMany({ where: { accountId: { in: [accountId, strangerAccountId] } } });
 });
 
 afterAll(async () => {
   await db.transactionLinkMember.deleteMany({});
   await db.transactionLink.deleteMany({});
+  await db.ignoredLinkSuggestion.deleteMany({ where: { userId: { in: [owner, stranger] } } });
   await db.transaction.deleteMany({ where: { accountId: { in: [accountId, strangerAccountId] } } });
   await db.bankAccount.deleteMany({ where: { ownerId: { in: [owner, stranger] } } });
   await db.user.deleteMany({ where: { id: { in: [owner, stranger] } } });
@@ -104,5 +113,30 @@ describe("deleteLink", () => {
     const b = await tx(accountId, "2026-03-05T00:00:00.000Z", 50, "REMB FNAC");
     const { id } = await createLink({ transactionIds: [a, b], userId: owner });
     await expect(deleteLink(id, stranger)).rejects.toBeInstanceOf(LinkAccessError);
+  });
+});
+
+describe("suggestPairs", () => {
+  it("suggests an opposite pair within the user's window and respects ignore", async () => {
+    const a = await tx(accountId, "2026-03-02T00:00:00.000Z", -50, "CB FNAC");
+    const b = await tx(accountId, "2026-03-05T00:00:00.000Z", 50, "REMB FNAC");
+
+    const first = await suggestPairs(owner);
+    expect(first.map((p) => p.key)).toContain([a, b].sort().join("|"));
+    // Carries decrypted labels for display.
+    expect(first[0].positiveLabel).toBeTruthy();
+    expect(first[0].negativeLabel).toBeTruthy();
+
+    await ignoreSuggestion(owner, [a, b].sort().join("|"));
+    const second = await suggestPairs(owner);
+    expect(second.some((p) => p.key === [a, b].sort().join("|"))).toBe(false);
+  });
+
+  it("excludes transactions already linked", async () => {
+    const a = await tx(accountId, "2026-03-02T00:00:00.000Z", -70, "CB DARTY");
+    const b = await tx(accountId, "2026-03-04T00:00:00.000Z", 70, "REMB DARTY");
+    await createLink({ transactionIds: [a, b], userId: owner });
+    const pairs = await suggestPairs(owner);
+    expect(pairs.some((p) => p.key === [a, b].sort().join("|"))).toBe(false);
   });
 });
