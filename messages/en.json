@@ -286,6 +286,17 @@
       "FORBIDDEN": "Not allowed.",
       "NOT_FOUND": "Transaction not found.",
       "FAILED": "Failed. Try again."
+    },
+    "link": {
+      "mode": "Link mode",
+      "exit": "Exit",
+      "selected": "{count, plural, one {# selected} other {# selected}}",
+      "create": "Link",
+      "linked": "Linked",
+      "unlink": "Unlink",
+      "hint": "Select at least two transactions to link.",
+      "createdOk": "Transactions linked.",
+      "failed": "Linking failed."
     }
   },
   "import": {

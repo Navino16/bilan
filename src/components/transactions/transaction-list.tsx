@@ -9,6 +9,7 @@ import { categoryIndex } from "./category-tree";
 import { CreateRuleDialog } from "./create-rule-dialog";
 import { TransactionDetail, type AccountMeta, type DetailItem } from "./transaction-detail";
 import { recategorizeTransactionAction } from "@/server/transport/actions/transactions";
+import { createLinkAction } from "@/server/transport/actions/links";
 
 export type ListItem = {
   id: string;
@@ -21,6 +22,7 @@ export type ListItem = {
   accountId: string;
   accountName: string;
   categoryId: string | null;
+  linked: boolean;
 };
 
 export type AccountOption = {
@@ -76,6 +78,31 @@ export function TransactionList({
     categoryName: string;
     categoryColor: string | null;
   } | null>(null);
+
+  const tLink = useTranslations("transactions.link");
+  const [linkMode, setLinkMode] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [linkPending, startLinkTransition] = useTransition();
+
+  function togglePicked(id: string) {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function submitLink(formData: FormData) {
+    startLinkTransition(async () => {
+      const r = await createLinkAction(null, formData);
+      if (r?.ok) {
+        setPicked(new Set());
+        setLinkMode(false);
+        router.refresh();
+      }
+    });
+  }
 
   const catMeta = categoryIndex(categories);
   const accMeta: Record<string, AccountMeta> = Object.fromEntries(
@@ -141,6 +168,36 @@ export function TransactionList({
 
   return (
     <div className="space-y-5">
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setLinkMode((v) => !v);
+            setPicked(new Set());
+          }}
+          aria-pressed={linkMode}
+          className="border-border text-muted-foreground hover:text-foreground inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[0.8rem]"
+        >
+          {linkMode ? tLink("exit") : tLink("mode")}
+        </button>
+        {linkMode && (
+          <form action={submitLink} className="flex items-center gap-2">
+            <input type="hidden" name="transactionIds" value={[...picked].join(",")} />
+            <span className="text-muted-foreground text-[0.8rem]">
+              {tLink("selected", { count: picked.size })}
+            </span>
+            <button
+              type="submit"
+              disabled={picked.size < 2 || linkPending}
+              className="bg-primary text-primary-foreground inline-flex h-8 items-center rounded-lg px-3 text-[0.8rem] font-medium disabled:opacity-50"
+            >
+              {tLink("create")}
+            </button>
+          </form>
+        )}
+      </div>
+      {linkMode && <p className="text-muted-foreground text-xs">{tLink("hint")}</p>}
+
       {/* Desktop column header */}
       <div className="overflow-hidden rounded-xl border">
         <div
@@ -171,8 +228,10 @@ export function TransactionList({
                   key={it.id}
                   type="button"
                   data-slot="transaction-row"
-                  onClick={() => setSelectedId(it.id)}
-                  className={`w-full border-b text-left transition-colors last:border-b-0 ${isSel ? "bg-accent" : "hover:bg-muted/50"}`}
+                  onClick={() => (linkMode ? togglePicked(it.id) : setSelectedId(it.id))}
+                  aria-pressed={linkMode ? picked.has(it.id) : undefined}
+                  data-selected={linkMode && picked.has(it.id) ? "true" : undefined}
+                  className={`w-full border-b text-left transition-colors last:border-b-0 ${isSel ? "bg-accent" : "hover:bg-muted/50"} ${linkMode && picked.has(it.id) ? "ring-primary ring-2 ring-inset" : ""}`}
                 >
                   {/* Desktop grid */}
                   <span className="hidden items-center gap-3 px-4 py-2.5 md:grid md:grid-cols-[64px_1fr_minmax(0,180px)_minmax(0,140px)_92px_110px]">
@@ -182,6 +241,7 @@ export function TransactionList({
                     <span className="flex min-w-0 items-center gap-2.5">
                       <CategoryAvatar color={meta?.color} icon={meta?.icon} size={26} />
                       <span className="truncate text-sm">{it.label}</span>
+                      {it.linked && <Pill>{tLink("linked")}</Pill>}
                     </span>
                     <span className="min-w-0">
                       {meta ? (
@@ -206,7 +266,10 @@ export function TransactionList({
                   <span className="flex items-center gap-3 px-4 py-3 md:hidden">
                     <CategoryAvatar color={meta?.color} icon={meta?.icon} size={32} />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm">{it.label}</span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="truncate text-sm">{it.label}</span>
+                        {it.linked && <Pill>{tLink("linked")}</Pill>}
+                      </span>
                       <span className="text-muted-foreground block truncate text-xs">
                         {meta?.name ? `${meta.name} · ` : ""}
                         {it.accountName}

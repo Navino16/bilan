@@ -286,6 +286,17 @@
       "FORBIDDEN": "Action non autorisée.",
       "NOT_FOUND": "Transaction introuvable.",
       "FAILED": "Échec. Réessayez."
+    },
+    "link": {
+      "mode": "Mode lien",
+      "exit": "Quitter",
+      "selected": "{count, plural, one {# sélectionnée} other {# sélectionnées}}",
+      "create": "Lier",
+      "linked": "Liée",
+      "unlink": "Délier",
+      "hint": "Sélectionnez au moins deux transactions à lier.",
+      "createdOk": "Transactions liées.",
+      "failed": "Échec de la liaison."
     }
   },
   "import": {
