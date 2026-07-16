@@ -36,7 +36,11 @@ test.describe("transaction links", () => {
       await page.getByRole("button", { name: /mode lien/i }).click();
       await expect(page.getByText(/sélectionnez au moins deux/i)).toBeVisible();
     }).toPass();
-    await page.locator('[data-slot="transaction-row"]').filter({ hasText: expense }).first().click();
+    await page
+      .locator('[data-slot="transaction-row"]')
+      .filter({ hasText: expense })
+      .first()
+      .click();
     await page.locator('[data-slot="transaction-row"]').filter({ hasText: refund }).first().click();
     await page.getByRole("button", { name: /^lier$/i }).click();
 
