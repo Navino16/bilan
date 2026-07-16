@@ -81,6 +81,39 @@ describe("groups service", () => {
     await expect(removeMember(g.id, owner, { id: owner })).rejects.toBeInstanceOf(GroupAccessError);
   });
 
+  it("an ADMIN can only remove members ranked below them", async () => {
+    const g = await createGroup({ name: "Ranks" }, owner);
+    await db.groupMember.create({ data: { groupId: g.id, userId: admin, role: "ADMIN" } });
+    await db.groupMember.create({ data: { groupId: g.id, userId: member, role: "MEMBER" } });
+
+    // ADMIN cannot remove an OWNER (even though another owner would remain — here
+    // the owner is the last one, so this also guards the rank check, not just the
+    // last-owner check).
+    await expect(removeMember(g.id, owner, { id: admin })).rejects.toBeInstanceOf(GroupAccessError);
+
+    // ADMIN cannot remove a peer ADMIN.
+    const admin2 = await db.user.create({
+      data: { id: "grp_admin2", email: "grp_admin2@b.local" },
+    });
+    await db.groupMember.create({ data: { groupId: g.id, userId: admin2.id, role: "ADMIN" } });
+    await expect(removeMember(g.id, admin2.id, { id: admin })).rejects.toBeInstanceOf(
+      GroupAccessError,
+    );
+
+    // ADMIN can remove a MEMBER.
+    await removeMember(g.id, member, { id: admin });
+    expect((await getGroupDetail(g.id, owner)).members.some((m) => m.userId === member)).toBe(
+      false,
+    );
+
+    // OWNER can remove an ADMIN.
+    await removeMember(g.id, admin, { id: owner });
+    expect((await getGroupDetail(g.id, owner)).members.some((m) => m.userId === admin)).toBe(false);
+
+    await db.groupMember.deleteMany({ where: { userId: admin2.id } });
+    await db.user.delete({ where: { id: admin2.id } });
+  });
+
   it("lets a MEMBER leave, and an OWNER delete the group", async () => {
     const g = await createGroup({ name: "Leaveable" }, owner);
     await db.groupMember.create({ data: { groupId: g.id, userId: member, role: "MEMBER" } });
