@@ -189,6 +189,54 @@
       "FAILED": "Échec. Réessayez."
     }
   },
+  "budgets": {
+    "overline": "Planification",
+    "pageTitle": "Budgets",
+    "empty": "Aucun budget pour le moment.",
+    "create": "Nouveau budget",
+    "createTitle": "Nouveau budget",
+    "editTitle": "Modifier le budget",
+    "name": "Nom",
+    "namePlaceholder": "Budget de mars",
+    "scope": "Portée",
+    "scopePersonal": "Personnel",
+    "scopeGroup": "Foyer",
+    "period": "Période",
+    "periodStart": "Début",
+    "periodEnd": "Fin",
+    "periodType": {
+      "WEEK": "Semaine",
+      "MONTH": "Mois",
+      "QUARTER": "Trimestre",
+      "YEAR": "Année",
+      "CUSTOM": "Personnalisée"
+    },
+    "recurring": "Récurrent",
+    "lines": "Lignes",
+    "line": {
+      "category": "Catégorie",
+      "account": "Compte",
+      "label": "Libellé",
+      "planned": "Montant prévu",
+      "add": "Ajouter une ligne",
+      "remove": "Retirer",
+      "any": "Toutes"
+    },
+    "plannedTotal": "Total prévu",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "createCta": "Créer le budget",
+    "delete": "Supprimer",
+    "deleteConfirm": "Supprimer ce budget ?",
+    "cancel": "Annuler",
+    "error": {
+      "INVALID": "Vérifiez les champs.",
+      "INVALID_PERIOD": "La fin doit suivre le début.",
+      "FORBIDDEN": "Action non autorisée.",
+      "NOT_FOUND": "Budget introuvable.",
+      "FAILED": "Échec. Réessayez."
+    }
+  },
   "categories": {
     "title": "Catégories",
     "subtitle": "Organisez vos dépenses et revenus. Une catégorie appartient à vous ou à un foyer.",

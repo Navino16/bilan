@@ -189,6 +189,54 @@
       "FAILED": "Failed. Try again."
     }
   },
+  "budgets": {
+    "overline": "Planning",
+    "pageTitle": "Budgets",
+    "empty": "No budgets yet.",
+    "create": "New budget",
+    "createTitle": "New budget",
+    "editTitle": "Edit budget",
+    "name": "Name",
+    "namePlaceholder": "March budget",
+    "scope": "Scope",
+    "scopePersonal": "Personal",
+    "scopeGroup": "Household",
+    "period": "Period",
+    "periodStart": "Start",
+    "periodEnd": "End",
+    "periodType": {
+      "WEEK": "Week",
+      "MONTH": "Month",
+      "QUARTER": "Quarter",
+      "YEAR": "Year",
+      "CUSTOM": "Custom"
+    },
+    "recurring": "Recurring",
+    "lines": "Lines",
+    "line": {
+      "category": "Category",
+      "account": "Account",
+      "label": "Label",
+      "planned": "Planned amount",
+      "add": "Add a line",
+      "remove": "Remove",
+      "any": "Any"
+    },
+    "plannedTotal": "Planned total",
+    "save": "Save",
+    "saving": "Saving…",
+    "createCta": "Create budget",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this budget?",
+    "cancel": "Cancel",
+    "error": {
+      "INVALID": "Check the fields.",
+      "INVALID_PERIOD": "End must be after start.",
+      "FORBIDDEN": "Not allowed.",
+      "NOT_FOUND": "Budget not found.",
+      "FAILED": "Failed. Try again."
+    }
+  },
   "categories": {
     "title": "Categories",
     "subtitle": "Organize your spending and income. A category belongs to you or to a household.",
