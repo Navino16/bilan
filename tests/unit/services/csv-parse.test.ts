@@ -34,6 +34,17 @@ describe("normalizeDate", () => {
     expect(normalizeDate("2026-02-01")?.toISOString().slice(0, 10)).toBe("2026-02-01");
     expect(normalizeDate("not a date")).toBeNull();
   });
+
+  it("rejects impossible calendar dates instead of rolling them over", () => {
+    // JS Date would silently turn "31/02/2026" into 2026-03-03.
+    expect(normalizeDate("31/02/2026")).toBeNull();
+    expect(normalizeDate("32/01/2026")).toBeNull();
+    expect(normalizeDate("00/01/2026")).toBeNull();
+    expect(normalizeDate("2026-02-31")).toBeNull();
+    expect(normalizeDate("2026-13-01")).toBeNull();
+    // A real leap day stays valid.
+    expect(normalizeDate("29/02/2028")?.toISOString().slice(0, 10)).toBe("2028-02-29");
+  });
 });
 
 describe("parseCsv + detectMapping", () => {

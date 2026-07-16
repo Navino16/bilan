@@ -1,3 +1,4 @@
+import { utcDayFromParts } from "../csv-parse";
 import type { NormalizedRow } from "../types";
 import type { TextItem } from "./extract";
 
@@ -47,7 +48,8 @@ export function parseLclItems(items: TextItem[]): NormalizedRow[] {
       const vm = VAL_DATE.exec(val.str)!;
       const om = OP_DATE.exec(op.str)!;
       const year = 2000 + Number(vm[3]); // value date carries the year; op date the day/month
-      const date = new Date(`${year}-${om[2]}-${om[1]}T00:00:00.000Z`);
+      const date = utcDayFromParts(year, Number(om[2]), Number(om[1]));
+      if (!date) continue;
 
       const magnitude = toNumber(amt.str);
       const isCredit = Math.abs(amt.x - creditH.x) < Math.abs(amt.x - debitH.x);

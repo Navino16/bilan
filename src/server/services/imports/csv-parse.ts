@@ -65,13 +65,24 @@ export function normalizeAmount(raw: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-// dd/mm/yyyy or yyyy-mm-dd → UTC midnight Date; else null.
+// Builds a UTC-midnight Date from calendar parts, rejecting impossible dates:
+// `new Date("2026-02-31T…")` silently rolls over to 2026-03-03, so we verify the
+// constructed date's fields round-trip back to the inputs.
+export function utcDayFromParts(year: number, month: number, day: number): Date | null {
+  const dt = new Date(Date.UTC(year, month - 1, day));
+  if (dt.getUTCFullYear() !== year || dt.getUTCMonth() !== month - 1 || dt.getUTCDate() !== day) {
+    return null;
+  }
+  return dt;
+}
+
+// dd/mm/yyyy or yyyy-mm-dd → UTC midnight Date; invalid/garbage → null.
 export function normalizeDate(raw: string): Date | null {
   const s = raw.trim();
   const fr = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s);
-  if (fr) return new Date(`${fr[3]}-${fr[2]}-${fr[1]}T00:00:00.000Z`);
+  if (fr) return utcDayFromParts(Number(fr[3]), Number(fr[2]), Number(fr[1]));
   const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-  if (iso) return new Date(`${iso[1]}-${iso[2]}-${iso[3]}T00:00:00.000Z`);
+  if (iso) return utcDayFromParts(Number(iso[1]), Number(iso[2]), Number(iso[3]));
   return null;
 }
 
