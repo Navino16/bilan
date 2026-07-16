@@ -3,6 +3,7 @@ import { db } from "@/server/db";
 import {
   createSignupToken,
   consumeSignupToken,
+  refundSignupToken,
   revokeSignupToken,
 } from "@/server/services/signup-tokens";
 
@@ -50,5 +51,20 @@ describe("signup tokens", () => {
 
   it("consume() returns false for an unknown token", async () => {
     expect((await consumeSignupToken("does-not-exist")).ok).toBe(false);
+  });
+
+  it("refund() restores a consumed use so a single-use token works again", async () => {
+    const t = await createSignupToken({ description: "refund", maxUses: 1, createdById: adminId });
+    expect((await consumeSignupToken(t.token)).ok).toBe(true);
+    expect((await consumeSignupToken(t.token)).ok).toBe(false); // exhausted
+    await refundSignupToken(t.token);
+    expect((await consumeSignupToken(t.token)).ok).toBe(true); // usable again
+  });
+
+  it("refund() never drives usedCount below zero", async () => {
+    const t = await createSignupToken({ description: "refund0", maxUses: 3, createdById: adminId });
+    await refundSignupToken(t.token); // nothing consumed yet
+    const row = await db.adminSignupToken.findUnique({ where: { token: t.token } });
+    expect(row?.usedCount).toBe(0);
   });
 });

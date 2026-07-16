@@ -39,6 +39,17 @@ export async function consumeSignupToken(token: string): Promise<{ ok: boolean }
   return { ok: count === 1 };
 }
 
+// Gives back a use previously taken by consumeSignupToken — called when the
+// signup that consumed it ultimately fails, so a single-use invite is not burned
+// on a recoverable error (duplicate email, weak password). Guarded so it can
+// never drive usedCount below zero.
+export async function refundSignupToken(token: string): Promise<void> {
+  await db.adminSignupToken.updateMany({
+    where: { token, usedCount: { gt: 0 } },
+    data: { usedCount: { decrement: 1 } },
+  });
+}
+
 export async function revokeSignupToken(id: string): Promise<void> {
   await db.adminSignupToken.update({ where: { id }, data: { revokedAt: new Date() } });
 }
