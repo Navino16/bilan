@@ -68,6 +68,22 @@ describe("rules management", () => {
     expect(await db.categorizationRule.findUnique({ where: { id } })).toBeNull();
   });
 
+  it("rejects a rule pointing at a category the actor cannot see", async () => {
+    const foreign = (await db.category.create({ data: { name: "Foreign", userId: stranger } })).id;
+    await expect(
+      createRule({ pattern: "x", matchType: "CONTAINS", categoryId: foreign }, { id: owner }),
+    ).rejects.toBeInstanceOf(RuleAccessError);
+    // updating an own rule to a foreign category is rejected too
+    const { id } = await createRule(
+      { pattern: "ok", matchType: "CONTAINS", categoryId: catA },
+      { id: owner },
+    );
+    await expect(
+      updateRule(id, { pattern: "ok", matchType: "CONTAINS", categoryId: foreign }, { id: owner }),
+    ).rejects.toBeInstanceOf(RuleAccessError);
+    await db.category.delete({ where: { id: foreign } });
+  });
+
   it("forbids managing another user's rule", async () => {
     const { id } = await createRule(
       { pattern: "mine", matchType: "CONTAINS", categoryId: catA },

@@ -102,4 +102,24 @@ describe("categories service", () => {
     expect(node.children.some((c) => c.name === "Child")).toBe(true);
     expect(tree.some((c) => c.scope === "GROUP")).toBe(true);
   });
+
+  it("rejects reparenting onto a category from another scope", async () => {
+    const mine = await createCategory({ name: "Reparent me" }, { id: owner });
+    // stranger's personal category — a different owner scope.
+    const foreign = await createCategory({ name: "Foreign" }, { id: stranger });
+    await expect(
+      updateCategory(mine.id, { name: "Reparent me", parentId: foreign.id }, { id: owner }),
+    ).rejects.toBeInstanceOf(CategoryAccessError);
+    await db.category.deleteMany({ where: { id: { in: [mine.id, foreign.id] } } });
+  });
+
+  it("rejects reparenting that would create a cycle", async () => {
+    const a = await createCategory({ name: "A" }, { id: owner });
+    const b = await createCategory({ name: "B", parentId: a.id }, { id: owner });
+    // Making A a child of its own descendant B is a cycle.
+    await expect(
+      updateCategory(a.id, { name: "A", parentId: b.id }, { id: owner }),
+    ).rejects.toBeInstanceOf(CategoryAccessError);
+    await db.category.deleteMany({ where: { id: { in: [b.id, a.id] } } });
+  });
 });

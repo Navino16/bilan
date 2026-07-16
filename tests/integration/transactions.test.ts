@@ -81,6 +81,27 @@ describe("createTransaction", () => {
     ).rejects.toBeInstanceOf(TransactionAccessError);
   });
 
+  it("rejects creating a transaction with a category the actor cannot see", async () => {
+    // A category owned by the stranger must not be assignable by the owner.
+    const foreign = await db.category.create({
+      data: { name: "Foreign", userId: stranger },
+    });
+    await expect(
+      createTransaction(
+        {
+          accountId,
+          date: "2026-01-14",
+          amount: -3,
+          type: "CARD",
+          label: "Y",
+          categoryId: foreign.id,
+        },
+        { id: owner },
+      ),
+    ).rejects.toBeInstanceOf(TransactionAccessError);
+    await db.category.delete({ where: { id: foreign.id } });
+  });
+
   it("getTransactionForUser returns a decrypted view for the owner and null for a stranger", async () => {
     const { id } = await createTransaction(
       { accountId, date: "2026-01-13", amount: -7, type: "CARD", label: "Boulangerie" },

@@ -1,11 +1,24 @@
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import { requireGroupRole } from "@/server/services/groups/roles";
+import { assertCategoryAssignable, CategoryAccessError } from "@/server/services/categories";
 import { ruleInputSchema, type RuleInput } from "@/lib/validation/rule";
 import { pickByPriority, proposeRule, type Rule } from "./match";
 import type { RuleMatchType } from "@/lib/validation/rule";
 
 export class RuleAccessError extends Error {}
+
+// Rejects a rule categoryId the actor cannot see (a forged id pointing at another
+// user's private category). The category must be one the actor can see — their
+// own or one of their groups'. Surfaced as RuleAccessError.
+async function assertRuleCategory(categoryId: string, actorId: string): Promise<void> {
+  try {
+    await assertCategoryAssignable(categoryId, actorId);
+  } catch (e) {
+    if (e instanceof CategoryAccessError) throw new RuleAccessError("INVALID_CATEGORY");
+    throw e;
+  }
+}
 
 export type Suggestion = { categoryId: string | null; ruleId: string | null };
 export type Scope = { userId: string };
@@ -59,6 +72,7 @@ export async function createRule(input: RuleInput, actor: { id: string }): Promi
       throw new RuleAccessError("FORBIDDEN");
     }
   }
+  await assertRuleCategory(data.categoryId, actor.id);
   const rule = await db.categorizationRule.create({
     data: {
       pattern: data.pattern,
@@ -121,6 +135,7 @@ export async function updateRule(
 ): Promise<void> {
   await loadManageableRule(id, actor.id);
   const data = ruleInputSchema.parse(input);
+  await assertRuleCategory(data.categoryId, actor.id);
   await db.categorizationRule.update({
     where: { id },
     data: {
