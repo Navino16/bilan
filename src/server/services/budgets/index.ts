@@ -4,13 +4,7 @@ import { logEvent } from "@/server/services/audit";
 import { listVisibleForUser } from "@/server/services/accounts";
 import { canReadAccount } from "@/server/services/accounts/sharing";
 import { collapseLinkedRows } from "@/lib/links";
-import {
-  budgetPlannedTotal,
-  lineStatus,
-  nextPeriod,
-  round2,
-  type LineStatus,
-} from "@/lib/budgets";
+import { budgetPlannedTotal, lineStatus, nextPeriod, round2, type LineStatus } from "@/lib/budgets";
 import {
   budgetInputSchema,
   type BudgetInput,
@@ -177,10 +171,7 @@ export type BudgetListItem = {
 
 // True when the actor may manage a budget of this scope: a personal budget is
 // managed by its owner; a group budget requires ADMIN or OWNER in that group.
-function canManageBudget(
-  groupId: string | null,
-  roleByGroup: Map<string, string>,
-): boolean {
+function canManageBudget(groupId: string | null, roleByGroup: Map<string, string>): boolean {
   if (!groupId) return true;
   const role = roleByGroup.get(groupId);
   return role === "ADMIN" || role === "OWNER";
@@ -204,7 +195,9 @@ export async function listBudgetsForUser(userId: string): Promise<BudgetListItem
     periodStart: b.periodStart,
     periodEnd: b.periodEnd,
     recurring: b.recurring,
-    plannedTotal: budgetPlannedTotal(b.lines.map((l) => ({ plannedAmount: Number(l.plannedAmount) }))),
+    plannedTotal: budgetPlannedTotal(
+      b.lines.map((l) => ({ plannedAmount: Number(l.plannedAmount) })),
+    ),
     ended: b.periodEnd.getTime() < now,
     canManage: canManageBudget(b.groupId, roleByGroup),
   }));
