@@ -82,6 +82,7 @@
     },
     "nav": {
       "dashboard": "Dashboard",
+      "insights": "Insights",
       "transactions": "Transactions",
       "import": "Import",
       "budgets": "Budgets",

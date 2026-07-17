@@ -82,6 +82,7 @@
     },
     "nav": {
       "dashboard": "Tableau de bord",
+      "insights": "Analyses",
       "transactions": "Transactions",
       "import": "Importer",
       "budgets": "Budgets",
@@ -577,6 +578,15 @@
       "custom": "Personnalisé"
     },
     "apply": "Appliquer"
+  },
+  "insights": {
+    "overline": "Analyses",
+    "pageTitle": "Analyses",
+    "byCategory": "Par catégorie",
+    "trend": "Tendance",
+    "noData": "Pas de données sur cette période.",
+    "noCategory": "Sans catégorie",
+    "spentThisPeriod": "dépensés sur la période"
   },
   "admin": {
     "title": "Administration",
