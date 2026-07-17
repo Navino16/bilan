@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { createGroupAction, updateGroupAction } from "@/server/transport/actions/groups";
 
@@ -115,27 +115,30 @@ export function GroupForm({
     </>
   );
 
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        if (!next) setError(null);
-      }}
-    >
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) setError(null);
+  };
+
+  // Swap the whole root: a centered Dialog on desktop, a bottom Sheet on mobile.
+  // (A Sheet popup under a Dialog root doesn't open — the root and its content
+  // must come from the same primitive family.)
+  return isMobile ? (
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      {trigger && <SheetTrigger render={trigger as React.ReactElement} />}
+      <SheetContent
+        side="bottom"
+        className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden rounded-t-2xl p-0"
+      >
+        {body}
+      </SheetContent>
+    </Sheet>
+  ) : (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       {trigger && <DialogTrigger render={trigger as React.ReactElement} />}
-      {isMobile ? (
-        <SheetContent
-          side="bottom"
-          className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden rounded-t-2xl p-0"
-        >
-          {body}
-        </SheetContent>
-      ) : (
-        <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0">
-          {body}
-        </DialogContent>
-      )}
+      <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0">
+        {body}
+      </DialogContent>
     </Dialog>
   );
 }
