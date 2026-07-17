@@ -3,7 +3,9 @@
 const EPSILON = 0.005;
 
 export function round2(n: number): number {
-  return Math.round(n * 100) / 100;
+  // `+ 0` normalizes a negative zero (e.g. from `-sum` when sum is 0) to +0 so
+  // callers comparing with Object.is / toBe(0) don't trip on -0.
+  return Math.round(n * 100) / 100 + 0;
 }
 
 // Planned total of a budget = sum of its lines' planned amounts.

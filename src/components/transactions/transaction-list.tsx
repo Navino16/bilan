@@ -7,7 +7,12 @@ import { CategoryAvatar, CategoryChip, Pill } from "./bits";
 import { type FlatCategory } from "./category-picker";
 import { categoryIndex } from "./category-tree";
 import { CreateRuleDialog } from "./create-rule-dialog";
-import { TransactionDetail, type AccountMeta, type DetailItem } from "./transaction-detail";
+import {
+  TransactionDetail,
+  type AccountMeta,
+  type DetailItem,
+  type AssignableBudget,
+} from "./transaction-detail";
 import { recategorizeTransactionAction } from "@/server/transport/actions/transactions";
 import { createLinkAction } from "@/server/transport/actions/links";
 
@@ -61,10 +66,12 @@ export function TransactionList({
   items,
   categories,
   accounts,
+  budgets = [],
 }: {
   items: ListItem[];
   categories: FlatCategory[];
   accounts: AccountOption[];
+  budgets?: AssignableBudget[];
 }) {
   const t = useTranslations("transactions");
   const locale = useLocale();
@@ -295,6 +302,7 @@ export function TransactionList({
         item={detailItem}
         accounts={accMeta}
         categories={categories}
+        budgets={budgets}
         side={isMobile ? "bottom" : "right"}
         onClose={() => setSelectedId(null)}
         onRecategorize={(categoryId) => selected && recategorize(selected, categoryId)}

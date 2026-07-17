@@ -39,4 +39,59 @@ test.describe("budgets", () => {
     await expect(page.getByText("250,00", { exact: false }).first()).toBeVisible();
     await expect(page.getByText(/dans le budget/i).first()).toBeVisible();
   });
+
+  test("assigns a non-matching transaction to a budget (INCLUDE) and it counts", async ({
+    page,
+  }) => {
+    const stamp = Date.now();
+    const txLabel = `Assign ${stamp}`;
+    const budgetName = `Enveloppe ${stamp}`;
+
+    // 1) Seed an expense (no category → won't auto-match) on the first account.
+    await page.goto("/fr/accounts");
+    await expect(async () => {
+      await page
+        .getByRole("button", { name: /saisir une transaction/i })
+        .first()
+        .click();
+      await expect(page.locator('input[name="label"]')).toBeVisible();
+    }).toPass();
+    await page.fill('input[name="date"]', "2026-03-15");
+    await page.fill('input[name="amount"]', "-60");
+    await page.fill('input[name="label"]', txLabel);
+    await page.getByRole("button", { name: /^ajouter$/i }).click();
+    await expect(page.locator('input[name="label"]')).toBeHidden();
+
+    // 2) Create a budget with a single unfiltered line (INCLUDE-only spend).
+    await page.goto("/fr/budgets");
+    await expect(async () => {
+      await page.getByRole("button", { name: /nouveau budget/i }).click();
+      await expect(page.locator('input[name="name"]')).toBeVisible();
+    }).toPass();
+    await page.fill('input[name="name"]', budgetName);
+    await page.fill('input[name="periodStart"]', "2026-03-01");
+    await page.fill('input[name="periodEnd"]', "2026-03-31");
+    await page.fill('input[name="plannedAmount"]', "200");
+    await page.getByRole("button", { name: /créer le budget/i }).click();
+    await expect(page.getByText(budgetName).first()).toBeVisible({ timeout: 15_000 });
+
+    // 3) Open the seeded transaction and assign it INCLUDE to the budget.
+    await page.goto("/fr/transactions");
+    await page
+      .locator('[data-slot="transaction-row"]')
+      .filter({ hasText: txLabel })
+      .first()
+      .click({ timeout: 15_000 });
+    await page.getByLabel(/choisir un budget/i).selectOption({ label: budgetName });
+    await page.getByRole("button", { name: /^inclure$/i }).click();
+    await expect(page.getByText(/incluse/i).first()).toBeVisible({ timeout: 15_000 });
+
+    // 4) The budget detail now reflects the included spend (60,00 €).
+    await page.goto("/fr/budgets");
+    await page.getByText(budgetName).first().click();
+    await expect(page.getByRole("heading", { name: budgetName })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("60,00", { exact: false }).first()).toBeVisible({
+      timeout: 15_000,
+    });
+  });
 });
