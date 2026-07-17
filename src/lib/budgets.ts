@@ -1,5 +1,7 @@
 // Pure budget math — no DB. Amounts are euros as numbers; compare with epsilon.
 
+import type { BudgetPeriodType } from "@/lib/validation/budget";
+
 const EPSILON = 0.005;
 
 export function round2(n: number): number {
@@ -33,4 +35,37 @@ export function lineStatus(plannedAmount: number, spent: number): LineStatus {
   const status: BudgetStatus =
     spent > plannedAmount + EPSILON ? "OVER" : percent >= 80 ? "WARN" : "OK";
   return { plannedAmount: round2(plannedAmount), spent: round2(spent), remaining, percent, status };
+}
+
+const DAY = 86_400_000;
+const lastDayUtc = (y: number, m0: number) => new Date(Date.UTC(y, m0 + 1, 0)).getUTCDate();
+
+// The period immediately after [start, end] for a budget of the given type.
+// MONTH/QUARTER/YEAR step by calendar unit; WEEK/CUSTOM step by the window
+// length so the span is preserved. Bounds stay UTC-inclusive.
+export function nextPeriod(
+  periodType: BudgetPeriodType,
+  start: Date,
+  end: Date,
+): { start: Date; end: Date } {
+  if (periodType === "MONTH" || periodType === "QUARTER" || periodType === "YEAR") {
+    const months = periodType === "MONTH" ? 1 : periodType === "QUARTER" ? 3 : 12;
+    const y = start.getUTCFullYear();
+    const m0 = start.getUTCMonth();
+    const zeroFrom = y * 12 + m0 + months;
+    const zeroTo = zeroFrom + months - 1;
+    const sy = Math.floor(zeroFrom / 12);
+    const sm0 = ((zeroFrom % 12) + 12) % 12;
+    const ey = Math.floor(zeroTo / 12);
+    const em0 = ((zeroTo % 12) + 12) % 12;
+    return {
+      start: new Date(Date.UTC(sy, sm0, 1, 0, 0, 0, 0)),
+      end: new Date(Date.UTC(ey, em0, lastDayUtc(ey, em0), 23, 59, 59, 999)),
+    };
+  }
+  // WEEK / CUSTOM → shift both bounds by the window length in whole days.
+  const lengthDays = Math.round((end.getTime() - start.getTime() + 1) / DAY);
+  const nextStart = new Date(start.getTime() + lengthDays * DAY);
+  const nextEnd = new Date(end.getTime() + lengthDays * DAY);
+  return { start: nextStart, end: nextEnd };
 }
