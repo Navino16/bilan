@@ -10,7 +10,9 @@ let groupId: string;
 beforeAll(async () => {
   await db.user.deleteMany({ where: { id: userId } });
   await db.group.deleteMany({ where: { createdById: userId } });
-  await db.user.create({ data: { id: userId, email: "rgpd-owner@bilan.local", name: "RGPD Owner" } });
+  await db.user.create({
+    data: { id: userId, email: "rgpd-owner@bilan.local", name: "RGPD Owner" },
+  });
 
   accountId = (
     await db.bankAccount.create({ data: { ownerId: userId, name: "Courant", type: "CHECKING" } })

@@ -90,6 +90,7 @@
       "categories": "Categories",
       "groups": "Households",
       "settings": "Settings",
+      "data": "Data",
       "admin": "Administration"
     },
     "userMenu": {
@@ -578,6 +579,39 @@
       "custom": "Custom"
     },
     "apply": "Apply"
+  },
+  "insights": {
+    "overline": "Insights",
+    "pageTitle": "Insights",
+    "byCategory": "By category",
+    "trend": "Trend",
+    "noData": "No data for this period.",
+    "noCategory": "Uncategorised",
+    "spentThisPeriod": "spent this period"
+  },
+  "settings": {
+    "data": {
+      "overline": "Account",
+      "title": "Data",
+      "subtitle": "Export your data or permanently delete your account.",
+      "exportOverline": "Export",
+      "exportTitle": "Export my data",
+      "exportHint": "Download your transactions as CSV, or your full data (GDPR) as JSON.",
+      "exportCsv": "Transactions (CSV)",
+      "exportJson": "All my data (JSON)",
+      "dangerZone": "Danger zone",
+      "deleteTitle": "Delete my account",
+      "deleteWarning": "This action is irreversible: all your data will be permanently deleted.",
+      "passwordLabel": "Password",
+      "cancel": "Cancel",
+      "deleting": "Deleting…",
+      "confirmDelete": "Delete permanently",
+      "error": {
+        "INVALID": "Please enter your password.",
+        "BAD_PASSWORD": "Incorrect password.",
+        "FAILED": "Deletion failed. Please try again."
+      }
+    }
   },
   "admin": {
     "title": "Administration",

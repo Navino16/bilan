@@ -29,21 +29,30 @@ export type UserDataExport = {
 // Gathers the full data graph a user is entitled to under RGPD, decrypting the
 // transaction labels/notes. Read-only. Callers stream the result as JSON.
 export async function exportUserData(userId: string): Promise<UserDataExport> {
-  const [user, preference, accounts, categories, rules, budgets, memberships, invitationsSent, auditLog] =
-    await Promise.all([
-      db.user.findUniqueOrThrow({
-        where: { id: userId },
-        select: { id: true, email: true, name: true, createdAt: true },
-      }),
-      db.userPreference.findUnique({ where: { userId } }),
-      db.bankAccount.findMany({ where: { ownerId: userId } }),
-      db.category.findMany({ where: { userId } }),
-      db.categorizationRule.findMany({ where: { userId } }),
-      db.budget.findMany({ where: { userId }, include: { lines: true, assignments: true } }),
-      db.groupMember.findMany({ where: { userId }, include: { group: true } }),
-      db.groupInvitation.findMany({ where: { invitedById: userId } }),
-      db.auditLog.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 5000 }),
-    ]);
+  const [
+    user,
+    preference,
+    accounts,
+    categories,
+    rules,
+    budgets,
+    memberships,
+    invitationsSent,
+    auditLog,
+  ] = await Promise.all([
+    db.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { id: true, email: true, name: true, createdAt: true },
+    }),
+    db.userPreference.findUnique({ where: { userId } }),
+    db.bankAccount.findMany({ where: { ownerId: userId } }),
+    db.category.findMany({ where: { userId } }),
+    db.categorizationRule.findMany({ where: { userId } }),
+    db.budget.findMany({ where: { userId }, include: { lines: true, assignments: true } }),
+    db.groupMember.findMany({ where: { userId }, include: { group: true } }),
+    db.groupInvitation.findMany({ where: { invitedById: userId } }),
+    db.auditLog.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 5000 }),
+  ]);
 
   const accountIds = accounts.map((a) => a.id);
   const txRows = accountIds.length
