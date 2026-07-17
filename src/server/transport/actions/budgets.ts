@@ -10,6 +10,7 @@ import {
   assignTransaction,
   unassignTransaction,
   listAssignmentsForTx,
+  rollRecurring,
   BudgetAccessError,
 } from "@/server/services/budgets";
 import { budgetInputSchema } from "@/lib/validation/budget";
@@ -137,4 +138,19 @@ export async function listAssignmentsForTxAction(
   if (!txRow) return [];
   if (!(await canReadAccount(user.id, txRow.accountId))) return [];
   return listAssignmentsForTx(transactionId);
+}
+
+export async function rollRecurringAction(
+  _prev: BudgetActionState,
+  formData: FormData,
+): Promise<BudgetActionState> {
+  const user = await requireSession();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { ok: false, error: "INVALID" };
+  try {
+    const r = await rollRecurring(id, { id: user.id });
+    return { ok: true, id: r.id };
+  } catch (e) {
+    return { ok: false, error: mapError(e) };
+  }
 }

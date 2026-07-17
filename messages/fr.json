@@ -266,7 +266,10 @@
       "assigned": "Assignée",
       "modeINCLUDE": "Incluse",
       "modeEXCLUDE": "Exclue"
-    }
+    },
+    "roll": "Renouveler",
+    "rolledOk": "Instance créée.",
+    "ended": "Période terminée"
   },
   "categories": {
     "title": "Catégories",
