@@ -71,4 +71,14 @@ describe("nextPeriod", () => {
     expect(p.start.toISOString()).toBe("2026-03-09T00:00:00.000Z");
     expect(p.end.toISOString()).toBe("2026-03-15T23:59:59.999Z");
   });
+  it("shifts a MONTH with non-calendar bounds by its span (no gap/overlap)", () => {
+    // 15 Jan – 14 Feb (31-day window) is not a calendar month → span-preserving.
+    const p = nextPeriod(
+      "MONTH",
+      new Date("2026-01-15T00:00:00.000Z"),
+      new Date("2026-02-14T23:59:59.999Z"),
+    );
+    expect(p.start.toISOString()).toBe("2026-02-15T00:00:00.000Z");
+    expect(p.end.toISOString()).toBe("2026-03-17T23:59:59.999Z");
+  });
 });
