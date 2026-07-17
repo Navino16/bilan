@@ -140,7 +140,7 @@ export function BudgetForm({
           <DialogTitle className="font-display text-2xl">
             {mode === "create" ? t("createTitle") : t("editTitle")}
           </DialogTitle>
-          <DialogDescription>{t("period")}</DialogDescription>
+          <DialogDescription>{t("subtitle")}</DialogDescription>
         </DialogHeader>
 
         <form action={handleAction} className="flex min-h-0 flex-1 flex-col">
@@ -270,7 +270,7 @@ export function BudgetForm({
                     step="0.01"
                     min="0"
                     inputMode="decimal"
-                    placeholder={t("line.planned")}
+                    placeholder="0,00"
                     aria-label={t("line.planned")}
                     value={line.plannedAmount}
                     onChange={(e) => updateLine(i, { plannedAmount: e.target.value })}
