@@ -297,3 +297,124 @@ describe("rollRecurring", () => {
     await expect(rollRecurring(id, { id: owner })).rejects.toBeInstanceOf(BudgetAccessError);
   });
 });
+
+describe("hardening (group scope, dedup, links, out-of-period, canManage)", () => {
+  let sharedAccountId: string;
+  let otherCatId: string;
+
+  beforeAll(async () => {
+    sharedAccountId = (
+      await db.bankAccount.create({ data: { ownerId: owner, name: "Partagé", type: "CHECKING" } })
+    ).id;
+    await db.accountShare.create({
+      data: { accountId: sharedAccountId, groupId, permission: "READ", createdById: owner },
+    });
+    otherCatId = (await db.category.create({ data: { userId: owner, name: "Autre" } })).id;
+  });
+
+  afterAll(async () => {
+    await db.transaction.deleteMany({ where: { accountId: sharedAccountId } });
+    await db.accountShare.deleteMany({ where: { accountId: sharedAccountId } });
+    await db.bankAccount.deleteMany({ where: { id: sharedAccountId } });
+    await db.category.deleteMany({ where: { id: otherCatId } });
+  });
+
+  beforeEach(async () => {
+    await db.budgetAssignment.deleteMany({});
+    await db.transactionLinkMember.deleteMany({});
+    await db.transactionLink.deleteMany({});
+    await db.transaction.deleteMany({ where: { accountId: { in: [accountId, sharedAccountId] } } });
+  });
+
+  async function txOn(
+    account: string,
+    date: string,
+    amount: number,
+    categoryId: string | null,
+  ): Promise<string> {
+    const s = buildSecureFields({ label: "T", rawLabel: "T" });
+    const row = await db.transaction.create({
+      data: {
+        accountId: account,
+        date: new Date(date),
+        amount,
+        type: "OTHER",
+        labelEnc: s.labelEnc,
+        labelHash: s.labelHash,
+        rawLabelEnc: s.rawLabelEnc,
+        rawLabelHash: s.rawLabelHash,
+        categoryId,
+        createdById: owner,
+      },
+    });
+    return row.id;
+  }
+
+  it("#1 group budget counts only the group's shared accounts, not a member's personal account", async () => {
+    await txOn(sharedAccountId, "2026-03-05T00:00:00.000Z", -50, catId); // shared → counts
+    await txOn(accountId, "2026-03-06T00:00:00.000Z", -30, catId); // personal (unshared) → must NOT count
+    const { id } = await createBudget(
+      { ...baseInput, groupId, lines: [{ categoryId: catId, plannedAmount: 200 }] },
+      { id: owner },
+    );
+    const detail = await getBudgetDetail(id, owner);
+    expect(detail.lines[0].spent).toBe(50);
+    expect(detail.spentTotal).toBe(50);
+  });
+
+  it("#2 spentTotal counts a tx once and an INCLUDE with no matching line lands on the first line only", async () => {
+    const t = await txOn(accountId, "2026-03-07T00:00:00.000Z", -50, null); // no category
+    const { id } = await createBudget(
+      {
+        ...baseInput,
+        lines: [
+          { categoryId: catId, plannedAmount: 100 },
+          { categoryId: otherCatId, plannedAmount: 100 },
+        ],
+      },
+      { id: owner },
+    );
+    await assignTransaction({ budgetId: id, transactionId: t, mode: "INCLUDE" }, { id: owner });
+    const detail = await getBudgetDetail(id, owner);
+    expect(detail.lines[0].spent).toBe(50); // attributed to the first line
+    expect(detail.lines[1].spent).toBe(0); // not double-counted onto the second line
+    expect(detail.spentTotal).toBe(50); // counted once overall
+  });
+
+  it("#3 nets a link split across categories (offsetting member kept)", async () => {
+    const e = await txOn(accountId, "2026-03-03T00:00:00.000Z", -100, catId);
+    const r = await txOn(accountId, "2026-03-04T00:00:00.000Z", 30, otherCatId); // different category
+    await createLink({ transactionIds: [e, r], userId: owner });
+    const { id } = await createBudget(
+      { ...baseInput, lines: [{ categoryId: catId, plannedAmount: 100 }] },
+      { id: owner },
+    );
+    const detail = await getBudgetDetail(id, owner);
+    expect(detail.lines[0].spent).toBe(70); // net −70, not −100
+  });
+
+  it("#4 an INCLUDE outside the budget period still counts", async () => {
+    const t = await txOn(accountId, "2026-02-15T00:00:00.000Z", -25, null); // before March
+    const { id } = await createBudget(
+      { ...baseInput, lines: [{ categoryId: catId, plannedAmount: 100 }] },
+      { id: owner },
+    );
+    await assignTransaction({ budgetId: id, transactionId: t, mode: "INCLUDE" }, { id: owner });
+    const detail = await getBudgetDetail(id, owner);
+    expect(detail.lines[0].spent).toBe(25);
+  });
+
+  it("#6 canManage is false for a non-admin group member, true for the owner", async () => {
+    await createBudget({ ...baseInput, groupId }, { id: owner });
+    // Add stranger as a plain MEMBER of the group.
+    await db.groupMember.create({ data: { groupId, userId: stranger, role: "MEMBER" } });
+    try {
+      const asMember = (await listBudgetsForUser(stranger)).find((b) => b.groupId === groupId);
+      expect(asMember?.canManage).toBe(false);
+      const asOwner = (await listBudgetsForUser(owner)).find((b) => b.groupId === groupId);
+      expect(asOwner?.canManage).toBe(true);
+    } finally {
+      await db.groupMember.deleteMany({ where: { groupId, userId: stranger } });
+    }
+  });
+});

@@ -89,7 +89,7 @@ export function BudgetsView({
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
-                    {b.recurring && b.ended && (
+                    {b.recurring && b.ended && b.canManage && (
                       <Button
                         type="button"
                         size="sm"

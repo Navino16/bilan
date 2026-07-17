@@ -41,8 +41,10 @@ const DAY = 86_400_000;
 const lastDayUtc = (y: number, m0: number) => new Date(Date.UTC(y, m0 + 1, 0)).getUTCDate();
 
 // The period immediately after [start, end] for a budget of the given type.
-// MONTH/QUARTER/YEAR step by calendar unit; WEEK/CUSTOM step by the window
-// length so the span is preserved. Bounds stay UTC-inclusive.
+// MONTH/QUARTER/YEAR step by calendar unit **only when the bounds are actually
+// calendar-aligned** (1st 00:00:00.000 → last-day 23:59:59.999); otherwise —
+// like WEEK/CUSTOM — they shift by the window length so the span is preserved
+// and consecutive instances neither gap nor overlap. Bounds stay UTC-inclusive.
 export function nextPeriod(
   periodType: BudgetPeriodType,
   start: Date,
@@ -52,18 +54,28 @@ export function nextPeriod(
     const months = periodType === "MONTH" ? 1 : periodType === "QUARTER" ? 3 : 12;
     const y = start.getUTCFullYear();
     const m0 = start.getUTCMonth();
-    const zeroFrom = y * 12 + m0 + months;
-    const zeroTo = zeroFrom + months - 1;
-    const sy = Math.floor(zeroFrom / 12);
-    const sm0 = ((zeroFrom % 12) + 12) % 12;
-    const ey = Math.floor(zeroTo / 12);
-    const em0 = ((zeroTo % 12) + 12) % 12;
-    return {
-      start: new Date(Date.UTC(sy, sm0, 1, 0, 0, 0, 0)),
-      end: new Date(Date.UTC(ey, em0, lastDayUtc(ey, em0), 23, 59, 59, 999)),
-    };
+    // Is [start, end] exactly the calendar block of `months` starting this month?
+    const lastZero = y * 12 + m0 + months - 1;
+    const ly = Math.floor(lastZero / 12);
+    const lm0 = ((lastZero % 12) + 12) % 12;
+    const alignedStart = Date.UTC(y, m0, 1, 0, 0, 0, 0);
+    const alignedEnd = Date.UTC(ly, lm0, lastDayUtc(ly, lm0), 23, 59, 59, 999);
+    if (start.getTime() === alignedStart && end.getTime() === alignedEnd) {
+      const zeroFrom = y * 12 + m0 + months;
+      const zeroTo = zeroFrom + months - 1;
+      const sy = Math.floor(zeroFrom / 12);
+      const sm0 = ((zeroFrom % 12) + 12) % 12;
+      const ey = Math.floor(zeroTo / 12);
+      const em0 = ((zeroTo % 12) + 12) % 12;
+      return {
+        start: new Date(Date.UTC(sy, sm0, 1, 0, 0, 0, 0)),
+        end: new Date(Date.UTC(ey, em0, lastDayUtc(ey, em0), 23, 59, 59, 999)),
+      };
+    }
+    // Non-calendar bounds → fall through to the span-preserving shift.
   }
-  // WEEK / CUSTOM → shift both bounds by the window length in whole days.
+  // WEEK / CUSTOM (and non-aligned M/Q/Y) → shift both bounds by the window
+  // length in whole days.
   const lengthDays = Math.round((end.getTime() - start.getTime() + 1) / DAY);
   const nextStart = new Date(start.getTime() + lengthDays * DAY);
   const nextEnd = new Date(end.getTime() + lengthDays * DAY);
