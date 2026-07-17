@@ -114,7 +114,7 @@ Next.js 16.2 · React 19.2 · TypeScript 6 · Tailwind v4 · shadcn/ui (themed B
 **Milestone goal:** charts, exports, mobile fine-tuning, RGPD, and security hardening triggers.
 
 - [x] **8.1 — Insights & charts.** `/app/insights`: category pie, monthly trend (shadcn Charts / Recharts). _AC: e2e renders._
-- [ ] **8.2 — Export (CSV + RGPD JSON).** Filtered CSV export, full-user JSON export, account deletion (cascade + session invalidation). _AC: integration export contents; e2e delete cascades._
+- [x] **8.2 — Export (CSV + RGPD JSON).** Filtered CSV export, full-user JSON export, account deletion (cascade + session invalidation). _AC: integration export contents; e2e delete cascades._
 - [ ] **8.3 — Mobile fine-tuning + PWA.** `manifest.webmanifest`, service worker (app-shell cache), splash/icons, responsive pass. _AC: Lighthouse PWA installable; e2e mobile flows._
 - [ ] **8.4 — Audit log + admin settings UI.** `AuditLog` writes on state mutations, `/admin` (auth-providers, SMTP, app-settings, audit-log viewer), 12-month purge cron. _AC: integration audit entries; e2e admin edits hot-reload._
 - [ ] **8.5 — Security hardening (from spec §6.11, as triggered).** Encrypted DB backups script, optional 2FA-mandatory for admins, security email notifications. _AC: per item._

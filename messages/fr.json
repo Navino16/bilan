@@ -90,6 +90,7 @@
       "categories": "Catégories",
       "groups": "Foyers",
       "settings": "Préférences",
+      "data": "Données",
       "admin": "Administration"
     },
     "userMenu": {
@@ -587,6 +588,30 @@
     "noData": "Pas de données sur cette période.",
     "noCategory": "Sans catégorie",
     "spentThisPeriod": "dépensés sur la période"
+  },
+  "settings": {
+    "data": {
+      "overline": "Compte",
+      "title": "Données",
+      "subtitle": "Exportez vos données ou supprimez définitivement votre compte.",
+      "exportOverline": "Export",
+      "exportTitle": "Exporter mes données",
+      "exportHint": "Téléchargez vos transactions au format CSV, ou l'intégralité de vos données (RGPD) au format JSON.",
+      "exportCsv": "Transactions (CSV)",
+      "exportJson": "Toutes mes données (JSON)",
+      "dangerZone": "Zone de danger",
+      "deleteTitle": "Supprimer mon compte",
+      "deleteWarning": "Cette action est irréversible : toutes vos données seront définitivement supprimées.",
+      "passwordLabel": "Mot de passe",
+      "cancel": "Annuler",
+      "deleting": "Suppression…",
+      "confirmDelete": "Supprimer définitivement",
+      "error": {
+        "INVALID": "Veuillez saisir votre mot de passe.",
+        "BAD_PASSWORD": "Mot de passe incorrect.",
+        "FAILED": "La suppression a échoué. Réessayez."
+      }
+    }
   },
   "admin": {
     "title": "Administration",
