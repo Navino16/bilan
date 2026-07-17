@@ -1,5 +1,6 @@
 import {
   ArrowRightLeft,
+  ChartPie,
   Landmark,
   LayoutDashboard,
   ShieldCheck,
@@ -23,6 +24,7 @@ export type NavItem = {
 /** Primary destinations — the "Espace" group in the design. */
 export const WORKSPACE_NAV: NavItem[] = [
   { key: "dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { key: "insights", href: "/insights", icon: ChartPie },
   { key: "transactions", href: "/transactions", icon: ArrowRightLeft },
   { key: "import", href: "/import", icon: Upload },
   { key: "budgets", href: "/budgets", icon: Target },
