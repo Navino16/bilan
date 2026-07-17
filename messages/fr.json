@@ -269,7 +269,8 @@
     },
     "roll": "Renouveler",
     "rolledOk": "Instance créée.",
-    "ended": "Période terminée"
+    "ended": "Période terminée",
+    "subtitle": "Définissez une enveloppe par catégorie ou compte sur une période."
   },
   "categories": {
     "title": "Catégories",

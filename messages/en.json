@@ -269,7 +269,8 @@
     },
     "roll": "Renew",
     "rolledOk": "Instance created.",
-    "ended": "Period ended"
+    "ended": "Period ended",
+    "subtitle": "Set an envelope by category or account over a period."
   },
   "categories": {
     "title": "Categories",
