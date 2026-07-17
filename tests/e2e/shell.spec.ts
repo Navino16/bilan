@@ -15,9 +15,15 @@ test.skip("sidebar visible on desktop", async ({ page }) => {
   await expect(page.getByRole("navigation", { name: /sidebar/i })).toBeVisible();
 });
 
-test.skip("bottom nav visible on mobile", async ({ page }) => {
-  await page.goto("/fr/dashboard");
-  await expect(page.getByRole("navigation", { name: /bottom/i })).toBeVisible();
+test.describe("mobile chrome", () => {
+  test.use({ storageState: "tests/e2e/.auth/owner.json" });
+
+  test("bottom nav visible on mobile", async ({ page, isMobile }) => {
+    // The bottom tab bar is `md:hidden` — only the mobile project renders it.
+    test.skip(!isMobile, "bottom nav is mobile-only (md:hidden)");
+    await page.goto("/fr/dashboard");
+    await expect(page.getByRole("navigation", { name: /bottom/i })).toBeVisible();
+  });
 });
 
 // Guards against shipping a primary nav entry that points at an unbuilt route
@@ -26,7 +32,12 @@ test.skip("bottom nav visible on mobile", async ({ page }) => {
 test.describe("primary navigation", () => {
   test.use({ storageState: "tests/e2e/.auth/owner.json" });
 
-  test("every sidebar link resolves without an error status", async ({ page }) => {
+  test("every sidebar link resolves without an error status", async ({ page, isMobile }) => {
+    // The sidebar is desktop-only (`hidden md:flex`); on mobile it never renders.
+    test.skip(!!isMobile, "sidebar is desktop-only");
+    // Crawls every sidebar route sequentially; a cold dev-server compile per new
+    // route can add up, so allow more than the default 30s.
+    test.setTimeout(120_000);
     await page.goto("/fr/dashboard");
     const nav = page.getByRole("navigation", { name: /sidebar/i });
     await expect(nav).toBeVisible();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { CategoryAvatar, CategoryChip, Pill } from "./bits";
@@ -15,6 +15,7 @@ import {
 } from "./transaction-detail";
 import { recategorizeTransactionAction } from "@/server/transport/actions/transactions";
 import { createLinkAction } from "@/server/transport/actions/links";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 
 export type ListItem = {
   id: string;
@@ -45,21 +46,6 @@ function proposePattern(label: string): string {
     .split(/[^a-z0-9]+/)
     .filter((w) => w.length >= 3);
   return tokens.length ? tokens.reduce((a, b) => (b.length > a.length ? b : a)) : "";
-}
-
-// Switches the detail Sheet between a right-side panel (desktop) and a bottom
-// sheet (mobile). Resolved after mount, so it never causes a hydration mismatch
-// (the Sheet only opens on a post-hydration click).
-function useIsMobile(): boolean {
-  const [mobile, setMobile] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
-    const sync = () => setMobile(mq.matches);
-    sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
-  }, []);
-  return mobile;
 }
 
 export function TransactionList({

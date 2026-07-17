@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
@@ -11,6 +11,19 @@ import { THEME_COOKIE } from "@/lib/theme";
 export const metadata: Metadata = {
   title: "Bilan",
   description: "Self-hosted multi-user personal finance app",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Bilan" },
+  icons: { icon: "/icon.png", apple: "/apple-icon.png" },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f7f4ed" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f1114" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export function generateStaticParams() {
@@ -30,9 +43,6 @@ export default async function LocaleLayout({
   setRequestLocale(locale);
   const messages = await getMessages();
 
-  // Read the theme from the cookie and render the `.dark` class server-side, so
-  // the initial HTML already has the right theme — no pre-paint script, no flash,
-  // and no React 19 inline-<script> warning.
   const isDark = (await cookies()).get(THEME_COOKIE)?.value === "dark";
 
   return (
