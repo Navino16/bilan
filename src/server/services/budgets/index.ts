@@ -4,8 +4,12 @@ import { logEvent } from "@/server/services/audit";
 import { listVisibleForUser } from "@/server/services/accounts";
 import { canReadAccount } from "@/server/services/accounts/sharing";
 import { collapseLinkedRows } from "@/lib/links";
-import { lineStatus, type LineStatus } from "@/lib/budgets";
-import { budgetInputSchema, type BudgetInput } from "@/lib/validation/budget";
+import { lineStatus, nextPeriod, type LineStatus } from "@/lib/budgets";
+import {
+  budgetInputSchema,
+  type BudgetInput,
+  type BudgetPeriodType,
+} from "@/lib/validation/budget";
 
 export class BudgetAccessError extends Error {}
 
@@ -147,6 +151,7 @@ export type BudgetListItem = {
   periodEnd: Date;
   recurring: boolean;
   plannedTotal: number;
+  ended: boolean; // period is over (eligible for a recurring roll)
 };
 
 // The user's own budgets + those of groups they belong to (not archived).
@@ -161,6 +166,7 @@ export async function listBudgetsForUser(userId: string): Promise<BudgetListItem
     include: { lines: { select: { plannedAmount: true } } },
     orderBy: { periodStart: "desc" },
   });
+  const now = Date.now();
   return rows.map((b) => ({
     id: b.id,
     name: b.name,
@@ -171,6 +177,7 @@ export async function listBudgetsForUser(userId: string): Promise<BudgetListItem
     periodEnd: b.periodEnd,
     recurring: b.recurring,
     plannedTotal: Math.round(b.lines.reduce((s, l) => s + Number(l.plannedAmount), 0) * 100) / 100,
+    ended: b.periodEnd.getTime() < now,
   }));
 }
 
@@ -404,4 +411,54 @@ export async function listAssignmentsForTx(
     where: { transactionId },
     select: { budgetId: true, mode: true },
   });
+}
+
+// Creates the next-period instance of a recurring budget (copies scope + lines,
+// links parentBudgetId). Idempotent: no-op if that next instance already exists.
+export async function rollRecurring(
+  id: string,
+  actor: { id: string },
+): Promise<{ created: boolean; id?: string }> {
+  const b = await manageableOrThrow(id, actor.id);
+  if (!b.recurring) throw new BudgetAccessError("NOT_RECURRING");
+  const template = b.parentBudgetId ?? b.id; // chain instances off the original template
+  const period = nextPeriod(b.periodType as BudgetPeriodType, b.periodStart, b.periodEnd);
+
+  const existing = await db.budget.findFirst({
+    where: { parentBudgetId: template, periodStart: period.start },
+    select: { id: true },
+  });
+  if (existing) return { created: false };
+
+  const lines = await db.budgetLine.findMany({ where: { budgetId: b.id } });
+  const instance = await db.budget.create({
+    data: {
+      name: b.name,
+      description: b.description,
+      userId: b.userId,
+      groupId: b.groupId,
+      periodType: b.periodType,
+      periodStart: period.start,
+      periodEnd: period.end,
+      recurring: true,
+      parentBudgetId: template,
+      createdById: actor.id,
+      lines: {
+        create: lines.map((l) => ({
+          categoryId: l.categoryId,
+          accountId: l.accountId,
+          label: l.label,
+          plannedAmount: l.plannedAmount,
+        })),
+      },
+    },
+  });
+  await logEvent({
+    userId: actor.id,
+    action: "budget.created",
+    entity: "Budget",
+    entityId: instance.id,
+    metadata: { rolledFrom: id },
+  });
+  return { created: true, id: instance.id };
 }

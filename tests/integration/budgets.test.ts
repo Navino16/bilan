@@ -9,6 +9,7 @@ import {
   assignTransaction,
   unassignTransaction,
   listAssignableBudgets,
+  rollRecurring,
   BudgetAccessError,
 } from "@/server/services/budgets";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
@@ -258,5 +259,41 @@ describe("assignTransaction", () => {
     await createBudget(baseInput, { id: owner });
     const list = await listAssignableBudgets(owner);
     expect(list.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("rollRecurring", () => {
+  beforeEach(async () => {
+    await db.budget.deleteMany({ where: { userId: owner } });
+  });
+
+  it("creates one next-period instance linked to the template, and is idempotent", async () => {
+    const { id } = await createBudget(
+      { ...baseInput, recurring: true, lines: [{ categoryId: catId, plannedAmount: 200 }] },
+      { id: owner },
+    );
+    const first = await rollRecurring(id, { id: owner });
+    expect(first.created).toBe(true);
+    const instance = await db.budget.findUniqueOrThrow({
+      where: { id: first.id! },
+      include: { lines: true },
+    });
+    expect(instance.parentBudgetId).toBe(id);
+    expect(instance.periodStart.toISOString()).toBe("2026-04-01T00:00:00.000Z");
+    expect(instance.periodEnd.toISOString()).toBe("2026-04-30T23:59:59.999Z");
+    expect(instance.lines).toHaveLength(1);
+    expect(Number(instance.lines[0].plannedAmount)).toBe(200);
+
+    // Idempotent: a second roll does not create a duplicate for the same next period.
+    const second = await rollRecurring(id, { id: owner });
+    expect(second.created).toBe(false);
+    expect(
+      await db.budget.count({ where: { parentBudgetId: id, periodStart: instance.periodStart } }),
+    ).toBe(1);
+  });
+
+  it("rejects rolling a non-recurring budget", async () => {
+    const { id } = await createBudget(baseInput, { id: owner });
+    await expect(rollRecurring(id, { id: owner })).rejects.toBeInstanceOf(BudgetAccessError);
   });
 });

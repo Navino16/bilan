@@ -105,7 +105,7 @@ Next.js 16.2 · React 19.2 · TypeScript 6 · Tailwind v4 · shadcn/ui (themed B
 - [x] **7.1 — Budget model + creation.** `Budget`, `BudgetLine` (category and/or account), `/app/budgets` + new-budget modal (dynamic lines, computed total), user XOR group scope. _AC: unit XOR + line validation; e2e create._
 - [x] **7.2 — Budget calculation.** `budgets.service.computeLine` (visible tx, period filter, INCLUDE/EXCLUDE overrides, link-aware), status OK/WARN/OVER, detail page per Bilan. _AC: integration tests for matching + overrides + links._
 - [x] **7.3 — Explicit assignment.** `BudgetAssignment` (INCLUDE/EXCLUDE), assign-to-budget from any visible tx (incl. unshared account → shared budget), transparency for group members. _AC: e2e assign the owner's personal tx to the family budget; their partner sees it._
-- [ ] **7.4 — Recurring budgets.** Auto-create next-period instance, parent/instance link. _AC: integration: rolling a recurring budget creates the next instance._
+- [x] **7.4 — Recurring budgets.** Auto-create next-period instance, parent/instance link. _AC: integration: rolling a recurring budget creates the next instance._
 
 ---
 

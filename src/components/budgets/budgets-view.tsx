@@ -1,12 +1,15 @@
 "use client";
 
+import { useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { overline } from "@/components/transactions/bits";
+import { rollRecurringAction } from "@/server/transport/actions/budgets";
 import { BudgetForm, type BudgetLineOption } from "./budget-form";
 import type { BudgetListItem } from "@/server/services/budgets";
 
@@ -23,6 +26,8 @@ export function BudgetsView({
 }) {
   const t = useTranslations("budgets");
   const locale = useLocale();
+  const router = useRouter();
+  const [rolling, startRoll] = useTransition();
   const nf = new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" });
   // periodStart/periodEnd are UTC-bounded semantic dates — format in UTC so
   // server and client agree (periodEnd sits at 23:59:59.999Z).
@@ -32,6 +37,15 @@ export function BudgetsView({
     year: "numeric",
     timeZone: "UTC",
   });
+
+  function roll(id: string) {
+    const fd = new FormData();
+    fd.set("id", id);
+    startRoll(async () => {
+      const r = await rollRecurringAction(null, fd);
+      if (r?.ok) router.refresh();
+    });
+  }
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-5">
@@ -74,11 +88,29 @@ export function BudgetsView({
                       {df.format(b.periodStart)} – {df.format(b.periodEnd)}
                     </p>
                   </div>
-                  <div className="shrink-0 text-right">
-                    <div className="font-display text-lg leading-none">
-                      {nf.format(b.plannedTotal)}
+                  <div className="flex shrink-0 items-center gap-3">
+                    {b.recurring && b.ended && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={rolling}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          roll(b.id);
+                        }}
+                      >
+                        <RefreshCw />
+                        {t("roll")}
+                      </Button>
+                    )}
+                    <div className="text-right">
+                      <div className="font-display text-lg leading-none">
+                        {nf.format(b.plannedTotal)}
+                      </div>
+                      <div className="text-muted-foreground text-xs">{t("plannedTotal")}</div>
                     </div>
-                    <div className="text-muted-foreground text-xs">{t("plannedTotal")}</div>
                   </div>
                 </Card>
               </Link>
