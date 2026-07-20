@@ -68,9 +68,25 @@
       }
     }
   },
-  "forbidden": {
-    "message": "Vous n'avez pas accès à cette page.",
-    "back": "Retour au tableau de bord"
+  "errors": {
+    "back": "Retour au tableau de bord",
+    "notFound": {
+      "title": "Page introuvable",
+      "message": "Cette page n'existe pas ou a été déplacée."
+    },
+    "serverError": {
+      "title": "Une erreur est survenue",
+      "message": "Un problème inattendu s'est produit. Réessayez dans un instant.",
+      "retry": "Réessayer"
+    },
+    "forbidden": {
+      "title": "Accès refusé",
+      "message": "Vous n'avez pas accès à cette page."
+    },
+    "unauthorized": {
+      "title": "Connexion requise",
+      "message": "Connectez-vous pour accéder à cette page."
+    }
   },
   "shell": {
     "tagline": "Finances · 2026",

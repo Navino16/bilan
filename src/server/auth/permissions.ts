@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import { headers as nextHeaders } from "next/headers";
-import { redirect } from "next/navigation";
+import { redirect, forbidden } from "next/navigation";
 import { db } from "@/server/db";
 import { getAuth } from "@/server/auth";
 import { appSettings } from "@/server/services/settings/app-settings";
@@ -39,7 +39,8 @@ export async function requireSession() {
 export async function requirePermission(permissionKey: string) {
   const user = await requireSession();
   const ok = await hasPermission(user.id, permissionKey);
-  if (!ok) redirect("/403");
+  // Real 403 via the auth-interrupt → nearest forbidden.tsx (not a redirect).
+  if (!ok) forbidden();
   return user;
 }
 

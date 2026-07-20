@@ -7,11 +7,18 @@ test("unauthenticated access to /admin redirects to login", async ({ page }) => 
   await expect(page).toHaveURL(/\/login$/);
 });
 
-// Skipped until credentialed fixtures land (an admin-created USER with a known
-// password). The RBAC gate itself (requirePermission → /403) is unit/flow covered
-// in the integration suite. Pre-conditions: sign a USER in via auth.api.signInEmail
-// and copy the cookie into the browser context.
-test.skip("non-admin user is redirected from /admin to /403", async ({ page }) => {
-  await page.goto("/fr/admin");
-  await expect(page).toHaveURL(/\/403$/);
+test.describe("non-admin forbidden", () => {
+  test.use({ storageState: "tests/e2e/.auth/member.json" });
+  test.skip(
+    ({ browserName }) => browserName === "webkit",
+    "Playwright WebKit doesn't deliver taps in this env (project-wide skip)",
+  );
+
+  // A signed-in non-admin hitting /admin gets a real 403 forbidden page
+  // (requirePermission → forbidden()), not a redirect.
+  test("a non-admin gets the 403 forbidden page", async ({ page }) => {
+    const res = await page.goto("/fr/admin", { waitUntil: "domcontentloaded", timeout: 90_000 });
+    expect(res?.status()).toBe(403);
+    await expect(page.getByRole("heading", { level: 1, name: /accès refusé/i })).toBeVisible();
+  });
 });
