@@ -5,6 +5,7 @@ import { grantRole } from "@/server/services/users/roles";
 
 const actorId = "appset_actor";
 const grantTargetId = "grant_target";
+const roleKey = "test_grant_role";
 
 afterAll(async () => {
   await db.auditLog.deleteMany({ where: { entity: "AppSetting", entityId: "registration_mode" } });
@@ -12,6 +13,7 @@ afterAll(async () => {
   await db.auditLog.deleteMany({ where: { action: "user.role.granted", entityId: grantTargetId } });
   await db.userRole.deleteMany({ where: { userId: grantTargetId } });
   await db.user.deleteMany({ where: { id: grantTargetId } });
+  await db.role.deleteMany({ where: { key: roleKey } });
   await db.$disconnect();
 });
 
@@ -35,9 +37,15 @@ describe("grantRole audits", () => {
     await db.userRole.deleteMany({ where: { userId: grantTargetId } });
     await db.user.deleteMany({ where: { id: grantTargetId } });
     await db.user.create({ data: { id: grantTargetId, email: "grant@bilan.local" } });
-    const role = await db.role.findFirstOrThrow();
+    // Self-contained: the CI test DB is migrated but not seeded, so create the
+    // role rather than assuming one exists.
+    await db.role.upsert({
+      where: { key: roleKey },
+      create: { key: roleKey, name: "Test Grant Role" },
+      update: {},
+    });
 
-    await grantRole(db, grantTargetId, role.key, actorId);
+    await grantRole(db, grantTargetId, roleKey, actorId);
 
     const audit = await db.auditLog.findFirst({
       where: { action: "user.role.granted", entityId: grantTargetId },
