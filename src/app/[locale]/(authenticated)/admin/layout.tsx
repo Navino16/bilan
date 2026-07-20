@@ -29,6 +29,18 @@ export default async function AdminLayout({
           <Link href={`/${locale}/admin/signup-tokens`} className="hover:text-foreground">
             {t("nav.signupTokens")}
           </Link>
+          <Link href={`/${locale}/admin/auth-providers`} className="hover:text-foreground">
+            {t("nav.authProviders")}
+          </Link>
+          <Link href={`/${locale}/admin/smtp`} className="hover:text-foreground">
+            {t("nav.smtp")}
+          </Link>
+          <Link href={`/${locale}/admin/app-settings`} className="hover:text-foreground">
+            {t("nav.appSettings")}
+          </Link>
+          <Link href={`/${locale}/admin/audit`} className="hover:text-foreground">
+            {t("nav.audit")}
+          </Link>
         </nav>
       </header>
       {children}

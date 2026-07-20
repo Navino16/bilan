@@ -617,7 +617,11 @@
     "title": "Administration",
     "nav": {
       "users": "Utilisateurs",
-      "signupTokens": "Jetons d'invitation"
+      "signupTokens": "Jetons d'invitation",
+      "authProviders": "Fournisseurs d'authentification",
+      "smtp": "SMTP",
+      "appSettings": "Paramètres",
+      "audit": "Journal d'audit"
     },
     "users": {
       "createTitle": "Créer un utilisateur",
@@ -656,6 +660,96 @@
         "UNAUTHORIZED": "Vous n'avez pas la permission de gérer les jetons.",
         "INVALID": "Valeur invalide."
       }
+    },
+    "settings": {
+      "title": "Paramètres de l'application",
+      "appName": "Nom de l'application",
+      "registrationMode": "Mode d'inscription",
+      "credentialsEnabled": "Connexion par mot de passe",
+      "minPasswordLength": "Longueur minimale du mot de passe",
+      "mode": {
+        "OPEN": "Ouvert",
+        "INVITE_ONLY": "Sur invitation",
+        "DISABLED": "Désactivé"
+      },
+      "enabled": "Activée",
+      "disabled": "Désactivée",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saved": "Enregistré.",
+      "error": {
+        "INVALID": "Valeur invalide.",
+        "FAILED": "Échec de l'enregistrement."
+      }
+    },
+    "smtp": {
+      "title": "Serveur SMTP",
+      "subtitle": "Configuration de l'envoi d'e-mails (invitations, réinitialisation).",
+      "host": "Hôte",
+      "port": "Port",
+      "username": "Utilisateur",
+      "password": "Mot de passe",
+      "passwordKept": "Laisser vide pour conserver l'actuel",
+      "fromAddress": "Adresse d'expédition",
+      "fromName": "Nom d'expéditeur",
+      "secure": "Chiffrement",
+      "secureTls": "TLS/SSL",
+      "securePlain": "Aucun",
+      "enabled": "État",
+      "on": "Activé",
+      "off": "Désactivé",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saved": "Configuration SMTP enregistrée.",
+      "error": {
+        "INVALID": "Vérifiez les champs saisis.",
+        "FAILED": "Échec de l'enregistrement."
+      }
+    },
+    "authProviders": {
+      "listTitle": "Fournisseurs configurés",
+      "addTitle": "Ajouter un fournisseur",
+      "empty": "Aucun fournisseur configuré.",
+      "key": "Clé",
+      "type": "Type",
+      "typeCredentials": "Identifiants",
+      "typeOidc": "OIDC",
+      "typeGoogle": "Google",
+      "displayName": "Nom affiché",
+      "enabled": "État",
+      "on": "Activé",
+      "off": "Désactivé",
+      "oidcSection": "Options OIDC",
+      "issuer": "Issuer",
+      "clientId": "Client ID",
+      "clientSecret": "Client secret",
+      "secretKept": "Laisser vide pour conserver l'actuel",
+      "scopes": "Scopes",
+      "mapName": "Claim → nom",
+      "mapEmail": "Claim → e-mail",
+      "authorizationUrl": "URL d'autorisation",
+      "tokenUrl": "URL de token",
+      "userInfoUrl": "URL userinfo",
+      "pkce": "PKCE",
+      "save": "Enregistrer",
+      "add": "Ajouter",
+      "saving": "Enregistrement…",
+      "saved": "Fournisseur enregistré.",
+      "error": {
+        "INVALID": "Vérifiez les champs saisis.",
+        "FAILED": "Échec de l'enregistrement."
+      }
+    },
+    "audit": {
+      "title": "Journal d'audit",
+      "empty": "Aucune entrée.",
+      "count": "{total} entrées",
+      "colDate": "Date",
+      "colAction": "Action",
+      "colEntity": "Entité",
+      "colUser": "Utilisateur",
+      "system": "système",
+      "filter": "Filtrer"
     }
   },
   "home": {

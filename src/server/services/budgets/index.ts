@@ -1,3 +1,4 @@
+import type { Budget } from "@prisma/client";
 import { db } from "@/server/db";
 import { requireGroupRole } from "@/server/services/groups/roles";
 import { logEvent } from "@/server/services/audit";
@@ -480,11 +481,14 @@ export async function listAssignmentsForTx(
 
 // Creates the next-period instance of a recurring budget (copies scope + lines,
 // links parentBudgetId). Idempotent: no-op if that next instance already exists.
-export async function rollRecurring(
-  id: string,
-  actor: { id: string },
+// Core roll: create the next-period instance of a recurring budget if it doesn't
+// already exist (idempotent). `createdById` owns the new row; `auditUserId` is the
+// acting user (null for the system cron → anonymous audit).
+async function rollFrom(
+  b: Budget,
+  createdById: string,
+  auditUserId: string | null,
 ): Promise<{ created: boolean; id?: string }> {
-  const b = await manageableOrThrow(id, actor.id);
   if (!b.recurring) throw new BudgetAccessError("NOT_RECURRING");
   const template = b.parentBudgetId ?? b.id; // chain instances off the original template
   const period = nextPeriod(b.periodType as BudgetPeriodType, b.periodStart, b.periodEnd);
@@ -507,7 +511,7 @@ export async function rollRecurring(
       periodEnd: period.end,
       recurring: true,
       parentBudgetId: template,
-      createdById: actor.id,
+      createdById,
       lines: {
         create: lines.map((l) => ({
           categoryId: l.categoryId,
@@ -519,11 +523,53 @@ export async function rollRecurring(
     },
   });
   await logEvent({
-    userId: actor.id,
+    userId: auditUserId,
     action: "budget.created",
     entity: "Budget",
     entityId: instance.id,
-    metadata: { rolledFrom: id },
+    metadata: { rolledFrom: b.id, system: auditUserId === null },
   });
   return { created: true, id: instance.id };
+}
+
+export async function rollRecurring(
+  id: string,
+  actor: { id: string },
+): Promise<{ created: boolean; id?: string }> {
+  const b = await manageableOrThrow(id, actor.id);
+  return rollFrom(b, actor.id, actor.id);
+}
+
+// System (cron) roll: no actor/permission check; the new instance inherits the
+// template's creator and the audit entry is anonymous.
+export async function rollRecurringSystem(id: string): Promise<{ created: boolean; id?: string }> {
+  const b = await db.budget.findUnique({ where: { id } });
+  if (!b) throw new BudgetAccessError("NOT_FOUND");
+  return rollFrom(b, b.createdById, null);
+}
+
+// Recurring budgets whose period has ended and whose next-period instance doesn't
+// exist yet — the work list for the roll cron (each roll is independently idempotent).
+export async function listRollableTemplates(now: Date): Promise<{ id: string }[]> {
+  const ended = await db.budget.findMany({
+    where: { recurring: true, archived: false, periodEnd: { lt: now } },
+    select: {
+      id: true,
+      parentBudgetId: true,
+      periodType: true,
+      periodStart: true,
+      periodEnd: true,
+    },
+  });
+  const rollable: { id: string }[] = [];
+  for (const b of ended) {
+    const template = b.parentBudgetId ?? b.id;
+    const period = nextPeriod(b.periodType as BudgetPeriodType, b.periodStart, b.periodEnd);
+    const existing = await db.budget.findFirst({
+      where: { parentBudgetId: template, periodStart: period.start },
+      select: { id: true },
+    });
+    if (!existing) rollable.push({ id: b.id });
+  }
+  return rollable;
 }

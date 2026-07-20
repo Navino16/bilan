@@ -20,6 +20,8 @@ const spec = {
   AUTH_SECRET: str({ devDefault: "x".repeat(32) }),
   DATA_ENCRYPTION_KEY: base64Key32(),
   SEARCH_TOKEN_KEY: base64Key32(),
+  // Optional: enables the token-guarded cron routes. Unset → they 404 (inert).
+  CRON_SECRET: str({ default: "" }),
 } satisfies Record<string, ValidatorSpec<unknown>>;
 
 export function parseEnv(source: Record<string, string | undefined>) {
