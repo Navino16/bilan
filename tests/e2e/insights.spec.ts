@@ -8,9 +8,12 @@ test.describe("insights", () => {
   );
 
   test("renders the analyses heading and the spend-trend chart", async ({ page }) => {
-    // A brand-new route compiles on first hit in the dockerized dev server, which
-    // can exceed the default nav timeout — wait only for the document, generously.
-    await page.goto("/fr/insights", { waitUntil: "domcontentloaded", timeout: 90_000 });
+    // Target a period that has seeded data — an empty period now shows a "no data"
+    // message instead of the (flat, meaningless) trend bars.
+    await page.goto("/fr/insights?from=2026-03-01&to=2026-03-31", {
+      waitUntil: "domcontentloaded",
+      timeout: 90_000,
+    });
 
     // Absorb the dev-server cold-compile race on the first load.
     const heading = page.getByRole("heading", { level: 1, name: /analyses/i });

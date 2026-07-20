@@ -56,6 +56,8 @@ export async function InsightsView({
     amount: p.amount,
     label: traceLabelFmt.format(new Date(`${p.date}T00:00:00.000Z`)),
   }));
+  // A period with no spending yields all-zero points → flat, meaningless bars.
+  const hasTrend = trendPoints.some((p) => p.amount !== 0);
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
@@ -74,7 +76,7 @@ export async function InsightsView({
       {/* Category donut + legend */}
       <Card className="gap-4 p-6">
         <div>
-          <div className={overline}>{t("overline")}</div>
+          <div className={overline}>{t("breakdown")}</div>
           <div className="font-display text-xl">{t("byCategory")}</div>
         </div>
         {topCats.length === 0 ? (
@@ -99,13 +101,13 @@ export async function InsightsView({
       {/* Spend trend */}
       <Card className="gap-4 p-6">
         <div>
-          <div className={overline}>{t("overline")}</div>
+          <div className={overline}>{t("evolution")}</div>
           <div className="font-display text-xl">{t("trend")}</div>
         </div>
-        {trendPoints.length === 0 ? (
-          <p className="text-muted-foreground text-sm">{t("noData")}</p>
-        ) : (
+        {hasTrend ? (
           <TrendBars points={trendPoints} format={(n) => money.format(n)} />
+        ) : (
+          <p className="text-muted-foreground text-sm">{t("noData")}</p>
         )}
       </Card>
     </div>
