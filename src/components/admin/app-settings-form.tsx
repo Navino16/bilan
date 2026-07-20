@@ -56,11 +56,13 @@ export function AppSettingsForm({
   registrationMode,
   credentialsEnabled,
   minPasswordLength,
+  admin2faRequired,
 }: {
   appName: string;
   registrationMode: string;
   credentialsEnabled: boolean;
   minPasswordLength: number;
+  admin2faRequired: boolean;
 }) {
   const t = useTranslations("admin.settings");
   return (
@@ -103,6 +105,20 @@ export function AppSettingsForm({
             max={128}
             defaultValue={minPasswordLength}
           />
+        )}
+      </SettingForm>
+
+      <SettingForm settingKey="security.admin_2fa_required" label={t("admin2faRequired")}>
+        {(id) => (
+          <select
+            id={id}
+            name="value"
+            defaultValue={String(admin2faRequired)}
+            className={selectClass}
+          >
+            <option value="true">{t("enabled")}</option>
+            <option value="false">{t("disabled")}</option>
+          </select>
         )}
       </SettingForm>
     </div>

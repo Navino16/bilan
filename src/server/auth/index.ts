@@ -8,6 +8,7 @@ import { dataKey } from "@/server/crypto/keys";
 import { decrypt } from "@/server/crypto/encryption";
 import { appSettings } from "@/server/services/settings/app-settings";
 import { logEvent } from "@/server/services/audit";
+import { notifyPasswordChanged } from "@/server/services/mail/security-notifications";
 import { seedDefaultCategories } from "@/server/services/categories/seed-defaults";
 import { providerCache, resolveOidcProvider, type ResolvedOidc } from "./providers";
 import { authPlugins } from "./plugins";
@@ -86,6 +87,27 @@ async function buildOptions(): Promise<BetterAuthOptions> {
           after: async (user) => {
             try {
               await seedDefaultCategories(user.id, "fr");
+            } catch {
+              // best-effort
+            }
+          },
+        },
+      },
+      account: {
+        update: {
+          // A credential account's row updates when the password changes (reset
+          // flow) → send the security alert + audit. Skipped for OIDC token
+          // refreshes (providerId !== "credential"). Best-effort, never blocks.
+          after: async (account) => {
+            if (account.providerId !== "credential") return;
+            try {
+              const u = await db.user.findUnique({
+                where: { id: account.userId },
+                select: { email: true },
+              });
+              if (!u) return;
+              await notifyPasswordChanged({ email: u.email, at: new Date() });
+              await logEvent({ userId: account.userId, action: "auth.password.changed" });
             } catch {
               // best-effort
             }

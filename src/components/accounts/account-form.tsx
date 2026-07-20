@@ -67,7 +67,12 @@ export function AccountForm({
   const setOpen = onOpenChange ?? setUncontrolledOpen;
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const isMobile = useIsMobile();
+  const liveMobile = useIsMobile();
+  // Freeze the mobile/desktop choice while the form is open: swapping the root
+  // element (Sheet↔Dialog) mid-edit would remount the subtree and wipe typed
+  // fields. Re-sync only when closed. `isMobile` is captured on open below.
+  const [openMobile, setOpenMobile] = useState(liveMobile);
+  const isMobile = open ? openMobile : liveMobile;
 
   const [type, setType] = useState<AccountType>((account?.type as AccountType) ?? "CHECKING");
   const [color, setColor] = useState<string>(account?.color ?? DEFAULT_COLOR);
@@ -250,6 +255,7 @@ export function AccountForm({
   );
 
   const handleOpenChange = (next: boolean) => {
+    if (next) setOpenMobile(liveMobile); // freeze the layout for this open session
     setOpen(next);
     if (!next) setError(null);
   };

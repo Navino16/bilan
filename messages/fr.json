@@ -620,12 +620,15 @@
       "deleteTitle": "Supprimer mon compte",
       "deleteWarning": "Cette action est irréversible : toutes vos données seront définitivement supprimées.",
       "passwordLabel": "Mot de passe",
+      "confirmEmailLabel": "Saisissez votre e-mail ({email}) pour confirmer",
       "cancel": "Annuler",
       "deleting": "Suppression…",
       "confirmDelete": "Supprimer définitivement",
       "error": {
         "INVALID": "Veuillez saisir votre mot de passe.",
         "BAD_PASSWORD": "Mot de passe incorrect.",
+        "BAD_CONFIRM": "L'e-mail saisi ne correspond pas.",
+        "RATE_LIMITED": "Trop de tentatives. Réessayez plus tard.",
         "FAILED": "La suppression a échoué. Réessayez."
       }
     },
@@ -707,6 +710,7 @@
       "registrationMode": "Mode d'inscription",
       "credentialsEnabled": "Connexion par mot de passe",
       "minPasswordLength": "Longueur minimale du mot de passe",
+      "admin2faRequired": "Double authentification obligatoire (admin)",
       "mode": {
         "OPEN": "Ouvert",
         "INVITE_ONLY": "Sur invitation",

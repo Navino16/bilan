@@ -620,12 +620,15 @@
       "deleteTitle": "Delete my account",
       "deleteWarning": "This action is irreversible: all your data will be permanently deleted.",
       "passwordLabel": "Password",
+      "confirmEmailLabel": "Type your email ({email}) to confirm",
       "cancel": "Cancel",
       "deleting": "Deleting…",
       "confirmDelete": "Delete permanently",
       "error": {
         "INVALID": "Please enter your password.",
         "BAD_PASSWORD": "Incorrect password.",
+        "BAD_CONFIRM": "The email you entered doesn't match.",
+        "RATE_LIMITED": "Too many attempts. Try again later.",
         "FAILED": "Deletion failed. Please try again."
       }
     },
@@ -707,6 +710,7 @@
       "registrationMode": "Registration mode",
       "credentialsEnabled": "Password sign-in",
       "minPasswordLength": "Minimum password length",
+      "admin2faRequired": "Mandatory admin 2FA",
       "mode": {
         "OPEN": "Open",
         "INVITE_ONLY": "Invite only",

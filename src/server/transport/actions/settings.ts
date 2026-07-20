@@ -81,6 +81,7 @@ function coerceAppSetting(key: string, raw: string): unknown | undefined {
     case "registration_mode":
       return ["OPEN", "INVITE_ONLY", "DISABLED"].includes(raw) ? raw : undefined;
     case "credentials_enabled":
+    case "security.admin_2fa_required":
       return raw.toLowerCase() === "true" || raw.toLowerCase() === "on" || raw === "1";
     case "min_password_length": {
       const n = Number(raw);

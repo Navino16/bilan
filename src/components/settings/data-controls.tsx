@@ -24,7 +24,15 @@ import {
   type AccountDataState,
 } from "@/server/transport/actions/account-data";
 
-export function DataControls({ locale }: { locale: string }) {
+export function DataControls({
+  locale,
+  hasPassword,
+  email,
+}: {
+  locale: string;
+  hasPassword: boolean;
+  email: string;
+}) {
   const t = useTranslations("settings.data");
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState<AccountDataState, FormData>(
@@ -89,16 +97,30 @@ export function DataControls({ locale }: { locale: string }) {
                 <DialogTitle>{t("deleteTitle")}</DialogTitle>
                 <DialogDescription>{t("deleteWarning")}</DialogDescription>
               </DialogHeader>
-              <div className="space-y-2">
-                <Label htmlFor="delete-password">{t("passwordLabel")}</Label>
-                <Input
-                  id="delete-password"
-                  name="password"
-                  type="password"
-                  required
-                  autoComplete="current-password"
-                />
-              </div>
+              {hasPassword ? (
+                <div className="space-y-2">
+                  <Label htmlFor="delete-password">{t("passwordLabel")}</Label>
+                  <Input
+                    id="delete-password"
+                    name="password"
+                    type="password"
+                    required
+                    autoComplete="current-password"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="delete-confirm-email">{t("confirmEmailLabel", { email })}</Label>
+                  <Input
+                    id="delete-confirm-email"
+                    name="confirmEmail"
+                    type="email"
+                    required
+                    autoComplete="off"
+                    placeholder={email}
+                  />
+                </div>
+              )}
               {state && !state.ok && (
                 <Alert variant="destructive">
                   <AlertDescription>
