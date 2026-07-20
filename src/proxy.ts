@@ -46,6 +46,16 @@ const SECURITY_HEADERS: Record<string, string> = {
   ].join("; "),
 };
 
+// Minimal Bilan-styled 404 for the proxy's own not-found branch (the edge
+// runtime has no access to the app's ErrorShell / i18n). Dependency-free HTML.
+function notFoundHtml(): Response {
+  const body = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Bilan — 404</title><style>body{min-height:100vh;margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;font-family:system-ui,sans-serif;background:#f7f4ed;color:#15130f;text-align:center}p.code{color:#6b7280;font-family:monospace;margin:0}h1{font-size:2rem;margin:0}a{color:#1f4d3a}@media(prefers-color-scheme:dark){body{background:#0f1114;color:#e6e1d4}}</style></head><body><p class="code">404</p><h1>Bilan</h1><p>Cette page n'existe pas ou a été déplacée.</p><a href="/">Retour</a></body></html>`;
+  return new Response(body, {
+    status: 404,
+    headers: { "Content-Type": "text/html; charset=utf-8" },
+  });
+}
+
 // Spec §3.5 / §5.1 — until the first user exists, /setup is the only reachable
 // page; once setup is done, /setup permanently 404s.
 const setupPath = /^\/(fr|en)\/setup(\/|$)/;
@@ -75,7 +85,7 @@ export default async function middleware(req: NextRequest) {
       return Response.redirect(url, 307);
     }
   } else if (setupPath.test(pathname)) {
-    return new Response("Not found", { status: 404 });
+    return notFoundHtml();
   }
 
   const authedMatch = authedPath.exec(pathname);

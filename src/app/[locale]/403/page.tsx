@@ -1,17 +1,18 @@
-import Link from "next/link";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { ErrorShell } from "@/components/shell/error-shell";
 
+// Kept as a real, bookmarkable route (requirePermission now uses forbidden()
+// instead of redirecting here). Reuses the shared shell + `errors` copy.
 export default async function ForbiddenPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations("forbidden");
+  const t = await getTranslations("errors");
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
-      <h1 className="font-display text-4xl">403</h1>
-      <p className="text-muted-foreground">{t("message")}</p>
-      <Link href={`/${locale}/dashboard`} className="text-foreground text-sm hover:underline">
-        {t("back")}
-      </Link>
-    </main>
+    <ErrorShell
+      code="403"
+      title={t("forbidden.title")}
+      message={t("forbidden.message")}
+      action={{ href: `/${locale}/dashboard`, label: t("back") }}
+    />
   );
 }

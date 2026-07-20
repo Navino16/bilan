@@ -68,9 +68,25 @@
       }
     }
   },
-  "forbidden": {
-    "message": "You don't have access to this page.",
-    "back": "Back to dashboard"
+  "errors": {
+    "back": "Back to dashboard",
+    "notFound": {
+      "title": "Page not found",
+      "message": "This page doesn't exist or has moved."
+    },
+    "serverError": {
+      "title": "Something went wrong",
+      "message": "An unexpected problem occurred. Try again in a moment.",
+      "retry": "Try again"
+    },
+    "forbidden": {
+      "title": "Access denied",
+      "message": "You don't have access to this page."
+    },
+    "unauthorized": {
+      "title": "Sign-in required",
+      "message": "Sign in to access this page."
+    }
   },
   "shell": {
     "tagline": "Finances · 2026",
