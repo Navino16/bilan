@@ -8,6 +8,7 @@ import { appSettings } from "@/server/services/settings/app-settings";
 import { consumeSignupToken, refundSignupToken } from "@/server/services/signup-tokens";
 import { userExistsByEmail } from "@/server/services/users/lookup";
 import { logEvent } from "@/server/services/audit";
+import { notifyNewLogin } from "@/server/services/mail/security-notifications";
 import {
   loginSchema,
   registerSchema,
@@ -45,8 +46,16 @@ export async function loginAction(
 
   try {
     const auth = await getAuth();
-    await auth.api.signInEmail({ body: parsed.data, headers: await nextHeaders() });
+    const h = await nextHeaders();
+    await auth.api.signInEmail({ body: parsed.data, headers: h });
     await logEvent({ action: "auth.login.success", metadata: { email: parsed.data.email } });
+    // Best-effort security alert (never blocks/breaks login — it self-catches).
+    await notifyNewLogin({
+      email: parsed.data.email,
+      ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? h.get("x-real-ip") ?? null,
+      userAgent: h.get("user-agent") ?? null,
+      at: new Date(),
+    });
     return { ok: true };
   } catch {
     await logEvent({ action: "auth.login.failed", metadata: { email: parsed.data.email } });
@@ -148,6 +157,7 @@ export async function resetConfirmAction(
       body: { token: parsed.data.token, newPassword: parsed.data.password },
     });
     await logEvent({ action: "auth.password.reset_completed" });
+    await logEvent({ action: "auth.password.changed", metadata: { via: "reset" } });
     return { ok: true };
   } catch {
     return { ok: false, error: "INVALID_TOKEN" };

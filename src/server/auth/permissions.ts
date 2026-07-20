@@ -3,6 +3,7 @@ import { headers as nextHeaders } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/server/db";
 import { getAuth } from "@/server/auth";
+import { appSettings } from "@/server/services/settings/app-settings";
 
 export function buildPermissionsChecker(database: PrismaClient) {
   return async function hasPermission(userId: string, permissionKey: string): Promise<boolean> {
@@ -40,4 +41,35 @@ export async function requirePermission(permissionKey: string) {
   const ok = await hasPermission(user.id, permissionKey);
   if (!ok) redirect("/403");
   return user;
+}
+
+// Pure gate predicate (spec §6.11): an admin must set up 2FA before using the
+// admin area once the instance requires it. True only when all three hold.
+export function requiresTwoFactorSetup(input: {
+  isAdmin: boolean;
+  twoFactorEnabled: boolean;
+  settingOn: boolean;
+}): boolean {
+  return input.isAdmin && input.settingOn && !input.twoFactorEnabled;
+}
+
+// Server gate: if admin-mandatory 2FA is on and this admin hasn't enrolled,
+// redirect them to the security settings to set it up. Called after
+// requirePermission in the admin layout. `admin.settings.write` proxies "is admin".
+export async function requireAdmin2fa(locale: string): Promise<void> {
+  const user = await requireSession();
+  const [isAdmin, settingOn, row] = await Promise.all([
+    hasPermission(user.id, "admin.settings.write"),
+    appSettings.get<boolean>("security.admin_2fa_required").then((v) => v ?? false),
+    db.user.findUnique({ where: { id: user.id }, select: { twoFactorEnabled: true } }),
+  ]);
+  if (
+    requiresTwoFactorSetup({
+      isAdmin,
+      twoFactorEnabled: Boolean(row?.twoFactorEnabled),
+      settingOn,
+    })
+  ) {
+    redirect(`/${locale}/settings/security`);
+  }
 }

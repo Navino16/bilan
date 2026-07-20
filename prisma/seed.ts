@@ -45,6 +45,7 @@ const APP_SETTINGS: { key: string; value: unknown; isSecret?: boolean }[] = [
   { key: "min_password_length", value: 12 },
   { key: "credentials_enabled", value: true },
   { key: "app_name", value: "Bilan" },
+  { key: "security.admin_2fa_required", value: false },
 ];
 
 export async function seedAppSettings(db: PrismaClient): Promise<void> {

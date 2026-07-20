@@ -90,6 +90,7 @@
       "categories": "Catégories",
       "groups": "Foyers",
       "settings": "Préférences",
+      "security": "Sécurité",
       "data": "Données",
       "admin": "Administration"
     },
@@ -610,6 +611,29 @@
         "INVALID": "Veuillez saisir votre mot de passe.",
         "BAD_PASSWORD": "Mot de passe incorrect.",
         "FAILED": "La suppression a échoué. Réessayez."
+      }
+    },
+    "security": {
+      "overline": "Compte",
+      "title": "Sécurité",
+      "subtitle": "Renforcez la protection de votre compte.",
+      "twoFactor": "Double authentification",
+      "twoFactorTitle": "Application d'authentification (TOTP)",
+      "twoFactorHint": "Ajoutez un code à usage unique en plus de votre mot de passe.",
+      "statusEnabled": "La double authentification est activée sur votre compte.",
+      "statusDisabled": "La double authentification n'est pas encore activée.",
+      "password": "Mot de passe",
+      "code": "Code à 6 chiffres",
+      "secret": "Clé secrète (saisie manuelle)",
+      "backupCodes": "Codes de secours",
+      "scanHint": "Ajoutez cette clé dans votre application d'authentification, puis saisissez le code généré. Conservez les codes de secours en lieu sûr.",
+      "enable": "Activer",
+      "disable": "Désactiver",
+      "verify": "Vérifier et activer",
+      "working": "En cours…",
+      "error": {
+        "BAD_PASSWORD": "Mot de passe incorrect.",
+        "BAD_CODE": "Code invalide. Réessayez."
       }
     }
   },

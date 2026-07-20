@@ -117,7 +117,7 @@ Next.js 16.2 · React 19.2 · TypeScript 6 · Tailwind v4 · shadcn/ui (themed B
 - [x] **8.2 — Export (CSV + RGPD JSON).** Filtered CSV export, full-user JSON export, account deletion (cascade + session invalidation). _AC: integration export contents; e2e delete cascades._
 - [x] **8.3 — Mobile fine-tuning + PWA.** `manifest.webmanifest`, service worker (app-shell cache), splash/icons, responsive pass. _AC: Lighthouse PWA installable; e2e mobile flows._
 - [x] **8.4 — Audit log + admin settings UI.** `AuditLog` writes on state mutations, `/admin` (auth-providers, SMTP, app-settings, audit-log viewer), 12-month purge cron. _AC: integration audit entries; e2e admin edits hot-reload._
-- [ ] **8.5 — Security hardening (from spec §6.11, as triggered).** Encrypted DB backups script, optional 2FA-mandatory for admins, security email notifications. _AC: per item._
+- [x] **8.5 — Security hardening (from spec §6.11, as triggered).** Encrypted DB backups script, optional 2FA-mandatory for admins, security email notifications. _AC: per item._
 - [ ] **8.6 — Unified error pages (4XX/5XX).** `not-found`, `error`, `global-error`, `forbidden`/`unauthorized` wired to Next App Router primitives; shared Bilan `ErrorShell` component (reused by the existing /403); modernize 403/401 to native `forbidden()`/`unauthorized()` (correct HTTP status); harmonize the proxy's plain-text 404. i18n fallback outside locale context. _AC: each status renders the Bilan page with the right HTTP code; e2e 404 + 403._
 
 ---

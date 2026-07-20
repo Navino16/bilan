@@ -34,6 +34,7 @@ describe("seedRolesAndPermissions", () => {
       "credentials_enabled",
       "min_password_length",
       "registration_mode",
+      "security.admin_2fa_required",
     ]);
   });
 });

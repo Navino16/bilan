@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { requirePermission } from "@/server/auth/permissions";
+import { requirePermission, requireAdmin2fa } from "@/server/auth/permissions";
 
 // RBAC gate for the whole admin section: non-admins are redirected to /403.
 // Each page additionally requirePermission's its narrower scope.
@@ -16,6 +16,7 @@ export default async function AdminLayout({
   const { locale } = await params;
   setRequestLocale(locale);
   await requirePermission("admin.settings.write");
+  await requireAdmin2fa(locale);
   const t = await getTranslations("admin");
 
   return (

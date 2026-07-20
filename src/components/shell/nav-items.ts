@@ -2,6 +2,7 @@ import {
   ArrowRightLeft,
   ChartPie,
   Database,
+  KeyRound,
   Landmark,
   LayoutDashboard,
   ShieldCheck,
@@ -40,6 +41,7 @@ export const WORKSPACE_NAV: NavItem[] = [
  * until it ships (see PLAN.md); a link to it would 404.
  */
 export const ACCOUNT_NAV: NavItem[] = [
+  { key: "security", href: "/settings/security", icon: KeyRound },
   { key: "data", href: "/settings/data", icon: Database },
   { key: "admin", href: "/admin", icon: ShieldCheck, permission: "admin.settings.write" },
 ];
