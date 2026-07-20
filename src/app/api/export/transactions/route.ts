@@ -14,23 +14,29 @@ export async function GET(req: Request): Promise<Response> {
   const url = new URL(req.url);
   const q = url.searchParams;
   const dir = q.get("dir");
-  const direction = dir === "in" || dir === "out" ? dir : undefined;
+  const direction: "in" | "out" | undefined = dir === "in" || dir === "out" ? dir : undefined;
   const from = q.get("from") ?? undefined;
   const to = q.get("to") ?? undefined;
   const period = from || to ? parsePeriodParams({ from, to }) : undefined;
 
-  const [{ items }, tree] = await Promise.all([
-    listTransactions(user.id, {
-      categoryId: q.get("categoryId") ?? undefined,
-      direction,
-      search: q.get("search") ?? undefined,
-      from: period?.from,
-      to: period?.to,
-      take: 100_000,
-      skip: 0,
-    }),
-    listForUser(user.id),
-  ]);
+  const filters = {
+    categoryId: q.get("categoryId") ?? undefined,
+    direction,
+    search: q.get("search") ?? undefined,
+    from: period?.from,
+    to: period?.to,
+  };
+
+  // Paginate through the full result set so the export is never silently
+  // truncated (RGPD/portability must be complete). `total` bounds the loop.
+  const PAGE = 10_000;
+  const items: Awaited<ReturnType<typeof listTransactions>>["items"] = [];
+  for (let skip = 0; ; skip += PAGE) {
+    const page = await listTransactions(user.id, { ...filters, take: PAGE, skip });
+    items.push(...page.items);
+    if (items.length >= page.total || page.items.length === 0) break;
+  }
+  const tree = await listForUser(user.id);
 
   const catName = new Map(flattenCategories(tree).map((c) => [c.id, c.name]));
   const rows: CsvRow[] = items.map((i) => ({

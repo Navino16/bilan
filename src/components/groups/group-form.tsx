@@ -43,7 +43,10 @@ export function GroupForm({
   const setOpen = onOpenChange ?? setUncontrolledOpen;
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const isMobile = useIsMobile();
+  const liveMobile = useIsMobile();
+  // Freeze the mobile/desktop root choice while the form is open (see account-form).
+  const [openMobile, setOpenMobile] = useState(liveMobile);
+  const isMobile = open ? openMobile : liveMobile;
 
   function handleAction(formData: FormData) {
     startTransition(async () => {
@@ -116,6 +119,7 @@ export function GroupForm({
   );
 
   const handleOpenChange = (next: boolean) => {
+    if (next) setOpenMobile(liveMobile); // freeze the layout for this open session
     setOpen(next);
     if (!next) setError(null);
   };

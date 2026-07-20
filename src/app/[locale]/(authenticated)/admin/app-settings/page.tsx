@@ -9,11 +9,12 @@ export default async function AdminAppSettingsPage() {
   await requirePermission("admin.settings.write");
   const t = await getTranslations("admin.settings");
 
-  const [appName, mode, credentials, minPw] = await Promise.all([
+  const [appName, mode, credentials, minPw, admin2fa] = await Promise.all([
     appSettings.get<string>("app_name"),
     appSettings.get<string>("registration_mode"),
     appSettings.get<boolean>("credentials_enabled"),
     appSettings.get<number>("min_password_length"),
+    appSettings.get<boolean>("security.admin_2fa_required"),
   ]);
 
   return (
@@ -24,6 +25,7 @@ export default async function AdminAppSettingsPage() {
         registrationMode={mode ?? "INVITE_ONLY"}
         credentialsEnabled={credentials ?? true}
         minPasswordLength={minPw ?? 12}
+        admin2faRequired={admin2fa ?? false}
       />
     </div>
   );

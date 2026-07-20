@@ -97,6 +97,29 @@ export async function deleteUser(userId: string, _actor: { id: string }): Promis
   // Anonymise the user's audit trail rather than delete it (retention).
   await db.auditLog.updateMany({ where: { userId }, data: { userId: null } });
 
+  // Groups the user OWNs: `Group.createdById` is FK-less and cascade only removes
+  // the user's own GroupMember row, so without this a solely-owned group would be
+  // left ownerless (unmanageable). Hand each group off or delete it.
+  const ownedGroups = await db.groupMember.findMany({
+    where: { userId, role: "OWNER" },
+    select: { groupId: true },
+  });
+  for (const { groupId } of ownedGroups) {
+    const successor = await db.groupMember.findFirst({
+      where: { groupId, userId: { not: userId } },
+      orderBy: { joinedAt: "asc" },
+      select: { id: true, userId: true },
+    });
+    if (successor) {
+      // Promote the earliest other member to OWNER and reassign createdById.
+      await db.groupMember.update({ where: { id: successor.id }, data: { role: "OWNER" } });
+      await db.group.update({ where: { id: groupId }, data: { createdById: successor.userId } });
+    } else {
+      // Sole member → remove the group and its cascaded categories/budgets/shares.
+      await db.group.delete({ where: { id: groupId } });
+    }
+  }
+
   // Cascade: User → accounts → transactions/links/tokens/importbatches/budgetlines,
   // categories, budgets, rules, memberships, sessions, authAccounts, twoFactors,
   // passkeys, preference (all onDelete: Cascade on userId/ownerId).

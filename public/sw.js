@@ -1,7 +1,13 @@
 // Bilan app-shell service worker (hand-authored, no build step).
-// Bump CACHE (-v2, …) whenever the shell changes so old caches are evicted on activate.
-const CACHE = "bilan-shell-v1";
-const ASSETS = ["/", "/manifest.webmanifest", "/icons/icon-192.png"];
+// Bump CACHE (-v3, …) whenever the shell changes so old caches are evicted on activate.
+//
+// SECURITY: only STATIC, non-sensitive assets are ever cached. Authenticated
+// HTML pages (dashboard/transactions/…) contain private financial data and must
+// never be persisted in the shared Cache API — they are passed straight through
+// to the network (no respondWith), so nothing is stored and cross-user/offline
+// disclosure is impossible.
+const CACHE = "bilan-shell-v2";
+const ASSETS = ["/manifest.webmanifest", "/icons/icon-192.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
@@ -26,33 +32,24 @@ self.addEventListener("fetch", (e) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  // Never cache API / auth / dynamic data.
-  if (url.pathname.startsWith("/api")) return;
-  // Static assets → cache-first; pages → network-first (fallback to cache).
+
+  // Cache-first ONLY for static, non-sensitive assets. Everything else (pages,
+  // /api, anything requiring auth) is left to the network — never stored.
   const isStatic =
-    /\.(?:css|js|png|svg|ico|webmanifest|woff2?)$/.test(url.pathname) ||
-    url.pathname.startsWith("/_next/static");
-  if (isStatic) {
-    e.respondWith(
-      caches.match(req).then(
-        (hit) =>
-          hit ||
-          fetch(req).then((res) => {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(req, copy));
-            return res;
-          }),
-      ),
-    );
-  } else {
-    e.respondWith(
-      fetch(req)
-        .then((res) => {
+    url.pathname.startsWith("/_next/static") ||
+    url.pathname === "/manifest.webmanifest" ||
+    /\.(?:css|js|png|svg|ico|webp|woff2?)$/.test(url.pathname);
+  if (!isStatic) return;
+
+  e.respondWith(
+    caches.match(req).then(
+      (hit) =>
+        hit ||
+        fetch(req).then((res) => {
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put(req, copy));
           return res;
-        })
-        .catch(() => caches.match(req)),
-    );
-  }
+        }),
+    ),
+  );
 });

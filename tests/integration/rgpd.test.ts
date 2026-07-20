@@ -4,6 +4,8 @@ import { buildSecureFields } from "@/server/services/transactions/secure-fields"
 import { exportUserData, deleteUser } from "@/server/services/rgpd";
 
 const userId = "rgpd_owner";
+const ownerB = "rgpd_ownerB";
+const succ = "rgpd_succ";
 let accountId: string;
 let groupId: string;
 
@@ -52,9 +54,9 @@ beforeAll(async () => {
 afterAll(async () => {
   await db.transaction.deleteMany({ where: { accountId } });
   await db.bankAccount.deleteMany({ where: { ownerId: userId } });
-  await db.group.deleteMany({ where: { createdById: userId } });
+  await db.group.deleteMany({ where: { createdById: { in: [userId, ownerB, succ] } } });
   await db.auditLog.deleteMany({ where: { entityId: userId, action: "user.deleted" } });
-  await db.user.deleteMany({ where: { id: userId } });
+  await db.user.deleteMany({ where: { id: { in: [userId, ownerB, succ] } } });
   await db.$disconnect();
 });
 
@@ -80,5 +82,40 @@ describe("rgpd", () => {
       orderBy: { createdAt: "desc" },
     });
     expect(audit?.userId).toBeNull(); // anonymous
+  });
+
+  it("deleteUser hands a solely-owned group to the earliest remaining member", async () => {
+    await db.user.createMany({
+      data: [
+        { id: ownerB, email: "rgpd-ownerb@bilan.local" },
+        { id: succ, email: "rgpd-succ@bilan.local" },
+      ],
+    });
+    const g = await db.group.create({ data: { name: "FoyerB", createdById: ownerB } });
+    await db.groupMember.create({
+      data: {
+        groupId: g.id,
+        userId: ownerB,
+        role: "OWNER",
+        joinedAt: new Date("2026-01-01T00:00:00.000Z"),
+      },
+    });
+    await db.groupMember.create({
+      data: {
+        groupId: g.id,
+        userId: succ,
+        role: "MEMBER",
+        joinedAt: new Date("2026-02-01T00:00:00.000Z"),
+      },
+    });
+
+    await deleteUser(ownerB, { id: ownerB });
+
+    const group = await db.group.findUnique({ where: { id: g.id } });
+    expect(group).not.toBeNull(); // survives (has another member)
+    expect(group?.createdById).toBe(succ); // ownership reassigned
+    const succMember = await db.groupMember.findFirst({ where: { groupId: g.id, userId: succ } });
+    expect(succMember?.role).toBe("OWNER"); // promoted
+    expect(await db.groupMember.count({ where: { groupId: g.id, userId: ownerB } })).toBe(0);
   });
 });

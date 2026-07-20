@@ -1,6 +1,7 @@
 "use server";
 
 import { headers as nextHeaders } from "next/headers";
+import { after } from "next/server";
 import { env } from "@/env";
 import { getAuth } from "@/server/auth";
 import { loginLimiter, registerLimiter, resetLimiter } from "@/server/auth/rate-limit";
@@ -49,13 +50,11 @@ export async function loginAction(
     const h = await nextHeaders();
     await auth.api.signInEmail({ body: parsed.data, headers: h });
     await logEvent({ action: "auth.login.success", metadata: { email: parsed.data.email } });
-    // Best-effort security alert (never blocks/breaks login — it self-catches).
-    await notifyNewLogin({
-      email: parsed.data.email,
-      ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? h.get("x-real-ip") ?? null,
-      userAgent: h.get("user-agent") ?? null,
-      at: new Date(),
-    });
+    // Best-effort security alert, sent AFTER the response so a slow/unreachable
+    // SMTP host never delays the login (it also self-catches).
+    const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? h.get("x-real-ip") ?? null;
+    const userAgent = h.get("user-agent") ?? null;
+    after(() => notifyNewLogin({ email: parsed.data.email, ip, userAgent, at: new Date() }));
     return { ok: true };
   } catch {
     await logEvent({ action: "auth.login.failed", metadata: { email: parsed.data.email } });
@@ -157,7 +156,8 @@ export async function resetConfirmAction(
       body: { token: parsed.data.token, newPassword: parsed.data.password },
     });
     await logEvent({ action: "auth.password.reset_completed" });
-    await logEvent({ action: "auth.password.changed", metadata: { via: "reset" } });
+    // `auth.password.changed` + the security email are emitted by the
+    // account.update databaseHook (fires for every credential password change).
     return { ok: true };
   } catch {
     return { ok: false, error: "INVALID_TOKEN" };

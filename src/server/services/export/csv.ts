@@ -9,6 +9,14 @@ export type CsvRow = {
   categoryName: string | null;
 };
 
+// Neutralize spreadsheet formula injection: a value beginning with =, +, -, @
+// (or a leading tab/CR, which some parsers strip to reveal a formula char) is
+// prefixed with a single quote so Excel/LibreOffice treat it as text, never a
+// formula. Papa.unparse only handles delimiter/quote/newline escaping, not this.
+function sanitizeCell(value: string): string {
+  return /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+}
+
 // Pure: rows → RFC-4180 CSV with a stable header. No DB, no decryption (callers
 // pass already-decrypted, display-ready rows).
 export function transactionsToCsv(rows: CsvRow[]): string {
@@ -19,9 +27,9 @@ export function transactionsToCsv(rows: CsvRow[]): string {
         r.date,
         r.amount,
         r.type,
-        r.label,
-        r.accountName,
-        r.categoryName ?? "",
+        sanitizeCell(r.label),
+        sanitizeCell(r.accountName),
+        sanitizeCell(r.categoryName ?? ""),
       ]),
     },
     { newline: "\n" },
