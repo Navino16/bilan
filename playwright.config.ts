@@ -14,6 +14,9 @@ export default defineConfig({
     baseURL: "http://localhost:3000",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
+    // The app registers a PWA service worker in production; block it in tests so
+    // its app-shell cache can't serve stale pages between navigations.
+    serviceWorkers: "block",
   },
   projects: [
     { name: "setup", testMatch: /auth\.setup\.ts/ },
@@ -21,7 +24,12 @@ export default defineConfig({
     { name: "mobile", use: { ...devices["iPhone 14"] }, dependencies: ["setup"] },
   ],
   webServer: {
-    command: "npm run dev",
+    // In CI, serve a production build: `next dev` (Turbopack) compiles routes
+    // on demand and its compiler hangs under the full-suite load on the runner
+    // (static assets keep serving, but any route needing compilation times out).
+    // `next start` pre-compiles everything → stable. Locally we reuse the running
+    // dev server for fast iteration.
+    command: process.env.CI ? "npm run start" : "npm run dev",
     port: 3000,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

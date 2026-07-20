@@ -1,0 +1,110 @@
+"use server";
+
+import { requirePermission } from "@/server/auth/permissions";
+import { appSettings } from "@/server/services/settings/app-settings";
+import { upsertSmtp, smtpSchema } from "@/server/services/settings/smtp";
+import { upsertAuthProvider, upsertSchema } from "@/server/services/settings/auth-providers";
+
+export type SettingsActionState = { ok: true } | { ok: false; error: string } | null;
+
+function str(formData: FormData, key: string): string {
+  return String(formData.get(key) ?? "").trim();
+}
+
+function bool(formData: FormData, key: string): boolean {
+  const v = str(formData, key).toLowerCase();
+  return v === "true" || v === "on" || v === "1";
+}
+
+function optional(value: string): string | null {
+  return value.length > 0 ? value : null;
+}
+
+export async function upsertAuthProviderAction(
+  _prev: SettingsActionState,
+  formData: FormData,
+): Promise<SettingsActionState> {
+  const user = await requirePermission("admin.settings.write");
+  const parsed = upsertSchema.safeParse({
+    key: str(formData, "key"),
+    type: str(formData, "type"),
+    displayName: str(formData, "displayName"),
+    enabled: bool(formData, "enabled"),
+    issuer: optional(str(formData, "issuer")),
+    clientId: optional(str(formData, "clientId")),
+    // Empty secret → keep the stored one (the service only overwrites when set).
+    clientSecret: optional(str(formData, "clientSecret")),
+    scopes: optional(str(formData, "scopes")),
+    pkce: bool(formData, "pkce"),
+    authorizationUrl: optional(str(formData, "authorizationUrl")),
+    tokenUrl: optional(str(formData, "tokenUrl")),
+    userInfoUrl: optional(str(formData, "userInfoUrl")),
+    mapName: optional(str(formData, "mapName")),
+    mapEmail: optional(str(formData, "mapEmail")),
+  });
+  if (!parsed.success) return { ok: false, error: "INVALID" };
+  try {
+    await upsertAuthProvider(parsed.data, { id: user.id });
+  } catch {
+    return { ok: false, error: "FAILED" };
+  }
+  return { ok: true };
+}
+
+export async function upsertSmtpAction(
+  _prev: SettingsActionState,
+  formData: FormData,
+): Promise<SettingsActionState> {
+  const user = await requirePermission("admin.settings.write");
+  const parsed = smtpSchema.safeParse({
+    host: str(formData, "host"),
+    port: str(formData, "port"),
+    secure: bool(formData, "secure"),
+    username: str(formData, "username"),
+    password: str(formData, "password"),
+    fromAddress: str(formData, "fromAddress"),
+    fromName: optional(str(formData, "fromName")),
+    enabled: bool(formData, "enabled"),
+  });
+  if (!parsed.success) return { ok: false, error: "INVALID" };
+  try {
+    await upsertSmtp(parsed.data, { id: user.id });
+  } catch {
+    return { ok: false, error: "FAILED" };
+  }
+  return { ok: true };
+}
+
+// Coerce a known app-setting key's raw form value to its stored type.
+function coerceAppSetting(key: string, raw: string): unknown | undefined {
+  switch (key) {
+    case "registration_mode":
+      return ["OPEN", "INVITE_ONLY", "DISABLED"].includes(raw) ? raw : undefined;
+    case "credentials_enabled":
+      return raw.toLowerCase() === "true" || raw.toLowerCase() === "on" || raw === "1";
+    case "min_password_length": {
+      const n = Number(raw);
+      return Number.isInteger(n) && n >= 8 && n <= 128 ? n : undefined;
+    }
+    case "app_name":
+      return raw.length > 0 ? raw : undefined;
+    default:
+      return undefined;
+  }
+}
+
+export async function setAppSettingAction(
+  _prev: SettingsActionState,
+  formData: FormData,
+): Promise<SettingsActionState> {
+  const user = await requirePermission("admin.settings.write");
+  const key = str(formData, "key");
+  const value = coerceAppSetting(key, str(formData, "value"));
+  if (value === undefined) return { ok: false, error: "INVALID" };
+  try {
+    await appSettings.set(key, value, user.id);
+  } catch {
+    return { ok: false, error: "FAILED" };
+  }
+  return { ok: true };
+}

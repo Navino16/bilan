@@ -50,6 +50,14 @@ function buildAdvancedConfig(input: UpsertInput): OidcAdvancedConfig | null {
   return Object.keys(cfg).length > 0 ? cfg : null;
 }
 
+/**
+ * All configured providers (incl. disabled), for the admin list — unlike the
+ * enabled-only `providerCache` that feeds the live auth handler.
+ */
+export function listAuthProviders(database: PrismaClient = db): Promise<AuthProvider[]> {
+  return database.authProvider.findMany({ orderBy: { displayName: "asc" } });
+}
+
 export async function upsertAuthProvider(
   input: UpsertInput,
   actor: { id: string },

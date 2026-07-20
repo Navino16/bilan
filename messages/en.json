@@ -617,7 +617,11 @@
     "title": "Administration",
     "nav": {
       "users": "Users",
-      "signupTokens": "Invitation tokens"
+      "signupTokens": "Invitation tokens",
+      "authProviders": "Auth providers",
+      "smtp": "SMTP",
+      "appSettings": "Settings",
+      "audit": "Audit log"
     },
     "users": {
       "createTitle": "Create a user",
@@ -656,6 +660,96 @@
         "UNAUTHORIZED": "You don't have permission to manage tokens.",
         "INVALID": "Invalid value."
       }
+    },
+    "settings": {
+      "title": "Application settings",
+      "appName": "Application name",
+      "registrationMode": "Registration mode",
+      "credentialsEnabled": "Password sign-in",
+      "minPasswordLength": "Minimum password length",
+      "mode": {
+        "OPEN": "Open",
+        "INVITE_ONLY": "Invite only",
+        "DISABLED": "Disabled"
+      },
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Saved.",
+      "error": {
+        "INVALID": "Invalid value.",
+        "FAILED": "Save failed."
+      }
+    },
+    "smtp": {
+      "title": "SMTP server",
+      "subtitle": "Outgoing email configuration (invitations, password resets).",
+      "host": "Host",
+      "port": "Port",
+      "username": "Username",
+      "password": "Password",
+      "passwordKept": "Leave blank to keep the current one",
+      "fromAddress": "From address",
+      "fromName": "From name",
+      "secure": "Encryption",
+      "secureTls": "TLS/SSL",
+      "securePlain": "None",
+      "enabled": "State",
+      "on": "On",
+      "off": "Off",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "SMTP configuration saved.",
+      "error": {
+        "INVALID": "Check the fields you entered.",
+        "FAILED": "Save failed."
+      }
+    },
+    "authProviders": {
+      "listTitle": "Configured providers",
+      "addTitle": "Add a provider",
+      "empty": "No providers configured.",
+      "key": "Key",
+      "type": "Type",
+      "typeCredentials": "Credentials",
+      "typeOidc": "OIDC",
+      "typeGoogle": "Google",
+      "displayName": "Display name",
+      "enabled": "State",
+      "on": "On",
+      "off": "Off",
+      "oidcSection": "OIDC options",
+      "issuer": "Issuer",
+      "clientId": "Client ID",
+      "clientSecret": "Client secret",
+      "secretKept": "Leave blank to keep the current one",
+      "scopes": "Scopes",
+      "mapName": "Claim → name",
+      "mapEmail": "Claim → email",
+      "authorizationUrl": "Authorization URL",
+      "tokenUrl": "Token URL",
+      "userInfoUrl": "Userinfo URL",
+      "pkce": "PKCE",
+      "save": "Save",
+      "add": "Add",
+      "saving": "Saving…",
+      "saved": "Provider saved.",
+      "error": {
+        "INVALID": "Check the fields you entered.",
+        "FAILED": "Save failed."
+      }
+    },
+    "audit": {
+      "title": "Audit log",
+      "empty": "No entries.",
+      "count": "{total} entries",
+      "colDate": "Date",
+      "colAction": "Action",
+      "colEntity": "Entity",
+      "colUser": "User",
+      "system": "system",
+      "filter": "Filter"
     }
   },
   "home": {
