@@ -3,12 +3,14 @@ import { test, expect } from "@playwright/test";
 test.describe("accounts", () => {
   test.use({ storageState: "tests/e2e/.auth/owner.json" });
 
-  // The create/edit dialog is a centered modal for now; its mobile bottom-sheet
-  // refinement (and reliable touch interaction on WebKit) is deferred to Phase
-  // 8.3, so the dialog-driven flow is covered on desktop Chromium only.
+  // Project-wide convention: every click-driven spec skips WebKit — Playwright's
+  // WebKit driver does not reliably deliver taps in this (WSL) environment, so
+  // Base UI popups never open (the trigger focuses but no dialog/sheet mounts).
+  // Phase 8.3 shipped the mobile bottom-sheet layout (verified on Chromium at a
+  // mobile viewport); the interaction itself stays Chromium-only, like the rest.
   test.skip(
     ({ browserName }) => browserName === "webkit",
-    "Mobile dialog/bottom-sheet refinement deferred to Phase 8.3",
+    "Playwright WebKit doesn't deliver taps in this env (project-wide skip)",
   );
 
   test("create, edit and archive an account", async ({ page }) => {

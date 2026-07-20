@@ -3,10 +3,12 @@ import { test, expect } from "@playwright/test";
 test.describe("groups", () => {
   test.use({ storageState: "tests/e2e/.auth/owner.json" });
 
-  // Dialog interaction on WebKit / mobile bottom-sheet is deferred to Phase 8.3.
+  // Project-wide convention: click-driven specs skip WebKit — Playwright's WebKit
+  // driver doesn't reliably deliver taps in this (WSL) env, so Base UI popups
+  // don't open. The Phase-8.3 bottom-sheet layout is verified on Chromium.
   test.skip(
     ({ browserName }) => browserName === "webkit",
-    "Mobile dialog/bottom-sheet refinement deferred to Phase 8.3",
+    "Playwright WebKit doesn't deliver taps in this env (project-wide skip)",
   );
 
   test("create a group and open its detail", async ({ page }) => {
