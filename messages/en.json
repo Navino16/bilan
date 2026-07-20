@@ -611,6 +611,29 @@
         "BAD_PASSWORD": "Incorrect password.",
         "FAILED": "Deletion failed. Please try again."
       }
+    },
+    "security": {
+      "overline": "Account",
+      "title": "Security",
+      "subtitle": "Strengthen your account's protection.",
+      "twoFactor": "Two-factor authentication",
+      "twoFactorTitle": "Authenticator app (TOTP)",
+      "twoFactorHint": "Add a one-time code on top of your password.",
+      "statusEnabled": "Two-factor authentication is enabled on your account.",
+      "statusDisabled": "Two-factor authentication is not enabled yet.",
+      "password": "Password",
+      "code": "6-digit code",
+      "secret": "Secret key (manual entry)",
+      "backupCodes": "Backup codes",
+      "scanHint": "Add this key to your authenticator app, then enter the generated code. Keep the backup codes somewhere safe.",
+      "enable": "Enable",
+      "disable": "Disable",
+      "verify": "Verify and enable",
+      "working": "Working…",
+      "error": {
+        "BAD_PASSWORD": "Incorrect password.",
+        "BAD_CODE": "Invalid code. Please try again."
+      }
     }
   },
   "admin": {
