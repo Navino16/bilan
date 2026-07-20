@@ -67,3 +67,6 @@ tests/e2e/.auth
 
 # Local dev-only seed helper (per user request, never commit)
 scripts/seed-dev-user.ts
+
+# Encrypted DB backups (scripts/backup.sh)
+backups/
