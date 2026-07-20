@@ -61,10 +61,10 @@ Next.js 16.2 · React 19.2 · TypeScript 6 · Tailwind v4 · shadcn/ui (themed B
 
 **Milestone goal:** categorize transactions (manual entry), with user/group categories and auto-categorization rules.
 
-- [ ] **3.1 — Categories (user XOR group).** Model + migration, seed default sets fr/en, `/app/categories` hierarchical CRUD, XOR constraint enforced. _AC: unit (XOR validation) + e2e CRUD._
-- [ ] **3.2 — Transaction model + crypto.** `Transaction` (encrypted label/rawLabel/note, HMAC hashes), `TransactionSearchToken`, `server/crypto/*` (AES-256-GCM, HMAC). _AC: crypto unit tests (round-trip, key failure); integration create tx writes tokens._
-- [ ] **3.3 — Categorization engine + learning.** `CategorizationRule` model, `categorization.service.suggest`, "create a rule?" dialog on manual recategorize. _AC: unit tests for all match types + priority; e2e recategorize→rule._
-- [ ] **3.4 — Transactions list + manual entry.** `/app/transactions` (day-grouped cards mobile / table desktop per Bilan), filters, search (HMAC tokens), inline category edit, manual entry form. _AC: e2e search, filter, create, recategorize._
+- [x] **3.1 — Categories (user XOR group).** Model + migration, seed default sets fr/en, `/app/categories` hierarchical CRUD, XOR constraint enforced. _AC: unit (XOR validation) + e2e CRUD._
+- [x] **3.2 — Transaction model + crypto.** `Transaction` (encrypted label/rawLabel/note, HMAC hashes), `TransactionSearchToken`, `server/crypto/*` (AES-256-GCM, HMAC). _AC: crypto unit tests (round-trip, key failure); integration create tx writes tokens._
+- [x] **3.3 — Categorization engine + learning.** `CategorizationRule` model, `categorization.service.suggest`, "create a rule?" dialog on manual recategorize. _AC: unit tests for all match types + priority; e2e recategorize→rule._
+- [x] **3.4 — Transactions list + manual entry.** `/app/transactions` (day-grouped cards mobile / table desktop per Bilan), filters, search (HMAC tokens), inline category edit, manual entry form. _AC: e2e search, filter, create, recategorize._
 
 ---
 
@@ -83,8 +83,8 @@ Next.js 16.2 · React 19.2 · TypeScript 6 · Tailwind v4 · shadcn/ui (themed B
 
 **Milestone goal:** monthly dashboard and custom-period reporting per Bilan dashboard.
 
-- [ ] **5.1 — Dashboard (flagship).** `/app/dashboard`: editorial layout, month switcher, KPI row (income/expense/net + vs-previous), category donut (shadcn Charts), budgets-in-progress bars, recent transactions. _AC: e2e renders with seeded data, month nav works._
-- [ ] **5.2 — Custom periods.** Date-range picker (presets + custom), reactive recompute across dashboard + transactions. _AC: e2e switch presets; service unit tests for period math._
+- [x] **5.1 — Dashboard (flagship).** `/app/dashboard`: editorial layout, month switcher, KPI row (income/expense/net + vs-previous), category donut (shadcn Charts), budgets-in-progress bars, recent transactions. _AC: e2e renders with seeded data, month nav works._
+- [x] **5.2 — Custom periods.** Date-range picker (presets + custom), reactive recompute across dashboard + transactions. _AC: e2e switch presets; service unit tests for period math._
 
 ---
 
