@@ -42,10 +42,7 @@ export async function notifyNewLogin(input: {
   }
 }
 
-export async function notifyPasswordChanged(input: {
-  email: string;
-  at: Date;
-}): Promise<void> {
+export async function notifyPasswordChanged(input: { email: string; at: Date }): Promise<void> {
   try {
     await sendMail({
       to: input.email,

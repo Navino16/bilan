@@ -3,7 +3,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const sendMail = vi.fn().mockResolvedValue({ delivered: true });
 vi.mock("@/server/services/mail/mailer", () => ({ sendMail: (o: unknown) => sendMail(o) }));
 
-import { notifyNewLogin, notifyPasswordChanged } from "@/server/services/mail/security-notifications";
+import {
+  notifyNewLogin,
+  notifyPasswordChanged,
+} from "@/server/services/mail/security-notifications";
 
 describe("security notifications", () => {
   beforeEach(() => sendMail.mockClear());

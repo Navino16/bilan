@@ -10,8 +10,21 @@ const intlMiddleware = createIntlMiddleware({
 });
 
 // Spec §6.6 — security headers attached to every (non-static) response.
-// Strict CSP with per-request nonce is deferred to scope 8.5; the current CSP
-// is the most restrictive policy compatible with Next.js dev tooling.
+//
+// CSP note (scope 8.5): a per-request nonce was evaluated but not shipped. The
+// app authors no inline <script> (the theme is server-rendered, no pre-paint
+// script), so the only inline scripts are Next's own RSC bootstrap, which need
+// either a nonce or 'unsafe-inline'. Nonce-ing Next's scripts requires injecting
+// the CSP onto the *request* headers, which the next-intl middleware (URL
+// rewrites) doesn't propagate cleanly — attempting it risks breaking every page.
+// Instead we ship the plan's documented hardening: drop 'unsafe-eval' in
+// production (only dev/HMR needs it) and add object-src 'none'. Rollback = the
+// previous policy (add back 'unsafe-eval', drop object-src).
+const isProd = process.env.NODE_ENV === "production";
+const scriptSrc = isProd
+  ? "script-src 'self' 'unsafe-inline'"
+  : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
+
 const SECURITY_HEADERS: Record<string, string> = {
   "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
   "X-Content-Type-Options": "nosniff",
@@ -20,11 +33,12 @@ const SECURITY_HEADERS: Record<string, string> = {
   "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
   "Content-Security-Policy": [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    scriptSrc,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
     "connect-src 'self'",
+    "object-src 'none'",
     "frame-ancestors 'none'",
     "form-action 'self'",
     "base-uri 'self'",

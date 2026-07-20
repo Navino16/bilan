@@ -3,9 +3,9 @@ import { requiresTwoFactorSetup } from "@/server/auth/permissions";
 
 describe("requiresTwoFactorSetup", () => {
   it("is true only for an admin, when the setting is on and 2FA isn't enabled yet", () => {
-    expect(requiresTwoFactorSetup({ isAdmin: true, twoFactorEnabled: false, settingOn: true })).toBe(
-      true,
-    );
+    expect(
+      requiresTwoFactorSetup({ isAdmin: true, twoFactorEnabled: false, settingOn: true }),
+    ).toBe(true);
   });
 
   it("is false when the setting is off", () => {
