@@ -213,6 +213,9 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium webkit --with-deps
 
+      - name: Build (production server for stable E2E)
+        run: npm run build
+
       - name: Run E2E tests
         run: npm run test:e2e
 
