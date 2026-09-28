@@ -32,6 +32,7 @@ export function TransactionFilters({
 
   function setParam(key: string, value: string) {
     const next = new URLSearchParams(params.toString());
+    next.delete("limit");
     if (value) next.set(key, value);
     else next.delete(key);
     router.replace(`${pathname}?${next.toString()}`);

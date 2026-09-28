@@ -345,6 +345,9 @@
     "allCategories": "Toutes les catégories",
     "allTypes": "Tous les types",
     "opCount": "{count, plural, one {# opération} other {# opérations}}",
+    "shownOf": "{shown} sur {total} opérations affichées",
+    "loadMore": "Afficher {count} de plus",
+    "refineToSeeMore": "Affinez les filtres pour voir les plus anciennes.",
     "tab": {
       "all": "Toutes",
       "in": "Entrées",
