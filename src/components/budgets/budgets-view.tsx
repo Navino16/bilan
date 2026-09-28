@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { overline } from "@/components/transactions/bits";
 import { rollRecurringAction } from "@/server/transport/actions/budgets";
 import { BudgetForm, type BudgetLineOption } from "./budget-form";
+import { BudgetBar, statusStyle } from "./budget-status";
 import type { BudgetListItem } from "@/server/services/budgets";
 
 export function BudgetsView({
@@ -75,42 +76,51 @@ export function BudgetsView({
           {budgets.map((b) => (
             <li key={b.id}>
               <Link href={`/${locale}/budgets/${b.id}`} className="block">
-                <Card className="hover:border-primary/40 flex-row items-center justify-between gap-3 p-4 transition-colors">
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate font-medium">{b.name}</span>
-                      <Badge variant={b.scope === "GROUP" ? "default" : "secondary"}>
-                        {b.scope === "GROUP" ? t("scopeGroup") : t("scopePersonal")}
-                      </Badge>
-                      {b.recurring && <Badge variant="outline">{t("recurring")}</Badge>}
-                    </div>
-                    <p className="text-muted-foreground text-sm">
-                      {df.format(b.periodStart)} – {df.format(b.periodEnd)}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-3">
-                    {b.recurring && b.ended && b.canManage && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={rolling}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          roll(b.id);
-                        }}
-                      >
-                        <RefreshCw />
-                        {t("roll")}
-                      </Button>
-                    )}
-                    <div className="text-right">
-                      <div className="font-display text-lg leading-none">
-                        {nf.format(b.plannedTotal)}
+                <Card
+                  data-slot="budget-card"
+                  className="hover:border-primary/40 gap-3 p-4 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate font-medium">{b.name}</span>
+                        <Badge variant={b.scope === "GROUP" ? "default" : "secondary"}>
+                          {b.scope === "GROUP" ? t("scopeGroup") : t("scopePersonal")}
+                        </Badge>
+                        {b.recurring && <Badge variant="outline">{t("recurring")}</Badge>}
                       </div>
-                      <div className="text-muted-foreground text-xs">{t("plannedTotal")}</div>
+                      <p className="text-muted-foreground text-sm">
+                        {df.format(b.periodStart)} – {df.format(b.periodEnd)}
+                      </p>
                     </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      {b.recurring && b.ended && b.canManage && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={rolling}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            roll(b.id);
+                          }}
+                        >
+                          <RefreshCw />
+                          {t("roll")}
+                        </Button>
+                      )}
+                      <Badge style={statusStyle(b.status)} className="border-transparent">
+                        {t(`status.${b.status}`)}
+                      </Badge>
+                    </div>
+                  </div>
+                  <BudgetBar percent={b.percent} status={b.status} />
+                  <div className="text-muted-foreground flex items-center justify-between text-sm tabular-nums">
+                    <span>
+                      {nf.format(b.spentTotal)} / {nf.format(b.plannedTotal)}
+                    </span>
+                    <span>{b.percent} %</span>
                   </div>
                 </Card>
               </Link>

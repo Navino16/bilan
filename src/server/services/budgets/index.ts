@@ -5,7 +5,14 @@ import { logEvent } from "@/server/services/audit";
 import { listVisibleForUser } from "@/server/services/accounts";
 import { canReadAccount } from "@/server/services/accounts/sharing";
 import { collapseLinkedRows } from "@/lib/links";
-import { budgetPlannedTotal, lineStatus, nextPeriod, round2, type LineStatus } from "@/lib/budgets";
+import {
+  budgetPlannedTotal,
+  lineStatus,
+  nextPeriod,
+  round2,
+  type BudgetStatus,
+  type LineStatus,
+} from "@/lib/budgets";
 import {
   budgetInputSchema,
   type BudgetInput,
@@ -166,6 +173,9 @@ export type BudgetListItem = {
   periodEnd: Date;
   recurring: boolean;
   plannedTotal: number;
+  spentTotal: number;
+  percent: number;
+  status: BudgetStatus;
   ended: boolean; // period is over (eligible for a recurring roll)
   canManage: boolean; // actor may edit/delete/roll (own, or ADMIN+ of the group)
 };
@@ -183,25 +193,34 @@ export async function listBudgetsForUser(userId: string): Promise<BudgetListItem
   const { groupIds, roleByGroup } = await budgetScopeForUser(userId);
   const rows = await db.budget.findMany({
     where: { archived: false, OR: [{ userId }, { groupId: { in: groupIds } }] },
-    include: { lines: { select: { plannedAmount: true } } },
+    include: { lines: { select: { plannedAmount: true, categoryId: true, accountId: true } } },
     orderBy: { periodStart: "desc" },
   });
+  const accountCache: AccountScopeCache = new Map();
+  const spends = await Promise.all(rows.map((b) => computeBudgetSpend(b, accountCache)));
   const now = Date.now();
-  return rows.map((b) => ({
-    id: b.id,
-    name: b.name,
-    scope: b.groupId ? "GROUP" : "USER",
-    groupId: b.groupId,
-    periodType: b.periodType,
-    periodStart: b.periodStart,
-    periodEnd: b.periodEnd,
-    recurring: b.recurring,
-    plannedTotal: budgetPlannedTotal(
+  return rows.map((b, i) => {
+    const plannedTotal = budgetPlannedTotal(
       b.lines.map((l) => ({ plannedAmount: Number(l.plannedAmount) })),
-    ),
-    ended: b.periodEnd.getTime() < now,
-    canManage: canManageBudget(b.groupId, roleByGroup),
-  }));
+    );
+    const { spent, percent, status } = lineStatus(plannedTotal, round2(-spends[i].totalSum));
+    return {
+      id: b.id,
+      name: b.name,
+      scope: b.groupId ? "GROUP" : "USER",
+      groupId: b.groupId,
+      periodType: b.periodType,
+      periodStart: b.periodStart,
+      periodEnd: b.periodEnd,
+      recurring: b.recurring,
+      plannedTotal,
+      spentTotal: spent,
+      percent,
+      status,
+      ended: b.periodEnd.getTime() < now,
+      canManage: canManageBudget(b.groupId, roleByGroup),
+    };
+  });
 }
 
 type BudgetRow = {
@@ -247,18 +266,23 @@ async function budgetAccountIds(budget: {
   return (await listVisibleForUser(budget.userId)).map((a) => a.id);
 }
 
+type AccountScopeCache = Map<string, Promise<string[]>>;
+
 // Loads the budget's candidate rows once: transactions on the budget's account
 // scope within its period, PLUS any transaction explicitly assigned to this
 // budget regardless of account or period — so an INCLUDE can pull in an
 // out-of-period or personal-into-shared transaction, and an EXCLUDE always
 // resolves.
-async function loadBudgetRows(budget: {
-  id: string;
-  userId: string | null;
-  groupId: string | null;
-  periodStart: Date;
-  periodEnd: Date;
-}): Promise<{
+async function loadBudgetRows(
+  budget: {
+    id: string;
+    userId: string | null;
+    groupId: string | null;
+    periodStart: Date;
+    periodEnd: Date;
+  },
+  accountCache?: AccountScopeCache,
+): Promise<{
   rows: BudgetRow[];
   excluded: Set<string>;
   includedIds: Set<string>;
@@ -274,7 +298,13 @@ async function loadBudgetRows(budget: {
     assignments.filter((a) => a.mode === "INCLUDE").map((a) => a.transactionId),
   );
 
-  const accountIds = await budgetAccountIds(budget);
+  const scopeKey = budget.groupId ? `g:${budget.groupId}` : `u:${budget.userId}`;
+  let accountIdsPromise = accountCache?.get(scopeKey);
+  if (!accountIdsPromise) {
+    accountIdsPromise = budgetAccountIds(budget);
+    accountCache?.set(scopeKey, accountIdsPromise);
+  }
+  const accountIds = await accountIdsPromise;
   const assignedIds = [...includedIds, ...excluded];
 
   const orClauses: object[] = [];
@@ -343,9 +373,21 @@ export type BudgetDetail = {
   spentTotal: number;
 };
 
-export async function getBudgetDetail(id: string, viewerId: string): Promise<BudgetDetail> {
-  const b = await readableOrThrow(id, viewerId);
-  const { rows, excluded, includedIds } = await loadBudgetRows(b);
+// Per-line sums for display + a budget-wide dedup sum for the total: a tx that
+// matches several lines is counted once in the total; an INCLUDE'd tx that
+// matches no line is attributed to the first line for display.
+async function computeBudgetSpend(
+  b: {
+    id: string;
+    userId: string | null;
+    groupId: string | null;
+    periodStart: Date;
+    periodEnd: Date;
+    lines: LineFilter[];
+  },
+  accountCache?: AccountScopeCache,
+): Promise<{ lineSums: number[]; totalSum: number }> {
+  const { rows, excluded, includedIds } = await loadBudgetRows(b, accountCache);
 
   // Collapse links across the WHOLE loaded scope first, so a linked group split
   // across categories nets correctly (the offsetting member is not dropped by a
@@ -356,9 +398,6 @@ export async function getBudgetDetail(id: string, viewerId: string): Promise<Bud
     accountId: l.accountId,
   }));
 
-  // Per-line sums for display + a budget-wide dedup sum for the total: a tx that
-  // matches several lines is counted once in the total; an INCLUDE'd tx that
-  // matches no line is attributed to the first line for display.
   const lineSums = new Array<number>(b.lines.length).fill(0);
   let totalSum = 0;
   for (const r of collapsed) {
@@ -372,6 +411,12 @@ export async function getBudgetDetail(id: string, viewerId: string): Promise<Bud
       lineSums[0] += r.amount; // pure INCLUDE with no matching line
     }
   }
+  return { lineSums, totalSum };
+}
+
+export async function getBudgetDetail(id: string, viewerId: string): Promise<BudgetDetail> {
+  const b = await readableOrThrow(id, viewerId);
+  const { lineSums, totalSum } = await computeBudgetSpend(b);
 
   const lines = b.lines.map((l, i) => ({
     id: l.id,
