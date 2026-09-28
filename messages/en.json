@@ -606,18 +606,29 @@
       "custom": "Custom"
     },
     "apply": "Apply",
-    "vsPrevAmount": "{arrow} {amount} vs previous period"
+    "vsPrevAmount": "{arrow} {amount} vs previous period",
+    "periodInProgress": "Period in progress: compared with the full previous period ({previous})."
   },
   "insights": {
     "overline": "Insights",
     "pageTitle": "Insights",
-    "byCategory": "By category",
-    "breakdown": "Breakdown",
-    "evolution": "Over time",
-    "trend": "Trend",
     "noData": "No spending this period.",
     "noCategory": "Uncategorised",
-    "spentThisPeriod": "spent this period"
+    "biggestIncrease": "Biggest increase",
+    "biggestDecrease": "Biggest decrease",
+    "noChange": "None",
+    "changesOverline": "Changes",
+    "changesTitle": "What changed",
+    "changesSub": "{current} vs {previous} · spending by category",
+    "merchantsOverline": "Where the money goes",
+    "merchantsTitle": "Top merchants",
+    "merchantsCount": "{count}×",
+    "noMerchants": "No merchants this period.",
+    "incomeOverline": "Income",
+    "incomeTitle": "Income by category",
+    "incomeTotal": "{amount} this period",
+    "noIncome": "No income this period.",
+    "new": "new"
   },
   "settings": {
     "data": {

@@ -11,6 +11,7 @@ import type { FlatCategory } from "@/components/transactions/category-tree";
 import { formatPeriodLabel, toIsoDay } from "@/lib/period";
 import { PageHeader } from "@/components/shell/page-header";
 import { categorySliceColors } from "@/lib/chart-colors";
+import { PeriodInProgress } from "./period-in-progress";
 
 const DEFAULT_COLOR = "#2563eb";
 
@@ -23,11 +24,15 @@ function delta(cur: number, prev: number): { pct: number; up: boolean } | null {
 export async function DashboardView({
   data,
   period,
+  previous,
+  inProgress,
   categories,
   locale,
 }: {
   data: DashboardData;
   period: Period;
+  previous: Period;
+  inProgress: boolean;
   categories: FlatCategory[];
   locale: string;
 }) {
@@ -115,17 +120,20 @@ export async function DashboardView({
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        overline={t("overline")}
-        title={label}
-        subtitle={t("txCount", { count: data.totals.count })}
-        actions={
-          <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
-            <PeriodPicker from={toIsoDay(period.from)} to={toIsoDay(period.to)} />
-            <PeriodNav period={period} />
-          </div>
-        }
-      />
+      <div className="space-y-3">
+        <PageHeader
+          overline={t("overline")}
+          title={label}
+          subtitle={t("txCount", { count: data.totals.count })}
+          actions={
+            <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+              <PeriodPicker from={toIsoDay(period.from)} to={toIsoDay(period.to)} />
+              <PeriodNav period={period} />
+            </div>
+          }
+        />
+        {inProgress && <PeriodInProgress previousLabel={formatPeriodLabel(previous, locale)} />}
+      </div>
 
       {/* KPI row */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
