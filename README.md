@@ -17,6 +17,24 @@ npm run setup   # generates .env, boots MariaDB, migrates + seeds (once scope 0.
 npm run dev     # http://localhost:3000
 ```
 
+## Demo data
+
+`npm run db:seed-dev` creates a fictional user with a realistic dataset for local
+development and demos (`scripts/seed-dev-user.ts`). It refuses to run if the user
+already exists; `npm run db:seed-dev -- --reset` wipes and re-seeds it.
+
+- **Login**: `dev@bilan.local` / `dev-password-123`
+- **Accounts**: Compte courant, Livret A, Compte joint
+- **Transactions**: ~450 over the 12 months ending today (recomputed on each run,
+  deterministic for a given day), categorized with the default categories; ~15% left
+  uncategorized on purpose (ATM withdrawals, PayPal…)
+- **Links**: monthly internal transfers (→ joint, → Livret A) + a refunded purchase
+- **Rules**: 3 categorization rules (Carrefour, Netflix, SNCF)
+- **Household**: "Foyer Martin" with `member@e2e.local` (if the e2e users are seeded),
+  the joint account shared with write access
+- **Budgets**: a recurring monthly budget (last month, rolled into this month) and a
+  household budget that goes over
+
 ## Scripts
 
 | Script                               | Purpose                     |
@@ -28,6 +46,7 @@ npm run dev     # http://localhost:3000
 | `npm test` / `npm run test:coverage` | Unit + integration (Vitest) |
 | `npm run test:e2e`                   | E2E (Playwright)            |
 | `npm run ci`                         | lint + typecheck + test     |
+| `npm run db:seed-dev`                | Seed the demo user (above)  |
 
 ## Docs
 
