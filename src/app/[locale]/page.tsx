@@ -3,12 +3,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { getAppName } from "@/server/services/settings/app-settings";
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("home");
   const tApp = await getTranslations("app");
+  const appName = await getAppName();
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 py-16">
@@ -18,7 +20,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
             {tApp("tagline")}
           </p>
           <h1 className="font-display text-5xl font-medium tracking-tight text-balance md:text-6xl">
-            {tApp("name")}
+            {appName}
           </h1>
           <p className="text-muted-foreground max-w-2xl text-base">{t("intro")}</p>
         </div>

@@ -15,7 +15,18 @@ type AuditFn = (input: {
 // App-setting keys that feed the Better Auth config (built in `buildOptions`):
 // changing one must hot-reload the auth handler so it takes effect without a
 // restart. See `[[project_dev-e2e-ops]]` (restart no longer needed for these).
-const AUTH_KEYS = new Set(["registration_mode", "credentials_enabled", "min_password_length"]);
+const AUTH_KEYS = new Set([
+  "registration_mode",
+  "credentials_enabled",
+  "min_password_length",
+  "app_name",
+]);
+
+const DEFAULT_APP_NAME = "Bilan";
+
+export function normalizeAppName(raw: unknown): string {
+  return typeof raw === "string" && raw.trim() ? raw.trim() : DEFAULT_APP_NAME;
+}
 
 export class AppSettingsService {
   private cache = new Map<string, Entry>();
@@ -74,3 +85,7 @@ export const appSettings = new AppSettingsService(db, {
     invalidateAuthCache();
   },
 });
+
+export async function getAppName(): Promise<string> {
+  return normalizeAppName(await appSettings.get("app_name"));
+}

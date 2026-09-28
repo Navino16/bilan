@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const sendMail = vi.fn().mockResolvedValue({ delivered: true });
 vi.mock("@/server/services/mail/mailer", () => ({ sendMail: (o: unknown) => sendMail(o) }));
+vi.mock("@/server/services/settings/app-settings", () => ({
+  getAppName: async () => "Maison",
+}));
 
 import {
   notifyNewLogin,
@@ -23,6 +26,8 @@ describe("security notifications", () => {
     expect(arg.to).toBe("user@bilan.local");
     expect(arg.subject.toLowerCase()).toMatch(/connexion|login/);
     expect(arg.text).toContain("203.0.113.7");
+    expect(arg.subject).toContain("Maison");
+    expect(arg.text).toContain("Maison");
   });
 
   it("notifyPasswordChanged emails the user", async () => {
@@ -31,5 +36,6 @@ describe("security notifications", () => {
     const arg = sendMail.mock.calls[0][0] as { to: string; subject: string };
     expect(arg.to).toBe("user@bilan.local");
     expect(arg.subject.toLowerCase()).toMatch(/mot de passe|password/);
+    expect(arg.subject).toContain("Maison");
   });
 });

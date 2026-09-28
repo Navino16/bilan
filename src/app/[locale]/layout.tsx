@@ -5,14 +5,18 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { hasLocale } from "next-intl";
 import { locales } from "@/i18n/config";
 import { DocumentShell } from "@/components/shell/document-shell";
+import { getAppName } from "@/server/services/settings/app-settings";
 
-export const metadata: Metadata = {
-  title: "Bilan",
-  description: "Self-hosted multi-user personal finance app",
-  manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "Bilan" },
-  icons: { icon: "/icon.png", apple: "/apple-icon.png" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const appName = await getAppName();
+  return {
+    title: appName,
+    description: "Self-hosted multi-user personal finance app",
+    manifest: "/manifest.webmanifest",
+    appleWebApp: { capable: true, statusBarStyle: "default", title: appName },
+    icons: { icon: "/icon.png", apple: "/apple-icon.png" },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: [

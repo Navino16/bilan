@@ -6,7 +6,7 @@ import { db } from "@/server/db";
 import { env } from "@/env";
 import { dataKey } from "@/server/crypto/keys";
 import { decrypt } from "@/server/crypto/encryption";
-import { appSettings } from "@/server/services/settings/app-settings";
+import { appSettings, getAppName } from "@/server/services/settings/app-settings";
 import { logEvent } from "@/server/services/audit";
 import { notifyPasswordChanged } from "@/server/services/mail/security-notifications";
 import { seedDefaultCategories } from "@/server/services/categories/seed-defaults";
@@ -46,6 +46,7 @@ function toOAuthConfig(o: ResolvedOidc) {
 async function buildOptions(): Promise<BetterAuthOptions> {
   const credentialsEnabled = (await appSettings.get<boolean>("credentials_enabled")) ?? true;
   const minPasswordLength = (await appSettings.get<number>("min_password_length")) ?? 12;
+  const appName = await getAppName();
   const providers = await providerCache.get();
 
   // Compose enabled providers out of the DB: Google as a built-in social
@@ -68,7 +69,7 @@ async function buildOptions(): Promise<BetterAuthOptions> {
     oidcProviders.length > 0 ? [genericOAuth({ config: oidcProviders.map(toOAuthConfig) })] : [];
 
   return {
-    appName: "Bilan",
+    appName,
     secret: env.AUTH_SECRET,
     baseURL: env.APP_URL,
     trustedOrigins: [env.APP_URL],

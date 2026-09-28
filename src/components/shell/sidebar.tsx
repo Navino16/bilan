@@ -13,10 +13,12 @@ type SidebarUser = { name?: string | null; email: string };
 export function Sidebar({
   user,
   canAdmin,
+  appName,
   className,
 }: {
   user: SidebarUser;
   canAdmin: boolean;
+  appName: string;
   className?: string;
 }) {
   const t = useTranslations("shell");
@@ -31,7 +33,7 @@ export function Sidebar({
     >
       <div className="px-5 py-6">
         <Link href={`/${locale}/dashboard`} className="font-display text-2xl tracking-tight">
-          Bilan
+          {appName}
         </Link>
         <p className="text-muted-foreground mt-0.5 text-[10px] tracking-[0.12em] uppercase">
           {t("tagline")}

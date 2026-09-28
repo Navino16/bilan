@@ -1,6 +1,5 @@
 {
   "app": {
-    "name": "Bilan",
     "tagline": "Your finances, settled."
   },
   "auth": {
