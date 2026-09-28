@@ -16,6 +16,7 @@ import {
   type AccountOption,
 } from "@/components/transactions/transaction-list";
 import { TransactionFilters } from "@/components/transactions/transaction-filters";
+import { LinkModeProvider } from "@/components/transactions/link-mode";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -118,14 +119,16 @@ export default async function TransactionsPage({
           </>
         }
       />
-      <TransactionFilters categories={flatCategories} from={sp.from} to={sp.to} />
-      <TransactionList
-        items={listItems}
-        categories={flatCategories}
-        accounts={accountOptions}
-        budgets={budgets}
-        partialLastDay={partialLastDay}
-      />
+      <LinkModeProvider>
+        <TransactionFilters categories={flatCategories} from={sp.from} to={sp.to} total={total} />
+        <TransactionList
+          items={listItems}
+          categories={flatCategories}
+          accounts={accountOptions}
+          budgets={budgets}
+          partialLastDay={partialLastDay}
+        />
+      </LinkModeProvider>
       {truncated && (
         <div
           data-slot="transactions-more"

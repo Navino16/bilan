@@ -416,6 +416,12 @@
       "link": "Lier",
       "ignore": "Ignorer",
       "empty": "Aucune paire à suggérer pour le moment."
+    },
+    "filterSheet": {
+      "reset": "Réinitialiser",
+      "period": "Période",
+      "linkModeHint": "Relier des opérations (remboursement, virement).",
+      "show": "{count, plural, =0 {Aucune opération} one {Voir # opération} other {Voir # opérations}}"
     }
   },
   "import": {

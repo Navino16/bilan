@@ -416,6 +416,12 @@
       "link": "Link",
       "ignore": "Ignore",
       "empty": "No pairs to suggest right now."
+    },
+    "filterSheet": {
+      "reset": "Reset",
+      "period": "Period",
+      "linkModeHint": "Link transactions (refund, transfer).",
+      "show": "{count, plural, =0 {No transactions} one {Show # transaction} other {Show # transactions}}"
     }
   },
   "import": {

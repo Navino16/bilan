@@ -32,4 +32,23 @@ test.describe("mobile bottom-sheets", () => {
     await openViaTrigger(page, /nouveau foyer/i);
     await expect(page.locator('input[name="name"]')).toBeVisible();
   });
+
+  test("transaction filters live in a bottom sheet and combine", async ({ page }) => {
+    await page.goto("/fr/transactions", { waitUntil: "domcontentloaded", timeout: 90_000 });
+    // Only search + the « Filtres » button stay inline on mobile.
+    await expect(page.getByRole("button", { name: "Sorties", exact: true })).toBeHidden();
+    await openViaTrigger(page, /^filtres/i);
+
+    const sheet = page.locator('[data-slot="sheet-content"]');
+    await sheet.getByRole("button", { name: "Sorties", exact: true }).click();
+    await expect(page).toHaveURL(/dir=out/);
+    // A period keeps the other filters.
+    await sheet.getByRole("button", { name: "Trimestre", exact: true }).click();
+    await expect(page).toHaveURL(/from=.*&to=/);
+    expect(page.url()).toContain("dir=out");
+
+    await sheet.getByRole("button", { name: /^(voir|aucune)/i }).click();
+    await expect(sheet).toBeHidden();
+    await expect(page.getByRole("button", { name: /^filtres/i })).toContainText("2");
+  });
 });
