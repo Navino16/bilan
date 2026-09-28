@@ -234,7 +234,7 @@ export function ImportWizard({
           </Link>
         </Card>
       ) : !preview ? (
-        <div className="max-w-xl space-y-4">
+        <div className="mx-auto max-w-xl space-y-4 pt-4">
           <label className="flex items-center gap-3">
             <span className={overline}>{t("account")}</span>
             <select

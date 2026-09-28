@@ -74,7 +74,7 @@ export async function InsightsView({
       {/* Category donut + legend */}
       <Card className="gap-4 p-6">
         <div>
-          <div className={overline}>{t("overline")}</div>
+          <div className={overline}>{t("breakdown")}</div>
           <div className="font-display text-xl">{t("byCategory")}</div>
         </div>
         {topCats.length === 0 ? (
@@ -99,13 +99,13 @@ export async function InsightsView({
       {/* Spend trend */}
       <Card className="gap-4 p-6">
         <div>
-          <div className={overline}>{t("overline")}</div>
+          <div className={overline}>{t("evolution")}</div>
           <div className="font-display text-xl">{t("trend")}</div>
         </div>
-        {trendPoints.length === 0 ? (
-          <p className="text-muted-foreground text-sm">{t("noData")}</p>
-        ) : (
+        {data.trace.peak ? (
           <TrendBars points={trendPoints} format={(n) => money.format(n)} />
+        ) : (
+          <p className="text-muted-foreground text-sm">{t("noData")}</p>
         )}
       </Card>
     </div>

@@ -62,7 +62,11 @@ function Row({ node, parents }: { node: Node; parents: ParentOption[] }) {
           {node.name}
         </span>
         {node.scope === "GROUP" && <Badge variant="secondary">{t("scopeGroup")}</Badge>}
-        {node.isDefault && <Badge variant="outline">{t("default")}</Badge>}
+        {node.isDefault && (
+          <span className="text-muted-foreground text-[11px] tracking-wide uppercase">
+            {t("default")}
+          </span>
+        )}
         <Button variant="ghost" size="icon" aria-label={t("edit")} onClick={() => setEditing(true)}>
           <Pencil className="size-4" />
         </Button>

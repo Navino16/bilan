@@ -601,6 +601,8 @@
     "overline": "Insights",
     "pageTitle": "Insights",
     "byCategory": "By category",
+    "breakdown": "Breakdown",
+    "evolution": "Over time",
     "trend": "Trend",
     "noData": "No data for this period.",
     "noCategory": "Uncategorised",
