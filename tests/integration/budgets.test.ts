@@ -194,6 +194,22 @@ describe("getBudgetDetail / computeLine", () => {
     expect(detail.lines[0].spent).toBe(55); // 30 (kept) + 25 (included) − 40 (excluded)
   });
 
+  it("listBudgetsForUser reports the same spend and status as the detail", async () => {
+    const a = await tx("2026-03-03T00:00:00.000Z", -40, catId); // matches, will EXCLUDE
+    await tx("2026-03-05T00:00:00.000Z", -90, catId);
+    const { id } = await createBudget(
+      { ...baseInput, lines: [{ categoryId: catId, plannedAmount: 100 }] },
+      { id: owner },
+    );
+    await db.budgetAssignment.create({
+      data: { budgetId: id, transactionId: a, mode: "EXCLUDE", assignedById: owner },
+    });
+    const detail = await getBudgetDetail(id, owner);
+    const item = (await listBudgetsForUser(owner)).find((b) => b.id === id);
+    expect(item?.spentTotal).toBe(detail.spentTotal);
+    expect(item).toMatchObject({ spentTotal: 90, percent: 90, status: "WARN" });
+  });
+
   it("excludes a balanced link and collapses an unbalanced one to its net", async () => {
     const e1 = await tx("2026-03-03T00:00:00.000Z", -50, catId);
     const r1 = await tx("2026-03-04T00:00:00.000Z", 50, catId); // balanced pair → 0

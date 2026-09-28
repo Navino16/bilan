@@ -88,7 +88,10 @@ test.describe("budgets", () => {
 
     // 4) The budget detail now reflects the included spend (60,00 €).
     await page.goto("/fr/budgets");
-    await page.getByText(budgetName).first().click();
+    const card = page.locator('[data-slot="budget-card"]').filter({ hasText: budgetName });
+    await expect(card).toContainText("60,00 € / 200,00 €", { timeout: 15_000 });
+    await expect(card).toContainText("30 %");
+    await card.click();
     await expect(page.getByRole("heading", { name: budgetName })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("60,00", { exact: false }).first()).toBeVisible({
       timeout: 15_000,

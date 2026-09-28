@@ -5,19 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { overline } from "@/components/transactions/bits";
 import type { BudgetDetail as BudgetDetailData } from "@/server/services/budgets";
-
-type BudgetStatus = "OK" | "WARN" | "OVER";
-
-function statusStyle(status: BudgetStatus): { color: string; background: string } {
-  switch (status) {
-    case "OVER":
-      return { color: "var(--expense)", background: "var(--expense-bg)" };
-    case "WARN":
-      return { color: "var(--warning)", background: "var(--warning-bg)" };
-    default:
-      return { color: "var(--income)", background: "var(--income-bg)" };
-  }
-}
+import { BudgetBar, statusStyle } from "./budget-status";
 
 export function BudgetDetail({
   detail,
@@ -86,15 +74,7 @@ export function BudgetDetail({
                     {t(`status.${line.status}`)}
                   </Badge>
                 </div>
-                <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${Math.min(100, line.percent)}%`,
-                      background: style.color,
-                    }}
-                  />
-                </div>
+                <BudgetBar percent={line.percent} status={line.status} />
                 <div className="text-muted-foreground flex items-center justify-between text-sm">
                   <span>
                     {nf.format(line.spent)} / {nf.format(line.plannedAmount)}
