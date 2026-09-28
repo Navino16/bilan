@@ -34,6 +34,7 @@ npm run dev          # dev server
 npm run ci           # lint + typecheck + test (run before every PR)
 npm run test:e2e     # Playwright
 npm run setup        # generate .env, boot MariaDB, migrate + seed (after scope 0.2/0.3)
+npm run db:seed-dev  # demo user dev@bilan.local / dev-password-123, 12 months of data (-- --reset to rebuild)
 ```
 
 ## Important notes
