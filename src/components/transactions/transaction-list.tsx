@@ -53,11 +53,13 @@ export function TransactionList({
   categories,
   accounts,
   budgets = [],
+  partialLastDay = false,
 }: {
   items: ListItem[];
   categories: FlatCategory[];
   accounts: AccountOption[];
   budgets?: AssignableBudget[];
+  partialLastDay?: boolean;
 }) {
   const t = useTranslations("transactions");
   const locale = useLocale();
@@ -206,13 +208,15 @@ export function TransactionList({
           <span className="text-right">{t("amount")}</span>
         </div>
 
-        {groups.map((g) => (
+        {groups.map((g, gi) => (
           <div key={g.day}>
             <div className="text-muted-foreground bg-muted/60 flex items-center justify-between border-y px-4 py-2 text-[0.7rem] font-medium tracking-[0.08em] uppercase">
               <span>{dfDay.format(new Date(g.day))}</span>
               {/* The per-day total only adds signal when a day has several rows;
                   for single-transaction days it would just echo the amount. */}
-              {g.rows.length > 1 && <span className="tabular-nums">{signed(g.total)}</span>}
+              {g.rows.length > 1 && !(partialLastDay && gi === groups.length - 1) && (
+                <span className="tabular-nums">{signed(g.total)}</span>
+              )}
             </div>
 
             {g.rows.map((it) => {

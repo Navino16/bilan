@@ -345,6 +345,9 @@
     "allCategories": "All categories",
     "allTypes": "All types",
     "opCount": "{count, plural, one {# transaction} other {# transactions}}",
+    "shownOf": "Showing {shown} of {total} transactions",
+    "loadMore": "Show {count} more",
+    "refineToSeeMore": "Narrow the filters to see older ones.",
     "tab": {
       "all": "All",
       "in": "Income",

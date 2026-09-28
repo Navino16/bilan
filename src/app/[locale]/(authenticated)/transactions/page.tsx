@@ -9,6 +9,7 @@ import { listLinkedTxIds } from "@/server/services/links";
 import { listAssignableBudgets } from "@/server/services/budgets";
 import { flattenCategories } from "@/components/transactions/category-tree";
 import { parsePeriodParams } from "@/lib/period";
+import { LIST_MAX_LIMIT, nextListLimit, parseListLimit, trimToDayBoundary } from "@/lib/list-limit";
 import {
   TransactionList,
   type ListItem,
@@ -16,7 +17,8 @@ import {
 } from "@/components/transactions/transaction-list";
 import { TransactionFilters } from "@/components/transactions/transaction-filters";
 import { TransactionForm } from "@/components/transactions/transaction-form";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +39,7 @@ export default async function TransactionsPage({
   // A from/to range narrows the list; with no params the list stays unfiltered
   // (all transactions), preserving the default "show everything" behaviour.
   const period = sp.from || sp.to ? parsePeriodParams({ from: sp.from, to: sp.to }) : undefined;
+  const limit = parseListLimit(sp.limit);
 
   const [{ items, total }, tree, accounts, linkedIds, budgets] = await Promise.all([
     listTransactions(user.id, {
@@ -45,6 +48,7 @@ export default async function TransactionsPage({
       search: sp.search,
       from: period?.from,
       to: period?.to,
+      take: limit,
     }),
     listForUser(user.id),
     listVisibleForUser(user.id),
@@ -60,7 +64,7 @@ export default async function TransactionsPage({
     bankName: a.bankName,
   }));
   const formAccounts = accounts.map((a) => ({ id: a.id, name: a.name }));
-  const listItems: ListItem[] = items.map((i) => ({
+  const allItems: ListItem[] = items.map((i) => ({
     id: i.id,
     date: i.date.toISOString(),
     amount: i.amount,
@@ -73,6 +77,12 @@ export default async function TransactionsPage({
     categoryId: i.categoryId,
     linked: linkedIds.has(i.id),
   }));
+  const truncated = items.length < total;
+  const { items: listItems, partialLastDay } = trimToDayBoundary(allItems, truncated);
+  const moreParams = new URLSearchParams(
+    Object.entries(sp).filter((e): e is [string, string] => e[1] !== undefined),
+  );
+  moreParams.set("limit", String(nextListLimit(limit)));
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-5">
@@ -115,7 +125,29 @@ export default async function TransactionsPage({
         categories={flatCategories}
         accounts={accountOptions}
         budgets={budgets}
+        partialLastDay={partialLastDay}
       />
+      {truncated && (
+        <div
+          data-slot="transactions-more"
+          className="flex flex-col items-center gap-3 py-2 text-sm"
+        >
+          <span className="text-muted-foreground">
+            {t("shownOf", { shown: listItems.length, total })}
+          </span>
+          {limit < LIST_MAX_LIMIT ? (
+            <Link
+              href={`/${locale}/transactions?${moreParams.toString()}`}
+              scroll={false}
+              className={cn(buttonVariants({ variant: "outline" }), "bg-card shadow-sm")}
+            >
+              {t("loadMore", { count: nextListLimit(limit) - limit })}
+            </Link>
+          ) : (
+            <span className="text-muted-foreground">{t("refineToSeeMore")}</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
