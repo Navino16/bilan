@@ -8,6 +8,11 @@ const USERS = [
     password: "e2e-member-pw-123456",
   },
   { file: "tests/e2e/.auth/admin.json", email: "admin@e2e.local", password: "e2e-admin-pw-123456" },
+  {
+    file: "tests/e2e/.auth/superadmin.json",
+    email: "superadmin@e2e.local",
+    password: "e2e-superadmin-pw-123456",
+  },
 ];
 
 for (const u of USERS) {

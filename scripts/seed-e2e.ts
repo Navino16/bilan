@@ -17,7 +17,15 @@ const db = new PrismaClient({ adapter: new PrismaMariaDb(url) });
 const E2E_USERS = [
   { email: "owner@e2e.local", name: "E2E Owner", password: "e2e-owner-pw-123456" },
   { email: "member@e2e.local", name: "E2E Member", password: "e2e-member-pw-123456" },
-  { email: "admin@e2e.local", name: "E2E Admin", password: "e2e-admin-pw-123456", admin: true },
+  { email: "admin@e2e.local", name: "E2E Admin", password: "e2e-admin-pw-123456", role: "ADMIN" },
+  {
+    email: "superadmin@e2e.local",
+    name: "E2E Super Admin",
+    password: "e2e-superadmin-pw-123456",
+    role: "SUPER_ADMIN",
+  },
+  // Only ever promoted/demoted by the role-change e2e.
+  { email: "roles-target@e2e.local", name: "E2E Roles Target", password: "e2e-target-pw-123456" },
 ];
 
 async function ensureUsers(): Promise<void> {
@@ -33,7 +41,7 @@ async function ensureUsers(): Promise<void> {
     const res = await auth.api.signUpEmail({
       body: { email: u.email, password: u.password, name: u.name },
     });
-    if (u.admin) await grantRole(db, res.user.id, "ADMIN", res.user.id);
+    if (u.role) await grantRole(db, res.user.id, u.role, res.user.id);
   }
 }
 

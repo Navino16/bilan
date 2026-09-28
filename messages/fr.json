@@ -700,7 +700,17 @@
       "createOverline": "Invitation",
       "createHint": "La personne reçoit par e-mail un lien pour définir son mot de passe.",
       "listOverline": "Comptes",
-      "count": "{count, plural, =0 {Aucun compte} one {# compte} other {# comptes}}"
+      "count": "{count, plural, =0 {Aucun compte} one {# compte} other {# comptes}}",
+      "roleFor": "Rôle de {user}",
+      "roleError": {
+        "UNAUTHORIZED": "Vous n'avez pas la permission de changer les rôles.",
+        "INVALID": "Rôle invalide.",
+        "SELF": "Vous ne pouvez pas changer votre propre rôle.",
+        "FORBIDDEN": "Seul un super admin peut attribuer ou retirer un rôle d'administration.",
+        "LAST_SUPER_ADMIN": "Impossible de retirer le dernier super admin.",
+        "NOT_FOUND": "Utilisateur introuvable.",
+        "FAILED": "Échec du changement de rôle."
+      }
     },
     "signupTokens": {
       "createTitle": "Créer un jeton",

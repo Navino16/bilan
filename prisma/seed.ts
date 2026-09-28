@@ -5,6 +5,7 @@ const PERMISSIONS = [
   { key: "admin.settings.write", scope: "admin", description: "Edit app settings" },
   { key: "admin.users.read", scope: "admin", description: "View users" },
   { key: "admin.users.create", scope: "admin", description: "Create users" },
+  { key: "admin.users.update", scope: "admin", description: "Change user roles" },
   { key: "admin.signup_tokens.manage", scope: "admin", description: "Manage signup tokens" },
   { key: "admin.audit.read", scope: "admin", description: "View audit log" },
 ];
