@@ -175,7 +175,8 @@
       "INVALID_IBAN": "Invalid IBAN.",
       "FORBIDDEN": "Action not allowed.",
       "FAILED": "Failed. Please retry."
-    }
+    },
+    "legendOthers": "Others · {count}"
   },
   "rules": {
     "pageTitle": "Categories & rules",

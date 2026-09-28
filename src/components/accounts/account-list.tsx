@@ -18,6 +18,9 @@ import { ShareDialog, type ShareGroup } from "@/components/accounts/share-dialog
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import type { VisibleAccount } from "@/server/services/accounts";
+import { balanceLegend } from "@/lib/balance-legend";
+
+const OTHERS_COLOR = "var(--ink-3)";
 import { archiveAccountAction, revealAccountIbanAction } from "@/server/transport/actions/accounts";
 
 function useMoney() {
@@ -138,8 +141,27 @@ export function AccountList({
     .filter((a) => a.access === "OWNER" || a.access === "WRITE")
     .map((a) => ({ id: a.id, name: a.name }));
   const total = accounts.reduce((sum, a) => sum + a.balance, 0);
-  const positive = accounts.filter((a) => a.balance > 0);
-  const positiveTotal = positive.reduce((sum, a) => sum + a.balance, 0);
+  const legend = balanceLegend(accounts);
+  const segments = [
+    ...legend.items
+      .filter((a) => a.balance > 0)
+      .map((a) => ({ key: a.id, value: a.balance, color: a.color ?? "#2563eb" })),
+    ...(legend.others?.positive
+      ? [{ key: "others", value: legend.others.positive, color: OTHERS_COLOR }]
+      : []),
+  ];
+  const legendEntries = [
+    ...legend.items.map((a) => ({ key: a.id, label: a.name, color: a.color ?? "#2563eb" })),
+    ...(legend.others
+      ? [
+          {
+            key: "others",
+            label: t("legendOthers", { count: legend.others.count }),
+            color: OTHERS_COLOR,
+          },
+        ]
+      : []),
+  ];
 
   return (
     <div className="space-y-4">
@@ -149,31 +171,31 @@ export function AccountList({
             {t("globalBalance")}
           </div>
           <div className="font-display text-4xl leading-none">{money(total)}</div>
-          {positiveTotal > 0 && (
+          {legend.positiveTotal > 0 && (
             <>
               <div className="bg-muted flex h-2 w-full gap-0.5 overflow-hidden rounded-full">
-                {positive.map((a) => (
+                {segments.map((seg) => (
                   <div
-                    key={a.id}
+                    key={seg.key}
                     style={{
-                      width: `${(a.balance / positiveTotal) * 100}%`,
-                      backgroundColor: a.color ?? "#2563eb",
+                      width: `${(seg.value / legend.positiveTotal) * 100}%`,
+                      backgroundColor: seg.color,
                     }}
                   />
                 ))}
               </div>
-              <div className="flex flex-wrap gap-x-4 gap-y-1">
-                {accounts.map((a) => (
+              <div className="flex flex-wrap gap-x-4 gap-y-1" data-slot="balance-legend">
+                {legendEntries.map((e) => (
                   <span
-                    key={a.id}
+                    key={e.key}
                     className="text-muted-foreground flex items-center gap-1.5 text-xs"
                   >
                     <span
                       aria-hidden
                       className="size-2 shrink-0 rounded-full"
-                      style={{ backgroundColor: a.color ?? "#2563eb" }}
+                      style={{ backgroundColor: e.color }}
                     />
-                    {a.name}
+                    {e.label}
                   </span>
                 ))}
               </div>
