@@ -27,4 +27,17 @@ test.describe("admin settings", () => {
     });
     await expect(page.locator('[data-slot="audit-row"]').first()).toBeVisible();
   });
+
+  test("the admin nav only lists permitted tabs and fits a narrow viewport", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/fr/admin/users", { waitUntil: "domcontentloaded", timeout: 90_000 });
+    const nav = page.getByRole("link", { name: "Utilisateurs", exact: true });
+    await expect(nav).toHaveAttribute("aria-current", "page");
+    // ADMIN lacks admin.signup_tokens.manage (SUPER_ADMIN only) → no dead-end tab.
+    await expect(page.getByRole("link", { name: /jetons d'invitation/i })).toHaveCount(0);
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
 });

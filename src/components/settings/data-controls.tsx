@@ -85,7 +85,7 @@ export function DataControls({
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger
             render={
-              <Button variant="destructive" className="w-full sm:w-auto">
+              <Button variant="destructive" className="w-full sm:w-auto sm:self-start">
                 <TriangleAlert />
                 {t("deleteTitle")}
               </Button>

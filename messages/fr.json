@@ -571,7 +571,7 @@
       "net": "Solde net"
     },
     "vsPrev": "{arrow} {pct} % vs période précédente",
-    "noPrev": "Pas de période précédente",
+    "noPrev": "Rien sur la période précédente",
     "breakdown": "Répartition",
     "byCategory": "Dépenses par catégorie",
     "spentThisPeriod": "dépensés sur la période",
@@ -604,7 +604,7 @@
     "breakdown": "Répartition",
     "evolution": "Évolution",
     "trend": "Tendance",
-    "noData": "Pas de données sur cette période.",
+    "noData": "Aucune dépense sur cette période.",
     "noCategory": "Sans catégorie",
     "spentThisPeriod": "dépensés sur la période"
   },

@@ -26,6 +26,18 @@ test.describe("transactions", () => {
       page.locator('[data-slot="transaction-row"]').filter({ hasText: label }).first(),
     ).toBeVisible();
   });
+
+  test("the header fits a narrow viewport without horizontal overflow", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/fr/transactions");
+    await expect(page.getByRole("button", { name: /nouvelle transaction/i })).toBeInViewport({
+      ratio: 1,
+    });
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
 });
 
 test("unauthenticated /transactions redirects to login", async ({ page }) => {

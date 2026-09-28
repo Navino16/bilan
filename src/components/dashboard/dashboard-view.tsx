@@ -63,6 +63,12 @@ export async function DashboardView({
       ? { month: "short", year: "numeric", timeZone: "UTC" }
       : { day: "numeric", month: "short", timeZone: "UTC" },
   );
+  const pctFmt = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
+  const recentDateFmt = new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
   const peak = data.trace.peak;
   const peakCatName = peak?.categoryId ? catById.get(peak.categoryId)?.name : undefined;
 
@@ -118,7 +124,10 @@ export async function DashboardView({
             </div>
             <div className="text-muted-foreground text-[11.5px]">
               {k.d
-                ? t("vsPrev", { arrow: k.d.up ? "↗" : "↘", pct: Math.abs(k.d.pct) })
+                ? t("vsPrev", {
+                    arrow: k.d.up ? "↗" : "↘",
+                    pct: pctFmt.format(Math.abs(k.d.pct)),
+                  })
                 : t("noPrev")}
             </div>
           </Card>
@@ -174,11 +183,17 @@ export async function DashboardView({
               {t(isMonthlyTrace ? "monthByMonth" : "dayByDay")}
             </div>
           </div>
-          <MiniBars values={tracePoints.map((p) => p.amount)} />
-          <div className="text-muted-foreground flex justify-between text-[11px]">
-            <span>{traceAxis(tracePoints[0])}</span>
-            <span>{traceAxis(tracePoints[tracePoints.length - 1])}</span>
-          </div>
+          {!peak ? (
+            <p className="text-muted-foreground text-sm">{t("noExpenses")}</p>
+          ) : (
+            <>
+              <MiniBars values={tracePoints.map((p) => p.amount)} />
+              <div className="text-muted-foreground flex justify-between text-[11px]">
+                <span>{traceAxis(tracePoints[0])}</span>
+                <span>{traceAxis(tracePoints[tracePoints.length - 1])}</span>
+              </div>
+            </>
+          )}
           {peak && (
             <div className="grid grid-cols-2 gap-3 border-t pt-3">
               <div className="space-y-0.5">
@@ -223,7 +238,15 @@ export async function DashboardView({
                   className="flex items-center gap-3 border-b px-5 py-2.5 last:border-b-0"
                 >
                   <CategoryAvatar color={meta?.color} icon={meta?.icon} size={28} />
-                  <span className="min-w-0 flex-1 truncate text-sm">{r.label}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm">{r.label}</div>
+                    <div className="text-muted-foreground truncate text-[11.5px]">
+                      {recentDateFmt.format(r.date)} · {meta?.name ?? t("noCategory")}
+                    </div>
+                  </div>
+                  <span className="text-muted-foreground hidden max-w-40 truncate text-[11.5px] sm:block">
+                    {r.accountName}
+                  </span>
                   <span
                     className="text-sm font-medium tabular-nums"
                     style={r.amount > 0 ? { color: "var(--income)" } : undefined}
