@@ -21,7 +21,15 @@ type Node = {
   children: Node[];
 };
 
-function Row({ node, parents }: { node: Node; parents: ParentOption[] }) {
+function Row({
+  node,
+  parents,
+  inheritedColor = null,
+}: {
+  node: Node;
+  parents: ParentOption[];
+  inheritedColor?: string | null;
+}) {
   const t = useTranslations("categories");
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -55,7 +63,7 @@ function Row({ node, parents }: { node: Node; parents: ParentOption[] }) {
         <span
           aria-hidden
           className="inline-block size-3 rounded-full"
-          style={{ background: node.color ?? "var(--muted-foreground)" }}
+          style={{ background: node.color ?? inheritedColor ?? "var(--muted-foreground)" }}
         />
         <span className="flex-1 text-sm">
           {node.icon ? `${node.icon} ` : ""}
@@ -91,7 +99,12 @@ function Row({ node, parents }: { node: Node; parents: ParentOption[] }) {
       {node.children.length > 0 && (
         <div className="ml-6 space-y-1">
           {node.children.map((c) => (
-            <Row key={c.id} node={c} parents={parents} />
+            <Row
+              key={c.id}
+              node={c}
+              parents={parents}
+              inheritedColor={node.color ?? inheritedColor}
+            />
           ))}
         </div>
       )}

@@ -571,7 +571,7 @@
       "net": "Net balance"
     },
     "vsPrev": "{arrow} {pct} % vs previous period",
-    "noPrev": "No previous period",
+    "noPrev": "Nothing in the previous period",
     "breakdown": "Breakdown",
     "byCategory": "Spending by category",
     "spentThisPeriod": "spent this period",
@@ -604,7 +604,7 @@
     "breakdown": "Breakdown",
     "evolution": "Over time",
     "trend": "Trend",
-    "noData": "No data for this period.",
+    "noData": "No spending this period.",
     "noCategory": "Uncategorised",
     "spentThisPeriod": "spent this period"
   },
