@@ -31,7 +31,9 @@ export default async function AuthenticatedLayout({
       <Sidebar user={user} canAdmin={canAdmin} appName={appName} className="hidden md:flex" />
       <div className="flex min-w-0 flex-1 flex-col">
         <Header user={user} canAdmin={canAdmin} appName={appName} />
-        <main className="flex-1 px-4 pt-6 pb-24 md:px-8 md:pb-8">{children}</main>
+        <main className="flex-1 px-4 pt-6 pb-24 md:px-8 md:pb-8">
+          <div className="mx-auto w-full max-w-5xl">{children}</div>
+        </main>
         <BottomNav className="md:hidden" />
       </div>
       <RegisterSw />

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { upsertSmtpAction, type SettingsActionState } from "@/server/transport/actions/settings";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export type SmtpDefaults = {
   host: string;
@@ -18,8 +19,6 @@ export type SmtpDefaults = {
   fromName: string | null;
   enabled: boolean;
 } | null;
-
-const selectClass = "border-input bg-background h-9 w-full rounded-md border px-3 text-sm";
 
 export function SmtpForm({ defaults }: { defaults: SmtpDefaults }) {
   const t = useTranslations("admin.smtp");
@@ -90,27 +89,25 @@ export function SmtpForm({ defaults }: { defaults: SmtpDefaults }) {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="smtp-secure">{t("secure")}</Label>
-          <select
+          <NativeSelect
             id="smtp-secure"
             name="secure"
             defaultValue={String(defaults?.secure ?? true)}
-            className={selectClass}
           >
             <option value="true">{t("secureTls")}</option>
             <option value="false">{t("securePlain")}</option>
-          </select>
+          </NativeSelect>
         </div>
         <div className="space-y-2">
           <Label htmlFor="smtp-enabled">{t("enabled")}</Label>
-          <select
+          <NativeSelect
             id="smtp-enabled"
             name="enabled"
             defaultValue={String(defaults?.enabled ?? true)}
-            className={selectClass}
           >
             <option value="true">{t("on")}</option>
             <option value="false">{t("off")}</option>
-          </select>
+          </NativeSelect>
         </div>
       </div>
       {state?.ok && (

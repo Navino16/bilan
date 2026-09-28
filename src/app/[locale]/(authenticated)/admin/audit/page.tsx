@@ -2,6 +2,10 @@ import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/server/auth/permissions";
 import { listAuditLog } from "@/server/services/audit";
 import { AuditTable } from "@/components/admin/audit-table";
+import { SectionCard } from "@/components/shell/section-card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export const dynamic = "force-dynamic";
 
@@ -24,42 +28,23 @@ export default async function AdminAuditPage({
   });
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-medium">{t("title")}</h2>
-
+    <SectionCard flush overline={t("overline")} title={t("title")} hint={t("count", { total })}>
       {/* Plain GET filter form → query string; no client JS needed. */}
-      <form method="get" className="flex flex-wrap items-end gap-3">
-        <div className="space-y-1">
-          <label htmlFor="f-action" className="text-muted-foreground text-xs">
-            {t("colAction")}
-          </label>
-          <input
-            id="f-action"
-            name="action"
-            defaultValue={sp.action ?? ""}
-            className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-          />
+      <form method="get" className="flex flex-wrap items-end gap-3 border-b px-6 py-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="f-action">{t("colAction")}</Label>
+          <Input id="f-action" name="action" defaultValue={sp.action ?? ""} className="w-56" />
         </div>
-        <div className="space-y-1">
-          <label htmlFor="f-entity" className="text-muted-foreground text-xs">
-            {t("colEntity")}
-          </label>
-          <input
-            id="f-entity"
-            name="entity"
-            defaultValue={sp.entity ?? ""}
-            className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-          />
+        <div className="space-y-1.5">
+          <Label htmlFor="f-entity">{t("colEntity")}</Label>
+          <Input id="f-entity" name="entity" defaultValue={sp.entity ?? ""} className="w-56" />
         </div>
-        <button
-          type="submit"
-          className="bg-primary text-primary-foreground h-9 rounded-md px-3 text-sm font-medium"
-        >
+        <Button type="submit" variant="outline">
           {t("filter")}
-        </button>
+        </Button>
       </form>
 
-      <AuditTable items={items} total={total} locale={locale} />
-    </div>
+      <AuditTable items={items} locale={locale} />
+    </SectionCard>
   );
 }

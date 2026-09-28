@@ -8,6 +8,7 @@ import { flattenCategories } from "@/components/transactions/category-tree";
 import { AccountList } from "@/components/accounts/account-list";
 import { AccountForm } from "@/components/accounts/account-form";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/shell/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -21,19 +22,22 @@ export default async function AccountsPage({ params }: { params: Promise<{ local
   const groups = (await listGroupsForUser(user.id)).map((g) => ({ id: g.id, name: g.name }));
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6">
-      <header className="flex items-center justify-between gap-3">
-        <h1 className="font-display text-3xl">{t("title")}</h1>
-        <AccountForm
-          mode="create"
-          trigger={
-            <Button>
-              <Plus />
-              {t("create")}
-            </Button>
-          }
-        />
-      </header>
+    <div className="space-y-6">
+      <PageHeader
+        overline={t("overline")}
+        title={t("title")}
+        actions={
+          <AccountForm
+            mode="create"
+            trigger={
+              <Button>
+                <Plus />
+                {t("create")}
+              </Button>
+            }
+          />
+        }
+      />
       <AccountList accounts={accounts} groups={groups} categories={categories} />
     </div>
   );

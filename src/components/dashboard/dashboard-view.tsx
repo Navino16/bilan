@@ -9,6 +9,8 @@ import type { DashboardData } from "@/server/services/dashboard";
 import type { Period } from "@/lib/period";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import { formatPeriodLabel, toIsoDay } from "@/lib/period";
+import { PageHeader } from "@/components/shell/page-header";
+import { categorySliceColors } from "@/lib/chart-colors";
 
 const DEFAULT_COLOR = "#2563eb";
 
@@ -72,44 +74,58 @@ export async function DashboardView({
   const peak = data.trace.peak;
   const peakCatName = peak?.categoryId ? catById.get(peak.categoryId)?.name : undefined;
 
+  const pctNote = (d: ReturnType<typeof delta>) =>
+    d ? t("vsPrev", { arrow: d.up ? "↗" : "↘", pct: pctFmt.format(Math.abs(d.pct)) }) : t("noPrev");
+  // The net can change sign between periods, which makes a % meaningless (issue #112 §7):
+  // it shows the difference in euros instead.
+  const netDiff = data.totals.net - data.previous.net;
+  const hasPrevious = data.previous.income !== 0 || data.previous.expense !== 0;
+  const diffFmt = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0,
+    signDisplay: "exceptZero",
+  });
+
   const kpis = [
     {
       key: "income",
       value: data.totals.income,
-      d: delta(data.totals.income, data.previous.income),
+      note: pctNote(delta(data.totals.income, data.previous.income)),
       tone: "var(--income)",
     },
     {
       key: "expense",
       value: data.totals.expense,
-      d: delta(data.totals.expense, data.previous.expense),
+      note: pctNote(delta(data.totals.expense, data.previous.expense)),
       tone: "var(--expense)",
     },
     {
       key: "net",
       value: data.totals.net,
-      d: delta(data.totals.net, data.previous.net),
+      note: hasPrevious
+        ? t("vsPrevAmount", { arrow: netDiff >= 0 ? "↗" : "↘", amount: diffFmt.format(netDiff) })
+        : t("noPrev"),
       tone: data.totals.net >= 0 ? "var(--income)" : "var(--expense)",
     },
   ] as const;
 
   const topCats = data.byCategory.slice(0, 6);
+  const sliceColors = categorySliceColors(topCats, catById, DEFAULT_COLOR);
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-        <div className="space-y-1">
-          <div className={overline}>{t("overline")}</div>
-          <h1 className="font-display text-4xl leading-none">{label}</h1>
-          <p className="text-muted-foreground text-sm">
-            {t("txCount", { count: data.totals.count })}
-          </p>
-        </div>
-        <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
-          <PeriodPicker from={toIsoDay(period.from)} to={toIsoDay(period.to)} />
-          <PeriodNav period={period} />
-        </div>
-      </header>
+    <div className="space-y-6">
+      <PageHeader
+        overline={t("overline")}
+        title={label}
+        subtitle={t("txCount", { count: data.totals.count })}
+        actions={
+          <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+            <PeriodPicker from={toIsoDay(period.from)} to={toIsoDay(period.to)} />
+            <PeriodNav period={period} />
+          </div>
+        }
+      />
 
       {/* KPI row */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -122,13 +138,8 @@ export async function DashboardView({
             >
               {money.format(k.value)}
             </div>
-            <div className="text-muted-foreground text-[11.5px]">
-              {k.d
-                ? t("vsPrev", {
-                    arrow: k.d.up ? "↗" : "↘",
-                    pct: pctFmt.format(Math.abs(k.d.pct)),
-                  })
-                : t("noPrev")}
+            <div className="text-muted-foreground text-[11.5px]" data-slot="kpi-note">
+              {k.note}
             </div>
           </Card>
         ))}
@@ -146,21 +157,18 @@ export async function DashboardView({
           ) : (
             <div className="flex flex-col items-center gap-6 sm:flex-row">
               <Donut
-                data={topCats.map((c) => ({
-                  value: c.amount,
-                  color: (c.categoryId && catById.get(c.categoryId)?.color) || DEFAULT_COLOR,
-                }))}
+                data={topCats.map((c, i) => ({ value: c.amount, color: sliceColors[i] }))}
                 centerLabel={money.format(data.totals.expense)}
                 centerSub={t("spentThisPeriod")}
               />
               <div className="flex w-full flex-1 flex-col gap-2">
-                {topCats.map((c) => {
+                {topCats.map((c, i) => {
                   const meta = c.categoryId ? catById.get(c.categoryId) : undefined;
                   return (
                     <div key={c.categoryId ?? "none"} className="flex items-center gap-2.5 text-sm">
                       <span
                         className="size-2.5 shrink-0 rounded-full"
-                        style={{ background: meta?.color ?? DEFAULT_COLOR }}
+                        style={{ background: sliceColors[i] }}
                       />
                       <span className="flex-1 truncate">{meta?.name ?? t("noCategory")}</span>
                       <span className="tabular-nums">{money.format(c.amount)}</span>

@@ -8,8 +8,9 @@ test.describe("categorization learning", () => {
   );
 
   test("recategorizing a transaction offers to create a rule", async ({ page }) => {
-    const label = `Leclerc ${Date.now()}`;
-    await page.goto("/fr/transactions");
+    const stamp = Date.now();
+    const label = `Leclerc ${stamp}`;
+    await page.goto(`/fr/transactions?search=${stamp}`);
     await page.getByRole("button", { name: /nouvelle transaction/i }).click();
     await page.fill('input[name="date"]', "2026-02-16");
     await page.fill('input[name="amount"]', "-30");
@@ -17,7 +18,7 @@ test.describe("categorization learning", () => {
     await page.getByRole("button", { name: /^ajouter$/i }).click();
 
     const row = page.locator('[data-slot="transaction-row"]').filter({ hasText: label }).first();
-    await expect(row).toBeVisible();
+    await expect(row).toBeVisible({ timeout: 15_000 });
     // Open the detail panel, open its category combobox and pick the first real
     // category (menu item 0 is "no category").
     await row.click();

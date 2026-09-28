@@ -23,6 +23,7 @@ import {
   updateBudgetAction,
   type BudgetActionState,
 } from "@/server/transport/actions/budgets";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export type BudgetLineOption = { id: string; name: string };
 export type EditableBudgetLine = {
@@ -161,12 +162,11 @@ export function BudgetForm({
 
             <div className="space-y-2">
               <Label htmlFor="bud-scope">{t("scope")}</Label>
-              <select
+              <NativeSelect
                 id="bud-scope"
                 name="groupId"
                 defaultValue={budget?.groupId ?? ""}
                 disabled={mode === "edit"}
-                className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
               >
                 <option value="">{t("scopePersonal")}</option>
                 {groups.map((g) => (
@@ -174,24 +174,23 @@ export function BudgetForm({
                     {g.name}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="bud-period-type">{t("period")}</Label>
-                <select
+                <NativeSelect
                   id="bud-period-type"
                   name="periodType"
                   defaultValue={budget?.periodType ?? "MONTH"}
-                  className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
                 >
                   {BUDGET_PERIOD_TYPES.map((p) => (
                     <option key={p} value={p}>
                       {t(`periodType.${p}`)}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="bud-start">{t("periodStart")}</Label>
@@ -238,11 +237,10 @@ export function BudgetForm({
                   key={i}
                   className="border-border grid grid-cols-1 gap-2 rounded-md border p-3 sm:grid-cols-[1fr_1fr_auto_auto]"
                 >
-                  <select
+                  <NativeSelect
                     aria-label={t("line.category")}
                     value={line.categoryId}
                     onChange={(e) => updateLine(i, { categoryId: e.target.value })}
-                    className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
                   >
                     <option value="">{t("line.any")}</option>
                     {categories.map((c) => (
@@ -250,12 +248,11 @@ export function BudgetForm({
                         {c.name}
                       </option>
                     ))}
-                  </select>
-                  <select
+                  </NativeSelect>
+                  <NativeSelect
                     aria-label={t("line.account")}
                     value={line.accountId}
                     onChange={(e) => updateLine(i, { accountId: e.target.value })}
-                    className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
                   >
                     <option value="">{t("line.any")}</option>
                     {accounts.map((a) => (
@@ -263,7 +260,7 @@ export function BudgetForm({
                         {a.name}
                       </option>
                     ))}
-                  </select>
+                  </NativeSelect>
                   <Input
                     name="plannedAmount"
                     type="number"

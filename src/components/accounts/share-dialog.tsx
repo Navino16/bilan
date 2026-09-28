@@ -15,6 +15,7 @@ import {
   revokeShareAction,
   listSharesAction,
 } from "@/server/transport/actions/accounts";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export type ShareGroup = { id: string; name: string };
 
@@ -87,17 +88,17 @@ export function ShareDialog({
               {groups.map((g) => (
                 <div key={g.id} className="flex items-center justify-between gap-3 px-4 py-3">
                   <span className="truncate text-sm font-medium">{g.name}</span>
-                  <select
+                  <NativeSelect
                     aria-label={g.name}
                     value={shares[g.id] ?? "NONE"}
                     disabled={pending}
                     onChange={(e) => change(g.id, e.target.value)}
-                    className="border-input bg-background h-8 rounded-md border px-2 text-xs"
+                    size="sm"
                   >
                     <option value="NONE">{t("permNone")}</option>
                     <option value="READ">{t("access.READ")}</option>
                     <option value="WRITE">{t("access.WRITE")}</option>
-                  </select>
+                  </NativeSelect>
                 </div>
               ))}
             </div>

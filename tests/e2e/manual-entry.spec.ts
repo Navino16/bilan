@@ -8,7 +8,8 @@ test.describe("manual entry from accounts", () => {
   );
 
   test("adds a transaction from an account card with the account preselected", async ({ page }) => {
-    const label = `Loyer ${Date.now()}`;
+    const stamp = Date.now();
+    const label = `Loyer ${stamp}`;
     await page.goto("/fr/accounts");
     // Open the per-account "add transaction" dialog (first writable account).
     await page
@@ -24,8 +25,9 @@ test.describe("manual entry from accounts", () => {
     // navigating, otherwise the goto races/aborts the server action.
     await expect(page.locator('input[name="label"]')).toBeHidden();
 
-    // It lands in the transactions list (allow for a cold /transactions compile).
-    await page.goto("/fr/transactions");
+    // It lands in the transactions list (searched: the unfiltered list shows only
+    // the newest page, and the e2e DB accumulates rows across runs).
+    await page.goto(`/fr/transactions?search=${stamp}`);
     await expect(
       page.locator('[data-slot="transaction-row"]').filter({ hasText: label }).first(),
     ).toBeVisible({ timeout: 15_000 });

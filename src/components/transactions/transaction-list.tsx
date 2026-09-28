@@ -16,6 +16,7 @@ import {
 import { recategorizeTransactionAction } from "@/server/transport/actions/transactions";
 import { createLinkAction } from "@/server/transport/actions/links";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useLinkMode } from "./link-mode";
 
 export type ListItem = {
   id: string;
@@ -75,24 +76,13 @@ export function TransactionList({
   } | null>(null);
 
   const tLink = useTranslations("transactions.link");
-  const [linkMode, setLinkMode] = useState(false);
-  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const { linkMode, picked, setLinkMode, togglePicked } = useLinkMode();
   const [linkPending, startLinkTransition] = useTransition();
-
-  function togglePicked(id: string) {
-    setPicked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
 
   function submitLink(formData: FormData) {
     startLinkTransition(async () => {
       const r = await createLinkAction(null, formData);
       if (r?.ok) {
-        setPicked(new Set());
         setLinkMode(false);
         router.refresh();
       }
@@ -165,13 +155,11 @@ export function TransactionList({
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-2">
+      {/* On mobile, link mode is entered from the filter sheet; the row only shows once active. */}
+      <div className={`items-center justify-between gap-2 ${linkMode ? "flex" : "hidden md:flex"}`}>
         <button
           type="button"
-          onClick={() => {
-            setLinkMode((v) => !v);
-            setPicked(new Set());
-          }}
+          onClick={() => setLinkMode(!linkMode)}
           aria-pressed={linkMode}
           className="border-border text-muted-foreground hover:text-foreground inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[0.8rem]"
         >

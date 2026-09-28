@@ -3,9 +3,9 @@
 import { useLocale, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { overline } from "@/components/transactions/bits";
 import type { BudgetDetail as BudgetDetailData } from "@/server/services/budgets";
 import { BudgetBar, statusStyle } from "./budget-status";
+import { PageHeader } from "@/components/shell/page-header";
 
 export function BudgetDetail({
   detail,
@@ -36,20 +36,20 @@ export function BudgetDetail({
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-5">
-      <header className="space-y-1">
-        <div className={overline}>{t("overline")}</div>
-        <div className="flex items-center gap-2">
-          <h1 className="font-display text-3xl leading-none">{detail.name}</h1>
-          <Badge variant={detail.scope === "GROUP" ? "default" : "secondary"}>
-            {detail.scope === "GROUP" ? t("scopeGroup") : t("scopePersonal")}
-          </Badge>
-          {detail.recurring && <Badge variant="outline">{t("recurring")}</Badge>}
-        </div>
-        <p className="text-muted-foreground text-sm">
-          {df.format(detail.periodStart)} – {df.format(detail.periodEnd)}
-        </p>
-      </header>
+    <div className="space-y-5">
+      <PageHeader
+        overline={t("overline")}
+        title={detail.name}
+        badges={
+          <>
+            <Badge variant={detail.scope === "GROUP" ? "default" : "secondary"}>
+              {detail.scope === "GROUP" ? t("scopeGroup") : t("scopePersonal")}
+            </Badge>
+            {detail.recurring && <Badge variant="outline">{t("recurring")}</Badge>}
+          </>
+        }
+        subtitle={`${df.format(detail.periodStart)} – ${df.format(detail.periodEnd)}`}
+      />
 
       <Card className="flex-row items-center justify-between p-4">
         <div>

@@ -23,7 +23,7 @@ npm run dev     # http://localhost:3000
 development and demos (`scripts/seed-dev-user.ts`). It refuses to run if the user
 already exists; `npm run db:seed-dev -- --reset` wipes and re-seeds it.
 
-- **Login**: `dev@bilan.local` / `dev-password-123`
+- **Login**: `dev@bilan.local` / `dev-password-123` (super admin: sees the whole admin area)
 - **Accounts**: Compte courant, Livret A, Compte joint
 - **Transactions**: ~450 over the 12 months ending today (recomputed on each run,
   deterministic for a given day), categorized with the default categories; ~15% left

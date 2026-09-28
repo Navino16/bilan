@@ -13,6 +13,7 @@ import {
   createInvitationAction,
   type InvitationActionState,
 } from "@/server/transport/actions/invitations";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export function InviteForm({ groupId }: { groupId: string }) {
   const t = useTranslations("invitations");
@@ -45,18 +46,13 @@ export function InviteForm({ groupId }: { groupId: string }) {
         </div>
         <div className="space-y-2">
           <Label htmlFor="inv-role">{t("role")}</Label>
-          <select
-            id="inv-role"
-            name="role"
-            defaultValue="MEMBER"
-            className="border-input bg-background h-8 w-full rounded-lg border px-2.5 text-sm sm:w-32"
-          >
+          <NativeSelect id="inv-role" name="role" defaultValue="MEMBER" className="sm:w-32">
             {INVITABLE_GROUP_ROLES.map((r) => (
               <option key={r} value={r}>
                 {tg(`roles.${r}`)}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <Button type="submit" disabled={pending}>
           <Send />

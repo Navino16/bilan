@@ -12,6 +12,8 @@ import { CategoryCombobox } from "@/components/transactions/category-combobox";
 import { Stepper, FieldMap, CheckRow } from "./wizard-bits";
 import { CSV_FIELDS } from "@/lib/validation/import";
 import type { FlatCategory } from "@/components/transactions/category-tree";
+import { PageHeader } from "@/components/shell/page-header";
+import { NativeSelect } from "@/components/ui/native-select";
 
 type Account = { id: string; name: string; bankName: string | null };
 type PreviewRow = {
@@ -214,13 +216,11 @@ export function ImportWizard({
 
   return (
     <div className="space-y-5">
-      <div className="flex items-end justify-between gap-3">
-        <div className="space-y-1">
-          <div className={overline}>{t("overline")}</div>
-          <h1 className="font-display text-3xl leading-none">{t("title")}</h1>
-        </div>
-        <span className="text-muted-foreground text-xs">{t("sources")}</span>
-      </div>
+      <PageHeader
+        overline={t("overline")}
+        title={t("title")}
+        actions={<span className="text-muted-foreground text-xs">{t("sources")}</span>}
+      />
 
       <Stepper steps={steps} current={step} />
 
@@ -237,17 +237,17 @@ export function ImportWizard({
         <div className="mx-auto max-w-xl space-y-4 pt-4">
           <label className="flex items-center gap-3">
             <span className={overline}>{t("account")}</span>
-            <select
+            <NativeSelect
               value={accountId}
               onChange={(e) => setAccountId(e.target.value)}
-              className="border-input bg-card h-9 w-auto max-w-sm min-w-48 rounded-lg border px-3 text-sm shadow-sm"
+              className="w-auto max-w-sm min-w-48"
             >
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </label>
           <label className="border-border hover:bg-muted/40 flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed px-6 py-14 text-center transition-colors">
             <Upload className="text-muted-foreground size-6" />
@@ -316,10 +316,10 @@ export function ImportWizard({
               {preview.source === "CSV" && preview.headers ? (
                 CSV_FIELDS.map((field) => (
                   <FieldMap key={field} label={t(`col${field[0].toUpperCase()}${field.slice(1)}`)}>
-                    <select
+                    <NativeSelect
                       value={columns[field] ?? ""}
                       onChange={(e) => setColumns((m) => ({ ...m, [field]: e.target.value }))}
-                      className="border-input bg-card h-8 w-full rounded-md border px-2 text-xs"
+                      size="sm"
                     >
                       <option value="">{t("none")}</option>
                       {preview.headers!.map((h) => (
@@ -327,7 +327,7 @@ export function ImportWizard({
                           {h}
                         </option>
                       ))}
-                    </select>
+                    </NativeSelect>
                   </FieldMap>
                 ))
               ) : (
@@ -382,12 +382,13 @@ export function ImportWizard({
                 {products.length > 1 && (
                   <div className="bg-muted/40 flex items-center justify-between gap-3 border-y px-5 py-2">
                     <span className="text-sm font-medium">{t(`products.${product.key}`)}</span>
-                    <select
+                    <NativeSelect
                       value={productAccount[product.key] ?? ""}
                       onChange={(e) =>
                         setProductAccount((m) => ({ ...m, [product.key]: e.target.value }))
                       }
-                      className="border-input bg-card h-8 w-auto min-w-40 rounded-md border px-2 text-xs"
+                      size="sm"
+                      className="w-auto min-w-40"
                     >
                       <option value="">{t("ignoreProduct")}</option>
                       {accounts.map((a) => (
@@ -395,7 +396,7 @@ export function ImportWizard({
                           {a.name}
                         </option>
                       ))}
-                    </select>
+                    </NativeSelect>
                   </div>
                 )}
                 <div className="text-muted-foreground bg-muted/60 hidden grid-cols-[28px_56px_1fr_minmax(0,160px)_76px_96px] items-center gap-3 border-y px-5 py-2.5 text-[11px] tracking-[0.08em] uppercase md:grid">

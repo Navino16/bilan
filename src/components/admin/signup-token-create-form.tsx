@@ -24,7 +24,7 @@ export function SignupTokenCreateForm() {
 
   return (
     <form ref={formRef} action={action} className="flex flex-wrap items-end gap-4">
-      <div className="space-y-2">
+      <div className="min-w-48 flex-1 space-y-2">
         <Label htmlFor="st-desc">{t("description")}</Label>
         <Input id="st-desc" name="description" placeholder={t("descriptionPlaceholder")} />
       </div>

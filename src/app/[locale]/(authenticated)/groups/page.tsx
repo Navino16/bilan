@@ -8,6 +8,7 @@ import { GroupForm } from "@/components/groups/group-form";
 import { JoinByCode } from "@/components/groups/join-by-code";
 import { PendingInvitations } from "@/components/groups/pending-invitations";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/shell/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -25,22 +26,23 @@ export default async function GroupsPage({ params }: { params: Promise<{ locale:
   }));
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6">
-      <header className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl">{t("title")}</h1>
-          <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
-        </div>
-        <GroupForm
-          mode="create"
-          trigger={
-            <Button>
-              <Plus />
-              {t("create")}
-            </Button>
-          }
-        />
-      </header>
+    <div className="space-y-6">
+      <PageHeader
+        overline={t("overline")}
+        title={t("title")}
+        subtitle={t("subtitle")}
+        actions={
+          <GroupForm
+            mode="create"
+            trigger={
+              <Button>
+                <Plus />
+                {t("create")}
+              </Button>
+            }
+          />
+        }
+      />
       <PendingInvitations invitations={pending} />
       <GroupList groups={groups} />
       <section className="border-border space-y-2 rounded-lg border border-dashed p-4">

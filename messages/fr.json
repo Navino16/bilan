@@ -5,7 +5,6 @@
   "auth": {
     "login": {
       "title": "Connexion",
-      "subtitle": "Accédez à votre espace Bilan.",
       "email": "Adresse e-mail",
       "password": "Mot de passe",
       "forgot": "Mot de passe oublié ?",
@@ -20,7 +19,6 @@
     },
     "register": {
       "title": "Créer un compte",
-      "subtitle": "Rejoignez votre instance Bilan.",
       "name": "Nom",
       "email": "Adresse e-mail",
       "password": "Mot de passe",
@@ -115,6 +113,7 @@
     }
   },
   "accounts": {
+    "overline": "Patrimoine",
     "title": "Comptes",
     "empty": "Aucun compte. Créez-en un pour commencer.",
     "new": "Nouveau",
@@ -174,7 +173,8 @@
       "INVALID_IBAN": "IBAN invalide.",
       "FORBIDDEN": "Action non autorisée.",
       "FAILED": "Échec. Réessayez."
-    }
+    },
+    "legendOthers": "Autres · {count}"
   },
   "rules": {
     "pageTitle": "Catégories & règles",
@@ -414,6 +414,12 @@
       "link": "Lier",
       "ignore": "Ignorer",
       "empty": "Aucune paire à suggérer pour le moment."
+    },
+    "filterSheet": {
+      "reset": "Réinitialiser",
+      "period": "Période",
+      "linkModeHint": "Relier des opérations (remboursement, virement).",
+      "show": "{count, plural, =0 {Aucune opération} one {Voir # opération} other {Voir # opérations}}"
     }
   },
   "import": {
@@ -488,6 +494,8 @@
     }
   },
   "groups": {
+    "overline": "Partage",
+    "detailOverline": "Foyer",
     "title": "Foyers",
     "subtitle": "Partagez des comptes et des budgets avec votre foyer.",
     "empty": "Aucun foyer. Créez-en un pour partager vos comptes.",
@@ -597,7 +605,8 @@
       "this-year": "Année",
       "custom": "Personnalisé"
     },
-    "apply": "Appliquer"
+    "apply": "Appliquer",
+    "vsPrevAmount": "{arrow} {amount} vs période précédente"
   },
   "insights": {
     "overline": "Analyses",
@@ -661,6 +670,7 @@
     }
   },
   "admin": {
+    "overline": "Instance",
     "title": "Administration",
     "nav": {
       "users": "Utilisateurs",
@@ -686,7 +696,11 @@
         "UNAUTHORIZED": "Vous n'avez pas la permission de créer des utilisateurs.",
         "INVALID": "Vérifiez les champs saisis.",
         "FAILED": "Échec de la création (l'e-mail existe peut-être déjà)."
-      }
+      },
+      "createOverline": "Invitation",
+      "createHint": "La personne reçoit par e-mail un lien pour définir son mot de passe.",
+      "listOverline": "Comptes",
+      "count": "{count, plural, =0 {Aucun compte} one {# compte} other {# comptes}}"
     },
     "signupTokens": {
       "createTitle": "Créer un jeton",
@@ -706,10 +720,15 @@
       "error": {
         "UNAUTHORIZED": "Vous n'avez pas la permission de gérer les jetons.",
         "INVALID": "Valeur invalide."
-      }
+      },
+      "createOverline": "Inscription",
+      "createHint": "Un jeton permet de créer un compte lorsque l'inscription est sur invitation.",
+      "listOverline": "Invitations",
+      "token": "Jeton",
+      "usesCol": "Utilisations",
+      "status": "Statut"
     },
     "settings": {
-      "title": "Paramètres de l'application",
       "appName": "Nom de l'application",
       "registrationMode": "Mode d'inscription",
       "credentialsEnabled": "Connexion par mot de passe",
@@ -728,6 +747,21 @@
       "error": {
         "INVALID": "Valeur invalide.",
         "FAILED": "Échec de l'enregistrement."
+      },
+      "general": {
+        "overline": "Général",
+        "title": "Identité",
+        "hint": "Nom affiché dans l'interface, les e-mails et l'onglet du navigateur."
+      },
+      "access": {
+        "overline": "Accès",
+        "title": "Inscription et connexion",
+        "hint": "Qui peut créer un compte et comment on se connecte."
+      },
+      "security": {
+        "overline": "Sécurité",
+        "title": "Mots de passe et double authentification",
+        "hint": "Exigences appliquées à tous les comptes."
       }
     },
     "smtp": {
@@ -752,7 +786,8 @@
       "error": {
         "INVALID": "Vérifiez les champs saisis.",
         "FAILED": "Échec de l'enregistrement."
-      }
+      },
+      "overline": "E-mails"
     },
     "authProviders": {
       "listTitle": "Fournisseurs configurés",
@@ -786,7 +821,10 @@
       "error": {
         "INVALID": "Vérifiez les champs saisis.",
         "FAILED": "Échec de l'enregistrement."
-      }
+      },
+      "listOverline": "Connexion",
+      "addOverline": "Nouveau",
+      "addHint": "Connexion par identifiants, OIDC ou Google."
     },
     "audit": {
       "title": "Journal d'audit",
@@ -797,7 +835,13 @@
       "colEntity": "Entité",
       "colUser": "Utilisateur",
       "system": "système",
-      "filter": "Filtrer"
+      "filter": "Filtrer",
+      "overline": "Traçabilité"
+    },
+    "roles": {
+      "USER": "Utilisateur",
+      "ADMIN": "Admin",
+      "SUPER_ADMIN": "Super admin"
     }
   },
   "home": {

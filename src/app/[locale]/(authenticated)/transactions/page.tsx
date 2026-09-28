@@ -16,9 +16,11 @@ import {
   type AccountOption,
 } from "@/components/transactions/transaction-list";
 import { TransactionFilters } from "@/components/transactions/transaction-filters";
+import { LinkModeProvider } from "@/components/transactions/link-mode";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/shell/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -85,48 +87,48 @@ export default async function TransactionsPage({
   moreParams.set("limit", String(nextListLimit(limit)));
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div className="space-y-1">
-          <div className="text-muted-foreground text-[0.7rem] font-medium tracking-[0.14em] uppercase">
-            {t("opCount", { count: total })}
-          </div>
-          <h1 className="font-display text-3xl leading-none">{t("title")}</h1>
-        </div>
-        <div className="flex items-center gap-4">
-          <Link
-            href={`/${locale}/transactions/suggestions`}
-            className="text-primary text-sm hover:underline"
-          >
-            {t("suggestions.open")}
-          </Link>
-          {accountOptions.length === 0 ? (
-            <Button disabled>
-              <Plus />
-              {t("create")}
-            </Button>
-          ) : (
-            <TransactionForm
-              accounts={formAccounts}
-              categories={flatCategories}
-              trigger={
-                <Button>
-                  <Plus />
-                  {t("create")}
-                </Button>
-              }
-            />
-          )}
-        </div>
-      </header>
-      <TransactionFilters categories={flatCategories} from={sp.from} to={sp.to} />
-      <TransactionList
-        items={listItems}
-        categories={flatCategories}
-        accounts={accountOptions}
-        budgets={budgets}
-        partialLastDay={partialLastDay}
+    <div className="space-y-5">
+      <PageHeader
+        overline={t("opCount", { count: total })}
+        title={t("title")}
+        actions={
+          <>
+            <Link
+              href={`/${locale}/transactions/suggestions`}
+              className="text-primary text-sm hover:underline"
+            >
+              {t("suggestions.open")}
+            </Link>
+            {accountOptions.length === 0 ? (
+              <Button disabled>
+                <Plus />
+                {t("create")}
+              </Button>
+            ) : (
+              <TransactionForm
+                accounts={formAccounts}
+                categories={flatCategories}
+                trigger={
+                  <Button>
+                    <Plus />
+                    {t("create")}
+                  </Button>
+                }
+              />
+            )}
+          </>
+        }
       />
+      <LinkModeProvider>
+        <TransactionFilters categories={flatCategories} from={sp.from} to={sp.to} total={total} />
+        <TransactionList
+          items={listItems}
+          categories={flatCategories}
+          accounts={accountOptions}
+          budgets={budgets}
+          partialLastDay={partialLastDay}
+        />
+      </LinkModeProvider>
       {truncated && (
         <div
           data-slot="transactions-more"

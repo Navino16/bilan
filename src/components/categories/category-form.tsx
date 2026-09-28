@@ -21,6 +21,7 @@ import {
   updateCategoryAction,
   type CategoryActionState,
 } from "@/server/transport/actions/categories";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export type ParentOption = { id: string; name: string };
 export type EditableCategory = {
@@ -127,12 +128,7 @@ export function CategoryForm({
 
             <div className="space-y-2">
               <Label htmlFor="cat-parent">{t("parent")}</Label>
-              <select
-                id="cat-parent"
-                name="parentId"
-                defaultValue={category?.parentId ?? ""}
-                className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-              >
+              <NativeSelect id="cat-parent" name="parentId" defaultValue={category?.parentId ?? ""}>
                 <option value="">{t("noParent")}</option>
                 {parents
                   .filter((p) => p.id !== category?.id)
@@ -141,7 +137,7 @@ export function CategoryForm({
                       {p.name}
                     </option>
                   ))}
-              </select>
+              </NativeSelect>
             </div>
 
             {error && <p className="text-destructive text-sm">{t(`error.${error}`)}</p>}

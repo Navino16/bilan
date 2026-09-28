@@ -16,9 +16,8 @@ export default async function LoginPage({ params }: { params: Promise<{ locale: 
 
   return (
     <main className="space-y-6">
-      <header className="space-y-1 text-center">
+      <header className="text-center">
         <h1 className="font-display text-3xl">{t("title")}</h1>
-        <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
       </header>
       <LoginForm locale={locale} />
       <p className="text-muted-foreground text-center text-sm">

@@ -38,6 +38,8 @@ test.describe("import wizard", () => {
     await page.getByRole("button", { name: /valider l'import/i }).click();
     await committed;
     await page.getByRole("link", { name: /voir les transactions/i }).click({ timeout: 15_000 });
+    await expect(page).toHaveURL(/\/transactions/, { timeout: 30_000 });
+    await page.goto("/fr/transactions?search=acme");
 
     await expect(
       page.locator('[data-slot="transaction-row"]').filter({ hasText: "ACME STORE" }).first(),

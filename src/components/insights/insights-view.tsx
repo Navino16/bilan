@@ -4,10 +4,12 @@ import { overline } from "@/components/transactions/bits";
 import { Donut, ChartLegend, TrendBars } from "@/components/dashboard/charts";
 import { PeriodNav } from "@/components/dashboard/period-nav";
 import { PeriodPicker } from "@/components/dashboard/period-picker";
+import { categorySliceColors } from "@/lib/chart-colors";
 import type { DashboardData } from "@/server/services/dashboard";
 import type { Period } from "@/lib/period";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import { formatPeriodLabel, toIsoDay } from "@/lib/period";
+import { PageHeader } from "@/components/shell/page-header";
 
 const DEFAULT_COLOR = "#2563eb";
 const TOP_N = 8;
@@ -33,12 +35,13 @@ export async function InsightsView({
   const label = formatPeriodLabel(period, locale);
 
   const topCats = data.byCategory.slice(0, TOP_N);
-  const legendItems = topCats.map((c) => {
+  const sliceColors = categorySliceColors(topCats, catById, DEFAULT_COLOR);
+  const legendItems = topCats.map((c, i) => {
     const meta = c.categoryId ? catById.get(c.categoryId) : undefined;
     return {
       label: meta?.name ?? t("noCategory"),
       value: money.format(c.amount),
-      color: meta?.color ?? DEFAULT_COLOR,
+      color: sliceColors[i],
     };
   });
 
@@ -58,18 +61,18 @@ export async function InsightsView({
   }));
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-        <div className="space-y-1">
-          <div className={overline}>{t("overline")}</div>
-          <h1 className="font-display text-4xl leading-none">{t("pageTitle")}</h1>
-          <p className="text-muted-foreground text-sm">{label}</p>
-        </div>
-        <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
-          <PeriodPicker from={toIsoDay(period.from)} to={toIsoDay(period.to)} />
-          <PeriodNav period={period} />
-        </div>
-      </header>
+    <div className="space-y-6">
+      <PageHeader
+        overline={t("overline")}
+        title={t("pageTitle")}
+        subtitle={label}
+        actions={
+          <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+            <PeriodPicker from={toIsoDay(period.from)} to={toIsoDay(period.to)} />
+            <PeriodNav period={period} />
+          </div>
+        }
+      />
 
       {/* Category donut + legend */}
       <Card className="gap-4 p-6">
@@ -82,10 +85,7 @@ export async function InsightsView({
         ) : (
           <div className="flex flex-col items-center gap-8 sm:flex-row sm:items-center">
             <Donut
-              data={topCats.map((c) => ({
-                value: c.amount,
-                color: (c.categoryId && catById.get(c.categoryId)?.color) || DEFAULT_COLOR,
-              }))}
+              data={topCats.map((c, i) => ({ value: c.amount, color: sliceColors[i] }))}
               centerLabel={money.format(data.totals.expense)}
               centerSub={t("spentThisPeriod")}
             />

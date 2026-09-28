@@ -7,7 +7,6 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card } from "@/components/ui/card";
 import {
   Dialog,
   DialogTrigger,
@@ -18,11 +17,12 @@ import {
   DialogDescription,
   DialogClose,
 } from "@/components/ui/dialog";
-import { overline } from "@/components/transactions/bits";
 import {
   deleteAccountAction,
   type AccountDataState,
 } from "@/server/transport/actions/account-data";
+import { PageHeader } from "@/components/shell/page-header";
+import { SectionCard } from "@/components/shell/section-card";
 
 export function DataControls({
   locale,
@@ -45,20 +45,11 @@ export function DataControls({
   }, [state, locale]);
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-6">
-      <div className="space-y-1">
-        <div className={overline}>{t("overline")}</div>
-        <h1 className="font-display text-4xl leading-none">{t("title")}</h1>
-        <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader overline={t("overline")} title={t("title")} subtitle={t("subtitle")} />
 
       {/* Export */}
-      <Card className="gap-4 p-6">
-        <div>
-          <div className={overline}>{t("exportOverline")}</div>
-          <div className="font-display text-xl">{t("exportTitle")}</div>
-          <p className="text-muted-foreground mt-1 text-sm">{t("exportHint")}</p>
-        </div>
+      <SectionCard overline={t("exportOverline")} title={t("exportTitle")} hint={t("exportHint")}>
         <div className="flex flex-col gap-2 sm:flex-row">
           <a
             href="/api/export/transactions"
@@ -73,15 +64,15 @@ export function DataControls({
             {t("exportJson")}
           </a>
         </div>
-      </Card>
+      </SectionCard>
 
       {/* Danger zone */}
-      <Card className="border-destructive/40 gap-4 p-6">
-        <div>
-          <div className={overline}>{t("dangerZone")}</div>
-          <div className="font-display text-xl">{t("deleteTitle")}</div>
-          <p className="text-muted-foreground mt-1 text-sm">{t("deleteWarning")}</p>
-        </div>
+      <SectionCard
+        className="border-destructive/40"
+        overline={t("dangerZone")}
+        title={t("deleteTitle")}
+        hint={t("deleteWarning")}
+      >
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger
             render={
@@ -139,7 +130,7 @@ export function DataControls({
             </form>
           </DialogContent>
         </Dialog>
-      </Card>
+      </SectionCard>
     </div>
   );
 }

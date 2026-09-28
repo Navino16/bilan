@@ -14,6 +14,7 @@ import {
   leaveGroupAction,
   deleteGroupAction,
 } from "@/server/transport/actions/groups";
+import { NativeSelect } from "@/components/ui/native-select";
 
 type Member = { userId: string; role: GroupRole; name: string | null; email: string };
 
@@ -113,19 +114,19 @@ export function MemberList({
                 <div className="text-muted-foreground truncate text-xs">{m.email}</div>
               </div>
               {canManageRoles ? (
-                <select
+                <NativeSelect
                   aria-label={t("role")}
                   value={m.role}
                   disabled={pending}
                   onChange={(e) => changeRole(m.userId, e.target.value)}
-                  className="border-input bg-background h-8 rounded-md border px-2 text-xs"
+                  size="sm"
                 >
                   {GROUP_ROLES.map((r) => (
                     <option key={r} value={r}>
                       {t(`roles.${r}`)}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
               ) : (
                 <Badge variant="outline">{t(`roles.${m.role}`)}</Badge>
               )}

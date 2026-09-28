@@ -8,7 +8,8 @@ test.describe("transactions", () => {
   );
 
   test("create a manual transaction and find it via search", async ({ page }) => {
-    const label = `Boulangerie ${Date.now()}`;
+    const stamp = Date.now();
+    const label = `Boulangerie ${stamp}`;
     await page.goto("/fr/transactions");
     // Requires the owner to have at least one account (seeded e2e fixture).
     await page.getByRole("button", { name: /nouvelle transaction/i }).click();
@@ -17,11 +18,10 @@ test.describe("transactions", () => {
     await page.fill('input[name="label"]', label);
     await page.getByRole("button", { name: /^ajouter$/i }).click();
 
-    const row = page.locator('[data-slot="transaction-row"]').filter({ hasText: label });
-    await expect(row.first()).toBeVisible();
+    await expect(page.locator('input[name="label"]')).toBeHidden();
 
-    // Token search (first distinctive word).
-    await page.getByRole("searchbox").fill("boulangerie");
+    // Token search on the per-run word (the unfiltered list only shows the newest page).
+    await page.getByRole("searchbox").fill(String(stamp));
     await expect(
       page.locator('[data-slot="transaction-row"]').filter({ hasText: label }).first(),
     ).toBeVisible();

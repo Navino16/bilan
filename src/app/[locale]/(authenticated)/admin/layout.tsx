@@ -1,6 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { hasPermission, requirePermission, requireAdmin2fa } from "@/server/auth/permissions";
 import { AdminNav } from "@/components/admin/admin-nav";
+import { PageHeader } from "@/components/shell/page-header";
 
 // RBAC gate for the whole admin section: non-admins are redirected to /403.
 // Each page additionally requirePermission's its narrower scope.
@@ -34,11 +35,11 @@ export default async function AdminLayout({
     .map((tab) => ({ href: `/${locale}/admin/${tab.path}`, label: t(`nav.${tab.key}`) }));
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-8">
-      <header className="space-y-3">
-        <h1 className="font-display text-3xl">{t("title")}</h1>
+    <div className="space-y-8">
+      <div className="space-y-4">
+        <PageHeader overline={t("overline")} title={t("title")} />
         <AdminNav items={items} />
-      </header>
+      </div>
       {children}
     </div>
   );
