@@ -7,6 +7,7 @@ export type FlatCategory = {
   depth: number;
   color: string | null;
   icon: string | null;
+  rootId: string;
 };
 
 type CategoryNodeLike = {
@@ -26,16 +27,17 @@ export function flattenCategories(tree: CategoryNodeLike[]): FlatCategory[] {
   const walk = (
     nodes: CategoryNodeLike[],
     depth: number,
-    inherited: { color: string | null; icon: string | null },
+    inherited: { color: string | null; icon: string | null; rootId: string | null },
   ) => {
     for (const n of nodes) {
       const color = n.color ?? inherited.color;
       const icon = n.icon ?? inherited.icon;
-      out.push({ id: n.id, name: n.name, depth, color, icon });
-      walk(n.children, depth + 1, { color, icon });
+      const rootId = inherited.rootId ?? n.id;
+      out.push({ id: n.id, name: n.name, depth, color, icon, rootId });
+      walk(n.children, depth + 1, { color, icon, rootId });
     }
   };
-  walk(tree, 0, { color: null, icon: null });
+  walk(tree, 0, { color: null, icon: null, rootId: null });
   return out;
 }
 

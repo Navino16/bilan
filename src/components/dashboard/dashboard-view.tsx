@@ -10,6 +10,7 @@ import type { Period } from "@/lib/period";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import { formatPeriodLabel, toIsoDay } from "@/lib/period";
 import { PageHeader } from "@/components/shell/page-header";
+import { categorySliceColors } from "@/lib/chart-colors";
 
 const DEFAULT_COLOR = "#2563eb";
 
@@ -110,6 +111,7 @@ export async function DashboardView({
   ] as const;
 
   const topCats = data.byCategory.slice(0, 6);
+  const sliceColors = categorySliceColors(topCats, catById, DEFAULT_COLOR);
 
   return (
     <div className="space-y-6">
@@ -155,21 +157,18 @@ export async function DashboardView({
           ) : (
             <div className="flex flex-col items-center gap-6 sm:flex-row">
               <Donut
-                data={topCats.map((c) => ({
-                  value: c.amount,
-                  color: (c.categoryId && catById.get(c.categoryId)?.color) || DEFAULT_COLOR,
-                }))}
+                data={topCats.map((c, i) => ({ value: c.amount, color: sliceColors[i] }))}
                 centerLabel={money.format(data.totals.expense)}
                 centerSub={t("spentThisPeriod")}
               />
               <div className="flex w-full flex-1 flex-col gap-2">
-                {topCats.map((c) => {
+                {topCats.map((c, i) => {
                   const meta = c.categoryId ? catById.get(c.categoryId) : undefined;
                   return (
                     <div key={c.categoryId ?? "none"} className="flex items-center gap-2.5 text-sm">
                       <span
                         className="size-2.5 shrink-0 rounded-full"
-                        style={{ background: meta?.color ?? DEFAULT_COLOR }}
+                        style={{ background: sliceColors[i] }}
                       />
                       <span className="flex-1 truncate">{meta?.name ?? t("noCategory")}</span>
                       <span className="tabular-nums">{money.format(c.amount)}</span>

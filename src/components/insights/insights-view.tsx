@@ -4,6 +4,7 @@ import { overline } from "@/components/transactions/bits";
 import { Donut, ChartLegend, TrendBars } from "@/components/dashboard/charts";
 import { PeriodNav } from "@/components/dashboard/period-nav";
 import { PeriodPicker } from "@/components/dashboard/period-picker";
+import { categorySliceColors } from "@/lib/chart-colors";
 import type { DashboardData } from "@/server/services/dashboard";
 import type { Period } from "@/lib/period";
 import type { FlatCategory } from "@/components/transactions/category-tree";
@@ -34,12 +35,13 @@ export async function InsightsView({
   const label = formatPeriodLabel(period, locale);
 
   const topCats = data.byCategory.slice(0, TOP_N);
-  const legendItems = topCats.map((c) => {
+  const sliceColors = categorySliceColors(topCats, catById, DEFAULT_COLOR);
+  const legendItems = topCats.map((c, i) => {
     const meta = c.categoryId ? catById.get(c.categoryId) : undefined;
     return {
       label: meta?.name ?? t("noCategory"),
       value: money.format(c.amount),
-      color: meta?.color ?? DEFAULT_COLOR,
+      color: sliceColors[i],
     };
   });
 
@@ -83,10 +85,7 @@ export async function InsightsView({
         ) : (
           <div className="flex flex-col items-center gap-8 sm:flex-row sm:items-center">
             <Donut
-              data={topCats.map((c) => ({
-                value: c.amount,
-                color: (c.categoryId && catById.get(c.categoryId)?.color) || DEFAULT_COLOR,
-              }))}
+              data={topCats.map((c, i) => ({ value: c.amount, color: sliceColors[i] }))}
               centerLabel={money.format(data.totals.expense)}
               centerSub={t("spentThisPeriod")}
             />
