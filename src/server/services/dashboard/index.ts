@@ -104,17 +104,20 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-type AggRow = CollapsibleRow & { accountId: string };
+type AggRow = CollapsibleRow & { accountId: string; type: string; labelEnc: string | null };
 
 // Loads the period's rows over CLEAR columns only (amount/date/categoryId +
 // link id) and collapses links: balanced groups drop out, unbalanced groups
 // become one net row on their primary. `count` is the number of REAL
 // transactions in the period (pre-collapse) — a linked pair is still two
-// transactions the user made. Labels stay encrypted; only `recent` decrypts.
-async function loadRows(
+// transactions the user made. Labels stay encrypted unless `withLabels` asks for
+// the ciphertext (insights merchants decrypt it).
+export async function loadRows(
   accountIds: string[],
   period: Period,
+  opts: { withLabels?: boolean } = {},
 ): Promise<{ rows: AggRow[]; count: number }> {
+  const withLabels = opts.withLabels ?? false;
   if (accountIds.length === 0) return { rows: [], count: 0 };
   const rows = await db.transaction.findMany({
     where: { accountId: { in: accountIds }, date: { gte: period.from, lte: period.to } },
@@ -124,6 +127,8 @@ async function loadRows(
       date: true,
       categoryId: true,
       accountId: true,
+      type: true,
+      labelEnc: withLabels,
       linkMembership: { select: { linkId: true } },
     },
   });
@@ -134,6 +139,8 @@ async function loadRows(
       date: r.date,
       categoryId: r.categoryId,
       accountId: r.accountId,
+      type: r.type,
+      labelEnc: withLabels ? r.labelEnc : null,
       linkId: r.linkMembership?.linkId ?? null,
     })),
   );

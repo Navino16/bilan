@@ -7,8 +7,10 @@ test.describe("insights", () => {
     "Mobile click-driven nav refinement deferred to Phase 8.3",
   );
 
-  test("renders the analyses heading and the spend-trend chart", async ({ page }) => {
-    // The trend chart only renders for a period with spending: seed one expense.
+  test("renders the what-changed block for a past period, without the in-progress note", async ({
+    page,
+  }) => {
+    // The changes block needs spending in the period: seed one expense.
     await page.goto("/fr/accounts");
     await expect(async () => {
       await page
@@ -34,6 +36,19 @@ test.describe("insights", () => {
       await expect(heading).toBeVisible();
     }).toPass();
 
-    await expect(page.locator('[data-slot="insights-trend"]')).toBeVisible();
+    await expect(page.locator('[data-slot="insights-changes"]')).toBeVisible();
+    await expect(page.locator('[data-slot="insights-merchants"]')).toBeVisible();
+    await expect(page.locator('[data-slot="period-in-progress"]')).toHaveCount(0);
+  });
+
+  test("flags the current period as in progress on insights and the dashboard", async ({
+    page,
+  }) => {
+    for (const path of ["/fr/insights", "/fr/dashboard"]) {
+      await page.goto(path, { waitUntil: "domcontentloaded", timeout: 90_000 });
+      await expect(async () => {
+        await expect(page.locator('[data-slot="period-in-progress"]')).toBeVisible();
+      }).toPass();
+    }
   });
 });

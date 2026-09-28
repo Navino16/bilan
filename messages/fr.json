@@ -606,18 +606,29 @@
       "custom": "Personnalisé"
     },
     "apply": "Appliquer",
-    "vsPrevAmount": "{arrow} {amount} vs période précédente"
+    "vsPrevAmount": "{arrow} {amount} vs période précédente",
+    "periodInProgress": "Période en cours : comparée à la période précédente complète ({previous})."
   },
   "insights": {
     "overline": "Analyses",
     "pageTitle": "Analyses",
-    "byCategory": "Par catégorie",
-    "breakdown": "Répartition",
-    "evolution": "Évolution",
-    "trend": "Tendance",
     "noData": "Aucune dépense sur cette période.",
     "noCategory": "Sans catégorie",
-    "spentThisPeriod": "dépensés sur la période"
+    "biggestIncrease": "Plus forte hausse",
+    "biggestDecrease": "Plus forte baisse",
+    "noChange": "Aucune",
+    "changesOverline": "Évolution",
+    "changesTitle": "Ce qui a changé",
+    "changesSub": "{current} vs {previous} · dépenses par catégorie",
+    "merchantsOverline": "Où part l'argent",
+    "merchantsTitle": "Top marchands",
+    "merchantsCount": "{count}×",
+    "noMerchants": "Aucun marchand sur cette période.",
+    "incomeOverline": "Entrées",
+    "incomeTitle": "Revenus par catégorie",
+    "incomeTotal": "{amount} sur la période",
+    "noIncome": "Aucun revenu sur cette période.",
+    "new": "nouveau"
   },
   "settings": {
     "data": {

@@ -90,6 +90,12 @@ export function clampPeriodToNow(p: Period, now: Date = new Date()): Period {
   return p;
 }
 
+// True while `now` falls inside the period: its comparison with the full previous
+// period is then partial (spec §7).
+export function periodInProgress(p: Period, now: Date = new Date()): boolean {
+  return p.from.getTime() <= now.getTime() && now.getTime() <= p.to.getTime();
+}
+
 // ISO day (YYYY-MM-DD) of a date's UTC calendar day — for building ?from/?to links.
 export function toIsoDay(d: Date): string {
   return d.toISOString().slice(0, 10);
