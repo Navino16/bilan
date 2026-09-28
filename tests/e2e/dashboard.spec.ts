@@ -25,6 +25,8 @@ test.describe("dashboard", () => {
     await expect(page.getByText("Revenus", { exact: true })).toBeVisible();
     await expect(page.getByText("Dépenses", { exact: true })).toBeVisible();
     await expect(page.getByText("Solde net", { exact: true })).toBeVisible();
+    // The net can change sign, so its comparison is an amount, never a percentage.
+    await expect(page.locator('[data-slot="kpi-note"]').nth(2)).not.toContainText("%");
 
     // The default view is the current month — there's no future to browse into.
     await expect(page.getByRole("button", { name: "next", exact: true })).toBeDisabled();

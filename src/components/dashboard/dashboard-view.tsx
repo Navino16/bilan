@@ -73,23 +73,38 @@ export async function DashboardView({
   const peak = data.trace.peak;
   const peakCatName = peak?.categoryId ? catById.get(peak.categoryId)?.name : undefined;
 
+  const pctNote = (d: ReturnType<typeof delta>) =>
+    d ? t("vsPrev", { arrow: d.up ? "↗" : "↘", pct: pctFmt.format(Math.abs(d.pct)) }) : t("noPrev");
+  // The net can change sign between periods, which makes a % meaningless (issue #112 §7):
+  // it shows the difference in euros instead.
+  const netDiff = data.totals.net - data.previous.net;
+  const hasPrevious = data.previous.income !== 0 || data.previous.expense !== 0;
+  const diffFmt = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0,
+    signDisplay: "exceptZero",
+  });
+
   const kpis = [
     {
       key: "income",
       value: data.totals.income,
-      d: delta(data.totals.income, data.previous.income),
+      note: pctNote(delta(data.totals.income, data.previous.income)),
       tone: "var(--income)",
     },
     {
       key: "expense",
       value: data.totals.expense,
-      d: delta(data.totals.expense, data.previous.expense),
+      note: pctNote(delta(data.totals.expense, data.previous.expense)),
       tone: "var(--expense)",
     },
     {
       key: "net",
       value: data.totals.net,
-      d: delta(data.totals.net, data.previous.net),
+      note: hasPrevious
+        ? t("vsPrevAmount", { arrow: netDiff >= 0 ? "↗" : "↘", amount: diffFmt.format(netDiff) })
+        : t("noPrev"),
       tone: data.totals.net >= 0 ? "var(--income)" : "var(--expense)",
     },
   ] as const;
@@ -121,13 +136,8 @@ export async function DashboardView({
             >
               {money.format(k.value)}
             </div>
-            <div className="text-muted-foreground text-[11.5px]">
-              {k.d
-                ? t("vsPrev", {
-                    arrow: k.d.up ? "↗" : "↘",
-                    pct: pctFmt.format(Math.abs(k.d.pct)),
-                  })
-                : t("noPrev")}
+            <div className="text-muted-foreground text-[11.5px]" data-slot="kpi-note">
+              {k.note}
             </div>
           </Card>
         ))}

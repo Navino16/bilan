@@ -605,7 +605,8 @@
       "this-year": "Année",
       "custom": "Personnalisé"
     },
-    "apply": "Appliquer"
+    "apply": "Appliquer",
+    "vsPrevAmount": "{arrow} {amount} vs période précédente"
   },
   "insights": {
     "overline": "Analyses",
