@@ -8,8 +8,21 @@ test.describe("insights", () => {
   );
 
   test("renders the analyses heading and the spend-trend chart", async ({ page }) => {
-    // Target a period that has seeded data — an empty period now shows a "no data"
-    // message instead of the (flat, meaningless) trend bars.
+    // The trend chart only renders for a period with spending: seed one expense.
+    await page.goto("/fr/accounts");
+    await expect(async () => {
+      await page
+        .getByRole("button", { name: /saisir une transaction/i })
+        .first()
+        .click();
+      await expect(page.locator('input[name="label"]')).toBeVisible();
+    }).toPass();
+    await page.fill('input[name="date"]', "2026-03-20");
+    await page.fill('input[name="amount"]', "-35");
+    await page.fill('input[name="label"]', `Insights ${Date.now()}`);
+    await page.getByRole("button", { name: /^ajouter$/i }).click();
+    await expect(page.locator('input[name="label"]')).toBeHidden();
+
     await page.goto("/fr/insights?from=2026-03-01&to=2026-03-31", {
       waitUntil: "domcontentloaded",
       timeout: 90_000,

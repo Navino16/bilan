@@ -56,8 +56,6 @@ export async function InsightsView({
     amount: p.amount,
     label: traceLabelFmt.format(new Date(`${p.date}T00:00:00.000Z`)),
   }));
-  // A period with no spending yields all-zero points → flat, meaningless bars.
-  const hasTrend = trendPoints.some((p) => p.amount !== 0);
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
@@ -104,7 +102,7 @@ export async function InsightsView({
           <div className={overline}>{t("evolution")}</div>
           <div className="font-display text-xl">{t("trend")}</div>
         </div>
-        {hasTrend ? (
+        {data.trace.peak ? (
           <TrendBars points={trendPoints} format={(n) => money.format(n)} />
         ) : (
           <p className="text-muted-foreground text-sm">{t("noData")}</p>

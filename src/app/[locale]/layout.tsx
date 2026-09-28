@@ -1,12 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { hasLocale } from "next-intl";
 import { locales } from "@/i18n/config";
-import { mono, sans, serif } from "@/lib/fonts";
-import { THEME_COOKIE } from "@/lib/theme";
+import { DocumentShell } from "@/components/shell/document-shell";
 
 export const metadata: Metadata = {
   title: "Bilan",
@@ -43,21 +41,11 @@ export default async function LocaleLayout({
   setRequestLocale(locale);
   const messages = await getMessages();
 
-  const isDark = (await cookies()).get(THEME_COOKIE)?.value === "dark";
-
   return (
-    <html
-      lang={locale}
-      suppressHydrationWarning
-      className={`${sans.variable} ${serif.variable} ${mono.variable} h-full antialiased ${
-        isDark ? "dark" : ""
-      }`}
-    >
-      <body className="bg-background text-foreground flex min-h-full flex-col font-sans">
-        <NextIntlClientProvider locale={locale} messages={messages}>
-          {children}
-        </NextIntlClientProvider>
-      </body>
-    </html>
+    <DocumentShell lang={locale}>
+      <NextIntlClientProvider locale={locale} messages={messages}>
+        {children}
+      </NextIntlClientProvider>
+    </DocumentShell>
   );
 }

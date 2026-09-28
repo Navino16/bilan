@@ -1,6 +1,14 @@
-import { getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
-export default async function AuthLayout({ children }: { children: React.ReactNode }) {
+export default async function AuthLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("app");
   return (
     <div className="bg-background flex min-h-screen w-full flex-col items-center justify-center px-6 py-12">
