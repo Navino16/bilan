@@ -2,6 +2,8 @@
 
 import { getCurrentUser, hasPermission } from "@/server/auth/permissions";
 import { adminCreateUser, adminCreateUserSchema } from "@/server/services/users/create";
+import { RoleChangeError, setUserRole } from "@/server/services/users/roles";
+import { isInstanceRole } from "@/lib/instance-roles";
 import { createSignupToken, revokeSignupToken } from "@/server/services/signup-tokens";
 import { logEvent } from "@/server/services/audit";
 
@@ -27,6 +29,26 @@ export async function adminCreateUserAction(
     await adminCreateUser(parsed.data, { id: actor.id });
     return { ok: true };
   } catch {
+    return { ok: false, error: "FAILED" };
+  }
+}
+
+export async function setUserRoleAction(
+  _prev: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const actor = await requirePerm("admin.users.update");
+  if (!actor) return { ok: false, error: "UNAUTHORIZED" };
+
+  const userId = String(formData.get("userId") ?? "");
+  const role = String(formData.get("role") ?? "");
+  if (!userId || !isInstanceRole(role)) return { ok: false, error: "INVALID" };
+
+  try {
+    await setUserRole({ id: actor.id }, userId, role);
+    return { ok: true };
+  } catch (e) {
+    if (e instanceof RoleChangeError) return { ok: false, error: e.message };
     return { ok: false, error: "FAILED" };
   }
 }

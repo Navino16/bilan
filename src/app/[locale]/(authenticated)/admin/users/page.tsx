@@ -1,16 +1,19 @@
 import { getTranslations } from "next-intl/server";
 import { db } from "@/server/db";
-import { requirePermission } from "@/server/auth/permissions";
+import { hasPermission, requirePermission } from "@/server/auth/permissions";
 import { CreateUserForm } from "@/components/admin/create-user-form";
 import { RoleBadge } from "@/components/admin/role-badge";
+import { RoleSelect } from "@/components/admin/role-select";
+import { topRole } from "@/lib/instance-roles";
 import { SectionCard, listHeader } from "@/components/shell/section-card";
 
 export const dynamic = "force-dynamic";
 
-const cols = "md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_120px]";
+const cols = "md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_140px]";
 
 export default async function AdminUsersPage() {
-  await requirePermission("admin.users.read");
+  const viewer = await requirePermission("admin.users.read");
+  const canUpdate = await hasPermission(viewer.id, "admin.users.update");
   const t = await getTranslations("admin.users");
   const users = await db.user.findMany({
     orderBy: { createdAt: "desc" },
@@ -47,7 +50,15 @@ export default async function AdminUsersPage() {
               <div className="text-muted-foreground truncate text-xs md:hidden">{u.email}</div>
             </div>
             <div className="text-muted-foreground hidden truncate md:block">{u.email}</div>
-            <RoleBadge roles={u.roles.map((r) => r.role.key)} />
+            {canUpdate && u.id !== viewer.id ? (
+              <RoleSelect
+                userId={u.id}
+                role={topRole(u.roles.map((r) => r.role.key))}
+                userLabel={u.name ?? u.email}
+              />
+            ) : (
+              <RoleBadge roles={u.roles.map((r) => r.role.key)} />
+            )}
           </div>
         ))}
         {users.length === 0 && (

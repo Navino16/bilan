@@ -700,7 +700,17 @@
       "createOverline": "Invitation",
       "createHint": "They receive an email with a link to set their password.",
       "listOverline": "Accounts",
-      "count": "{count, plural, =0 {No accounts} one {# account} other {# accounts}}"
+      "count": "{count, plural, =0 {No accounts} one {# account} other {# accounts}}",
+      "roleFor": "{user}'s role",
+      "roleError": {
+        "UNAUTHORIZED": "You don't have permission to change roles.",
+        "INVALID": "Invalid role.",
+        "SELF": "You can't change your own role.",
+        "FORBIDDEN": "Only a super admin can grant or revoke an admin role.",
+        "LAST_SUPER_ADMIN": "The last super admin can't be removed.",
+        "NOT_FOUND": "User not found.",
+        "FAILED": "Role change failed."
+      }
     },
     "signupTokens": {
       "createTitle": "Create a token",
