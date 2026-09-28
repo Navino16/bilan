@@ -11,9 +11,10 @@ import { createGroup } from "@/server/services/groups";
 import { shareAccountWithGroup } from "@/server/services/accounts/sharing";
 import { createLink } from "@/server/services/links";
 import { deleteUser } from "@/server/services/rgpd";
+import { grantRole } from "@/server/services/users/roles";
 import type { TransactionType } from "@/lib/validation/transaction";
 
-// Dev convenience: a credentialed user with ~12 months of realistic data ending
+// Dev convenience: a SUPER_ADMIN user with ~12 months of realistic data ending
 // today (accounts, categorized history, rules, budgets, a shared household,
 // links). Deterministic for a given day. Usage: npm run db:seed-dev [-- --reset]
 const EMAIL = "dev@bilan.local";
@@ -363,6 +364,7 @@ async function main(): Promise<void> {
   });
   const userId = res.user.id;
   const actor = { id: userId };
+  await grantRole(db, userId, "SUPER_ADMIN", userId);
   await seedDefaultCategories(userId, "fr", db);
 
   const accountIds = {
