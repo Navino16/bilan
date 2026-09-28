@@ -16,7 +16,7 @@ import {
 import { ACCOUNT_NAV, WORKSPACE_NAV } from "./nav-items";
 import { NavLink } from "./nav-link";
 
-export function MobileNav({ canAdmin }: { canAdmin: boolean }) {
+export function MobileNav({ canAdmin, appName }: { canAdmin: boolean; appName: string }) {
   const [open, setOpen] = useState(false);
   const t = useTranslations("shell");
   const accountItems = ACCOUNT_NAV.filter((item) => !item.permission || canAdmin);
@@ -32,7 +32,7 @@ export function MobileNav({ canAdmin }: { canAdmin: boolean }) {
       </SheetTrigger>
       <SheetContent side="left" className="bg-sidebar flex w-72 flex-col gap-0 p-0">
         <SheetHeader className="px-5 py-6 text-left">
-          <SheetTitle className="font-display text-2xl tracking-tight">Bilan</SheetTitle>
+          <SheetTitle className="font-display text-2xl tracking-tight">{appName}</SheetTitle>
           <SheetDescription className="text-[10px] tracking-[0.12em] uppercase">
             {t("tagline")}
           </SheetDescription>

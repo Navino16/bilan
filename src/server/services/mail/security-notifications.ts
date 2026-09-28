@@ -1,5 +1,6 @@
 import { sendMail } from "@/server/services/mail/mailer";
 import { logEvent } from "@/server/services/audit";
+import { getAppName } from "@/server/services/settings/app-settings";
 
 // Best-effort security emails. `sendMail` already no-ops when SMTP is disabled;
 // these wrappers additionally never throw into the auth path (a failed
@@ -20,11 +21,12 @@ export async function notifyNewLogin(input: {
   at: Date;
 }): Promise<void> {
   try {
+    const appName = await getAppName();
     await sendMail({
       to: input.email,
-      subject: "Bilan — nouvelle connexion à votre compte",
+      subject: `${appName} — nouvelle connexion à votre compte`,
       text: [
-        "Une nouvelle connexion à votre compte Bilan vient d'avoir lieu.",
+        `Une nouvelle connexion à votre compte ${appName} vient d'avoir lieu.`,
         "",
         `Date : ${formatAt(input.at)} (UTC)`,
         `Adresse IP : ${input.ip ?? "inconnue"}`,
@@ -44,11 +46,12 @@ export async function notifyNewLogin(input: {
 
 export async function notifyPasswordChanged(input: { email: string; at: Date }): Promise<void> {
   try {
+    const appName = await getAppName();
     await sendMail({
       to: input.email,
-      subject: "Bilan — votre mot de passe a été modifié",
+      subject: `${appName} — votre mot de passe a été modifié`,
       text: [
-        "Le mot de passe de votre compte Bilan vient d'être modifié.",
+        `Le mot de passe de votre compte ${appName} vient d'être modifié.`,
         "",
         `Date : ${formatAt(input.at)} (UTC)`,
         "",

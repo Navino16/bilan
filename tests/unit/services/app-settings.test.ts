@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { AppSettingsService } from "@/server/services/settings/app-settings";
+import { AppSettingsService, normalizeAppName } from "@/server/services/settings/app-settings";
 
 describe("AppSettingsService", () => {
   const findUnique = vi.fn();
@@ -33,5 +33,25 @@ describe("AppSettingsService", () => {
     findUnique.mockResolvedValueOnce({ key: "k", value: 2 });
     expect(await svc.get("k")).toBe(2);
     expect(findUnique).toHaveBeenCalledTimes(2);
+  });
+
+  it("hot-reloads auth when app_name changes (it feeds Better Auth's appName)", async () => {
+    const onAuthKeyChange = vi.fn();
+    const withHook = new AppSettingsService(db, { onAuthKeyChange });
+    upsert.mockResolvedValueOnce({});
+    await withHook.set("app_name", "Maison", "user_1");
+    expect(onAuthKeyChange).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("normalizeAppName", () => {
+  it("falls back to Bilan when unset, blank or not a string", () => {
+    expect(normalizeAppName(null)).toBe("Bilan");
+    expect(normalizeAppName("   ")).toBe("Bilan");
+    expect(normalizeAppName(42)).toBe("Bilan");
+  });
+
+  it("trims the configured name", () => {
+    expect(normalizeAppName("  Maison  ")).toBe("Maison");
   });
 });

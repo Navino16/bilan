@@ -1,9 +1,13 @@
 import type { MetadataRoute } from "next";
+import { getAppName } from "@/server/services/settings/app-settings";
 
-export default function manifest(): MetadataRoute.Manifest {
+export const dynamic = "force-dynamic";
+
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const appName = await getAppName();
   return {
-    name: "Bilan",
-    short_name: "Bilan",
+    name: appName,
+    short_name: appName,
     description: "Self-hosted multi-user personal finance app",
     start_url: "/",
     scope: "/",

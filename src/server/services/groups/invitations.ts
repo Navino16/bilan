@@ -2,6 +2,7 @@ import { randomBytes, randomInt } from "node:crypto";
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import { sendMail } from "@/server/services/mail/mailer";
+import { getAppName } from "@/server/services/settings/app-settings";
 import { env } from "@/env";
 import {
   INVITABLE_GROUP_ROLES,
@@ -57,10 +58,11 @@ export async function createInvitation(
   });
 
   const acceptUrl = `${env.APP_URL.replace(/\/$/, "")}/fr/groups/join/${token}`;
+  const appName = await getAppName();
   const result = await sendMail({
     to: email,
-    subject: "Invitation Bilan",
-    text: `Vous êtes invité à rejoindre un groupe Bilan.\nLien : ${acceptUrl}\nCode : ${code}`,
+    subject: `Invitation ${appName}`,
+    text: `Vous êtes invité à rejoindre un groupe ${appName}.\nLien : ${acceptUrl}\nCode : ${code}`,
   });
   await logEvent({
     userId: actor.id,

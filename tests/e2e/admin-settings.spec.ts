@@ -28,6 +28,28 @@ test.describe("admin settings", () => {
     await expect(page.locator('[data-slot="audit-row"]').first()).toBeVisible();
   });
 
+  test("renaming the instance rebrands the shell and the page title", async ({ page }) => {
+    test.setTimeout(120_000);
+    const form = page.locator("form:has(#set-app_name)");
+    const saveName = async (name: string) => {
+      await page.goto("/fr/admin/app-settings", { waitUntil: "domcontentloaded", timeout: 90_000 });
+      await expect(async () => {
+        await form.locator("#set-app_name").fill(name);
+        await form.getByRole("button", { name: /enregistrer/i }).click();
+        await expect(form.getByText("Enregistré.")).toBeVisible({ timeout: 2000 });
+      }).toPass({ timeout: 20_000 });
+    };
+
+    try {
+      await saveName("Maison E2E");
+      await page.goto("/fr/dashboard");
+      await expect(page).toHaveTitle("Maison E2E");
+      await expect(page.locator("aside").getByRole("link", { name: "Maison E2E" })).toBeVisible();
+    } finally {
+      await saveName("Bilan");
+    }
+  });
+
   test("the admin nav only lists permitted tabs and fits a narrow viewport", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/fr/admin/users", { waitUntil: "domcontentloaded", timeout: 90_000 });
