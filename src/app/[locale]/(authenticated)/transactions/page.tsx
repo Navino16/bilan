@@ -76,7 +76,7 @@ export default async function TransactionsPage({
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-5">
-      <header className="flex items-end justify-between gap-3">
+      <header className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
           <div className="text-muted-foreground text-[0.7rem] font-medium tracking-[0.14em] uppercase">
             {t("opCount", { count: total })}
