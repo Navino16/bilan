@@ -5,7 +5,6 @@
   "auth": {
     "login": {
       "title": "Sign in",
-      "subtitle": "Access your Bilan workspace.",
       "email": "Email address",
       "password": "Password",
       "forgot": "Forgot password?",
@@ -20,7 +19,6 @@
     },
     "register": {
       "title": "Create an account",
-      "subtitle": "Join your Bilan instance.",
       "name": "Name",
       "email": "Email address",
       "password": "Password",

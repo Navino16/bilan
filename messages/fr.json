@@ -5,7 +5,6 @@
   "auth": {
     "login": {
       "title": "Connexion",
-      "subtitle": "Accédez à votre espace Bilan.",
       "email": "Adresse e-mail",
       "password": "Mot de passe",
       "forgot": "Mot de passe oublié ?",
@@ -20,7 +19,6 @@
     },
     "register": {
       "title": "Créer un compte",
-      "subtitle": "Rejoignez votre instance Bilan.",
       "name": "Nom",
       "email": "Adresse e-mail",
       "password": "Mot de passe",
