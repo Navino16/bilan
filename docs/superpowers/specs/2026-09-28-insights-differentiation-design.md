@@ -49,7 +49,7 @@ export type MerchantTotal = {
 export type IncomeByCategory = { categoryId: string | null; current: number; previous: number };
 export type InsightsData = {
   changes: CategoryChange[];     // |diff| desc, diff === 0 excluded
-  merchants: MerchantTotal[];    // total desc, top 8
+  merchants: MerchantTotal[];    // total desc, top 6
   income: IncomeByCategory[];    // current desc, categories with current > 0 only
   incomeTotal: number;
 };
@@ -59,9 +59,9 @@ export async function getInsights(userId: string, period: Period, previous: Peri
 
 - Rows come from the existing `loadRows` (visible accounts, period bounds, link collapse). `loadRows` gains an opt-in to also select `labelEnc` and `type`; only the current period needs them (merchants). `collapseLinkedRows` spreads the primary row, so the extra fields survive collapsing.
 - `changes`: per-category expense sums for both periods, union of category ids, `diff = current - previous`, sorted by `|diff|` desc (ties → higher `current` first, then `categoryId`), `diff === 0` dropped.
-- `merchants`: current-period rows with `amount < 0` and `type !== "TRANSFER"`, label decrypted, grouped by `merchantKey(label)`. Rows whose key is empty are skipped. `categoryId` = most frequent in the group (ties → highest spend). Sorted by `total` desc (ties → `label`), top 8.
+- `merchants`: current-period rows with `amount < 0` and `type !== "TRANSFER"`, label decrypted, grouped by `merchantKey(label)`. Rows whose key is empty are skipped. `categoryId` = most frequent in the group (ties → highest spend). Sorted by `total` desc (ties → `label`), top 6.
 - `income`: per-category sums of `amount > 0` rows for both periods; only categories with `current > 0`, sorted by `current` desc.
-- All amounts rounded to cents (`round2`, shared with `getDashboard`).
+- All amounts rounded to cents (`round2` from `@/lib/budgets`). The pure aggregations live in `src/lib/insights.ts` (with the types); `getInsights` only loads, decrypts and delegates.
 
 ## 5. `merchantKey` — `src/lib/merchant.ts`
 
@@ -78,7 +78,7 @@ Examples: `CB SUPERMARKET 02/04/26` → `SUPERMARKET`; `CB AMAZON EU 42,99` → 
 
 ## 6. View — `src/components/insights/insights-view.tsx` (rewritten)
 
-Server component, same props shape as today but taking `InsightsData`.
+Server component taking `InsightsData`, the current and previous `Period`, and `inProgress`.
 
 1. `PageHeader` + `PeriodPicker`/`PeriodNav` — unchanged.
 2. **Tiles** (2 columns): biggest increase (max positive `diff`) and biggest decrease (min negative `diff`) — amount signed, category name + `%` (or "nouveau" when `previous === 0`). A tile with no candidate shows a neutral "—".
@@ -107,7 +107,7 @@ The page (`insights/page.tsx`) calls `getInsights` instead of `getDashboard`.
 - **Unit** `tests/unit/lib/merchant.test.ts`: prefixes, dates, trailing amounts/refs, accents, empty result, display variant.
 - **Unit** `periodInProgress`: past, current and future periods; boundaries.
 - **Unit** on the pure aggregation helpers (changes sort/ties, zero-diff drop, merchant grouping + most frequent category, TRANSFER exclusion, income filter).
-- **Integration** `tests/integration/insights.test.ts`: `getInsights` on the test DB with its own fixtures (CI DB is not seeded) — two periods, a linked balanced pair dropped, a TRANSFER excluded from merchants, a shared account visible.
+- **Integration** `tests/integration/insights.test.ts`: `getInsights` on the test DB with its own fixtures (CI DB is not seeded) — two periods, a linked balanced pair dropped, a TRANSFER excluded from merchants.
 - **E2E** `tests/e2e/insights.spec.ts`: heading + `[data-slot="insights-changes"]` visible for a period with spending; `[data-slot="period-in-progress"]` visible on the current month, absent on a past month.
 
 ## 10. Out of scope

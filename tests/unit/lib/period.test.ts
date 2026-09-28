@@ -10,6 +10,7 @@ import {
   PERIOD_PRESETS,
   formatPeriodLabel,
   shiftPeriod,
+  periodInProgress,
 } from "@/lib/period";
 
 describe("monthPeriod", () => {
@@ -233,5 +234,21 @@ describe("shiftPeriod", () => {
     const prev = shiftPeriod(range, -1);
     expect(prev.from.toISOString().slice(0, 10)).toBe("2026-03-30");
     expect(prev.to.toISOString().slice(0, 10)).toBe("2026-04-09");
+  });
+});
+
+describe("periodInProgress", () => {
+  const now = new Date("2026-09-28T12:00:00.000Z");
+  it("is true for the period containing now", () => {
+    expect(periodInProgress(monthPeriod(2026, 9), now)).toBe(true);
+  });
+  it("is false for a past or future period", () => {
+    expect(periodInProgress(monthPeriod(2026, 8), now)).toBe(false);
+    expect(periodInProgress(monthPeriod(2026, 10), now)).toBe(false);
+  });
+  it("includes both bounds", () => {
+    const p = monthPeriod(2026, 9);
+    expect(periodInProgress(p, p.from)).toBe(true);
+    expect(periodInProgress(p, p.to)).toBe(true);
   });
 });
