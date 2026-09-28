@@ -23,6 +23,7 @@ import {
   updateRuleAction,
   type RuleActionState,
 } from "@/server/transport/actions/rules";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export type EditableRule = {
   id: string;
@@ -131,11 +132,10 @@ export function RuleDialog({
             {mode === "create" && groups.length > 0 && (
               <div className="space-y-1.5">
                 <Label htmlFor="rule-scope">{t("scope")}</Label>
-                <select
+                <NativeSelect
                   id="rule-scope"
                   value={groupId}
                   onChange={(e) => setGroupId(e.target.value)}
-                  className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
                 >
                   <option value="">{t("scopePersonal")}</option>
                   {groups.map((g) => (
@@ -143,7 +143,7 @@ export function RuleDialog({
                       {g.name}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
               </div>
             )}
           </div>

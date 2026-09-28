@@ -13,6 +13,7 @@ import {
 import { type FlatCategory } from "./category-picker";
 import { CategoryCombobox } from "./category-combobox";
 import { Pill, overline } from "./bits";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export type DetailItem = {
   id: string;
@@ -184,11 +185,11 @@ export function TransactionDetail({
                 <Field label={tb("title")}>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <select
+                      <NativeSelect
                         aria-label={tb("choose")}
                         value={chosen}
                         onChange={(e) => setChosen(e.target.value)}
-                        className="border-input bg-background h-9 min-w-0 flex-1 rounded-md border px-3 text-sm"
+                        className="min-w-0 flex-1"
                       >
                         <option value="">{tb("choose")}</option>
                         {budgets.map((b) => (
@@ -196,7 +197,7 @@ export function TransactionDetail({
                             {b.name}
                           </option>
                         ))}
-                      </select>
+                      </NativeSelect>
                       <Button
                         type="button"
                         size="sm"

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { adminCreateUserAction } from "@/server/transport/actions/admin";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export function CreateUserForm() {
   const t = useTranslations("admin.users");
@@ -36,15 +37,10 @@ export function CreateUserForm() {
       </div>
       <div className="space-y-2">
         <Label htmlFor="cu-role">{t("role")}</Label>
-        <select
-          id="cu-role"
-          name="role"
-          defaultValue="USER"
-          className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-        >
+        <NativeSelect id="cu-role" name="role" defaultValue="USER">
           <option value="USER">{t("roleUser")}</option>
           <option value="ADMIN">{t("roleAdmin")}</option>
-        </select>
+        </NativeSelect>
       </div>
       {state?.ok && (
         <Alert>

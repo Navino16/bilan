@@ -11,6 +11,7 @@ import {
   upsertAuthProviderAction,
   type SettingsActionState,
 } from "@/server/transport/actions/settings";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export type AuthProviderDefaults = {
   key: string;
@@ -29,8 +30,6 @@ export type AuthProviderDefaults = {
     mapEmail?: string;
   } | null;
 };
-
-const selectClass = "border-input bg-background h-9 w-full rounded-md border px-3 text-sm";
 
 export function AuthProviderForm({ provider }: { provider?: AuthProviderDefaults }) {
   const t = useTranslations("admin.authProviders");
@@ -62,16 +61,11 @@ export function AuthProviderForm({ provider }: { provider?: AuthProviderDefaults
         </div>
         <div className="space-y-2">
           <Label htmlFor={`${prefix}-type`}>{t("type")}</Label>
-          <select
-            id={`${prefix}-type`}
-            name="type"
-            defaultValue={provider?.type ?? "oidc"}
-            className={selectClass}
-          >
+          <NativeSelect id={`${prefix}-type`} name="type" defaultValue={provider?.type ?? "oidc"}>
             <option value="credentials">{t("typeCredentials")}</option>
             <option value="oidc">{t("typeOidc")}</option>
             <option value="google">{t("typeGoogle")}</option>
-          </select>
+          </NativeSelect>
         </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -86,15 +80,14 @@ export function AuthProviderForm({ provider }: { provider?: AuthProviderDefaults
         </div>
         <div className="space-y-2">
           <Label htmlFor={`${prefix}-enabled`}>{t("enabled")}</Label>
-          <select
+          <NativeSelect
             id={`${prefix}-enabled`}
             name="enabled"
             defaultValue={String(provider?.enabled ?? true)}
-            className={selectClass}
           >
             <option value="true">{t("on")}</option>
             <option value="false">{t("off")}</option>
-          </select>
+          </NativeSelect>
         </div>
       </div>
 

@@ -9,8 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SectionCard } from "@/components/shell/section-card";
 import { setAppSettingAction, type SettingsActionState } from "@/server/transport/actions/settings";
-
-const selectClass = "border-input bg-background h-9 w-full rounded-md border px-3 text-sm";
+import { NativeSelect } from "@/components/ui/native-select";
 
 function SettingForm({
   settingKey,
@@ -85,25 +84,20 @@ export function AppSettingsForm({
       >
         <SettingForm settingKey="registration_mode" label={t("registrationMode")}>
           {(id) => (
-            <select id={id} name="value" defaultValue={registrationMode} className={selectClass}>
+            <NativeSelect id={id} name="value" defaultValue={registrationMode}>
               <option value="OPEN">{t("mode.OPEN")}</option>
               <option value="INVITE_ONLY">{t("mode.INVITE_ONLY")}</option>
               <option value="DISABLED">{t("mode.DISABLED")}</option>
-            </select>
+            </NativeSelect>
           )}
         </SettingForm>
 
         <SettingForm settingKey="credentials_enabled" label={t("credentialsEnabled")}>
           {(id) => (
-            <select
-              id={id}
-              name="value"
-              defaultValue={String(credentialsEnabled)}
-              className={selectClass}
-            >
+            <NativeSelect id={id} name="value" defaultValue={String(credentialsEnabled)}>
               <option value="true">{t("enabled")}</option>
               <option value="false">{t("disabled")}</option>
-            </select>
+            </NativeSelect>
           )}
         </SettingForm>
       </SectionCard>
@@ -128,15 +122,10 @@ export function AppSettingsForm({
 
         <SettingForm settingKey="security.admin_2fa_required" label={t("admin2faRequired")}>
           {(id) => (
-            <select
-              id={id}
-              name="value"
-              defaultValue={String(admin2faRequired)}
-              className={selectClass}
-            >
+            <NativeSelect id={id} name="value" defaultValue={String(admin2faRequired)}>
               <option value="true">{t("enabled")}</option>
               <option value="false">{t("disabled")}</option>
-            </select>
+            </NativeSelect>
           )}
         </SettingForm>
       </SectionCard>
