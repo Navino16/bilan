@@ -4,13 +4,14 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { overline, SegmentedTabs } from "@/components/transactions/bits";
+import { SegmentedTabs } from "@/components/transactions/bits";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import { CategoryForm } from "./category-form";
 import { CategoryList } from "./category-list";
 import { RulesList, type RuleRow } from "./rules-list";
 import { RuleDialog } from "./rule-dialog";
 import type { CategoryNode } from "@/server/services/categories";
+import { PageHeader } from "@/components/shell/page-header";
 
 export function CategoriesView({
   tree,
@@ -30,30 +31,30 @@ export function CategoriesView({
   const parents = tree.map((n) => ({ id: n.id, name: n.name }));
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-5">
-      <header className="flex items-end justify-between gap-3">
-        <div className="space-y-1">
-          <div className={overline}>{t("overline")}</div>
-          <h1 className="font-display text-3xl leading-none">{t("pageTitle")}</h1>
-        </div>
-        {tab === "cats" ? (
-          <CategoryForm
-            mode="create"
-            parents={parents}
-            trigger={
-              <Button>
-                <Plus />
-                {tc("create")}
-              </Button>
-            }
-          />
-        ) : (
-          <Button onClick={() => setRuleOpen(true)}>
-            <Plus />
-            {t("new")}
-          </Button>
-        )}
-      </header>
+    <div className="space-y-5">
+      <PageHeader
+        overline={t("overline")}
+        title={t("pageTitle")}
+        actions={
+          tab === "cats" ? (
+            <CategoryForm
+              mode="create"
+              parents={parents}
+              trigger={
+                <Button>
+                  <Plus />
+                  {tc("create")}
+                </Button>
+              }
+            />
+          ) : (
+            <Button onClick={() => setRuleOpen(true)}>
+              <Plus />
+              {t("new")}
+            </Button>
+          )
+        }
+      />
 
       <SegmentedTabs
         items={[

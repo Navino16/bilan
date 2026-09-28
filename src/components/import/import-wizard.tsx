@@ -12,6 +12,7 @@ import { CategoryCombobox } from "@/components/transactions/category-combobox";
 import { Stepper, FieldMap, CheckRow } from "./wizard-bits";
 import { CSV_FIELDS } from "@/lib/validation/import";
 import type { FlatCategory } from "@/components/transactions/category-tree";
+import { PageHeader } from "@/components/shell/page-header";
 
 type Account = { id: string; name: string; bankName: string | null };
 type PreviewRow = {
@@ -214,13 +215,11 @@ export function ImportWizard({
 
   return (
     <div className="space-y-5">
-      <div className="flex items-end justify-between gap-3">
-        <div className="space-y-1">
-          <div className={overline}>{t("overline")}</div>
-          <h1 className="font-display text-3xl leading-none">{t("title")}</h1>
-        </div>
-        <span className="text-muted-foreground text-xs">{t("sources")}</span>
-      </div>
+      <PageHeader
+        overline={t("overline")}
+        title={t("title")}
+        actions={<span className="text-muted-foreground text-xs">{t("sources")}</span>}
+      />
 
       <Stepper steps={steps} current={step} />
 

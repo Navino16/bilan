@@ -13,6 +13,7 @@ import { InviteForm } from "@/components/groups/invite-form";
 import { InvitationsList } from "@/components/groups/invitations-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/shell/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +57,7 @@ export default async function GroupDetailPage({
     : [];
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6">
+    <div className="space-y-6">
       <Link
         href={`/${locale}/groups`}
         className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"
@@ -65,26 +66,25 @@ export default async function GroupDetailPage({
         {t("back")}
       </Link>
 
-      <header className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="font-display truncate text-3xl">{group.name}</h1>
-          {group.description && (
-            <p className="text-muted-foreground text-sm">{group.description}</p>
-          )}
-        </div>
-        {canEdit && (
-          <GroupForm
-            mode="edit"
-            group={{ id: group.id, name: group.name, description: group.description }}
-            trigger={
-              <Button variant="outline" size="sm">
-                <Pencil />
-                {t("edit")}
-              </Button>
-            }
-          />
-        )}
-      </header>
+      <PageHeader
+        overline={t("detailOverline")}
+        title={group.name}
+        subtitle={group.description}
+        actions={
+          canEdit && (
+            <GroupForm
+              mode="edit"
+              group={{ id: group.id, name: group.name, description: group.description }}
+              trigger={
+                <Button variant="outline" size="sm">
+                  <Pencil />
+                  {t("edit")}
+                </Button>
+              }
+            />
+          )
+        }
+      />
 
       <section className="space-y-3">
         <h2 className="text-lg font-medium">{t("members")}</h2>

@@ -9,6 +9,7 @@ import type { DashboardData } from "@/server/services/dashboard";
 import type { Period } from "@/lib/period";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import { formatPeriodLabel, toIsoDay } from "@/lib/period";
+import { PageHeader } from "@/components/shell/page-header";
 
 const DEFAULT_COLOR = "#2563eb";
 
@@ -96,20 +97,18 @@ export async function DashboardView({
   const topCats = data.byCategory.slice(0, 6);
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-        <div className="space-y-1">
-          <div className={overline}>{t("overline")}</div>
-          <h1 className="font-display text-4xl leading-none">{label}</h1>
-          <p className="text-muted-foreground text-sm">
-            {t("txCount", { count: data.totals.count })}
-          </p>
-        </div>
-        <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
-          <PeriodPicker from={toIsoDay(period.from)} to={toIsoDay(period.to)} />
-          <PeriodNav period={period} />
-        </div>
-      </header>
+    <div className="space-y-6">
+      <PageHeader
+        overline={t("overline")}
+        title={label}
+        subtitle={t("txCount", { count: data.totals.count })}
+        actions={
+          <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+            <PeriodPicker from={toIsoDay(period.from)} to={toIsoDay(period.to)} />
+            <PeriodNav period={period} />
+          </div>
+        }
+      />
 
       {/* KPI row */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

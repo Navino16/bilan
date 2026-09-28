@@ -115,6 +115,7 @@
     }
   },
   "accounts": {
+    "overline": "Patrimoine",
     "title": "Comptes",
     "empty": "Aucun compte. Créez-en un pour commencer.",
     "new": "Nouveau",
@@ -488,6 +489,8 @@
     }
   },
   "groups": {
+    "overline": "Partage",
+    "detailOverline": "Foyer",
     "title": "Foyers",
     "subtitle": "Partagez des comptes et des budgets avec votre foyer.",
     "empty": "Aucun foyer. Créez-en un pour partager vos comptes.",
@@ -661,6 +664,7 @@
     }
   },
   "admin": {
+    "overline": "Instance",
     "title": "Administration",
     "nav": {
       "users": "Utilisateurs",

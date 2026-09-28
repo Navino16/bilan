@@ -115,6 +115,7 @@
     }
   },
   "accounts": {
+    "overline": "Wealth",
     "title": "Accounts",
     "empty": "No accounts yet. Create one to get started.",
     "new": "New",
@@ -488,6 +489,8 @@
     }
   },
   "groups": {
+    "overline": "Sharing",
+    "detailOverline": "Household",
     "title": "Households",
     "subtitle": "Share accounts and budgets with your household.",
     "empty": "No households yet. Create one to share your accounts.",
@@ -661,6 +664,7 @@
     }
   },
   "admin": {
+    "overline": "Instance",
     "title": "Administration",
     "nav": {
       "users": "Users",

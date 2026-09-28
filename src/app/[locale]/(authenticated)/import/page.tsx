@@ -16,9 +16,5 @@ export default async function ImportPage({ params }: { params: Promise<{ locale:
     .map((a) => ({ id: a.id, name: a.name, bankName: a.bankName }));
   const categories = flattenCategories(await listForUser(user.id));
 
-  return (
-    <div className="mx-auto w-full max-w-5xl">
-      <ImportWizard accounts={accounts} categories={categories} />
-    </div>
-  );
+  return <ImportWizard accounts={accounts} categories={categories} />;
 }

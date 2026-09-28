@@ -23,6 +23,7 @@ import {
   deleteAccountAction,
   type AccountDataState,
 } from "@/server/transport/actions/account-data";
+import { PageHeader } from "@/components/shell/page-header";
 
 export function DataControls({
   locale,
@@ -45,15 +46,11 @@ export function DataControls({
   }, [state, locale]);
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-6">
-      <div className="space-y-1">
-        <div className={overline}>{t("overline")}</div>
-        <h1 className="font-display text-4xl leading-none">{t("title")}</h1>
-        <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader overline={t("overline")} title={t("title")} subtitle={t("subtitle")} />
 
       {/* Export */}
-      <Card className="gap-4 p-6">
+      <Card className="max-w-2xl gap-4 p-6">
         <div>
           <div className={overline}>{t("exportOverline")}</div>
           <div className="font-display text-xl">{t("exportTitle")}</div>
@@ -76,7 +73,7 @@ export function DataControls({
       </Card>
 
       {/* Danger zone */}
-      <Card className="border-destructive/40 gap-4 p-6">
+      <Card className="border-destructive/40 max-w-2xl gap-4 p-6">
         <div>
           <div className={overline}>{t("dangerZone")}</div>
           <div className="font-display text-xl">{t("deleteTitle")}</div>

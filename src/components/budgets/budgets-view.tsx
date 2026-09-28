@@ -8,11 +8,11 @@ import { Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { overline } from "@/components/transactions/bits";
 import { rollRecurringAction } from "@/server/transport/actions/budgets";
 import { BudgetForm, type BudgetLineOption } from "./budget-form";
 import { BudgetBar, statusStyle } from "./budget-status";
 import type { BudgetListItem } from "@/server/services/budgets";
+import { PageHeader } from "@/components/shell/page-header";
 
 export function BudgetsView({
   budgets,
@@ -49,25 +49,25 @@ export function BudgetsView({
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-5">
-      <header className="flex items-end justify-between gap-3">
-        <div className="space-y-1">
-          <div className={overline}>{t("overline")}</div>
-          <h1 className="font-display text-3xl leading-none">{t("pageTitle")}</h1>
-        </div>
-        <BudgetForm
-          mode="create"
-          categories={categories}
-          accounts={accounts}
-          groups={groups}
-          trigger={
-            <Button>
-              <Plus />
-              {t("create")}
-            </Button>
-          }
-        />
-      </header>
+    <div className="space-y-5">
+      <PageHeader
+        overline={t("overline")}
+        title={t("pageTitle")}
+        actions={
+          <BudgetForm
+            mode="create"
+            categories={categories}
+            accounts={accounts}
+            groups={groups}
+            trigger={
+              <Button>
+                <Plus />
+                {t("create")}
+              </Button>
+            }
+          />
+        }
+      />
 
       {budgets.length === 0 ? (
         <p className="text-muted-foreground text-sm">{t("empty")}</p>
