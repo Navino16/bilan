@@ -76,7 +76,10 @@ test.describe("budgets", () => {
     await expect(page.getByText(budgetName).first()).toBeVisible({ timeout: 15_000 });
 
     // 3) Open the seeded transaction and assign it INCLUDE to the budget.
-    await page.goto("/fr/transactions");
+    // Retried: the budget-create refresh can still be in flight and abort the goto.
+    await expect(async () => {
+      await page.goto(`/fr/transactions?search=${stamp}`);
+    }).toPass();
     await page
       .locator('[data-slot="transaction-row"]')
       .filter({ hasText: txLabel })

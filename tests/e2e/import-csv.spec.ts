@@ -45,6 +45,8 @@ test.describe("CSV import (wizard)", () => {
     await page.getByRole("button", { name: /valider l'import/i }).click();
     await committed;
     await page.getByRole("link", { name: /voir les transactions/i }).click({ timeout: 15_000 });
+    await expect(page).toHaveURL(/\/transactions/, { timeout: 30_000 });
+    await page.goto(`/fr/transactions?search=${stamp}`);
 
     // The kept row is imported; the excluded one is not.
     await expect(

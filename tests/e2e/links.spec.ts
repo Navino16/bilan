@@ -17,7 +17,7 @@ test.describe("transaction links", () => {
       [expense, "-60"],
       [refund, "60"],
     ] as const) {
-      await page.goto("/fr/transactions");
+      await page.goto(`/fr/transactions?search=${stamp}`);
       await expect(async () => {
         await page.getByRole("button", { name: /nouvelle transaction/i }).click();
         await expect(page.locator('input[name="date"]')).toBeVisible();
@@ -68,7 +68,7 @@ test.describe("transaction links", () => {
       [exp, `-${uniq}`],
       [ref, uniq],
     ] as const) {
-      await page.goto("/fr/transactions");
+      await page.goto(`/fr/transactions?search=${stamp}`);
       await expect(async () => {
         await page.getByRole("button", { name: /nouvelle transaction/i }).click();
         await expect(page.locator('input[name="date"]')).toBeVisible();
