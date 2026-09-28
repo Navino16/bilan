@@ -690,7 +690,11 @@
         "UNAUTHORIZED": "Vous n'avez pas la permission de créer des utilisateurs.",
         "INVALID": "Vérifiez les champs saisis.",
         "FAILED": "Échec de la création (l'e-mail existe peut-être déjà)."
-      }
+      },
+      "createOverline": "Invitation",
+      "createHint": "La personne reçoit par e-mail un lien pour définir son mot de passe.",
+      "listOverline": "Comptes",
+      "count": "{count, plural, =0 {Aucun compte} one {# compte} other {# comptes}}"
     },
     "signupTokens": {
       "createTitle": "Créer un jeton",
@@ -710,10 +714,15 @@
       "error": {
         "UNAUTHORIZED": "Vous n'avez pas la permission de gérer les jetons.",
         "INVALID": "Valeur invalide."
-      }
+      },
+      "createOverline": "Inscription",
+      "createHint": "Un jeton permet de créer un compte lorsque l'inscription est sur invitation.",
+      "listOverline": "Invitations",
+      "token": "Jeton",
+      "usesCol": "Utilisations",
+      "status": "Statut"
     },
     "settings": {
-      "title": "Paramètres de l'application",
       "appName": "Nom de l'application",
       "registrationMode": "Mode d'inscription",
       "credentialsEnabled": "Connexion par mot de passe",
@@ -732,6 +741,21 @@
       "error": {
         "INVALID": "Valeur invalide.",
         "FAILED": "Échec de l'enregistrement."
+      },
+      "general": {
+        "overline": "Général",
+        "title": "Identité",
+        "hint": "Nom affiché dans l'interface, les e-mails et l'onglet du navigateur."
+      },
+      "access": {
+        "overline": "Accès",
+        "title": "Inscription et connexion",
+        "hint": "Qui peut créer un compte et comment on se connecte."
+      },
+      "security": {
+        "overline": "Sécurité",
+        "title": "Mots de passe et double authentification",
+        "hint": "Exigences appliquées à tous les comptes."
       }
     },
     "smtp": {
@@ -756,7 +780,8 @@
       "error": {
         "INVALID": "Vérifiez les champs saisis.",
         "FAILED": "Échec de l'enregistrement."
-      }
+      },
+      "overline": "E-mails"
     },
     "authProviders": {
       "listTitle": "Fournisseurs configurés",
@@ -790,7 +815,10 @@
       "error": {
         "INVALID": "Vérifiez les champs saisis.",
         "FAILED": "Échec de l'enregistrement."
-      }
+      },
+      "listOverline": "Connexion",
+      "addOverline": "Nouveau",
+      "addHint": "Connexion par identifiants, OIDC ou Google."
     },
     "audit": {
       "title": "Journal d'audit",
@@ -801,7 +829,13 @@
       "colEntity": "Entité",
       "colUser": "Utilisateur",
       "system": "système",
-      "filter": "Filtrer"
+      "filter": "Filtrer",
+      "overline": "Traçabilité"
+    },
+    "roles": {
+      "USER": "Utilisateur",
+      "ADMIN": "Admin",
+      "SUPER_ADMIN": "Super admin"
     }
   },
   "home": {

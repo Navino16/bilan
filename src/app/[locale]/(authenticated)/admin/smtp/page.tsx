@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/server/auth/permissions";
 import { getSmtpConfig } from "@/server/services/settings/smtp";
 import { SmtpForm } from "@/components/admin/smtp-form";
+import { SectionCard } from "@/components/shell/section-card";
 
 export const dynamic = "force-dynamic";
 
@@ -11,9 +12,7 @@ export default async function AdminSmtpPage() {
   const cfg = await getSmtpConfig();
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-medium">{t("title")}</h2>
-      <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
+    <SectionCard overline={t("overline")} title={t("title")} hint={t("subtitle")}>
       <SmtpForm
         defaults={
           cfg
@@ -29,6 +28,6 @@ export default async function AdminSmtpPage() {
             : null
         }
       />
-    </div>
+    </SectionCard>
   );
 }

@@ -2,8 +2,16 @@ import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/server/auth/permissions";
 import { listAuthProviders } from "@/server/services/settings/auth-providers";
 import { AuthProviderForm, type AuthProviderDefaults } from "@/components/admin/auth-provider-form";
+import { SectionCard } from "@/components/shell/section-card";
+import { StatusBadge } from "@/components/admin/status-badge";
 
 export const dynamic = "force-dynamic";
+
+const TYPE_KEY = {
+  credentials: "typeCredentials",
+  oidc: "typeOidc",
+  google: "typeGoogle",
+} as const;
 
 export default async function AdminAuthProvidersPage() {
   await requirePermission("admin.settings.write");
@@ -11,41 +19,37 @@ export default async function AdminAuthProvidersPage() {
   const providers = await listAuthProviders();
 
   return (
-    <div className="space-y-8">
-      <section className="space-y-4">
-        <h2 className="text-lg font-medium">{t("listTitle")}</h2>
-        {providers.length === 0 && <p className="text-muted-foreground text-sm">{t("empty")}</p>}
-        {providers.map((p) => {
-          const defaults: AuthProviderDefaults = {
-            key: p.key,
-            type: p.type,
-            displayName: p.displayName,
-            enabled: p.enabled,
-            issuer: p.issuer,
-            clientId: p.clientId,
-            scopes: p.scopes,
-            config: (p.config as AuthProviderDefaults["config"]) ?? null,
-          };
-          return (
-            <section key={p.id} className="space-y-3 rounded-lg border p-4">
-              <div className="flex items-center gap-2">
-                <h3 className="font-medium">{p.displayName}</h3>
-                <span className="text-muted-foreground text-xs">
-                  {p.enabled ? t("on") : t("off")}
-                </span>
-              </div>
-              <AuthProviderForm provider={defaults} />
-            </section>
-          );
-        })}
-      </section>
+    <div className="space-y-6">
+      {providers.length === 0 && (
+        <SectionCard overline={t("listOverline")} title={t("listTitle")} hint={t("empty")} />
+      )}
+      {providers.map((p) => {
+        const defaults: AuthProviderDefaults = {
+          key: p.key,
+          type: p.type,
+          displayName: p.displayName,
+          enabled: p.enabled,
+          issuer: p.issuer,
+          clientId: p.clientId,
+          scopes: p.scopes,
+          config: (p.config as AuthProviderDefaults["config"]) ?? null,
+        };
+        const typeKey = TYPE_KEY[p.type as keyof typeof TYPE_KEY];
+        return (
+          <SectionCard
+            key={p.id}
+            overline={typeKey ? t(typeKey) : p.type}
+            title={p.displayName}
+            action={<StatusBadge active={p.enabled}>{p.enabled ? t("on") : t("off")}</StatusBadge>}
+          >
+            <AuthProviderForm provider={defaults} />
+          </SectionCard>
+        );
+      })}
 
-      <section className="space-y-4">
-        <h2 className="text-lg font-medium">{t("addTitle")}</h2>
-        <div className="rounded-lg border p-4">
-          <AuthProviderForm />
-        </div>
-      </section>
+      <SectionCard overline={t("addOverline")} title={t("addTitle")} hint={t("addHint")}>
+        <AuthProviderForm />
+      </SectionCard>
     </div>
   );
 }

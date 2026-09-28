@@ -1,10 +1,9 @@
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import { requireSession } from "@/server/auth/permissions";
 import { db } from "@/server/db";
-import { overline } from "@/components/transactions/bits";
-import { Card } from "@/components/ui/card";
 import { TwoFactorControls } from "@/components/settings/two-factor-controls";
 import { PageHeader } from "@/components/shell/page-header";
+import { SectionCard } from "@/components/shell/section-card";
 
 export const dynamic = "force-dynamic";
 
@@ -27,14 +26,9 @@ export default async function SecuritySettingsPage({
     <div className="space-y-6">
       <PageHeader overline={t("overline")} title={t("title")} subtitle={t("subtitle")} />
 
-      <Card className="max-w-2xl gap-4 p-6">
-        <div>
-          <div className={overline}>{t("twoFactor")}</div>
-          <div className="font-display text-xl">{t("twoFactorTitle")}</div>
-          <p className="text-muted-foreground mt-1 text-sm">{t("twoFactorHint")}</p>
-        </div>
+      <SectionCard overline={t("twoFactor")} title={t("twoFactorTitle")} hint={t("twoFactorHint")}>
         <TwoFactorControls enabled={Boolean(row?.twoFactorEnabled)} />
-      </Card>
+      </SectionCard>
     </div>
   );
 }

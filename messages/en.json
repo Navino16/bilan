@@ -690,7 +690,11 @@
         "UNAUTHORIZED": "You don't have permission to create users.",
         "INVALID": "Check the fields you entered.",
         "FAILED": "Creation failed (the email may already exist)."
-      }
+      },
+      "createOverline": "Invitation",
+      "createHint": "They receive an email with a link to set their password.",
+      "listOverline": "Accounts",
+      "count": "{count, plural, =0 {No accounts} one {# account} other {# accounts}}"
     },
     "signupTokens": {
       "createTitle": "Create a token",
@@ -710,10 +714,15 @@
       "error": {
         "UNAUTHORIZED": "You don't have permission to manage tokens.",
         "INVALID": "Invalid value."
-      }
+      },
+      "createOverline": "Sign-up",
+      "createHint": "A token lets someone create an account when sign-up is invite-only.",
+      "listOverline": "Invitations",
+      "token": "Token",
+      "usesCol": "Uses",
+      "status": "Status"
     },
     "settings": {
-      "title": "Application settings",
       "appName": "Application name",
       "registrationMode": "Registration mode",
       "credentialsEnabled": "Password sign-in",
@@ -732,6 +741,21 @@
       "error": {
         "INVALID": "Invalid value.",
         "FAILED": "Save failed."
+      },
+      "general": {
+        "overline": "General",
+        "title": "Identity",
+        "hint": "Name shown in the interface, emails and the browser tab."
+      },
+      "access": {
+        "overline": "Access",
+        "title": "Sign-up and sign-in",
+        "hint": "Who can create an account and how people sign in."
+      },
+      "security": {
+        "overline": "Security",
+        "title": "Passwords and two-factor",
+        "hint": "Requirements applied to every account."
       }
     },
     "smtp": {
@@ -756,7 +780,8 @@
       "error": {
         "INVALID": "Check the fields you entered.",
         "FAILED": "Save failed."
-      }
+      },
+      "overline": "Email"
     },
     "authProviders": {
       "listTitle": "Configured providers",
@@ -790,7 +815,10 @@
       "error": {
         "INVALID": "Check the fields you entered.",
         "FAILED": "Save failed."
-      }
+      },
+      "listOverline": "Sign-in",
+      "addOverline": "New",
+      "addHint": "Credentials, OIDC or Google sign-in."
     },
     "audit": {
       "title": "Audit log",
@@ -801,7 +829,13 @@
       "colEntity": "Entity",
       "colUser": "User",
       "system": "system",
-      "filter": "Filter"
+      "filter": "Filter",
+      "overline": "Traceability"
+    },
+    "roles": {
+      "USER": "User",
+      "ADMIN": "Admin",
+      "SUPER_ADMIN": "Super admin"
     }
   },
   "home": {
