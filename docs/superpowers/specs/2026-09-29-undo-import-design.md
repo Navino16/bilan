@@ -52,7 +52,6 @@ New file `revert.ts` (the CSV path of `index.ts` stays untouched apart from fina
 ```ts
 export type RevertImpact = {
   transactions: number;
-  accountIds: string[];
   linked: number;
   budgeted: number;
   edited: number;
@@ -76,7 +75,7 @@ purgeStaleImports(cutoff: Date): Promise<number>
 
 Then audit `import.reverted` with `{ deleted, linksDissolved }`. Re-importing the same file afterwards works: dedup finds no existing `externalId`.
 
-**`finalizeBatch`** also writes the trimmed `metadata` (§4).
+**`finalizeBatch`** also writes the trimmed `metadata` (§4). Committing now requires `status === "REVIEW"` (else `NOT_COMMITTABLE`, HTTP 409): once the payload is trimmed, re-committing a `COMPLETED` or `REVERTED` batch would otherwise re-finalize it with zero rows.
 
 **`discardBatch`** deletes the batch row; audit `import.discarded`.
 
@@ -86,7 +85,7 @@ Then audit `import.reverted` with `{ deleted, linksDissolved }`. Re-importing th
 
 ## 6. Transport
 
-- `src/server/transport/actions/imports.ts` (new): `getRevertImpactAction`, `revertImportAction`, `discardImportAction`. Thin wrappers (session, error mapping to `{ error }`, `revalidatePath` of `/import` and `/transactions` after a revert).
+- `src/server/transport/actions/imports.ts` (new): `getRevertImpactAction`, `revertImportAction`, `discardImportAction`. Thin wrappers (session, error mapping to `{ error }`); the client calls `router.refresh()` after a revert, like the other actions.
 - `src/app/api/cron/purge-imports/route.ts`: same `CRON_SECRET` guard as `purge-audit`, cutoff `now − 24 h`, audit `import.purged` with `{ count }`. Crontab line documented in the PR:
 
   ```
