@@ -1,10 +1,21 @@
 import { db } from "@/server/db";
 import { canWriteAccount } from "@/server/services/accounts/sharing";
+import { listVisibleForUser } from "@/server/services/accounts";
 import { logEvent } from "@/server/services/audit";
-import { canRevert, trimBatchMetadata } from "@/lib/import-status";
+import {
+  canDiscard,
+  canRevert,
+  trimBatchMetadata,
+  UNCOMMITTED_STATUSES,
+} from "@/lib/import-status";
 import { ImportAccessError } from "./index";
 
-export type RevertImpact = { transactions: number; linked: number; budgeted: number; edited: number };
+export type RevertImpact = {
+  transactions: number;
+  linked: number;
+  budgeted: number;
+  edited: number;
+};
 
 // Write access is required on every account the batch touched: a PDF batch maps
 // each product to its own account (spec D2).
@@ -80,4 +91,65 @@ export async function revertImport(
     metadata: result,
   });
   return result;
+}
+
+export async function discardBatch(actorId: string, batchId: string): Promise<void> {
+  const batch = await db.importBatch.findUnique({ where: { id: batchId } });
+  if (!batch) return; // already discarded or purged
+  if (!(await canWriteAccount(actorId, batch.accountId))) throw new ImportAccessError("FORBIDDEN");
+  if (!canDiscard(batch.status)) throw new ImportAccessError("NOT_DISCARDABLE");
+  await db.importBatch.deleteMany({
+    where: { id: batchId, status: { in: [...UNCOMMITTED_STATUSES] } },
+  });
+  await logEvent({
+    userId: actorId,
+    action: "import.discarded",
+    entity: "ImportBatch",
+    entityId: batchId,
+  });
+}
+
+export type ImportHistoryItem = {
+  id: string;
+  createdAt: Date;
+  source: string;
+  filename: string | null;
+  status: "COMPLETED" | "REVERTED";
+  importedRows: number;
+  skippedRows: number;
+  accountNames: string[];
+};
+
+export async function listRecentImports(userId: string, limit = 20): Promise<ImportHistoryItem[]> {
+  const visible = await listVisibleForUser(userId);
+  const names = new Map(visible.map((a) => [a.id, a.name]));
+  const writable = visible.filter((a) => a.access === "OWNER" || a.access === "WRITE");
+  const batches = await db.importBatch.findMany({
+    where: {
+      accountId: { in: writable.map((a) => a.id) },
+      status: { in: ["COMPLETED", "REVERTED"] },
+    },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+  return batches.map((b) => {
+    const ids = (b.metadata as { accountIds?: string[] } | null)?.accountIds ?? [b.accountId];
+    return {
+      id: b.id,
+      createdAt: b.createdAt,
+      source: b.source,
+      filename: b.filename,
+      status: b.status as ImportHistoryItem["status"],
+      importedRows: b.importedRows,
+      skippedRows: b.skippedRows,
+      accountNames: ids.flatMap((id) => names.get(id) ?? []),
+    };
+  });
+}
+
+export async function purgeStaleImports(cutoff: Date): Promise<number> {
+  const { count } = await db.importBatch.deleteMany({
+    where: { status: { in: [...UNCOMMITTED_STATUSES] }, createdAt: { lt: cutoff } },
+  });
+  return count;
 }

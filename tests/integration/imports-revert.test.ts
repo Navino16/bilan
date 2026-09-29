@@ -1,7 +1,13 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "@/server/db";
 import { insertRows, finalizeBatch } from "@/server/services/imports/commit";
-import { getRevertImpact, revertImport } from "@/server/services/imports/revert";
+import {
+  discardBatch,
+  getRevertImpact,
+  listRecentImports,
+  purgeStaleImports,
+  revertImport,
+} from "@/server/services/imports/revert";
 import { createLink } from "@/server/services/links";
 import { createTransaction } from "@/server/services/transactions";
 
@@ -207,5 +213,75 @@ describe("revertImport", () => {
     );
     await expect(revertImport(owner, batchId)).rejects.toThrow("FORBIDDEN");
     expect(await db.transaction.count({ where: { importBatchId: batchId } })).toBe(2);
+  });
+});
+describe("discardBatch", () => {
+  it("deletes an uncommitted batch and is a no-op once it is gone", async () => {
+    const b = await db.importBatch.create({
+      data: {
+        accountId: accA,
+        source: "CSV",
+        status: "REVIEW",
+        createdById: owner,
+        metadata: { text: "raw" },
+      },
+    });
+    await discardBatch(owner, b.id);
+    expect(await db.importBatch.findUnique({ where: { id: b.id } })).toBeNull();
+    await expect(discardBatch(owner, b.id)).resolves.toBeUndefined();
+  });
+
+  it("refuses a committed batch and a stranger", async () => {
+    const batchId = await committedBatch([{ accountId: accA, labels: ["KEEP ONE"] }]);
+    await expect(discardBatch(owner, batchId)).rejects.toThrow("NOT_DISCARDABLE");
+    const b = await db.importBatch.create({
+      data: { accountId: accA, source: "CSV", status: "REVIEW", createdById: owner },
+    });
+    await expect(discardBatch("nobody", b.id)).rejects.toThrow("FORBIDDEN");
+  });
+});
+
+describe("purgeStaleImports", () => {
+  it("deletes old uncommitted batches only", async () => {
+    const old = new Date(Date.now() - 48 * 3600_000);
+    const stale = await db.importBatch.create({
+      data: {
+        accountId: accA,
+        source: "CSV",
+        status: "PARSING",
+        createdById: owner,
+        createdAt: old,
+      },
+    });
+    const fresh = await db.importBatch.create({
+      data: { accountId: accA, source: "CSV", status: "REVIEW", createdById: owner },
+    });
+    const done = await committedBatch([{ accountId: accA, labels: ["OLD DONE"] }]);
+    await db.importBatch.update({ where: { id: done }, data: { createdAt: old } });
+
+    expect(await purgeStaleImports(new Date(Date.now() - 24 * 3600_000))).toBeGreaterThanOrEqual(1);
+    expect(await db.importBatch.findUnique({ where: { id: stale.id } })).toBeNull();
+    expect(await db.importBatch.findUnique({ where: { id: fresh.id } })).not.toBeNull();
+    expect(await db.importBatch.findUnique({ where: { id: done } })).not.toBeNull();
+  });
+});
+
+describe("listRecentImports", () => {
+  it("lists committed and reverted batches of writable accounts, newest first", async () => {
+    const kept = await committedBatch([{ accountId: accA, labels: ["HIST ONE"] }]);
+    const undone = await committedBatch([{ accountId: accA, labels: ["HIST TWO"] }]);
+    await revertImport(owner, undone);
+    const foreign = await committedBatch([{ accountId: accB, labels: ["HIST B"] }], other);
+
+    const items = await listRecentImports(owner);
+    const ids = items.map((i) => i.id);
+    expect(ids).toContain(kept);
+    expect(ids).toContain(undone);
+    expect(ids).not.toContain(foreign); // B is READ-only for owner
+    expect(items.find((i) => i.id === undone)?.status).toBe("REVERTED");
+    expect(items.find((i) => i.id === kept)?.accountNames).toEqual(["A"]);
+    expect(items.every((i) => i.status === "COMPLETED" || i.status === "REVERTED")).toBe(true);
+    const times = items.map((i) => i.createdAt.getTime());
+    expect([...times].sort((a, b) => b - a)).toEqual(times);
   });
 });
