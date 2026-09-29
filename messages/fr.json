@@ -490,7 +490,8 @@
       "TOO_LARGE": "Fichier trop volumineux (5 Mo max).",
       "FORBIDDEN": "Action non autorisée.",
       "PARSE_FAILED": "Impossible de lire le fichier.",
-      "COMMIT_FAILED": "Échec de l'import. Réessayez."
+      "COMMIT_FAILED": "Échec de l'import. Réessayez.",
+      "NOT_COMMITTABLE": "Cet import a déjà été validé ou annulé."
     }
   },
   "groups": {

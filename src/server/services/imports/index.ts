@@ -3,6 +3,7 @@ import { db } from "@/server/db";
 import { canWriteAccount } from "@/server/services/accounts/sharing";
 import { logEvent } from "@/server/services/audit";
 import { csvMappingSchema, type CsvMappingInput } from "@/lib/validation/import";
+import { canCommit } from "@/lib/import-status";
 import { parseCsv, detectMapping, mapRows } from "./csv-parse";
 import { commitRows, type CommitOptions } from "./commit";
 import { buildPreview } from "./preview";
@@ -84,6 +85,7 @@ export async function commitCsvBatch(
   opts: CommitOptions = {},
 ): Promise<CommitSummary> {
   const batch = await loadBatch(batchId, actor.id);
+  if (!canCommit(batch.status)) throw new ImportAccessError("NOT_COMMITTABLE");
   const parsedMapping = csvMappingSchema.parse(mapping) as CsvMapping;
   const text = (batch.metadata as { text?: string } | null)?.text ?? "";
   const { rows } = parseCsv(text);

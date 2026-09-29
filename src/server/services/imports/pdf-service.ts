@@ -4,6 +4,7 @@ import { canWriteAccount } from "@/server/services/accounts/sharing";
 import { logEvent } from "@/server/services/audit";
 import { insertRows, finalizeBatch, type CommitOptions } from "./commit";
 import { buildPreview } from "./preview";
+import { canCommit } from "@/lib/import-status";
 // Static import → pdfjs/pdf-parse stay externalized (next.config serverExternalPackages),
 // so the pdfjs worker resolves. Only the PDF route imports this module, so the CSV
 // path never loads pdfjs.
@@ -120,8 +121,10 @@ export async function commitPdfBatch(
   opts: CommitOptions = {},
 ): Promise<CommitSummary> {
   const batch = await loadBatch(batchId, actor.id);
+  if (!canCommit(batch.status)) throw new ImportAccessError("NOT_COMMITTABLE");
   const { products } = readPdfMeta(batch.metadata);
   const totals = { imported: 0, skipped: 0, total: 0 };
+  const accountIds: string[] = [];
   for (const product of products) {
     const accountId = mapping[product.key];
     if (!accountId) continue; // ignored
@@ -135,6 +138,7 @@ export async function commitPdfBatch(
     totals.imported += r.imported;
     totals.skipped += r.skipped;
     totals.total += r.total;
+    if (!accountIds.includes(accountId)) accountIds.push(accountId);
   }
-  return finalizeBatch(batch.id, totals, actor);
+  return finalizeBatch(batch.id, totals, actor, accountIds);
 }

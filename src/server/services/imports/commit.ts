@@ -2,6 +2,7 @@ import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import { buildSecureFields, computeExternalId } from "@/server/services/transactions/secure-fields";
 import { suggest } from "@/server/services/categorization";
+import { trimBatchMetadata } from "@/lib/import-status";
 import { deriveType } from "./derive-type";
 import type { CommitSummary, NormalizedRow } from "./types";
 
@@ -95,12 +96,18 @@ export async function insertRows(
   return { imported, skipped, total: rows.length };
 }
 
-// Finalizes an ImportBatch after inserts: sets COMPLETED + counters, audit-logs.
+// Finalizes an ImportBatch after inserts: sets COMPLETED + counters, trims the raw
+// payload, audit-logs.
 export async function finalizeBatch(
   batchId: string,
   totals: { imported: number; skipped: number; total: number },
   actor: { id: string },
+  accountIds: string[],
 ): Promise<CommitSummary> {
+  const { metadata } = await db.importBatch.findUniqueOrThrow({
+    where: { id: batchId },
+    select: { metadata: true },
+  });
   const updated = await db.importBatch.update({
     where: { id: batchId },
     data: {
@@ -109,6 +116,7 @@ export async function finalizeBatch(
       importedRows: totals.imported,
       skippedRows: totals.skipped,
       completedAt: new Date(),
+      metadata: trimBatchMetadata(metadata, accountIds),
     },
   });
   await logEvent({
@@ -139,5 +147,5 @@ export async function commitRows(
     actor,
     opts,
   );
-  return finalizeBatch(batch.id, totals, actor);
+  return finalizeBatch(batch.id, totals, actor, [batch.accountId]);
 }

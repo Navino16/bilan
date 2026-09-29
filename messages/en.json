@@ -490,7 +490,8 @@
       "TOO_LARGE": "File too large (5 MB max).",
       "FORBIDDEN": "Not allowed.",
       "PARSE_FAILED": "Could not read the file.",
-      "COMMIT_FAILED": "Import failed. Try again."
+      "COMMIT_FAILED": "Import failed. Try again.",
+      "NOT_COMMITTABLE": "This import was already committed or undone."
     }
   },
   "groups": {

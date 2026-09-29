@@ -25,8 +25,11 @@ export async function POST(
     );
     return Response.json(summary);
   } catch (e) {
-    if (e instanceof ImportAccessError)
-      return Response.json({ error: "FORBIDDEN" }, { status: 403 });
+    if (e instanceof ImportAccessError) {
+      return e.message === "NOT_COMMITTABLE"
+        ? Response.json({ error: "NOT_COMMITTABLE" }, { status: 409 })
+        : Response.json({ error: "FORBIDDEN" }, { status: 403 });
+    }
     return Response.json({ error: "COMMIT_FAILED" }, { status: 422 });
   }
 }
