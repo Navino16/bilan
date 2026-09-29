@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -14,6 +14,8 @@ import { CSV_FIELDS } from "@/lib/validation/import";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import { PageHeader } from "@/components/shell/page-header";
 import { NativeSelect } from "@/components/ui/native-select";
+import { discardImportAction } from "@/server/transport/actions/imports";
+import { RevertImportDialog } from "./revert-import-dialog";
 
 type Account = { id: string; name: string; bankName: string | null };
 type PreviewRow = {
@@ -58,9 +60,11 @@ function formatBytes(n: number | null): string {
 export function ImportWizard({
   accounts,
   categories,
+  history,
 }: {
   accounts: Account[];
   categories: FlatCategory[];
+  history?: ReactNode;
 }) {
   const t = useTranslations("import");
   const tType = useTranslations("transactions");
@@ -79,6 +83,8 @@ export function ImportWizard({
   const [excluded, setExcluded] = useState<Record<string, boolean>>({});
   const [autoCategorize, setAutoCategorize] = useState(true);
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [reverting, setReverting] = useState(false);
+  const [reverted, setReverted] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -86,6 +92,7 @@ export function ImportWizard({
   const step = summary ? 3 : preview ? 2 : loading ? 1 : 0;
 
   async function upload(f: File, account: string) {
+    discard(preview?.batchId);
     setError(null);
     setLoading(true);
     const isPdf = f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf";
@@ -126,10 +133,7 @@ export function ImportWizard({
     if (file) void upload(file, next); // re-detect duplicates against the new account
   }
 
-  // Discard the current file/preview and return to the File step. Nothing is
-  // committed, so no transactions are touched (the parsed batch row is left
-  // untouched and simply abandoned).
-  function reset() {
+  function clear() {
     setFile(null);
     setPreview(null);
     setColumns({});
@@ -137,6 +141,18 @@ export function ImportWizard({
     setOverrides({});
     setExcluded({});
     setError(null);
+    setSummary(null);
+    setReverted(null);
+  }
+
+  // Server cleanup is best effort: a batch that survives is purged by cron.
+  function discard(batchId: string | undefined) {
+    if (batchId) void discardImportAction(batchId);
+  }
+
+  function reset() {
+    discard(preview?.batchId);
+    clear();
   }
 
   function commit() {
@@ -226,12 +242,37 @@ export function ImportWizard({
 
       {summary ? (
         <Card className="space-y-3 p-6">
-          <p className="text-sm">
-            {t("summary", { imported: summary.importedRows, skipped: summary.skippedRows })}
-          </p>
-          <Link href={`/${locale}/transactions`} className={buttonVariants()}>
-            {t("viewTransactions")}
-          </Link>
+          {reverted === null ? (
+            <>
+              <p className="text-sm">
+                {t("summary", { imported: summary.importedRows, skipped: summary.skippedRows })}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Link href={`/${locale}/transactions`} className={buttonVariants()}>
+                  {t("viewTransactions")}
+                </Link>
+                {preview && (
+                  <Button variant="outline" onClick={() => setReverting(true)}>
+                    {t("revert.action")}
+                  </Button>
+                )}
+              </div>
+              {reverting && preview && (
+                <RevertImportDialog
+                  batchId={preview.batchId}
+                  onClose={() => setReverting(false)}
+                  onReverted={setReverted}
+                />
+              )}
+            </>
+          ) : (
+            <>
+              <p className="text-sm">{t("revert.done", { count: reverted })}</p>
+              <Button variant="outline" onClick={clear}>
+                {t("revert.newImport")}
+              </Button>
+            </>
+          )}
         </Card>
       ) : !preview ? (
         <div className="mx-auto max-w-xl space-y-4 pt-4">
@@ -260,6 +301,7 @@ export function ImportWizard({
             />
           </label>
           {error && <p className="text-destructive text-sm">{t(`error.${error}`)}</p>}
+          {history}
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-[320px_1fr]">
