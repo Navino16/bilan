@@ -35,7 +35,7 @@ Out of scope: undoing single rows (#128), editing a committed import.
 
 `ImportBatch.status` is a `String`: the new `REVERTED` value needs no migration.
 
-Statuses: `PARSING | REVIEW | COMPLETED | FAILED | REVERTED`. "Uncommitted" = `PARSING | REVIEW | FAILED`.
+Statuses: `PARSING | REVIEW | COMMITTING | COMPLETED | FAILED | REVERTED`. "Uncommitted" = `PARSING | REVIEW | FAILED`. `COMMITTING` is held by a commit in progress (see §5).
 
 `metadata` after commit (D4) keeps only:
 
@@ -75,7 +75,7 @@ purgeStaleImports(cutoff: Date): Promise<number>
 
 Then audit `import.reverted` with `{ deleted, linksDissolved }`. Re-importing the same file afterwards works: dedup finds no existing `externalId`.
 
-**`finalizeBatch`** also writes the trimmed `metadata` (§4). Committing now requires `status === "REVIEW"` (else `NOT_COMMITTABLE`, HTTP 409): once the payload is trimmed, re-committing a `COMPLETED` or `REVERTED` batch would otherwise re-finalize it with zero rows.
+**`finalizeBatch`** also writes the trimmed `metadata` (§4). A commit first claims its batch atomically (`REVIEW → COMMITTING`, else `NOT_COMMITTABLE`, HTTP 409), so a replayed or concurrent commit, a discard or the purge can't touch it mid-insert; a commit that fails rolls its partial rows back and returns the batch to `REVIEW`. The purge also removes batches stuck in `COMMITTING` for over 24 h (crashed commit), rows included.
 
 **`discardBatch`** deletes the batch row; audit `import.discarded`.
 
