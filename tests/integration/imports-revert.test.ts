@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "@/server/db";
 import { insertRows, finalizeBatch } from "@/server/services/imports/commit";
+import { createCsvBatch, previewCsvBatch, commitCsvBatch } from "@/server/services/imports";
+import { commitPdfBatch } from "@/server/services/imports/pdf-service";
 import {
   discardBatch,
   getRevertImpact,
@@ -283,5 +285,96 @@ describe("listRecentImports", () => {
     expect(items.every((i) => i.status === "COMPLETED" || i.status === "REVERTED")).toBe(true);
     const times = items.map((i) => i.createdAt.getTime());
     expect([...times].sort((a, b) => b - a)).toEqual(times);
+  });
+});
+
+describe("commit claim", () => {
+  it("lets only one of two concurrent commits run, with correct counters", async () => {
+    const csv = `Date;Libellé;Débit;Crédit
+11/05/2026;CB CLAIM ONE;4,00;
+12/05/2026;CB CLAIM TWO;5,00;`;
+    const batch = await createCsvBatch(
+      { accountId: accA, filename: "claim.csv", text: csv },
+      { id: owner },
+    );
+    const { mapping } = await previewCsvBatch(batch.id, owner);
+    const results = await Promise.allSettled([
+      commitCsvBatch(batch.id, mapping, { id: owner }),
+      commitCsvBatch(batch.id, mapping, { id: owner }),
+    ]);
+    const rejected = results.filter((r) => r.status === "rejected");
+    expect(rejected).toHaveLength(1);
+    expect(String((rejected[0] as PromiseRejectedResult).reason)).toContain("NOT_COMMITTABLE");
+    const row = await db.importBatch.findUniqueOrThrow({ where: { id: batch.id } });
+    expect(row.status).toBe("COMPLETED");
+    expect(row.importedRows).toBe(2);
+    expect(await db.transaction.count({ where: { importBatchId: batch.id } })).toBe(2);
+  });
+
+  it("rolls back a commit that fails halfway, so a discard leaves no orphan rows", async () => {
+    const batch = await db.importBatch.create({
+      data: {
+        accountId: accA,
+        source: "PDF",
+        status: "REVIEW",
+        createdById: owner,
+        metadata: {
+          products: [
+            { key: "p1", rows: [{ date: d(3).toISOString(), amount: -7, rawLabel: "HALF ONE" }] },
+            { key: "p2", rows: [{ date: d(4).toISOString(), amount: -8, rawLabel: "HALF TWO" }] },
+          ],
+        },
+      },
+    });
+    // p2 targets B, read-only for owner: the commit fails after p1 was inserted.
+    await expect(commitPdfBatch(batch.id, { p1: accA, p2: accB }, { id: owner })).rejects.toThrow(
+      "FORBIDDEN",
+    );
+    expect(await db.transaction.count({ where: { importBatchId: batch.id } })).toBe(0);
+    expect((await db.importBatch.findUniqueOrThrow({ where: { id: batch.id } })).status).toBe(
+      "REVIEW",
+    );
+    const orphansBefore = await db.transaction.count({
+      where: { accountId: accA, importBatchId: null },
+    });
+    await discardBatch(owner, batch.id);
+    expect(await db.transaction.count({ where: { accountId: accA, importBatchId: null } })).toBe(
+      orphansBefore,
+    );
+  });
+
+  it("keeps a batch being committed out of reach of discard and purge", async () => {
+    const committing = await db.importBatch.create({
+      data: { accountId: accA, source: "CSV", status: "COMMITTING", createdById: owner },
+    });
+    await expect(discardBatch(owner, committing.id)).rejects.toThrow("NOT_DISCARDABLE");
+    await purgeStaleImports(new Date(Date.now() - 24 * 3600_000));
+    expect(await db.importBatch.findUnique({ where: { id: committing.id } })).not.toBeNull();
+  });
+
+  it("purges a batch stuck committing for over a day, with its rows", async () => {
+    const old = new Date(Date.now() - 48 * 3600_000);
+    const stuck = await db.importBatch.create({
+      data: {
+        accountId: accA,
+        source: "CSV",
+        status: "COMMITTING",
+        createdById: owner,
+        createdAt: old,
+      },
+    });
+    await insertRows(
+      { batchId: stuck.id, accountId: accA },
+      [{ date: d(5), amount: -3, rawLabel: "STUCK ONE" }],
+      { id: owner },
+      { autoCategorize: false },
+    );
+    await purgeStaleImports(new Date(Date.now() - 24 * 3600_000));
+    expect(await db.importBatch.findUnique({ where: { id: stuck.id } })).toBeNull();
+    expect(
+      await db.transaction.count({
+        where: { accountId: accA, externalId: { not: null }, importBatchId: null },
+      }),
+    ).toBe(0);
   });
 });

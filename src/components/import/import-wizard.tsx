@@ -90,6 +90,8 @@ export function ImportWizard({
   const [pending, startTransition] = useTransition();
 
   const step = summary ? 3 : preview ? 2 : loading ? 1 : 0;
+  // An upload replaces (and discards) the previewed batch: nothing may commit or re-upload meanwhile.
+  const busy = loading || pending;
 
   async function upload(f: File, account: string) {
     discard(preview?.batchId);
@@ -332,6 +334,7 @@ export function ImportWizard({
                       key={a.id}
                       type="button"
                       onClick={() => onAccountChange(a.id)}
+                      disabled={busy}
                       className={`flex w-full items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors ${
                         active
                           ? "border-primary bg-primary/10"
@@ -409,10 +412,10 @@ export function ImportWizard({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button size="sm" variant="ghost" onClick={reset} disabled={pending}>
+                <Button size="sm" variant="ghost" onClick={reset} disabled={busy}>
                   {t("cancel")}
                 </Button>
-                <Button size="sm" onClick={commit} disabled={pending}>
+                <Button size="sm" onClick={commit} disabled={busy}>
                   {pending ? t("importing") : t("validate")}
                   <ChevronRight />
                 </Button>

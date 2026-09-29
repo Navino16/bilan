@@ -1,13 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { canCommit, canDiscard, canRevert, trimBatchMetadata } from "@/lib/import-status";
+import { canDiscard, canRevert, trimBatchMetadata } from "@/lib/import-status";
 
 describe("import status guards", () => {
-  it("commits only a batch in review", () => {
-    expect(canCommit("REVIEW")).toBe(true);
-    for (const s of ["PARSING", "COMPLETED", "REVERTED", "FAILED"])
-      expect(canCommit(s)).toBe(false);
-  });
-
   it("reverts only a completed batch", () => {
     expect(canRevert("COMPLETED")).toBe(true);
     for (const s of ["PARSING", "REVIEW", "REVERTED", "FAILED"]) expect(canRevert(s)).toBe(false);

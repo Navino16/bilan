@@ -1,6 +1,5 @@
 export const UNCOMMITTED_STATUSES = ["PARSING", "REVIEW", "FAILED"] as const;
 
-export const canCommit = (status: string) => status === "REVIEW";
 export const canRevert = (status: string) => status === "COMPLETED";
 export const canDiscard = (status: string) =>
   (UNCOMMITTED_STATUSES as readonly string[]).includes(status);

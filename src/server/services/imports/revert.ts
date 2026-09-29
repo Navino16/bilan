@@ -147,9 +147,20 @@ export async function listRecentImports(userId: string, limit = 20): Promise<Imp
   });
 }
 
+// A batch still COMMITTING a day later was left by a crashed commit: its partial rows go too.
 export async function purgeStaleImports(cutoff: Date): Promise<number> {
-  const { count } = await db.importBatch.deleteMany({
-    where: { status: { in: [...UNCOMMITTED_STATUSES] }, createdAt: { lt: cutoff } },
+  const stale = await db.importBatch.findMany({
+    where: {
+      status: { in: [...UNCOMMITTED_STATUSES, "COMMITTING"] },
+      createdAt: { lt: cutoff },
+    },
+    select: { id: true },
   });
+  const ids = stale.map((b) => b.id);
+  if (ids.length === 0) return 0;
+  const [, { count }] = await db.$transaction([
+    db.transaction.deleteMany({ where: { importBatchId: { in: ids } } }),
+    db.importBatch.deleteMany({ where: { id: { in: ids } } }),
+  ]);
   return count;
 }

@@ -96,8 +96,7 @@ export async function insertRows(
   return { imported, skipped, total: rows.length };
 }
 
-// Finalizes an ImportBatch after inserts: sets COMPLETED + counters, trims the raw
-// payload, audit-logs.
+// Finalizes an ImportBatch after inserts: sets COMPLETED + counters, audit-logs.
 export async function finalizeBatch(
   batchId: string,
   totals: { imported: number; skipped: number; total: number },
