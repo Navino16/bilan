@@ -88,7 +88,28 @@ export async function commitCsvBatch(
   const text = (batch.metadata as { text?: string } | null)?.text ?? "";
   const { rows } = parseCsv(text);
   const normalized = mapRows(rows, parsedMapping);
-  return commitRows({ id: batch.id, accountId: batch.accountId }, normalized, actor, opts);
+  return withCommitClaim(batch.id, () =>
+    commitRows({ id: batch.id, accountId: batch.accountId }, normalized, actor, opts),
+  );
+}
+
+// The claim (REVIEW → COMMITTING) keeps a replayed commit, a discard or the purge off a
+// batch mid-insert; a failed commit deletes its partial rows so the batch stays discardable.
+export async function withCommitClaim<T>(batchId: string, run: () => Promise<T>): Promise<T> {
+  const { count } = await db.importBatch.updateMany({
+    where: { id: batchId, status: "REVIEW" },
+    data: { status: "COMMITTING" },
+  });
+  if (count === 0) throw new ImportAccessError("NOT_COMMITTABLE");
+  try {
+    return await run();
+  } catch (e) {
+    await db.$transaction([
+      db.transaction.deleteMany({ where: { importBatchId: batchId } }),
+      db.importBatch.update({ where: { id: batchId }, data: { status: "REVIEW" } }),
+    ]);
+    throw e;
+  }
 }
 
 export async function getBatchForUser(batchId: string, userId: string) {

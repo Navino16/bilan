@@ -139,4 +139,32 @@ describe("CSV import pipeline", () => {
     expect(tx.categoryId).toBeNull(); // foreign category dropped
     expect(tx.manuallyCategorized).toBe(false);
   });
+
+  it("trims the raw CSV text from metadata once committed", async () => {
+    const batch = await createCsvBatch(
+      { accountId, filename: "trim.csv", text: CSV },
+      { id: owner },
+    );
+    const preview = await previewCsvBatch(batch.id, owner);
+    await commitCsvBatch(batch.id, preview.mapping, { id: owner });
+    const row = await db.importBatch.findUniqueOrThrow({ where: { id: batch.id } });
+    expect(row.metadata).toEqual({
+      fileSizeBytes: Buffer.byteLength(CSV),
+      accountIds: [accountId],
+    });
+  });
+
+  it("refuses to commit a batch twice", async () => {
+    const batch = await createCsvBatch(
+      { accountId, filename: "twice.csv", text: CSV },
+      { id: owner },
+    );
+    const preview = await previewCsvBatch(batch.id, owner);
+    await commitCsvBatch(batch.id, preview.mapping, { id: owner });
+    await expect(commitCsvBatch(batch.id, preview.mapping, { id: owner })).rejects.toThrow(
+      "NOT_COMMITTABLE",
+    );
+    const row = await db.importBatch.findUniqueOrThrow({ where: { id: batch.id } });
+    expect(row.status).toBe("COMPLETED");
+  });
 });

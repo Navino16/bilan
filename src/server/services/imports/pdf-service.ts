@@ -8,7 +8,7 @@ import { buildPreview } from "./preview";
 // so the pdfjs worker resolves. Only the PDF route imports this module, so the CSV
 // path never loads pdfjs.
 import { parsePdf, type BankKey } from "./pdf";
-import { loadBatch, ImportAccessError } from "./index";
+import { loadBatch, withCommitClaim, ImportAccessError } from "./index";
 import type { CommitSummary, PreviewRow } from "./types";
 
 type PdfMetaRow = { date: string; amount: number; rawLabel: string };
@@ -121,20 +121,24 @@ export async function commitPdfBatch(
 ): Promise<CommitSummary> {
   const batch = await loadBatch(batchId, actor.id);
   const { products } = readPdfMeta(batch.metadata);
-  const totals = { imported: 0, skipped: 0, total: 0 };
-  for (const product of products) {
-    const accountId = mapping[product.key];
-    if (!accountId) continue; // ignored
-    if (!(await canWriteAccount(actor.id, accountId))) throw new ImportAccessError("FORBIDDEN");
-    const rows = product.rows.map((r) => ({
-      date: new Date(r.date),
-      amount: r.amount,
-      rawLabel: r.rawLabel,
-    }));
-    const r = await insertRows({ batchId: batch.id, accountId }, rows, actor, opts);
-    totals.imported += r.imported;
-    totals.skipped += r.skipped;
-    totals.total += r.total;
-  }
-  return finalizeBatch(batch.id, totals, actor);
+  return withCommitClaim(batch.id, async () => {
+    const totals = { imported: 0, skipped: 0, total: 0 };
+    const accountIds: string[] = [];
+    for (const product of products) {
+      const accountId = mapping[product.key];
+      if (!accountId) continue; // ignored
+      if (!(await canWriteAccount(actor.id, accountId))) throw new ImportAccessError("FORBIDDEN");
+      const rows = product.rows.map((r) => ({
+        date: new Date(r.date),
+        amount: r.amount,
+        rawLabel: r.rawLabel,
+      }));
+      const r = await insertRows({ batchId: batch.id, accountId }, rows, actor, opts);
+      totals.imported += r.imported;
+      totals.skipped += r.skipped;
+      totals.total += r.total;
+      if (!accountIds.includes(accountId)) accountIds.push(accountId);
+    }
+    return finalizeBatch(batch.id, totals, actor, accountIds);
+  });
 }

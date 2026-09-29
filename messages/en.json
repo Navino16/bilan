@@ -490,7 +490,39 @@
       "TOO_LARGE": "File too large (5 MB max).",
       "FORBIDDEN": "Not allowed.",
       "PARSE_FAILED": "Could not read the file.",
-      "COMMIT_FAILED": "Import failed. Try again."
+      "COMMIT_FAILED": "Import failed. Try again.",
+      "NOT_COMMITTABLE": "This import was already committed or undone."
+    },
+    "history": {
+      "overline": "History",
+      "title": "Recent imports",
+      "empty": "No imports yet.",
+      "rows": "{imported} imported · {skipped} skipped",
+      "status": {
+        "COMPLETED": "Imported",
+        "REVERTED": "Undone"
+      },
+      "actions": "Import actions"
+    },
+    "revert": {
+      "action": "Undo import",
+      "title": "Undo this import?",
+      "loading": "Checking the impact…",
+      "deleted": "{count, plural, one {# transaction will be deleted} other {# transactions will be deleted}}",
+      "linked": "{count, plural, one {# is linked to other transactions and will leave its link} other {# are linked to other transactions and will leave their links}}",
+      "budgeted": "{count, plural, one {# is assigned to a budget} other {# are assigned to a budget}}",
+      "edited": "{count, plural, one {# was edited since the import} other {# were edited since the import}}",
+      "irreversible": "This can't be undone.",
+      "keep": "Keep",
+      "confirm": "Delete the transactions",
+      "done": "Import undone: {count, plural, one {# transaction deleted} other {# transactions deleted}}.",
+      "newImport": "New import",
+      "error": {
+        "NOT_REVERTIBLE": "This import was already undone.",
+        "NOT_FOUND": "Import not found.",
+        "FORBIDDEN": "Not allowed.",
+        "FAILED": "Undo failed. Try again."
+      }
     }
   },
   "groups": {

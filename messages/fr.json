@@ -490,7 +490,39 @@
       "TOO_LARGE": "Fichier trop volumineux (5 Mo max).",
       "FORBIDDEN": "Action non autorisée.",
       "PARSE_FAILED": "Impossible de lire le fichier.",
-      "COMMIT_FAILED": "Échec de l'import. Réessayez."
+      "COMMIT_FAILED": "Échec de l'import. Réessayez.",
+      "NOT_COMMITTABLE": "Cet import a déjà été validé ou annulé."
+    },
+    "history": {
+      "overline": "Historique",
+      "title": "Imports récents",
+      "empty": "Aucun import pour l'instant.",
+      "rows": "{imported} importées · {skipped} ignorées",
+      "status": {
+        "COMPLETED": "Importé",
+        "REVERTED": "Annulé"
+      },
+      "actions": "Actions de l'import"
+    },
+    "revert": {
+      "action": "Annuler l'import",
+      "title": "Annuler cet import ?",
+      "loading": "Calcul de l'impact…",
+      "deleted": "{count, plural, one {# transaction sera supprimée} other {# transactions seront supprimées}}",
+      "linked": "{count, plural, one {# est liée à d'autres transactions : elle sortira de son lien} other {# sont liées à d'autres transactions : elles sortiront de leur lien}}",
+      "budgeted": "{count, plural, one {# est affectée à un budget} other {# sont affectées à un budget}}",
+      "edited": "{count, plural, one {# a été modifiée depuis l'import} other {# ont été modifiées depuis l'import}}",
+      "irreversible": "Cette action est définitive.",
+      "keep": "Garder",
+      "confirm": "Supprimer les transactions",
+      "done": "Import annulé : {count, plural, one {# transaction supprimée} other {# transactions supprimées}}.",
+      "newImport": "Nouvel import",
+      "error": {
+        "NOT_REVERTIBLE": "Cet import a déjà été annulé.",
+        "NOT_FOUND": "Import introuvable.",
+        "FORBIDDEN": "Action non autorisée.",
+        "FAILED": "Échec de l'annulation. Réessayez."
+      }
     }
   },
   "groups": {

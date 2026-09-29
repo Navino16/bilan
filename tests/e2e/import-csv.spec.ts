@@ -59,4 +59,51 @@ test.describe("CSV import (wizard)", () => {
       page.locator('[data-slot="transaction-row"]').filter({ hasText: `VIR IMPORT ${stamp}` }),
     ).toHaveCount(0);
   });
+
+  test("undo a committed import from the summary, then see it in the history", async ({ page }) => {
+    const stamp = Date.now();
+    const csv = `Date;Libellé;Débit;Crédit
+09/03/2026;CB UNDO ${stamp};12,00;
+10/03/2026;CB UNDO BIS ${stamp};8,00;`;
+
+    await page.goto("/fr/import");
+    const uploaded = page.waitForResponse(
+      (r) => r.url().includes("/api/import/csv") && r.request().method() === "POST",
+      { timeout: 30_000 },
+    );
+    await page.locator('input[type="file"]').setInputFiles({
+      name: `undo-${stamp}.csv`,
+      mimeType: "text/csv",
+      buffer: Buffer.from(csv, "utf8"),
+    });
+    await uploaded;
+    await expect(page.locator('[data-slot="import-preview-row"]').first()).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const committed = page.waitForResponse(
+      (r) => r.url().includes("/commit") && r.request().method() === "POST",
+      { timeout: 30_000 },
+    );
+    await page.getByRole("button", { name: /valider l'import/i }).click();
+    await committed;
+
+    const dialog = page.locator('[data-slot="revert-import-dialog"]');
+    await expect(async () => {
+      await page.getByRole("button", { name: /annuler l'import/i }).click();
+      await expect(dialog).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
+    await expect(dialog).toContainText("2 transactions seront supprimées");
+    await dialog.getByRole("button", { name: /supprimer les transactions/i }).click();
+    await expect(page.getByText(/import annulé/i)).toBeVisible({ timeout: 15_000 });
+
+    await page.goto(`/fr/transactions?search=${stamp}`);
+    await expect(page.getByRole("heading", { level: 1, name: /transactions/i })).toBeVisible();
+    await expect(page.locator('[data-slot="transaction-row"]')).toHaveCount(0);
+
+    await page.goto("/fr/import");
+    await expect(
+      page.locator('[data-slot="import-history-row"]', { hasText: `undo-${stamp}.csv` }),
+    ).toContainText("Annulé");
+  });
 });
