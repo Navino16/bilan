@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { overline } from "@/components/transactions/bits";
 import { PeriodNav } from "@/components/dashboard/period-nav";
@@ -8,11 +9,14 @@ import { PageHeader } from "@/components/shell/page-header";
 import { DivergingBar } from "./diverging-bar";
 import { categorySliceColors } from "@/lib/chart-colors";
 import { formatPeriodLabel, toIsoDay, type Period } from "@/lib/period";
+import { transactionsHref, type TransactionsLinkFilter } from "@/lib/transaction-filters";
 import type { CategoryChange, InsightsData } from "@/lib/insights";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 
 const DEFAULT_COLOR = "#2563eb";
 const TOP_CHANGES = 6;
+const ROW_LINK =
+  "-mx-2 rounded-lg px-2 py-1 transition-colors hover:bg-muted/50 focus-visible:ring-ring/50 focus-visible:ring-3 focus-visible:outline-none";
 
 function CardTitle({ over, title, sub }: { over: string; title: string; sub?: string }) {
   return (
@@ -70,6 +74,11 @@ export async function InsightsView({
   const label = formatPeriodLabel(period, locale);
   const previousLabel = formatPeriodLabel(previous, locale);
   const tone = (diff: number) => (diff > 0 ? "var(--expense)" : "var(--income)");
+  const txHref = (filter: TransactionsLinkFilter, p: Period = period) =>
+    transactionsHref(locale, p, filter);
+  // A category that dropped to zero has nothing to show now: link to where it was spent.
+  const changeHref = (c: CategoryChange) =>
+    txHref({ categoryId: c.categoryId, dir: "out" }, c.current ? period : previous);
 
   const changes = data.changes.slice(0, TOP_CHANGES);
   const changeColors = categorySliceColors(changes, catById, DEFAULT_COLOR);
@@ -85,23 +94,37 @@ export async function InsightsView({
   const maxMerchant = data.merchants[0]?.total ?? 0;
   const incomeColors = categorySliceColors(data.income, catById, DEFAULT_COLOR);
 
-  const tile = (key: "biggestIncrease" | "biggestDecrease", c: CategoryChange | undefined) => (
-    <Card className="gap-1.5 p-4">
-      <div className={overline}>{t(key)}</div>
-      {c ? (
-        <>
-          <div className="font-display text-2xl tabular-nums" style={{ color: tone(c.diff) }}>
-            {signed.format(c.diff)}
-          </div>
-          <div className="text-muted-foreground truncate text-[11.5px]">
-            {catName(c.categoryId)} · {pctLabel(c.current, c.previous)}
-          </div>
-        </>
-      ) : (
-        <div className="text-muted-foreground font-display text-2xl">{t("noChange")}</div>
-      )}
-    </Card>
-  );
+  const tile = (key: "biggestIncrease" | "biggestDecrease", c: CategoryChange | undefined) => {
+    const card = (
+      <Card
+        className={`h-full gap-1.5 p-4 ${c ? "group-hover:bg-muted/50 transition-colors" : ""}`}
+      >
+        <div className={overline}>{t(key)}</div>
+        {c ? (
+          <>
+            <div className="font-display text-2xl tabular-nums" style={{ color: tone(c.diff) }}>
+              {signed.format(c.diff)}
+            </div>
+            <div className="text-muted-foreground truncate text-[11.5px]">
+              {catName(c.categoryId)} · {pctLabel(c.current, c.previous)}
+            </div>
+          </>
+        ) : (
+          <div className="text-muted-foreground font-display text-2xl">{t("noChange")}</div>
+        )}
+      </Card>
+    );
+    return c ? (
+      <Link
+        href={changeHref(c)}
+        className="group focus-visible:ring-ring/50 rounded-xl focus-visible:ring-3 focus-visible:outline-none"
+      >
+        {card}
+      </Link>
+    ) : (
+      card
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -140,9 +163,13 @@ export async function InsightsView({
         {changes.length === 0 ? (
           <p className="text-muted-foreground text-sm">{t("noData")}</p>
         ) : (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
             {changes.map((c, i) => (
-              <div key={c.categoryId ?? "none"} className="flex flex-col gap-1.5">
+              <Link
+                key={c.categoryId ?? "none"}
+                href={changeHref(c)}
+                className={`flex flex-col gap-1.5 ${ROW_LINK}`}
+              >
                 <div className="flex items-center gap-2 text-sm">
                   <Dot color={changeColors[i]} />
                   <span className="min-w-0 flex-1 truncate">{catName(c.categoryId)}</span>
@@ -157,7 +184,7 @@ export async function InsightsView({
                 <div className="text-muted-foreground text-[11px] tabular-nums">
                   {money.format(c.previous)} → {money.format(c.current)}
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
@@ -169,31 +196,36 @@ export async function InsightsView({
           {data.merchants.length === 0 ? (
             <p className="text-muted-foreground text-sm">{t("noMerchants")}</p>
           ) : (
-            <ol className="flex flex-col gap-3.5">
+            <ol className="flex flex-col gap-1.5">
               {data.merchants.map((m, i) => (
-                <li key={m.label} className="flex flex-col gap-1.5">
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-muted-foreground w-4 text-[11.5px] tabular-nums">
-                      {i + 1}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate">
-                      {m.label}
-                      <span className="text-muted-foreground text-[11.5px]">
-                        {" "}
-                        · {catName(m.categoryId)} · {t("merchantsCount", { count: m.count })}
+                <li key={m.label}>
+                  <Link
+                    href={txHref({ search: m.label, dir: "out" })}
+                    className={`flex flex-col gap-1.5 ${ROW_LINK}`}
+                  >
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-muted-foreground w-4 text-[11.5px] tabular-nums">
+                        {i + 1}
                       </span>
-                    </span>
-                    <span className="font-semibold tabular-nums">{money.format(m.total)}</span>
-                  </div>
-                  <div className="bg-muted ml-6 h-1.5 rounded">
-                    <div
-                      className="h-1.5 rounded"
-                      style={{
-                        width: `${maxMerchant ? (m.total / maxMerchant) * 100 : 0}%`,
-                        background: merchantColor(m.categoryId),
-                      }}
-                    />
-                  </div>
+                      <span className="min-w-0 flex-1 truncate">
+                        {m.label}
+                        <span className="text-muted-foreground text-[11.5px]">
+                          {" "}
+                          · {catName(m.categoryId)} · {t("merchantsCount", { count: m.count })}
+                        </span>
+                      </span>
+                      <span className="font-semibold tabular-nums">{money.format(m.total)}</span>
+                    </div>
+                    <div className="bg-muted ml-6 h-1.5 rounded">
+                      <div
+                        className="h-1.5 rounded"
+                        style={{
+                          width: `${maxMerchant ? (m.total / maxMerchant) * 100 : 0}%`,
+                          background: merchantColor(m.categoryId),
+                        }}
+                      />
+                    </div>
+                  </Link>
                 </li>
               ))}
             </ol>
@@ -225,16 +257,20 @@ export async function InsightsView({
                   />
                 ))}
               </div>
-              <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-0.5">
                 {data.income.map((inc, i) => (
-                  <div key={inc.categoryId ?? "none"} className="flex items-center gap-2 text-sm">
+                  <Link
+                    key={inc.categoryId ?? "none"}
+                    href={txHref({ categoryId: inc.categoryId, dir: "in" })}
+                    className={`flex items-center gap-2 text-sm ${ROW_LINK}`}
+                  >
                     <Dot color={incomeColors[i]} />
                     <span className="min-w-0 flex-1 truncate">{catName(inc.categoryId)}</span>
                     <span className="tabular-nums">{money.format(inc.current)}</span>
                     <span className="text-muted-foreground w-16 text-right text-[11.5px] tabular-nums">
                       {inc.current === inc.previous ? "=" : pctLabel(inc.current, inc.previous)}
                     </span>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </>

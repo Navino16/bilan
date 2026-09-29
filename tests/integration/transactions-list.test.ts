@@ -5,6 +5,7 @@ import {
   listTransactions,
   recategorizeTransaction,
 } from "@/server/services/transactions";
+import { UNCATEGORIZED } from "@/lib/transaction-filters";
 
 const owner = "txl_owner";
 const member = "txl_member";
@@ -99,5 +100,10 @@ describe("listTransactions", () => {
     const after = await db.transaction.findUniqueOrThrow({ where: { id: items[0].id } });
     expect(after.categoryId).toBe(catGroceries);
     expect(after.manuallyCategorized).toBe(true);
+  });
+
+  it("filters uncategorized transactions with the sentinel", async () => {
+    const { items } = await listTransactions(owner, { categoryId: UNCATEGORIZED });
+    expect(items.map((i) => i.label)).toEqual(["Salaire", "Leclerc Drive"]);
   });
 });
