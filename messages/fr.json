@@ -396,13 +396,9 @@
       "FAILED": "Échec. Réessayez."
     },
     "link": {
-      "mode": "Mode lien",
-      "exit": "Quitter",
-      "selected": "{count, plural, one {# sélectionnée} other {# sélectionnées}}",
       "create": "Lier",
       "linked": "Liée",
       "unlink": "Délier",
-      "hint": "Sélectionnez au moins deux transactions à lier.",
       "createdOk": "Transactions liées.",
       "failed": "Échec de la liaison."
     },
@@ -418,8 +414,32 @@
     "filterSheet": {
       "reset": "Réinitialiser",
       "period": "Période",
-      "linkModeHint": "Relier des opérations (remboursement, virement).",
       "show": "{count, plural, =0 {Aucune opération} one {Voir # opération} other {Voir # opérations}}"
+    },
+    "selection": {
+      "mode": "Sélectionner",
+      "exit": "Quitter la sélection",
+      "selected": "{count, plural, =0 {Aucune sélection} one {# sélectionnée} other {# sélectionnées}}",
+      "hint": "Lier ou supprimer plusieurs opérations."
+    },
+    "delete": {
+      "action": "Supprimer",
+      "detailAction": "Supprimer la transaction",
+      "title": "{count, plural, one {Supprimer cette transaction ?} other {Supprimer # transactions ?}}",
+      "loading": "Calcul de l'impact…",
+      "deleted": "{count, plural, one {Cette transaction sera supprimée définitivement.} other {# transactions seront supprimées définitivement.}}",
+      "dissolvedLinks": "{count, plural, one {# lien sera dissous (il ne resterait qu'une transaction).} other {# liens seront dissous (il ne resterait qu'une transaction).}}",
+      "leavingLink": "{count, plural, one {# transaction quittera son lien, qui reste actif.} other {# transactions quitteront leur lien, qui reste actif.}}",
+      "budgeted": "{count, plural, one {# transaction est affectée à un budget : elle en sera retirée.} other {# transactions sont affectées à un budget : elles en seront retirées.}}",
+      "irreversible": "Cette action est irréversible.",
+      "keep": "Conserver",
+      "confirm": "Supprimer",
+      "error": {
+        "INVALID": "Sélection invalide (500 transactions au maximum).",
+        "NOT_FOUND": "Une transaction n'existe plus. Rechargez la page.",
+        "FORBIDDEN": "Vous ne pouvez pas modifier l'un de ces comptes.",
+        "FAILED": "Échec de la suppression. Réessayez."
+      }
     }
   },
   "import": {

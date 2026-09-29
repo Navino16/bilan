@@ -2,6 +2,7 @@ import { db } from "@/server/db";
 import { canWriteAccount } from "@/server/services/accounts/sharing";
 import { listVisibleForUser } from "@/server/services/accounts";
 import { logEvent } from "@/server/services/audit";
+import { dissolveUndersizedLinks } from "@/server/services/links/dissolve";
 import {
   canDiscard,
   canRevert,
@@ -73,15 +74,7 @@ export async function revertImport(
     const { count: deleted } = await tx.transaction.deleteMany({
       where: { importBatchId: batchId },
     });
-    const remaining = await tx.transactionLinkMember.groupBy({
-      by: ["linkId"],
-      where: { linkId: { in: linkIds } },
-      _count: { _all: true },
-    });
-    const kept = new Set(remaining.filter((r) => r._count._all >= 2).map((r) => r.linkId));
-    const dissolved = linkIds.filter((id) => !kept.has(id));
-    await tx.transactionLink.deleteMany({ where: { id: { in: dissolved } } });
-    return { deleted, linksDissolved: dissolved.length };
+    return { deleted, linksDissolved: await dissolveUndersizedLinks(tx, linkIds) };
   });
   await logEvent({
     userId: actorId,

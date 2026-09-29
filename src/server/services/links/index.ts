@@ -90,8 +90,7 @@ export async function listLinkedTxIds(userId: string): Promise<Set<string>> {
   return new Set(members.map((m) => m.transactionId));
 }
 
-// The link id a transaction belongs to, or null. Used by the detail view + the
-// link-mode "unlink" action.
+// The link id a transaction belongs to, or null when unlinked or not visible.
 export async function getLinkForTx(transactionId: string, userId: string): Promise<string | null> {
   const visible = await visibleAccountIds(userId);
   const member = await db.transactionLinkMember.findUnique({

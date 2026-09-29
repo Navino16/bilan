@@ -7,7 +7,7 @@ test.describe("transaction links", () => {
     "Mobile click-driven link flow deferred to Phase 8.3",
   );
 
-  test("link two transactions via link mode and see them badged", async ({ page }) => {
+  test("link two transactions via selection mode and see them badged", async ({ page }) => {
     const stamp = Date.now();
     const expense = `Achat ${stamp}`;
     const refund = `Remb ${stamp}`;
@@ -31,10 +31,10 @@ test.describe("transaction links", () => {
       ).toBeVisible({ timeout: 15_000 });
     }
 
-    // Enter link mode, select both, confirm.
+    // Enter selection mode, select both, link.
     await expect(async () => {
-      await page.getByRole("button", { name: /mode lien/i }).click();
-      await expect(page.getByText(/sélectionnez au moins deux/i)).toBeVisible();
+      await page.getByRole("button", { name: /^sélectionner$/i }).click();
+      await expect(page.locator('[data-slot="selection-bar"]')).toBeVisible();
     }).toPass();
     await page
       .locator('[data-slot="transaction-row"]')
@@ -43,6 +43,7 @@ test.describe("transaction links", () => {
       .click();
     await page.locator('[data-slot="transaction-row"]').filter({ hasText: refund }).first().click();
     await page.getByRole("button", { name: /^lier$/i }).click();
+    await expect(page.locator('[data-slot="selection-bar"]')).toBeHidden({ timeout: 15_000 });
 
     // The expense row shows the "Liée" badge (the row renders both a desktop and
     // a mobile layout, so the badge appears twice in the DOM — assert the first).

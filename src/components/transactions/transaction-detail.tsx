@@ -14,6 +14,7 @@ import { type FlatCategory } from "./category-picker";
 import { CategoryCombobox } from "./category-combobox";
 import { Pill, overline } from "./bits";
 import { NativeSelect } from "@/components/ui/native-select";
+import { Trash2 } from "lucide-react";
 
 export type DetailItem = {
   id: string;
@@ -27,7 +28,12 @@ export type DetailItem = {
   categoryId: string | null;
 };
 
-export type AccountMeta = { name: string; color: string | null; bankName: string | null };
+export type AccountMeta = {
+  name: string;
+  color: string | null;
+  bankName: string | null;
+  writable: boolean;
+};
 export type AssignableBudget = { id: string; name: string; scope: "USER" | "GROUP" };
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -47,6 +53,7 @@ export function TransactionDetail({
   side,
   onClose,
   onRecategorize,
+  onDelete,
 }: {
   item: DetailItem | null;
   accounts: Record<string, AccountMeta>;
@@ -55,9 +62,11 @@ export function TransactionDetail({
   side: "right" | "bottom";
   onClose: () => void;
   onRecategorize: (categoryId: string) => void;
+  onDelete: () => void;
 }) {
   const t = useTranslations("transactions");
   const tb = useTranslations("budgets.assign");
+  const td = useTranslations("transactions.delete");
   const locale = useLocale();
 
   const [assignments, setAssignments] = useState<Record<string, string>>({});
@@ -249,6 +258,20 @@ export function TransactionDetail({
                 </Field>
               )}
             </div>
+
+            {acc?.writable && (
+              <div className="border-border bg-card sticky bottom-0 mt-auto border-t px-6 pt-3 pb-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="text-destructive hover:text-destructive h-10 w-full"
+                  onClick={onDelete}
+                >
+                  <Trash2 />
+                  {td("detailAction")}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </SheetContent>
