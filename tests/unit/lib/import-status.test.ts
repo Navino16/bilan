@@ -4,7 +4,8 @@ import { canCommit, canDiscard, canRevert, trimBatchMetadata } from "@/lib/impor
 describe("import status guards", () => {
   it("commits only a batch in review", () => {
     expect(canCommit("REVIEW")).toBe(true);
-    for (const s of ["PARSING", "COMPLETED", "REVERTED", "FAILED"]) expect(canCommit(s)).toBe(false);
+    for (const s of ["PARSING", "COMPLETED", "REVERTED", "FAILED"])
+      expect(canCommit(s)).toBe(false);
   });
 
   it("reverts only a completed batch", () => {
