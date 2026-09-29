@@ -20,6 +20,7 @@ import { SegmentedTabs, overline } from "./bits";
 import { PeriodPicker } from "@/components/dashboard/period-picker";
 import { useLinkMode } from "./link-mode";
 import type { FlatCategory } from "./category-picker";
+import { UNCATEGORIZED } from "@/lib/transaction-filters";
 
 type Direction = "" | "in" | "out";
 
@@ -60,7 +61,10 @@ export function TransactionFilters({
 
   const dir = (params.get("dir") ?? "") as Direction;
   const activeCat = params.get("categoryId") ?? "";
-  const activeCatName = categories.find((c) => c.id === activeCat)?.name ?? t("allCategories");
+  const activeCatName =
+    activeCat === UNCATEGORIZED
+      ? t("noCategory")
+      : (categories.find((c) => c.id === activeCat)?.name ?? t("allCategories"));
   const activeCount = [from || to, dir, activeCat].filter(Boolean).length;
 
   const directionTabs = (
@@ -109,6 +113,10 @@ export function TransactionFilters({
             <DropdownMenuItem onClick={() => setParam("categoryId", "")}>
               <span className="flex-1">{t("allCategories")}</span>
               {!activeCat && <Check className="size-3.5" />}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setParam("categoryId", UNCATEGORIZED)}>
+              <span className="flex-1">{t("noCategory")}</span>
+              {activeCat === UNCATEGORIZED && <Check className="size-3.5" />}
             </DropdownMenuItem>
             {categories.map((c) => (
               <DropdownMenuItem key={c.id} onClick={() => setParam("categoryId", c.id)}>
@@ -180,6 +188,7 @@ export function TransactionFilters({
               onChange={(e) => setParam("categoryId", e.target.value)}
             >
               <option value="">{t("allCategories")}</option>
+              <option value={UNCATEGORIZED}>{t("noCategory")}</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {`${"  ".repeat(c.depth)}${c.name}`}

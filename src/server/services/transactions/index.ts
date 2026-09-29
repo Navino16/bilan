@@ -2,6 +2,7 @@ import { db } from "@/server/db";
 import { decrypt } from "@/server/crypto/encryption";
 import { hmacForSearch, tokenize } from "@/server/crypto/hmac";
 import { dataKey, searchKey } from "@/server/crypto/keys";
+import { UNCATEGORIZED } from "@/lib/transaction-filters";
 import { logEvent } from "@/server/services/audit";
 import { canWriteAccount, canReadAccount } from "@/server/services/accounts/sharing";
 import { listVisibleForUser } from "@/server/services/accounts";
@@ -113,7 +114,7 @@ export type TransactionListItem = TransactionView & { accountName: string };
 
 export type TransactionFilters = {
   accountId?: string;
-  categoryId?: string;
+  categoryId?: string; // UNCATEGORIZED selects rows with no category
   type?: TransactionType;
   direction?: "in" | "out"; // amount sign filter (Entrées / Sorties)
   from?: Date;
@@ -138,7 +139,9 @@ export async function listTransactions(
   if (accountIds.length === 0) return { items: [], total: 0 };
 
   const where: Record<string, unknown> = { accountId: { in: accountIds } };
-  if (filters.categoryId) where.categoryId = filters.categoryId;
+  if (filters.categoryId) {
+    where.categoryId = filters.categoryId === UNCATEGORIZED ? null : filters.categoryId;
+  }
   if (filters.type) where.type = filters.type;
   if (filters.direction) where.amount = filters.direction === "in" ? { gt: 0 } : { lt: 0 };
   if (filters.from || filters.to) {

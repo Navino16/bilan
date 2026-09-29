@@ -41,6 +41,48 @@ test.describe("insights", () => {
     await expect(page.locator('[data-slot="period-in-progress"]')).toHaveCount(0);
   });
 
+  test("drills down from a category row and a merchant row to the filtered list", async ({
+    page,
+  }) => {
+    const label = `Drilldown ${Date.now()}`;
+    await page.goto("/fr/accounts");
+    await expect(async () => {
+      await page
+        .getByRole("button", { name: /saisir une transaction/i })
+        .first()
+        .click();
+      await expect(page.locator('input[name="label"]')).toBeVisible();
+    }).toPass();
+    await page.fill('input[name="date"]', "2025-11-12");
+    await page.fill('input[name="amount"]', "-42");
+    await page.fill('input[name="label"]', label);
+    await page.getByRole("button", { name: /^ajouter$/i }).click();
+    await expect(page.locator('input[name="label"]')).toBeHidden();
+
+    const insights = "/fr/insights?from=2025-11-01&to=2025-11-30";
+    await page.goto(insights, { waitUntil: "domcontentloaded", timeout: 90_000 });
+    const uncategorized = page.locator('[data-slot="insights-changes"] a', {
+      hasText: "Sans catégorie",
+    });
+    await expect(async () => {
+      await expect(uncategorized).toBeVisible();
+    }).toPass();
+    await uncategorized.click();
+    await expect(page).toHaveURL(
+      /\/fr\/transactions\?.*from=2025-11-01.*dir=out.*categoryId=none/,
+      {
+        timeout: 60_000,
+      },
+    );
+    await expect(page.getByRole("button", { name: "Sans catégorie", exact: true })).toBeVisible();
+    await expect(page.getByText(label).first()).toBeVisible();
+
+    await page.goto(insights, { waitUntil: "domcontentloaded" });
+    await page.locator('[data-slot="insights-merchants"] a', { hasText: "Drilldown" }).click();
+    await expect(page).toHaveURL(/search=Drilldown/, { timeout: 60_000 });
+    await expect(page.getByText(label).first()).toBeVisible();
+  });
+
   test("flags the current period as in progress on insights and the dashboard", async ({
     page,
   }) => {
