@@ -16,7 +16,7 @@ import {
   type AccountOption,
 } from "@/components/transactions/transaction-list";
 import { TransactionFilters } from "@/components/transactions/transaction-filters";
-import { LinkModeProvider } from "@/components/transactions/link-mode";
+import { SelectionModeProvider } from "@/components/transactions/selection-mode";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -64,6 +64,7 @@ export default async function TransactionsPage({
     name: a.name,
     color: a.color,
     bankName: a.bankName,
+    writable: a.access !== "READ",
   }));
   const formAccounts = accounts.map((a) => ({ id: a.id, name: a.name }));
   const allItems: ListItem[] = items.map((i) => ({
@@ -119,7 +120,7 @@ export default async function TransactionsPage({
           </>
         }
       />
-      <LinkModeProvider>
+      <SelectionModeProvider>
         <TransactionFilters categories={flatCategories} from={sp.from} to={sp.to} total={total} />
         <TransactionList
           items={listItems}
@@ -128,7 +129,7 @@ export default async function TransactionsPage({
           budgets={budgets}
           partialLastDay={partialLastDay}
         />
-      </LinkModeProvider>
+      </SelectionModeProvider>
       {truncated && (
         <div
           data-slot="transactions-more"

@@ -16,7 +16,9 @@ import {
 import { recategorizeTransactionAction } from "@/server/transport/actions/transactions";
 import { createLinkAction } from "@/server/transport/actions/links";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { useLinkMode } from "./link-mode";
+import { useSelectionMode } from "./selection-mode";
+import { SelectionBar } from "./selection-bar";
+import { DeleteTransactionsDialog } from "./delete-transactions-dialog";
 
 export type ListItem = {
   id: string;
@@ -37,6 +39,7 @@ export type AccountOption = {
   name: string;
   color: string | null;
   bankName: string | null;
+  writable: boolean;
 };
 
 function proposePattern(label: string): string {
@@ -76,25 +79,56 @@ export function TransactionList({
   } | null>(null);
 
   const tLink = useTranslations("transactions.link");
-  const { linkMode, picked, setLinkMode, togglePicked } = useLinkMode();
+  const tSel = useTranslations("transactions.selection");
+  const { selecting, picked, setSelecting, togglePicked } = useSelectionMode();
+  // Picks survive filter changes (the provider sits above the list): act on visible rows only.
+  const pickedIds = items.filter((i) => picked.has(i.id)).map((i) => i.id);
   const [linkPending, startLinkTransition] = useTransition();
+  const [deleteIds, setDeleteIds] = useState<string[] | null>(null);
 
-  function submitLink(formData: FormData) {
+  function submitLink() {
+    const fd = new FormData();
+    fd.set("transactionIds", pickedIds.join(","));
     startLinkTransition(async () => {
-      const r = await createLinkAction(null, formData);
+      const r = await createLinkAction(null, fd);
       if (r?.ok) {
-        setLinkMode(false);
+        setSelecting(false);
         router.refresh();
       }
     });
   }
 
+  function onDeleted() {
+    setDeleteIds(null);
+    setSelectedId(null);
+    if (selecting) setSelecting(false);
+  }
+
   const catMeta = categoryIndex(categories);
   const accMeta: Record<string, AccountMeta> = Object.fromEntries(
-    accounts.map((a) => [a.id, { name: a.name, color: a.color, bankName: a.bankName }]),
+    accounts.map((a) => [
+      a.id,
+      { name: a.name, color: a.color, bankName: a.bankName, writable: a.writable },
+    ]),
   );
 
-  if (items.length === 0) return <p className="text-muted-foreground text-sm">{t("empty")}</p>;
+  const selectionBar = selecting && (
+    <SelectionBar
+      count={pickedIds.length}
+      linkPending={linkPending}
+      onExit={() => setSelecting(false)}
+      onLink={submitLink}
+      onDelete={() => setDeleteIds(pickedIds)}
+    />
+  );
+
+  if (items.length === 0)
+    return (
+      <>
+        <p className="text-muted-foreground text-sm">{t("empty")}</p>
+        {selectionBar}
+      </>
+    );
 
   const nf = new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" });
   const dfDay = new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long" });
@@ -154,34 +188,19 @@ export function TransactionList({
     : null;
 
   return (
-    <div className="space-y-5">
-      {/* On mobile, link mode is entered from the filter sheet; the row only shows once active. */}
-      <div className={`items-center justify-between gap-2 ${linkMode ? "flex" : "hidden md:flex"}`}>
-        <button
-          type="button"
-          onClick={() => setLinkMode(!linkMode)}
-          aria-pressed={linkMode}
-          className="border-border text-muted-foreground hover:text-foreground inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[0.8rem]"
-        >
-          {linkMode ? tLink("exit") : tLink("mode")}
-        </button>
-        {linkMode && (
-          <form action={submitLink} className="flex items-center gap-2">
-            <input type="hidden" name="transactionIds" value={[...picked].join(",")} />
-            <span className="text-muted-foreground text-[0.8rem]">
-              {tLink("selected", { count: picked.size })}
-            </span>
-            <button
-              type="submit"
-              disabled={picked.size < 2 || linkPending}
-              className="bg-primary text-primary-foreground inline-flex h-8 items-center rounded-lg px-3 text-[0.8rem] font-medium disabled:opacity-50"
-            >
-              {tLink("create")}
-            </button>
-          </form>
-        )}
-      </div>
-      {linkMode && <p className="text-muted-foreground text-xs">{tLink("hint")}</p>}
+    <div className={`space-y-5 ${selecting ? "pb-20" : ""}`}>
+      {/* On mobile, selection mode is entered from the filter sheet. */}
+      {!selecting && (
+        <div className="hidden md:flex">
+          <button
+            type="button"
+            onClick={() => setSelecting(true)}
+            className="border-border text-muted-foreground hover:text-foreground inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[0.8rem]"
+          >
+            {tSel("mode")}
+          </button>
+        </div>
+      )}
 
       {/* Desktop column header */}
       <div className="overflow-hidden rounded-xl border">
@@ -210,15 +229,17 @@ export function TransactionList({
             {g.rows.map((it) => {
               const meta = it.categoryId ? catMeta[it.categoryId] : undefined;
               const isSel = it.id === selectedId;
+              const locked = selecting && !accMeta[it.accountId]?.writable;
               return (
                 <button
                   key={it.id}
                   type="button"
                   data-slot="transaction-row"
-                  onClick={() => (linkMode ? togglePicked(it.id) : setSelectedId(it.id))}
-                  aria-pressed={linkMode ? picked.has(it.id) : undefined}
-                  data-selected={linkMode && picked.has(it.id) ? "true" : undefined}
-                  className={`w-full border-b text-left transition-colors last:border-b-0 ${isSel ? "bg-accent" : "hover:bg-muted/50"} ${linkMode && picked.has(it.id) ? "ring-primary ring-2 ring-inset" : ""}`}
+                  disabled={locked}
+                  onClick={() => (selecting ? togglePicked(it.id) : setSelectedId(it.id))}
+                  aria-pressed={selecting ? picked.has(it.id) : undefined}
+                  data-selected={selecting && picked.has(it.id) ? "true" : undefined}
+                  className={`w-full border-b text-left transition-colors last:border-b-0 ${isSel ? "bg-accent" : "hover:bg-muted/50"} ${selecting && picked.has(it.id) ? "ring-primary ring-2 ring-inset" : ""} ${locked ? "opacity-50" : ""}`}
                 >
                   {/* Desktop grid */}
                   <span className="hidden items-center gap-3 px-4 py-2.5 md:grid md:grid-cols-[64px_1fr_minmax(0,180px)_minmax(0,140px)_92px_110px]">
@@ -284,7 +305,18 @@ export function TransactionList({
         side={isMobile ? "bottom" : "right"}
         onClose={() => setSelectedId(null)}
         onRecategorize={(categoryId) => selected && recategorize(selected, categoryId)}
+        onDelete={() => selected && setDeleteIds([selected.id])}
       />
+
+      {selectionBar}
+
+      {deleteIds && (
+        <DeleteTransactionsDialog
+          ids={deleteIds}
+          onClose={() => setDeleteIds(null)}
+          onDeleted={onDeleted}
+        />
+      )}
 
       {rule && (
         <CreateRuleDialog

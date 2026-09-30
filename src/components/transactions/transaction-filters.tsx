@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SegmentedTabs, overline } from "./bits";
 import { PeriodPicker } from "@/components/dashboard/period-picker";
-import { useLinkMode } from "./link-mode";
+import { useSelectionMode } from "./selection-mode";
 import type { FlatCategory } from "./category-picker";
 import { UNCATEGORIZED } from "@/lib/transaction-filters";
 
@@ -39,11 +39,11 @@ export function TransactionFilters({
 }) {
   const t = useTranslations("transactions");
   const tSheet = useTranslations("transactions.filterSheet");
-  const tLink = useTranslations("transactions.link");
+  const tSel = useTranslations("transactions.selection");
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const { linkMode, setLinkMode } = useLinkMode();
+  const { selecting, setSelecting } = useSelectionMode();
   const [sheetOpen, setSheetOpen] = useState(false);
 
   function replaceParams(update: (next: URLSearchParams) => void) {
@@ -199,13 +199,13 @@ export function TransactionFilters({
 
           <label className="flex items-center justify-between gap-4 border-t pt-4">
             <span>
-              <span className="block text-sm">{tLink("mode")}</span>
-              <span className="text-muted-foreground block text-xs">{tSheet("linkModeHint")}</span>
+              <span className="block text-sm">{tSel("mode")}</span>
+              <span className="text-muted-foreground block text-xs">{tSel("hint")}</span>
             </span>
             <Switch
-              checked={linkMode}
+              checked={selecting}
               onCheckedChange={(on) => {
-                setLinkMode(on);
+                setSelecting(on);
                 if (on) setSheetOpen(false);
               }}
             />

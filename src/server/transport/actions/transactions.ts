@@ -7,6 +7,11 @@ import {
   recategorizeTransaction,
   TransactionAccessError,
 } from "@/server/services/transactions";
+import {
+  deleteTransactions,
+  getDeleteImpact,
+  type DeleteImpact,
+} from "@/server/services/transactions/delete";
 import { suggest } from "@/server/services/categorization";
 
 export type TxActionState = { ok: true; id?: string } | { ok: false; error: string } | null;
@@ -64,4 +69,31 @@ export async function recategorizeTransactionAction(
     return { ok: false, error: mapError(e) };
   }
   return { ok: true };
+}
+
+export type TxResult<T> = { ok: true; data: T } | { ok: false; error: string };
+
+async function runOnIds<T>(
+  ids: unknown,
+  fn: (userId: string, ids: string[]) => Promise<T>,
+): Promise<TxResult<T>> {
+  const user = await requireSession();
+  if (!Array.isArray(ids) || !ids.every((id) => typeof id === "string")) {
+    return { ok: false, error: "INVALID" };
+  }
+  try {
+    return { ok: true, data: await fn(user.id, ids) };
+  } catch (e) {
+    return { ok: false, error: mapError(e) };
+  }
+}
+
+export async function getDeleteImpactAction(ids: string[]): Promise<TxResult<DeleteImpact>> {
+  return runOnIds(ids, getDeleteImpact);
+}
+
+export async function deleteTransactionsAction(
+  ids: string[],
+): Promise<TxResult<{ deleted: number; linksDissolved: number }>> {
+  return runOnIds(ids, deleteTransactions);
 }

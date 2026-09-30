@@ -396,13 +396,9 @@
       "FAILED": "Failed. Try again."
     },
     "link": {
-      "mode": "Link mode",
-      "exit": "Exit",
-      "selected": "{count, plural, one {# selected} other {# selected}}",
       "create": "Link",
       "linked": "Linked",
       "unlink": "Unlink",
-      "hint": "Select at least two transactions to link.",
       "createdOk": "Transactions linked.",
       "failed": "Linking failed."
     },
@@ -418,8 +414,32 @@
     "filterSheet": {
       "reset": "Reset",
       "period": "Period",
-      "linkModeHint": "Link transactions (refund, transfer).",
       "show": "{count, plural, =0 {No transactions} one {Show # transaction} other {Show # transactions}}"
+    },
+    "selection": {
+      "mode": "Select",
+      "exit": "Exit selection",
+      "selected": "{count, plural, =0 {Nothing selected} one {# selected} other {# selected}}",
+      "hint": "Link or delete several transactions."
+    },
+    "delete": {
+      "action": "Delete",
+      "detailAction": "Delete transaction",
+      "title": "{count, plural, one {Delete this transaction?} other {Delete # transactions?}}",
+      "loading": "Checking the impact…",
+      "deleted": "{count, plural, one {This transaction will be permanently deleted.} other {# transactions will be permanently deleted.}}",
+      "dissolvedLinks": "{count, plural, one {# link will be dissolved (only one transaction would be left).} other {# links will be dissolved (only one transaction would be left).}}",
+      "leavingLink": "{count, plural, one {# transaction will leave its link, which stays active.} other {# transactions will leave their link, which stays active.}}",
+      "budgeted": "{count, plural, one {# transaction is assigned to a budget and will be removed from it.} other {# transactions are assigned to a budget and will be removed from them.}}",
+      "irreversible": "This can't be undone.",
+      "keep": "Keep",
+      "confirm": "Delete",
+      "error": {
+        "INVALID": "Invalid selection (500 transactions at most).",
+        "NOT_FOUND": "A transaction no longer exists. Reload the page.",
+        "FORBIDDEN": "You can't edit one of these accounts.",
+        "FAILED": "Deletion failed. Try again."
+      }
     }
   },
   "import": {
