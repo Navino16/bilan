@@ -2,7 +2,7 @@
 
 FROM node:24-alpine AS base
 WORKDIR /app
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat openssl
 
 FROM base AS deps
 COPY package.json package-lock.json ./
@@ -36,6 +36,24 @@ COPY . .
 RUN npx prisma generate || true
 RUN npm run build
 
+# Self-contained migrate + seed toolkit (spec §4): independent of what Next copies
+# into the standalone node_modules.
+FROM base AS migrator
+WORKDIR /opt/migrate
+COPY package-lock.json /tmp/package-lock.json
+RUN locked() { node -p "require('/tmp/package-lock.json').packages['node_modules/$1'].version"; } \
+  && echo '{"private":true,"type":"module"}' > package.json \
+  && npm install --no-audit --no-fund \
+    "prisma@$(locked prisma)" \
+    "dotenv@$(locked dotenv)" \
+    "@prisma/client@$(locked @prisma/client)" \
+    "@prisma/adapter-mariadb@$(locked @prisma/adapter-mariadb)" \
+  && npm cache clean --force
+COPY prisma.config.ts ./
+COPY prisma/schema.prisma prisma/seed.ts ./prisma/
+COPY prisma/migrations ./prisma/migrations
+RUN DATABASE_URL=mysql://build:build@localhost:3306/build node_modules/.bin/prisma generate
+
 FROM base AS prod
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -44,8 +62,10 @@ RUN addgroup --system --gid 1001 nodejs \
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=migrator --chown=nextjs:nodejs /opt/migrate /opt/migrate
+COPY --chmod=755 docker/entrypoint.sh /usr/local/bin/bilan-entrypoint
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
-CMD ["node", "server.js"]
+ENTRYPOINT ["bilan-entrypoint"]

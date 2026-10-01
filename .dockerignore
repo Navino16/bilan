@@ -1,0 +1,12 @@
+.git
+node_modules
+.next
+.env
+.env.*
+!.env.example
+!.env.prod.example
+test-results
+.reports
+.playwright-mcp
+docker/mariadb/keyring
+tsconfig.tsbuildinfo
