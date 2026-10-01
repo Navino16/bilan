@@ -10,6 +10,8 @@ on:
       - "docker/**"
       - docker-compose.prod.yml
       - "prisma/**"
+      - prisma.config.ts
+      - next.config.ts
       - package.json
       - package-lock.json
       - scripts/prod-smoke.sh

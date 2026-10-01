@@ -43,14 +43,18 @@ cron sidecar.
 ```bash
 cp .env.prod.example .env          # then fill in every value
 mkdir -p docker/mariadb/keyring
-echo "1;$(openssl rand -hex 32)" > docker/mariadb/keyring/keyfile
+# Never overwrite an existing keyfile: the database could no longer be read.
+[ -f docker/mariadb/keyring/keyfile ] || echo "1;$(openssl rand -hex 32)" > docker/mariadb/keyring/keyfile
 chmod 644 docker/mariadb/keyring/keyfile
 docker compose -f docker-compose.prod.yml up -d
 ```
 
 On every start the app container applies pending migrations (`prisma migrate deploy`)
 and seeds roles, permissions and default settings (settings changed in the admin UI are
-kept), then serves on port 3000. Open `APP_URL`: a fresh install lands on the setup
+kept), then serves on port 3000 (`BILAN_PORT`). Serve it over HTTPS: put a TLS reverse proxy
+(Caddy, Traefik, nginx…) in front of that port and set `APP_URL` to its public `https://`
+URL. The app sends HSTS and `upgrade-insecure-requests`, and auth only trusts `APP_URL`,
+so plain `http://host:3000` does not work. Open `APP_URL`: a fresh install lands on the setup
 wizard, which creates the first (super admin) account.
 
 Keep `.env` and the keyring file safe: without the keyring the database files can't be

@@ -40,15 +40,8 @@ RUN npm run build
 # into the standalone node_modules.
 FROM base AS migrator
 WORKDIR /opt/migrate
-COPY package-lock.json /tmp/package-lock.json
-RUN locked() { node -p "require('/tmp/package-lock.json').packages['node_modules/$1'].version"; } \
-  && echo '{"private":true,"type":"module"}' > package.json \
-  && npm install --no-audit --no-fund \
-    "prisma@$(locked prisma)" \
-    "dotenv@$(locked dotenv)" \
-    "@prisma/client@$(locked @prisma/client)" \
-    "@prisma/adapter-mariadb@$(locked @prisma/adapter-mariadb)" \
-  && npm cache clean --force
+COPY docker/migrate/package.json docker/migrate/package-lock.json ./
+RUN npm ci --no-audit --no-fund && npm cache clean --force
 COPY prisma.config.ts ./
 COPY prisma/schema.prisma prisma/seed.ts ./prisma/
 COPY prisma/migrations ./prisma/migrations
