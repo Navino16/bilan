@@ -72,4 +72,22 @@ dc up -d --wait --wait-timeout 180 app
   fail "the seed overwrote registration_mode on restart"
 [[ "$(sql "SELECT COUNT(*) FROM Role WHERE \`key\` = 'SUPER_ADMIN'")" == 1 ]] || fail "SUPER_ADMIN role missing"
 
+echo "==> compose refuses a missing CRON_SECRET"
+if CRON_SECRET= dc config -q 2>/dev/null; then fail "compose accepted an empty CRON_SECRET"; fi
+
+echo "==> the cron sidecar is running and made its start-up call"
+dc ps --status running --services | grep -qx cron || fail "cron sidecar not running"
+dc logs cron | grep -q "OK purge-imports" || fail "no 'OK purge-imports' in the cron logs"
+
+echo "==> every route of the crontab answers through run.sh"
+for route in $(dc exec -T cron sh -c "awk '!/^#/ && NF { print \$8 }' /opt/cron/crontab"); do
+  dc exec -T cron sh /opt/cron/run.sh "$route" | grep -q "^OK $route " || fail "run.sh $route failed"
+done
+
+echo "==> the cron sidecar exits on a wrong secret"
+if out="$(dc run --rm --no-deps -e CRON_SECRET=wrong cron 2>&1)"; then
+  fail "the cron sidecar started with a wrong secret"
+fi
+grep -q "ERROR purge-imports" <<<"$out" || fail "no 'ERROR purge-imports' line: $out"
+
 echo "OK prod smoke"
