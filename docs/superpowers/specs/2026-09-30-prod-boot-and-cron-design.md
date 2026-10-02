@@ -30,35 +30,29 @@ Out of scope:
 
 | # | Decision | Rationale |
 |---|----------|-----------|
-| D1 | The **prod image migrates and seeds on every start**, from an entrypoint script, before `node server.js`. | User choice. One image, which also works outside the compose (`docker run`, Kubernetes). The alternative, a separate `migrate` service, needs a second published image and is easy to forget without the compose. |
-| D2 | Migrations and seed run from a **self-contained toolkit in `/opt/migrate`**, built in a separate alpine stage: `prisma` CLI, `dotenv`, `@prisma/client`, `@prisma/adapter-mariadb`, a generated client, the schema, the migrations and `seed.ts`. | Same libc as the prod stage (musl schema engine), versions pinned by `package-lock.json`. It does not depend on what Next copies into the standalone `node_modules` (the MariaDB adapter is likely bundled, not copied). Costs tens of MB. |
-| D3 | The seed runs with `node prisma/seed.ts` (Node 24 native type stripping), not `tsx`. | `seed.ts` only uses erasable TypeScript syntax. Checked on the host (Node 24.19): it runs and exits 0. |
+| D1 | The **prod image migrates on every start** (`prisma migrate deploy` then `node server.js`, in the image `CMD`); the **app seeds itself** on every server start from `src/instrumentation.ts`, with its own Prisma client. | User choice, kept simple: one image, no entrypoint script, no second client. Overriding the command (`docker compose run --rm app sh`) skips the migration, which is the way in to repair a failed one. |
+| D2 | The image carries only the **Prisma CLI** (`prisma` + `dotenv`, own `docker/migrate/package.json` and lockfile, `npm ci` in an alpine stage), the schema and the migrations, in `/opt/migrate`. | Same libc as the prod stage (musl schema engine), reproducible build. The CLI and its dependencies weigh about 240 MB; pruning it was judged over-engineering. |
+| D3 | The seed functions stay in `prisma/seed.ts` (still used by `prisma db seed`, the dev/e2e seed scripts and the tests); `src/instrumentation.ts` imports them. | No code moves; Next bundles the file into the server. |
 | D4 | The seed is safe to run on every start. | Every write is an `upsert`, and app settings use `update: {}`, so a value an admin changed is never overwritten. |
 | D5 | Scheduling is a **`cron` sidecar** (plain `alpine:3`: busybox `crond` + `wget`) in the prod compose; still no in-app scheduler. | Issue scope. The routes stay host-driven; installs without the compose use the crontab lines from the README. |
 | D6 | The sidecar calls `purge-imports` once at start and **exits non-zero on failure**. | A wrong or missing secret shows up as a restart loop in `docker compose ps`, not as silent log lines. `purge-imports` is idempotent and harmless. |
 | D7 | Schedules, **in UTC**: `roll-budgets` 00:05 daily, `purge-audit` 03:00 daily, `purge-imports` hourly. | Issue scope. Plain `alpine:3` has no `tzdata`, so a `TZ` name would be ignored. |
 | D8 | The prod compose keeps MariaDB **encryption at rest** (same `encryption.cnf` and keyring layout as dev) and does **not publish** the database port. | Main spec requirement; the database is only reached from the compose network. |
-| D9 | CI gets a **`prod-smoke` workflow** that builds the image and boots the prod compose, filtered on the paths that can break it. It runs `scripts/prod-smoke.sh`, which also runs locally. | User choice. The entrypoint only fails at a real first boot; config validation alone would not catch a missing file or module. |
+| D9 | CI gets a **`prod-smoke` workflow** that builds the image and boots the prod compose, filtered on the paths that can break it. It runs `scripts/prod-smoke.sh`, which also runs locally. | User choice. The boot command only fails at a real first boot; config validation alone would not catch a missing file or module. |
 
 ## 4. Image — `Dockerfile`
 
-- A new `.dockerignore` keeps the host `node_modules` (built for glibc), `.next`, `.env*` and the keyring out of the build context.
+- A `.dockerignore` keeps the host `node_modules` (built for glibc), `.next`, `.env*` and the keyring out of the build context.
 - Stage `base` adds `openssl` (needed by the Prisma schema engine on alpine).
-- New stage `migrator` (FROM `base`), working directory `/opt/migrate`:
-  - a minimal `package.json` (`{"private": true, "type": "module"}`; `type` silences Node's typeless-module warning for `seed.ts`);
-  - `npm install` of `prisma`, `dotenv`, `@prisma/client` and `@prisma/adapter-mariadb`, at the versions read from `package-lock.json`;
-  - `prisma.config.ts`, `prisma/schema.prisma`, `prisma/migrations/`, `prisma/seed.ts`;
-  - `prisma generate`.
-- Stage `prod` adds `/opt/migrate` from `migrator`, and `docker/entrypoint.sh` as `ENTRYPOINT`, replacing `CMD ["node", "server.js"]`.
+- Stage `migrator` (FROM `base`), working directory `/opt/migrate`: `npm ci` from `docker/migrate/package.json` + `package-lock.json` (`prisma`, `dotenv`, versions equal to the app lockfile, checked by a unit test), then `prisma.config.ts`, `prisma/schema.prisma` and `prisma/migrations/`.
+- Stage `prod` adds `/opt/migrate` and sets `CMD ["sh", "-c", "cd /opt/migrate && node_modules/.bin/prisma migrate deploy && cd /app && exec node server.js"]`.
 - The `dev` stage and `docker-compose.yml` are unchanged.
 
-## 5. First boot — `docker/entrypoint.sh`
+## 5. First boot
 
-POSIX `sh`, `set -eu`:
-
-1. `prisma migrate deploy`, run from `/opt/migrate`. On failure (database unreachable, broken migration) the script exits non-zero, `restart: unless-stopped` retries, and the error is in `docker compose logs app`.
-2. `node prisma/seed.ts`, run from `/opt/migrate` (D3, D4).
-3. `cd /app && exec node server.js`, so signals reach Node directly.
+1. `prisma migrate deploy`. On failure (database unreachable, broken migration) the container exits non-zero, `restart: unless-stopped` retries, and the error is in `docker compose logs app`.
+2. `exec node server.js`, so signals reach Node directly.
+3. Next calls `register()` in `src/instrumentation.ts` before serving: it runs `seedRolesAndPermissions` and `seedAppSettings` (D4) with the app's Prisma client, on the Node runtime only. It runs in dev too, where it is equally harmless.
 
 ## 6. Compose — `docker-compose.prod.yml`
 
@@ -101,5 +95,5 @@ POSIX `sh`, `set -eu`:
 
 ## 10. Tests
 
-- `scripts/prod-smoke.sh` (§9) covers the entrypoint, the seed, the compose and the sidecar end to end, including the wrong-secret restart (D6). It is the failing test written before the implementation.
+- `scripts/prod-smoke.sh` (§9) covers the boot command, the seed, the compose and the sidecar end to end, including the wrong-secret restart (D6). It is the failing test written before the implementation.
 - The existing suites are unchanged: nothing in `src/` changes.

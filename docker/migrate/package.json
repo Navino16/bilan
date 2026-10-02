@@ -1,10 +1,7 @@
 {
   "name": "bilan-migrate",
   "private": true,
-  "type": "module",
   "dependencies": {
-    "@prisma/adapter-mariadb": "7.8.0",
-    "@prisma/client": "7.8.0",
     "dotenv": "17.4.2",
     "prisma": "7.8.0"
   }

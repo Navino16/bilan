@@ -22,7 +22,10 @@ const copied = readFileSync("Dockerfile", "utf8")
   .filter((src) => src !== ".");
 
 describe("prod smoke workflow path filters", () => {
-  it.each([...new Set([...copied, "next.config.ts"])])("triggers on %s", (file) => {
-    expect(covered(file)).toBe(true);
-  });
+  it.each([...new Set([...copied, "next.config.ts", "src/instrumentation.ts"])])(
+    "triggers on %s",
+    (file) => {
+      expect(covered(file)).toBe(true);
+    },
+  );
 });

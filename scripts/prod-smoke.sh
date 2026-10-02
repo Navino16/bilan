@@ -69,7 +69,7 @@ sql "UPDATE AppSetting SET value = '\"OPEN\"' WHERE \`key\` = 'registration_mode
 dc restart app
 dc up -d --wait --wait-timeout 180 app
 [[ "$(sql "SELECT value FROM AppSetting WHERE \`key\` = 'registration_mode'")" == '"OPEN"' ]] ||
-  fail "the seed overwrote registration_mode on restart"
+  fail "registration_mode not kept on restart (missing or overwritten by the seed)"
 [[ "$(sql "SELECT COUNT(*) FROM Role WHERE \`key\` = 'SUPER_ADMIN'")" == 1 ]] || fail "SUPER_ADMIN role missing"
 
 echo "==> compose refuses a missing CRON_SECRET"

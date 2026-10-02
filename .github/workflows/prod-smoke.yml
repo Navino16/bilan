@@ -12,6 +12,7 @@ on:
       - "prisma/**"
       - prisma.config.ts
       - next.config.ts
+      - src/instrumentation.ts
       - package.json
       - package-lock.json
       - scripts/prod-smoke.sh

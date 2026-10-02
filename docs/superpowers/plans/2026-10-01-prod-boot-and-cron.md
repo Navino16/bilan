@@ -587,3 +587,14 @@ Expected: `OK prod smoke`.
 
 Run: `docker compose ps` (dev `app`, `mariadb`, `mariadb-test` still up) and `curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/fr/login`.
 Expected: `200` — the smoke test ran under its own project and port and did not touch the dev stack.
+
+---
+
+## Addendum (2026-10-02): simplified boot
+
+After review the user asked for a simpler image (spec D1–D3, §4–§5 updated):
+
+- `docker/entrypoint.sh` removed; the prod `CMD` runs `prisma migrate deploy` then `exec node server.js`.
+- The seed runs inside the app, from `src/instrumentation.ts` (`register()`), with the app's Prisma client.
+- `docker/migrate` keeps only `prisma` + `dotenv`; no second client, no `prisma generate` in the image.
+- Image 557 MB → 463 MB (`/opt/migrate` 318 MB → 226 MB). Pruning the CLI was judged over-engineering.

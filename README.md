@@ -60,6 +60,11 @@ wizard, which creates the first (super admin) account.
 Keep `.env` and the keyring file safe: without the keyring the database files can't be
 read, and without `DATA_ENCRYPTION_KEY` the transaction labels can't be decrypted.
 
+If a migration fails, the app container stops before serving (see `docker compose logs app`).
+Overriding its command skips the migration and gives a shell to repair it:
+`docker compose -f docker-compose.prod.yml run --rm app sh`, then
+`cd /opt/migrate && node_modules/.bin/prisma migrate resolve --rolled-back <migration>`.
+
 To upgrade, change `BILAN_VERSION` in `.env`, then
 `docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d`.
 

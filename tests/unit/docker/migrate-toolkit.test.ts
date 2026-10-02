@@ -7,9 +7,7 @@ describe("prod migrate toolkit (docker/migrate)", () => {
   it("pins the same versions as the app lockfile", () => {
     const appLock = json("package-lock.json").packages;
     const deps: Record<string, string> = json("docker/migrate/package.json").dependencies;
-    expect(Object.keys(deps).sort()).toEqual(
-      ["@prisma/adapter-mariadb", "@prisma/client", "dotenv", "prisma"].sort(),
-    );
+    expect(Object.keys(deps).sort()).toEqual(["dotenv", "prisma"]);
     for (const [name, version] of Object.entries(deps)) {
       expect(version, name).toBe(appLock[`node_modules/${name}`].version);
     }

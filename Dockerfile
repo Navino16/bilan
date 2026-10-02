@@ -36,16 +36,14 @@ COPY . .
 RUN npx prisma generate || true
 RUN npm run build
 
-# Self-contained migrate + seed toolkit (spec §4): independent of what Next copies
-# into the standalone node_modules.
+# Prisma CLI for `migrate deploy` at boot (spec §4), with its own pinned lockfile.
 FROM base AS migrator
 WORKDIR /opt/migrate
 COPY docker/migrate/package.json docker/migrate/package-lock.json ./
 RUN npm ci --no-audit --no-fund && npm cache clean --force
 COPY prisma.config.ts ./
-COPY prisma/schema.prisma prisma/seed.ts ./prisma/
+COPY prisma/schema.prisma ./prisma/
 COPY prisma/migrations ./prisma/migrations
-RUN DATABASE_URL=mysql://build:build@localhost:3306/build node_modules/.bin/prisma generate
 
 FROM base AS prod
 ENV NODE_ENV=production
@@ -56,9 +54,9 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=migrator --chown=nextjs:nodejs /opt/migrate /opt/migrate
-COPY --chmod=755 docker/entrypoint.sh /usr/local/bin/bilan-entrypoint
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
-ENTRYPOINT ["bilan-entrypoint"]
+# Overriding the command (e.g. `sh`) skips the migration: the way in to repair a failed one.
+CMD ["sh", "-c", "cd /opt/migrate && node_modules/.bin/prisma migrate deploy && cd /app && exec node server.js"]
