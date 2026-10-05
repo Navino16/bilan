@@ -1,5 +1,5 @@
 #!/bin/sh
-# Cron sidecar entrypoint (spec §7, D6): a failing first call exits, so a wrong secret
+# Cron service command (spec §7, D6): a failing first call exits, so a wrong secret
 # shows as a restart loop.
 set -eu
 if [ -z "${CRON_SECRET:-}" ]; then

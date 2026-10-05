@@ -37,15 +37,35 @@ already exists; `npm run db:seed-dev -- --reset` wipes and re-seeds it.
 
 ## Self-hosting
 
-`docker-compose.prod.yml` runs the app, MariaDB (encrypted at rest, not exposed) and a
-cron sidecar.
+Bilan runs from published images: no checkout of this repository is needed. Put four files
+in one directory:
+
+```text
+bilan/
+├── docker-compose.prod.yml   # from the release you run
+├── app.env                   # app and cron settings (from app.env.example)
+├── db.env                    # MariaDB passwords (from db.env.example)
+└── keyring/keyfile           # MariaDB encryption key
+```
+
+Every variable of `app.env` and `db.env` is mandatory:
+
+| File      | Variable                                                                | Value                                                                  |
+| --------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `app.env` | `APP_URL`                                                               | Public `https://` URL of the reverse proxy in front of the app         |
+| `app.env` | `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `SEARCH_TOKEN_KEY`, `CRON_SECRET` | `openssl rand -base64 32`, one value each                              |
+| `app.env` | `DATABASE_URL`                                                          | `mysql://bilan:<MARIADB_PASSWORD>@mariadb:3306/bilan`                  |
+| `db.env`  | `MARIADB_ROOT_PASSWORD`, `MARIADB_PASSWORD`                             | `openssl rand -hex 24` each (hex, because it goes into `DATABASE_URL`) |
+
+Optional, from the shell or a `.env` next to the compose file: `BILAN_VERSION` (image tag,
+default `latest`; use `develop` until the first release is tagged) and `BILAN_PORT`
+(default `3000`).
 
 ```bash
-cp .env.prod.example .env          # then fill in every value
-mkdir -p docker/mariadb/keyring
+mkdir -p keyring
 # Never overwrite an existing keyfile: the database could no longer be read.
-[ -f docker/mariadb/keyring/keyfile ] || echo "1;$(openssl rand -hex 32)" > docker/mariadb/keyring/keyfile
-chmod 644 docker/mariadb/keyring/keyfile
+[ -f keyring/keyfile ] || echo "1;$(openssl rand -hex 32)" > keyring/keyfile
+chmod 644 keyring/keyfile
 docker compose -f docker-compose.prod.yml up -d
 ```
 
@@ -57,22 +77,26 @@ URL. The app sends HSTS and `upgrade-insecure-requests`, and auth only trusts `A
 so plain `http://host:3000` does not work. Open `APP_URL`: a fresh install lands on the setup
 wizard, which creates the first (super admin) account.
 
-Keep `.env` and the keyring file safe: without the keyring the database files can't be
-read, and without `DATA_ENCRYPTION_KEY` the transaction labels can't be decrypted.
+Keep `app.env`, `db.env` and the keyring file safe: without the keyring the database files
+can't be read, and without `DATA_ENCRYPTION_KEY` the transaction labels can't be decrypted.
 
 If a migration fails, the app container stops before serving (see `docker compose logs app`).
 Overriding its command skips the migration and gives a shell to repair it:
 `docker compose -f docker-compose.prod.yml run --rm app sh`, then
 `cd /opt/migrate && node_modules/.bin/prisma migrate resolve --rolled-back <migration>`.
 
-To upgrade, change `BILAN_VERSION` in `.env`, then
+To upgrade, set the new `BILAN_VERSION`, take that release's `docker-compose.prod.yml` if it
+changed, then
 `docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d`.
 
 ## Scheduled jobs
 
-Three token-guarded routes do the periodic work. The `cron` sidecar of the prod compose
-calls them (UTC); it calls `purge-imports` once at start and exits if that fails, so a
-wrong or missing `CRON_SECRET` shows up as a restart loop in `docker compose ps`.
+Three token-guarded routes do the periodic work. The `cron` service of the prod compose
+(same image as the app) calls them (UTC); it calls `purge-imports` once at start and exits
+if that fails, so a wrong or missing `CRON_SECRET` shows up as a restart loop in
+`docker compose ps`. After a host reboot Docker restarts every container at once: the
+`cron` service may log a few `ERROR purge-imports … Connection refused` and restart until
+the app is up, then settles by itself.
 
 | Route                          | Schedule (UTC) | Effect                                                                    |
 | ------------------------------ | -------------- | ------------------------------------------------------------------------- |

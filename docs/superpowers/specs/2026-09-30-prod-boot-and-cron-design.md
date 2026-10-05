@@ -34,10 +34,10 @@ Out of scope:
 | D2 | The image carries only the **Prisma CLI** (`prisma` + `dotenv`, own `docker/migrate/package.json` and lockfile, `npm ci` in an alpine stage), the schema and the migrations, in `/opt/migrate`. | Same libc as the prod stage (musl schema engine), reproducible build. The CLI and its dependencies weigh about 240 MB; pruning it was judged over-engineering. |
 | D3 | The seed functions stay in `prisma/seed.ts` (still used by `prisma db seed`, the dev/e2e seed scripts and the tests); `src/instrumentation.ts` imports them. | No code moves; Next bundles the file into the server. |
 | D4 | The seed is safe to run on every start. | Every write is an `upsert`, and app settings use `update: {}`, so a value an admin changed is never overwritten. |
-| D5 | Scheduling is a **`cron` sidecar** (plain `alpine:3`: busybox `crond` + `wget`) in the prod compose; still no in-app scheduler. | Issue scope. The routes stay host-driven; installs without the compose use the crontab lines from the README. |
+| D5 | Scheduling is a **`cron` service running the app image** with another command (`sh /opt/cron/start.sh`, as root): busybox `crond` + `wget` are already in `node:24-alpine`, the scripts are copied into the image. Still no in-app scheduler. | User choice: **running the project must not need a repo checkout**, so everything the cron needs ships in an image; reusing the app image keeps one image to publish and app/cron versions in lockstep. |
 | D6 | The sidecar calls `purge-imports` once at start and **exits non-zero on failure**. | A wrong or missing secret shows up as a restart loop in `docker compose ps`, not as silent log lines. `purge-imports` is idempotent and harmless. |
 | D7 | Schedules, **in UTC**: `roll-budgets` 00:05 daily, `purge-audit` 03:00 daily, `purge-imports` hourly. | Issue scope. Plain `alpine:3` has no `tzdata`, so a `TZ` name would be ignored. |
-| D8 | The prod compose keeps MariaDB **encryption at rest** (same `encryption.cnf` and keyring layout as dev) and does **not publish** the database port. | Main spec requirement; the database is only reached from the compose network. |
+| D8 | The prod compose keeps MariaDB **encryption at rest**, configured by `command:` flags (no mounted `conf.d`), with a user-generated `./keyring/keyfile`, and does **not publish** the database port. | Main spec requirement, without depending on repo files. |
 | D9 | CI gets a **`prod-smoke` workflow** that builds the image and boots the prod compose, filtered on the paths that can break it. It runs `scripts/prod-smoke.sh`, which also runs locally. | User choice. The boot command only fails at a real first boot; config validation alone would not catch a missing file or module. |
 
 ## 4. Image — `Dockerfile`
@@ -56,40 +56,38 @@ Out of scope:
 
 ## 6. Compose — `docker-compose.prod.yml`
 
+Running the project needs only four files next to each other: `docker-compose.prod.yml`, `app.env`, `db.env`, `keyring/keyfile`. No `build:`, no bind mount of repo files.
+
 | Service | Definition |
 |---------|------------|
-| `mariadb` | `mariadb:11`; named volume for data; `./docker/mariadb/conf.d` and `./docker/mariadb/keyring` mounted read-only; no published port; healthcheck as in dev; `MARIADB_PASSWORD` and `MARIADB_ROOT_PASSWORD` required (`${VAR:?}`). |
-| `app` | `image: ghcr.io/navino16/bilan:${BILAN_VERSION:-latest}` with `build: { context: ., target: prod }` as a fallback; `env_file: ${BILAN_ENV_FILE:-.env}`; `DATABASE_URL` built from `MARIADB_PASSWORD` on the `mariadb` host; published port `${BILAN_PORT:-3000}`; `depends_on: mariadb (healthy)`; healthcheck `wget -q --spider http://127.0.0.1:3000/fr/login` (on a fresh install the proxy redirects to `/fr/setup`, which `wget` follows; either way the answer needs the database). |
-| `cron` | plain `alpine:3`, nothing installed (busybox ships `crond` and `wget`, so a restart needs no network); `docker/cron/` mounted read-only; `CRON_SECRET` from the environment; `depends_on: app (healthy)`; `restart: unless-stopped`. |
+| `mariadb` | `mariadb:11`; `env_file: db.env` (`MARIADB_ROOT_PASSWORD`, `MARIADB_PASSWORD`); database and user `bilan`; encryption flags in `command:`; named data volume; `./keyring` mounted read-only; no published port; healthcheck as in dev. |
+| `app` | `image: ghcr.io/navino16/bilan:${BILAN_VERSION:-latest}`; `env_file: app.env` (`APP_URL`, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `SEARCH_TOKEN_KEY`, `CRON_SECRET`, `DATABASE_URL`); `init: true`; published port `${BILAN_PORT:-3000}`; `depends_on: mariadb (healthy)`; healthcheck `wget -q -O /dev/null http://127.0.0.1:3000/fr/login`. |
+| `cron` | same image; `command: ["sh", "/opt/cron/start.sh"]` (overriding the command skips the migration); `user: root`; `init: true`; `env_file: app.env` (same trust domain as the app; only `CRON_SECRET` is read); `depends_on: app (healthy)`. |
 
-## 7. Cron sidecar — `docker/cron/`
+Two env files keep the MariaDB root password out of the app and cron containers. Variables are not checked by compose (`:?`): the README lists the mandatory ones. `BILAN_VERSION` / `BILAN_PORT` are optional, read from the shell or a `.env` next to the compose file.
 
-- `crontab`: the three lines of D7, each running `run.sh <route>`.
-- `run.sh <route>`: busybox `wget -q -O - --post-data "" --header "Authorization: Bearer …" http://app:3000/api/cron/<route>`, which exits non-zero on any HTTP error. It logs one line per call to the container output, `OK <route> <body>` or `ERROR <route> <wget error, which carries the HTTP status>`, and exits non-zero on failure.
-- `start.sh`:
-  - fails at once if `CRON_SECRET` is empty;
-  - writes the secret to a file only root can read (busybox `crond` does not pass the container environment to jobs); `run.sh` reads it back;
-  - runs `run.sh purge-imports` once and exits non-zero if it fails (D6);
-  - then `exec crond -f` with the crontab.
+## 7. Cron — `docker/cron/` (copied to `/opt/cron` in the image)
+
+- `crontab`: the three lines of D7, each running `run.sh <route>`, output redirected to the container log (`/proc/1/fd/1`).
+- `run.sh <route>`: busybox `wget -q -T 60 -O - --post-data "" --header "Authorization: Bearer …" http://app:3000/api/cron/<route>`. One log line per call, `OK <route> <body>` or `ERROR <route> <wget error>`, non-zero exit on failure.
+- `start.sh`: fails at once if `CRON_SECRET` is empty; writes the secret to a root-only file (busybox `crond` does not pass the environment to jobs); runs `run.sh purge-imports` once and exits non-zero if it fails (D6); then copies the crontab and `exec crond -f`.
 
 ## 8. Configuration and docs
 
-- `.env.example`: add `CRON_SECRET=  # openssl rand -base64 32`.
-- New `.env.prod.example`: `APP_URL`, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `SEARCH_TOKEN_KEY`, `CRON_SECRET`, `MARIADB_PASSWORD`, `MARIADB_ROOT_PASSWORD`, `BILAN_VERSION`, each with its generation command. `BILAN_PORT` and `BILAN_ENV_FILE` stay optional (they let the smoke test run next to a dev stack).
-- README:
-  - **Self-hosting**: create `.env` from `.env.prod.example`, generate the keyring, `docker compose -f docker-compose.prod.yml up -d`, what the first boot does (migrations, seed, setup wizard), how to upgrade (change `BILAN_VERSION`, `pull`, `up -d`).
-  - **Scheduled jobs**: the three routes and their effect, the crontab lines for installs without the compose, and a `curl` command to check the secret (200 expected, 401 means a wrong secret, 404 an unset one).
+- `.env.example`: `CRON_SECRET=  # openssl rand -base64 32`.
+- `app.env.example` and `db.env.example` (replace `.env.prod.example`); `app.env`, `db.env` and `keyring/` are git- and docker-ignored.
+- README **Self-hosting**: download `docker-compose.prod.yml` (no checkout), create `app.env` / `db.env` with the mandatory variables, generate the keyring (never overwrite an existing one), TLS reverse proxy and `https://` `APP_URL`, `up -d`, failed-migration repair, upgrade. **Scheduled jobs**: routes, host crontab lines, secret check, the transient errors after a host reboot.
 
 ## 9. CI — `prod-smoke` workflow
 
-- `scripts/prod-smoke.sh` (bash) runs the whole check, locally or in CI, under its own compose project (`bilan-smoke`), a throwaway env file and port 3100, so it never touches a dev stack or its `.env`:
+- `scripts/prod-smoke.sh` (bash) builds the image, then runs the whole check from a **temporary directory holding only the four runtime files** (proving no checkout is needed), under its own compose project (`bilan-smoke`) and port 3100, so it never touches a dev stack:
   1. `docker compose config` (fast validation);
-  2. generate the throwaway env file (and the keyring if missing);
-  3. `up -d --build --wait`;
-  4. `/fr/login` answers 200 after redirects, on the setup page (migrations and seed ran on an empty database);
+  2. generate the throwaway `app.env`, `db.env`, `.env` and keyring;
+  3. `docker build --target prod`, then `up -d --wait` (compose has no `build:`);
+  4. `/fr/login` answers 200 after redirects, on the setup page (migrations and seed ran on an empty database), and `innodb_encrypt_tables` is `ON`;
   5. `POST /api/cron/purge-imports`: 200 with `{ "purged": … }` with the secret, 401 with a wrong one;
   6. the `cron` container is running and its logs contain `OK purge-imports`;
-  7. a one-off `cron` container started with a wrong secret exits non-zero and logs `ERROR purge-imports` (D6).
+  7. a one-off `cron` container started with a wrong secret exits non-zero and logs `ERROR purge-imports` (D6); with an empty one it exits with `CRON_SECRET is empty`.
   - On failure it prints the compose logs; it always runs `down -v`.
 - `.github/workflows/prod-smoke.yml` runs the script on pull requests to `develop`/`main` that change `Dockerfile`, `docker/**`, `docker-compose.prod.yml`, `prisma/**`, `package.json`, `package-lock.json`, `scripts/prod-smoke.sh` or the workflow itself. A separate workflow, because GitHub Actions cannot path-filter a single job inside `ci.yml`.
 

@@ -1,19 +1,26 @@
-# Production stack (README "Self-hosting"). Settings come from .env, see .env.prod.example.
+# Production stack (README "Self-hosting"). Needs app.env, db.env and keyring/keyfile
+# next to this file; no repo checkout.
 name: bilan
 
 services:
   mariadb:
     image: mariadb:11
     restart: unless-stopped
+    env_file:
+      - db.env
     environment:
-      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?set MARIADB_ROOT_PASSWORD in .env}
       MARIADB_DATABASE: bilan
       MARIADB_USER: bilan
-      MARIADB_PASSWORD: ${MARIADB_PASSWORD:?set MARIADB_PASSWORD in .env}
+    command:
+      - --plugin-load-add=file_key_management
+      - --file-key-management-filename=/etc/mysql/keyring/keyfile
+      - --file-key-management-encryption-algorithm=AES_CTR
+      - --innodb-encrypt-tables=ON
+      - --innodb-encrypt-log=ON
+      - --innodb-encryption-threads=4
     volumes:
       - mariadb_data:/var/lib/mysql
-      - ./docker/mariadb/conf.d:/etc/mysql/conf.d:ro
-      - ./docker/mariadb/keyring:/etc/mysql/keyring:ro
+      - ./keyring:/etc/mysql/keyring:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s
@@ -22,14 +29,10 @@ services:
 
   app:
     image: ghcr.io/navino16/bilan:${BILAN_VERSION:-latest}
-    build:
-      context: .
-      target: prod
     restart: unless-stopped
+    init: true
     env_file:
-      - ${BILAN_ENV_FILE:-.env}
-    environment:
-      DATABASE_URL: mysql://bilan:${MARIADB_PASSWORD:?set MARIADB_PASSWORD in .env}@mariadb:3306/bilan
+      - app.env
     ports:
       - "${BILAN_PORT:-3000}:3000"
     depends_on:
@@ -44,12 +47,13 @@ services:
       start_period: 90s
 
   cron:
-    image: alpine:3
+    image: ghcr.io/navino16/bilan:${BILAN_VERSION:-latest}
     restart: unless-stopped
-    environment:
-      CRON_SECRET: ${CRON_SECRET:?set CRON_SECRET in .env}
-    volumes:
-      - ./docker/cron:/opt/cron:ro
+    init: true
+    user: root
+    # Same image and trust domain as the app; only CRON_SECRET is read (spec §7).
+    env_file:
+      - app.env
     command: ["sh", "/opt/cron/start.sh"]
     depends_on:
       app:

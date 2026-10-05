@@ -598,3 +598,13 @@ After review the user asked for a simpler image (spec D1–D3, §4–§5 updated
 - The seed runs inside the app, from `src/instrumentation.ts` (`register()`), with the app's Prisma client.
 - `docker/migrate` keeps only `prisma` + `dotenv`; no second client, no `prisma generate` in the image.
 - Image 557 MB → 463 MB (`/opt/migrate` 318 MB → 226 MB). Pruning the CLI was judged over-engineering.
+
+## Addendum (2026-10-05): no checkout at runtime
+
+User decisions after review (spec D5, D8, §6–§9 updated):
+
+- The `cron` service runs the app image (`sh /opt/cron/start.sh`, `user: root`); `docker/cron` is copied into the image.
+- MariaDB encryption moves to `command:` flags; the compose has no `build:` and no repo bind mount. Runtime = `docker-compose.prod.yml`, `app.env`, `db.env`, `keyring/keyfile`.
+- Two env files (`app.env`, `db.env`), no `:?`; the README lists the mandatory variables. `.env.prod.example` replaced by `app.env.example` / `db.env.example`.
+- `init: true` on `app` and `cron`, `wget -T 60`, wider `.dockerignore`.
+- `scripts/prod-smoke.sh` builds the image, then runs from a temp directory with only the runtime files; it also checks encryption at rest, that the app never sees the root password, and the empty-secret exit.
