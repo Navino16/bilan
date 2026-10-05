@@ -96,7 +96,7 @@ export function CategoryHistoryCard({
                       {r.average ? money.format(r.average) : "—"}
                     </span>
                   </Link>
-                  <div className="ml-[18px] flex items-end gap-0.5">
+                  <div className="ml-[18px] flex items-end">
                     {r.values.map((v, i) => {
                       const label = t("historyBar", {
                         month: partial(i)
@@ -116,9 +116,11 @@ export function CategoryHistoryCard({
                               dir: "out",
                             },
                           )}
+                          // Keyboard users drill down through the row's name link: 72 tab stops otherwise.
+                          tabIndex={-1}
                           aria-label={label}
                           title={label}
-                          className="focus-visible:ring-ring/50 flex flex-1 items-end rounded-sm focus-visible:ring-3 focus-visible:outline-none"
+                          className="flex flex-1 items-end px-px"
                           style={{ height: BAR_HEIGHT }}
                         >
                           <span
