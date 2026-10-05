@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "@/server/db";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
-import { getInsights } from "@/server/services/dashboard/insights";
+import { getCategoryHistory, getInsights } from "@/server/services/dashboard/insights";
 import { createLink } from "@/server/services/links";
 import { monthPeriod, previousMonthPeriod } from "@/lib/period";
 
@@ -65,6 +65,10 @@ beforeAll(async () => {
   const purchase = await tx("2026-03-12T00:00:00.000Z", -50, "CB FNAC", food);
   const refund = await tx("2026-03-14T00:00:00.000Z", 50, "REMB FNAC", food, "OTHER");
   await createLink({ transactionIds: [purchase, refund], userId: owner });
+  // A balanced link spanning December and January: it must drop out of both months.
+  const order = await tx("2025-12-28T00:00:00.000Z", -80, "CB DARTY", food);
+  const credit = await tx("2026-01-04T00:00:00.000Z", 80, "REMB DARTY", food, "OTHER");
+  await createLink({ transactionIds: [order, credit], userId: owner });
   // February 2026 (previous period)
   await tx("2026-02-05T00:00:00.000Z", -500, "PRLV FONCIA LOYER", rent, "DIRECT_DEBIT");
   await tx("2026-02-08T00:00:00.000Z", -20, "CB FRANPRIX", food);
@@ -100,5 +104,29 @@ describe("getInsights", () => {
     const data = await getInsights(owner, period, previousMonthPeriod(period));
     expect(data.income).toEqual([{ categoryId: pay, current: 2000, previous: 1000 }]);
     expect(data.incomeTotal).toBe(2000);
+  });
+});
+
+describe("getCategoryHistory", () => {
+  const zeros = (n: number) => Array<number>(n).fill(0);
+
+  it("totals 12 months of spending per category, ending at the period's month", async () => {
+    const h = await getCategoryHistory(owner, monthPeriod(2026, 3), new Date("2026-10-05"));
+    expect(h.months[0]).toEqual({ year: 2025, month: 4 });
+    expect(h.months[11]).toEqual({ year: 2026, month: 3 });
+    expect(h.inProgress).toBe(false);
+    expect(h.series).toEqual(
+      expect.arrayContaining([
+        { categoryId: food, values: [...zeros(10), 20, 50] },
+        { categoryId: rent, values: [...zeros(10), 500, 700] },
+        { categoryId: null, values: [...zeros(11), 300] },
+      ]),
+    );
+    expect(h.series).toHaveLength(3);
+  });
+
+  it("flags the last month while it is in progress", async () => {
+    const h = await getCategoryHistory(owner, monthPeriod(2026, 3), new Date("2026-03-20"));
+    expect(h.inProgress).toBe(true);
   });
 });

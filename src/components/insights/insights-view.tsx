@@ -7,35 +7,19 @@ import { PeriodPicker } from "@/components/dashboard/period-picker";
 import { PeriodInProgress } from "@/components/dashboard/period-in-progress";
 import { PageHeader } from "@/components/shell/page-header";
 import { DivergingBar } from "./diverging-bar";
+import { CardTitle, DEFAULT_COLOR, Dot, ROW_LINK } from "./bits";
+import { CategoryHistoryCard } from "./category-history";
 import { categorySliceColors } from "@/lib/chart-colors";
 import { formatPeriodLabel, toIsoDay, type Period } from "@/lib/period";
 import { transactionsHref, type TransactionsLinkFilter } from "@/lib/transaction-filters";
-import type { CategoryChange, InsightsData } from "@/lib/insights";
+import type { CategoryChange, CategoryHistory, InsightsData } from "@/lib/insights";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 
-const DEFAULT_COLOR = "#2563eb";
 const TOP_CHANGES = 6;
-const ROW_LINK =
-  "-mx-2 rounded-lg px-2 py-1 transition-colors hover:bg-muted/50 focus-visible:ring-ring/50 focus-visible:ring-3 focus-visible:outline-none";
-
-function CardTitle({ over, title, sub }: { over: string; title: string; sub?: string }) {
-  return (
-    <div>
-      <div className={overline}>{over}</div>
-      <div className="font-display text-xl">{title}</div>
-      {sub && <div className="text-muted-foreground text-[12px]">{sub}</div>}
-    </div>
-  );
-}
-
-function Dot({ color }: { color: string }) {
-  return (
-    <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ background: color }} />
-  );
-}
 
 export async function InsightsView({
   data,
+  history,
   period,
   previous,
   inProgress,
@@ -43,6 +27,7 @@ export async function InsightsView({
   locale,
 }: {
   data: InsightsData;
+  history: CategoryHistory;
   period: Period;
   previous: Period;
   inProgress: boolean;
@@ -189,6 +174,8 @@ export async function InsightsView({
           </div>
         )}
       </Card>
+
+      <CategoryHistoryCard history={history} categories={categories} locale={locale} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card className="gap-4 p-6" data-slot="insights-merchants">
