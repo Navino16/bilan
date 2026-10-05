@@ -2,7 +2,7 @@ import { setRequestLocale } from "next-intl/server";
 import { requireSession } from "@/server/auth/permissions";
 import { listForUser } from "@/server/services/categories";
 import { flattenCategories } from "@/components/transactions/category-tree";
-import { getInsights } from "@/server/services/dashboard/insights";
+import { getCategoryHistory, getInsights } from "@/server/services/dashboard/insights";
 import {
   parsePeriodParams,
   previousPeriod,
@@ -27,14 +27,16 @@ export default async function InsightsPage({
 
   const period = clampPeriodToNow(parsePeriodParams({ from: sp.from, to: sp.to }));
   const previous = previousPeriod(period);
-  const [data, categories] = await Promise.all([
+  const [data, history, categories] = await Promise.all([
     getInsights(user.id, period, previous),
+    getCategoryHistory(user.id, period),
     listForUser(user.id).then(flattenCategories),
   ]);
 
   return (
     <InsightsView
       data={data}
+      history={history}
       period={period}
       previous={previous}
       inProgress={periodInProgress(period)}

@@ -5,14 +5,17 @@ import { round2 } from "@/lib/budgets";
 import {
   categoryChanges,
   incomeByCategory,
+  monthlyCategoryTotals,
   topMerchants,
+  type CategoryHistory,
   type InsightsData,
   type MerchantRow,
 } from "@/lib/insights";
-import type { Period } from "@/lib/period";
+import { historyMonths, monthPeriod, periodInProgress, type Period } from "@/lib/period";
 import { loadRows } from "./index";
 
 const TOP_MERCHANTS = 6;
+const HISTORY_MONTHS = 12;
 
 export async function getInsights(
   userId: string,
@@ -42,5 +45,28 @@ export async function getInsights(
     merchants: topMerchants(merchantRows, TOP_MERCHANTS),
     income,
     incomeTotal: round2(income.reduce((s, i) => s + i.current, 0)),
+  };
+}
+
+// One load over the whole window so links spanning two months collapse like on the dashboard.
+export async function getCategoryHistory(
+  userId: string,
+  period: Period,
+  now: Date = new Date(),
+): Promise<CategoryHistory> {
+  const months = historyMonths(period, HISTORY_MONTHS, now);
+  const first = months[0];
+  const last = monthPeriod(months[months.length - 1].year, months[months.length - 1].month);
+  const accountIds = (await listVisibleForUser(userId)).map((a) => a.id);
+  const { rows } = await loadRows(accountIds, {
+    from: monthPeriod(first.year, first.month).from,
+    to: last.to,
+    year: null,
+    month: null,
+  });
+  return {
+    months,
+    inProgress: periodInProgress(last, now),
+    series: monthlyCategoryTotals(rows, months),
   };
 }

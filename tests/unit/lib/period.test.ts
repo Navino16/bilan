@@ -11,6 +11,7 @@ import {
   formatPeriodLabel,
   shiftPeriod,
   periodInProgress,
+  historyMonths,
 } from "@/lib/period";
 
 describe("monthPeriod", () => {
@@ -250,5 +251,22 @@ describe("periodInProgress", () => {
     const p = monthPeriod(2026, 9);
     expect(periodInProgress(p, p.from)).toBe(true);
     expect(periodInProgress(p, p.to)).toBe(true);
+  });
+});
+
+describe("historyMonths", () => {
+  const now = new Date(Date.UTC(2026, 9, 5));
+
+  it("ends at the period's last month, oldest first, wrapping the year", () => {
+    const months = historyMonths(monthPeriod(2026, 3), 12, now);
+    expect(months).toHaveLength(12);
+    expect(months[0]).toEqual({ year: 2025, month: 4 });
+    expect(months[11]).toEqual({ year: 2026, month: 3 });
+  });
+
+  it("never ends after the current month", () => {
+    const months = historyMonths(presetPeriod("this-year", now), 6, now);
+    expect(months[0]).toEqual({ year: 2026, month: 5 });
+    expect(months[5]).toEqual({ year: 2026, month: 10 });
   });
 });

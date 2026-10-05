@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { categoryChanges, incomeByCategory, topMerchants, type MerchantRow } from "@/lib/insights";
+import {
+  categoryChanges,
+  historyRows,
+  incomeByCategory,
+  monthlyCategoryTotals,
+  topMerchants,
+  type CategoryHistory,
+  type MerchantRow,
+} from "@/lib/insights";
 
 const d = (day: number) => new Date(Date.UTC(2026, 2, day));
 
@@ -103,5 +111,67 @@ describe("topMerchants", () => {
   it("limits the result", () => {
     const rows = ["A", "B", "C"].map((m, i) => row(`CB SHOP${m}`, -(i + 1), i + 1));
     expect(topMerchants(rows, 2).map((m) => m.label)).toEqual(["SHOPC", "SHOPB"]);
+  });
+});
+
+describe("monthlyCategoryTotals", () => {
+  const months = [
+    { year: 2025, month: 12 },
+    { year: 2026, month: 1 },
+    { year: 2026, month: 2 },
+  ];
+  const at = (y: number, m: number, day = 10) => new Date(Date.UTC(y, m - 1, day));
+
+  it("sums spending per category and month, zero-filling months without any", () => {
+    const rows = [
+      { amount: -40, categoryId: "food", date: at(2025, 12) },
+      { amount: -10.5, categoryId: "food", date: at(2025, 12, 28) },
+      { amount: -20, categoryId: "food", date: at(2026, 2) },
+      { amount: -700, categoryId: "rent", date: at(2026, 1) },
+      { amount: -5, categoryId: null, date: at(2026, 2) },
+      { amount: 2000, categoryId: "pay", date: at(2026, 1) },
+      { amount: -99, categoryId: "food", date: at(2026, 3) },
+    ];
+    expect(monthlyCategoryTotals(rows, months)).toEqual([
+      { categoryId: null, values: [0, 0, 5] },
+      { categoryId: "food", values: [50.5, 0, 20] },
+      { categoryId: "rent", values: [0, 700, 0] },
+    ]);
+  });
+});
+
+describe("historyRows", () => {
+  const months = Array.from({ length: 12 }, (_, i) => ({ year: 2026, month: i + 1 }));
+  const history = (inProgress: boolean): CategoryHistory => ({
+    months,
+    inProgress,
+    series: [
+      { categoryId: "rent", values: Array(12).fill(800) },
+      { categoryId: "food", values: [900, 900, 900, 900, 900, 900, 300, 300, 300, 300, 300, 30] },
+      { categoryId: "trip", values: [0, 0, 0, 0, 0, 600, 0, 0, 0, 0, 0, 0] },
+      { categoryId: "fun", values: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 40, 0] },
+    ],
+  });
+
+  it("keeps the last months, ranked by total, dropping categories with no spending", () => {
+    const { months: shown, rows } = historyRows(history(false), 6, 10);
+    expect(shown).toEqual(months.slice(6));
+    expect(rows.map((r) => r.categoryId)).toEqual(["rent", "food", "fun"]);
+    expect(rows[1]).toEqual({
+      categoryId: "food",
+      values: [300, 300, 300, 300, 300, 30],
+      total: 1530,
+      average: 255,
+    });
+  });
+
+  it("leaves the month in progress out of the average", () => {
+    const { rows } = historyRows(history(true), 6, 10);
+    expect(rows.find((r) => r.categoryId === "food")?.average).toBe(300);
+  });
+
+  it("limits the number of rows", () => {
+    const { rows } = historyRows(history(false), 12, 2);
+    expect(rows.map((r) => r.categoryId)).toEqual(["rent", "food"]);
   });
 });

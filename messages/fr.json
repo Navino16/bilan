@@ -680,7 +680,15 @@
     "incomeTitle": "Revenus par catégorie",
     "incomeTotal": "{amount} sur la période",
     "noIncome": "Aucun revenu sur cette période.",
-    "new": "nouveau"
+    "new": "nouveau",
+    "historyOverline": "Tendances",
+    "historyTitle": "Historique par catégorie",
+    "historySub": "Moyenne mensuelle sur les mois complets",
+    "historyAverage": "moy.",
+    "historyMonths": "{count} mois",
+    "historyInProgress": "{month} (en cours)",
+    "historyBar": "{month} : {amount}",
+    "historyEmpty": "Aucune dépense sur ces {count} mois."
   },
   "settings": {
     "data": {

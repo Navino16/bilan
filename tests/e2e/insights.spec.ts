@@ -83,6 +83,37 @@ test.describe("insights", () => {
     await expect(page.getByText(label).first()).toBeVisible();
   });
 
+  test("shows the category history over 12 months, or 6 with the toggle", async ({ page }) => {
+    await page.goto("/fr/accounts");
+    await expect(async () => {
+      await page
+        .getByRole("button", { name: /saisir une transaction/i })
+        .first()
+        .click();
+      await expect(page.locator('input[name="label"]')).toBeVisible();
+    }).toPass();
+    await page.fill('input[name="date"]', "2026-02-10");
+    await page.fill('input[name="amount"]', "-18");
+    await page.fill('input[name="label"]', `History ${Date.now()}`);
+    await page.getByRole("button", { name: /^ajouter$/i }).click();
+    await expect(page.locator('input[name="label"]')).toBeHidden();
+
+    await page.goto("/fr/insights?from=2026-03-01&to=2026-03-31", {
+      waitUntil: "domcontentloaded",
+      timeout: 90_000,
+    });
+    const card = page.locator('[data-slot="insights-history"]');
+    const firstRowBars = card
+      .locator('[data-slot="history-row"]')
+      .first()
+      .locator('[data-slot="history-bar"]');
+    await expect(async () => {
+      await expect(firstRowBars).toHaveCount(12);
+    }).toPass();
+    await card.getByRole("button", { name: "6 mois" }).click();
+    await expect(firstRowBars).toHaveCount(6);
+  });
+
   test("flags the current period as in progress on insights and the dashboard", async ({
     page,
   }) => {

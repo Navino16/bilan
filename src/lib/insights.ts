@@ -21,6 +21,16 @@ export type InsightsData = {
   incomeTotal: number;
 };
 
+export type HistoryMonth = { year: number; month: number };
+export type CategorySeries = { categoryId: string | null; values: number[] };
+// Monthly spending per category, oldest month first. `inProgress` flags the last month as partial.
+export type CategoryHistory = {
+  months: HistoryMonth[];
+  inProgress: boolean;
+  series: CategorySeries[];
+};
+export type HistoryRow = CategorySeries & { total: number; average: number };
+
 export type AmountRow = { amount: number; categoryId: string | null };
 export type MerchantRow = AmountRow & { label: string; date: Date; type: string };
 
@@ -63,6 +73,49 @@ export function incomeByCategory(current: AmountRow[], previous: AmountRow[]): I
       previous: round2(prev.get(categoryId) ?? 0),
     }))
     .sort((a, b) => b.current - a.current || byId(a.categoryId, b.categoryId));
+}
+
+export function monthlyCategoryTotals(
+  rows: (AmountRow & { date: Date })[],
+  months: HistoryMonth[],
+): CategorySeries[] {
+  const index = new Map(months.map((m, i) => [m.year * 12 + m.month - 1, i]));
+  const out = new Map<string | null, number[]>();
+  for (const r of rows) {
+    if (r.amount >= 0) continue;
+    const i = index.get(r.date.getUTCFullYear() * 12 + r.date.getUTCMonth());
+    if (i === undefined) continue;
+    const values = out.get(r.categoryId) ?? months.map(() => 0);
+    values[i] -= r.amount;
+    out.set(r.categoryId, values);
+  }
+  return [...out.entries()]
+    .map(([categoryId, values]) => ({ categoryId, values: values.map(round2) }))
+    .sort((a, b) => byId(a.categoryId, b.categoryId));
+}
+
+// The average covers whole months only: the month in progress would drag it down.
+export function historyRows(
+  history: CategoryHistory,
+  count: number,
+  limit: number,
+): { months: HistoryMonth[]; rows: HistoryRow[] } {
+  const start = Math.max(0, history.months.length - count);
+  const rows = history.series
+    .map(({ categoryId, values }) => {
+      const shown = values.slice(start);
+      const whole = history.inProgress ? shown.slice(0, -1) : shown;
+      return {
+        categoryId,
+        values: shown,
+        total: round2(shown.reduce((s, v) => s + v, 0)),
+        average: whole.length ? round2(whole.reduce((s, v) => s + v, 0) / whole.length) : 0,
+      };
+    })
+    .filter((r) => r.total > 0)
+    .sort((a, b) => b.total - a.total || byId(a.categoryId, b.categoryId))
+    .slice(0, limit);
+  return { months: history.months.slice(start), rows };
 }
 
 type MerchantGroup = {

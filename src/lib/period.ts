@@ -96,6 +96,21 @@ export function periodInProgress(p: Period, now: Date = new Date()): boolean {
   return p.from.getTime() <= now.getTime() && now.getTime() <= p.to.getTime();
 }
 
+// The `count` calendar months (oldest first) ending at the period's last month,
+// capped at the current month so a year or quarter never ends in the future.
+export function historyMonths(
+  p: Period,
+  count: number,
+  now: Date = new Date(),
+): { year: number; month: number }[] {
+  const endZero = Math.min(
+    p.to.getUTCFullYear() * 12 + p.to.getUTCMonth(),
+    now.getUTCFullYear() * 12 + now.getUTCMonth(),
+  );
+  const end = { year: Math.floor(endZero / 12), month: (endZero % 12) + 1 };
+  return Array.from({ length: count }, (_, i) => addMonths(end.year, end.month, i - count + 1));
+}
+
 // ISO day (YYYY-MM-DD) of a date's UTC calendar day — for building ?from/?to links.
 export function toIsoDay(d: Date): string {
   return d.toISOString().slice(0, 10);
