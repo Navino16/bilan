@@ -37,23 +37,29 @@ export type MerchantTarget = {
 
 const MAX_SUGGESTIONS = 8;
 
+// Either self-triggered (`trigger`) or controlled (`open`/`onOpenChange`).
 export function MerchantNameDialog({
   target,
   names,
   trigger,
+  open: controlledOpen,
+  onOpenChange,
 }: {
   target: MerchantTarget;
   names: string[];
-  trigger: React.ReactElement;
+  trigger?: React.ReactElement;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const t = useTranslations("merchants");
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const setOpen = onOpenChange ?? setUncontrolledOpen;
   const [name, setName] = useState(target.alias ?? target.label);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const liveMobile = useIsMobile();
-  // Frozen while open: swapping Sheet↔Dialog mid-edit would remount and wipe the input.
   const [openMobile, setOpenMobile] = useState(liveMobile);
   const isMobile = open ? openMobile : liveMobile;
 
@@ -75,13 +81,16 @@ export function MerchantNameDialog({
     });
   }
 
-  function handleOpenChange(next: boolean) {
-    if (next) {
+  // Reset on every opening, whoever opens it; the layout is frozen while open since
+  // swapping Sheet↔Dialog would remount and wipe the input.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
       setOpenMobile(liveMobile);
       setName(target.alias ?? target.label);
       setError(null);
     }
-    setOpen(next);
   }
 
   const body = (
@@ -168,8 +177,8 @@ export function MerchantNameDialog({
   );
 
   return isMobile ? (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetTrigger render={trigger} />
+    <Sheet open={open} onOpenChange={setOpen}>
+      {trigger && <SheetTrigger render={trigger} />}
       <SheetContent
         side="bottom"
         className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden rounded-t-2xl p-0"
@@ -178,8 +187,8 @@ export function MerchantNameDialog({
       </SheetContent>
     </Sheet>
   ) : (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger render={trigger} />
+    <Dialog open={open} onOpenChange={setOpen}>
+      {trigger && <DialogTrigger render={trigger} />}
       <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
         {body}
       </DialogContent>

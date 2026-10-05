@@ -687,16 +687,19 @@
     "cancel": "Annuler",
     "save": "Enregistrer",
     "saving": "Enregistrement…",
-    "listHint": "Renommez ou regroupez les marchands depuis le Top marchands des Analyses.",
-    "empty": "Aucun marchand renommé. Utilisez le crayon du Top marchands dans les Analyses.",
-    "edit": "Modifier {name}",
-    "delete": "Rétablir les libellés de {name}",
-    "deleteConfirm": "Rétablir les libellés de la banque pour « {name} » ?",
+    "empty": "Aucune dépense pour l'instant : les marchands apparaîtront après un import.",
     "error": {
       "INVALID": "Le nom doit faire entre 1 et 60 caractères.",
       "NOT_FOUND": "Ce nom n'existe plus. Rechargez la page.",
       "FAILED": "L'enregistrement a échoué."
-    }
+    },
+    "search": "Rechercher un marchand",
+    "renamedSection": "Renommés",
+    "othersSection": "Autres marchands",
+    "showMore": "Afficher {count} de plus",
+    "noMatch": "Aucun marchand ne correspond.",
+    "count": "{count}×",
+    "noCategory": "Sans catégorie"
   },
   "insights": {
     "overline": "Analyses",

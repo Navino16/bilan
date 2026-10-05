@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 
-async function addExpense(page: Page, label: string, amount: string) {
+async function addExpense(page: Page, date: string, label: string, amount: string) {
   await page.goto("/fr/accounts");
   await expect(async () => {
     await page
@@ -9,7 +9,7 @@ async function addExpense(page: Page, label: string, amount: string) {
       .click();
     await expect(page.locator('input[name="label"]')).toBeVisible();
   }).toPass();
-  await page.fill('input[name="date"]', "2024-05-14");
+  await page.fill('input[name="date"]', date);
   await page.fill('input[name="amount"]', amount);
   await page.fill('input[name="label"]', label);
   await page.getByRole("button", { name: /^ajouter$/i }).click();
@@ -20,7 +20,7 @@ test.describe("merchant aliases", () => {
   test.use({ storageState: "tests/e2e/.auth/owner.json" });
   test.skip(({ browserName }) => browserName === "webkit", "WebKit taps are unreliable here");
 
-  test("renames and merges merchants from Insights, then manages them on Categories", async ({
+  test("renames and merges merchants from Insights, then manages them in the merchant list", async ({
     page,
   }) => {
     const tag = Math.random()
@@ -31,10 +31,12 @@ test.describe("merchant aliases", () => {
     const first = `E2E SHOP ${tag}`;
     const second = `E2E MART ${tag}`;
     const name = `Boutique ${tag}`;
-    await addExpense(page, `CB ${first}`, "-950");
-    await addExpense(page, `CB ${second}`, "-940");
+    // A month of its own, so leftovers of earlier local runs can't push it out of the Top 6.
+    const month = `${2001 + Math.floor(Math.random() * 20)}-${String(1 + Math.floor(Math.random() * 12)).padStart(2, "0")}`;
+    await addExpense(page, `${month}-14`, `CB ${first}`, "-950");
+    await addExpense(page, `${month}-14`, `CB ${second}`, "-940");
 
-    await page.goto("/fr/insights?from=2024-05-01&to=2024-05-31", {
+    await page.goto(`/fr/insights?from=${month}-01&to=${month}-28`, {
       waitUntil: "domcontentloaded",
       timeout: 90_000,
     });
@@ -59,19 +61,23 @@ test.describe("merchant aliases", () => {
     await expect(merchants.locator("li", { hasText: name })).toContainText("1 890 €");
 
     await page.goto("/fr/categories", { waitUntil: "domcontentloaded" });
-    const row = page.locator('[data-slot="merchant-alias-row"]', { hasText: name });
+    const search = page.getByRole("searchbox", { name: "Rechercher un marchand" });
     await expect(async () => {
       await page.getByRole("button", { name: /^Marchands/ }).click();
-      await expect(row).toBeVisible({ timeout: 2000 });
+      await expect(search).toBeVisible({ timeout: 2000 });
     }).toPass({ timeout: 60_000 });
+    await search.fill(tag);
+    const row = page.locator('[data-slot="merchant-row"]', { hasText: name });
     await expect(row).toContainText(first);
     await expect(row).toContainText(second);
 
     await row.getByRole("button", { name: `Retirer ${second} de ${name}` }).click();
     await expect(row).not.toContainText(second, { timeout: 30_000 });
+    await expect(page.locator('[data-slot="merchant-row"]', { hasText: second })).toBeVisible();
 
-    page.once("dialog", (d) => d.accept());
-    await row.getByRole("button", { name: `Rétablir les libellés de ${name}` }).click();
+    await row.getByRole("button", { name: `Renommer ${name}` }).click();
+    await page.getByRole("button", { name: "Rétablir" }).click();
     await expect(row).toHaveCount(0, { timeout: 30_000 });
+    await expect(page.locator('[data-slot="merchant-row"]', { hasText: first })).toBeVisible();
   });
 });

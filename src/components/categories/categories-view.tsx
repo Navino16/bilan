@@ -10,8 +10,8 @@ import { CategoryForm } from "./category-form";
 import { CategoryList } from "./category-list";
 import { RulesList, type RuleRow } from "./rules-list";
 import { RuleDialog } from "./rule-dialog";
-import { MerchantAliasList } from "@/components/merchants/merchant-alias-list";
-import type { MerchantAliasGroup } from "@/lib/insights";
+import { MerchantDirectory } from "@/components/merchants/merchant-directory";
+import type { MerchantDirectory as Directory } from "@/lib/insights";
 import type { CategoryNode } from "@/server/services/categories";
 import { PageHeader } from "@/components/shell/page-header";
 
@@ -20,13 +20,13 @@ export function CategoriesView({
   flatCategories,
   rules,
   groups,
-  aliases,
+  merchants,
 }: {
   tree: CategoryNode[];
   flatCategories: FlatCategory[];
   rules: RuleRow[];
   groups: { id: string; name: string }[];
-  aliases: MerchantAliasGroup[];
+  merchants: Directory;
 }) {
   const t = useTranslations("rules");
   const tc = useTranslations("categories");
@@ -65,7 +65,10 @@ export function CategoriesView({
         items={[
           { id: "cats", label: `${t("tabCategories")} (${flatCategories.length})` },
           { id: "rules", label: `${t("tabRules")} (${rules.length})` },
-          { id: "merchants", label: `${tm("tab")} (${aliases.length})` },
+          {
+            id: "merchants",
+            label: `${tm("tab")} (${merchants.renamed.length + merchants.others.length})`,
+          },
         ]}
         value={tab}
         onChange={setTab}
@@ -76,7 +79,7 @@ export function CategoriesView({
       ) : tab === "rules" ? (
         <RulesList rules={rules} categories={flatCategories} groups={groups} />
       ) : (
-        <MerchantAliasList aliases={aliases} />
+        <MerchantDirectory directory={merchants} categories={flatCategories} />
       )}
 
       <RuleDialog

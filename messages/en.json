@@ -687,16 +687,19 @@
     "cancel": "Cancel",
     "save": "Save",
     "saving": "Saving…",
-    "listHint": "Rename or group merchants from Top merchants in Insights.",
-    "empty": "No renamed merchant. Use the pencil in Top merchants on Insights.",
-    "edit": "Edit {name}",
-    "delete": "Restore the bank labels of {name}",
-    "deleteConfirm": "Restore the bank labels for “{name}”?",
+    "empty": "No spending yet: merchants show up after an import.",
     "error": {
       "INVALID": "The name must be 1 to 60 characters.",
       "NOT_FOUND": "This name no longer exists. Reload the page.",
       "FAILED": "Saving failed."
-    }
+    },
+    "search": "Search a merchant",
+    "renamedSection": "Renamed",
+    "othersSection": "Other merchants",
+    "showMore": "Show {count} more",
+    "noMatch": "No merchant matches.",
+    "count": "{count}×",
+    "noCategory": "Uncategorized"
   },
   "insights": {
     "overline": "Insights",

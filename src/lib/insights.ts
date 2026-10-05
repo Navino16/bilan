@@ -19,6 +19,7 @@ export type MerchantTotal = {
   categoryId: string | null;
 };
 export type MerchantAliasGroup = { name: string; keys: string[] };
+export type MerchantDirectory = { renamed: MerchantTotal[]; others: MerchantTotal[] };
 export type IncomeByCategory = { categoryId: string | null; current: number; previous: number };
 export type InsightsData = {
   changes: CategoryChange[];

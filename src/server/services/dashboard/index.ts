@@ -105,14 +105,14 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-type AggRow = CollapsibleRow & { accountId: string; type: string; labelEnc: string | null };
+export type AggRow = CollapsibleRow & { accountId: string; type: string; labelEnc: string | null };
 
 // Loads the period's rows over CLEAR columns only (amount/date/categoryId +
 // link id) and collapses links: balanced groups drop out, unbalanced groups
 // become one net row on their primary. `count` is the number of REAL
 // transactions in the period (pre-collapse) — a linked pair is still two
 // transactions the user made. Labels stay encrypted unless `withLabels` asks for
-// the ciphertext (insights merchants decrypt it).
+// the ciphertext (merchant rows decrypt it).
 export async function loadRows(
   accountIds: string[],
   period: Period,

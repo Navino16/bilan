@@ -3,7 +3,7 @@ import { requireSession } from "@/server/auth/permissions";
 import { listForUser } from "@/server/services/categories";
 import { listRulesForUser } from "@/server/services/categorization";
 import { listGroupsForUser } from "@/server/services/groups";
-import { listAliasGroups } from "@/server/services/merchants";
+import { getMerchantDirectory } from "@/server/services/merchants";
 import { flattenCategories } from "@/components/transactions/category-tree";
 import { CategoriesView } from "@/components/categories/categories-view";
 import type { RuleMatchType } from "@/lib/validation/rule";
@@ -18,7 +18,7 @@ export default async function CategoriesPage({ params }: { params: Promise<{ loc
   const flatCategories = flattenCategories(tree);
   const ruleRows = await listRulesForUser(user.id);
   const groups = (await listGroupsForUser(user.id)).map((g) => ({ id: g.id, name: g.name }));
-  const aliases = await listAliasGroups(user.id);
+  const merchants = await getMerchantDirectory(user.id);
 
   const rules = ruleRows.map((r) => ({
     id: r.id,
@@ -40,7 +40,7 @@ export default async function CategoriesPage({ params }: { params: Promise<{ loc
       flatCategories={flatCategories}
       rules={rules}
       groups={groups}
-      aliases={aliases}
+      merchants={merchants}
     />
   );
 }

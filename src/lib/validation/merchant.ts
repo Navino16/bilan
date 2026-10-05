@@ -12,6 +12,7 @@ export const merchantKeySchema = z
   .string()
   .transform((k) =>
     k
+      .replace(/\s+/g, " ")
       .trim()
       .normalize("NFD")
       .replace(/\p{Diacritic}/gu, "")
