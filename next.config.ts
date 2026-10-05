@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
   // bundling them breaks the worker resolution ("Setting up fake worker failed").
   // Keep them external so they are required from node_modules instead.
   serverExternalPackages: ["pdf-parse", "pdfjs-dist"],
+  // Dev only: reach the dev server from private-network addresses (WSL IP, phone on the LAN).
+  allowedDevOrigins: ["10.*.*.*", "172.*.*.*", "192.168.*.*"],
 };
 
 export default withNextIntl(nextConfig);

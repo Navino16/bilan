@@ -42,7 +42,8 @@ const SECURITY_HEADERS: Record<string, string> = {
     "frame-ancestors 'none'",
     "form-action 'self'",
     "base-uri 'self'",
-    "upgrade-insecure-requests",
+    // Dev is plain HTTP: upgrading would break any non-localhost access (LAN, WSL IP).
+    ...(isProd ? ["upgrade-insecure-requests"] : []),
   ].join("; "),
 };
 
