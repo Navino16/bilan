@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "@/server/db";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
 import { exportUserData, deleteUser } from "@/server/services/rgpd";
+import { renameMerchant } from "@/server/services/merchants";
 
 const userId = "rgpd_owner";
 const ownerB = "rgpd_ownerB";
@@ -47,6 +48,8 @@ beforeAll(async () => {
     },
   });
 
+  await renameMerchant(userId, "FONCIA LOYER", "Loyer");
+
   groupId = (await db.group.create({ data: { name: "Foyer", createdById: userId } })).id;
   await db.groupMember.create({ data: { groupId, userId, role: "OWNER" } });
 });
@@ -67,6 +70,7 @@ describe("rgpd", () => {
     expect(data.accounts).toHaveLength(1);
     expect(data.transactions[0].label).toBe("Loyer"); // decrypted
     expect(data.budgets.length).toBeGreaterThanOrEqual(1);
+    expect(data.merchantAliases).toEqual([{ merchant: "FONCIA LOYER", name: "Loyer" }]);
   });
 
   it("deleteUser cascades owned data, clears FK-less rows, revokes sessions, keeps an anonymous audit entry", async () => {
@@ -77,6 +81,7 @@ describe("rgpd", () => {
     expect(await db.user.findUnique({ where: { id: userId } })).toBeNull();
     expect(await db.session.count({ where: { userId } })).toBe(0);
     expect(await db.bankAccount.count({ where: { ownerId: userId } })).toBe(0);
+    expect(await db.merchantAlias.count({ where: { userId } })).toBe(0);
     const audit = await db.auditLog.findFirst({
       where: { action: "user.deleted" },
       orderBy: { createdAt: "desc" },

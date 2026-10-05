@@ -4,6 +4,7 @@ import { buildSecureFields } from "@/server/services/transactions/secure-fields"
 import { getCategoryHistory, getInsights } from "@/server/services/dashboard/insights";
 import { createLink } from "@/server/services/links";
 import { comparisonFor, monthPeriod } from "@/lib/period";
+import { deleteAliasGroup, renameMerchant } from "@/server/services/merchants";
 
 const owner = "insights_owner";
 let accountId: string;
@@ -96,9 +97,26 @@ describe("getInsights", () => {
   it("ranks merchants without transfers or balanced links", async () => {
     const data = await getInsights(owner, period, comparisonFor(period, "prev", later));
     expect(data.merchants).toEqual([
-      { label: "FONCIA LOYER", total: 700, count: 1, categoryId: rent },
-      { label: "CARREFOUR", total: 50, count: 2, categoryId: food },
+      expect.objectContaining({ label: "FONCIA LOYER", total: 700, count: 1, categoryId: rent }),
+      expect.objectContaining({ label: "CARREFOUR", total: 50, count: 2, categoryId: food }),
     ]);
+    expect(data.aliasGroups).toEqual([]);
+  });
+
+  it("applies the user's merchant aliases", async () => {
+    await renameMerchant(owner, "FONCIA LOYER", "Loyer");
+    try {
+      const data = await getInsights(owner, period, comparisonFor(period, "prev", later));
+      expect(data.merchants[0]).toMatchObject({
+        label: "Loyer",
+        search: "FONCIA LOYER",
+        alias: "Loyer",
+        keys: ["FONCIA LOYER"],
+      });
+      expect(data.aliasGroups).toEqual([{ name: "Loyer", keys: ["FONCIA LOYER"] }]);
+    } finally {
+      await deleteAliasGroup(owner, "Loyer");
+    }
   });
 
   it("breaks income down by category", async () => {

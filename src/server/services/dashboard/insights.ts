@@ -1,6 +1,7 @@
 import { decrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
 import { listVisibleForUser } from "@/server/services/accounts";
+import { listAliasGroups } from "@/server/services/merchants";
 import { round2 } from "@/lib/budgets";
 import {
   categoryChanges,
@@ -30,9 +31,10 @@ export async function getInsights(
   comparison: Comparison,
 ): Promise<InsightsData> {
   const accountIds = (await listVisibleForUser(userId)).map((a) => a.id);
-  const [current, prev] = await Promise.all([
+  const [current, prev, aliases] = await Promise.all([
     loadRows(accountIds, period, { withLabels: true }),
     referenceRows(accountIds, comparison),
+    listAliasGroups(userId),
   ]);
 
   // Only the rows a merchant can come from are decrypted.
@@ -49,7 +51,12 @@ export async function getInsights(
   const income = incomeByCategory(current.rows, prev);
   return {
     changes: categoryChanges(current.rows, prev),
-    merchants: topMerchants(merchantRows, TOP_MERCHANTS),
+    merchants: topMerchants(
+      merchantRows,
+      TOP_MERCHANTS,
+      new Map(aliases.flatMap((g) => g.keys.map((k) => [k, g.name] as const))),
+    ),
+    aliasGroups: aliases,
     income,
     incomeTotal: round2(income.reduce((s, i) => s + i.current, 0)),
   };

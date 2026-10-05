@@ -10,6 +10,8 @@ import { CategoryForm } from "./category-form";
 import { CategoryList } from "./category-list";
 import { RulesList, type RuleRow } from "./rules-list";
 import { RuleDialog } from "./rule-dialog";
+import { MerchantAliasList } from "@/components/merchants/merchant-alias-list";
+import type { MerchantAliasGroup } from "@/lib/insights";
 import type { CategoryNode } from "@/server/services/categories";
 import { PageHeader } from "@/components/shell/page-header";
 
@@ -18,15 +20,18 @@ export function CategoriesView({
   flatCategories,
   rules,
   groups,
+  aliases,
 }: {
   tree: CategoryNode[];
   flatCategories: FlatCategory[];
   rules: RuleRow[];
   groups: { id: string; name: string }[];
+  aliases: MerchantAliasGroup[];
 }) {
   const t = useTranslations("rules");
   const tc = useTranslations("categories");
-  const [tab, setTab] = useState<"cats" | "rules">("cats");
+  const tm = useTranslations("merchants");
+  const [tab, setTab] = useState<"cats" | "rules" | "merchants">("cats");
   const [ruleOpen, setRuleOpen] = useState(false);
   const parents = tree.map((n) => ({ id: n.id, name: n.name }));
 
@@ -47,12 +52,12 @@ export function CategoriesView({
                 </Button>
               }
             />
-          ) : (
+          ) : tab === "rules" ? (
             <Button onClick={() => setRuleOpen(true)}>
               <Plus />
               {t("new")}
             </Button>
-          )
+          ) : null
         }
       />
 
@@ -60,6 +65,7 @@ export function CategoriesView({
         items={[
           { id: "cats", label: `${t("tabCategories")} (${flatCategories.length})` },
           { id: "rules", label: `${t("tabRules")} (${rules.length})` },
+          { id: "merchants", label: `${tm("tab")} (${aliases.length})` },
         ]}
         value={tab}
         onChange={setTab}
@@ -67,8 +73,10 @@ export function CategoriesView({
 
       {tab === "cats" ? (
         <CategoryList tree={tree} />
-      ) : (
+      ) : tab === "rules" ? (
         <RulesList rules={rules} categories={flatCategories} groups={groups} />
+      ) : (
+        <MerchantAliasList aliases={aliases} />
       )}
 
       <RuleDialog

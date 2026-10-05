@@ -2,6 +2,7 @@ import { db } from "@/server/db";
 import { decrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
 import { logEvent } from "@/server/services/audit";
+import { loadAliases } from "@/server/services/merchants";
 
 export type UserDataExport = {
   exportedAt: string;
@@ -20,6 +21,7 @@ export type UserDataExport = {
   }[];
   categories: unknown[];
   rules: unknown[];
+  merchantAliases: { merchant: string; name: string }[];
   budgets: unknown[];
   groups: unknown[];
   invitationsSent: unknown[];
@@ -35,6 +37,7 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
     accounts,
     categories,
     rules,
+    aliases,
     budgets,
     memberships,
     invitationsSent,
@@ -48,6 +51,7 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
     db.bankAccount.findMany({ where: { ownerId: userId } }),
     db.category.findMany({ where: { userId } }),
     db.categorizationRule.findMany({ where: { userId } }),
+    loadAliases(userId),
     db.budget.findMany({ where: { userId }, include: { lines: true, assignments: true } }),
     db.groupMember.findMany({ where: { userId }, include: { group: true } }),
     db.groupInvitation.findMany({ where: { invitedById: userId } }),
@@ -80,6 +84,7 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
     transactions,
     categories,
     rules,
+    merchantAliases: [...aliases].map(([merchant, name]) => ({ merchant, name })),
     budgets,
     groups: memberships,
     invitationsSent,
@@ -121,7 +126,7 @@ export async function deleteUser(userId: string, _actor: { id: string }): Promis
   }
 
   // Cascade: User → accounts → transactions/links/tokens/importbatches/budgetlines,
-  // categories, budgets, rules, memberships, sessions, authAccounts, twoFactors,
+  // categories, budgets, rules, merchant aliases, memberships, sessions, authAccounts, twoFactors,
   // passkeys, preference (all onDelete: Cascade on userId/ownerId).
   await db.user.delete({ where: { id: userId } });
 
