@@ -2,7 +2,8 @@ import { db } from "@/server/db";
 import { listVisibleForUser } from "@/server/services/accounts";
 import { listTransactions, type TransactionListItem } from "@/server/services/transactions";
 import { collapseLinkedRows, type CollapsibleRow } from "@/lib/links";
-import type { Period } from "@/lib/period";
+import { averageMonthRows, type AmountRow } from "@/lib/insights";
+import { monthsSpan, type Comparison, type Period } from "@/lib/period";
 
 export type DashboardTotals = { income: number; expense: number; net: number; count: number };
 export type TracePoint = { date: string; amount: number };
@@ -147,7 +148,7 @@ export async function loadRows(
   return { rows: collapsed, count: rows.length };
 }
 
-function totalsOf(rows: AggRow[], count: number): DashboardTotals {
+function totalsOf(rows: { amount: number }[], count: number): DashboardTotals {
   let income = 0;
   let expense = 0;
   for (const r of rows) {
@@ -162,20 +163,32 @@ function totalsOf(rows: AggRow[], count: number): DashboardTotals {
   };
 }
 
+// The side the period is compared with: the previous period, or one average month
+// built from a single load over the N months (links collapse across month boundaries).
+export async function referenceRows(
+  accountIds: string[],
+  comparison: Comparison,
+): Promise<AmountRow[]> {
+  const { months, elapsedDays } = comparison;
+  if (months.length === 0) return (await loadRows(accountIds, comparison.previous)).rows;
+  const { rows } = await loadRows(accountIds, monthsSpan(months));
+  return averageMonthRows(rows, months.length, elapsedDays);
+}
+
 export async function getDashboard(
   userId: string,
   period: Period,
-  previous: Period,
+  comparison: Comparison,
 ): Promise<DashboardData> {
   const accountIds = (await listVisibleForUser(userId)).map((a) => a.id);
 
   // Independent queries for the two periods → run them together.
   const [current, previousLoaded] = await Promise.all([
     loadRows(accountIds, period),
-    loadRows(accountIds, previous),
+    referenceRows(accountIds, comparison),
   ]);
   const totals = totalsOf(current.rows, current.count);
-  const prev = totalsOf(previousLoaded.rows, previousLoaded.count);
+  const prev = totalsOf(previousLoaded, 0);
 
   // Expenses (post-collapse) for by-category + trace.
   const expenseRows: ExpenseRow[] = current.rows

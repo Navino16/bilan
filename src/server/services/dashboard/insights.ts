@@ -3,12 +3,10 @@ import { dataKey } from "@/server/crypto/keys";
 import { listVisibleForUser } from "@/server/services/accounts";
 import { round2 } from "@/lib/budgets";
 import {
-  averageMonthRows,
   categoryChanges,
   incomeByCategory,
   monthlyCategoryTotals,
   topMerchants,
-  type AmountRow,
   type CategoryHistory,
   type InsightsData,
   type MerchantRow,
@@ -21,7 +19,7 @@ import {
   type Comparison,
   type Period,
 } from "@/lib/period";
-import { loadRows } from "./index";
+import { loadRows, referenceRows } from "./index";
 
 const TOP_MERCHANTS = 6;
 const HISTORY_MONTHS = 12;
@@ -55,15 +53,6 @@ export async function getInsights(
     income,
     incomeTotal: round2(income.reduce((s, i) => s + i.current, 0)),
   };
-}
-
-// The side the period is compared with: the previous period, or one average month
-// built from a single load over the N months (links collapse across month boundaries).
-async function referenceRows(accountIds: string[], comparison: Comparison): Promise<AmountRow[]> {
-  const { months, elapsedDays } = comparison;
-  if (months.length === 0) return (await loadRows(accountIds, comparison.previous)).rows;
-  const { rows } = await loadRows(accountIds, monthsSpan(months));
-  return averageMonthRows(rows, months.length, elapsedDays);
 }
 
 // One load over the whole window so links spanning two months collapse like on the dashboard.

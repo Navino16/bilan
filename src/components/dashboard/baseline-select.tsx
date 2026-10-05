@@ -7,7 +7,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { BASELINES, type Baseline } from "@/lib/period";
 
 export function BaselineSelect({ value }: { value: Baseline }) {
-  const t = useTranslations("insights");
+  const t = useTranslations("dashboard");
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -30,7 +30,7 @@ export function BaselineSelect({ value }: { value: Baseline }) {
       <span className="text-muted-foreground">{t("compareTo")}</span>
       <NativeSelect
         size="sm"
-        data-slot="insights-baseline"
+        data-slot="baseline-select"
         aria-busy={pending}
         value={shown}
         onChange={(e) => change(e.target.value as Baseline)}

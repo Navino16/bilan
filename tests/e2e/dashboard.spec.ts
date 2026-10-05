@@ -127,4 +127,22 @@ test.describe("dashboard", () => {
     await page.getByRole("button", { name: "prev", exact: true }).click();
     await expect(heading).toHaveText(String(thisYear - 1));
   });
+  test("KPIs compare with an N-month average when picked", async ({ page }) => {
+    await page.goto("/fr/dashboard?from=2026-03-01&to=2026-03-31", {
+      waitUntil: "domcontentloaded",
+      timeout: 90_000,
+    });
+    const baseline = page.locator('[data-slot="baseline-select"]');
+    await expect(async () => {
+      await expect(baseline).toBeVisible();
+    }).toPass();
+    // Selecting before hydration changes the value without firing React's onChange.
+    await page.waitForFunction(() => {
+      const el = document.querySelector('[data-slot="baseline-select"]');
+      return !!el && Object.keys(el).some((k) => k.startsWith("__reactProps"));
+    });
+    await baseline.selectOption("avg3");
+    await expect(page).toHaveURL(/vs=avg3/, { timeout: 60_000 });
+    await expect(page.locator('[data-slot="kpi-note"]').nth(1)).toContainText("3 mois");
+  });
 });

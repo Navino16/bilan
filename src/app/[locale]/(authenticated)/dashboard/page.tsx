@@ -3,12 +3,7 @@ import { requireSession } from "@/server/auth/permissions";
 import { listForUser } from "@/server/services/categories";
 import { flattenCategories } from "@/components/transactions/category-tree";
 import { getDashboard } from "@/server/services/dashboard";
-import {
-  parsePeriodParams,
-  previousPeriod,
-  clampPeriodToNow,
-  periodInProgress,
-} from "@/lib/period";
+import { parsePeriodParams, clampPeriodToNow, parseBaseline, comparisonFor } from "@/lib/period";
 import { DashboardView } from "@/components/dashboard/dashboard-view";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +13,7 @@ export default async function DashboardPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ from?: string; to?: string }>;
+  searchParams: Promise<{ from?: string; to?: string; vs?: string }>;
 }) {
   const { locale } = await params;
   const sp = await searchParams;
@@ -26,9 +21,9 @@ export default async function DashboardPage({
   const user = await requireSession();
 
   const period = clampPeriodToNow(parsePeriodParams({ from: sp.from, to: sp.to }));
-  const previous = previousPeriod(period);
+  const comparison = comparisonFor(period, parseBaseline(sp.vs, period));
   const [data, categories] = await Promise.all([
-    getDashboard(user.id, period, previous),
+    getDashboard(user.id, period, comparison),
     listForUser(user.id).then(flattenCategories),
   ]);
 
@@ -36,8 +31,7 @@ export default async function DashboardPage({
     <DashboardView
       data={data}
       period={period}
-      previous={previous}
-      inProgress={periodInProgress(period)}
+      comparison={comparison}
       categories={categories}
       locale={locale}
     />

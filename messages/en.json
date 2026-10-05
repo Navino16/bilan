@@ -659,7 +659,19 @@
     },
     "apply": "Apply",
     "vsPrevAmount": "{arrow} {amount} vs previous period",
-    "periodInProgress": "Period in progress: compared with the full previous period ({previous})."
+    "compareTo": "Compared with",
+    "baseline": {
+      "prev": "the previous month",
+      "avg3": "the 3-month average",
+      "avg6": "the 6-month average",
+      "avg12": "the 12-month average"
+    },
+    "inProgressPrev": "Period in progress: compared with the same number of days of the previous period ({previous}).",
+    "inProgressAvg": "Period in progress: compared with the same days ({day, plural, =1 {the 1st} other {days 1–#}} of each month).",
+    "vsAvg": "{arrow} {pct} % vs {months}-month average",
+    "vsAvgAmount": "{arrow} {amount} vs {months}-month average",
+    "noSameDate": "Nothing at the same date",
+    "noAvg": "Nothing over the previous {months} months"
   },
   "insights": {
     "overline": "Insights",
@@ -689,16 +701,7 @@
     "historyInProgress": "{month} (in progress)",
     "historyBar": "{month}: {amount}",
     "historyEmpty": "No spending over these {count} months.",
-    "compareTo": "Compared with",
-    "baseline": {
-      "prev": "the previous month",
-      "avg3": "the 3-month average",
-      "avg6": "the 6-month average",
-      "avg12": "the 12-month average"
-    },
-    "changesSubAvg": "{current} vs average of {months} · spending by category",
-    "inProgressPrev": "Period in progress: compared with the same number of days of the previous period ({previous}).",
-    "inProgressAvg": "Period in progress: compared with the same days ({day, plural, =1 {the 1st} other {days 1–#}} of each month)."
+    "changesSubAvg": "{current} vs average of {months} · spending by category"
   },
   "settings": {
     "data": {
