@@ -1,0 +1,8 @@
+{
+  "name": "bilan-migrate",
+  "private": true,
+  "dependencies": {
+    "dotenv": "17.4.2",
+    "prisma": "7.8.0"
+  }
+}

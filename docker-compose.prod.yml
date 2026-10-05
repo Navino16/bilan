@@ -1,0 +1,63 @@
+# Production stack (README "Self-hosting"). Needs app.env, db.env and keyring/keyfile
+# next to this file; no repo checkout.
+name: bilan
+
+services:
+  mariadb:
+    image: mariadb:11
+    restart: unless-stopped
+    env_file:
+      - db.env
+    environment:
+      MARIADB_DATABASE: bilan
+      MARIADB_USER: bilan
+    command:
+      - --plugin-load-add=file_key_management
+      - --file-key-management-filename=/etc/mysql/keyring/keyfile
+      - --file-key-management-encryption-algorithm=AES_CTR
+      - --innodb-encrypt-tables=ON
+      - --innodb-encrypt-log=ON
+      - --innodb-encryption-threads=4
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./keyring:/etc/mysql/keyring:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    image: ghcr.io/navino16/bilan:${BILAN_VERSION:-latest}
+    restart: unless-stopped
+    init: true
+    env_file:
+      - app.env
+    ports:
+      - "${BILAN_PORT:-3000}:3000"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    healthcheck:
+      # Fresh install: /fr/login redirects to /fr/setup; either answer needs the database.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/fr/login"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 90s
+
+  cron:
+    image: ghcr.io/navino16/bilan:${BILAN_VERSION:-latest}
+    restart: unless-stopped
+    init: true
+    user: root
+    # Same image and trust domain as the app; only CRON_SECRET is read (spec §7).
+    env_file:
+      - app.env
+    command: ["sh", "/opt/cron/start.sh"]
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  mariadb_data:

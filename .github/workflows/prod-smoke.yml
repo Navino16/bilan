@@ -1,0 +1,37 @@
+name: Prod smoke
+
+# A separate workflow: GitHub Actions cannot path-filter one job inside ci.yml (spec §9).
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - "docker/**"
+      - docker-compose.prod.yml
+      - "prisma/**"
+      - prisma.config.ts
+      - next.config.ts
+      - src/instrumentation.ts
+      - package.json
+      - package-lock.json
+      - scripts/prod-smoke.sh
+      - .github/workflows/prod-smoke.yml
+
+concurrency:
+  group: prod-smoke-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Prod smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Boot the prod compose and check it
+        run: bash scripts/prod-smoke.sh

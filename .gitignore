@@ -67,3 +67,8 @@ tests/e2e/.auth
 
 # Encrypted DB backups (scripts/backup.sh)
 backups/
+
+# Prod runtime files (README "Self-hosting")
+/app.env
+/db.env
+/keyring/
