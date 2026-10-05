@@ -3,7 +3,7 @@ import { db } from "@/server/db";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
 import { getCategoryHistory, getInsights } from "@/server/services/dashboard/insights";
 import { createLink } from "@/server/services/links";
-import { monthPeriod, previousMonthPeriod } from "@/lib/period";
+import { comparisonFor, monthPeriod } from "@/lib/period";
 
 const owner = "insights_owner";
 let accountId: string;
@@ -82,9 +82,10 @@ afterAll(async () => {
 
 describe("getInsights", () => {
   const period = monthPeriod(2026, 3);
+  const later = new Date("2026-10-05");
 
   it("compares expenses per category with the previous period, biggest change first", async () => {
-    const data = await getInsights(owner, period, previousMonthPeriod(period));
+    const data = await getInsights(owner, period, comparisonFor(period, "prev", later));
     expect(data.changes).toEqual([
       { categoryId: null, current: 300, previous: 0, diff: 300 },
       { categoryId: rent, current: 700, previous: 500, diff: 200 },
@@ -93,7 +94,7 @@ describe("getInsights", () => {
   });
 
   it("ranks merchants without transfers or balanced links", async () => {
-    const data = await getInsights(owner, period, previousMonthPeriod(period));
+    const data = await getInsights(owner, period, comparisonFor(period, "prev", later));
     expect(data.merchants).toEqual([
       { label: "FONCIA LOYER", total: 700, count: 1, categoryId: rent },
       { label: "CARREFOUR", total: 50, count: 2, categoryId: food },
@@ -101,9 +102,40 @@ describe("getInsights", () => {
   });
 
   it("breaks income down by category", async () => {
-    const data = await getInsights(owner, period, previousMonthPeriod(period));
+    const data = await getInsights(owner, period, comparisonFor(period, "prev", later));
     expect(data.income).toEqual([{ categoryId: pay, current: 2000, previous: 1000 }]);
     expect(data.incomeTotal).toBe(2000);
+  });
+});
+
+describe("getInsights against an N-month average", () => {
+  const period = monthPeriod(2026, 3);
+
+  it("compares with the monthly average of the months before, empty months counting as 0", async () => {
+    const data = await getInsights(
+      owner,
+      period,
+      comparisonFor(period, "avg3", new Date("2026-10-05")),
+    );
+    expect(data.changes).toEqual([
+      { categoryId: rent, current: 700, previous: 166.67, diff: 533.33 },
+      { categoryId: null, current: 300, previous: 0, diff: 300 },
+      { categoryId: food, current: 50, previous: 6.67, diff: 43.33 },
+    ]);
+    expect(data.income).toEqual([{ categoryId: pay, current: 2000, previous: 333.33 }]);
+  });
+
+  it("cuts the averaged months to the same days while the month is in progress", async () => {
+    const data = await getInsights(
+      owner,
+      period,
+      comparisonFor(period, "avg3", new Date("2026-03-10T12:00:00Z")),
+    );
+    expect(data.changes).toEqual([
+      { categoryId: rent, current: 700, previous: 166.67, diff: 533.33 },
+      { categoryId: null, current: 300, previous: 0, diff: 300 },
+      { categoryId: food, current: 50, previous: 6.67, diff: 43.33 },
+    ]);
   });
 });
 

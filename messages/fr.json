@@ -688,7 +688,17 @@
     "historyMonths": "{count} mois",
     "historyInProgress": "{month} (en cours)",
     "historyBar": "{month} : {amount}",
-    "historyEmpty": "Aucune dépense sur ces {count} mois."
+    "historyEmpty": "Aucune dépense sur ces {count} mois.",
+    "compareTo": "Comparé à",
+    "baseline": {
+      "prev": "le mois précédent",
+      "avg3": "la moyenne sur 3 mois",
+      "avg6": "la moyenne sur 6 mois",
+      "avg12": "la moyenne sur 12 mois"
+    },
+    "changesSubAvg": "{current} vs moyenne {months} · dépenses par catégorie",
+    "inProgressPrev": "Période en cours : comparée au même nombre de jours de la période précédente ({previous}).",
+    "inProgressAvg": "Période en cours : comparée à la même date ({day, plural, =1 {le 1er} other {du 1er au #}} de chaque mois)."
   },
   "settings": {
     "data": {
