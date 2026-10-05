@@ -6,12 +6,13 @@ import { Donut, MiniBars } from "./charts";
 import { PeriodNav } from "./period-nav";
 import { PeriodPicker } from "./period-picker";
 import type { DashboardData } from "@/server/services/dashboard";
-import type { Period } from "@/lib/period";
+import type { Comparison, Period } from "@/lib/period";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import { formatPeriodLabel, toIsoDay } from "@/lib/period";
 import { PageHeader } from "@/components/shell/page-header";
 import { categorySliceColors } from "@/lib/chart-colors";
-import { PeriodInProgress } from "./period-in-progress";
+import { BaselineSelect } from "./baseline-select";
+import { ComparisonNote } from "./comparison-note";
 
 const DEFAULT_COLOR = "#2563eb";
 
@@ -24,15 +25,13 @@ function delta(cur: number, prev: number): { pct: number; up: boolean } | null {
 export async function DashboardView({
   data,
   period,
-  previous,
-  inProgress,
+  comparison,
   categories,
   locale,
 }: {
   data: DashboardData;
   period: Period;
-  previous: Period;
-  inProgress: boolean;
+  comparison: Comparison;
   categories: FlatCategory[];
   locale: string;
 }) {
@@ -79,8 +78,17 @@ export async function DashboardView({
   const peak = data.trace.peak;
   const peakCatName = peak?.categoryId ? catById.get(peak.categoryId)?.name : undefined;
 
-  const pctNote = (d: ReturnType<typeof delta>) =>
-    d ? t("vsPrev", { arrow: d.up ? "↗" : "↘", pct: pctFmt.format(Math.abs(d.pct)) }) : t("noPrev");
+  const months = comparison.months.length;
+  const noReference = comparison.elapsedDays
+    ? t("noSameDate")
+    : months
+      ? t("noAvg", { months })
+      : t("noPrev");
+  const pctNote = (d: ReturnType<typeof delta>) => {
+    if (!d) return noReference;
+    const args = { arrow: d.up ? "↗" : "↘", pct: pctFmt.format(Math.abs(d.pct)) };
+    return months ? t("vsAvg", { ...args, months }) : t("vsPrev", args);
+  };
   // The net can change sign between periods, which makes a % meaningless (issue #112 §7):
   // it shows the difference in euros instead.
   const netDiff = data.totals.net - data.previous.net;
@@ -109,8 +117,12 @@ export async function DashboardView({
       key: "net",
       value: data.totals.net,
       note: hasPrevious
-        ? t("vsPrevAmount", { arrow: netDiff >= 0 ? "↗" : "↘", amount: diffFmt.format(netDiff) })
-        : t("noPrev"),
+        ? t(months ? "vsAvgAmount" : "vsPrevAmount", {
+            arrow: netDiff >= 0 ? "↗" : "↘",
+            amount: diffFmt.format(netDiff),
+            months,
+          })
+        : noReference,
       tone: data.totals.net >= 0 ? "var(--income)" : "var(--expense)",
     },
   ] as const;
@@ -132,11 +144,8 @@ export async function DashboardView({
             </div>
           }
         />
-        {inProgress && (
-          <PeriodInProgress>
-            {t("periodInProgress", { previous: formatPeriodLabel(previous, locale) })}
-          </PeriodInProgress>
-        )}
+        {period.month && <BaselineSelect value={comparison.baseline} />}
+        <ComparisonNote comparison={comparison} locale={locale} />
       </div>
 
       {/* KPI row */}

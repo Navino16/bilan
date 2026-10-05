@@ -4,12 +4,12 @@ import { Card } from "@/components/ui/card";
 import { overline } from "@/components/transactions/bits";
 import { PeriodNav } from "@/components/dashboard/period-nav";
 import { PeriodPicker } from "@/components/dashboard/period-picker";
-import { PeriodInProgress } from "@/components/dashboard/period-in-progress";
+import { ComparisonNote } from "@/components/dashboard/comparison-note";
 import { PageHeader } from "@/components/shell/page-header";
 import { DivergingBar } from "./diverging-bar";
 import { CardTitle, DEFAULT_COLOR, Dot, ROW_LINK } from "./bits";
 import { CategoryHistoryCard } from "./category-history";
-import { BaselineSelect } from "./baseline-select";
+import { BaselineSelect } from "@/components/dashboard/baseline-select";
 import { categorySliceColors } from "@/lib/chart-colors";
 import {
   formatPeriodLabel,
@@ -141,13 +141,7 @@ export async function InsightsView({
           }
         />
         {period.month && <BaselineSelect value={comparison.baseline} />}
-        {comparison.elapsedDays && (
-          <PeriodInProgress>
-            {averaged
-              ? t("inProgressAvg", { day: comparison.elapsedDays })
-              : t("inProgressPrev", { previous: formatPeriodLabel(reference, locale) })}
-          </PeriodInProgress>
-        )}
+        <ComparisonNote comparison={comparison} locale={locale} />
       </div>
 
       <div className="grid grid-cols-2 gap-3">

@@ -119,13 +119,13 @@ test.describe("insights", () => {
       waitUntil: "domcontentloaded",
       timeout: 90_000,
     });
-    const baseline = page.locator('[data-slot="insights-baseline"]');
+    const baseline = page.locator('[data-slot="baseline-select"]');
     await expect(async () => {
       await expect(baseline).toBeVisible();
     }).toPass();
     // Selecting before hydration changes the value without firing React's onChange.
     await page.waitForFunction(() => {
-      const el = document.querySelector('[data-slot="insights-baseline"]');
+      const el = document.querySelector('[data-slot="baseline-select"]');
       return !!el && Object.keys(el).some((k) => k.startsWith("__reactProps"));
     });
     await baseline.selectOption("avg3");

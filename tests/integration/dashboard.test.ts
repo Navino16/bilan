@@ -3,7 +3,7 @@ import { db } from "@/server/db";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
 import { getDashboard } from "@/server/services/dashboard";
 import { createLink } from "@/server/services/links";
-import { monthPeriod, previousMonthPeriod } from "@/lib/period";
+import { comparisonFor, monthPeriod } from "@/lib/period";
 
 const owner = "dash_owner";
 let accountId: string;
@@ -56,10 +56,12 @@ afterAll(async () => {
   await db.$disconnect();
 });
 
+const later = new Date("2026-10-05");
+
 describe("getDashboard", () => {
   it("totals income/expense/net for the month and the previous month", async () => {
     const period = monthPeriod(2026, 3);
-    const data = await getDashboard(owner, period, previousMonthPeriod(period));
+    const data = await getDashboard(owner, period, comparisonFor(period, "prev", later));
     expect(data.totals.income).toBe(2000);
     expect(data.totals.expense).toBe(750); // 40 + 10 + 700
     expect(data.totals.net).toBe(1250);
@@ -71,14 +73,14 @@ describe("getDashboard", () => {
 
   it("groups expenses by category, highest first", async () => {
     const period = monthPeriod(2026, 3);
-    const data = await getDashboard(owner, period, previousMonthPeriod(period));
+    const data = await getDashboard(owner, period, comparisonFor(period, "prev", later));
     expect(data.byCategory[0]).toEqual({ categoryId: catB, amount: 700 });
     expect(data.byCategory[1]).toEqual({ categoryId: catA, amount: 50 });
   });
 
   it("returns a per-day expense trace and recent transactions for a month", async () => {
     const period = monthPeriod(2026, 3);
-    const data = await getDashboard(owner, period, previousMonthPeriod(period));
+    const data = await getDashboard(owner, period, comparisonFor(period, "prev", later));
     expect(data.trace.granularity).toBe("day");
     const day2 = data.trace.points.find((d) => d.date === "2026-03-02");
     expect(day2?.amount).toBe(50);
@@ -89,7 +91,7 @@ describe("getDashboard", () => {
 
   it("reports the average per bucket and the peak bucket with its top category", async () => {
     const period = monthPeriod(2026, 3);
-    const data = await getDashboard(owner, period, previousMonthPeriod(period));
+    const data = await getDashboard(owner, period, comparisonFor(period, "prev", later));
     expect(data.trace.avg).toBeCloseTo(750 / 31, 2); // total expense / days in March
     expect(data.trace.peak).toEqual({ date: "2026-03-05", amount: 700, categoryId: catB });
   });
@@ -101,7 +103,7 @@ describe("getDashboard", () => {
       year: null,
       month: null,
     };
-    const data = await getDashboard(owner, q1, previousMonthPeriod(monthPeriod(2026, 1)));
+    const data = await getDashboard(owner, q1, comparisonFor(q1, "prev", later));
     expect(data.trace.granularity).toBe("month");
     expect(data.trace.points).toHaveLength(3); // Jan, Feb, Mar
     expect(data.trace.points.find((p) => p.date === "2026-01-01")?.amount).toBe(0);
@@ -109,6 +111,25 @@ describe("getDashboard", () => {
     expect(data.trace.points.find((p) => p.date === "2026-03-01")?.amount).toBe(750);
     expect(data.trace.avg).toBeCloseTo((0 + 500 + 750) / 3, 2);
     expect(data.trace.peak).toEqual({ date: "2026-03-01", amount: 750, categoryId: catB });
+  });
+});
+
+describe("getDashboard comparison baselines", () => {
+  const period = monthPeriod(2026, 3);
+
+  it("compares with the monthly average of the months before", async () => {
+    const data = await getDashboard(owner, period, comparisonFor(period, "avg3", later));
+    expect(data.previous).toEqual({ income: 333.33, expense: 166.67, net: 166.67 });
+  });
+
+  it("cuts the previous month to the same days while the month is in progress", async () => {
+    const data = await getDashboard(
+      owner,
+      period,
+      comparisonFor(period, "prev", new Date("2026-03-08T12:00:00Z")),
+    );
+    expect(data.previous).toEqual({ income: 0, expense: 0, net: 0 });
+    expect(data.totals.expense).toBe(750);
   });
 });
 
@@ -133,7 +154,7 @@ describe("getDashboard link-aware totals", () => {
     await createLink({ transactionIds: [find(-50), find(50)], userId: owner });
     await createLink({ transactionIds: [find(-80), find(30)], userId: owner });
 
-    const data = await getDashboard(owner, period, previousMonthPeriod(period));
+    const data = await getDashboard(owner, period, comparisonFor(period, "prev", later));
     // Balanced pair contributes nothing; unbalanced collapses to a −50 expense.
     expect(data.totals.income).toBe(0);
     expect(data.totals.expense).toBe(50);
