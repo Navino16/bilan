@@ -9,8 +9,15 @@ import { PageHeader } from "@/components/shell/page-header";
 import { DivergingBar } from "./diverging-bar";
 import { CardTitle, DEFAULT_COLOR, Dot, ROW_LINK } from "./bits";
 import { CategoryHistoryCard } from "./category-history";
+import { BaselineSelect } from "./baseline-select";
 import { categorySliceColors } from "@/lib/chart-colors";
-import { formatPeriodLabel, toIsoDay, type Period } from "@/lib/period";
+import {
+  formatPeriodLabel,
+  monthsSpan,
+  toIsoDay,
+  type Comparison,
+  type Period,
+} from "@/lib/period";
 import { transactionsHref, type TransactionsLinkFilter } from "@/lib/transaction-filters";
 import type { CategoryChange, CategoryHistory, InsightsData } from "@/lib/insights";
 import type { FlatCategory } from "@/components/transactions/category-tree";
@@ -21,16 +28,14 @@ export async function InsightsView({
   data,
   history,
   period,
-  previous,
-  inProgress,
+  comparison,
   categories,
   locale,
 }: {
   data: InsightsData;
   history: CategoryHistory;
   period: Period;
-  previous: Period;
-  inProgress: boolean;
+  comparison: Comparison;
   categories: FlatCategory[];
   locale: string;
 }) {
@@ -57,13 +62,23 @@ export async function InsightsView({
   const catName = (id: string | null) =>
     (id ? catById.get(id)?.name : undefined) ?? t("noCategory");
   const label = formatPeriodLabel(period, locale);
-  const previousLabel = formatPeriodLabel(previous, locale);
+  const averaged = comparison.months.length > 0;
+  const reference = averaged ? monthsSpan(comparison.months) : comparison.previous;
+  const changesSub = averaged
+    ? t("changesSubAvg", {
+        current: label,
+        months: formatPeriodLabel(reference, locale),
+      })
+    : t("changesSub", {
+        current: label,
+        previous: formatPeriodLabel(reference, locale),
+      });
   const tone = (diff: number) => (diff > 0 ? "var(--expense)" : "var(--income)");
   const txHref = (filter: TransactionsLinkFilter, p: Period = period) =>
     transactionsHref(locale, p, filter);
   // A category that dropped to zero has nothing to show now: link to where it was spent.
   const changeHref = (c: CategoryChange) =>
-    txHref({ categoryId: c.categoryId, dir: "out" }, c.current ? period : previous);
+    txHref({ categoryId: c.categoryId, dir: "out" }, c.current ? period : reference);
 
   const changes = data.changes.slice(0, TOP_CHANGES);
   const changeColors = categorySliceColors(changes, catById, DEFAULT_COLOR);
@@ -125,7 +140,14 @@ export async function InsightsView({
             </div>
           }
         />
-        {inProgress && <PeriodInProgress previousLabel={previousLabel} />}
+        {period.month && <BaselineSelect value={comparison.baseline} />}
+        {comparison.elapsedDays && (
+          <PeriodInProgress>
+            {averaged
+              ? t("inProgressAvg", { day: comparison.elapsedDays })
+              : t("inProgressPrev", { previous: formatPeriodLabel(reference, locale) })}
+          </PeriodInProgress>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -140,11 +162,7 @@ export async function InsightsView({
       </div>
 
       <Card className="gap-4 p-6" data-slot="insights-changes">
-        <CardTitle
-          over={t("changesOverline")}
-          title={t("changesTitle")}
-          sub={t("changesSub", { current: label, previous: previousLabel })}
-        />
+        <CardTitle over={t("changesOverline")} title={t("changesTitle")} sub={changesSub} />
         {changes.length === 0 ? (
           <p className="text-muted-foreground text-sm">{t("noData")}</p>
         ) : (
@@ -167,6 +185,7 @@ export async function InsightsView({
                 </div>
                 <DivergingBar value={c.diff} max={maxDiff} />
                 <div className="text-muted-foreground text-[11px] tabular-nums">
+                  {averaged && `${t("historyAverage")} `}
                   {money.format(c.previous)} → {money.format(c.current)}
                 </div>
               </Link>

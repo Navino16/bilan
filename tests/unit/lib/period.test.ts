@@ -12,6 +12,8 @@ import {
   shiftPeriod,
   periodInProgress,
   historyMonths,
+  parseBaseline,
+  comparisonFor,
 } from "@/lib/period";
 
 describe("monthPeriod", () => {
@@ -268,5 +270,71 @@ describe("historyMonths", () => {
     const months = historyMonths(presetPeriod("this-year", now), 6, now);
     expect(months[0]).toEqual({ year: 2026, month: 5 });
     expect(months[5]).toEqual({ year: 2026, month: 10 });
+  });
+});
+
+describe("parseBaseline", () => {
+  it("accepts the average baselines on a month period only", () => {
+    expect(parseBaseline("avg6", monthPeriod(2026, 10))).toBe("avg6");
+    expect(
+      parseBaseline("avg6", presetPeriod("this-quarter", new Date(Date.UTC(2026, 9, 5)))),
+    ).toBe("prev");
+    expect(parseBaseline("avg5", monthPeriod(2026, 10))).toBe("prev");
+    expect(parseBaseline(undefined, monthPeriod(2026, 10))).toBe("prev");
+    expect(parseBaseline("avg3", parsePeriodParams({ from: "2026-10-03", to: "2026-10-20" }))).toBe(
+      "prev",
+    );
+  });
+});
+
+describe("comparisonFor", () => {
+  const now = new Date(Date.UTC(2026, 9, 5, 14, 30));
+  const day = (d: Date) => d.toISOString();
+
+  it("cuts the previous month to the same elapsed days while the month is in progress", () => {
+    const c = comparisonFor(monthPeriod(2026, 10), "prev", now);
+    expect(c.elapsedDays).toBe(5);
+    expect(day(c.previous.from)).toBe("2026-09-01T00:00:00.000Z");
+    expect(day(c.previous.to)).toBe("2026-09-05T23:59:59.999Z");
+    expect(c.months).toEqual([]);
+  });
+
+  it("compares whole periods once the period is over", () => {
+    const c = comparisonFor(monthPeriod(2026, 9), "prev", now);
+    expect(c.elapsedDays).toBeNull();
+    expect(c.previous).toEqual(monthPeriod(2026, 8));
+  });
+
+  it("never runs past the end of a shorter previous month", () => {
+    const c = comparisonFor(monthPeriod(2026, 10), "prev", new Date(Date.UTC(2026, 9, 31, 8)));
+    expect(day(c.previous.to)).toBe("2026-09-30T23:59:59.999Z");
+  });
+
+  it("cuts a quarter in progress to the same number of days", () => {
+    const c = comparisonFor(presetPeriod("this-quarter", now), "prev", now);
+    expect(day(c.previous.from)).toBe("2026-07-01T00:00:00.000Z");
+    expect(day(c.previous.to)).toBe("2026-07-05T23:59:59.999Z");
+    // Day 64 of Q1 2027 (March 5th) lands on December 3rd, not the 5th.
+    const march = new Date(Date.UTC(2027, 2, 5, 9));
+    expect(day(comparisonFor(presetPeriod("this-quarter", march), "prev", march).previous.to)).toBe(
+      "2026-12-03T23:59:59.999Z",
+    );
+  });
+
+  it("averages whole months once the selected month is over", () => {
+    const c = comparisonFor(monthPeriod(2026, 9), "avg3", now);
+    expect(c.elapsedDays).toBeNull();
+    expect(c.months).toEqual([
+      { year: 2026, month: 6 },
+      { year: 2026, month: 7 },
+      { year: 2026, month: 8 },
+    ]);
+  });
+
+  it("lists the N whole months before the selected month for an average", () => {
+    const c = comparisonFor(monthPeriod(2026, 10), "avg6", now);
+    expect(c.months[0]).toEqual({ year: 2026, month: 4 });
+    expect(c.months[5]).toEqual({ year: 2026, month: 9 });
+    expect(c.elapsedDays).toBe(5);
   });
 });

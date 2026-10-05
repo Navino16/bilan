@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { shiftPeriod, toIsoDay, type Period } from "@/lib/period";
@@ -8,10 +8,16 @@ import { shiftPeriod, toIsoDay, type Period } from "@/lib/period";
 export function PeriodNav({ period }: { period: Period }) {
   const router = useRouter();
   const pathname = usePathname();
+  const params = useSearchParams();
 
+  // Keeps the other params (e.g. the insights comparison baseline).
   function go(dir: 1 | -1) {
     const p = shiftPeriod(period, dir);
-    router.push(`${pathname}?from=${toIsoDay(p.from)}&to=${toIsoDay(p.to)}`);
+    const next = new URLSearchParams(params.toString());
+    next.delete("limit");
+    next.set("from", toIsoDay(p.from));
+    next.set("to", toIsoDay(p.to));
+    router.push(`${pathname}?${next.toString()}`);
   }
 
   // The arrows step by the period's own granularity (month/quarter/year/range).

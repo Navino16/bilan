@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  averageMonthRows,
   categoryChanges,
   historyRows,
   incomeByCategory,
@@ -173,5 +174,33 @@ describe("historyRows", () => {
   it("limits the number of rows", () => {
     const { rows } = historyRows(history(false), 12, 2);
     expect(rows.map((r) => r.categoryId)).toEqual(["rent", "food"]);
+  });
+});
+
+describe("averageMonthRows", () => {
+  const at = (m: number, day: number) => new Date(Date.UTC(2026, m - 1, day));
+  const rows = [
+    { amount: -40, categoryId: "food", date: at(8, 2) },
+    { amount: -60, categoryId: "food", date: at(9, 5) },
+    { amount: -500, categoryId: "rent", date: at(9, 20) },
+  ];
+
+  it("weights each row by 1/N so category sums become monthly averages", () => {
+    expect(categoryChanges([], averageMonthRows(rows, 2, null))).toEqual([
+      { categoryId: "rent", current: 0, previous: 250, diff: -250 },
+      { categoryId: "food", current: 0, previous: 50, diff: -50 },
+    ]);
+  });
+
+  it("keeps only the first days of each month while the period is in progress", () => {
+    expect(averageMonthRows(rows, 2, 5)).toEqual([
+      { amount: -20, categoryId: "food" },
+      { amount: -30, categoryId: "food" },
+    ]);
+  });
+
+  it("keeps a whole shorter month when the cut day is past its end", () => {
+    const feb = [{ amount: -30, categoryId: "food", date: at(2, 28) }];
+    expect(averageMonthRows(feb, 1, 31)).toEqual([{ amount: -30, categoryId: "food" }]);
   });
 });

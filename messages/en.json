@@ -688,7 +688,17 @@
     "historyMonths": "{count} months",
     "historyInProgress": "{month} (in progress)",
     "historyBar": "{month}: {amount}",
-    "historyEmpty": "No spending over these {count} months."
+    "historyEmpty": "No spending over these {count} months.",
+    "compareTo": "Compared with",
+    "baseline": {
+      "prev": "the previous month",
+      "avg3": "the 3-month average",
+      "avg6": "the 6-month average",
+      "avg12": "the 12-month average"
+    },
+    "changesSubAvg": "{current} vs average of {months} · spending by category",
+    "inProgressPrev": "Period in progress: compared with the same number of days of the previous period ({previous}).",
+    "inProgressAvg": "Period in progress: compared with the same days ({day, plural, =1 {the 1st} other {days 1–#}} of each month)."
   },
   "settings": {
     "data": {

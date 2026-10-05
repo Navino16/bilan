@@ -94,6 +94,18 @@ export function monthlyCategoryTotals(
     .sort((a, b) => byId(a.categoryId, b.categoryId));
 }
 
+// Rows of an N-month window as one "average month": each amount weighs 1/N. `lastDay`
+// keeps only days 1..lastDay of each month, to match a month in progress.
+export function averageMonthRows(
+  rows: (AmountRow & { date: Date })[],
+  months: number,
+  lastDay: number | null,
+): AmountRow[] {
+  return rows
+    .filter((r) => lastDay === null || r.date.getUTCDate() <= lastDay)
+    .map((r) => ({ amount: r.amount / months, categoryId: r.categoryId }));
+}
+
 // The average covers whole months only: the month in progress would drag it down.
 export function historyRows(
   history: CategoryHistory,

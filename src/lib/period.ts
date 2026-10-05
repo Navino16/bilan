@@ -111,6 +111,59 @@ export function historyMonths(
   return Array.from({ length: count }, (_, i) => addMonths(end.year, end.month, i - count + 1));
 }
 
+// The whole-month range covering `months` (oldest first).
+export function monthsSpan(months: { year: number; month: number }[]): Period {
+  const first = months[0];
+  const last = months[months.length - 1];
+  return {
+    from: monthPeriod(first.year, first.month).from,
+    to: monthPeriod(last.year, last.month).to,
+    year: null,
+    month: null,
+  };
+}
+
+export const BASELINES = ["prev", "avg3", "avg6", "avg12"] as const;
+export type Baseline = (typeof BASELINES)[number];
+
+// Averages only make sense against whole months: other periods fall back to "prev".
+export function parseBaseline(value: string | undefined, p: Period): Baseline {
+  if (!p.month || !BASELINES.includes(value as Baseline)) return "prev";
+  return value as Baseline;
+}
+
+export type Comparison = {
+  baseline: Baseline;
+  // Days elapsed while the period is in progress: the reference side is cut to that many days.
+  elapsedDays: number | null;
+  previous: Period;
+  // The months averaged, oldest first (empty for "prev").
+  months: { year: number; month: number }[];
+};
+
+function truncatePeriod(p: Period, days: number): Period {
+  const end = new Date(p.from.getTime() + days * 86_400_000 - 1);
+  return end < p.to ? { from: p.from, to: end, year: null, month: null } : p;
+}
+
+export function comparisonFor(
+  period: Period,
+  baseline: Baseline,
+  now: Date = new Date(),
+): Comparison {
+  const elapsedDays = periodInProgress(period, now)
+    ? Math.floor((now.getTime() - period.from.getTime()) / 86_400_000) + 1
+    : null;
+  const cut = (p: Period) => (elapsedDays ? truncatePeriod(p, elapsedDays) : p);
+  const count = baseline === "prev" ? 0 : Number(baseline.slice(3));
+  return {
+    baseline,
+    elapsedDays,
+    previous: cut(previousPeriod(period)),
+    months: count ? historyMonths(previousMonthPeriod(period), count, now) : [],
+  };
+}
+
 // ISO day (YYYY-MM-DD) of a date's UTC calendar day — for building ?from/?to links.
 export function toIsoDay(d: Date): string {
   return d.toISOString().slice(0, 10);

@@ -132,7 +132,11 @@ export async function DashboardView({
             </div>
           }
         />
-        {inProgress && <PeriodInProgress previousLabel={formatPeriodLabel(previous, locale)} />}
+        {inProgress && (
+          <PeriodInProgress>
+            {t("periodInProgress", { previous: formatPeriodLabel(previous, locale) })}
+          </PeriodInProgress>
+        )}
       </div>
 
       {/* KPI row */}

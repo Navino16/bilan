@@ -114,6 +114,39 @@ test.describe("insights", () => {
     await expect(firstRowBars).toHaveCount(6);
   });
 
+  test("compares with an N-month average, kept while browsing months", async ({ page }) => {
+    await page.goto("/fr/insights?from=2026-03-01&to=2026-03-31", {
+      waitUntil: "domcontentloaded",
+      timeout: 90_000,
+    });
+    const baseline = page.locator('[data-slot="insights-baseline"]');
+    await expect(async () => {
+      await expect(baseline).toBeVisible();
+    }).toPass();
+    // Selecting before hydration changes the value without firing React's onChange.
+    await page.waitForFunction(() => {
+      const el = document.querySelector('[data-slot="insights-baseline"]');
+      return !!el && Object.keys(el).some((k) => k.startsWith("__reactProps"));
+    });
+    await baseline.selectOption("avg3");
+    await expect(page).toHaveURL(/vs=avg3/, { timeout: 60_000 });
+    await expect(page.locator('[data-slot="insights-changes"]')).toContainText(
+      /moyenne déc\.\s2025\s–\sfévr\.\s2026/,
+    );
+
+    await page.getByRole("button", { name: "prev" }).click();
+    await expect(page).toHaveURL(/from=2026-02-01.*vs=avg3|vs=avg3.*from=2026-02-01/, {
+      timeout: 60_000,
+    });
+    await expect(baseline).toHaveValue("avg3");
+
+    await page.goto("/fr/insights?from=2026-01-01&to=2026-03-31&vs=avg3", {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator('[data-slot="insights-changes"]')).toBeVisible();
+    await expect(baseline).toHaveCount(0);
+  });
+
   test("flags the current period as in progress on insights and the dashboard", async ({
     page,
   }) => {
