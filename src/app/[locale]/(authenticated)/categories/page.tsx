@@ -32,6 +32,7 @@ export default async function CategoriesPage({ params }: { params: Promise<{ loc
     categoryColor: r.category?.color ?? null,
     groupId: r.groupId,
     groupName: r.group?.name ?? null,
+    hits: r.hits,
   }));
 
   return (

@@ -453,6 +453,8 @@ model CategorizationRule {
   group   Group?  @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   enabled   Boolean  @default(true)
+  // Cumulative count of transactions this rule categorized (import + manual entry).
+  hits      Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CategoryChip, Pill } from "@/components/transactions/bits";
+import { CategoryChip, Pill, SegmentedTabs } from "@/components/transactions/bits";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import type { RuleMatchType } from "@/lib/validation/rule";
 import { deleteRuleAction, toggleRuleAction } from "@/server/transport/actions/rules";
@@ -23,9 +23,10 @@ export type RuleRow = {
   categoryColor: string | null;
   groupId: string | null;
   groupName: string | null;
+  hits: number;
 };
 
-const COLS = "grid-cols-[32px_40px_1fr_minmax(0,108px)_minmax(0,140px)_72px_60px]";
+const COLS = "grid-cols-[32px_40px_1fr_minmax(0,108px)_minmax(0,140px)_72px_96px_60px]";
 
 export function RulesList({
   rules,
@@ -40,6 +41,9 @@ export function RulesList({
   const router = useRouter();
   const [editing, setEditing] = useState<EditableRule | null>(null);
   const [pending, startTransition] = useTransition();
+  const [sort, setSort] = useState<"priority" | "hits">("priority");
+  // Rules arrive in priority order; the stable sort keeps it as the tie-breaker.
+  const sorted = sort === "hits" ? [...rules].sort((a, b) => b.hits - a.hits) : rules;
 
   function remove(id: string) {
     if (!window.confirm(t("deleteConfirm"))) return;
@@ -68,6 +72,21 @@ export function RulesList({
 
   return (
     <>
+      <div
+        role="group"
+        aria-label={t("sortBy")}
+        className="text-muted-foreground mb-2.5 flex items-center justify-end gap-2 text-[0.8rem]"
+      >
+        {t("sortBy")}
+        <SegmentedTabs
+          items={[
+            { id: "priority", label: t("sortPriority") },
+            { id: "hits", label: t("sortHits") },
+          ]}
+          value={sort}
+          onChange={setSort}
+        />
+      </div>
       <div className="border-border overflow-hidden rounded-xl border">
         <div
           className={`text-muted-foreground bg-muted/60 hidden ${COLS} gap-3 border-b px-4 py-2.5 text-[11px] tracking-[0.08em] uppercase md:grid`}
@@ -78,10 +97,11 @@ export function RulesList({
           <span>{t("colMatch")}</span>
           <span>{t("colTarget")}</span>
           <span>{t("colScope")}</span>
+          <span className="text-right">{t("colHits")}</span>
           <span />
         </div>
 
-        {rules.map((r) => {
+        {sorted.map((r) => {
           const actions = (
             <span className="flex items-center justify-end gap-0.5">
               <Button
@@ -144,6 +164,7 @@ export function RulesList({
                 </span>
                 <span className="min-w-0">{target}</span>
                 <span className="text-muted-foreground truncate text-xs">{scope}</span>
+                <span className="text-right text-[12.5px] tabular-nums">{r.hits}</span>
                 {actions}
               </div>
 
@@ -156,6 +177,9 @@ export function RulesList({
                     <Pill>{t(`match.${r.matchType}`)}</Pill>
                     {target}
                     <span className="text-muted-foreground">· {scope}</span>
+                    <span className="text-muted-foreground">
+                      · {t("hitCount", { count: r.hits })}
+                    </span>
                   </div>
                 </div>
                 {actions}

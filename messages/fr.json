@@ -188,6 +188,11 @@
     "colMatch": "Type",
     "colTarget": "Cible",
     "colScope": "Portée",
+    "colHits": "Utilisations",
+    "hitCount": "{count, plural, one {# utilisation} other {# utilisations}}",
+    "sortBy": "Trier par",
+    "sortPriority": "Priorité",
+    "sortHits": "Utilisations",
     "scopePersonal": "Perso",
     "match": {
       "CONTAINS": "Contient",

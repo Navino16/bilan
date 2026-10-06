@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { db } from "@/server/db";
 import { canWriteAccount } from "@/server/services/accounts/sharing";
 import { logEvent } from "@/server/services/audit";
-import { insertRows, finalizeBatch, type CommitOptions } from "./commit";
+import { insertRows, finalizeBatch, type CommitOptions, type InsertTotals } from "./commit";
 import { buildPreview } from "./preview";
 // Static import → pdfjs/pdf-parse stay externalized (next.config serverExternalPackages),
 // so the pdfjs worker resolves. Only the PDF route imports this module, so the CSV
@@ -122,7 +122,7 @@ export async function commitPdfBatch(
   const batch = await loadBatch(batchId, actor.id);
   const { products } = readPdfMeta(batch.metadata);
   return withCommitClaim(batch.id, async () => {
-    const totals = { imported: 0, skipped: 0, total: 0 };
+    const totals: InsertTotals = { imported: 0, skipped: 0, total: 0, hitRuleIds: [] };
     const accountIds: string[] = [];
     for (const product of products) {
       const accountId = mapping[product.key];
@@ -137,6 +137,7 @@ export async function commitPdfBatch(
       totals.imported += r.imported;
       totals.skipped += r.skipped;
       totals.total += r.total;
+      totals.hitRuleIds.push(...r.hitRuleIds);
       if (!accountIds.includes(accountId)) accountIds.push(accountId);
     }
     return finalizeBatch(batch.id, totals, actor, accountIds);

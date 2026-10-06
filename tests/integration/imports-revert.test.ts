@@ -35,7 +35,7 @@ async function committedBatch(
       metadata: { products: [], fileSizeBytes: 1 },
     },
   });
-  const totals = { imported: 0, skipped: 0, total: 0 };
+  const totals = { imported: 0, skipped: 0, total: 0, hitRuleIds: [] as string[] };
   for (const t of targets) {
     const rows = t.labels.map((rawLabel, i) => ({ date: d(i + 1), amount: -10 - i, rawLabel }));
     const r = await insertRows(
@@ -312,6 +312,10 @@ describe("commit claim", () => {
   });
 
   it("rolls back a commit that fails halfway, so a discard leaves no orphan rows", async () => {
+    const cat = await db.category.create({ data: { userId: owner, name: "Half" } });
+    const rule = await db.categorizationRule.create({
+      data: { pattern: "HALF", matchType: "CONTAINS", categoryId: cat.id, userId: owner },
+    });
     const batch = await db.importBatch.create({
       data: {
         accountId: accA,
@@ -333,6 +337,9 @@ describe("commit claim", () => {
     expect(await db.transaction.count({ where: { importBatchId: batch.id } })).toBe(0);
     expect((await db.importBatch.findUniqueOrThrow({ where: { id: batch.id } })).status).toBe(
       "REVIEW",
+    );
+    expect((await db.categorizationRule.findUniqueOrThrow({ where: { id: rule.id } })).hits).toBe(
+      0,
     );
     const orphansBefore = await db.transaction.count({
       where: { accountId: accA, importBatchId: null },

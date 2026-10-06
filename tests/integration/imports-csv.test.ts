@@ -140,6 +140,70 @@ describe("CSV import pipeline", () => {
     expect(tx.manuallyCategorized).toBe(false);
   });
 
+  it("counts a hit on the matched rule for each auto-categorized imported row", async () => {
+    const cat = await db.category.create({ data: { userId: owner, name: "Hits" } });
+    const tag = `H${Date.now()}`;
+    const hit = await db.categorizationRule.create({
+      data: { pattern: `${tag}MATCH`, matchType: "CONTAINS", categoryId: cat.id, userId: owner },
+    });
+    const idle = await db.categorizationRule.create({
+      data: { pattern: `${tag}IDLE`, matchType: "CONTAINS", categoryId: cat.id, userId: owner },
+    });
+    const csv = `Date;Libellé;Débit;Crédit
+01/05/2026;CB ${tag}MATCH ONE;1,00;
+02/05/2026;CB ${tag}MATCH TWO;2,00;
+03/05/2026;CB ${tag}MATCH FORCED;3,00;
+04/05/2026;CB ${tag}MATCH DROPPED;4,00;
+06/05/2026;CB ${tag}MATCH CLEARED;6,00;
+05/05/2026;CB OTHER ${tag};5,00;`;
+    const batch = await createCsvBatch(
+      { accountId, filename: "hits.csv", text: csv },
+      { id: owner },
+    );
+    const preview = await previewCsvBatch(batch.id, owner);
+    expect((await db.categorizationRule.findUniqueOrThrow({ where: { id: hit.id } })).hits).toBe(0);
+
+    const byLabel = (l: string) => preview.preview.find((r) => r.rawLabel.includes(l))!.externalId;
+    await commitCsvBatch(
+      batch.id,
+      preview.mapping,
+      { id: owner },
+      {
+        overrides: { [byLabel("FORCED")]: cat.id, [byLabel("CLEARED")]: "" },
+        excludedIds: [byLabel("DROPPED")],
+      },
+    );
+    const hits = async (id: string) =>
+      (await db.categorizationRule.findUniqueOrThrow({ where: { id } })).hits;
+    expect(await hits(hit.id)).toBe(2);
+    expect(await hits(idle.id)).toBe(0);
+    const cleared = await db.transaction.findMany({ where: { importBatchId: batch.id } });
+    const clearedRow = cleared.find((r) => decrypt(r.rawLabelEnc, dataKey).includes("CLEARED"))!;
+    expect(clearedRow.categoryId).toBeNull();
+    expect(clearedRow.manuallyCategorized).toBe(true);
+
+    // Re-import: duplicates add nothing, only the previously excluded row counts.
+    const again = await createCsvBatch(
+      { accountId, filename: "hits2.csv", text: csv },
+      { id: owner },
+    );
+    const p2 = await previewCsvBatch(again.id, owner);
+    await commitCsvBatch(again.id, p2.mapping, { id: owner });
+    expect(await hits(hit.id)).toBe(3);
+
+    const off = await createCsvBatch(
+      {
+        accountId,
+        filename: "hits3.csv",
+        text: `Date;Libellé;Débit;Crédit\n07/05/2026;CB ${tag}MATCH OFF;7,00;`,
+      },
+      { id: owner },
+    );
+    const p3 = await previewCsvBatch(off.id, owner);
+    await commitCsvBatch(off.id, p3.mapping, { id: owner }, { autoCategorize: false });
+    expect(await hits(hit.id)).toBe(3);
+  });
+
   it("trims the raw CSV text from metadata once committed", async () => {
     const batch = await createCsvBatch(
       { accountId, filename: "trim.csv", text: CSV },
