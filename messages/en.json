@@ -815,6 +815,27 @@
           "FAILED": "Couldn't change the password. Please try again.",
           "REVOKE_FAILED": "Your password was changed, but your other devices couldn't be signed out."
         }
+      },
+      "sessionsCard": {
+        "overline": "Sessions",
+        "title": "Signed-in devices",
+        "hint": "Sign out a device you don't recognise or no longer use.",
+        "thisDevice": "This device",
+        "unknownBrowser": "Unknown browser",
+        "activeNow": "Active now",
+        "active": "{days, plural, =0 {Active today} =1 {Active yesterday} other {Active # days ago}}",
+        "others": "Other devices · {count}",
+        "none": "No other device is signed in.",
+        "revoke": "Sign out",
+        "revokeAll": "Sign out all",
+        "revokeDevice": "Sign out {device}",
+        "error": {
+          "NOT_FOUND": "This device is already signed out.",
+          "CURRENT": "Use “Sign out” for this device.",
+          "UNAUTHORIZED": "Your session has expired. Sign in again.",
+          "INVALID": "Invalid request.",
+          "FAILED": "Couldn't sign this device out. Try again."
+        }
       }
     }
   },

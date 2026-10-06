@@ -139,7 +139,8 @@ async function buildOptions(): Promise<BetterAuthOptions> {
     session: {
       expiresIn: 60 * 60 * 24 * 7, // 7 days
       updateAge: 60 * 60 * 24, // refresh after 1 day
-      cookieCache: { enabled: true, maxAge: 5 * 60 },
+      // No cookie cache: a revoked session must stop working on its next request (#142).
+      cookieCache: { enabled: false },
     },
     advanced: {
       cookies: {

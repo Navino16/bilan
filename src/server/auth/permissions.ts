@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { PrismaClient } from "@prisma/client";
 import { headers as nextHeaders } from "next/headers";
 import { redirect, forbidden } from "next/navigation";
@@ -24,10 +25,14 @@ export function buildPermissionsChecker(database: PrismaClient) {
 
 export const hasPermission = buildPermissionsChecker(db);
 
-export async function getCurrentUser() {
+// Per-request memo: with the cookie cache off, every lookup is a DB round-trip.
+export const getCurrentSession = cache(async () => {
   const auth = await getAuth();
-  const session = await auth.api.getSession({ headers: await nextHeaders() });
-  return session?.user ?? null;
+  return auth.api.getSession({ headers: await nextHeaders() });
+});
+
+export async function getCurrentUser() {
+  return (await getCurrentSession())?.user ?? null;
 }
 
 export async function requireSession() {

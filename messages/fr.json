@@ -815,6 +815,27 @@
           "FAILED": "Impossible de changer le mot de passe. Réessayez.",
           "REVOKE_FAILED": "Votre mot de passe a été modifié, mais vos autres appareils n'ont pas pu être déconnectés."
         }
+      },
+      "sessionsCard": {
+        "overline": "Sessions",
+        "title": "Appareils connectés",
+        "hint": "Déconnectez un appareil que vous ne reconnaissez pas ou que vous n'utilisez plus.",
+        "thisDevice": "Cet appareil",
+        "unknownBrowser": "Navigateur inconnu",
+        "activeNow": "Actif maintenant",
+        "active": "{days, plural, =0 {Actif aujourd'hui} =1 {Actif hier} other {Actif il y a # jours}}",
+        "others": "Autres appareils · {count}",
+        "none": "Aucun autre appareil connecté.",
+        "revoke": "Déconnecter",
+        "revokeAll": "Tout déconnecter",
+        "revokeDevice": "Déconnecter {device}",
+        "error": {
+          "NOT_FOUND": "Cet appareil est déjà déconnecté.",
+          "CURRENT": "Pour cet appareil, utilisez « Se déconnecter ».",
+          "UNAUTHORIZED": "Votre session a expiré. Reconnectez-vous.",
+          "INVALID": "Requête invalide.",
+          "FAILED": "Impossible de déconnecter cet appareil. Réessayez."
+        }
       }
     }
   },
