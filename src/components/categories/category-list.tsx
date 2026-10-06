@@ -24,7 +24,6 @@ type Node = {
   parentId: string | null;
   scope: "USER" | "GROUP";
   groupId: string | null;
-  isDefault: boolean;
   children: Node[];
 };
 
@@ -32,12 +31,12 @@ function Row({
   node,
   parents,
   inheritedColor = null,
-  child = false,
+  depth = 0,
 }: {
   node: Node;
   parents: ParentOption[];
   inheritedColor?: string | null;
-  child?: boolean;
+  depth?: number;
 }) {
   const t = useTranslations("categories");
   const router = useRouter();
@@ -68,8 +67,9 @@ function Row({
       <div
         className={cn(
           "flex items-center gap-3 border-t py-1.5 pr-2 first:border-t-0",
-          child ? "border-border/50 pl-9" : "pl-3 font-medium",
+          depth > 0 ? "border-border/50" : "font-medium",
         )}
+        style={{ paddingLeft: 12 + depth * 24 }}
         data-slot="category-row"
       >
         <span
@@ -122,7 +122,7 @@ function Row({
           node={c}
           parents={parents}
           inheritedColor={node.color ?? inheritedColor}
-          child
+          depth={depth + 1}
         />
       ))}
     </>

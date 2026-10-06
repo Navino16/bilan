@@ -447,7 +447,6 @@
   "import": {
     "title": "Importer un relevé",
     "overline": "Import",
-    "subtitle": "Importez vos opérations depuis un fichier de votre banque.",
     "steps": {
       "file": "Fichier",
       "read": "Lecture",

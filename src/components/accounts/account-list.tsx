@@ -243,7 +243,7 @@ export function AccountList({
                 <Badge variant="outline">{t(`types.${a.type}`)}</Badge>
               </div>
 
-              <div className="mt-auto flex items-end justify-between gap-2 pt-3">
+              <div className="mt-auto flex flex-wrap items-end justify-between gap-2 pt-3">
                 <div className="min-w-0">
                   <div className="font-display text-xl">{money(a.balance)}</div>
                   {/* Reserved-height slot so the balance stays aligned across cards

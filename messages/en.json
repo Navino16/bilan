@@ -447,7 +447,6 @@
   "import": {
     "title": "Import a statement",
     "overline": "Import",
-    "subtitle": "Import your transactions from a file exported by your bank.",
     "steps": {
       "file": "File",
       "read": "Reading",

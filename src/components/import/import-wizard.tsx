@@ -244,7 +244,7 @@ export function ImportWizard({
             accounts={accounts}
             categories={categories}
             trigger={
-              <Button variant="outline">
+              <Button variant="outline" disabled={accounts.length === 0}>
                 <PenLine />
                 {t("manualEntry")}
               </Button>

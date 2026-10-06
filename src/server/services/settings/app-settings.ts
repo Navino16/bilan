@@ -56,16 +56,32 @@ export class AppSettingsService {
   }
 
   async set(key: string, value: unknown, updatedById: string): Promise<void> {
+    await this.write(key, value, updatedById);
+    // Auth-affecting keys must hot-reload the Better Auth handler.
+    if (AUTH_KEYS.has(key)) await this.opts.onAuthKeyChange?.();
+  }
+
+  // Writes only the values that differ from the stored ones (read past the cache, which
+  // may be stale), so the audit log records real changes; auth reloads once at most.
+  async setMany(entries: [string, unknown][], updatedById: string): Promise<string[]> {
+    const changed: string[] = [];
+    for (const [key, value] of entries) {
+      const row = await this.db.appSetting.findUnique({ where: { key } });
+      if (row && JSON.stringify(row.value) === JSON.stringify(value)) continue;
+      await this.write(key, value, updatedById);
+      changed.push(key);
+    }
+    if (changed.some((k) => AUTH_KEYS.has(k))) await this.opts.onAuthKeyChange?.();
+    return changed;
+  }
+
+  private async write(key: string, value: unknown, updatedById: string): Promise<void> {
     await this.db.appSetting.upsert({
       where: { key },
       create: { key, value: value as never, updatedById },
       update: { value: value as never, updatedById },
     });
     this.cache.delete(key);
-
-    // Auth-affecting keys must hot-reload the Better Auth handler.
-    if (AUTH_KEYS.has(key)) await this.opts.onAuthKeyChange?.();
-
     await this.opts.audit?.({
       userId: updatedById,
       action: `settings.${key}.update`,
