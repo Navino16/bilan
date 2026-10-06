@@ -409,7 +409,9 @@
       "pairWithin": "à {days, plural, one {# jour} other {# jours}} d'écart",
       "link": "Lier",
       "ignore": "Ignorer",
-      "empty": "Aucune paire à suggérer pour le moment."
+      "empty": "Aucune paire à suggérer pour le moment.",
+      "back": "Retour aux transactions",
+      "hint": "Bilan repère les paires de même montant et de sens opposé (un virement entre vos comptes, un remboursement) pour que vous puissiez les lier et ne pas les compter deux fois."
     },
     "filterSheet": {
       "reset": "Réinitialiser",
@@ -587,7 +589,11 @@
       "LAST_OWNER": "Impossible : il doit rester au moins un propriétaire.",
       "NOT_MEMBER": "Ce membre n'appartient pas au foyer.",
       "FAILED": "Échec. Réessayez."
-    }
+    },
+    "dangerZone": "Zone de danger",
+    "dangerTitleOwner": "Quitter ou supprimer le foyer",
+    "leaveHint": "Vous perdrez l'accès aux comptes et budgets partagés de ce foyer.",
+    "leaveTitle": "Quitter le foyer"
   },
   "invitations": {
     "invite": "Inviter",

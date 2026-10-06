@@ -111,7 +111,7 @@ export async function InsightsView({
             <div className="font-display text-2xl tabular-nums" style={{ color: tone(c.diff) }}>
               {signed.format(c.diff)}
             </div>
-            <div className="text-muted-foreground truncate text-[11.5px]">
+            <div className="text-muted-foreground line-clamp-2 text-[11.5px]">
               {catName(c.categoryId)} · {pctLabel(c.current, c.previous)}
             </div>
           </>

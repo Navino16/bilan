@@ -409,7 +409,9 @@
       "pairWithin": "{days, plural, one {# day} other {# days}} apart",
       "link": "Link",
       "ignore": "Ignore",
-      "empty": "No pairs to suggest right now."
+      "empty": "No pairs to suggest right now.",
+      "back": "Back to transactions",
+      "hint": "Bilan spots pairs with the same amount and opposite signs (a transfer between your accounts, a refund) so you can link them and not count them twice."
     },
     "filterSheet": {
       "reset": "Reset",
@@ -587,7 +589,11 @@
       "LAST_OWNER": "Not allowed: at least one owner must remain.",
       "NOT_MEMBER": "This member is not part of the household.",
       "FAILED": "Failed. Please retry."
-    }
+    },
+    "dangerZone": "Danger zone",
+    "dangerTitleOwner": "Leave or delete the household",
+    "leaveHint": "You will lose access to this household's shared accounts and budgets.",
+    "leaveTitle": "Leave the household"
   },
   "invitations": {
     "invite": "Invite",

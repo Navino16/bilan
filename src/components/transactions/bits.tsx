@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Editorial label used across the design (uppercase, wide tracking, meta tone).
@@ -20,7 +21,7 @@ export function Pill({ children, className }: { children: ReactNode; className?:
   );
 }
 
-// Colored, rounded category badge with the seeded emoji icon.
+// Colored, rounded category badge with the seeded emoji icon (a tag when there is none).
 export function CategoryAvatar({
   color,
   icon,
@@ -42,7 +43,7 @@ export function CategoryAvatar({
         opacity: 0.92,
       }}
     >
-      {icon ?? ""}
+      {icon ?? <Tag style={{ width: size * 0.5, height: size * 0.5 }} />}
     </span>
   );
 }

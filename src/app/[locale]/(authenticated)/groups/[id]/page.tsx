@@ -8,6 +8,7 @@ import { listInvitations } from "@/server/services/groups/invitations";
 import { listAccountsSharedWithGroup } from "@/server/services/accounts/sharing";
 import type { GroupRole } from "@/server/services/groups/roles";
 import { MemberList } from "@/components/groups/member-list";
+import { GroupDangerZone } from "@/components/groups/group-danger-zone";
 import { GroupForm } from "@/components/groups/group-form";
 import { InviteForm } from "@/components/groups/invite-form";
 import { InvitationsList } from "@/components/groups/invitations-list";
@@ -39,6 +40,8 @@ export default async function GroupDetailPage({
 
   const viewerRole = group.members.find((m) => m.userId === user.id)?.role ?? "MEMBER";
   const canEdit = RANK[viewerRole] >= RANK.ADMIN;
+  const isLastOwner =
+    viewerRole === "OWNER" && group.members.filter((m) => m.role === "OWNER").length <= 1;
 
   const ta = await getTranslations("accounts");
   const money = (n: number) =>
@@ -135,6 +138,8 @@ export default async function GroupDetailPage({
           </div>
         </section>
       )}
+
+      <GroupDangerZone groupId={group.id} viewerRole={viewerRole} isLastOwner={isLastOwner} />
     </div>
   );
 }

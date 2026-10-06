@@ -72,7 +72,11 @@ function Row({ item }: { item: SuggestionItem }) {
 export function SuggestionsList({ items }: { items: SuggestionItem[] }) {
   const t = useTranslations("transactions.suggestions");
   if (items.length === 0) {
-    return <p className="text-muted-foreground text-sm">{t("empty")}</p>;
+    return (
+      <div className="text-muted-foreground border-border rounded-lg border border-dashed px-4 py-10 text-center text-sm">
+        {t("empty")}
+      </div>
+    );
   }
   return (
     <div className="flex flex-col gap-2">

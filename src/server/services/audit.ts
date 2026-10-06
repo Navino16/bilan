@@ -31,11 +31,14 @@ export type AuditLogFilter = {
   skip?: number;
 };
 
+// `user` is null for system events and for users deleted since (userId has no FK).
+export type AuditEntry = AuditLog & { user: { name: string | null; email: string } | null };
+
 // Paginated audit-log read for the admin viewer, newest first.
 export async function listAuditLog(
   filter: AuditLogFilter = {},
   database: PrismaClient = db,
-): Promise<{ items: AuditLog[]; total: number }> {
+): Promise<{ items: AuditEntry[]; total: number }> {
   const where = {
     ...(filter.action ? { action: filter.action } : {}),
     ...(filter.entity ? { entity: filter.entity } : {}),
@@ -50,7 +53,18 @@ export async function listAuditLog(
     }),
     database.auditLog.count({ where }),
   ]);
-  return { items, total };
+  const ids = [...new Set(items.flatMap((i) => (i.userId ? [i.userId] : [])))];
+  const users = ids.length
+    ? await database.user.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, name: true, email: true },
+      })
+    : [];
+  const byId = new Map(users.map((u) => [u.id, { name: u.name, email: u.email }]));
+  return {
+    items: items.map((i) => ({ ...i, user: i.userId ? (byId.get(i.userId) ?? null) : null })),
+    total,
+  };
 }
 
 // Retention purge: delete audit rows older than the cutoff. Returns the count.

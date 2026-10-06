@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SegmentedTabs } from "@/components/transactions/bits";
+import { ScrollFade } from "@/components/ui/scroll-fade";
 import { PERIOD_PRESETS, presetPeriod, toIsoDay, type PeriodPreset } from "@/lib/period";
 
 // The preset whose range matches the current from/to (so the segmented control
@@ -54,28 +54,27 @@ export function PeriodPicker({
   }
 
   const active = activePreset(from, to);
+  const presets = (
+    <SegmentedTabs<PeriodPreset | "custom" | "">
+      className={wrap ? "flex-wrap" : "w-max"}
+      items={[
+        ...PERIOD_PRESETS.map((p) => ({ id: p, label: t(`preset.${p}`) })),
+        { id: "custom", label: t("preset.custom") },
+      ]}
+      value={customOpen ? "custom" : (active ?? "")}
+      onChange={(id) =>
+        id === "custom" ? setCustomOpen((v) => !v) : applyPreset(id as PeriodPreset)
+      }
+    />
+  );
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-none sm:flex-row sm:flex-wrap sm:items-center">
-      {/* Presets scroll horizontally on narrow screens instead of overflowing the bar. */}
-      <div
-        className={cn(
-          "-mx-0.5 max-w-full px-0.5",
-          !wrap && "[scrollbar-width:none] overflow-x-auto [&::-webkit-scrollbar]:hidden",
-        )}
-      >
-        <SegmentedTabs<PeriodPreset | "custom" | "">
-          className={wrap ? "flex-wrap" : "w-max"}
-          items={[
-            ...PERIOD_PRESETS.map((p) => ({ id: p, label: t(`preset.${p}`) })),
-            { id: "custom", label: t("preset.custom") },
-          ]}
-          value={customOpen ? "custom" : (active ?? "")}
-          onChange={(id) =>
-            id === "custom" ? setCustomOpen((v) => !v) : applyPreset(id as PeriodPreset)
-          }
-        />
-      </div>
+      {wrap ? (
+        <div className="-mx-0.5 max-w-full px-0.5">{presets}</div>
+      ) : (
+        <ScrollFade className="-mx-0.5 max-w-full px-0.5">{presets}</ScrollFade>
+      )}
       {customOpen && (
         <div className="flex flex-wrap items-center gap-2">
           <input

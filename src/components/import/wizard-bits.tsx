@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 // Horizontal step indicator (Fichier → Lecture → Correspondances → Validation).
 export function Stepper({ steps, current }: { steps: string[]; current: number }) {
   return (
-    <div className="border-border bg-card flex items-center overflow-x-auto rounded-xl border px-3.5 py-3 shadow-sm">
+    <div className="border-border bg-card flex items-center rounded-xl border px-3.5 py-3 shadow-sm">
       {steps.map((label, i) => (
         <div key={label} className="flex flex-1 items-center last:flex-none">
           <div className={cn("flex items-center gap-2", i > current && "opacity-45")}>
@@ -27,6 +27,7 @@ export function Stepper({ steps, current }: { steps: string[]; current: number }
               className={cn(
                 "text-[13px] whitespace-nowrap",
                 i === current ? "text-foreground font-medium" : "text-muted-foreground",
+                i !== current && "hidden sm:inline",
               )}
             >
               {label}
