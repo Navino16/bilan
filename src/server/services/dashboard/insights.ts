@@ -1,6 +1,5 @@
-import { decrypt } from "@/server/crypto/encryption";
-import { dataKey } from "@/server/crypto/keys";
 import { listVisibleForUser } from "@/server/services/accounts";
+import { aliasMap, listAliasGroups, merchantRowsOf } from "@/server/services/merchants";
 import { round2 } from "@/lib/budgets";
 import {
   categoryChanges,
@@ -9,7 +8,6 @@ import {
   topMerchants,
   type CategoryHistory,
   type InsightsData,
-  type MerchantRow,
 } from "@/lib/insights";
 import {
   historyMonths,
@@ -30,26 +28,17 @@ export async function getInsights(
   comparison: Comparison,
 ): Promise<InsightsData> {
   const accountIds = (await listVisibleForUser(userId)).map((a) => a.id);
-  const [current, prev] = await Promise.all([
+  const [current, prev, aliases] = await Promise.all([
     loadRows(accountIds, period, { withLabels: true }),
     referenceRows(accountIds, comparison),
+    listAliasGroups(userId),
   ]);
-
-  // Only the rows a merchant can come from are decrypted.
-  const merchantRows: MerchantRow[] = current.rows
-    .filter((r) => r.amount < 0 && r.type !== "TRANSFER" && r.labelEnc)
-    .map((r) => ({
-      amount: r.amount,
-      categoryId: r.categoryId,
-      date: r.date,
-      type: r.type,
-      label: decrypt(r.labelEnc!, dataKey),
-    }));
 
   const income = incomeByCategory(current.rows, prev);
   return {
     changes: categoryChanges(current.rows, prev),
-    merchants: topMerchants(merchantRows, TOP_MERCHANTS),
+    merchants: topMerchants(merchantRowsOf(current.rows), TOP_MERCHANTS, aliasMap(aliases)),
+    aliasGroups: aliases,
     income,
     incomeTotal: round2(income.reduce((s, i) => s + i.current, 0)),
   };

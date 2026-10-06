@@ -37,6 +37,7 @@ model User {
   categories       Category[]
   rules            CategorizationRule[]
   budgets          Budget[]
+  merchantAliases  MerchantAlias[]
 }
 
 model Session {
@@ -458,6 +459,22 @@ model CategorizationRule {
   @@index([userId])
   @@index([groupId])
   @@index([categoryId])
+}
+
+// Per-user display name for a merchant (#125). keyHash = HMAC(merchantKey), the
+// lookup/uniqueness handle; keyEnc/nameEnc keep the values readable for the owner only.
+model MerchantAlias {
+  id      String @id @default(cuid())
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyHash String
+  keyEnc  String @db.Text
+  nameEnc String @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, keyHash])
 }
 
 model TransactionLink {

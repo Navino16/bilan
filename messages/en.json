@@ -673,6 +673,34 @@
     "noSameDate": "Nothing at the same date",
     "noAvg": "Nothing over the previous {months} months"
   },
+  "merchants": {
+    "tab": "Merchants",
+    "rename": "Rename {name}",
+    "title": "Rename merchant",
+    "bankLabel": "Bank label: {labels}",
+    "bankLabels": "Groups: {labels}",
+    "name": "Display name",
+    "existing": "Or group under an existing name:",
+    "hint": "Merchants renamed to the same name are added up.",
+    "removeKey": "Remove {key} from {name}",
+    "reset": "Restore",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "empty": "No spending yet: merchants show up after an import.",
+    "error": {
+      "INVALID": "The name must be 1 to 60 characters.",
+      "NOT_FOUND": "This name no longer exists. Reload the page.",
+      "FAILED": "Saving failed."
+    },
+    "search": "Search a merchant",
+    "renamedSection": "Renamed",
+    "othersSection": "Other merchants",
+    "showMore": "Show {count} more",
+    "noMatch": "No merchant matches.",
+    "count": "{count}×",
+    "noCategory": "Uncategorized"
+  },
   "insights": {
     "overline": "Insights",
     "pageTitle": "Insights",

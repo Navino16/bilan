@@ -7,16 +7,24 @@ export type CategoryChange = {
   previous: number;
   diff: number;
 };
+// `label` is what is shown (the alias, else the latest bank label); `search` stays a bank
+// label so the transactions link still matches; `keys` are the merchant keys grouped.
 export type MerchantTotal = {
   label: string;
+  search: string;
+  keys: string[];
+  alias: string | null;
   total: number;
   count: number;
   categoryId: string | null;
 };
+export type MerchantAliasGroup = { name: string; keys: string[] };
+export type MerchantDirectory = { renamed: MerchantTotal[]; others: MerchantTotal[] };
 export type IncomeByCategory = { categoryId: string | null; current: number; previous: number };
 export type InsightsData = {
   changes: CategoryChange[];
   merchants: MerchantTotal[];
+  aliasGroups: MerchantAliasGroup[];
   income: IncomeByCategory[];
   incomeTotal: number;
 };
@@ -131,6 +139,8 @@ export function historyRows(
 }
 
 type MerchantGroup = {
+  alias: string | null;
+  keys: Set<string>;
   total: number;
   count: number;
   latest: MerchantRow;
@@ -138,14 +148,29 @@ type MerchantGroup = {
 };
 
 // Transfers are excluded: unlinked internal moves ("VIR LIVRET A") would top the list.
-export function topMerchants(rows: MerchantRow[], limit: number): MerchantTotal[] {
+// Merchants sharing an alias (merchant key → display name) are summed as one.
+export function topMerchants(
+  rows: MerchantRow[],
+  limit: number,
+  aliases: ReadonlyMap<string, string> = new Map(),
+): MerchantTotal[] {
   const groups = new Map<string, MerchantGroup>();
   for (const r of rows) {
     if (r.amount >= 0 || r.type === "TRANSFER") continue;
     const key = merchantKey(r.label);
     if (!key) continue;
+    const alias = aliases.get(key) ?? null;
+    const id = alias === null ? `k:${key}` : `a:${alias.toLocaleLowerCase()}`;
     const spend = -r.amount;
-    const g = groups.get(key) ?? { total: 0, count: 0, latest: r, byCategory: new Map() };
+    const g: MerchantGroup = groups.get(id) ?? {
+      alias,
+      keys: new Set<string>(),
+      total: 0,
+      count: 0,
+      latest: r,
+      byCategory: new Map(),
+    };
+    g.keys.add(key);
     g.total += spend;
     g.count += 1;
     if (r.date > g.latest.date) g.latest = r;
@@ -153,15 +178,19 @@ export function topMerchants(rows: MerchantRow[], limit: number): MerchantTotal[
     c.count += 1;
     c.total += spend;
     g.byCategory.set(r.categoryId, c);
-    groups.set(key, g);
+    groups.set(id, g);
   }
   return [...groups.values()]
     .map((g) => {
       const [categoryId] = [...g.byCategory.entries()].reduce((a, e) =>
         e[1].count > a[1].count || (e[1].count === a[1].count && e[1].total > a[1].total) ? e : a,
       );
+      const search = merchantLabel(g.latest.label);
       return {
-        label: merchantLabel(g.latest.label),
+        label: g.alias ?? search,
+        search,
+        keys: [...g.keys].sort(),
+        alias: g.alias,
         total: round2(g.total),
         count: g.count,
         categoryId,

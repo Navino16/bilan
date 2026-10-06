@@ -9,6 +9,9 @@ import { PageHeader } from "@/components/shell/page-header";
 import { DivergingBar } from "./diverging-bar";
 import { CardTitle, DEFAULT_COLOR, Dot, ROW_LINK } from "./bits";
 import { CategoryHistoryCard } from "./category-history";
+import { MerchantNameDialog } from "@/components/merchants/merchant-name-dialog";
+import { Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { BaselineSelect } from "@/components/dashboard/baseline-select";
 import { categorySliceColors } from "@/lib/chart-colors";
 import {
@@ -40,6 +43,7 @@ export async function InsightsView({
   locale: string;
 }) {
   const t = await getTranslations("insights");
+  const tm = await getTranslations("merchants");
   const money = new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "EUR",
@@ -92,6 +96,8 @@ export async function InsightsView({
   );
   const merchantColor = (id: string | null) => merchantCatColors[merchantCats.indexOf(id)];
   const maxMerchant = data.merchants[0]?.total ?? 0;
+  const aliasNames = data.aliasGroups.map((g) => g.name);
+  const aliasKeys = new Map(data.aliasGroups.map((g) => [g.name, g.keys]));
   const incomeColors = categorySliceColors(data.income, catById, DEFAULT_COLOR);
 
   const tile = (key: "biggestIncrease" | "biggestDecrease", c: CategoryChange | undefined) => {
@@ -198,10 +204,13 @@ export async function InsightsView({
           ) : (
             <ol className="flex flex-col gap-1.5">
               {data.merchants.map((m, i) => (
-                <li key={m.label}>
+                <li
+                  key={m.alias ? `a:${m.alias}` : `k:${m.keys[0]}`}
+                  className="flex items-start gap-1"
+                >
                   <Link
-                    href={txHref({ search: m.label, dir: "out" })}
-                    className={`flex flex-col gap-1.5 ${ROW_LINK}`}
+                    href={txHref({ search: m.search, dir: "out" })}
+                    className={`flex min-w-0 flex-1 flex-col gap-1.5 ${ROW_LINK}`}
                   >
                     <div className="flex items-center gap-2 text-sm">
                       <span className="text-muted-foreground w-4 text-[11.5px] tabular-nums">
@@ -226,6 +235,25 @@ export async function InsightsView({
                       />
                     </div>
                   </Link>
+                  <MerchantNameDialog
+                    target={{
+                      key: m.alias ? null : m.keys[0],
+                      alias: m.alias,
+                      keys: aliasKeys.get(m.alias ?? "") ?? m.keys,
+                      label: m.label,
+                    }}
+                    names={aliasNames}
+                    trigger={
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-muted-foreground -mr-1.5"
+                        aria-label={tm("rename", { name: m.label })}
+                      >
+                        <Pencil />
+                      </Button>
+                    }
+                  />
                 </li>
               ))}
             </ol>

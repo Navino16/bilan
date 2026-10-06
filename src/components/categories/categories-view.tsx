@@ -10,6 +10,8 @@ import { CategoryForm } from "./category-form";
 import { CategoryList } from "./category-list";
 import { RulesList, type RuleRow } from "./rules-list";
 import { RuleDialog } from "./rule-dialog";
+import { MerchantDirectory } from "@/components/merchants/merchant-directory";
+import type { MerchantDirectory as Directory } from "@/lib/insights";
 import type { CategoryNode } from "@/server/services/categories";
 import { PageHeader } from "@/components/shell/page-header";
 
@@ -18,15 +20,18 @@ export function CategoriesView({
   flatCategories,
   rules,
   groups,
+  merchants,
 }: {
   tree: CategoryNode[];
   flatCategories: FlatCategory[];
   rules: RuleRow[];
   groups: { id: string; name: string }[];
+  merchants: Directory;
 }) {
   const t = useTranslations("rules");
   const tc = useTranslations("categories");
-  const [tab, setTab] = useState<"cats" | "rules">("cats");
+  const tm = useTranslations("merchants");
+  const [tab, setTab] = useState<"cats" | "rules" | "merchants">("cats");
   const [ruleOpen, setRuleOpen] = useState(false);
   const parents = tree.map((n) => ({ id: n.id, name: n.name }));
 
@@ -47,12 +52,12 @@ export function CategoriesView({
                 </Button>
               }
             />
-          ) : (
+          ) : tab === "rules" ? (
             <Button onClick={() => setRuleOpen(true)}>
               <Plus />
               {t("new")}
             </Button>
-          )
+          ) : null
         }
       />
 
@@ -60,6 +65,10 @@ export function CategoriesView({
         items={[
           { id: "cats", label: `${t("tabCategories")} (${flatCategories.length})` },
           { id: "rules", label: `${t("tabRules")} (${rules.length})` },
+          {
+            id: "merchants",
+            label: `${tm("tab")} (${merchants.renamed.length + merchants.others.length})`,
+          },
         ]}
         value={tab}
         onChange={setTab}
@@ -67,8 +76,10 @@ export function CategoriesView({
 
       {tab === "cats" ? (
         <CategoryList tree={tree} />
-      ) : (
+      ) : tab === "rules" ? (
         <RulesList rules={rules} categories={flatCategories} groups={groups} />
+      ) : (
+        <MerchantDirectory directory={merchants} categories={flatCategories} />
       )}
 
       <RuleDialog

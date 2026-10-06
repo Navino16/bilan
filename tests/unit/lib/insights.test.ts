@@ -75,8 +75,24 @@ describe("topMerchants", () => {
       6,
     );
     expect(out).toEqual([
-      { label: "FONCIA LOYER", total: 700, count: 1, categoryId: "rent" },
-      { label: "Lidl", total: 100, count: 2, categoryId: "food" },
+      {
+        label: "FONCIA LOYER",
+        search: "FONCIA LOYER",
+        keys: ["FONCIA LOYER"],
+        alias: null,
+        total: 700,
+        count: 1,
+        categoryId: "rent",
+      },
+      {
+        label: "Lidl",
+        search: "Lidl",
+        keys: ["LIDL"],
+        alias: null,
+        total: 100,
+        count: 2,
+        categoryId: "food",
+      },
     ]);
   });
 
@@ -112,6 +128,58 @@ describe("topMerchants", () => {
   it("limits the result", () => {
     const rows = ["A", "B", "C"].map((m, i) => row(`CB SHOP${m}`, -(i + 1), i + 1));
     expect(topMerchants(rows, 2).map((m) => m.label)).toEqual(["SHOPC", "SHOPB"]);
+  });
+
+  it("shows an alias as the display name and keeps the bank label for the search", () => {
+    const out = topMerchants(
+      [row("PRLV FONCIA LOYER", -700, 5, "rent")],
+      6,
+      new Map([["FONCIA LOYER", "Loyer"]]),
+    );
+    expect(out[0]).toMatchObject({
+      label: "Loyer",
+      search: "FONCIA LOYER",
+      keys: ["FONCIA LOYER"],
+      alias: "Loyer",
+    });
+  });
+
+  it("merges merchants sharing an alias, leaving the others apart", () => {
+    const out = topMerchants(
+      [row("CB LIDL", -40, 3), row("CB CARREFOUR MARKET", -60, 9), row("CB MONOPRIX", -10, 4)],
+      6,
+      new Map([
+        ["LIDL", "Supermarché"],
+        ["CARREFOUR MARKET", "Supermarché"],
+      ]),
+    );
+    expect(out).toEqual([
+      {
+        label: "Supermarché",
+        search: "CARREFOUR MARKET",
+        keys: ["CARREFOUR MARKET", "LIDL"],
+        alias: "Supermarché",
+        total: 100,
+        count: 2,
+        categoryId: "food",
+      },
+      expect.objectContaining({ label: "MONOPRIX", alias: null, keys: ["MONOPRIX"] }),
+    ]);
+  });
+
+  it("groups aliases whose names differ only by case, apart from an unaliased namesake", () => {
+    const out = topMerchants(
+      [row("CB LIDL", -40, 3), row("CB LIDL SAS", -10, 9), row("CB ALDI", -5, 4)],
+      6,
+      new Map([
+        ["LIDL", "Aldi"],
+        ["LIDL SAS", "aldi"],
+      ]),
+    );
+    expect(out.map((m) => [m.label, m.total, m.keys])).toEqual([
+      ["Aldi", 50, ["LIDL", "LIDL SAS"]],
+      ["ALDI", 5, ["ALDI"]],
+    ]);
   });
 });
 

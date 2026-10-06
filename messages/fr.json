@@ -673,6 +673,34 @@
     "noSameDate": "Rien à la même date",
     "noAvg": "Rien sur les {months} mois précédents"
   },
+  "merchants": {
+    "tab": "Marchands",
+    "rename": "Renommer {name}",
+    "title": "Renommer le marchand",
+    "bankLabel": "Libellé de la banque : {labels}",
+    "bankLabels": "Regroupe : {labels}",
+    "name": "Nom affiché",
+    "existing": "Ou regrouper sous un nom existant :",
+    "hint": "Les marchands renommés avec le même nom sont additionnés.",
+    "removeKey": "Retirer {key} de {name}",
+    "reset": "Rétablir",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "empty": "Aucune dépense pour l'instant : les marchands apparaîtront après un import.",
+    "error": {
+      "INVALID": "Le nom doit faire entre 1 et 60 caractères.",
+      "NOT_FOUND": "Ce nom n'existe plus. Rechargez la page.",
+      "FAILED": "L'enregistrement a échoué."
+    },
+    "search": "Rechercher un marchand",
+    "renamedSection": "Renommés",
+    "othersSection": "Autres marchands",
+    "showMore": "Afficher {count} de plus",
+    "noMatch": "Aucun marchand ne correspond.",
+    "count": "{count}×",
+    "noCategory": "Sans catégorie"
+  },
   "insights": {
     "overline": "Analyses",
     "pageTitle": "Analyses",
