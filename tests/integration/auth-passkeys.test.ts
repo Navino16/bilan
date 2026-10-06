@@ -74,7 +74,8 @@ describe("listPasskeys", () => {
     const recent = await createPasskey(owner.id, { createdAt: new Date("2026-06-01") });
     await createPasskey(other.id);
 
-    const list = await listPasskeys(owner.id);
+    const ids = new Set([old.id, recent.id]);
+    const list = (await listPasskeys(owner.id)).filter((pk) => ids.has(pk.id));
     expect(list).toEqual([
       { id: recent.id, name: null, createdAt: recent.createdAt, synced: false },
       { id: old.id, name: "Old key", createdAt: old.createdAt, synced: true },

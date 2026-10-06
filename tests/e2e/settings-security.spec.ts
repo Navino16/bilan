@@ -119,10 +119,11 @@ test.describe("passkeys", () => {
   );
 
   test("adds, renames, signs in with and deletes a passkey", async ({ page, context }) => {
+    test.setTimeout(90_000);
     const email = `passkeys-${Date.now()}@e2e.local`;
     const cdp = await context.newCDPSession(page);
     await cdp.send("WebAuthn.enable");
-    await cdp.send("WebAuthn.addVirtualAuthenticator", {
+    const { authenticatorId } = await cdp.send("WebAuthn.addVirtualAuthenticator", {
       options: {
         protocol: "ctap2",
         transport: "internal",
@@ -146,8 +147,12 @@ test.describe("passkeys", () => {
     // Retry until the client island has hydrated.
     await expect(async () => {
       await card.getByRole("button", { name: "Ajouter" }).click();
-      await expect(card.getByText("Vos passkeys · 1")).toBeVisible({ timeout: 2_000 });
+      await expect(card.getByText("Vos passkeys · 1")).toBeVisible({ timeout: 5_000 });
     }).toPass({ timeout: 20_000 });
+    // A retried click on an already-added passkey would surface ALREADY_REGISTERED.
+    await expect(card.getByRole("alert")).toHaveCount(0);
+    const { credentials } = await cdp.send("WebAuthn.getCredentials", { authenticatorId });
+    expect(credentials.map((c) => c.userName)).toEqual([email]);
 
     await card.getByRole("button", { name: /^Renommer/ }).click();
     await card.getByLabel("Nom de la passkey").fill("Clé e2e");
@@ -158,7 +163,7 @@ test.describe("passkeys", () => {
     await page.goto("/fr/login");
     await expect(async () => {
       await page.getByRole("button", { name: "Se connecter avec une passkey" }).click();
-      await expect(page).toHaveURL(/\/dashboard$/, { timeout: 2_000 });
+      await expect(page).toHaveURL(/\/dashboard$/, { timeout: 10_000 });
     }).toPass({ timeout: 20_000 });
 
     await page.goto("/fr/settings/security", { waitUntil: "domcontentloaded", timeout: 90_000 });

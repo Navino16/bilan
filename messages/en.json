@@ -844,7 +844,7 @@
       "passkeysCard": {
         "overline": "Passkeys",
         "title": "Passwordless sign-in",
-        "hint": "Sign in with your device's fingerprint, face or PIN.",
+        "hint": "Sign in with your fingerprint, your face or your device's PIN.",
         "count": "Your passkeys · {count}",
         "add": "Add",
         "none": "No passkeys yet.",
@@ -866,7 +866,8 @@
           "ALREADY_REGISTERED": "This device already has a passkey for your account.",
           "ADD_FAILED": "Adding the passkey was cancelled or didn't complete.",
           "FAILED": "Something went wrong. Please try again."
-        }
+        },
+        "signInAgain": "Sign in again"
       }
     }
   },

@@ -844,7 +844,7 @@
       "passkeysCard": {
         "overline": "Passkeys",
         "title": "Connexion sans mot de passe",
-        "hint": "Connectez-vous avec l'empreinte, le visage ou le code de votre appareil.",
+        "hint": "Connectez-vous avec votre empreinte digitale, votre visage ou le code de votre appareil.",
         "count": "Vos passkeys · {count}",
         "add": "Ajouter",
         "none": "Aucune passkey pour le moment.",
@@ -866,7 +866,8 @@
           "ALREADY_REGISTERED": "Cet appareil a déjà une passkey pour votre compte.",
           "ADD_FAILED": "L'ajout de la passkey a été annulé ou n'a pas abouti.",
           "FAILED": "L'opération a échoué. Réessayez."
-        }
+        },
+        "signInAgain": "Se reconnecter"
       }
     }
   },
