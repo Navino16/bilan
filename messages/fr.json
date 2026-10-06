@@ -593,7 +593,8 @@
     "dangerZone": "Zone de danger",
     "dangerTitleOwner": "Quitter ou supprimer le foyer",
     "leaveHint": "Vous perdrez l'accès aux comptes et budgets partagés de ce foyer.",
-    "leaveTitle": "Quitter le foyer"
+    "leaveTitle": "Quitter le foyer",
+    "deleteHint": "La suppression retire tous les partages associés. Action irréversible."
   },
   "invitations": {
     "invite": "Inviter",

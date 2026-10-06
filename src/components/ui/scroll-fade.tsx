@@ -5,8 +5,7 @@ import { cn } from "@/lib/utils";
 
 const FADE = "1.5rem";
 
-// Horizontal scroller that fades the edge(s) with hidden content, and brings the
-// active item ([aria-current=page] or [aria-pressed=true]) into view on mount.
+// Active item = [aria-current=page] | [aria-pressed=true]; scrolled into view on mount only.
 export function ScrollFade({
   className,
   children,
@@ -22,14 +21,15 @@ export function ScrollFade({
     if (!el) return;
     const active = el.querySelector<HTMLElement>('[aria-current="page"], [aria-pressed="true"]');
     if (active) el.scrollLeft = active.offsetLeft - (el.clientWidth - active.offsetWidth) / 2;
-    const sync = () =>
-      setEdges({
-        left: el.scrollLeft > 1,
-        right: el.scrollLeft + el.clientWidth < el.scrollWidth - 1,
-      });
+    const sync = () => {
+      const left = el.scrollLeft > 1;
+      const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+      setEdges((prev) => (prev.left === left && prev.right === right ? prev : { left, right }));
+    };
     sync();
     const ro = new ResizeObserver(sync);
     ro.observe(el);
+    if (el.firstElementChild) ro.observe(el.firstElementChild);
     el.addEventListener("scroll", sync, { passive: true });
     return () => {
       ro.disconnect();
@@ -42,7 +42,7 @@ export function ScrollFade({
     <div
       ref={ref}
       className={cn(
-        "[scrollbar-width:none] overflow-x-auto [&::-webkit-scrollbar]:hidden",
+        "relative [scrollbar-width:none] overflow-x-auto [&::-webkit-scrollbar]:hidden",
         className,
       )}
       style={{ maskImage: mask, WebkitMaskImage: mask }}

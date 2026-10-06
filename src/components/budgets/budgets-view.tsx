@@ -80,9 +80,14 @@ export function BudgetsView({
                   data-slot="budget-card"
                   className="hover:border-primary/40 gap-3 p-4 transition-colors"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <p className="truncate font-medium">{b.name}</p>
+                  <div className="space-y-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="min-w-0 truncate font-medium">{b.name}</p>
+                      <Badge style={statusStyle(b.status)} className="shrink-0 border-transparent">
+                        {t(`status.${b.status}`)}
+                      </Badge>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
                         <Badge variant={b.scope === "GROUP" ? "default" : "secondary"}>
                           {b.scope === "GROUP" ? t("scopeGroup") : t("scopePersonal")}
@@ -92,11 +97,6 @@ export function BudgetsView({
                           {df.format(b.periodStart)} – {df.format(b.periodEnd)}
                         </span>
                       </div>
-                    </div>
-                    <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row-reverse sm:items-center">
-                      <Badge style={statusStyle(b.status)} className="border-transparent">
-                        {t(`status.${b.status}`)}
-                      </Badge>
                       {b.recurring && b.ended && b.canManage && (
                         <Button
                           type="button"

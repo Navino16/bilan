@@ -27,7 +27,7 @@ export function Stepper({ steps, current }: { steps: string[]; current: number }
               className={cn(
                 "text-[13px] whitespace-nowrap",
                 i === current ? "text-foreground font-medium" : "text-muted-foreground",
-                i !== current && "hidden sm:inline",
+                i !== current && "sr-only sm:not-sr-only",
               )}
             >
               {label}

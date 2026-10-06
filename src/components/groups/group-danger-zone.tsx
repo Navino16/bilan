@@ -29,6 +29,7 @@ export function GroupDangerZone({
     action: (fd: FormData) => Promise<{ ok: boolean; error?: string } | null>,
   ) {
     if (!window.confirm(confirm)) return;
+    setError(null);
     const fd = new FormData();
     fd.set("id", groupId);
     startTransition(async () => {
@@ -42,8 +43,10 @@ export function GroupDangerZone({
     <SectionCard
       className="border-destructive/40"
       overline={t("dangerZone")}
-      title={viewerRole === "OWNER" ? t("dangerTitleOwner") : t("leaveTitle")}
-      hint={viewerRole === "OWNER" ? t("deleteConfirm") : t("leaveHint")}
+      title={
+        isLastOwner ? t("delete") : viewerRole === "OWNER" ? t("dangerTitleOwner") : t("leaveTitle")
+      }
+      hint={viewerRole === "OWNER" ? t("deleteHint") : t("leaveHint")}
     >
       <div className="flex flex-wrap gap-2">
         {/* The last owner can't leave (the service blocks it): deleting is their only exit. */}

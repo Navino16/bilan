@@ -133,7 +133,7 @@ export function TransactionForm({
           {error && <p className="text-destructive text-sm">{t(`error.${error}`)}</p>}
         </div>
         <DialogFooter className="bg-muted/40 border-border shrink-0 border-t px-6 py-3">
-          <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+          <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)}>
             {t("cancel")}
           </Button>
           <Button type="submit" disabled={pending}>

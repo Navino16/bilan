@@ -593,7 +593,8 @@
     "dangerZone": "Danger zone",
     "dangerTitleOwner": "Leave or delete the household",
     "leaveHint": "You will lose access to this household's shared accounts and budgets.",
-    "leaveTitle": "Leave the household"
+    "leaveTitle": "Leave the household",
+    "deleteHint": "Deleting removes all associated shares. This cannot be undone."
   },
   "invitations": {
     "invite": "Invite",

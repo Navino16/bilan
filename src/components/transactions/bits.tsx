@@ -21,7 +21,7 @@ export function Pill({ children, className }: { children: ReactNode; className?:
   );
 }
 
-// Colored, rounded category badge with the seeded emoji icon (a tag when there is none).
+// Colored, rounded category badge with the seeded emoji icon.
 export function CategoryAvatar({
   color,
   icon,

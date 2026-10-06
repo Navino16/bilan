@@ -17,7 +17,7 @@ export async function AuditTable({ items, locale }: { items: AuditEntry[]; local
   const entity = (row: AuditEntry) =>
     row.entity ? `${row.entity}${row.entityId ? ` · ${row.entityId}` : ""}` : "—";
   const user = (row: AuditEntry) =>
-    row.user ? (row.user.name ?? row.user.email) : (row.userId ?? t("system"));
+    row.user ? row.user.name?.trim() || row.user.email : (row.userId ?? t("system"));
 
   return (
     <>

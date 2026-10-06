@@ -29,12 +29,13 @@ afterAll(async () => {
 describe("listAuditLog", () => {
   it("resolves the acting user, null for system events and deleted users", async () => {
     const { items } = await listAuditLog({ action });
-    expect(items.map((i) => [i.userId, i.user]).sort()).toEqual(
-      [
+    expect(items).toHaveLength(3);
+    expect(items.map((i) => [i.userId, i.user])).toEqual(
+      expect.arrayContaining([
         [userId, { name: "Audit User", email: "auditlist@bilan.local" }],
         ["auditlist_gone", null],
         [null, null],
-      ].sort(),
+      ]),
     );
   });
 });
