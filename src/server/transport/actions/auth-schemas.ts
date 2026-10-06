@@ -34,3 +34,5 @@ export const changePasswordSchema = z
     path: ["confirmPassword"],
     error: "MISMATCH",
   });
+
+export const revokeSessionSchema = z.string().min(1).max(64);

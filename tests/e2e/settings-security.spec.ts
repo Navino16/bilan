@@ -42,8 +42,6 @@ test.describe("change password", () => {
     await card.getByLabel("Mot de passe actuel").fill(oldPassword);
     await card.getByLabel("Nouveau mot de passe", { exact: true }).fill(newPassword);
     await card.getByLabel("Confirmer le nouveau mot de passe").fill(newPassword);
-    // An expired session cache forces the post-action render to resolve the session from the DB.
-    await context.clearCookies({ name: /session_data/ });
     await card.getByRole("button", { name: "Changer le mot de passe" }).click();
     await expect(card.getByText("Votre mot de passe a été modifié.")).toBeVisible();
     await expect(page).toHaveURL(/\/settings\/security$/);
@@ -54,5 +52,62 @@ test.describe("change password", () => {
     await page.fill('input[name="password"]', newPassword);
     await page.click('button[type="submit"]');
     await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
+  });
+});
+
+test.describe("active sessions", () => {
+  test.skip(
+    ({ browserName }) => browserName === "webkit",
+    "Playwright WebKit doesn't deliver taps in this env (project-wide skip)",
+  );
+
+  test("signs other devices out, which lose access on their next request", async ({
+    page,
+    browser,
+  }) => {
+    const email = `sessions-${Date.now()}@e2e.local`;
+    const password = "e2e-sessions-password-123";
+
+    await page.goto("/fr/register");
+    await page.fill('input[name="name"]', "E2E Sessions");
+    await page.fill('input[name="email"]', email);
+    await page.fill('input[name="password"]', password);
+    await page.click('button[type="submit"]');
+    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
+
+    const devices = [];
+    for (let i = 0; i < 2; i++) {
+      const context = await browser.newContext({ storageState: undefined });
+      const device = await context.newPage();
+      await device.goto("/fr/login");
+      await device.fill('input[name="email"]', email);
+      await device.fill('input[name="password"]', password);
+      await device.click('button[type="submit"]');
+      await expect(device).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
+      devices.push(device);
+    }
+
+    await page.goto("/fr/settings/security", { waitUntil: "domcontentloaded", timeout: 90_000 });
+    const card = page.locator('[data-slot="sessions-controls"]');
+    await expect(card.getByText("Cet appareil")).toBeVisible();
+    await expect(card.getByText("Autres appareils · 2")).toBeVisible();
+    // Retry until the client island has hydrated.
+    await expect(async () => {
+      await card
+        .getByRole("button", { name: /^Déconnecter Chrome/ })
+        .first()
+        .click();
+      await expect(card.getByText("Autres appareils · 1")).toBeVisible({ timeout: 1_000 });
+    }).toPass({ timeout: 20_000 });
+
+    await card.getByRole("button", { name: "Tout déconnecter" }).click();
+    await expect(card.getByText("Aucun autre appareil connecté.")).toBeVisible();
+    await expect(page).toHaveURL(/\/settings\/security$/);
+
+    for (const device of devices) {
+      await device.goto("/fr/dashboard");
+      await expect(device).toHaveURL(/\/login/, { timeout: 15_000 });
+      await device.context().close();
+    }
   });
 });

@@ -15,6 +15,7 @@ import { appSettings } from "@/server/services/settings/app-settings";
 import { consumeSignupToken, refundSignupToken } from "@/server/services/signup-tokens";
 import { userExistsByEmail } from "@/server/services/users/lookup";
 import { changePassword } from "@/server/services/users/password";
+import { revokeOtherSessions, revokeSession } from "@/server/services/users/sessions";
 import { logEvent } from "@/server/services/audit";
 import { notifyNewLogin } from "@/server/services/mail/security-notifications";
 import {
@@ -23,6 +24,7 @@ import {
   resetRequestSchema,
   resetConfirmSchema,
   changePasswordSchema,
+  revokeSessionSchema,
 } from "./auth-schemas";
 
 export type AuthActionState =
@@ -206,4 +208,18 @@ export async function changePasswordAction(
       metadata: { reason: "bad_password" },
     });
   return res;
+}
+
+export async function revokeSessionAction(sessionId: string): Promise<AuthActionState> {
+  await requireSession();
+  const parsed = revokeSessionSchema.safeParse(sessionId);
+  if (!parsed.success) return { ok: false, error: "INVALID" };
+  const res = await revokeSession(await nextHeaders(), parsed.data);
+  return res.ok ? { ok: true } : res;
+}
+
+export async function revokeOtherSessionsAction(): Promise<AuthActionState> {
+  await requireSession();
+  const res = await revokeOtherSessions(await nextHeaders());
+  return res.ok ? { ok: true } : res;
 }

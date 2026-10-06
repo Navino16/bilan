@@ -1,9 +1,11 @@
 import { setRequestLocale, getTranslations } from "next-intl/server";
-import { requireSession } from "@/server/auth/permissions";
+import { getCurrentSession, requireSession } from "@/server/auth/permissions";
 import { db } from "@/server/db";
 import { getMinPasswordLength } from "@/server/services/settings/app-settings";
 import { hasPasswordCredential } from "@/server/services/users/password";
+import { listSessions } from "@/server/services/users/sessions";
 import { PasswordControls } from "@/components/settings/password-controls";
+import { SessionsControls } from "@/components/settings/sessions-controls";
 import { TwoFactorControls } from "@/components/settings/two-factor-controls";
 import { PageHeader } from "@/components/shell/page-header";
 import { SectionCard } from "@/components/shell/section-card";
@@ -20,10 +22,12 @@ export default async function SecuritySettingsPage({
   const user = await requireSession();
   const t = await getTranslations("settings.security");
 
-  const [row, hasPassword, minPasswordLength] = await Promise.all([
+  const currentSessionId = (await getCurrentSession())?.session.id ?? null;
+  const [row, hasPassword, minPasswordLength, sessions] = await Promise.all([
     db.user.findUnique({ where: { id: user.id }, select: { twoFactorEnabled: true } }),
     hasPasswordCredential(user.id),
     getMinPasswordLength(),
+    listSessions(user.id, currentSessionId),
   ]);
 
   return (
@@ -42,6 +46,14 @@ export default async function SecuritySettingsPage({
 
       <SectionCard overline={t("twoFactor")} title={t("twoFactorTitle")} hint={t("twoFactorHint")}>
         <TwoFactorControls enabled={Boolean(row?.twoFactorEnabled)} />
+      </SectionCard>
+
+      <SectionCard
+        overline={t("sessionsCard.overline")}
+        title={t("sessionsCard.title")}
+        hint={t("sessionsCard.hint")}
+      >
+        <SessionsControls sessions={sessions} />
       </SectionCard>
     </div>
   );
