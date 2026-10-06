@@ -6,7 +6,11 @@ import { db } from "@/server/db";
 import { env } from "@/env";
 import { dataKey } from "@/server/crypto/keys";
 import { decrypt } from "@/server/crypto/encryption";
-import { appSettings, getAppName } from "@/server/services/settings/app-settings";
+import {
+  appSettings,
+  getAppName,
+  getMinPasswordLength,
+} from "@/server/services/settings/app-settings";
 import { logEvent } from "@/server/services/audit";
 import { notifyPasswordChanged } from "@/server/services/mail/security-notifications";
 import { seedDefaultCategories } from "@/server/services/categories/seed-defaults";
@@ -45,7 +49,7 @@ function toOAuthConfig(o: ResolvedOidc) {
 
 async function buildOptions(): Promise<BetterAuthOptions> {
   const credentialsEnabled = (await appSettings.get<boolean>("credentials_enabled")) ?? true;
-  const minPasswordLength = (await appSettings.get<number>("min_password_length")) ?? 12;
+  const minPasswordLength = await getMinPasswordLength();
   const appName = await getAppName();
   const providers = await providerCache.get();
 
@@ -96,9 +100,9 @@ async function buildOptions(): Promise<BetterAuthOptions> {
       },
       account: {
         update: {
-          // A credential account's row updates when the password changes (reset
-          // flow) → send the security alert + audit. Skipped for OIDC token
-          // refreshes (providerId !== "credential"). Best-effort, never blocks.
+          // A credential account's row updates when the password is reset or
+          // changed → audit + security alert. Skipped for OIDC token refreshes
+          // (providerId !== "credential"). The mail is not awaited: SMTP can be slow.
           after: async (account) => {
             if (account.providerId !== "credential") return;
             try {
@@ -107,8 +111,8 @@ async function buildOptions(): Promise<BetterAuthOptions> {
                 select: { email: true },
               });
               if (!u) return;
-              await notifyPasswordChanged({ email: u.email, at: new Date() });
               await logEvent({ userId: account.userId, action: "auth.password.changed" });
+              void notifyPasswordChanged({ email: u.email, at: new Date() });
             } catch {
               // best-effort
             }

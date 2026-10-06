@@ -790,6 +790,31 @@
       "error": {
         "BAD_PASSWORD": "Incorrect password.",
         "BAD_CODE": "Invalid code. Please try again."
+      },
+      "passwordCard": {
+        "overline": "Password",
+        "title": "Change password",
+        "hint": "Used to sign in and to confirm sensitive actions.",
+        "edit": "Change",
+        "current": "Current password",
+        "new": "New password",
+        "confirm": "Confirm new password",
+        "minLength": "At least {count} characters.",
+        "revokeOthers": "Sign out my other devices",
+        "submit": "Change password",
+        "cancel": "Cancel",
+        "working": "Working…",
+        "changed": "Your password has been changed.",
+        "error": {
+          "BAD_PASSWORD": "Incorrect current password.",
+          "TOO_SHORT": "The new password is too short.",
+          "TOO_LONG": "The new password is too long.",
+          "MISMATCH": "The two passwords don't match.",
+          "RATE_LIMITED": "Too many attempts. Try again later.",
+          "INVALID": "Fill in all the fields.",
+          "FAILED": "Couldn't change the password. Please try again.",
+          "REVOKE_FAILED": "Your password was changed, but your other devices couldn't be signed out."
+        }
       }
     }
   },

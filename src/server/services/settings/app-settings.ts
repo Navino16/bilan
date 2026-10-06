@@ -105,3 +105,7 @@ export const appSettings = new AppSettingsService(db, {
 export async function getAppName(): Promise<string> {
   return normalizeAppName(await appSettings.get("app_name"));
 }
+
+export async function getMinPasswordLength(): Promise<number> {
+  return (await appSettings.get<number>("min_password_length")) ?? 12;
+}

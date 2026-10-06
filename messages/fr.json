@@ -790,6 +790,31 @@
       "error": {
         "BAD_PASSWORD": "Mot de passe incorrect.",
         "BAD_CODE": "Code invalide. Réessayez."
+      },
+      "passwordCard": {
+        "overline": "Mot de passe",
+        "title": "Changer le mot de passe",
+        "hint": "Utilisé pour vous connecter et pour confirmer les actions sensibles.",
+        "edit": "Modifier",
+        "current": "Mot de passe actuel",
+        "new": "Nouveau mot de passe",
+        "confirm": "Confirmer le nouveau mot de passe",
+        "minLength": "{count} caractères minimum.",
+        "revokeOthers": "Déconnecter mes autres appareils",
+        "submit": "Changer le mot de passe",
+        "cancel": "Annuler",
+        "working": "En cours…",
+        "changed": "Votre mot de passe a été modifié.",
+        "error": {
+          "BAD_PASSWORD": "Mot de passe actuel incorrect.",
+          "TOO_SHORT": "Le nouveau mot de passe est trop court.",
+          "TOO_LONG": "Le nouveau mot de passe est trop long.",
+          "MISMATCH": "Les deux mots de passe ne correspondent pas.",
+          "RATE_LIMITED": "Trop de tentatives. Réessayez plus tard.",
+          "INVALID": "Remplissez tous les champs.",
+          "FAILED": "Impossible de changer le mot de passe. Réessayez.",
+          "REVOKE_FAILED": "Votre mot de passe a été modifié, mais vos autres appareils n'ont pas pu être déconnectés."
+        }
       }
     }
   },
