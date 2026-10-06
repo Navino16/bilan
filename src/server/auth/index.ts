@@ -16,6 +16,7 @@ import { notifyPasswordChanged } from "@/server/services/mail/security-notificat
 import { seedDefaultCategories } from "@/server/services/categories/seed-defaults";
 import { providerCache, resolveOidcProvider, type ResolvedOidc } from "./providers";
 import { authPlugins } from "./plugins";
+import { passkeyAuditHook } from "./passkey-audit";
 
 type Handler = ReturnType<typeof betterAuth>;
 let cached: { handler: Handler; builtAt: number } | null = null;
@@ -136,6 +137,7 @@ async function buildOptions(): Promise<BetterAuthOptions> {
       },
     },
     socialProviders,
+    hooks: { after: passkeyAuditHook },
     session: {
       expiresIn: 60 * 60 * 24 * 7, // 7 days
       updateAge: 60 * 60 * 24, // refresh after 1 day

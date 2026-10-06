@@ -4,6 +4,8 @@ import { db } from "@/server/db";
 import { getMinPasswordLength } from "@/server/services/settings/app-settings";
 import { hasPasswordCredential } from "@/server/services/users/password";
 import { listSessions } from "@/server/services/users/sessions";
+import { listPasskeys } from "@/server/services/users/passkeys";
+import { PasskeysControls } from "@/components/settings/passkeys-controls";
 import { PasswordControls } from "@/components/settings/password-controls";
 import { SessionsControls } from "@/components/settings/sessions-controls";
 import { TwoFactorControls } from "@/components/settings/two-factor-controls";
@@ -23,11 +25,12 @@ export default async function SecuritySettingsPage({
   const t = await getTranslations("settings.security");
 
   const currentSessionId = (await getCurrentSession())?.session.id ?? null;
-  const [row, hasPassword, minPasswordLength, sessions] = await Promise.all([
+  const [row, hasPassword, minPasswordLength, sessions, passkeys] = await Promise.all([
     db.user.findUnique({ where: { id: user.id }, select: { twoFactorEnabled: true } }),
     hasPasswordCredential(user.id),
     getMinPasswordLength(),
     listSessions(user.id, currentSessionId),
+    listPasskeys(user.id),
   ]);
 
   return (
@@ -54,6 +57,14 @@ export default async function SecuritySettingsPage({
         hint={t("sessionsCard.hint")}
       >
         <SessionsControls sessions={sessions} />
+      </SectionCard>
+
+      <SectionCard
+        overline={t("passkeysCard.overline")}
+        title={t("passkeysCard.title")}
+        hint={t("passkeysCard.hint")}
+      >
+        <PasskeysControls passkeys={passkeys} />
       </SectionCard>
     </div>
   );
