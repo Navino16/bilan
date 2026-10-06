@@ -15,11 +15,11 @@
       "error": {
         "rateLimited": "Trop de tentatives. Réessayez plus tard.",
         "badCredentials": "E-mail ou mot de passe incorrect.",
-        "passkeyNotFound": "Cette passkey n'est plus reconnue. Connectez-vous avec votre mot de passe.",
-        "passkeyFailed": "La connexion par passkey a été annulée ou n'a pas abouti."
+        "passkeyNotFound": "Cette clé d'accès n'est plus reconnue. Connectez-vous avec votre mot de passe.",
+        "passkeyFailed": "La connexion par clé d'accès a été annulée ou n'a pas abouti."
       },
       "or": "ou",
-      "passkey": "Se connecter avec une passkey"
+      "passkey": "Se connecter avec une clé d'accès"
     },
     "register": {
       "title": "Créer un compte",
@@ -842,29 +842,29 @@
         }
       },
       "passkeysCard": {
-        "overline": "Passkeys",
+        "overline": "Clés d'accès",
         "title": "Connexion sans mot de passe",
         "hint": "Connectez-vous avec votre empreinte digitale, votre visage ou le code de votre appareil.",
-        "count": "Vos passkeys · {count}",
+        "count": "Vos clés d'accès · {count}",
         "add": "Ajouter",
-        "none": "Aucune passkey pour le moment.",
-        "defaultName": "Passkey",
-        "unnamed": "Passkey sans nom",
+        "none": "Aucune clé d'accès pour le moment.",
+        "defaultName": "Clé d'accès",
+        "unnamed": "Clé d'accès sans nom",
         "added": "Ajoutée le {date}",
         "synced": "Synchronisée",
         "deviceBound": "Cet appareil uniquement",
         "rename": "Renommer {name}",
         "delete": "Supprimer {name}",
-        "nameLabel": "Nom de la passkey",
+        "nameLabel": "Nom de la clé d'accès",
         "save": "Enregistrer",
         "cancel": "Annuler",
-        "deleteTitle": "Supprimer cette passkey ?",
+        "deleteTitle": "Supprimer cette clé d'accès ?",
         "deleteBody": "« {name} » ne permettra plus de vous connecter. Pensez aussi à la retirer du gestionnaire de mots de passe de votre appareil.",
         "deleteConfirm": "Supprimer",
         "error": {
-          "NOT_FRESH": "Par sécurité, reconnectez-vous avant d'ajouter une passkey.",
-          "ALREADY_REGISTERED": "Cet appareil a déjà une passkey pour votre compte.",
-          "ADD_FAILED": "L'ajout de la passkey a été annulé ou n'a pas abouti.",
+          "NOT_FRESH": "Par sécurité, reconnectez-vous avant d'ajouter une clé d'accès.",
+          "ALREADY_REGISTERED": "Cet appareil a déjà une clé d'accès pour votre compte.",
+          "ADD_FAILED": "L'ajout de la clé d'accès a été annulé ou n'a pas abouti.",
           "FAILED": "L'opération a échoué. Réessayez."
         },
         "signInAgain": "Se reconnecter"

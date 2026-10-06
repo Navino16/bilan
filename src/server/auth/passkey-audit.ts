@@ -1,6 +1,7 @@
 import { createAuthMiddleware, getSessionFromCtx, isAPIError } from "better-auth/api";
+import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
-import { notifyNewLogin } from "@/server/services/mail/security-notifications";
+import { notifyNewLogin, notifyPasskeyAdded } from "@/server/services/mail/security-notifications";
 
 type AuditInput = Parameters<typeof logEvent>[0];
 
@@ -62,14 +63,20 @@ export const passkeyAuditHook = createAuthMiddleware(async (ctx) => {
     );
     if (!event) return;
     await logEvent(event);
+    const h = ctx.headers;
+    const origin = {
+      ip: h?.get("x-forwarded-for")?.split(",")[0]?.trim() ?? h?.get("x-real-ip") ?? null,
+      userAgent: h?.get("user-agent") ?? null,
+      at: new Date(),
+    };
     if (event.action === "auth.login.success") {
-      const h = ctx.headers;
-      void notifyNewLogin({
-        email: (event.metadata as { email: string }).email,
-        ip: h?.get("x-forwarded-for")?.split(",")[0]?.trim() ?? h?.get("x-real-ip") ?? null,
-        userAgent: h?.get("user-agent") ?? null,
-        at: new Date(),
+      void notifyNewLogin({ email: (event.metadata as { email: string }).email, ...origin });
+    } else if (event.action === "auth.passkey.added" && event.userId) {
+      const user = await db.user.findUnique({
+        where: { id: event.userId },
+        select: { email: true },
       });
+      if (user) void notifyPasskeyAdded({ email: user.email, ...origin });
     }
   } catch {
     // best-effort: an audit failure must not fail the auth request
