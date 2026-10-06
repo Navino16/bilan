@@ -4,10 +4,17 @@ import { headers as nextHeaders } from "next/headers";
 import { after } from "next/server";
 import { env } from "@/env";
 import { getAuth } from "@/server/auth";
-import { loginLimiter, registerLimiter, resetLimiter } from "@/server/auth/rate-limit";
+import {
+  changePasswordLimiter,
+  loginLimiter,
+  registerLimiter,
+  resetLimiter,
+} from "@/server/auth/rate-limit";
+import { requireSession } from "@/server/auth/permissions";
 import { appSettings } from "@/server/services/settings/app-settings";
 import { consumeSignupToken, refundSignupToken } from "@/server/services/signup-tokens";
 import { userExistsByEmail } from "@/server/services/users/lookup";
+import { changePassword } from "@/server/services/users/password";
 import { logEvent } from "@/server/services/audit";
 import { notifyNewLogin } from "@/server/services/mail/security-notifications";
 import {
@@ -15,6 +22,7 @@ import {
   registerSchema,
   resetRequestSchema,
   resetConfirmSchema,
+  changePasswordSchema,
 } from "./auth-schemas";
 
 export type AuthActionState =
@@ -162,4 +170,40 @@ export async function resetConfirmAction(
   } catch {
     return { ok: false, error: "INVALID_TOKEN" };
   }
+}
+
+export async function changePasswordAction(
+  _prev: AuthActionState,
+  formData: FormData,
+): Promise<AuthActionState> {
+  const user = await requireSession();
+  const parsed = changePasswordSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    const mismatch = parsed.error.issues.some((i) => i.message === "MISMATCH");
+    return { ok: false, error: mismatch ? "MISMATCH" : "INVALID" };
+  }
+
+  const bucket = changePasswordLimiter.consume(user.id);
+  if (!bucket.allowed) {
+    await logEvent({
+      userId: user.id,
+      action: "auth.password.change_failed",
+      metadata: { reason: "rate_limit" },
+    });
+    return { ok: false, error: "RATE_LIMITED", retryAfter: bucket.retryAfterSec };
+  }
+
+  const { currentPassword, newPassword, revokeOtherSessions } = parsed.data;
+  const res = await changePassword(await nextHeaders(), {
+    currentPassword,
+    newPassword,
+    revokeOtherSessions,
+  });
+  if (!res.ok && res.error === "BAD_PASSWORD")
+    await logEvent({
+      userId: user.id,
+      action: "auth.password.change_failed",
+      metadata: { reason: "bad_password" },
+    });
+  return res;
 }

@@ -13,3 +13,46 @@ test.describe("security settings", () => {
     await expect(page.locator('[data-slot="two-factor-controls"]')).toBeVisible();
   });
 });
+
+test.describe("change password", () => {
+  test.skip(
+    ({ browserName }) => browserName === "webkit",
+    "Playwright WebKit doesn't deliver taps in this env (project-wide skip)",
+  );
+
+  test("changes the password then signs in with the new one", async ({ page, context }) => {
+    const email = `pwchange-${Date.now()}@e2e.local`;
+    const oldPassword = "e2e-old-password-123";
+    const newPassword = "e2e-new-password-456";
+
+    await page.goto("/fr/register");
+    await page.fill('input[name="name"]', "E2E Password");
+    await page.fill('input[name="email"]', email);
+    await page.fill('input[name="password"]', oldPassword);
+    await page.click('button[type="submit"]');
+    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
+
+    await page.goto("/fr/settings/security", { waitUntil: "domcontentloaded", timeout: 90_000 });
+    const card = page.locator('[data-slot="password-controls"]');
+    // Retry until the client island has hydrated.
+    await expect(async () => {
+      await card.getByRole("button", { name: "Modifier" }).click();
+      await expect(card.getByLabel("Mot de passe actuel")).toBeVisible({ timeout: 1_000 });
+    }).toPass({ timeout: 20_000 });
+    await card.getByLabel("Mot de passe actuel").fill(oldPassword);
+    await card.getByLabel("Nouveau mot de passe", { exact: true }).fill(newPassword);
+    await card.getByLabel("Confirmer le nouveau mot de passe").fill(newPassword);
+    // An expired session cache forces the post-action render to resolve the session from the DB.
+    await context.clearCookies({ name: /session_data/ });
+    await card.getByRole("button", { name: "Changer le mot de passe" }).click();
+    await expect(card.getByText("Votre mot de passe a été modifié.")).toBeVisible();
+    await expect(page).toHaveURL(/\/settings\/security$/);
+
+    await context.clearCookies();
+    await page.goto("/fr/login");
+    await page.fill('input[name="email"]', email);
+    await page.fill('input[name="password"]', newPassword);
+    await page.click('button[type="submit"]');
+    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
+  });
+});

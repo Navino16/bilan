@@ -22,3 +22,15 @@ export const resetConfirmSchema = z.object({
   token: z.string().min(1),
   password: z.string().min(12),
 });
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1),
+    newPassword: z.string().min(1),
+    confirmPassword: z.string(),
+    revokeOtherSessions: z.enum(["true", "false"]).transform((v) => v === "true"),
+  })
+  .refine((d) => d.newPassword === d.confirmPassword, {
+    path: ["confirmPassword"],
+    error: "MISMATCH",
+  });

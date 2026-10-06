@@ -4,6 +4,7 @@ import {
   registerSchema,
   resetRequestSchema,
   resetConfirmSchema,
+  changePasswordSchema,
 } from "@/server/transport/actions/auth-schemas";
 
 describe("auth schemas", () => {
@@ -27,5 +28,23 @@ describe("auth schemas", () => {
   });
   it("rejects when reset email is missing on reset request", () => {
     expect(resetRequestSchema.safeParse({}).success).toBe(false);
+  });
+});
+
+describe("change password schema", () => {
+  const base = {
+    currentPassword: "old-password-123",
+    newPassword: "new-password-1234",
+    confirmPassword: "new-password-1234",
+    revokeOtherSessions: "true",
+  };
+  it("parses the revoke flag", () => {
+    const r = changePasswordSchema.safeParse({ ...base, revokeOtherSessions: "false" });
+    expect(r.success && r.data.revokeOtherSessions).toBe(false);
+  });
+  it("flags a confirmation mismatch", () => {
+    const r = changePasswordSchema.safeParse({ ...base, confirmPassword: "something-else" });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0]?.message).toBe("MISMATCH");
   });
 });
