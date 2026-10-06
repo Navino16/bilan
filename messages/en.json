@@ -14,8 +14,12 @@
       "registerLink": "Create an account",
       "error": {
         "rateLimited": "Too many attempts. Try again later.",
-        "badCredentials": "Incorrect email or password."
-      }
+        "badCredentials": "Incorrect email or password.",
+        "passkeyNotFound": "This passkey is no longer recognised. Sign in with your password.",
+        "passkeyFailed": "Passkey sign-in was cancelled or didn't complete."
+      },
+      "or": "or",
+      "passkey": "Sign in with a passkey"
     },
     "register": {
       "title": "Create an account",
@@ -835,6 +839,33 @@
           "UNAUTHORIZED": "Your session has expired. Sign in again.",
           "INVALID": "Invalid request.",
           "FAILED": "Couldn't sign this device out. Try again."
+        }
+      },
+      "passkeysCard": {
+        "overline": "Passkeys",
+        "title": "Passwordless sign-in",
+        "hint": "Sign in with your device's fingerprint, face or PIN.",
+        "count": "Your passkeys · {count}",
+        "add": "Add",
+        "none": "No passkeys yet.",
+        "defaultName": "Passkey",
+        "unnamed": "Unnamed passkey",
+        "added": "Added on {date}",
+        "synced": "Synced",
+        "deviceBound": "This device only",
+        "rename": "Rename {name}",
+        "delete": "Delete {name}",
+        "nameLabel": "Passkey name",
+        "save": "Save",
+        "cancel": "Cancel",
+        "deleteTitle": "Delete this passkey?",
+        "deleteBody": "“{name}” will no longer sign you in. Also remove it from your device's password manager.",
+        "deleteConfirm": "Delete",
+        "error": {
+          "NOT_FRESH": "For your security, sign in again before adding a passkey.",
+          "ALREADY_REGISTERED": "This device already has a passkey for your account.",
+          "ADD_FAILED": "Adding the passkey was cancelled or didn't complete.",
+          "FAILED": "Something went wrong. Please try again."
         }
       }
     }

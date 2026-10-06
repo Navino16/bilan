@@ -111,3 +111,62 @@ test.describe("active sessions", () => {
     }
   });
 });
+
+test.describe("passkeys", () => {
+  test.skip(
+    ({ browserName }) => browserName !== "chromium",
+    "The CDP virtual authenticator is Chromium-only",
+  );
+
+  test("adds, renames, signs in with and deletes a passkey", async ({ page, context }) => {
+    const email = `passkeys-${Date.now()}@e2e.local`;
+    const cdp = await context.newCDPSession(page);
+    await cdp.send("WebAuthn.enable");
+    await cdp.send("WebAuthn.addVirtualAuthenticator", {
+      options: {
+        protocol: "ctap2",
+        transport: "internal",
+        hasResidentKey: true,
+        hasUserVerification: true,
+        isUserVerified: true,
+        automaticPresenceSimulation: true,
+      },
+    });
+
+    await page.goto("/fr/register");
+    await page.fill('input[name="name"]', "E2E Passkeys");
+    await page.fill('input[name="email"]', email);
+    await page.fill('input[name="password"]', "e2e-passkeys-password-123");
+    await page.click('button[type="submit"]');
+    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
+
+    await page.goto("/fr/settings/security", { waitUntil: "domcontentloaded", timeout: 90_000 });
+    const card = page.locator('[data-slot="passkeys-controls"]');
+    await expect(card.getByText("Aucune passkey pour le moment.")).toBeVisible();
+    // Retry until the client island has hydrated.
+    await expect(async () => {
+      await card.getByRole("button", { name: "Ajouter" }).click();
+      await expect(card.getByText("Vos passkeys · 1")).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
+
+    await card.getByRole("button", { name: /^Renommer/ }).click();
+    await card.getByLabel("Nom de la passkey").fill("Clé e2e");
+    await card.getByRole("button", { name: "Enregistrer" }).click();
+    await expect(card.getByText("Clé e2e")).toBeVisible();
+
+    await context.clearCookies();
+    await page.goto("/fr/login");
+    await expect(async () => {
+      await page.getByRole("button", { name: "Se connecter avec une passkey" }).click();
+      await expect(page).toHaveURL(/\/dashboard$/, { timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
+
+    await page.goto("/fr/settings/security", { waitUntil: "domcontentloaded", timeout: 90_000 });
+    await expect(async () => {
+      await card.getByRole("button", { name: "Supprimer Clé e2e" }).click();
+      await expect(page.getByRole("dialog")).toBeVisible({ timeout: 1_000 });
+    }).toPass({ timeout: 20_000 });
+    await page.getByRole("dialog").getByRole("button", { name: "Supprimer" }).click();
+    await expect(card.getByText("Aucune passkey pour le moment.")).toBeVisible();
+  });
+});

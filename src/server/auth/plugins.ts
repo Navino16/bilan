@@ -1,7 +1,13 @@
 import { admin, twoFactor, openAPI } from "better-auth/plugins";
 import { passkey } from "@better-auth/passkey";
+import { env } from "@/env";
 
-// Passkey moved out of the better-auth core package into @better-auth/passkey
-// (>= 1.6). The four plugins are loaded so their endpoints exist; the
-// 2FA/passkey enrolment UI lands in Phase 8.4 (/settings/security).
-export const authPlugins = [admin(), twoFactor(), passkey(), openAPI()];
+const appUrl = new URL(env.APP_URL);
+
+// Pin the WebAuthn origin to APP_URL instead of trusting the request's Origin header.
+export const authPlugins = [
+  admin(),
+  twoFactor(),
+  passkey({ rpID: appUrl.hostname, origin: appUrl.origin }),
+  openAPI(),
+];

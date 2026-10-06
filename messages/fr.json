@@ -14,8 +14,12 @@
       "registerLink": "Créer un compte",
       "error": {
         "rateLimited": "Trop de tentatives. Réessayez plus tard.",
-        "badCredentials": "E-mail ou mot de passe incorrect."
-      }
+        "badCredentials": "E-mail ou mot de passe incorrect.",
+        "passkeyNotFound": "Cette passkey n'est plus reconnue. Connectez-vous avec votre mot de passe.",
+        "passkeyFailed": "La connexion par passkey a été annulée ou n'a pas abouti."
+      },
+      "or": "ou",
+      "passkey": "Se connecter avec une passkey"
     },
     "register": {
       "title": "Créer un compte",
@@ -835,6 +839,33 @@
           "UNAUTHORIZED": "Votre session a expiré. Reconnectez-vous.",
           "INVALID": "Requête invalide.",
           "FAILED": "Impossible de déconnecter cet appareil. Réessayez."
+        }
+      },
+      "passkeysCard": {
+        "overline": "Passkeys",
+        "title": "Connexion sans mot de passe",
+        "hint": "Connectez-vous avec l'empreinte, le visage ou le code de votre appareil.",
+        "count": "Vos passkeys · {count}",
+        "add": "Ajouter",
+        "none": "Aucune passkey pour le moment.",
+        "defaultName": "Passkey",
+        "unnamed": "Passkey sans nom",
+        "added": "Ajoutée le {date}",
+        "synced": "Synchronisée",
+        "deviceBound": "Cet appareil uniquement",
+        "rename": "Renommer {name}",
+        "delete": "Supprimer {name}",
+        "nameLabel": "Nom de la passkey",
+        "save": "Enregistrer",
+        "cancel": "Annuler",
+        "deleteTitle": "Supprimer cette passkey ?",
+        "deleteBody": "« {name} » ne permettra plus de vous connecter. Pensez aussi à la retirer du gestionnaire de mots de passe de votre appareil.",
+        "deleteConfirm": "Supprimer",
+        "error": {
+          "NOT_FRESH": "Par sécurité, reconnectez-vous avant d'ajouter une passkey.",
+          "ALREADY_REGISTERED": "Cet appareil a déjà une passkey pour votre compte.",
+          "ADD_FAILED": "L'ajout de la passkey a été annulé ou n'a pas abouti.",
+          "FAILED": "L'opération a échoué. Réessayez."
         }
       }
     }
