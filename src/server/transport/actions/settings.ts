@@ -94,16 +94,27 @@ function coerceAppSetting(key: string, raw: string): unknown | undefined {
   }
 }
 
-export async function setAppSettingAction(
+const SETTING_FIELD = "s:";
+
+// Saves every `s:<key>` field of one settings card; nothing is written if one is invalid,
+// and unchanged values are skipped so the audit log only records real changes.
+export async function setAppSettingsAction(
   _prev: SettingsActionState,
   formData: FormData,
 ): Promise<SettingsActionState> {
   const user = await requirePermission("admin.settings.write");
-  const key = str(formData, "key");
-  const value = coerceAppSetting(key, str(formData, "value"));
-  if (value === undefined) return { ok: false, error: "INVALID" };
+  const values: [string, unknown][] = [];
+  for (const [field, raw] of formData.entries()) {
+    if (!field.startsWith(SETTING_FIELD)) continue;
+    const key = field.slice(SETTING_FIELD.length);
+    const value = coerceAppSetting(key, String(raw).trim());
+    if (value === undefined) return { ok: false, error: "INVALID" };
+    values.push([key, value]);
+  }
   try {
-    await appSettings.set(key, value, user.id);
+    for (const [key, value] of values) {
+      if ((await appSettings.get(key)) !== value) await appSettings.set(key, value, user.id);
+    }
   } catch {
     return { ok: false, error: "FAILED" };
   }

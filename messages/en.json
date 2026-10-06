@@ -306,7 +306,6 @@
     "scope": "Scope",
     "scopePersonal": "Personal",
     "scopeGroup": "Household",
-    "default": "Default",
     "edit": "Edit",
     "delete": "Delete",
     "deleteConfirm": "Delete this category? Sub-categories become roots and transactions are uncategorized.",
@@ -320,7 +319,8 @@
       "FORBIDDEN": "Not allowed.",
       "NOT_FOUND": "Category not found.",
       "FAILED": "Failed. Try again."
-    }
+    },
+    "actionsFor": "Actions for {name}"
   },
   "transactions": {
     "title": "Transactions",
@@ -447,7 +447,6 @@
   "import": {
     "title": "Import a statement",
     "overline": "Import",
-    "sources": "CSV · PDF · Manual entry",
     "subtitle": "Import your transactions from a file exported by your bank.",
     "steps": {
       "file": "File",
@@ -545,7 +544,9 @@
         "FORBIDDEN": "Not allowed.",
         "FAILED": "Undo failed. Try again."
       }
-    }
+    },
+    "formats": "Accepted formats: CSV and PDF.",
+    "manualEntry": "Manual entry"
   },
   "groups": {
     "overline": "Sharing",

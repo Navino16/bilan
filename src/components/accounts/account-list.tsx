@@ -259,8 +259,9 @@ export function AccountList({
                       categories={categories}
                       defaultAccountId={a.id}
                       trigger={
-                        <Button variant="ghost" size="icon-sm" aria-label={t("addTransaction")}>
+                        <Button variant="outline" size="sm">
                           <Plus />
+                          {t("addTransaction")}
                         </Button>
                       }
                     />

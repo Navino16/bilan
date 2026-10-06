@@ -3,9 +3,16 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2 } from "lucide-react";
+import { MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import { CategoryForm, type EditableCategory, type ParentOption } from "./category-form";
 import { deleteCategoryAction } from "@/server/transport/actions/categories";
 
@@ -25,10 +32,12 @@ function Row({
   node,
   parents,
   inheritedColor = null,
+  child = false,
 }: {
   node: Node;
   parents: ParentOption[];
   inheritedColor?: string | null;
+  child?: boolean;
 }) {
   const t = useTranslations("categories");
   const router = useRouter();
@@ -55,38 +64,49 @@ function Row({
   }
 
   return (
-    <div className="space-y-1">
+    <>
       <div
-        className="border-border flex items-center gap-3 rounded-md border px-3 py-2"
+        className={cn(
+          "flex items-center gap-3 border-t py-1.5 pr-2 first:border-t-0",
+          child ? "border-border/50 pl-9" : "pl-3 font-medium",
+        )}
         data-slot="category-row"
       >
         <span
           aria-hidden
-          className="inline-block size-3 rounded-full"
+          className="inline-block size-2.5 shrink-0 rounded-full"
           style={{ background: node.color ?? inheritedColor ?? "var(--muted-foreground)" }}
         />
-        <span className="flex-1 text-sm">
+        <span className="min-w-0 flex-1 truncate text-sm">
           {node.icon ? `${node.icon} ` : ""}
           {node.name}
         </span>
         {node.scope === "GROUP" && <Badge variant="secondary">{t("scopeGroup")}</Badge>}
-        {node.isDefault && (
-          <span className="text-muted-foreground text-[11px] tracking-wide uppercase">
-            {t("default")}
-          </span>
-        )}
-        <Button variant="ghost" size="icon" aria-label={t("edit")} onClick={() => setEditing(true)}>
-          <Pencil className="size-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={t("delete")}
-          disabled={pending}
-          onClick={handleDelete}
-        >
-          <Trash2 className="size-4" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-muted-foreground"
+                aria-label={t("actionsFor", { name: node.name })}
+                disabled={pending}
+              />
+            }
+          >
+            <MoreVertical />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuItem onClick={() => setEditing(true)}>
+              <Pencil />
+              {t("edit")}
+            </DropdownMenuItem>
+            <DropdownMenuItem variant="destructive" onClick={handleDelete}>
+              <Trash2 />
+              {t("delete")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <CategoryForm
           mode="edit"
           category={editable}
@@ -96,19 +116,16 @@ function Row({
           onOpenChange={setEditing}
         />
       </div>
-      {node.children.length > 0 && (
-        <div className="ml-6 space-y-1">
-          {node.children.map((c) => (
-            <Row
-              key={c.id}
-              node={c}
-              parents={parents}
-              inheritedColor={node.color ?? inheritedColor}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+      {node.children.map((c) => (
+        <Row
+          key={c.id}
+          node={c}
+          parents={parents}
+          inheritedColor={node.color ?? inheritedColor}
+          child
+        />
+      ))}
+    </>
   );
 }
 
@@ -117,7 +134,7 @@ export function CategoryList({ tree }: { tree: Node[] }) {
   const parents: ParentOption[] = tree.map((n) => ({ id: n.id, name: n.name }));
   if (tree.length === 0) return <p className="text-muted-foreground text-sm">{t("empty")}</p>;
   return (
-    <div className="space-y-2">
+    <div className="border-border bg-card overflow-hidden rounded-xl border">
       {tree.map((node) => (
         <Row key={node.id} node={node} parents={parents} />
       ))}

@@ -4,7 +4,7 @@ import { useState, useTransition, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Upload, ChevronRight } from "lucide-react";
+import { Upload, ChevronRight, PenLine } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { overline } from "@/components/transactions/bits";
@@ -12,6 +12,7 @@ import { CategoryCombobox } from "@/components/transactions/category-combobox";
 import { Stepper, FieldMap, CheckRow } from "./wizard-bits";
 import { CSV_FIELDS } from "@/lib/validation/import";
 import type { FlatCategory } from "@/components/transactions/category-tree";
+import { TransactionForm } from "@/components/transactions/transaction-form";
 import { PageHeader } from "@/components/shell/page-header";
 import { NativeSelect } from "@/components/ui/native-select";
 import { discardImportAction } from "@/server/transport/actions/imports";
@@ -237,7 +238,19 @@ export function ImportWizard({
       <PageHeader
         overline={t("overline")}
         title={t("title")}
-        actions={<span className="text-muted-foreground text-xs">{t("sources")}</span>}
+        subtitle={t("formats")}
+        actions={
+          <TransactionForm
+            accounts={accounts}
+            categories={categories}
+            trigger={
+              <Button variant="outline">
+                <PenLine />
+                {t("manualEntry")}
+              </Button>
+            }
+          />
+        }
       />
 
       <Stepper steps={steps} current={step} />

@@ -18,8 +18,9 @@ test.describe("categories", () => {
 
     await row
       .first()
-      .getByRole("button", { name: /modifier/i })
+      .getByRole("button", { name: /actions pour/i })
       .click();
+    await page.getByRole("menuitem", { name: /modifier/i }).click();
     await page.fill('input[name="name"]', `${name} edited`);
     await page.getByRole("button", { name: /enregistrer/i }).click();
     await expect(
@@ -34,8 +35,9 @@ test.describe("categories", () => {
       .locator('[data-slot="category-row"]')
       .filter({ hasText: `${name} edited` })
       .first()
-      .getByRole("button", { name: /supprimer/i })
+      .getByRole("button", { name: /actions pour/i })
       .click();
+    await page.getByRole("menuitem", { name: /supprimer/i }).click();
     await expect(
       page.locator('[data-slot="category-row"]').filter({ hasText: `${name} edited` }),
     ).toHaveCount(0);
