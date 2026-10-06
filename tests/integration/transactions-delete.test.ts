@@ -225,7 +225,7 @@ describe("deleteTransactions", () => {
     );
     await finalizeBatch(
       batch.id,
-      { imported: r.imported, skipped: 0, total: r.total },
+      { ...r, skipped: 0 },
       {
         id: owner,
       },

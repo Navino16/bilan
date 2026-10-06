@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "@/server/db";
-import { suggest, createRule, RuleAccessError } from "@/server/services/categorization";
+import { suggest, createRule, recordHits, RuleAccessError } from "@/server/services/categorization";
 
 const userId = "rule_user";
 const stranger = "rule_stranger";
@@ -79,5 +79,22 @@ describe("createRule authorization", () => {
         { id: stranger },
       ),
     ).rejects.toBeInstanceOf(RuleAccessError);
+  });
+});
+
+describe("recordHits", () => {
+  it("adds one hit per occurrence and ignores nulls and unknown ids", async () => {
+    const a = await createRule(
+      { pattern: "hits-a", matchType: "CONTAINS", categoryId: catA },
+      { id: userId },
+    );
+    const b = await createRule(
+      { pattern: "hits-b", matchType: "CONTAINS", categoryId: catA },
+      { id: userId },
+    );
+    await recordHits([a.id, null, b.id, a.id, "missing_rule"]);
+    await recordHits([a.id]);
+    const rows = await db.categorizationRule.findMany({ where: { id: { in: [a.id, b.id] } } });
+    expect(Object.fromEntries(rows.map((r) => [r.id, r.hits]))).toEqual({ [a.id]: 3, [b.id]: 1 });
   });
 });

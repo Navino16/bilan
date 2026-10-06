@@ -475,8 +475,15 @@ async function main(): Promise<void> {
     ["CARREFOUR", "Courses"],
     ["NETFLIX", "Abonnements"],
     ["SNCF", "Voyages"],
-  ] as const)
-    await createRule({ pattern, matchType: "CONTAINS", categoryId: catId(category) }, actor);
+  ] as const) {
+    const { id } = await createRule(
+      { pattern, matchType: "CONTAINS", categoryId: catId(category) },
+      actor,
+    );
+    // History is seeded already categorized, so credit each rule with what it would have matched.
+    const hits = txs.filter((t) => t.date <= today && t.label.includes(pattern)).length;
+    await db.categorizationRule.update({ where: { id }, data: { hits } });
+  }
 
   const { id: groupId } = await createGroup(
     { name: "Foyer Martin", description: "Compte joint et charges du logement" },

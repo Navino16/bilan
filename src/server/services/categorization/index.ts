@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import { requireGroupRole } from "@/server/services/groups/roles";
@@ -51,16 +52,34 @@ function match(rules: Rule[], rawLabel: string): Suggestion {
 }
 
 // Suggests a category for a label by matching the user's own + their groups'
-// enabled rules, highest priority first. Used by manual entry (3.4) and import (4.x).
+// enabled rules, highest priority first. Used by manual entry (3.4).
 export async function suggest(rawLabel: string, scope: Scope): Promise<Suggestion> {
   return match(await loadRules(scope), rawLabel);
 }
 
 // Batch variant: loads the rules ONCE then matches every label. Used by the
-// import preview so N rows don't trigger N rule loads.
+// import preview and commit so N rows don't trigger N rule loads.
 export async function suggestMany(rawLabels: string[], scope: Scope): Promise<Suggestion[]> {
   const rules = await loadRules(scope);
   return rawLabels.map((label) => match(rules, label));
+}
+
+// Rules sharing the same increment are batched into one updateMany; a rule
+// deleted meanwhile is silently skipped.
+export async function recordHits(
+  ruleIds: (string | null)[],
+  client: Prisma.TransactionClient = db,
+): Promise<void> {
+  const perRule = new Map<string, number>();
+  for (const id of ruleIds) if (id) perRule.set(id, (perRule.get(id) ?? 0) + 1);
+  const byCount = new Map<number, string[]>();
+  for (const [id, n] of perRule) byCount.set(n, [...(byCount.get(n) ?? []), id]);
+  for (const [n, ids] of byCount) {
+    await client.categorizationRule.updateMany({
+      where: { id: { in: ids } },
+      data: { hits: { increment: n } },
+    });
+  }
 }
 
 export async function createRule(input: RuleInput, actor: { id: string }): Promise<{ id: string }> {

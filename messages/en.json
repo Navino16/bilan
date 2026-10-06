@@ -188,6 +188,11 @@
     "colMatch": "Type",
     "colTarget": "Target",
     "colScope": "Scope",
+    "colHits": "Hits",
+    "hitCount": "{count, plural, one {# hit} other {# hits}}",
+    "sortBy": "Sort by",
+    "sortPriority": "Priority",
+    "sortHits": "Hits",
     "scopePersonal": "Personal",
     "match": {
       "CONTAINS": "Contains",

@@ -12,7 +12,7 @@ import {
   getDeleteImpact,
   type DeleteImpact,
 } from "@/server/services/transactions/delete";
-import { suggest } from "@/server/services/categorization";
+import { recordHits, suggest } from "@/server/services/categorization";
 
 export type TxActionState = { ok: true; id?: string } | { ok: false; error: string } | null;
 
@@ -39,9 +39,11 @@ export async function createTransactionAction(
     // If the user didn't pick a category, fall back to the rule engine.
     let categoryId = parsed.data.categoryId ?? null;
     let manual = Boolean(parsed.data.categoryId);
+    let ruleId: string | null = null;
     if (!categoryId) {
       const s = await suggest(parsed.data.label, { userId: user.id });
       categoryId = s.categoryId;
+      ruleId = s.ruleId;
       manual = false;
     }
     const { id } = await createTransaction(
@@ -49,6 +51,8 @@ export async function createTransactionAction(
       { id: user.id },
       { manuallyCategorized: manual },
     );
+    // Best-effort: a failed counter must not report a saved transaction as failed.
+    await recordHits([ruleId]).catch(() => {});
     return { ok: true, id };
   } catch (e) {
     return { ok: false, error: mapError(e) };

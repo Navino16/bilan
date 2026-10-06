@@ -1,7 +1,7 @@
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import { buildSecureFields, computeExternalId } from "@/server/services/transactions/secure-fields";
-import { suggest } from "@/server/services/categorization";
+import { recordHits, suggestMany } from "@/server/services/categorization";
 import { trimBatchMetadata } from "@/lib/import-status";
 import { deriveType } from "./derive-type";
 import type { CommitSummary, NormalizedRow } from "./types";
@@ -18,12 +18,20 @@ export type CommitOptions = {
   excludedIds?: string[];
 };
 
+export type InsertTotals = {
+  imported: number;
+  skipped: number;
+  total: number;
+  // Rules that categorized the inserted rows, credited by finalizeBatch.
+  hitRuleIds: string[];
+};
+
 export async function insertRows(
   target: { batchId: string; accountId: string },
   rows: NormalizedRow[],
   actor: { id: string },
   opts: CommitOptions = {},
-): Promise<{ imported: number; skipped: number; total: number }> {
+): Promise<InsertTotals> {
   const autoCategorize = opts.autoCategorize ?? true;
   const overrides = opts.overrides ?? {};
   const excluded = new Set(opts.excludedIds ?? []);
@@ -55,10 +63,17 @@ export async function insertRows(
     select: { externalId: true },
   });
   const seen = new Set(existing.map((e) => e.externalId));
+  const suggestions = autoCategorize
+    ? await suggestMany(
+        rows.map((r) => r.rawLabel),
+        { userId: actor.id },
+      )
+    : null;
 
   let imported = 0;
   let skipped = 0;
-  for (const { row, externalId } of withIds) {
+  const hitRuleIds: string[] = [];
+  for (const [i, { row, externalId }] of withIds.entries()) {
     if (excluded.has(externalId)) continue; // user unchecked this row in the preview
     if (seen.has(externalId)) {
       skipped++;
@@ -68,10 +83,13 @@ export async function insertRows(
 
     const secure = buildSecureFields({ label: row.rawLabel, rawLabel: row.rawLabel });
     const rawOverride = overrides[externalId];
-    const override = rawOverride && allowedCategoryIds.has(rawOverride) ? rawOverride : undefined;
-    const categoryId =
-      override ??
-      (autoCategorize ? (await suggest(row.rawLabel, { userId: actor.id })).categoryId : null);
+    // "" is an explicit "Sans catégorie" pick; a foreign category id is dropped.
+    const override =
+      rawOverride === "" || (rawOverride && allowedCategoryIds.has(rawOverride))
+        ? rawOverride
+        : undefined;
+    const suggestion = override === undefined ? suggestions?.[i] : null;
+    const categoryId = override || suggestion?.categoryId || null;
     await db.transaction.create({
       data: {
         accountId: target.accountId,
@@ -84,7 +102,7 @@ export async function insertRows(
         rawLabelHash: secure.rawLabelHash,
         noteEnc: null,
         categoryId,
-        manuallyCategorized: Boolean(override),
+        manuallyCategorized: override !== undefined,
         externalId,
         importBatchId: target.batchId,
         createdById: actor.id,
@@ -92,14 +110,16 @@ export async function insertRows(
       },
     });
     imported++;
+    if (suggestion?.ruleId) hitRuleIds.push(suggestion.ruleId);
   }
-  return { imported, skipped, total: rows.length };
+  return { imported, skipped, total: rows.length, hitRuleIds };
 }
 
 // Finalizes an ImportBatch after inserts: sets COMPLETED + counters, audit-logs.
+// Rule hits commit with the status so a rolled-back commit can't count them twice.
 export async function finalizeBatch(
   batchId: string,
-  totals: { imported: number; skipped: number; total: number },
+  totals: InsertTotals,
   actor: { id: string },
   accountIds: string[],
 ): Promise<CommitSummary> {
@@ -107,16 +127,19 @@ export async function finalizeBatch(
     where: { id: batchId },
     select: { metadata: true },
   });
-  const updated = await db.importBatch.update({
-    where: { id: batchId },
-    data: {
-      status: "COMPLETED",
-      totalRows: totals.total,
-      importedRows: totals.imported,
-      skippedRows: totals.skipped,
-      completedAt: new Date(),
-      metadata: trimBatchMetadata(metadata, accountIds),
-    },
+  const updated = await db.$transaction(async (tx) => {
+    await recordHits(totals.hitRuleIds, tx);
+    return tx.importBatch.update({
+      where: { id: batchId },
+      data: {
+        status: "COMPLETED",
+        totalRows: totals.total,
+        importedRows: totals.imported,
+        skippedRows: totals.skipped,
+        completedAt: new Date(),
+        metadata: trimBatchMetadata(metadata, accountIds),
+      },
+    });
   });
   await logEvent({
     userId: actor.id,
