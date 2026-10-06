@@ -1,19 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { LogOut, Trash2, UserMinus } from "lucide-react";
+import { UserMinus } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { GROUP_ROLES, type GroupRole } from "@/lib/validation/group";
-import {
-  changeMemberRoleAction,
-  removeMemberAction,
-  leaveGroupAction,
-  deleteGroupAction,
-} from "@/server/transport/actions/groups";
+import { changeMemberRoleAction, removeMemberAction } from "@/server/transport/actions/groups";
 import { NativeSelect } from "@/components/ui/native-select";
 
 type Member = { userId: string; role: GroupRole; name: string | null; email: string };
@@ -32,25 +27,19 @@ export function MemberList({
   viewerRole: GroupRole;
 }) {
   const t = useTranslations("groups");
-  const locale = useLocale();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   const canManageRoles = viewerRole === "OWNER";
   const canRemove = RANK[viewerRole] >= RANK.ADMIN;
-  // The last owner can't leave (the service blocks it) — they must delete the
-  // group instead, so don't offer "Leave" in that case.
-  const ownerCount = members.filter((m) => m.role === "OWNER").length;
-  const isLastOwner = viewerRole === "OWNER" && ownerCount <= 1;
 
-  function run(action: () => Promise<{ ok: boolean; error?: string } | null>, after?: () => void) {
+  function run(action: () => Promise<{ ok: boolean; error?: string } | null>) {
     startTransition(async () => {
       const result = await action();
       if (result?.ok) {
         setError(null);
-        if (after) after();
-        else router.refresh();
+        router.refresh();
       } else {
         setError(result && "error" in result ? (result.error ?? "FAILED") : "FAILED");
       }
@@ -71,26 +60,6 @@ export function MemberList({
     fd.set("id", groupId);
     fd.set("userId", userId);
     run(() => removeMemberAction(null, fd));
-  }
-
-  function leave() {
-    if (!window.confirm(t("leaveConfirm"))) return;
-    const fd = new FormData();
-    fd.set("id", groupId);
-    run(
-      () => leaveGroupAction(null, fd),
-      () => router.push(`/${locale}/groups`),
-    );
-  }
-
-  function destroy() {
-    if (!window.confirm(t("deleteConfirm"))) return;
-    const fd = new FormData();
-    fd.set("id", groupId);
-    run(
-      () => deleteGroupAction(null, fd),
-      () => router.push(`/${locale}/groups`),
-    );
   }
 
   return (
@@ -147,21 +116,6 @@ export function MemberList({
       </div>
 
       {error && <p className="text-destructive text-sm">{t(`error.${error}`)}</p>}
-
-      <div className="flex flex-wrap gap-2">
-        {!isLastOwner && (
-          <Button variant="outline" size="sm" disabled={pending} onClick={leave}>
-            <LogOut />
-            {t("leave")}
-          </Button>
-        )}
-        {viewerRole === "OWNER" && (
-          <Button variant="ghost" size="sm" disabled={pending} onClick={destroy}>
-            <Trash2 />
-            {t("delete")}
-          </Button>
-        )}
-      </div>
     </div>
   );
 }

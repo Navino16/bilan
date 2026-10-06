@@ -80,20 +80,23 @@ export function BudgetsView({
                   data-slot="budget-card"
                   className="hover:border-primary/40 gap-3 p-4 transition-colors"
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="truncate font-medium">{b.name}</span>
+                  <div className="space-y-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="min-w-0 truncate font-medium">{b.name}</p>
+                      <Badge style={statusStyle(b.status)} className="shrink-0 border-transparent">
+                        {t(`status.${b.status}`)}
+                      </Badge>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
                         <Badge variant={b.scope === "GROUP" ? "default" : "secondary"}>
                           {b.scope === "GROUP" ? t("scopeGroup") : t("scopePersonal")}
                         </Badge>
                         {b.recurring && <Badge variant="outline">{t("recurring")}</Badge>}
+                        <span>
+                          {df.format(b.periodStart)} – {df.format(b.periodEnd)}
+                        </span>
                       </div>
-                      <p className="text-muted-foreground text-sm">
-                        {df.format(b.periodStart)} – {df.format(b.periodEnd)}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-3">
                       {b.recurring && b.ended && b.canManage && (
                         <Button
                           type="button"
@@ -110,9 +113,6 @@ export function BudgetsView({
                           {t("roll")}
                         </Button>
                       )}
-                      <Badge style={statusStyle(b.status)} className="border-transparent">
-                        {t(`status.${b.status}`)}
-                      </Badge>
                     </div>
                   </div>
                   <BudgetBar percent={b.percent} status={b.status} />

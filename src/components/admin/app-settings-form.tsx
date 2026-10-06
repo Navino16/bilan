@@ -8,46 +8,68 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SectionCard } from "@/components/shell/section-card";
-import { setAppSettingAction, type SettingsActionState } from "@/server/transport/actions/settings";
+import {
+  setAppSettingsAction,
+  type SettingsActionState,
+} from "@/server/transport/actions/settings";
 import { NativeSelect } from "@/components/ui/native-select";
 
-function SettingForm({
+function SettingsCard({
+  section,
+  children,
+}: {
+  section: "general" | "access" | "security";
+  children: ReactNode;
+}) {
+  const t = useTranslations("admin.settings");
+  const router = useRouter();
+  const [state, action, pending] = useActionState<SettingsActionState, FormData>(
+    setAppSettingsAction,
+    null,
+  );
+  useEffect(() => {
+    if (state?.ok) router.refresh();
+  }, [state, router]);
+
+  return (
+    <SectionCard
+      overline={t(`${section}.overline`)}
+      title={t(`${section}.title`)}
+      hint={t(`${section}.hint`)}
+    >
+      <form action={action} className="space-y-4">
+        {children}
+        <div className="flex items-center gap-3">
+          <Button type="submit" disabled={pending}>
+            {pending ? t("saving") : t("save")}
+          </Button>
+          {state?.ok && <p className="text-muted-foreground text-xs">{t("saved")}</p>}
+        </div>
+        {state && !state.ok && (
+          <Alert variant="destructive">
+            <AlertDescription>{t(`error.${state.error}`)}</AlertDescription>
+          </Alert>
+        )}
+      </form>
+    </SectionCard>
+  );
+}
+
+function Field({
   settingKey,
   label,
   children,
 }: {
   settingKey: string;
   label: string;
-  children: (id: string) => ReactNode;
+  children: (props: { id: string; name: string }) => ReactNode;
 }) {
-  const t = useTranslations("admin.settings");
-  const router = useRouter();
-  const [state, action, pending] = useActionState<SettingsActionState, FormData>(
-    setAppSettingAction,
-    null,
-  );
-  useEffect(() => {
-    if (state?.ok) router.refresh();
-  }, [state, router]);
   const id = `set-${settingKey}`;
-
   return (
-    <form action={action} className="space-y-2">
-      <input type="hidden" name="key" value={settingKey} />
+    <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
-      <div className="flex items-center gap-3">
-        <div className="flex-1">{children(id)}</div>
-        <Button type="submit" disabled={pending}>
-          {pending ? t("saving") : t("save")}
-        </Button>
-      </div>
-      {state?.ok && <p className="text-muted-foreground text-xs">{t("saved")}</p>}
-      {state && !state.ok && (
-        <Alert variant="destructive">
-          <AlertDescription>{t(`error.${state.error}`)}</AlertDescription>
-        </Alert>
-      )}
-    </form>
+      {children({ id, name: `s:${settingKey}` })}
+    </div>
   );
 }
 
@@ -67,68 +89,45 @@ export function AppSettingsForm({
   const t = useTranslations("admin.settings");
   return (
     <div className="space-y-6">
-      <SectionCard
-        overline={t("general.overline")}
-        title={t("general.title")}
-        hint={t("general.hint")}
-      >
-        <SettingForm settingKey="app_name" label={t("appName")}>
-          {(id) => <Input id={id} name="value" defaultValue={appName} />}
-        </SettingForm>
-      </SectionCard>
+      <SettingsCard section="general">
+        <Field settingKey="app_name" label={t("appName")}>
+          {(p) => <Input {...p} defaultValue={appName} />}
+        </Field>
+      </SettingsCard>
 
-      <SectionCard
-        overline={t("access.overline")}
-        title={t("access.title")}
-        hint={t("access.hint")}
-      >
-        <SettingForm settingKey="registration_mode" label={t("registrationMode")}>
-          {(id) => (
-            <NativeSelect id={id} name="value" defaultValue={registrationMode}>
+      <SettingsCard section="access">
+        <Field settingKey="registration_mode" label={t("registrationMode")}>
+          {(p) => (
+            <NativeSelect {...p} defaultValue={registrationMode}>
               <option value="OPEN">{t("mode.OPEN")}</option>
               <option value="INVITE_ONLY">{t("mode.INVITE_ONLY")}</option>
               <option value="DISABLED">{t("mode.DISABLED")}</option>
             </NativeSelect>
           )}
-        </SettingForm>
-
-        <SettingForm settingKey="credentials_enabled" label={t("credentialsEnabled")}>
-          {(id) => (
-            <NativeSelect id={id} name="value" defaultValue={String(credentialsEnabled)}>
+        </Field>
+        <Field settingKey="credentials_enabled" label={t("credentialsEnabled")}>
+          {(p) => (
+            <NativeSelect {...p} defaultValue={String(credentialsEnabled)}>
               <option value="true">{t("enabled")}</option>
               <option value="false">{t("disabled")}</option>
             </NativeSelect>
           )}
-        </SettingForm>
-      </SectionCard>
+        </Field>
+      </SettingsCard>
 
-      <SectionCard
-        overline={t("security.overline")}
-        title={t("security.title")}
-        hint={t("security.hint")}
-      >
-        <SettingForm settingKey="min_password_length" label={t("minPasswordLength")}>
-          {(id) => (
-            <Input
-              id={id}
-              name="value"
-              type="number"
-              min={8}
-              max={128}
-              defaultValue={minPasswordLength}
-            />
-          )}
-        </SettingForm>
-
-        <SettingForm settingKey="security.admin_2fa_required" label={t("admin2faRequired")}>
-          {(id) => (
-            <NativeSelect id={id} name="value" defaultValue={String(admin2faRequired)}>
+      <SettingsCard section="security">
+        <Field settingKey="min_password_length" label={t("minPasswordLength")}>
+          {(p) => <Input {...p} type="number" min={8} max={128} defaultValue={minPasswordLength} />}
+        </Field>
+        <Field settingKey="security.admin_2fa_required" label={t("admin2faRequired")}>
+          {(p) => (
+            <NativeSelect {...p} defaultValue={String(admin2faRequired)}>
               <option value="true">{t("enabled")}</option>
               <option value="false">{t("disabled")}</option>
             </NativeSelect>
           )}
-        </SettingForm>
-      </SectionCard>
+        </Field>
+      </SettingsCard>
     </div>
   );
 }

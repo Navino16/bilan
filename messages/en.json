@@ -306,7 +306,6 @@
     "scope": "Scope",
     "scopePersonal": "Personal",
     "scopeGroup": "Household",
-    "default": "Default",
     "edit": "Edit",
     "delete": "Delete",
     "deleteConfirm": "Delete this category? Sub-categories become roots and transactions are uncategorized.",
@@ -320,7 +319,8 @@
       "FORBIDDEN": "Not allowed.",
       "NOT_FOUND": "Category not found.",
       "FAILED": "Failed. Try again."
-    }
+    },
+    "actionsFor": "Actions for {name}"
   },
   "transactions": {
     "title": "Transactions",
@@ -409,7 +409,9 @@
       "pairWithin": "{days, plural, one {# day} other {# days}} apart",
       "link": "Link",
       "ignore": "Ignore",
-      "empty": "No pairs to suggest right now."
+      "empty": "No pairs to suggest right now.",
+      "back": "Back to transactions",
+      "hint": "Bilan spots pairs with the same amount and opposite signs (a transfer between your accounts, a refund) so you can link them and not count them twice."
     },
     "filterSheet": {
       "reset": "Reset",
@@ -445,8 +447,6 @@
   "import": {
     "title": "Import a statement",
     "overline": "Import",
-    "sources": "CSV · PDF · Manual entry",
-    "subtitle": "Import your transactions from a file exported by your bank.",
     "steps": {
       "file": "File",
       "read": "Reading",
@@ -543,7 +543,9 @@
         "FORBIDDEN": "Not allowed.",
         "FAILED": "Undo failed. Try again."
       }
-    }
+    },
+    "formats": "Accepted formats: CSV and PDF.",
+    "manualEntry": "Manual entry"
   },
   "groups": {
     "overline": "Sharing",
@@ -587,7 +589,12 @@
       "LAST_OWNER": "Not allowed: at least one owner must remain.",
       "NOT_MEMBER": "This member is not part of the household.",
       "FAILED": "Failed. Please retry."
-    }
+    },
+    "dangerZone": "Danger zone",
+    "dangerTitleOwner": "Leave or delete the household",
+    "leaveHint": "You will lose access to this household's shared accounts and budgets.",
+    "leaveTitle": "Leave the household",
+    "deleteHint": "Deleting removes all associated shares. This cannot be undone."
   },
   "invitations": {
     "invite": "Invite",

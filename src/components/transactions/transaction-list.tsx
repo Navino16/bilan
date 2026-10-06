@@ -52,6 +52,9 @@ function proposePattern(label: string): string {
   return tokens.length ? tokens.reduce((a, b) => (b.length > a.length ? b : a)) : "";
 }
 
+// No date column: rows are grouped under a day header.
+const COLS = "md:grid-cols-[1fr_minmax(0,180px)_minmax(0,140px)_92px_110px]";
+
 export function TransactionList({
   items,
   categories,
@@ -132,7 +135,6 @@ export function TransactionList({
 
   const nf = new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" });
   const dfDay = new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long" });
-  const dfShort = new Intl.DateTimeFormat(locale, { day: "2-digit", month: "2-digit" });
   const signed = (n: number) => (n > 0 ? `+${nf.format(n)}` : nf.format(n));
 
   // Group by ISO day (items already newest-first).
@@ -205,9 +207,8 @@ export function TransactionList({
       {/* Desktop column header */}
       <div className="overflow-hidden rounded-xl border">
         <div
-          className={`text-muted-foreground bg-muted/60 hidden gap-3 border-b px-4 py-2.5 text-[0.65rem] tracking-[0.08em] uppercase md:grid ${"md:grid-cols-[64px_1fr_minmax(0,180px)_minmax(0,140px)_92px_110px]"}`}
+          className={`text-muted-foreground bg-muted/60 hidden gap-3 border-b px-4 py-2.5 text-[0.65rem] tracking-[0.08em] uppercase md:grid ${COLS}`}
         >
-          <span>{t("date")}</span>
           <span>{t("label")}</span>
           <span>{t("category")}</span>
           <span>{t("account")}</span>
@@ -242,10 +243,7 @@ export function TransactionList({
                   className={`w-full border-b text-left transition-colors last:border-b-0 ${isSel ? "bg-accent" : "hover:bg-muted/50"} ${selecting && picked.has(it.id) ? "ring-primary ring-2 ring-inset" : ""} ${locked ? "opacity-50" : ""}`}
                 >
                   {/* Desktop grid */}
-                  <span className="hidden items-center gap-3 px-4 py-2.5 md:grid md:grid-cols-[64px_1fr_minmax(0,180px)_minmax(0,140px)_92px_110px]">
-                    <span className="text-muted-foreground text-xs tabular-nums">
-                      {dfShort.format(new Date(it.date))}
-                    </span>
+                  <span className={`hidden items-center gap-3 px-4 py-2.5 md:grid ${COLS}`}>
                     <span className="flex min-w-0 items-center gap-2.5">
                       <CategoryAvatar color={meta?.color} icon={meta?.icon} size={26} />
                       <span className="truncate text-sm">{it.label}</span>

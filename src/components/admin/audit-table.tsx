@@ -1,8 +1,8 @@
 import { getTranslations } from "next-intl/server";
-import type { AuditLog } from "@prisma/client";
+import type { AuditEntry } from "@/server/services/audit";
 import { listHeader } from "@/components/shell/section-card";
 
-export async function AuditTable({ items, locale }: { items: AuditLog[]; locale: string }) {
+export async function AuditTable({ items, locale }: { items: AuditEntry[]; locale: string }) {
   const t = await getTranslations("admin.audit");
   const dateFmt = new Intl.DateTimeFormat(locale, {
     dateStyle: "short",
@@ -14,9 +14,30 @@ export async function AuditTable({ items, locale }: { items: AuditLog[]; locale:
     return <p className="text-muted-foreground px-6 py-5 text-sm">{t("empty")}</p>;
   }
 
+  const entity = (row: AuditEntry) =>
+    row.entity ? `${row.entity}${row.entityId ? ` · ${row.entityId}` : ""}` : "—";
+  const user = (row: AuditEntry) =>
+    row.user ? row.user.name?.trim() || row.user.email : (row.userId ?? t("system"));
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+    <>
+      <ul className="divide-border divide-y md:hidden">
+        {items.map((row) => (
+          <li key={row.id} data-slot="audit-item" className="space-y-0.5 px-6 py-3 text-sm">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="min-w-0 font-medium break-words">{row.action}</span>
+              <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+                {dateFmt.format(row.createdAt)}
+              </span>
+            </div>
+            <p className="text-muted-foreground truncate text-xs">{entity(row)}</p>
+            <p className="text-muted-foreground truncate text-xs" title={row.user?.email}>
+              {user(row)}
+            </p>
+          </li>
+        ))}
+      </ul>
+      <table className="hidden w-full text-sm md:table">
         <thead className={`${listHeader} text-left`}>
           <tr>
             <th className="py-2.5 pr-3 pl-6 font-medium">{t("colDate")}</th>
@@ -32,19 +53,17 @@ export async function AuditTable({ items, locale }: { items: AuditLog[]; locale:
                 {dateFmt.format(row.createdAt)}
               </td>
               <td className="px-3 py-2.5 font-medium">{row.action}</td>
-              <td className="text-muted-foreground px-3 py-2.5 break-all">
-                {row.entity ? `${row.entity}${row.entityId ? ` · ${row.entityId}` : ""}` : "—"}
-              </td>
+              <td className="text-muted-foreground px-3 py-2.5 break-all">{entity(row)}</td>
               <td
-                className="text-muted-foreground max-w-40 truncate py-2.5 pr-6 pl-3"
-                title={row.userId ?? undefined}
+                className="text-muted-foreground max-w-48 truncate py-2.5 pr-6 pl-3"
+                title={row.user?.email ?? row.userId ?? undefined}
               >
-                {row.userId ?? t("system")}
+                {user(row)}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
+    </>
   );
 }

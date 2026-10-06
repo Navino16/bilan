@@ -10,22 +10,29 @@ test.describe("admin settings", () => {
   test("editing the app name saves and appears in the audit log", async ({ page }) => {
     // Two brand-new routes cold-compile on first hit; allow more than the default 30s.
     test.setTimeout(120_000);
-    await page.goto("/fr/admin/app-settings", { waitUntil: "domcontentloaded", timeout: 90_000 });
-
     const form = page.locator("form:has(#set-app_name)");
-    // Retry the first submit until the client island has hydrated.
-    await expect(async () => {
-      await form.locator("#set-app_name").fill("Bilan");
-      await form.getByRole("button", { name: /enregistrer/i }).click();
-      await expect(form.getByText("Enregistré.")).toBeVisible({ timeout: 2000 });
-    }).toPass({ timeout: 20_000 });
+    // Unchanged values aren't written (nor audited): save a fresh name, then restore.
+    const saveName = async (name: string) => {
+      await page.goto("/fr/admin/app-settings", { waitUntil: "domcontentloaded", timeout: 90_000 });
+      // Retry the first submit until the client island has hydrated.
+      await expect(async () => {
+        await form.locator("#set-app_name").fill(name);
+        await form.getByRole("button", { name: /enregistrer/i }).click();
+        await expect(form.getByText("Enregistré.")).toBeVisible({ timeout: 2000 });
+      }).toPass({ timeout: 20_000 });
+    };
 
-    // The mutation is audited; the viewer, filtered on the action, shows the row.
-    await page.goto("/fr/admin/audit?action=settings.app_name.update", {
-      waitUntil: "domcontentloaded",
-      timeout: 90_000,
-    });
-    await expect(page.locator('[data-slot="audit-row"]').first()).toBeVisible();
+    try {
+      await saveName(`Bilan E2E ${Date.now()}`);
+      // The mutation is audited; the viewer, filtered on the action, shows the row.
+      await page.goto("/fr/admin/audit?action=settings.app_name.update", {
+        waitUntil: "domcontentloaded",
+        timeout: 90_000,
+      });
+      await expect(page.locator('[data-slot="audit-row"]').first()).toBeVisible();
+    } finally {
+      await saveName("Bilan");
+    }
   });
 
   test("renaming the instance rebrands the shell and the page title", async ({ page }) => {

@@ -42,6 +42,32 @@ describe("AppSettingsService", () => {
     await withHook.set("app_name", "Maison", "user_1");
     expect(onAuthKeyChange).toHaveBeenCalledTimes(1);
   });
+
+  it("setMany writes and audits only the changed values, reloading auth once", async () => {
+    const audit = vi.fn();
+    const onAuthKeyChange = vi.fn();
+    const svc2 = new AppSettingsService(db, { audit, onAuthKeyChange });
+    findUnique
+      .mockResolvedValueOnce({ key: "app_name", value: "Bilan" })
+      .mockResolvedValueOnce({ key: "registration_mode", value: "OPEN" })
+      .mockResolvedValueOnce(null);
+    upsert.mockResolvedValue({});
+    const changed = await svc2.setMany(
+      [
+        ["app_name", "Bilan"],
+        ["registration_mode", "DISABLED"],
+        ["credentials_enabled", true],
+      ],
+      "user_1",
+    );
+    expect(changed).toEqual(["registration_mode", "credentials_enabled"]);
+    expect(upsert).toHaveBeenCalledTimes(2);
+    expect(audit.mock.calls.map(([e]) => e.action)).toEqual([
+      "settings.registration_mode.update",
+      "settings.credentials_enabled.update",
+    ]);
+    expect(onAuthKeyChange).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("normalizeAppName", () => {
