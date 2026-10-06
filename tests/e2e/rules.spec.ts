@@ -22,7 +22,7 @@ test.describe("categorization rules", () => {
 
     const row = page.locator('[data-slot="rule-row"]').filter({ hasText: pattern });
     await expect(row).toHaveCount(1);
-    await expect(row).toContainText("0 hit");
+    await expect(row).toContainText("0 utilisation");
 
     await page.goto(`/fr/transactions?search=${pattern}`);
     await page.getByRole("button", { name: /nouvelle transaction/i }).click();
@@ -35,7 +35,7 @@ test.describe("categorization rules", () => {
     ).toBeVisible({ timeout: 15_000 });
     await page.goto("/fr/categories");
     await page.getByRole("button", { name: /^Règles/ }).click();
-    await expect(row).toContainText("1 hit");
+    await expect(row).toContainText("1 utilisation");
 
     page.once("dialog", (d) => d.accept());
     await row.getByRole("button", { name: /supprimer/i }).click();

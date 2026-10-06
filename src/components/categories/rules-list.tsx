@@ -26,7 +26,7 @@ export type RuleRow = {
   hits: number;
 };
 
-const COLS = "grid-cols-[32px_40px_1fr_minmax(0,108px)_minmax(0,140px)_72px_56px_60px]";
+const COLS = "grid-cols-[32px_40px_1fr_minmax(0,108px)_minmax(0,140px)_72px_96px_60px]";
 
 export function RulesList({
   rules,
