@@ -43,7 +43,7 @@ export async function deleteAccountAction(
   }
 
   try {
-    await deleteUser(user.id, { id: user.id });
+    await deleteUser(user.id);
   } catch {
     return { ok: false, error: "FAILED" };
   }

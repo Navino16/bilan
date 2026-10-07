@@ -342,7 +342,7 @@ function monthTransactions(y: number, m0: number): Tx[] {
 async function resetUser(userId: string): Promise<void> {
   // deleteUser hands owned groups to another member; the dev household must go.
   await db.group.deleteMany({ where: { createdById: userId } });
-  await deleteUser(userId, { id: userId });
+  await deleteUser(userId);
 }
 
 async function main(): Promise<void> {

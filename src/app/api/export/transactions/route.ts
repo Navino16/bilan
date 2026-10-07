@@ -4,6 +4,7 @@ import { listForUser, listForeignCategories } from "@/server/services/categories
 import { flattenCategories } from "@/components/transactions/category-tree";
 import { transactionsToCsv, type CsvRow } from "@/server/services/export/csv";
 import { dayEnd, dayStart, parseDayBounds, toIsoDay } from "@/lib/period";
+import { defaultLocale, locales, type Locale } from "@/i18n/config";
 
 export const runtime = "nodejs";
 
@@ -18,6 +19,8 @@ export async function GET(req: Request): Promise<Response> {
   const from = q.get("from") ?? undefined;
   const to = q.get("to") ?? undefined;
   const bounds = parseDayBounds({ from, to });
+  const requested = q.get("locale");
+  const locale: Locale = locales.find((l) => l === requested) ?? defaultLocale;
 
   const filters = {
     categoryId: q.get("categoryId") ?? undefined,
@@ -50,11 +53,12 @@ export async function GET(req: Request): Promise<Response> {
     categoryName: i.categoryId ? (catName.get(i.categoryId) ?? null) : null,
   }));
 
-  const csv = transactionsToCsv(rows);
+  const csv = transactionsToCsv(rows, locale);
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="bilan-transactions-${toIsoDay(new Date())}.csv"`,
+      "Cache-Control": "no-store",
     },
   });
 }

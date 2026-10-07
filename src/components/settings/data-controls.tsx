@@ -2,8 +2,8 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Download, TriangleAlert } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { TriangleAlert } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -23,6 +23,7 @@ import {
 } from "@/server/transport/actions/account-data";
 import { PageHeader } from "@/components/shell/page-header";
 import { SectionCard } from "@/components/shell/section-card";
+import { DownloadButton } from "./download-button";
 
 export function DataControls({
   locale,
@@ -35,6 +36,7 @@ export function DataControls({
 }) {
   const t = useTranslations("settings.data");
   const [open, setOpen] = useState(false);
+  const [exportFailed, setExportFailed] = useState(false);
   const [state, action, pending] = useActionState<AccountDataState, FormData>(
     deleteAccountAction,
     null,
@@ -51,19 +53,28 @@ export function DataControls({
       {/* Export */}
       <SectionCard overline={t("exportOverline")} title={t("exportTitle")} hint={t("exportHint")}>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <a
-            href="/api/export/transactions"
-            download
-            className={buttonVariants({ variant: "outline" })}
+          <DownloadButton
+            href={`/api/export/transactions?locale=${locale}`}
+            fallbackFilename="bilan-transactions.csv"
+            pendingLabel={t("exporting")}
+            onError={setExportFailed}
           >
-            <Download />
             {t("exportCsv")}
-          </a>
-          <a href="/api/export/data" download className={buttonVariants({ variant: "outline" })}>
-            <Download />
+          </DownloadButton>
+          <DownloadButton
+            href="/api/export/data"
+            fallbackFilename="bilan-data-export.json"
+            pendingLabel={t("exporting")}
+            onError={setExportFailed}
+          >
             {t("exportJson")}
-          </a>
+          </DownloadButton>
         </div>
+        {exportFailed && (
+          <Alert variant="destructive">
+            <AlertDescription>{t("exportFailed")}</AlertDescription>
+          </Alert>
+        )}
       </SectionCard>
 
       {/* Danger zone */}
