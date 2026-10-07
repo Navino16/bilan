@@ -164,6 +164,8 @@
     "iban": "IBAN",
     "ibanEncrypted": "IBAN (optionnel, chiffré)",
     "ibanPlaceholder": "FR76 …",
+    "ibanKeep": "{iban} — laisser vide pour conserver",
+    "ibanRemove": "Retirer l'IBAN enregistré",
     "bankName": "Banque",
     "bankPlaceholder": "Crédit Coopératif",
     "initialBalance": "Solde initial",

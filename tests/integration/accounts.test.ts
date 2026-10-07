@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "@/server/db";
 import { dataKey } from "@/server/crypto/keys";
 import { decrypt } from "@/server/crypto/encryption";
+import { buildSecureFields } from "@/server/services/transactions/secure-fields";
 import {
   createAccount,
   updateAccount,
@@ -92,5 +93,51 @@ describe("accounts service", () => {
     await archiveAccount(acc.id, { id: ownerId });
     const afterArchive = await listVisibleForUser(ownerId);
     expect(afterArchive.find((a) => a.id === acc.id)).toBeUndefined(); // archived hidden by default
+  });
+
+  it("keeps the IBAN when an edit leaves it blank, and clears it only on request", async () => {
+    const acc = await createAccount({ name: "Keep IBAN", type: "CHECKING", iban }, ownerId);
+    await updateAccount(acc.id, { name: "Renamed", type: "CHECKING" }, { id: ownerId });
+    let row = await db.bankAccount.findUniqueOrThrow({ where: { id: acc.id } });
+    expect(row.name).toBe("Renamed");
+    expect(decrypt(row.ibanEnc!, dataKey)).toBe(iban);
+
+    await updateAccount(
+      acc.id,
+      { name: "Renamed", type: "CHECKING" },
+      { id: ownerId },
+      {
+        removeIban: true,
+      },
+    );
+    row = await db.bankAccount.findUniqueOrThrow({ where: { id: acc.id } });
+    expect(row.ibanEnc).toBeNull();
+    expect(row.ibanHash).toBeNull();
+  });
+
+  it("balance = opening balance + the account's transactions", async () => {
+    const acc = await createAccount(
+      { name: "Balance", type: "CHECKING", initialBalance: "100,50" },
+      ownerId,
+    );
+    for (const amount of [-30.25, 1200, -0.25]) {
+      const secure = buildSecureFields({ label: "T", rawLabel: `T${amount}` });
+      await db.transaction.create({
+        data: {
+          accountId: acc.id,
+          date: new Date("2026-09-01"),
+          amount,
+          type: "OTHER",
+          labelEnc: secure.labelEnc,
+          labelHash: secure.labelHash,
+          rawLabelEnc: secure.rawLabelEnc,
+          rawLabelHash: secure.rawLabelHash,
+          createdById: ownerId,
+        },
+      });
+    }
+    const view = (await listVisibleForUser(ownerId)).find((a) => a.id === acc.id)!;
+    expect(view.initialBalance).toBe(100.5);
+    expect(view.balance).toBe(1270);
   });
 });

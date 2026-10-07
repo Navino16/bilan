@@ -69,7 +69,8 @@ type EditableAccount = {
   type: string;
   bankName: string | null;
   color: string | null;
-  balance: number;
+  initialBalance: number;
+  ibanMasked: string | null;
 };
 
 function RowActions({ account, groups }: { account: EditableAccount; groups: ShareGroup[] }) {
@@ -274,7 +275,8 @@ export function AccountList({
                         type: a.type,
                         bankName: a.bankName,
                         color: a.color,
-                        balance: a.balance,
+                        initialBalance: a.initialBalance,
+                        ibanMasked: a.ibanMasked,
                       }}
                       groups={groups}
                     />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Check, Info, Lock, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,8 @@ type EditableAccount = {
   type: string;
   bankName: string | null;
   color: string | null;
-  balance: number;
+  initialBalance: number;
+  ibanMasked: string | null;
 };
 
 export function AccountForm({
@@ -61,10 +62,11 @@ export function AccountForm({
   onOpenChange?: (open: boolean) => void;
 }) {
   const t = useTranslations("accounts");
+  const locale = useLocale();
   const router = useRouter();
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = controlledOpen ?? uncontrolledOpen;
-  const setOpen = onOpenChange ?? setUncontrolledOpen;
+  const setOpenRaw = onOpenChange ?? setUncontrolledOpen;
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const liveMobile = useIsMobile();
@@ -76,6 +78,18 @@ export function AccountForm({
 
   const [type, setType] = useState<AccountType>((account?.type as AccountType) ?? "CHECKING");
   const [color, setColor] = useState<string>(account?.color ?? DEFAULT_COLOR);
+  const [removeIban, setRemoveIban] = useState(false);
+
+  // Each opening starts from the account (or blank) values, not the last submission.
+  function setOpen(next: boolean) {
+    if (next) {
+      setType((account?.type as AccountType) ?? "CHECKING");
+      setColor(account?.color ?? DEFAULT_COLOR);
+      setRemoveIban(false);
+      setError(null);
+    }
+    setOpenRaw(next);
+  }
   const colorPickerRef = useRef<HTMLInputElement>(null);
   const isCustomColor = !COLOR_PALETTE.includes(color as (typeof COLOR_PALETTE)[number]);
 
@@ -84,11 +98,13 @@ export function AccountForm({
   function handleAction(formData: FormData) {
     formData.set("type", type);
     formData.set("color", color);
+    if (removeIban) formData.set("removeIban", "1");
     startTransition(async () => {
       const act = mode === "create" ? createAccountAction : updateAccountAction;
       const result = await act(null, formData);
       if (result?.ok) {
         setError(null);
+        setRemoveIban(false);
         setOpen(false);
         router.refresh();
       } else {
@@ -101,7 +117,7 @@ export function AccountForm({
     <>
       <DialogHeader className="border-border shrink-0 border-b px-6 pt-5 pb-4 text-left">
         <span className="text-muted-foreground text-[0.7rem] font-medium tracking-[0.14em] uppercase">
-          {t("new")}
+          {mode === "create" ? t("new") : t("edit")}
         </span>
         <DialogTitle className="font-display text-2xl">
           {mode === "create" ? t("createTitle") : t("editTitle")}
@@ -166,7 +182,14 @@ export function AccountForm({
                 id="acc-balance"
                 name="initialBalance"
                 inputMode="decimal"
-                defaultValue={account ? String(account.balance) : ""}
+                defaultValue={
+                  account
+                    ? account.initialBalance.toLocaleString(locale, {
+                        minimumFractionDigits: 2,
+                        useGrouping: false,
+                      })
+                    : ""
+                }
                 placeholder="0,00"
                 className="font-display text-foreground placeholder:text-muted-foreground w-full border-0 bg-transparent text-lg outline-none"
               />
@@ -182,10 +205,26 @@ export function AccountForm({
                 id="acc-iban"
                 name="iban"
                 autoComplete="off"
-                placeholder={t("ibanPlaceholder")}
+                disabled={removeIban}
+                placeholder={
+                  account?.ibanMasked
+                    ? t("ibanKeep", { iban: account.ibanMasked })
+                    : t("ibanPlaceholder")
+                }
                 className="pl-8"
               />
             </div>
+            {account?.ibanMasked && (
+              <label className="text-muted-foreground flex items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={removeIban}
+                  onChange={(e) => setRemoveIban(e.target.checked)}
+                  className="border-input size-4 rounded border"
+                />
+                {t("ibanRemove")}
+              </label>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -229,10 +268,12 @@ export function AccountForm({
             </div>
           </div>
 
-          <div className="flex items-start gap-2 rounded-lg bg-[var(--info-bg)] p-3 text-xs text-[var(--info)]">
-            <Info className="mt-px size-3.5 shrink-0" />
-            <span>{t("privacyNote")}</span>
-          </div>
+          {mode === "create" && (
+            <div className="flex items-start gap-2 rounded-lg bg-[var(--info-bg)] p-3 text-xs text-[var(--info)]">
+              <Info className="mt-px size-3.5 shrink-0" />
+              <span>{t("privacyNote")}</span>
+            </div>
+          )}
 
           {error && (
             <Alert variant="destructive">
