@@ -1,6 +1,7 @@
 import { admin, twoFactor, openAPI } from "better-auth/plugins";
 import { passkey } from "@better-auth/passkey";
 import { env } from "@/env";
+import { authGuardPlugin } from "./login-guard";
 
 const appUrl = new URL(env.APP_URL);
 
@@ -9,5 +10,7 @@ export const authPlugins = [
   admin(),
   twoFactor(),
   passkey({ rpID: appUrl.hostname, origin: appUrl.origin }),
-  openAPI(),
+  authGuardPlugin,
+  // The generated API reference (/api/auth/reference) is a dev aid, not public surface.
+  ...(env.NODE_ENV === "production" ? [] : [openAPI()]),
 ];

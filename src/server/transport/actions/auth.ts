@@ -1,15 +1,10 @@
 "use server";
 
 import { headers as nextHeaders } from "next/headers";
-import { after } from "next/server";
 import { env } from "@/env";
+import { isAPIError } from "better-auth/api";
 import { getAuth } from "@/server/auth";
-import {
-  changePasswordLimiter,
-  loginLimiter,
-  registerLimiter,
-  resetLimiter,
-} from "@/server/auth/rate-limit";
+import { changePasswordLimiter, registerLimiter, resetLimiter } from "@/server/auth/rate-limit";
 import { requireSession } from "@/server/auth/permissions";
 import { appSettings } from "@/server/services/settings/app-settings";
 import { consumeSignupToken, refundSignupToken } from "@/server/services/signup-tokens";
@@ -17,7 +12,6 @@ import { userExistsByEmail } from "@/server/services/users/lookup";
 import { changePassword } from "@/server/services/users/password";
 import { revokeOtherSessions, revokeSession } from "@/server/services/users/sessions";
 import { logEvent } from "@/server/services/audit";
-import { notifyNewLogin } from "@/server/services/mail/security-notifications";
 import {
   loginSchema,
   registerSchema,
@@ -49,31 +43,18 @@ export async function loginAction(
   const parsed = loginSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: "INVALID" };
 
-  const bucket = loginLimiter.consume(rlKey(parsed.data.email));
-  if (!bucket.allowed) {
-    await logEvent({ action: "auth.login.failed", metadata: { reason: "rate_limit" } });
-    return { ok: false, error: "RATE_LIMITED", retryAfter: bucket.retryAfterSec };
-  }
-
+  // Rate limiting, audit and the new-login alert run in the Better Auth hooks
+  // (login-guard.ts, auth-audit.ts) so direct API sign-ins get them too.
   try {
     const auth = await getAuth();
-    const h = await nextHeaders();
-    const res = await auth.api.signInEmail({ body: parsed.data, headers: h });
-    // 2FA users get a pending cookie instead of a session; the code step (audited
-    // by the after-hook) finishes the sign-in.
-    if ("twoFactorRedirect" in res && res.twoFactorRedirect) {
-      await logEvent({ action: "auth.login.2fa_pending", metadata: { email: parsed.data.email } });
-      return { ok: true, twoFactor: true };
-    }
-    await logEvent({ action: "auth.login.success", metadata: { email: parsed.data.email } });
-    // Best-effort security alert, sent AFTER the response so a slow/unreachable
-    // SMTP host never delays the login (it also self-catches).
-    const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? h.get("x-real-ip") ?? null;
-    const userAgent = h.get("user-agent") ?? null;
-    after(() => notifyNewLogin({ email: parsed.data.email, ip, userAgent, at: new Date() }));
+    const res = await auth.api.signInEmail({ body: parsed.data, headers: await nextHeaders() });
+    if ("twoFactorRedirect" in res && res.twoFactorRedirect) return { ok: true, twoFactor: true };
     return { ok: true };
-  } catch {
-    await logEvent({ action: "auth.login.failed", metadata: { email: parsed.data.email } });
+  } catch (e) {
+    if (isAPIError(e) && e.body?.code === "RATE_LIMITED") {
+      const retryAfter = (e.body as { retryAfter?: number }).retryAfter;
+      return { ok: false, error: "RATE_LIMITED", retryAfter };
+    }
     return { ok: false, error: "BAD_CREDENTIALS" };
   }
 }

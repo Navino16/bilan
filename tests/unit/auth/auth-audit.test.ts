@@ -133,4 +133,34 @@ describe("authAuditEvent", () => {
       expect(await authAuditEvent("/two-factor/disable", badCode, {}, signedIn)).toBeNull();
     });
   });
+
+  describe("password sign-in", () => {
+    const body = { email: " A@B.c ", password: "x" };
+
+    it("audits success, the 2FA step and failures with the email", async () => {
+      expect(
+        await authAuditEvent(
+          "/sign-in/email",
+          { token: "t", user: { id: "user-1", email: "a@b.c" } },
+          body,
+          signedIn,
+        ),
+      ).toEqual({
+        userId: "user-1",
+        action: "auth.login.success",
+        metadata: { method: "password", email: "a@b.c" },
+      });
+      expect(
+        await authAuditEvent("/sign-in/email", { twoFactorRedirect: true }, body, signedIn),
+      ).toEqual({ action: "auth.login.2fa_pending", metadata: { email: "a@b.c" } });
+      const bad = APIError.from("UNAUTHORIZED", {
+        code: "INVALID_EMAIL_OR_PASSWORD",
+        message: "x",
+      });
+      expect(await authAuditEvent("/sign-in/email", bad, body, signedIn)).toEqual({
+        action: "auth.login.failed",
+        metadata: { method: "password", email: "a@b.c", reason: "INVALID_EMAIL_OR_PASSWORD" },
+      });
+    });
+  });
 });

@@ -14,6 +14,7 @@
       "registerLink": "Create an account",
       "error": {
         "rateLimited": "Too many attempts. Try again later.",
+        "rateLimitedFor": "Too many attempts. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
         "badCredentials": "Incorrect email or password.",
         "passkeyNotFound": "This passkey is no longer recognised. Sign in with your password.",
         "passkeyFailed": "Passkey sign-in was cancelled or didn't complete."

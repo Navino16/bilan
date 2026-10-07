@@ -32,4 +32,12 @@ describe("RateLimiter", () => {
     now += 60_001;
     expect(rl.consume("a").allowed).toBe(true);
   });
+
+  it("reset clears a key", () => {
+    const rl = new RateLimiter({ max: 1, windowMs: 60_000 });
+    rl.consume("k");
+    expect(rl.consume("k").allowed).toBe(false);
+    rl.reset("k");
+    expect(rl.consume("k").allowed).toBe(true);
+  });
 });
