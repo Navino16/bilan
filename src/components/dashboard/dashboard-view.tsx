@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/shell/page-header";
 import { categorySliceColors } from "@/lib/chart-colors";
 import { BaselineSelect } from "./baseline-select";
 import { ComparisonNote } from "./comparison-note";
+import { BudgetSnapshot, type CurrentBudget } from "./budget-snapshot";
 
 const DEFAULT_COLOR = "#2563eb";
 
@@ -27,12 +28,14 @@ export async function DashboardView({
   period,
   comparison,
   categories,
+  budget,
   locale,
 }: {
   data: DashboardData;
   period: Period;
   comparison: Comparison;
   categories: FlatCategory[];
+  budget: CurrentBudget;
   locale: string;
 }) {
   const t = await getTranslations("dashboard");
@@ -246,50 +249,54 @@ export async function DashboardView({
         </Card>
       </div>
 
-      {/* Recent transactions */}
-      <Card className="gap-0 overflow-hidden p-0">
-        <div className="flex items-center justify-between p-5">
-          <div className="font-display text-xl">{t("recent")}</div>
-          <Link href={`/${locale}/transactions`} className="text-primary text-sm hover:underline">
-            {t("seeAll")}
-          </Link>
-        </div>
-        <div className="border-t">
-          {data.recent.length === 0 ? (
-            <p className="text-muted-foreground p-5 text-sm">{t("noRecent")}</p>
-          ) : (
-            data.recent.map((r) => {
-              const meta = r.categoryId ? catById.get(r.categoryId) : undefined;
-              return (
-                <div
-                  key={r.id}
-                  data-slot="dashboard-recent-row"
-                  className="flex items-center gap-3 border-b px-5 py-2.5 last:border-b-0"
-                >
-                  <CategoryAvatar color={meta?.color} icon={meta?.icon} size={28} />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm">{r.label}</div>
-                    <div className="text-muted-foreground truncate text-[11.5px]">
-                      {recentDateFmt.format(r.date)} · {meta?.name ?? t("noCategory")}
-                    </div>
-                  </div>
-                  <span className="text-muted-foreground hidden max-w-40 truncate text-[11.5px] sm:block">
-                    {r.accountName}
-                  </span>
-                  <span
-                    className="text-sm font-medium tabular-nums"
-                    style={r.amount > 0 ? { color: "var(--income)" } : undefined}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_1.2fr]">
+        <BudgetSnapshot budget={budget} categories={catById} locale={locale} />
+
+        {/* Recent transactions */}
+        <Card className="gap-0 overflow-hidden p-0">
+          <div className="flex items-center justify-between p-5">
+            <div className="font-display text-xl">{t("recent")}</div>
+            <Link href={`/${locale}/transactions`} className="text-primary text-sm hover:underline">
+              {t("seeAll")}
+            </Link>
+          </div>
+          <div className="border-t">
+            {data.recent.length === 0 ? (
+              <p className="text-muted-foreground p-5 text-sm">{t("noRecent")}</p>
+            ) : (
+              data.recent.map((r) => {
+                const meta = r.categoryId ? catById.get(r.categoryId) : undefined;
+                return (
+                  <div
+                    key={r.id}
+                    data-slot="dashboard-recent-row"
+                    className="flex items-center gap-3 border-b px-5 py-2.5 last:border-b-0"
                   >
-                    {new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" }).format(
-                      r.amount,
-                    )}
-                  </span>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </Card>
+                    <CategoryAvatar color={meta?.color} icon={meta?.icon} size={28} />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm">{r.label}</div>
+                      <div className="text-muted-foreground truncate text-[11.5px]">
+                        {recentDateFmt.format(r.date)} · {meta?.name ?? t("noCategory")}
+                      </div>
+                    </div>
+                    <span className="text-muted-foreground hidden max-w-40 truncate text-[11.5px] sm:block">
+                      {r.accountName}
+                    </span>
+                    <span
+                      className="text-sm font-medium tabular-nums"
+                      style={r.amount > 0 ? { color: "var(--income)" } : undefined}
+                    >
+                      {new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" }).format(
+                        r.amount,
+                      )}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

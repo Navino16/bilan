@@ -297,7 +297,6 @@
     "saving": "Saving…",
     "createCta": "Create budget",
     "delete": "Delete",
-    "deleteConfirm": "Delete this budget?",
     "cancel": "Cancel",
     "error": {
       "INVALID": "Check the fields.",
@@ -317,7 +316,13 @@
       "spent": "Spent",
       "planned": "Planned",
       "remaining": "{amount} left",
-      "overBy": "Over by {amount}"
+      "overBy": "Over by {amount}",
+      "seeTransactions": "See transactions",
+      "counted": "Counted in this budget",
+      "transactions": "{count, plural, =0 {No transactions} one {# transaction} other {# transactions}}",
+      "latestOnly": "Showing the {count} most recent.",
+      "noTransactions": "No transaction counts in this budget yet.",
+      "hiddenTx": "Another member's transaction"
     },
     "assign": {
       "title": "Assign to a budget",
@@ -335,7 +340,21 @@
     "ended": "Period ended",
     "subtitle": "Set an envelope by category or account over a period.",
     "rolledExisting": "The next period already exists.",
-    "rollView": "View"
+    "rollView": "View",
+    "actionsFor": "Actions for {name}",
+    "edit": "Edit",
+    "deleteTitle": "Delete “{name}”?",
+    "deleteBody": "The budget and its lines will be deleted. Transactions are not touched; the other periods of a recurring budget are kept.",
+    "otherPeriods": "{count, plural, one {# other period} other {# other periods}}",
+    "previousPeriod": "Previous period",
+    "nextPeriod": "Next period",
+    "snapshot": {
+      "overline": "Budget in progress",
+      "none": "No budget in progress.",
+      "detail": "Details",
+      "others": "{count, plural, one {# other budget in progress} other {# other budgets in progress}}",
+      "moreLines": "{count, plural, one {# more line} other {# more lines}}"
+    }
   },
   "categories": {
     "title": "Categories",

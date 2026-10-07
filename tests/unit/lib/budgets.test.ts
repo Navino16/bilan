@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { budgetPlannedTotal, lineStatus, nextPeriod, periodEndFor } from "@/lib/budgets";
+import {
+  budgetPlannedTotal,
+  groupBudgetSeries,
+  lineStatus,
+  nextPeriod,
+  periodEndFor,
+} from "@/lib/budgets";
 import { parseAmount } from "@/lib/amount";
 import { budgetLineSchema } from "@/lib/validation/budget";
 
@@ -123,5 +129,44 @@ describe("parseAmount / budget line amount", () => {
     expect(budgetLineSchema.parse({ plannedAmount: "300,5" }).plannedAmount).toBe(300.5);
     expect(budgetLineSchema.safeParse({ plannedAmount: "abc" }).success).toBe(false);
     expect(budgetLineSchema.safeParse({ plannedAmount: "-1" }).success).toBe(false);
+  });
+});
+
+describe("groupBudgetSeries", () => {
+  const b = (
+    id: string,
+    parent: string | null,
+    start: string,
+    started: boolean,
+    ended: boolean,
+  ) => ({
+    id,
+    parentBudgetId: parent,
+    periodStart: new Date(start),
+    started,
+    ended,
+  });
+
+  it("puts the period in progress first and the rest of the series under it", () => {
+    const groups = groupBudgetSeries([
+      b("sep", "aug", "2026-09-01", true, true),
+      b("aug", null, "2026-08-01", true, true),
+      b("oct", "aug", "2026-10-01", true, false),
+      b("solo", null, "2026-07-01", true, true),
+    ]);
+    expect(groups.map((g) => [g.head.id, g.others.map((o) => o.id)])).toEqual([
+      ["oct", ["sep", "aug"]],
+      ["solo", []],
+    ]);
+  });
+
+  it("falls back to the latest started period, then to the next one to come", () => {
+    expect(
+      groupBudgetSeries([
+        b("a", null, "2026-08-01", true, true),
+        b("c", "a", "2026-11-01", false, false),
+      ])[0].head.id,
+    ).toBe("a");
+    expect(groupBudgetSeries([b("f", null, "2027-01-01", false, false)])[0].head.id).toBe("f");
   });
 });
