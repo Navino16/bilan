@@ -524,7 +524,9 @@
         "FORBIDDEN": "Vous ne pouvez pas modifier l'un de ces comptes.",
         "FAILED": "Échec de la suppression. Réessayez."
       }
-    }
+    },
+    "readOnly": "lecture seule",
+    "recategorizeFailed": "La catégorie n'a pas pu être changée."
   },
   "import": {
     "title": "Importer un relevé",

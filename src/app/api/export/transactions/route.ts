@@ -1,6 +1,6 @@
 import { getCurrentUser } from "@/server/auth/permissions";
 import { listTransactions } from "@/server/services/transactions";
-import { listForUser } from "@/server/services/categories";
+import { listForUser, listForeignCategories } from "@/server/services/categories";
 import { flattenCategories } from "@/components/transactions/category-tree";
 import { transactionsToCsv, type CsvRow } from "@/server/services/export/csv";
 import { parsePeriodParams, toIsoDay } from "@/lib/period";
@@ -36,9 +36,11 @@ export async function GET(req: Request): Promise<Response> {
     items.push(...page.items);
     if (items.length >= page.total || page.items.length === 0) break;
   }
-  const tree = await listForUser(user.id);
+  const [tree, foreign] = await Promise.all([listForUser(user.id), listForeignCategories(user.id)]);
 
-  const catName = new Map(flattenCategories(tree).map((c) => [c.id, c.name]));
+  const catName = new Map(
+    [...flattenCategories(tree), ...flattenCategories(foreign)].map((c) => [c.id, c.name]),
+  );
   const rows: CsvRow[] = items.map((i) => ({
     date: toIsoDay(i.date),
     amount: i.amount,

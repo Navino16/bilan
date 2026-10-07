@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { requireSession } from "@/server/auth/permissions";
 import { listTransactions } from "@/server/services/transactions";
-import { listForUser } from "@/server/services/categories";
+import { listForUser, listForeignCategories } from "@/server/services/categories";
 import { listVisibleForUser } from "@/server/services/accounts";
 import { listLinkedTxIds } from "@/server/services/links";
 import { listAssignableBudgets } from "@/server/services/budgets";
@@ -43,7 +43,7 @@ export default async function TransactionsPage({
   const period = sp.from || sp.to ? parsePeriodParams({ from: sp.from, to: sp.to }) : undefined;
   const limit = parseListLimit(sp.limit);
 
-  const [{ items, total }, tree, accounts, linkedIds, budgets] = await Promise.all([
+  const [{ items, total }, tree, foreignTree, accounts, linkedIds, budgets] = await Promise.all([
     listTransactions(user.id, {
       categoryId: sp.categoryId,
       direction,
@@ -53,12 +53,14 @@ export default async function TransactionsPage({
       take: limit,
     }),
     listForUser(user.id),
+    listForeignCategories(user.id),
     listVisibleForUser(user.id),
     listLinkedTxIds(user.id),
     listAssignableBudgets(user.id),
   ]);
 
   const flatCategories = flattenCategories(tree);
+  const foreignCategories = flattenCategories(foreignTree);
   const accountOptions: AccountOption[] = accounts.map((a) => ({
     id: a.id,
     name: a.name,
@@ -121,10 +123,16 @@ export default async function TransactionsPage({
         }
       />
       <SelectionModeProvider>
-        <TransactionFilters categories={flatCategories} from={sp.from} to={sp.to} total={total} />
+        <TransactionFilters
+          categories={[...flatCategories, ...foreignCategories]}
+          from={sp.from}
+          to={sp.to}
+          total={total}
+        />
         <TransactionList
           items={listItems}
           categories={flatCategories}
+          foreignCategories={foreignCategories}
           accounts={accountOptions}
           budgets={budgets}
           partialLastDay={partialLastDay}

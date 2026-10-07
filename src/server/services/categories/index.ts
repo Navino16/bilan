@@ -334,3 +334,42 @@ export async function listForUser(userId: string): Promise<CategoryNode[]> {
   });
   return buildTree(rows);
 }
+
+// Categories the user can't use but meets on the transactions they can see
+// (an owner's personal ones on a shared account), plus their ancestors for
+// colour inheritance. Display only: never offered in a picker (#159).
+export async function listForeignCategories(userId: string): Promise<CategoryNode[]> {
+  const own = await listForUser(userId);
+  const known = new Set<string>();
+  const collect = (nodes: CategoryNode[]): void => {
+    for (const n of nodes) {
+      known.add(n.id);
+      collect(n.children);
+    }
+  };
+  collect(own);
+  // Archived accounts included: budgets still show their transactions.
+  const used = await db.transaction.groupBy({
+    by: ["categoryId"],
+    where: {
+      categoryId: { not: null, notIn: [...known] },
+      account: {
+        OR: [
+          { ownerId: userId },
+          { shares: { some: { group: { members: { some: { userId } } } } } },
+        ],
+      },
+    },
+  });
+  let missing = used.map((u) => u.categoryId!);
+  const rows: Parameters<typeof buildTree>[0] = [];
+  while (missing.length > 0) {
+    const found = await db.category.findMany({ where: { id: { in: missing } } });
+    found.forEach((c) => known.add(c.id));
+    rows.push(...found);
+    missing = [
+      ...new Set(found.flatMap((c) => (c.parentId && !known.has(c.parentId) ? [c.parentId] : []))),
+    ];
+  }
+  return buildTree(rows);
+}

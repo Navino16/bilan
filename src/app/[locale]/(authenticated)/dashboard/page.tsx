@@ -1,6 +1,6 @@
 import { setRequestLocale } from "next-intl/server";
 import { requireSession } from "@/server/auth/permissions";
-import { listForUser } from "@/server/services/categories";
+import { listForUser, listForeignCategories } from "@/server/services/categories";
 import { flattenCategories } from "@/components/transactions/category-tree";
 import { getDashboard } from "@/server/services/dashboard";
 import { getCurrentBudget } from "@/server/services/budgets";
@@ -25,7 +25,11 @@ export default async function DashboardPage({
   const comparison = comparisonFor(period, parseBaseline(sp.vs, period));
   const [data, categories, budget] = await Promise.all([
     getDashboard(user.id, period, comparison),
-    listForUser(user.id).then(flattenCategories),
+    // Display only: shared accounts carry their owner's categories too.
+    Promise.all([listForUser(user.id), listForeignCategories(user.id)]).then(([own, foreign]) => [
+      ...flattenCategories(own),
+      ...flattenCategories(foreign),
+    ]),
     getCurrentBudget(user.id),
   ]);
 

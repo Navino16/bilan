@@ -1,6 +1,6 @@
 import { setRequestLocale } from "next-intl/server";
 import { requireSession } from "@/server/auth/permissions";
-import { listForUser } from "@/server/services/categories";
+import { listForUser, listForeignCategories } from "@/server/services/categories";
 import { flattenCategories } from "@/components/transactions/category-tree";
 import { getCategoryHistory, getInsights } from "@/server/services/dashboard/insights";
 import { parsePeriodParams, clampPeriodToNow, parseBaseline, comparisonFor } from "@/lib/period";
@@ -25,7 +25,11 @@ export default async function InsightsPage({
   const [data, history, categories] = await Promise.all([
     getInsights(user.id, period, comparison),
     getCategoryHistory(user.id, period),
-    listForUser(user.id).then(flattenCategories),
+    // Display only: shared accounts carry their owner's categories too.
+    Promise.all([listForUser(user.id), listForeignCategories(user.id)]).then(([own, foreign]) => [
+      ...flattenCategories(own),
+      ...flattenCategories(foreign),
+    ]),
   ]);
 
   return (
