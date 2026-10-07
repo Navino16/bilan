@@ -4,10 +4,18 @@ import { logEvent } from "@/server/services/audit";
 import { requireGroupRole } from "@/server/services/groups/roles";
 import { assertCategoryAssignable, CategoryAccessError } from "@/server/services/categories";
 import { ruleInputSchema, type RuleInput } from "@/lib/validation/rule";
+import { isValidRulePattern } from "./regex";
 import { pickByPriority, proposeRule, type Rule } from "./match";
 import type { RuleMatchType } from "@/lib/validation/rule";
 
 export class RuleAccessError extends Error {}
+export class RuleValidationError extends Error {}
+
+function assertValidPattern(data: { pattern: string; matchType: string }): void {
+  if (data.matchType === "REGEX" && !isValidRulePattern(data.pattern)) {
+    throw new RuleValidationError("INVALID_REGEX");
+  }
+}
 
 // Rejects a rule categoryId the actor cannot see (a forged id pointing at another
 // user's private category). The category must be one the actor can see — their
@@ -84,6 +92,7 @@ export async function recordHits(
 
 export async function createRule(input: RuleInput, actor: { id: string }): Promise<{ id: string }> {
   const data = ruleInputSchema.parse(input);
+  assertValidPattern(data);
   if (data.groupId) {
     try {
       await requireGroupRole(data.groupId, actor.id, "ADMIN");
@@ -154,6 +163,7 @@ export async function updateRule(
 ): Promise<void> {
   await loadManageableRule(id, actor.id);
   const data = ruleInputSchema.parse(input);
+  assertValidPattern(data);
   await assertRuleCategory(data.categoryId, actor.id);
   await db.categorizationRule.update({
     where: { id },

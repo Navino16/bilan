@@ -8,7 +8,14 @@ import {
   deleteRule,
   toggleRule,
   RuleAccessError,
+  RuleValidationError,
 } from "@/server/services/categorization";
+
+function ruleError(e: unknown): string {
+  if (e instanceof RuleAccessError) return "FORBIDDEN";
+  if (e instanceof RuleValidationError) return e.message;
+  return "FAILED";
+}
 
 export type RuleActionState = { ok: true } | { ok: false; error: string } | null;
 
@@ -17,7 +24,7 @@ function parseRule(formData: FormData) {
     pattern: formData.get("pattern") ?? "",
     matchType: formData.get("matchType") ?? "CONTAINS",
     caseSensitive: formData.get("caseSensitive") === "true",
-    priority: formData.get("priority") ?? 100,
+    priority: formData.get("priority") || undefined,
     categoryId: formData.get("categoryId") ?? "",
     groupId: formData.get("groupId") ?? "",
   });
@@ -33,7 +40,7 @@ export async function createRuleAction(
   try {
     await createRule(parsed.data, { id: user.id });
   } catch (e) {
-    return { ok: false, error: e instanceof RuleAccessError ? "FORBIDDEN" : "FAILED" };
+    return { ok: false, error: ruleError(e) };
   }
   return { ok: true };
 }
@@ -49,7 +56,7 @@ export async function updateRuleAction(
   try {
     await updateRule(id, parsed.data, { id: user.id });
   } catch (e) {
-    return { ok: false, error: e instanceof RuleAccessError ? "FORBIDDEN" : "FAILED" };
+    return { ok: false, error: ruleError(e) };
   }
   return { ok: true };
 }

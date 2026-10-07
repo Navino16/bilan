@@ -1,5 +1,6 @@
 import { tokenize } from "@/server/crypto/hmac";
 import type { RuleMatchType } from "@/lib/validation/rule";
+import { compileRulePattern } from "./regex";
 
 export type Rule = {
   id: string;
@@ -27,11 +28,7 @@ export function matchRule(rule: Rule, label: string): boolean {
     case "CONTAINS":
       return hay.includes(needle);
     case "REGEX":
-      try {
-        return new RegExp(rule.pattern, rule.caseSensitive ? "" : "i").test(label);
-      } catch {
-        return false;
-      }
+      return compileRulePattern(rule.pattern, rule.caseSensitive)?.matcher(label).find() ?? false;
     default:
       return false;
   }

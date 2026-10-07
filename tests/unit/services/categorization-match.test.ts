@@ -51,6 +51,21 @@ describe("matchRule", () => {
   it("an invalid regex never throws and returns false", () => {
     expect(matchRule({ ...base, matchType: "REGEX", pattern: "(" }, "anything")).toBe(false);
   });
+
+  it("runs catastrophic-backtracking patterns in linear time (no ReDoS)", () => {
+    const label = `${"a".repeat(5_000)}!`;
+    const started = performance.now();
+    for (const pattern of ["(a+)+$", "(a|aa)+$", "(a*)*b"]) {
+      expect(matchRule({ ...base, matchType: "REGEX", pattern }, label)).toBe(false);
+    }
+    expect(performance.now() - started).toBeLessThan(1_000);
+  });
+
+  it("REGEX honours caseSensitive", () => {
+    const rule = { ...base, matchType: "REGEX" as const, pattern: "^Uber" };
+    expect(matchRule({ ...rule, caseSensitive: true }, "uber eats")).toBe(false);
+    expect(matchRule({ ...rule, caseSensitive: true }, "Uber eats")).toBe(true);
+  });
 });
 
 describe("pickByPriority", () => {
