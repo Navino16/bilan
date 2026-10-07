@@ -204,6 +204,37 @@ describe("CSV import pipeline", () => {
     expect(await hits(hit.id)).toBe(3);
   });
 
+  it("re-previews with an edited mapping and commits exactly what it showed", async () => {
+    const csv = `Quand;Texte;Somme;Nature
+07/03/2026;BOULANGERIE;-3,10;Carte
+07/03/2026;BOULANGERIE;-3,10;Carte
+08/03/2026;;-1,00;Carte
+pas une date;X;-1,00;Carte`;
+    const batch = await createCsvBatch(
+      { accountId, filename: "remap.csv", text: csv },
+      { id: owner },
+    );
+    const mapping = { date: "Quand", label: "Texte", amount: "Somme", type: "Nature" };
+    const p = await previewCsvBatch(batch.id, owner, mapping);
+    expect(p.totalRows).toBe(2);
+    expect(p.preview.map((r) => r.type)).toEqual(["CARD", "CARD"]);
+    expect(new Set(p.preview.map((r) => r.externalId)).size).toBe(2);
+    expect(p.rejectedCount).toBe(2);
+    expect(p.rejected.map((r) => [r.row, r.reason])).toEqual([
+      [4, "LABEL"],
+      [5, "DATE"],
+    ]);
+    await expect(
+      previewCsvBatch(batch.id, owner, { date: "Quand", label: "Texte" }),
+    ).rejects.toMatchObject({ message: "INVALID_MAPPING" });
+
+    const summary = await commitCsvBatch(batch.id, mapping, { id: owner });
+    expect(summary).toMatchObject({ importedRows: 2, skippedRows: 0, rejectedRows: 2 });
+    await expect(previewCsvBatch(batch.id, owner, mapping)).rejects.toMatchObject({
+      message: "NOT_COMMITTABLE",
+    });
+  });
+
   it("trims the raw CSV text from metadata once committed", async () => {
     const batch = await createCsvBatch(
       { accountId, filename: "trim.csv", text: CSV },

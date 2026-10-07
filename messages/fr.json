@@ -593,7 +593,8 @@
       "FORBIDDEN": "Action non autorisée.",
       "PARSE_FAILED": "Impossible de lire le fichier.",
       "COMMIT_FAILED": "Échec de l'import. Réessayez.",
-      "NOT_COMMITTABLE": "Cet import a déjà été validé ou annulé."
+      "NOT_COMMITTABLE": "Cet import a déjà été validé ou annulé.",
+      "INVALID_MAPPING": "Choisissez au moins la date, le libellé et un montant (ou débit / crédit)."
     },
     "history": {
       "overline": "Historique",
@@ -627,7 +628,18 @@
       }
     },
     "formats": "Formats acceptés : CSV et PDF.",
-    "manualEntry": "Saisie manuelle"
+    "manualEntry": "Saisie manuelle",
+    "rejected": {
+      "count": "{count, plural, one {# ligne illisible ignorée} other {# lignes illisibles ignorées}}",
+      "example": "Ligne {row} : {reason} ({value})",
+      "reason": {
+        "DATE": "date non reconnue",
+        "AMOUNT": "montant non reconnu",
+        "AMOUNT_RANGE": "montant hors limites",
+        "LABEL": "libellé vide"
+      },
+      "exampleNoValue": "Ligne {row} : {reason}"
+    }
   },
   "groups": {
     "overline": "Partage",

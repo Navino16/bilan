@@ -1,6 +1,9 @@
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
-import { buildSecureFields, computeExternalId } from "@/server/services/transactions/secure-fields";
+import {
+  buildSecureFields,
+  computeExternalIds,
+} from "@/server/services/transactions/secure-fields";
 import { recordHits, suggestMany } from "@/server/services/categorization";
 import { trimBatchMetadata } from "@/lib/import-status";
 import { deriveType } from "./derive-type";
@@ -54,10 +57,8 @@ export async function insertRows(
       )
     : new Set<string>();
 
-  const withIds = rows.map((r) => ({
-    row: r,
-    externalId: computeExternalId(r.date, r.amount, r.rawLabel),
-  }));
+  const externalIds = computeExternalIds(rows);
+  const withIds = rows.map((r, i) => ({ row: r, externalId: externalIds[i] }));
   const existing = await db.transaction.findMany({
     where: { accountId: target.accountId, externalId: { in: withIds.map((w) => w.externalId) } },
     select: { externalId: true },
@@ -95,7 +96,7 @@ export async function insertRows(
         accountId: target.accountId,
         date: row.date,
         amount: row.amount,
-        type: deriveType(row.rawLabel),
+        type: row.type ?? deriveType(row.rawLabel),
         labelEnc: secure.labelEnc,
         labelHash: secure.labelHash,
         rawLabelEnc: secure.rawLabelEnc,
@@ -113,6 +114,12 @@ export async function insertRows(
     if (suggestion?.ruleId) hitRuleIds.push(suggestion.ruleId);
   }
   return { imported, skipped, total: rows.length, hitRuleIds };
+}
+
+function countHits(ruleIds: string[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const id of ruleIds) out[id] = (out[id] ?? 0) + 1;
+  return out;
 }
 
 // Finalizes an ImportBatch after inserts: sets COMPLETED + counters, audit-logs.
@@ -137,7 +144,10 @@ export async function finalizeBatch(
         importedRows: totals.imported,
         skippedRows: totals.skipped,
         completedAt: new Date(),
-        metadata: trimBatchMetadata(metadata, accountIds),
+        metadata: {
+          ...trimBatchMetadata(metadata, accountIds),
+          ...(totals.hitRuleIds.length ? { ruleHits: countHits(totals.hitRuleIds) } : {}),
+        },
       },
     });
   });

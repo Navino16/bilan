@@ -593,7 +593,8 @@
       "FORBIDDEN": "Not allowed.",
       "PARSE_FAILED": "Could not read the file.",
       "COMMIT_FAILED": "Import failed. Try again.",
-      "NOT_COMMITTABLE": "This import was already committed or undone."
+      "NOT_COMMITTABLE": "This import was already committed or undone.",
+      "INVALID_MAPPING": "Pick at least the date, the label and an amount (or debit / credit)."
     },
     "history": {
       "overline": "History",
@@ -627,7 +628,18 @@
       }
     },
     "formats": "Accepted formats: CSV and PDF.",
-    "manualEntry": "Manual entry"
+    "manualEntry": "Manual entry",
+    "rejected": {
+      "count": "{count, plural, one {# unreadable row skipped} other {# unreadable rows skipped}}",
+      "example": "Row {row}: {reason} ({value})",
+      "reason": {
+        "DATE": "unrecognised date",
+        "AMOUNT": "unrecognised amount",
+        "AMOUNT_RANGE": "amount out of range",
+        "LABEL": "empty label"
+      },
+      "exampleNoValue": "Row {row}: {reason}"
+    }
   },
   "groups": {
     "overline": "Sharing",

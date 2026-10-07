@@ -19,7 +19,7 @@ export class ImportAccessError extends Error {}
 // for the subsequent preview/commit. (MVP: text lives in the batch row; for very
 // large files a blob store would be used — out of scope.)
 export async function createCsvBatch(
-  input: { accountId: string; filename: string; text: string },
+  input: { accountId: string; filename: string; text: string; fileSizeBytes?: number },
   actor: { id: string },
 ): Promise<{ id: string }> {
   if (!(await canWriteAccount(actor.id, input.accountId))) throw new ImportAccessError("FORBIDDEN");
@@ -31,7 +31,10 @@ export async function createCsvBatch(
       filenameHash: createHash("sha256").update(input.filename).digest("hex"),
       status: "PARSING",
       createdById: actor.id,
-      metadata: { text: input.text, fileSizeBytes: Buffer.byteLength(input.text) } as never,
+      metadata: {
+        text: input.text,
+        fileSizeBytes: input.fileSizeBytes ?? Buffer.byteLength(input.text),
+      } as never,
     },
   });
   await logEvent({
@@ -51,16 +54,34 @@ export async function loadBatch(batchId: string, userId: string) {
   return batch;
 }
 
-export async function previewCsvBatch(batchId: string, userId: string): Promise<ImportPreview> {
+const REJECTED_SHOWN = 5;
+
+// Previews a batch with the detected mapping, or with `mapping` when the user
+// edited it, so what is shown is exactly what a commit with it would import.
+export async function previewCsvBatch(
+  batchId: string,
+  userId: string,
+  mapping?: CsvMappingInput,
+): Promise<ImportPreview> {
   const batch = await loadBatch(batchId, userId);
+  if (batch.source !== "CSV" || (batch.status !== "PARSING" && batch.status !== "REVIEW")) {
+    throw new ImportAccessError("NOT_COMMITTABLE");
+  }
   const meta = batch.metadata as { text?: string; fileSizeBytes?: number } | null;
   const { headers, rows } = parseCsv(meta?.text ?? "");
-  const mapping = detectMapping(headers);
-  const normalized = mapRows(rows, mapping);
-  await db.importBatch.update({
-    where: { id: batchId },
+  let effective: CsvMapping = detectMapping(headers);
+  if (mapping) {
+    const parsed = csvMappingSchema.safeParse(mapping);
+    if (!parsed.success) throw new ImportAccessError("INVALID_MAPPING");
+    effective = parsed.data as CsvMapping;
+  }
+  const { rows: normalized, rejected } = mapRows(rows, effective);
+  // Conditional, so a commit that started meanwhile is never pushed back to REVIEW.
+  const { count } = await db.importBatch.updateMany({
+    where: { id: batchId, status: { in: ["PARSING", "REVIEW"] } },
     data: { status: "REVIEW", totalRows: normalized.length },
   });
+  if (count === 0) throw new ImportAccessError("NOT_COMMITTABLE");
 
   const p = await buildPreview(batch.accountId, normalized, userId);
   return {
@@ -69,10 +90,12 @@ export async function previewCsvBatch(batchId: string, userId: string): Promise<
     filename: batch.filename,
     fileSizeBytes: meta?.fileSizeBytes ?? null,
     headers,
-    mapping,
+    mapping: effective,
     totalRows: p.totalRows,
     duplicateCount: p.duplicateCount,
     autoCategorizedCount: p.autoCategorizedCount,
+    rejectedCount: rejected.length,
+    rejected: rejected.slice(0, REJECTED_SHOWN),
     preview: p.rows,
   };
 }
@@ -87,10 +110,11 @@ export async function commitCsvBatch(
   const parsedMapping = csvMappingSchema.parse(mapping) as CsvMapping;
   const text = (batch.metadata as { text?: string } | null)?.text ?? "";
   const { rows } = parseCsv(text);
-  const normalized = mapRows(rows, parsedMapping);
-  return withCommitClaim(batch.id, () =>
+  const { rows: normalized, rejected } = mapRows(rows, parsedMapping);
+  const summary = await withCommitClaim(batch.id, () =>
     commitRows({ id: batch.id, accountId: batch.accountId }, normalized, actor, opts),
   );
+  return { ...summary, rejectedRows: rejected.length };
 }
 
 // The claim (REVIEW → COMMITTING) keeps a replayed commit, a discard or the purge off a

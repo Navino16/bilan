@@ -7,6 +7,40 @@ test.describe("CSV import (wizard)", () => {
     "Mobile dialog refinement deferred to Phase 8.3",
   );
 
+  test("a Latin-1 file is read, and remapping a column refreshes the preview", async ({ page }) => {
+    const stamp = Date.now();
+    const csv = `Date;Libellé;Débit;Crédit;Note
+07/03/2026;PRÉLÈVEMENT ÉDF ${stamp};55,00;;A
+bad;LIGNE ${stamp};1,00;;B`;
+    await page.goto("/fr/import");
+    const uploaded = page.waitForResponse(
+      (r) => r.url().endsWith("/api/import/csv") && r.request().method() === "POST",
+      { timeout: 30_000 },
+    );
+    await page.locator('input[type="file"]').setInputFiles({
+      name: "latin1.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(csv, "latin1"),
+    });
+    await uploaded;
+    const rows = page.locator('[data-slot="import-preview-row"]');
+    await expect(rows.filter({ hasText: `PRÉLÈVEMENT ÉDF ${stamp}` }).first()).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.locator('[data-slot="import-rejected"]')).toContainText(
+      "1 ligne illisible ignorée",
+    );
+
+    // Mapping the label to the "Note" column re-previews with it.
+    const remapped = page.waitForResponse((r) => r.url().endsWith("/preview"), {
+      timeout: 30_000,
+    });
+    await page.getByLabel("Libellé", { exact: true }).selectOption("Note");
+    await remapped;
+    await expect(rows.filter({ hasText: `PRÉLÈVEMENT ÉDF ${stamp}` })).toHaveCount(0);
+    await expect(rows.first()).toContainText("A");
+  });
+
   test("upload → preview → validate → see imported transactions", async ({ page }) => {
     const stamp = Date.now();
     const csv = `Date;Libellé;Débit;Crédit

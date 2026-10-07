@@ -3,6 +3,7 @@ import { canWriteAccount } from "@/server/services/accounts/sharing";
 import { listVisibleForUser } from "@/server/services/accounts";
 import { logEvent } from "@/server/services/audit";
 import { dissolveUndersizedLinks } from "@/server/services/links/dissolve";
+import { revokeHits } from "@/server/services/categorization";
 import {
   canDiscard,
   canRevert,
@@ -65,6 +66,10 @@ export async function revertImport(
       data: { status: "REVERTED", metadata: trimBatchMetadata(batch.metadata, accountIds) },
     });
     if (claimed.count === 0) throw new ImportAccessError("NOT_REVERTIBLE");
+    await revokeHits(
+      (batch.metadata as { ruleHits?: Record<string, number> } | null)?.ruleHits ?? {},
+      tx,
+    );
 
     const memberships = await tx.transactionLinkMember.findMany({
       where: { transaction: { importBatchId: batchId } },

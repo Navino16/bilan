@@ -72,6 +72,22 @@ export async function suggestMany(rawLabels: string[], scope: Scope): Promise<Su
   return rawLabels.map((label) => match(rules, label));
 }
 
+// Takes back hits credited by an import that is being reverted, never below zero.
+export async function revokeHits(
+  ruleHits: Record<string, number>,
+  client: Prisma.TransactionClient = db,
+): Promise<void> {
+  for (const [id, n] of Object.entries(ruleHits)) {
+    const { count } = await client.categorizationRule.updateMany({
+      where: { id, hits: { gte: n } },
+      data: { hits: { decrement: n } },
+    });
+    if (count === 0) {
+      await client.categorizationRule.updateMany({ where: { id }, data: { hits: 0 } });
+    }
+  }
+}
+
 // Rules sharing the same increment are batched into one updateMany; a rule
 // deleted meanwhile is silently skipped.
 export async function recordHits(
