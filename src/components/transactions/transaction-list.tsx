@@ -58,12 +58,15 @@ const COLS = "md:grid-cols-[1fr_minmax(0,180px)_minmax(0,140px)_92px_110px]";
 export function TransactionList({
   items,
   categories,
+  foreignCategories = [],
   accounts,
   budgets = [],
   partialLastDay = false,
 }: {
   items: ListItem[];
   categories: FlatCategory[];
+  // The owners' categories met on shared accounts: shown, never offered.
+  foreignCategories?: FlatCategory[];
   accounts: AccountOption[];
   budgets?: AssignableBudget[];
   partialLastDay?: boolean;
@@ -73,6 +76,8 @@ export function TransactionList({
   const router = useRouter();
   const isMobile = useIsMobile();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [recatFailedId, setRecatFailedId] = useState<string | null>(null);
+  const [recatAttempt, setRecatAttempt] = useState(0);
   const [, startTransition] = useTransition();
   const [rule, setRule] = useState<{
     pattern: string;
@@ -107,7 +112,7 @@ export function TransactionList({
     if (selecting) setSelecting(false);
   }
 
-  const catMeta = categoryIndex(categories);
+  const catMeta = categoryIndex([...categories, ...foreignCategories]);
   const accMeta: Record<string, AccountMeta> = Object.fromEntries(
     accounts.map((a) => [
       a.id,
@@ -158,6 +163,8 @@ export function TransactionList({
     fd.set("categoryId", categoryId);
     startTransition(async () => {
       const r = await recategorizeTransactionAction(null, fd);
+      setRecatFailedId(r?.ok ? null : it.id);
+      if (!r?.ok) setRecatAttempt((n) => n + 1);
       if (r?.ok) {
         router.refresh();
         const pattern = proposePattern(it.rawLabel || it.label);
@@ -299,9 +306,15 @@ export function TransactionList({
         item={detailItem}
         accounts={accMeta}
         categories={categories}
+        categoryMeta={catMeta}
+        categoryError={!!selected && recatFailedId === selected.id}
+        categoryAttempt={recatAttempt}
         budgets={budgets}
         side={isMobile ? "bottom" : "right"}
-        onClose={() => setSelectedId(null)}
+        onClose={() => {
+          setSelectedId(null);
+          setRecatFailedId(null);
+        }}
         onRecategorize={(categoryId) => selected && recategorize(selected, categoryId)}
         onDelete={() => selected && setDeleteIds([selected.id])}
       />

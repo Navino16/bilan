@@ -18,6 +18,7 @@ export function CategoryCombobox({
   name,
   categories,
   defaultValue,
+  unlisted,
   onChange,
 }: {
   // When set, mirrors the value into a hidden input (form-field use). Omit for a
@@ -25,11 +26,15 @@ export function CategoryCombobox({
   name?: string;
   categories: FlatCategory[];
   defaultValue?: string | null;
+  // Shown for a starting value the user can't pick (another user's category).
+  unlisted?: { name: string; color: string | null };
   onChange?: (id: string) => void;
 }) {
   const t = useTranslations("transactions");
   const [value, setValue] = useState(defaultValue ?? "");
-  const current = categories.find((c) => c.id === value);
+  const current =
+    categories.find((c) => c.id === value) ??
+    (value && value === defaultValue ? unlisted : undefined);
 
   function select(id: string) {
     setValue(id);

@@ -11,6 +11,7 @@ import {
   listAssignmentsForTxAction,
 } from "@/server/transport/actions/budgets";
 import { type FlatCategory } from "./category-picker";
+import type { CategoryMeta } from "./category-tree";
 import { CategoryCombobox } from "./category-combobox";
 import { Pill, overline } from "./bits";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -49,6 +50,9 @@ export function TransactionDetail({
   item,
   accounts,
   categories,
+  categoryMeta,
+  categoryError = false,
+  categoryAttempt = 0,
   budgets = [],
   side,
   onClose,
@@ -58,6 +62,11 @@ export function TransactionDetail({
   item: DetailItem | null;
   accounts: Record<string, AccountMeta>;
   categories: FlatCategory[];
+  // Every category a row may carry, including the owner's on a shared account.
+  categoryMeta: Record<string, CategoryMeta>;
+  categoryError?: boolean;
+  // Bumped on each failed change, so the picker goes back to the saved value.
+  categoryAttempt?: number;
   budgets?: AssignableBudget[];
   side: "right" | "bottom";
   onClose: () => void;
@@ -125,6 +134,7 @@ export function TransactionDetail({
   });
 
   const acc = item ? accounts[item.accountId] : undefined;
+  const category = item?.categoryId ? categoryMeta[item.categoryId] : undefined;
 
   return (
     <Sheet open={!!item} onOpenChange={(o) => !o && onClose()}>
@@ -150,13 +160,36 @@ export function TransactionDetail({
 
             <div className="flex flex-col gap-5 px-6 py-6">
               <Field label={t("category")}>
-                <CategoryCombobox
-                  key={item.id}
-                  name={`detail-cat-${item.id}`}
-                  categories={categories}
-                  defaultValue={item.categoryId}
-                  onChange={(id) => id && onRecategorize(id)}
-                />
+                {acc?.writable ? (
+                  <CategoryCombobox
+                    key={`${item.id}-${item.categoryId}-${categoryAttempt}`}
+                    name={`detail-cat-${item.id}`}
+                    categories={categories}
+                    defaultValue={item.categoryId}
+                    unlisted={category}
+                    onChange={onRecategorize}
+                  />
+                ) : (
+                  <div
+                    data-slot="category-readonly"
+                    className="border-border bg-muted/40 flex h-9 items-center gap-2 rounded-md border px-3 text-sm"
+                  >
+                    {category && (
+                      <span
+                        aria-hidden
+                        className="size-2.5 shrink-0 rounded-full"
+                        style={{ background: category.color ?? "var(--ink-3)" }}
+                      />
+                    )}
+                    <span className="flex-1 truncate">{category?.name ?? t("noCategory")}</span>
+                    <span className="text-muted-foreground text-xs">{t("readOnly")}</span>
+                  </div>
+                )}
+                {categoryError && (
+                  <p role="alert" className="text-destructive text-xs">
+                    {t("recategorizeFailed")}
+                  </p>
+                )}
               </Field>
 
               <Field label={t("account")}>

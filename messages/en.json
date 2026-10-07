@@ -524,7 +524,9 @@
         "FORBIDDEN": "You can't edit one of these accounts.",
         "FAILED": "Deletion failed. Try again."
       }
-    }
+    },
+    "readOnly": "read-only",
+    "recategorizeFailed": "The category couldn't be changed."
   },
   "import": {
     "title": "Import a statement",
