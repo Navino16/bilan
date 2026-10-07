@@ -37,7 +37,8 @@
       "error": {
         "badCode": "Invalid code. Please try again.",
         "expired": "The verification has expired. Go back and sign in again.",
-        "rateLimited": "Too many attempts. Go back and sign in again."
+        "rateLimited": "Too many attempts. Go back and sign in again.",
+        "slowDown": "Too many attempts in a row. Wait a few seconds before trying again."
       }
     },
     "register": {

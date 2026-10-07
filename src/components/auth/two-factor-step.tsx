@@ -17,7 +17,9 @@ export function TwoFactorStep({ locale, onBack }: { locale: string; onBack: () =
   const [mode, setMode] = useState<Mode>("totp");
   const [code, setCode] = useState("");
   const [trustDevice, setTrustDevice] = useState(false);
-  const [error, setError] = useState<"badCode" | "expired" | "rateLimited" | null>(null);
+  const [error, setError] = useState<"badCode" | "expired" | "rateLimited" | "slowDown" | null>(
+    null,
+  );
   const [pending, setPending] = useState(false);
 
   async function submit(e: React.FormEvent) {
@@ -30,8 +32,11 @@ export function TwoFactorStep({ locale, onBack }: { locale: string; onBack: () =
         : await authClient.twoFactor.verifyBackupCode({ code: code.trim(), trustDevice });
     if (res.error) {
       setPending(false);
-      if (res.error.status === 429) return setError("rateLimited");
       const errCode = (res.error as { code?: string }).code;
+      // TOO_MANY_ATTEMPTS burns the pending sign-in; any other 429 is Better Auth's
+      // short per-IP throttle.
+      if (errCode === "TOO_MANY_ATTEMPTS") return setError("rateLimited");
+      if (res.error.status === 429) return setError("slowDown");
       return setError(errCode === "INVALID_TWO_FACTOR_COOKIE" ? "expired" : "badCode");
     }
     router.push(`/${locale}/dashboard`);

@@ -37,7 +37,8 @@
       "error": {
         "badCode": "Code invalide. Réessayez.",
         "expired": "La vérification a expiré. Revenez en arrière et reconnectez-vous.",
-        "rateLimited": "Trop de tentatives. Revenez en arrière et reconnectez-vous."
+        "rateLimited": "Trop de tentatives. Revenez en arrière et reconnectez-vous.",
+        "slowDown": "Trop de tentatives rapprochées. Patientez quelques secondes avant de réessayer."
       }
     },
     "register": {

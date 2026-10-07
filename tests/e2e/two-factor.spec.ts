@@ -16,6 +16,19 @@ function totp(base32: string, at = Date.now()): string {
   return String((hmac.readUInt32BE(offset) & 0x7fffffff) % 1_000_000).padStart(6, "0");
 }
 
+// Under `next start` Better Auth throttles /two-factor/* to 3 requests per 10 s per
+// IP; wait it out so the test exercises our own attempt guard, not that throttle.
+async function submitCode(page: Page, button = "Vérifier") {
+  for (let i = 0; i < 4; i++) {
+    const response = page.waitForResponse((r) => r.url().includes("/api/auth/two-factor/verify"));
+    await page.getByRole("button", { name: button, exact: true }).click();
+    const r = await response;
+    if (r.status() !== 429 || (await r.json()).code === "TOO_MANY_ATTEMPTS") return;
+    await page.waitForTimeout(10_000);
+  }
+  throw new Error("two-factor verification still throttled");
+}
+
 async function signInWithPassword(page: Page, email: string, password: string) {
   await page.goto("/fr/login");
   await page.fill('input[name="email"]', email);
@@ -36,7 +49,7 @@ test.describe("two-factor sign-in", () => {
     page,
     context,
   }) => {
-    test.setTimeout(120_000);
+    test.setTimeout(240_000);
     const email = `twofactor-${Date.now()}@e2e.local`;
     const password = "e2e-twofactor-pw-123";
 
@@ -56,7 +69,7 @@ test.describe("two-factor sign-in", () => {
     const backupCode = (await card.getByRole("list").locator("li").first().textContent())!.trim();
 
     await card.locator("#tfa-code").fill(totp(secret));
-    await card.getByRole("button", { name: "Vérifier et activer" }).click();
+    await submitCode(page, "Vérifier et activer");
     await expect(page.getByText("La double authentification est activée")).toBeVisible({
       timeout: 15_000,
     });
@@ -72,10 +85,10 @@ test.describe("two-factor sign-in", () => {
     await signInWithPassword(page, email, password);
     await expect(page.getByLabel("Faire confiance à cet appareil")).not.toBeChecked();
     await page.getByLabel("Code de vérification").fill("000000");
-    await page.getByRole("button", { name: "Vérifier" }).click();
+    await submitCode(page);
     await expect(page.getByText("Code invalide. Réessayez.")).toBeVisible();
     await page.getByLabel("Code de vérification").fill(totp(secret));
-    await page.getByRole("button", { name: "Vérifier" }).click();
+    await submitCode(page);
     await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
 
     // Five wrong codes burn the pending sign-in: the password step is required again.
@@ -84,21 +97,21 @@ test.describe("two-factor sign-in", () => {
     const codeField = page.getByLabel("Code de vérification");
     for (let i = 0; i < 5; i++) {
       await codeField.fill("000000");
-      await page.getByRole("button", { name: "Vérifier" }).click();
+      await submitCode(page);
       await expect(page.getByText("Code invalide. Réessayez.")).toBeVisible();
     }
     await codeField.fill(totp(secret));
-    await page.getByRole("button", { name: "Vérifier" }).click();
+    await submitCode(page);
     await expect(page.getByText("Trop de tentatives.", { exact: false })).toBeVisible();
     await codeField.fill(totp(secret));
-    await page.getByRole("button", { name: "Vérifier" }).click();
+    await submitCode(page);
     await expect(page.getByText("La vérification a expiré.", { exact: false })).toBeVisible();
 
     await context.clearCookies();
     await signInWithPassword(page, email, password);
     await page.getByRole("button", { name: "Utiliser un code de secours" }).click();
     await page.getByLabel("Code de secours").fill(backupCode);
-    await page.getByRole("button", { name: "Vérifier" }).click();
+    await submitCode(page);
     await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
   });
 });
