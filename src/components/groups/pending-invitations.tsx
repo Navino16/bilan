@@ -16,7 +16,7 @@ export function PendingInvitations({ invitations }: { invitations: PendingForUse
   const tg = useTranslations("groups");
   const locale = useLocale();
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ code: string; hint?: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -31,7 +31,7 @@ export function PendingInvitations({ invitations }: { invitations: PendingForUse
         router.push(`/${locale}/groups/${result.groupId}`);
       } else {
         setBusy(null);
-        setError(result?.error ?? "FAILED");
+        setError(result ? { code: result.error, hint: result.hint } : { code: "FAILED" });
       }
     });
   }
@@ -46,7 +46,9 @@ export function PendingInvitations({ invitations }: { invitations: PendingForUse
       </h2>
       {error && (
         <Alert variant="destructive">
-          <AlertDescription>{t(`error.${error}`)}</AlertDescription>
+          <AlertDescription>
+            {t(`error.${error.code}`, { email: error.hint ?? "" })}
+          </AlertDescription>
         </Alert>
       )}
       <div className="divide-border divide-y">

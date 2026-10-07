@@ -12,7 +12,7 @@ export function JoinConfirm({ token }: { token: string }) {
   const t = useTranslations("invitations");
   const locale = useLocale();
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ code: string; hint?: string } | null>(null);
   const [pending, startTransition] = useTransition();
   const [redirecting, setRedirecting] = useState(false);
 
@@ -26,7 +26,7 @@ export function JoinConfirm({ token }: { token: string }) {
         setRedirecting(true);
         router.push(`/${locale}/groups/${result.groupId}`);
       } else {
-        setError(result?.error ?? "FAILED");
+        setError(result ? { code: result.error, hint: result.hint } : { code: "FAILED" });
       }
     });
   }
@@ -35,7 +35,9 @@ export function JoinConfirm({ token }: { token: string }) {
     <div className="space-y-3">
       {error && (
         <Alert variant="destructive">
-          <AlertDescription>{t(`error.${error}`)}</AlertDescription>
+          <AlertDescription>
+            {t(`error.${error.code}`, { email: error.hint ?? "" })}
+          </AlertDescription>
         </Alert>
       )}
       <Button onClick={accept} disabled={pending || redirecting}>

@@ -29,3 +29,5 @@ export const resetLimiter = new RateLimiter({ max: 3, windowMs: 60 * 60_000 });
 export const changePasswordLimiter = new RateLimiter({ max: 5, windowMs: 15 * 60_000 });
 // Keyed by the pending two-factor sign-in: caps code guesses after a valid password.
 export const twoFactorLimiter = new RateLimiter({ max: 5, windowMs: 10 * 60_000 });
+// Keyed by user id: caps invitation-code guessing.
+export const invitationAcceptLimiter = new RateLimiter({ max: 10, windowMs: 15 * 60_000 });

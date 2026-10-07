@@ -11,7 +11,20 @@ import {
 } from "@/lib/validation/group";
 import { requireGroupRole } from "./roles";
 
-export class InvitationError extends Error {}
+export class InvitationError extends Error {
+  constructor(
+    code: string,
+    // Extra context safe to show the caller (e.g. the masked invited address).
+    readonly hint?: string,
+  ) {
+    super(code);
+  }
+}
+
+export function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  return `${local.slice(0, 1)}***@${domain}`;
+}
 
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous chars
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -87,12 +100,18 @@ export async function acceptInvitation(
   if (!inv) throw new InvitationError("NOT_FOUND");
   if (inv.acceptedAt) throw new InvitationError("ALREADY_USED");
   if (inv.expiresAt.getTime() < Date.now()) throw new InvitationError("EXPIRED");
+  // Invitations are nominative: the code/link only works for the invited address.
+  if (inv.email !== user.email.trim().toLowerCase()) {
+    throw new InvitationError("WRONG_ACCOUNT", maskEmail(inv.email));
+  }
+  const membership = await db.groupMember.findUnique({
+    where: { groupId_userId: { groupId: inv.groupId, userId: user.id } },
+  });
+  if (membership) throw new InvitationError("ALREADY_IN_GROUP");
 
   await db.$transaction([
-    db.groupMember.upsert({
-      where: { groupId_userId: { groupId: inv.groupId, userId: user.id } },
-      update: {},
-      create: { groupId: inv.groupId, userId: user.id, role: inv.role },
+    db.groupMember.create({
+      data: { groupId: inv.groupId, userId: user.id, role: inv.role },
     }),
     db.groupInvitation.update({
       where: { id: inv.id },
@@ -140,6 +159,7 @@ export async function getInvitationByToken(token: string) {
   if (!inv) return null;
   return {
     id: inv.id,
+    groupId: inv.groupId,
     token: inv.token,
     email: inv.email,
     role: inv.role as GroupRole,

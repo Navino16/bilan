@@ -12,7 +12,7 @@ export function JoinByCode() {
   const t = useTranslations("invitations");
   const locale = useLocale();
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ code: string; hint?: string } | null>(null);
   const [pending, startTransition] = useTransition();
   const [redirecting, setRedirecting] = useState(false);
 
@@ -24,7 +24,7 @@ export function JoinByCode() {
         setRedirecting(true);
         router.push(`/${locale}/groups/${result.groupId}`);
       } else {
-        setError(result?.error ?? "FAILED");
+        setError(result ? { code: result.error, hint: result.hint } : { code: "FAILED" });
       }
     });
   }
@@ -38,10 +38,16 @@ export function JoinByCode() {
           autoComplete="off"
           placeholder={t("joinPlaceholder")}
           className="uppercase"
+          aria-describedby="join-code-hint"
         />
+        <p id="join-code-hint" className="text-muted-foreground mt-1 text-xs">
+          {t("joinCodeHint")}
+        </p>
         {error && (
           <Alert variant="destructive" className="mt-2">
-            <AlertDescription>{t(`error.${error}`)}</AlertDescription>
+            <AlertDescription>
+              {t(`error.${error.code}`, { email: error.hint ?? "" })}
+            </AlertDescription>
           </Alert>
         )}
       </div>

@@ -647,10 +647,14 @@
     "join": "Rejoindre",
     "joining": "…",
     "joinTitle": "Rejoindre le foyer",
-    "joinPrompt": "Vous avez été invité à rejoindre « {group} ».",
     "accept": "Accepter l'invitation",
     "accepting": "…",
     "invalidLink": "Cette invitation est introuvable, expirée ou déjà utilisée.",
+    "joinPromptRole": "Vous avez été invité à rejoindre « {group} » en tant que {role}.",
+    "joinCodeHint": "Le code ne fonctionne qu'avec le compte dont l'adresse a été invitée.",
+    "copyLink": "Copier le lien d'invitation",
+    "linkCopied": "Lien copié",
+    "openGroup": "Ouvrir le foyer",
     "error": {
       "NOT_FOUND": "Invitation introuvable.",
       "EXPIRED": "Cette invitation a expiré.",
@@ -658,7 +662,10 @@
       "ALREADY_MEMBER": "Cette personne fait déjà partie du foyer.",
       "FORBIDDEN": "Action non autorisée.",
       "INVALID": "Vérifiez les champs.",
-      "FAILED": "Échec. Réessayez."
+      "FAILED": "Échec. Réessayez.",
+      "WRONG_ACCOUNT": "Cette invitation a été envoyée à {email}. Connectez-vous avec ce compte pour l'accepter.",
+      "ALREADY_IN_GROUP": "Vous faites déjà partie de ce foyer.",
+      "RATE_LIMITED": "Trop de tentatives. Réessayez plus tard."
     }
   },
   "dashboard": {

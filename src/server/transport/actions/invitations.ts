@@ -1,6 +1,7 @@
 "use server";
 
 import { requireSession } from "@/server/auth/permissions";
+import { invitationAcceptLimiter } from "@/server/auth/rate-limit";
 import { GroupAccessError } from "@/server/services/groups";
 import { GROUP_ROLES, type GroupRole } from "@/lib/validation/group";
 import {
@@ -11,12 +12,15 @@ import {
 } from "@/server/services/groups/invitations";
 
 export type InvitationActionState = { ok: true } | { ok: false; error: string } | null;
-export type AcceptActionState = { ok: true; groupId: string } | { ok: false; error: string } | null;
+export type AcceptActionState =
+  | { ok: true; groupId: string }
+  | { ok: false; error: string; hint?: string }
+  | null;
 
-function fail(e: unknown): { ok: false; error: string } {
-  if (e instanceof InvitationError || e instanceof GroupAccessError) {
-    return { ok: false, error: e.message || "FAILED" };
-  }
+function fail(e: unknown): { ok: false; error: string; hint?: string } {
+  if (e instanceof InvitationError)
+    return { ok: false, error: e.message || "FAILED", hint: e.hint };
+  if (e instanceof GroupAccessError) return { ok: false, error: e.message || "FAILED" };
   return { ok: false, error: "FAILED" };
 }
 
@@ -59,6 +63,8 @@ export async function acceptInvitationAction(
   const user = await requireSession();
   const key = String(formData.get("code") || formData.get("token") || "").trim();
   if (!key) return { ok: false, error: "INVALID" };
+  if (!invitationAcceptLimiter.consume(user.id).allowed)
+    return { ok: false, error: "RATE_LIMITED" };
   try {
     const { groupId } = await acceptInvitation(key, { id: user.id, email: user.email });
     return { ok: true, groupId };

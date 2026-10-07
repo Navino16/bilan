@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
+import { Check, Link2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,8 +16,34 @@ export type PendingInvitation = {
   email: string;
   role: string;
   code: string;
+  token: string;
   expiresAt: string; // ISO
 };
+
+function CopyLinkButton({ token }: { token: string }) {
+  const t = useTranslations("invitations");
+  const locale = useLocale();
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    await navigator.clipboard.writeText(`${window.location.origin}/${locale}/groups/join/${token}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-sm"
+      onClick={copy}
+      aria-label={copied ? t("linkCopied") : t("copyLink")}
+      title={copied ? t("linkCopied") : t("copyLink")}
+    >
+      {copied ? <Check /> : <Link2 />}
+    </Button>
+  );
+}
 
 function RevokeButton({ id }: { id: string }) {
   const t = useTranslations("invitations");
@@ -68,6 +94,7 @@ export function InvitationsList({ invitations }: { invitations: PendingInvitatio
               {t("expiresAt", { date: fmtDate(inv.expiresAt) })}
             </div>
           </div>
+          <CopyLinkButton token={inv.token} />
           <RevokeButton id={inv.id} />
         </div>
       ))}

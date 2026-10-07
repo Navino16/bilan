@@ -55,6 +55,7 @@ export default async function GroupDetailPage({
         email: inv.email,
         role: inv.role,
         code: inv.code,
+        token: inv.token,
         expiresAt: inv.expiresAt.toISOString(),
       }))
     : [];

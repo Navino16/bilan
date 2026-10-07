@@ -106,4 +106,48 @@ describe("invitations service", () => {
       ),
     ).rejects.toBeInstanceOf(InvitationError);
   });
+
+  it("is nominative: another account gets the masked invited address and doesn't consume it", async () => {
+    const g = await createGroup({ name: "Nominative group" }, owner);
+    const inv = await createInvitation(
+      { groupId: g.id, email: "Invitee@Bilan.local", role: "ADMIN" },
+      { id: owner },
+    );
+    const err = await acceptInvitation(inv.code, {
+      id: owner,
+      email: "inv-owner@bilan.local",
+    }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(InvitationError);
+    expect((err as InvitationError).message).toBe("WRONG_ACCOUNT");
+    expect((err as InvitationError).hint).toBe("i***@bilan.local");
+
+    const stranger = "inv_stranger";
+    await db.user.deleteMany({ where: { id: stranger } });
+    await db.user.create({ data: { id: stranger, email: "stranger@bilan.local" } });
+    await expect(
+      acceptInvitation(inv.token, { id: stranger, email: "stranger@bilan.local" }),
+    ).rejects.toMatchObject({ message: "WRONG_ACCOUNT" });
+    await db.user.delete({ where: { id: stranger } });
+
+    const res = await acceptInvitation(inv.code.toLowerCase(), {
+      id: invitee,
+      email: "INVITEE@bilan.local",
+    });
+    expect(res.groupId).toBe(g.id);
+  });
+
+  it("tells an existing member they're already in, without consuming the invitation", async () => {
+    const g = await createGroup({ name: "Already member group" }, owner);
+    const inv = await createInvitation(
+      { groupId: g.id, email: "invitee@bilan.local", role: "MEMBER" },
+      { id: owner },
+    );
+    await db.groupMember.create({ data: { groupId: g.id, userId: invitee, role: "MEMBER" } });
+    await expect(
+      acceptInvitation(inv.token, { id: invitee, email: "invitee@bilan.local" }),
+    ).rejects.toMatchObject({ message: "ALREADY_IN_GROUP" });
+    expect(
+      (await db.groupInvitation.findUniqueOrThrow({ where: { id: inv.id } })).acceptedAt,
+    ).toBeNull();
+  });
 });
