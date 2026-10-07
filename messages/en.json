@@ -820,7 +820,7 @@
     "sending": "Sending…",
     "pending": "Pending invitations",
     "code": "Code",
-    "expiresAt": "Expires {date}",
+    "expiresAt": "Expires <date></date>",
     "revoke": "Revoke",
     "revokeConfirm": "Revoke this invitation?",
     "noPending": "No pending invitations.",

@@ -4,7 +4,6 @@ import { dataKey } from "@/server/crypto/keys";
 import { toIsoDay } from "@/lib/period";
 import { visibleAccountIds, visibleAccountRefs } from "@/server/services/accounts";
 import { canWriteAccount } from "@/server/services/accounts/sharing";
-import { listTransactions } from "@/server/services/transactions";
 import { logEvent } from "@/server/services/audit";
 import { findSuggestedPairs, pairKeyOf, type SuggestedPair } from "@/lib/links";
 
@@ -107,33 +106,43 @@ function legOf(t: { id: string; label: string; date: Date; accountName: string }
   return { id: t.id, label: t.label, date: toIsoDay(t.date), accountName: t.accountName };
 }
 
-// Suggests +X/-X pairs over the user's visible, not-yet-linked transactions,
-// within UserPreference.linkWindowDays / linkMinAmount, excluding ignored pairs.
+const SUGGESTION_SCAN_LIMIT = 5000;
+
+// Suggests +X/-X pairs over the user's visible, not-yet-linked transactions (the
+// most recent SUGGESTION_SCAN_LIMIT), within UserPreference.linkWindowDays /
+// linkMinAmount, excluding ignored pairs. Only the paired rows get their label decrypted.
 export async function suggestPairs(userId: string): Promise<SuggestedPairView[]> {
-  const pref = await db.userPreference.findUnique({ where: { userId } });
+  const [pref, visible, ignoredRows] = await Promise.all([
+    db.userPreference.findUnique({ where: { userId } }),
+    visibleAccountRefs(userId),
+    db.ignoredLinkSuggestion.findMany({ where: { userId }, select: { pairKey: true } }),
+  ]);
+  if (visible.length === 0) return [];
+  const accountName = new Map(visible.map((a) => [a.id, a.name]));
   const windowDays = pref?.linkWindowDays ?? 30;
   const minAmount = pref ? Number(pref.linkMinAmount) : 0;
-
-  // Visible transactions (decrypted) minus those already in a link.
-  const linked = await listLinkedTxIds(userId);
-  const { items } = await listTransactions(userId, { take: 5000 });
-  const candidates = items.filter((t) => !linked.has(t.id));
-
-  const ignoredRows = await db.ignoredLinkSuggestion.findMany({
-    where: { userId },
-    select: { pairKey: true },
-  });
   const ignored = new Set(ignoredRows.map((r) => r.pairKey));
 
-  const rows = candidates.map((t) => ({ id: t.id, amount: t.amount, date: t.date }));
+  const candidates = await db.transaction.findMany({
+    where: { accountId: { in: [...accountName.keys()] }, linkMembership: { is: null } },
+    select: { id: true, accountId: true, amount: true, date: true, labelEnc: true },
+    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+    take: SUGGESTION_SCAN_LIMIT,
+  });
+  const rows = candidates.map((t) => ({ id: t.id, amount: Number(t.amount), date: t.date }));
   const pairs = findSuggestedPairs(rows, { windowDays, minAmount, ignored });
 
   const byId = new Map(candidates.map((t) => [t.id, t]));
-  return pairs.map((p) => ({
-    ...p,
-    positive: legOf(byId.get(p.positiveId)!),
-    negative: legOf(byId.get(p.negativeId)!),
-  }));
+  const leg = (id: string) => {
+    const t = byId.get(id)!;
+    return legOf({
+      id,
+      label: decrypt(t.labelEnc, dataKey),
+      date: t.date,
+      accountName: accountName.get(t.accountId) ?? "",
+    });
+  };
+  return pairs.map((p) => ({ ...p, positive: leg(p.positiveId), negative: leg(p.negativeId) }));
 }
 
 export type IgnoredPairView = { key: string; amount: number; positive: PairLeg; negative: PairLeg };

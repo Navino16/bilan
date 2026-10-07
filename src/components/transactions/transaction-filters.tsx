@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SegmentedTabs, overline } from "./bits";
 import { PeriodPicker } from "@/components/dashboard/period-picker";
+import { useNavigationTransition } from "@/components/shell/navigation-pending";
 import { useSelectionMode } from "./selection-mode";
 import type { FlatCategory } from "./category-picker";
 import {
@@ -136,6 +137,7 @@ export function TransactionFilters({
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const [, startNavigation] = useNavigationTransition();
   const { selecting, setSelecting } = useSelectionMode();
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -160,19 +162,22 @@ export function TransactionFilters({
       const q = value.trim();
       if (q === (new URLSearchParams(window.location.search).get("search") ?? "")) return;
       setPushedSearch(q);
-      setParam("search", q);
+      // Not page-wide pending: it would dim the box being typed in.
+      setParam("search", q, false);
     }, SEARCH_DEBOUNCE_MS);
   }
 
   // Built from the live URL: the debounced search runs after later renders.
-  function replaceParams(update: (next: URLSearchParams) => void) {
+  function replaceParams(update: (next: URLSearchParams) => void, shared = true) {
     const next = new URLSearchParams(window.location.search);
     next.delete("limit");
     update(next);
-    router.replace(`${pathname}?${next.toString()}`);
+    const url = `${pathname}?${next.toString()}`;
+    if (shared) startNavigation(() => router.replace(url));
+    else router.replace(url);
   }
-  function setParam(key: string, value: string) {
-    replaceParams((next) => (value ? next.set(key, value) : next.delete(key)));
+  function setParam(key: string, value: string, shared = true) {
+    replaceParams((next) => (value ? next.set(key, value) : next.delete(key)), shared);
   }
   function resetFilters() {
     replaceParams((next) => FILTER_PARAMS.forEach((k) => next.delete(k)));

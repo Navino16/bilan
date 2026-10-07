@@ -61,6 +61,11 @@ Optional, from the shell or a `.env` next to the compose file: `BILAN_VERSION` (
 default `latest`; use `develop` until the first release is tagged) and `BILAN_PORT`
 (default `3000`).
 
+The database pool holds 10 connections and a request waits up to 10 s for one. Under heavy
+concurrent use (pool timeouts in the logs), raise them with MariaDB driver options appended
+to `DATABASE_URL`, e.g. `...@mariadb:3306/bilan?connectionLimit=20&acquireTimeout=15000`
+(MariaDB allows 151 connections by default).
+
 ```bash
 mkdir -p keyring
 # Never overwrite an existing keyfile: the database could no longer be read.

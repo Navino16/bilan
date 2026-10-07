@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
@@ -321,8 +322,9 @@ function buildTree(
 }
 
 // All categories the user can use: their personal ones + every category owned
-// by a group they belong to. Returned as a parent/child forest.
-export async function listForUser(userId: string): Promise<CategoryNode[]> {
+// by a group they belong to. Returned as a parent/child forest. Memoized per
+// server render: pages also reach it through listForeignCategories.
+export const listForUser = cache(async (userId: string): Promise<CategoryNode[]> => {
   const memberships = await db.groupMember.findMany({
     where: { userId },
     select: { groupId: true },
@@ -333,7 +335,7 @@ export async function listForUser(userId: string): Promise<CategoryNode[]> {
     orderBy: { name: "asc" },
   });
   return buildTree(rows);
-}
+});
 
 // Categories the user can't use but meets on the transactions they can see
 // (an owner's personal ones on a shared account), plus their ancestors for

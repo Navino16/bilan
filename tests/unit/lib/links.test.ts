@@ -105,6 +105,42 @@ describe("findSuggestedPairs", () => {
     });
     expect(pairs.map((p) => p.key)).toContain("far|pos");
   });
+
+  it("matches amounts that differ only by floating-point noise", () => {
+    const noisy = [
+      { id: "a", amount: 0.1 + 0.2, date: new Date("2026-03-01T00:00:00.000Z") },
+      { id: "b", amount: -0.3, date: new Date("2026-03-02T00:00:00.000Z") },
+    ];
+    const pairs = findSuggestedPairs(noisy, { windowDays: 30, minAmount: 0, ignored: new Set() });
+    expect(pairs.map((p) => p.key)).toEqual(["a|b"]);
+  });
+
+  it("pairs each positive with the closest equal negative among many amounts", () => {
+    const many = [
+      ...Array.from({ length: 50 }, (_, i) => ({
+        id: `n${String(i).padStart(2, "0")}`,
+        amount: -(i + 1),
+        date: new Date("2026-03-01T00:00:00.000Z"),
+      })),
+      { id: "n_close", amount: -25, date: new Date("2026-03-09T00:00:00.000Z") },
+      { id: "p25", amount: 25, date: new Date("2026-03-10T00:00:00.000Z") },
+      { id: "p99", amount: 99, date: new Date("2026-03-10T00:00:00.000Z") },
+    ];
+    const pairs = findSuggestedPairs(many, { windowDays: 30, minAmount: 0, ignored: new Set() });
+    expect(pairs).toEqual([
+      { key: "n_close|p25", positiveId: "p25", negativeId: "n_close", amount: 25, dayDelta: 1 },
+    ]);
+  });
+
+  it("keeps the first of equally close negatives (input order)", () => {
+    const ties = [
+      { id: "pos", amount: 10, date: new Date("2026-03-05T00:00:00.000Z") },
+      { id: "z_first", amount: -10, date: new Date("2026-03-03T00:00:00.000Z") },
+      { id: "a_second", amount: -10, date: new Date("2026-03-07T00:00:00.000Z") },
+    ];
+    const pairs = findSuggestedPairs(ties, { windowDays: 30, minAmount: 0, ignored: new Set() });
+    expect(pairs.map((p) => p.negativeId)).toEqual(["z_first"]);
+  });
 });
 
 describe("collapseLinkedRows", () => {

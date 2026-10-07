@@ -53,7 +53,15 @@ export function findSuggestedPairs(
   opts: { windowDays: number; minAmount: number; ignored: Set<string> },
 ): SuggestedPair[] {
   const positives = rows.filter((r) => r.amount > 0).sort((a, b) => b.amount - a.amount);
-  const negatives = rows.filter((r) => r.amount < 0);
+  // Negatives bucketed by cents (input order kept) so each positive only scans its matches.
+  const negativesByCents = new Map<number, LinkMemberRow[]>();
+  for (const r of rows) {
+    if (r.amount >= 0) continue;
+    const cents = Math.round(-r.amount * 100);
+    const bucket = negativesByCents.get(cents);
+    if (bucket) bucket.push(r);
+    else negativesByCents.set(cents, [r]);
+  }
   const used = new Set<string>();
   const pairs: SuggestedPair[] = [];
 
@@ -61,7 +69,7 @@ export function findSuggestedPairs(
     if (used.has(pos.id)) continue;
     if (pos.amount < opts.minAmount) continue;
     let best: { neg: LinkMemberRow; dayDelta: number } | null = null;
-    for (const neg of negatives) {
+    for (const neg of negativesByCents.get(Math.round(pos.amount * 100)) ?? []) {
       if (used.has(neg.id)) continue;
       if (Math.abs(pos.amount + neg.amount) >= EPSILON) continue; // not opposite
       if (opts.ignored.has(pairKeyOf(pos.id, neg.id))) continue; // dismissed → skip, try next
