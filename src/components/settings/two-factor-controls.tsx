@@ -8,10 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { authClient } from "@/lib/auth-client";
+import { TotpQr } from "./totp-qr";
 
 function secretFromUri(uri: string): string {
   try {
-    return new URL(uri).searchParams.get("secret") ?? uri;
+    const secret = new URL(uri).searchParams.get("secret") ?? uri;
+    return secret.replace(/(.{4})/g, "$1 ").trim();
   } catch {
     return uri;
   }
@@ -27,7 +29,8 @@ export function TwoFactorControls({ enabled }: { enabled: boolean }) {
   // After enable(): the TOTP URI + backup codes to show before verification.
   const [enrol, setEnrol] = useState<{ uri: string; backupCodes: string[] } | null>(null);
 
-  async function beginEnable() {
+  async function beginEnable(e: React.FormEvent) {
+    e.preventDefault();
     setError(null);
     setPending(true);
     const res = await authClient.twoFactor.enable({ password });
@@ -37,10 +40,11 @@ export function TwoFactorControls({ enabled }: { enabled: boolean }) {
     setPassword("");
   }
 
-  async function verify() {
+  async function verify(e: React.FormEvent) {
+    e.preventDefault();
     setError(null);
     setPending(true);
-    const res = await authClient.twoFactor.verifyTotp({ code });
+    const res = await authClient.twoFactor.verifyTotp({ code: code.replace(/\s/g, "") });
     setPending(false);
     if (res.error) return setError("BAD_CODE");
     setEnrol(null);
@@ -48,7 +52,8 @@ export function TwoFactorControls({ enabled }: { enabled: boolean }) {
     router.refresh();
   }
 
-  async function disable() {
+  async function disable(e: React.FormEvent) {
+    e.preventDefault();
     setError(null);
     setPending(true);
     const res = await authClient.twoFactor.disable({ password });
@@ -61,7 +66,7 @@ export function TwoFactorControls({ enabled }: { enabled: boolean }) {
   // Enabled → offer disable.
   if (enabled) {
     return (
-      <div className="space-y-4" data-slot="two-factor-controls">
+      <form onSubmit={disable} className="space-y-4" data-slot="two-factor-controls">
         <p className="text-sm">{t("statusEnabled")}</p>
         <div className="space-y-2">
           <Label htmlFor="tfa-pw-disable">{t("password")}</Label>
@@ -78,57 +83,67 @@ export function TwoFactorControls({ enabled }: { enabled: boolean }) {
             <AlertDescription>{t(`error.${error}`)}</AlertDescription>
           </Alert>
         )}
-        <Button variant="destructive" onClick={disable} disabled={pending || !password}>
+        <Button type="submit" variant="destructive" disabled={pending || !password}>
           {pending ? t("working") : t("disable")}
         </Button>
-      </div>
+      </form>
     );
   }
 
-  // Mid-enrolment → show secret + backup codes, then verify a code.
+  // Mid-enrolment.
   if (enrol) {
     return (
-      <div className="space-y-4" data-slot="two-factor-controls">
-        <p className="text-sm">{t("scanHint")}</p>
-        <div className="space-y-1">
-          <Label>{t("secret")}</Label>
-          <code className="bg-muted block rounded-md px-3 py-2 text-sm break-all">
-            {secretFromUri(enrol.uri)}
-          </code>
+      <form onSubmit={verify} className="space-y-4" data-slot="two-factor-controls">
+        <p className="text-sm">{t("enrolScan")}</p>
+        <div className="flex flex-wrap items-start gap-4">
+          <TotpQr uri={enrol.uri} label={t("qrLabel")} />
+          <div className="min-w-44 flex-1 space-y-1">
+            <p className="text-muted-foreground text-xs">{t("enrolManual")}</p>
+            <code className="bg-muted block rounded-md px-3 py-2 text-xs break-all">
+              {secretFromUri(enrol.uri)}
+            </code>
+          </div>
         </div>
-        <div className="space-y-1">
-          <Label>{t("backupCodes")}</Label>
-          <ul className="bg-muted grid grid-cols-2 gap-1 rounded-md p-3 font-mono text-xs">
-            {enrol.backupCodes.map((c) => (
-              <li key={c}>{c}</li>
-            ))}
-          </ul>
-        </div>
+        <p className="text-sm">{t("enrolBackup")}</p>
+        <ul
+          aria-label={t("backupCodes")}
+          className="bg-muted grid grid-cols-2 gap-1 rounded-md p-3 font-mono text-xs"
+        >
+          {enrol.backupCodes.map((c) => (
+            <li key={c}>{c}</li>
+          ))}
+        </ul>
         <div className="space-y-2">
-          <Label htmlFor="tfa-code">{t("code")}</Label>
-          <Input
-            id="tfa-code"
-            inputMode="numeric"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            autoComplete="one-time-code"
-          />
+          <Label htmlFor="tfa-code" className="font-normal">
+            {t("enrolVerify")}
+          </Label>
+          <div className="flex gap-2">
+            <Input
+              id="tfa-code"
+              inputMode="numeric"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              autoComplete="one-time-code"
+              placeholder="000000"
+              className="max-w-40 font-mono tracking-[0.3em]"
+            />
+            <Button type="submit" disabled={pending || code.replace(/\s/g, "").length < 6}>
+              {pending ? t("working") : t("verify")}
+            </Button>
+          </div>
         </div>
         {error && (
           <Alert variant="destructive">
             <AlertDescription>{t(`error.${error}`)}</AlertDescription>
           </Alert>
         )}
-        <Button onClick={verify} disabled={pending || code.length < 6}>
-          {pending ? t("working") : t("verify")}
-        </Button>
-      </div>
+      </form>
     );
   }
 
   // Disabled → offer enable (password-gated).
   return (
-    <div className="space-y-4" data-slot="two-factor-controls">
+    <form onSubmit={beginEnable} className="space-y-4" data-slot="two-factor-controls">
       <p className="text-sm">{t("statusDisabled")}</p>
       <div className="space-y-2">
         <Label htmlFor="tfa-pw-enable">{t("password")}</Label>
@@ -145,9 +160,9 @@ export function TwoFactorControls({ enabled }: { enabled: boolean }) {
           <AlertDescription>{t(`error.${error}`)}</AlertDescription>
         </Alert>
       )}
-      <Button onClick={beginEnable} disabled={pending || !password}>
+      <Button type="submit" disabled={pending || !password}>
         {pending ? t("working") : t("enable")}
       </Button>
-    </div>
+    </form>
   );
 }

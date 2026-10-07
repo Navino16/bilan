@@ -96,3 +96,33 @@ export async function notifyPasskeyAdded(input: {
     });
   }
 }
+
+export async function notifyTwoFactorDisabled(input: {
+  email: string;
+  ip: string | null;
+  userAgent: string | null;
+  at: Date;
+}): Promise<void> {
+  try {
+    const appName = await getAppName();
+    await sendMail({
+      to: input.email,
+      subject: `${appName} — la double authentification a été désactivée`,
+      text: [
+        `La double authentification vient d'être désactivée sur votre compte ${appName}.`,
+        "",
+        `Date : ${formatAt(input.at)} (UTC)`,
+        `Adresse IP : ${input.ip ?? "inconnue"}`,
+        `Appareil : ${input.userAgent ?? "inconnu"}`,
+        "",
+        "Si vous êtes à l'origine de ce changement, aucune action n'est requise.",
+        "Sinon, changez immédiatement votre mot de passe et réactivez la double authentification.",
+      ].join("\n"),
+    });
+  } catch (e) {
+    await logEvent({
+      action: "mail.security.failed",
+      metadata: { kind: "two_factor_disabled", error: e instanceof Error ? e.message : "unknown" },
+    });
+  }
+}
