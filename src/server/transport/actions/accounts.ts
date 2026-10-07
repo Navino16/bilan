@@ -2,6 +2,8 @@
 
 import { requireSession } from "@/server/auth/permissions";
 import { accountInputSchema } from "@/lib/validation/account";
+import { AMOUNT_ERRORS } from "@/lib/amount";
+import { issueCode } from "@/lib/validation/amount";
 import {
   createAccount,
   updateAccount,
@@ -42,7 +44,7 @@ export async function createAccountAction(
 ): Promise<AccountActionState> {
   const user = await requireSession();
   const parsed = parse(formData);
-  if (!parsed.success) return { ok: false, error: "INVALID" };
+  if (!parsed.success) return { ok: false, error: issueCode(parsed.error.issues, AMOUNT_ERRORS) };
   try {
     await createAccount(parsed.data, user.id);
   } catch (e) {
@@ -59,7 +61,7 @@ export async function updateAccountAction(
   const id = String(formData.get("id") ?? "");
   if (!id) return { ok: false, error: "INVALID" };
   const parsed = parse(formData);
-  if (!parsed.success) return { ok: false, error: "INVALID" };
+  if (!parsed.success) return { ok: false, error: issueCode(parsed.error.issues, AMOUNT_ERRORS) };
   try {
     await updateAccount(
       id,

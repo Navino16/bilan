@@ -229,7 +229,10 @@
       "INVALID_IBAN": "Invalid IBAN.",
       "FORBIDDEN": "Action not allowed.",
       "FAILED": "Failed. Please retry.",
-      "CONFIRMATION": "The name you typed doesn't match the account."
+      "CONFIRMATION": "The name you typed doesn't match the account.",
+      "AMOUNT_INVALID": "Invalid amount. Examples: -12.34 or 1,234.56.",
+      "AMOUNT_AMBIGUOUS": "Ambiguous amount: write 1234 or 1.23 (no lone thousands separator).",
+      "AMOUNT_PRECISION": "The amount can't have more than 2 decimals."
     },
     "legendOthers": "Others · {count}"
   },
@@ -331,7 +334,10 @@
       "NOT_FOUND": "Budget not found.",
       "FAILED": "Failed. Try again.",
       "PERIOD_MISMATCH": "The dates don't match the selected period type.",
-      "INVALID_LINE": "A line uses a category or account that isn't available for this budget."
+      "INVALID_LINE": "A line uses a category or account that isn't available for this budget.",
+      "AMOUNT_INVALID": "Invalid amount. Examples: -12.34 or 1,234.56.",
+      "AMOUNT_AMBIGUOUS": "Ambiguous amount: write 1234 or 1.23 (no lone thousands separator).",
+      "AMOUNT_PRECISION": "The amount can't have more than 2 decimals."
     },
     "status": {
       "OK": "On track",
@@ -482,7 +488,7 @@
     "rulePrompt": {
       "learning": "Learning",
       "title": "Create a rule for similar transactions?",
-      "body": "Automatically categorize future transactions containing \"{pattern}\" as {category}?",
+      "body": "Automatically categorize future transactions containing \"{pattern}\" as <chip>{category}</chip>?",
       "pattern": "Pattern",
       "matchType": "Match type",
       "match": {
@@ -502,14 +508,25 @@
       "FORBIDDEN": "Not allowed.",
       "NOT_FOUND": "Transaction not found.",
       "FAILED": "Failed. Try again.",
-      "ACCOUNT_ARCHIVED": "This account is archived: unarchive it to add transactions."
+      "ACCOUNT_ARCHIVED": "This account is archived: unarchive it to add transactions.",
+      "AMOUNT_INVALID": "Invalid amount. Examples: -12.34 or 1,234.56.",
+      "AMOUNT_PRECISION": "The amount can't have more than 2 decimals.",
+      "AMOUNT_ZERO": "The amount can't be zero.",
+      "LABEL_TOO_LONG": "The label can't exceed 200 characters.",
+      "AMOUNT_AMBIGUOUS": "Ambiguous amount: write 1234 or 1.23 (no lone thousands separator)."
     },
     "link": {
       "create": "Link",
       "linked": "Linked",
       "unlink": "Unlink",
       "createdOk": "Transactions linked.",
-      "failed": "Linking failed."
+      "failed": "Linking failed.",
+      "error": {
+        "ALREADY_LINKED": "One of the selected transactions is already linked.",
+        "FORBIDDEN": "You can't edit one of these accounts.",
+        "NOT_FOUND": "A transaction no longer exists. Reload the page.",
+        "TOO_FEW": "Select at least two transactions."
+      }
     },
     "suggestions": {
       "title": "Link suggestions",
@@ -520,7 +537,8 @@
       "ignore": "Ignore",
       "empty": "No pairs to suggest right now.",
       "back": "Back to transactions",
-      "hint": "Bilan spots pairs with the same amount and opposite signs (a transfer between your accounts, a refund) so you can link them and not count them twice."
+      "hint": "Bilan spots pairs with the same amount and opposite signs (a transfer between your accounts, a refund) so you can link them and not count them twice.",
+      "ignoreFailed": "Couldn't ignore this pair. Try again."
     },
     "filterSheet": {
       "reset": "Reset",
@@ -553,7 +571,9 @@
       }
     },
     "readOnly": "read-only",
-    "recategorizeFailed": "The category couldn't be changed."
+    "recategorizeFailed": "The category couldn't be changed.",
+    "searchHint": "Search matches whole words of at least {min} letters: shorter words are ignored.",
+    "emptySearch": "No matching transaction. Search matches whole words of at least {min} letters."
   },
   "import": {
     "title": "Import a statement",

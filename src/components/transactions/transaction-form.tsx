@@ -20,7 +20,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { type FlatCategory } from "./category-picker";
 import { CategoryCombobox } from "./category-combobox";
-import { TRANSACTION_TYPES } from "@/lib/validation/transaction";
+import { TRANSACTION_LABEL_MAX, TRANSACTION_TYPES } from "@/lib/validation/transaction";
 import {
   createTransactionAction,
   type TxActionState,
@@ -73,7 +73,14 @@ export function TransactionForm({
         <DialogTitle className="font-display text-2xl">{t("createTitle")}</DialogTitle>
         <DialogDescription>{t("subtitle")}</DialogDescription>
       </DialogHeader>
-      <form action={handleAction} className="flex min-h-0 flex-1 flex-col">
+      {/* onSubmit, not action=: React resets an action form's fields even on a server error. */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleAction(new FormData(e.currentTarget));
+        }}
+        className="flex min-h-0 flex-1 flex-col"
+      >
         <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-5">
           <div className="space-y-2">
             <Label htmlFor="tx-account">{t("account")}</Label>
@@ -103,12 +110,20 @@ export function TransactionForm({
                 inputMode="decimal"
                 placeholder="-12,34"
                 required
+                aria-invalid={error?.startsWith("AMOUNT_") || undefined}
+                aria-describedby={error ? "tx-error" : undefined}
               />
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="tx-label">{t("label")}</Label>
-            <Input id="tx-label" name="label" placeholder={t("labelPlaceholder")} required />
+            <Input
+              id="tx-label"
+              name="label"
+              placeholder={t("labelPlaceholder")}
+              maxLength={TRANSACTION_LABEL_MAX}
+              required
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -130,7 +145,11 @@ export function TransactionForm({
             <Label htmlFor="tx-note">{t("note")}</Label>
             <Input id="tx-note" name="note" maxLength={1000} />
           </div>
-          {error && <p className="text-destructive text-sm">{t(`error.${error}`)}</p>}
+          {error && (
+            <p id="tx-error" role="alert" className="text-destructive text-sm">
+              {t(`error.${error}`)}
+            </p>
+          )}
         </div>
         <DialogFooter className="bg-muted/40 border-border shrink-0 border-t px-6 py-3">
           <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)}>

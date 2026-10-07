@@ -445,6 +445,19 @@ describe("assignTransaction", () => {
     const list = await listAssignableBudgets(owner);
     expect(list.length).toBeGreaterThanOrEqual(1);
   });
+
+  it("tells same-named budgets apart by group and period (#161)", async () => {
+    await db.budget.deleteMany({ where: { OR: [{ userId: owner }, { groupId }] } });
+    await createBudget({ ...baseInput, name: "Mensuel" }, { id: owner });
+    await createBudget({ ...baseInput, name: "Mensuel", groupId }, { id: owner });
+    const list = await listAssignableBudgets(owner);
+    expect(list.map((b) => [b.name, b.groupName, b.periodStart.toISOString()])).toEqual(
+      expect.arrayContaining([
+        ["Mensuel", null, "2026-03-01T00:00:00.000Z"],
+        ["Mensuel", "Foyer Bud", "2026-03-01T00:00:00.000Z"],
+      ]),
+    );
+  });
 });
 
 describe("rollRecurring", () => {

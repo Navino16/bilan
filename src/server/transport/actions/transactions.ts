@@ -1,7 +1,8 @@
 "use server";
 
 import { requireSession } from "@/server/auth/permissions";
-import { transactionInputSchema } from "@/lib/validation/transaction";
+import { TRANSACTION_INPUT_ERRORS, transactionInputSchema } from "@/lib/validation/transaction";
+import { issueCode } from "@/lib/validation/amount";
 import {
   createTransaction,
   recategorizeTransaction,
@@ -34,7 +35,8 @@ export async function createTransactionAction(
     note: formData.get("note") || undefined,
     categoryId: formData.get("categoryId") || undefined,
   });
-  if (!parsed.success) return { ok: false, error: "INVALID" };
+  if (!parsed.success)
+    return { ok: false, error: issueCode(parsed.error.issues, TRANSACTION_INPUT_ERRORS) };
   try {
     // If the user didn't pick a category, fall back to the rule engine.
     let categoryId = parsed.data.categoryId ?? null;

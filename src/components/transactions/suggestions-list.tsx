@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { createLinkAction, ignoreSuggestionAction } from "@/server/transport/actions/links";
+import { useLinkErrorMessage } from "./link-error";
 
 export type SuggestionItem = {
   key: string;
@@ -19,6 +20,7 @@ export type SuggestionItem = {
 
 function Row({ item }: { item: SuggestionItem }) {
   const t = useTranslations("transactions.suggestions");
+  const linkErrorMessage = useLinkErrorMessage();
   const locale = useLocale();
   const router = useRouter();
   const [linkState, linkAction, linkPending] = useActionState(createLinkAction, null);
@@ -28,6 +30,13 @@ function Row({ item }: { item: SuggestionItem }) {
   useEffect(() => {
     if (linkState?.ok || ignoreState?.ok) router.refresh();
   }, [linkState, ignoreState, router]);
+
+  const failure =
+    linkState?.ok === false
+      ? linkErrorMessage(linkState.error)
+      : ignoreState?.ok === false
+        ? t("ignoreFailed")
+        : null;
 
   return (
     // The flex row lives on an inner div: shadcn `Card` sets `flex-col` on its
@@ -65,6 +74,11 @@ function Row({ item }: { item: SuggestionItem }) {
           </button>
         </form>
       </div>
+      {failure && (
+        <p role="alert" className="text-destructive mt-2 text-sm">
+          {failure}
+        </p>
+      )}
     </Card>
   );
 }

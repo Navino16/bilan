@@ -54,6 +54,19 @@ test.describe("transaction links", () => {
         .getByText("Liée")
         .first(),
     ).toBeVisible({ timeout: 15_000 });
+
+    // Linking rows that are already linked reports why instead of failing silently.
+    await page.getByRole("button", { name: /^sélectionner$/i }).click();
+    await page
+      .locator('[data-slot="transaction-row"]')
+      .filter({ hasText: expense })
+      .first()
+      .click();
+    await page.locator('[data-slot="transaction-row"]').filter({ hasText: refund }).first().click();
+    await page.getByRole("button", { name: /^lier$/i }).click();
+    await expect(page.locator('[data-slot="selection-bar"]').getByRole("alert")).toHaveText(
+      /déjà liée/i,
+    );
   });
 
   test("accepts a suggested pair and persists an ignore", async ({ page }) => {

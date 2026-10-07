@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseAmount } from "@/lib/amount";
+import { amountSchema } from "./amount";
 
 export const ACCOUNT_TYPES = ["CHECKING", "SAVINGS", "CREDIT", "OTHER"] as const;
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
@@ -31,14 +31,8 @@ export const accountInputSchema = z.object({
   initialBalance: z
     .union([z.string(), z.number()])
     .optional()
-    .transform((v) => {
-      if (v === undefined || v === "") return 0;
-      const n = parseAmount(v);
-      return Math.round(n * 100) / 100;
-    })
-    .refine((n) => Number.isFinite(n) && Math.abs(n) < 1e10, {
-      message: "Invalid balance",
-    }),
+    .transform((v) => (v === undefined || v === "" ? 0 : v))
+    .pipe(amountSchema),
 });
 
 // Use the *input* type: `iban`/`bankName` are optional keys callers may omit;

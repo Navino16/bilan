@@ -122,4 +122,17 @@ describe("listTransactions", () => {
     const { items } = await listTransactions(owner, { categoryId: UNCATEGORIZED });
     expect(items.map((i) => i.label)).toEqual(["Salaire", "Leclerc Drive"]);
   });
+
+  it("clears a category when « Sans catégorie » is picked (#161)", async () => {
+    const t = await createTransaction(
+      { accountId, date: "2026-02-04", amount: -4, type: "CARD", label: "Kiosque" },
+      { id: owner },
+    );
+    await recategorizeTransaction(t.id, catGroceries, { id: owner });
+    await recategorizeTransaction(t.id, null, { id: owner });
+    const after = await db.transaction.findUniqueOrThrow({ where: { id: t.id } });
+    expect(after.categoryId).toBeNull();
+    expect(after.manuallyCategorized).toBe(true);
+    await db.transaction.delete({ where: { id: t.id } });
+  });
 });

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseAmount } from "@/lib/amount";
+import { amountSchema } from "./amount";
 
 export const BUDGET_NAME_MAX = 80;
 export const BUDGET_PERIOD_TYPES = ["WEEK", "MONTH", "QUARTER", "YEAR", "CUSTOM"] as const;
@@ -12,10 +12,7 @@ export const budgetLineSchema = z.object({
   categoryId: z.preprocess(emptyToUndefined, z.string().trim().optional()),
   accountId: z.preprocess(emptyToUndefined, z.string().trim().optional()),
   label: z.preprocess(emptyToUndefined, z.string().trim().max(80).optional()),
-  plannedAmount: z
-    .union([z.string(), z.number()])
-    .transform((v) => Math.round(parseAmount(v) * 100) / 100)
-    .refine((n) => Number.isFinite(n) && n >= 0 && n < 1e10),
+  plannedAmount: amountSchema.refine((n) => n >= 0),
 });
 
 export const budgetInputSchema = z.object({

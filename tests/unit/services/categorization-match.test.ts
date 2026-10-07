@@ -66,6 +66,28 @@ describe("matchRule", () => {
     expect(matchRule({ ...rule, caseSensitive: true }, "uber eats")).toBe(false);
     expect(matchRule({ ...rule, caseSensitive: true }, "Uber eats")).toBe(true);
   });
+
+  it("case-insensitive rules ignore accents on both sides (#161)", () => {
+    for (const matchType of ["CONTAINS", "STARTS_WITH", "EXACT"] as const) {
+      expect(matchRule({ ...base, matchType, pattern: "creme" }, "Crème")).toBe(true);
+      expect(matchRule({ ...base, matchType, pattern: "Crème" }, "CREME")).toBe(true);
+    }
+    expect(
+      matchRule({ ...base, matchType: "CONTAINS", pattern: "epicerie" }, "CB ÉPICERIE DU COIN"),
+    ).toBe(true);
+  });
+
+  it("case-sensitive rules keep accents significant", () => {
+    const rule = { ...base, caseSensitive: true, matchType: "CONTAINS" as const };
+    expect(matchRule({ ...rule, pattern: "Creme" }, "Crème brûlée")).toBe(false);
+    expect(matchRule({ ...rule, pattern: "Crème" }, "Crème brûlée")).toBe(true);
+  });
+
+  it("a rule proposed from an accented label matches that label", () => {
+    const proposed = proposeRule("Crème")!;
+    expect(proposed.pattern).toBe("creme");
+    expect(matchRule({ ...base, ...proposed }, "Crème")).toBe(true);
+  });
 });
 
 describe("pickByPriority", () => {
