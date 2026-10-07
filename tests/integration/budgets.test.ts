@@ -176,6 +176,35 @@ describe("getBudgetDetail / computeLine", () => {
     expect(detail.lines[0].status).toBe("OVER");
   });
 
+  it("a parent-category line counts its sub-categories, unless a more specific line exists", async () => {
+    const child = await db.category.create({
+      data: { userId: owner, name: "Drive", parentId: catId },
+    });
+    const grandChild = await db.category.create({
+      data: { userId: owner, name: "Drive bio", parentId: child.id },
+    });
+    await tx("2026-03-03T00:00:00.000Z", -40, catId);
+    await tx("2026-03-04T00:00:00.000Z", -25, child.id);
+    await tx("2026-03-05T00:00:00.000Z", -10, grandChild.id);
+    const { id } = await createBudget(
+      {
+        ...baseInput,
+        lines: [
+          { categoryId: catId, plannedAmount: 100 },
+          { categoryId: child.id, plannedAmount: 50 },
+        ],
+      },
+      { id: owner },
+    );
+    const detail = await getBudgetDetail(id, owner);
+    expect(detail.lines.map((l) => l.spent)).toEqual([40, 35]);
+    expect(detail.spentTotal).toBe(75);
+    const listed = (await listBudgetsForUser(owner)).find((b) => b.id === id)!;
+    expect(listed.spentTotal).toBe(75);
+    await db.transaction.deleteMany({ where: { accountId } });
+    await db.category.deleteMany({ where: { id: { in: [grandChild.id, child.id] } } });
+  });
+
   it("EXCLUDE removes a matching tx; INCLUDE adds a non-matching one", async () => {
     const a = await tx("2026-03-03T00:00:00.000Z", -40, catId); // matches, will EXCLUDE
     await tx("2026-03-05T00:00:00.000Z", -30, catId); // matches, stays

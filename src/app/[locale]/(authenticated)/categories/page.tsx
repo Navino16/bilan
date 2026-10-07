@@ -16,6 +16,7 @@ export default async function CategoriesPage({ params }: { params: Promise<{ loc
   const user = await requireSession();
   const tree = await listForUser(user.id);
   const flatCategories = flattenCategories(tree);
+  const colorById = new Map(flatCategories.map((c) => [c.id, c.color]));
   const ruleRows = await listRulesForUser(user.id);
   const groups = (await listGroupsForUser(user.id)).map((g) => ({ id: g.id, name: g.name }));
   const merchants = await getMerchantDirectory(user.id);
@@ -29,7 +30,7 @@ export default async function CategoriesPage({ params }: { params: Promise<{ loc
     enabled: r.enabled,
     categoryId: r.categoryId,
     categoryName: r.category?.name ?? null,
-    categoryColor: r.category?.color ?? null,
+    categoryColor: colorById.get(r.categoryId) ?? r.category?.color ?? null,
     groupId: r.groupId,
     groupName: r.group?.name ?? null,
     hits: r.hits,

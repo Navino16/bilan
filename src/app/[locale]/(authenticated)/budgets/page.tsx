@@ -4,7 +4,7 @@ import { listBudgetsForUser } from "@/server/services/budgets";
 import { listForUser } from "@/server/services/categories";
 import { listVisibleForUser } from "@/server/services/accounts";
 import { listGroupsForUser } from "@/server/services/groups";
-import { flattenCategories } from "@/components/transactions/category-tree";
+import { flattenCategories, indentedName } from "@/components/transactions/category-tree";
 import { BudgetsView } from "@/components/budgets/budgets-view";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +21,10 @@ export default async function BudgetsPage({ params }: { params: Promise<{ locale
     listGroupsForUser(user.id),
   ]);
 
-  const categories = flattenCategories(tree).map((c) => ({ id: c.id, name: c.name }));
+  const categories = flattenCategories(tree).map((c) => ({
+    id: c.id,
+    name: indentedName(c.name, c.depth),
+  }));
   const accounts = accountRows.filter((a) => !a.archived).map((a) => ({ id: a.id, name: a.name }));
   const groups = groupRows
     .filter((g) => g.role === "OWNER" || g.role === "ADMIN")

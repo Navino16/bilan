@@ -1,11 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "@/server/db";
 import { seedDefaultCategories } from "@/server/services/categories/seed-defaults";
+import { buildSecureFields } from "@/server/services/transactions/secure-fields";
 import {
   createCategory,
   updateCategory,
   deleteCategory,
+  getCategoryDeletionImpact,
   listForUser,
+  withDescendants,
   CategoryAccessError,
 } from "@/server/services/categories";
 
@@ -121,5 +124,130 @@ describe("categories service", () => {
       updateCategory(a.id, { name: "A", parentId: b.id }, { id: owner }),
     ).rejects.toBeInstanceOf(CategoryAccessError);
     await db.category.deleteMany({ where: { id: { in: [b.id, a.id] } } });
+  });
+
+  describe("deletion", () => {
+    let accountId: string;
+    let budgetId: string;
+
+    async function tree() {
+      const root = await createCategory({ name: "Root" }, { id: owner });
+      const child = await createCategory({ name: "Child", parentId: root.id }, { id: owner });
+      const leaf = await createCategory({ name: "Leaf", parentId: child.id }, { id: owner });
+      const other = await createCategory({ name: "Other" }, { id: owner });
+      const s = buildSecureFields({ label: "T", rawLabel: "T" });
+      const t = await db.transaction.create({
+        data: {
+          accountId,
+          date: new Date("2026-03-01"),
+          amount: -5,
+          type: "OTHER",
+          labelEnc: s.labelEnc,
+          labelHash: s.labelHash,
+          rawLabelEnc: s.rawLabelEnc,
+          rawLabelHash: s.rawLabelHash,
+          categoryId: leaf.id,
+          createdById: owner,
+        },
+      });
+      const rule = await db.categorizationRule.create({
+        data: { pattern: "X", matchType: "CONTAINS", categoryId: child.id, userId: owner },
+      });
+      const line = await db.budgetLine.create({
+        data: { budgetId, categoryId: root.id, plannedAmount: 10 },
+      });
+      return { root, child, leaf, other, t, rule, line };
+    }
+
+    beforeAll(async () => {
+      accountId = (
+        await db.bankAccount.create({ data: { ownerId: owner, name: "Del", type: "CHECKING" } })
+      ).id;
+      budgetId = (
+        await db.budget.create({
+          data: {
+            name: "Del",
+            userId: owner,
+            periodType: "MONTH",
+            periodStart: new Date("2026-03-01"),
+            periodEnd: new Date("2026-03-31"),
+            createdById: owner,
+          },
+        })
+      ).id;
+    });
+
+    afterAll(async () => {
+      await db.budget.deleteMany({ where: { id: budgetId } });
+      await db.transaction.deleteMany({ where: { accountId } });
+      await db.bankAccount.deleteMany({ where: { id: accountId } });
+      await db.categorizationRule.deleteMany({ where: { userId: owner } });
+    });
+
+    it("maps a category to itself and all its descendants", async () => {
+      const { root, child, leaf, other } = await tree();
+      const map = await withDescendants([root.id, child.id, other.id]);
+      expect(map.get(root.id)).toEqual(new Set([root.id, child.id, leaf.id]));
+      expect(map.get(child.id)).toEqual(new Set([child.id, leaf.id]));
+      expect(map.get(other.id)).toEqual(new Set([other.id]));
+    });
+
+    it("counts the impact over the whole subtree", async () => {
+      const { root } = await tree();
+      expect(await getCategoryDeletionImpact(root.id, { id: owner })).toEqual({
+        subcategories: 2,
+        transactions: 1,
+        rules: 1,
+        budgetLines: 1,
+      });
+      await expect(getCategoryDeletionImpact(root.id, { id: stranger })).rejects.toBeInstanceOf(
+        CategoryAccessError,
+      );
+    });
+
+    it("moves everything to the target and deletes the subtree", async () => {
+      const { root, child, leaf, other, t, rule, line } = await tree();
+      await deleteCategory(root.id, { id: owner }, { targetId: other.id });
+      const gone = await db.category.count({ where: { id: { in: [root.id, child.id, leaf.id] } } });
+      expect(gone).toBe(0);
+      expect((await db.transaction.findUniqueOrThrow({ where: { id: t.id } })).categoryId).toBe(
+        other.id,
+      );
+      expect(
+        (await db.categorizationRule.findUniqueOrThrow({ where: { id: rule.id } })).categoryId,
+      ).toBe(other.id);
+      expect((await db.budgetLine.findUniqueOrThrow({ where: { id: line.id } })).categoryId).toBe(
+        other.id,
+      );
+    });
+
+    it("without a target, uncategorizes transactions and deletes rules and budget lines", async () => {
+      const { root, t, rule, line } = await tree();
+      await deleteCategory(root.id, { id: owner });
+      expect((await db.transaction.findUniqueOrThrow({ where: { id: t.id } })).categoryId).toBe(
+        null,
+      );
+      expect(await db.categorizationRule.findUnique({ where: { id: rule.id } })).toBeNull();
+      expect(await db.budgetLine.findUnique({ where: { id: line.id } })).toBeNull();
+    });
+
+    it("rejects a target inside the subtree or from another scope", async () => {
+      const { root, leaf } = await tree();
+      await expect(
+        deleteCategory(root.id, { id: owner }, { targetId: leaf.id }),
+      ).rejects.toBeInstanceOf(CategoryAccessError);
+      const groupCat = await createCategory({ name: "G", groupId }, { id: owner });
+      await expect(
+        deleteCategory(root.id, { id: owner }, { targetId: groupCat.id }),
+      ).rejects.toBeInstanceOf(CategoryAccessError);
+      const foreign = await createCategory({ name: "Foreign target" }, { id: stranger });
+      await expect(
+        deleteCategory(root.id, { id: owner }, { targetId: foreign.id }),
+      ).rejects.toBeInstanceOf(CategoryAccessError);
+      await expect(
+        deleteCategory(root.id, { id: owner }, { targetId: "missing" }),
+      ).rejects.toBeInstanceOf(CategoryAccessError);
+      expect(await db.category.count({ where: { id: root.id } })).toBe(1);
+    });
   });
 });

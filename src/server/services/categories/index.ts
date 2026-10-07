@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import { requireGroupRole } from "@/server/services/groups/roles";
@@ -163,15 +164,119 @@ export async function updateCategory(
   });
 }
 
-export async function deleteCategory(id: string, actor: { id: string }): Promise<void> {
+// Maps each id to itself + all its descendants, walking down one level per query.
+export async function withDescendants(
+  ids: string[],
+  client: Prisma.TransactionClient = db,
+): Promise<Map<string, Set<string>>> {
+  const childrenOf = new Map<string, string[]>();
+  const seen = new Set(ids);
+  let frontier = [...seen];
+  while (frontier.length > 0) {
+    const kids = await client.category.findMany({
+      where: { parentId: { in: frontier } },
+      select: { id: true, parentId: true },
+    });
+    frontier = [];
+    for (const k of kids) {
+      childrenOf.set(k.parentId!, [...(childrenOf.get(k.parentId!) ?? []), k.id]);
+      if (!seen.has(k.id)) {
+        seen.add(k.id);
+        frontier.push(k.id);
+      }
+    }
+  }
+  const out = new Map<string, Set<string>>();
+  for (const id of ids) {
+    const subtree = new Set<string>();
+    const stack = [id];
+    while (stack.length > 0) {
+      const cur = stack.pop()!;
+      if (subtree.has(cur)) continue;
+      subtree.add(cur);
+      stack.push(...(childrenOf.get(cur) ?? []));
+    }
+    out.set(id, subtree);
+  }
+  return out;
+}
+
+async function subtreeIds(id: string, client: Prisma.TransactionClient = db): Promise<string[]> {
+  return [...(await withDescendants([id], client)).get(id)!];
+}
+
+export type CategoryDeletionImpact = {
+  subcategories: number;
+  transactions: number;
+  rules: number;
+  budgetLines: number;
+};
+
+export async function getCategoryDeletionImpact(
+  id: string,
+  actor: { id: string },
+): Promise<CategoryDeletionImpact> {
+  await ownedOrThrow(id, actor.id);
+  const ids = await subtreeIds(id);
+  const where = { categoryId: { in: ids } };
+  const [transactions, rules, budgetLines] = await Promise.all([
+    db.transaction.count({ where }),
+    db.categorizationRule.count({ where }),
+    db.budgetLine.count({ where }),
+  ]);
+  return { subcategories: ids.length - 1, transactions, rules, budgetLines };
+}
+
+// Deletes the category with its whole subtree (spec: #154). With a `targetId`,
+// transactions, rules and budget lines of the subtree move to it; without one,
+// transactions become uncategorized and rules / budget lines are deleted.
+export async function deleteCategory(
+  id: string,
+  actor: { id: string },
+  opts: { targetId?: string | null } = {},
+): Promise<void> {
   const existing = await ownedOrThrow(id, actor.id);
-  // Children become roots (onDelete: SetNull); transactions keep categoryId null (set in 3.2 schema).
-  await db.category.delete({ where: { id } });
+  const targetId = opts.targetId || null;
+  const impact = await db.$transaction(async (tx) => {
+    const ids = await subtreeIds(id, tx);
+    if (targetId) {
+      if (ids.includes(targetId)) throw new CategoryAccessError("INVALID_TARGET");
+      const target = await tx.category.findUnique({
+        where: { id: targetId },
+        select: { userId: true, groupId: true },
+      });
+      const sameScope =
+        target &&
+        (existing.groupId
+          ? target.groupId === existing.groupId
+          : target.groupId === null && target.userId === existing.userId);
+      if (!sameScope) throw new CategoryAccessError("INVALID_TARGET");
+    }
+    const where = { categoryId: { in: ids } };
+    const transactions = await tx.transaction.updateMany({
+      where,
+      data: { categoryId: targetId },
+    });
+    const rules = targetId
+      ? await tx.categorizationRule.updateMany({ where, data: { categoryId: targetId } })
+      : await tx.categorizationRule.deleteMany({ where });
+    const budgetLines = targetId
+      ? await tx.budgetLine.updateMany({ where, data: { categoryId: targetId } })
+      : await tx.budgetLine.deleteMany({ where });
+    await tx.category.deleteMany({ where: { id: { in: ids } } });
+    return {
+      subcategories: ids.length - 1,
+      transactions: transactions.count,
+      rules: rules.count,
+      budgetLines: budgetLines.count,
+    };
+  });
   await logEvent({
     userId: actor.id,
     action: "category.deleted",
     entity: "Category",
     entityId: existing.id,
+    metadata: { ...impact, targetId },
   });
 }
 

@@ -6,7 +6,11 @@ import { UNCATEGORIZED } from "@/lib/transaction-filters";
 import { logEvent } from "@/server/services/audit";
 import { canWriteAccount, canReadAccount } from "@/server/services/accounts/sharing";
 import { listVisibleForUser } from "@/server/services/accounts";
-import { assertCategoryAssignable, CategoryAccessError } from "@/server/services/categories";
+import {
+  assertCategoryAssignable,
+  CategoryAccessError,
+  withDescendants,
+} from "@/server/services/categories";
 import {
   transactionInputSchema,
   type TransactionInput,
@@ -139,8 +143,11 @@ export async function listTransactions(
   if (accountIds.length === 0) return { items: [], total: 0 };
 
   const where: Record<string, unknown> = { accountId: { in: accountIds } };
-  if (filters.categoryId) {
-    where.categoryId = filters.categoryId === UNCATEGORIZED ? null : filters.categoryId;
+  if (filters.categoryId === UNCATEGORIZED) {
+    where.categoryId = null;
+  } else if (filters.categoryId) {
+    const subtree = (await withDescendants([filters.categoryId])).get(filters.categoryId)!;
+    where.categoryId = { in: [...subtree] };
   }
   if (filters.type) where.type = filters.type;
   if (filters.direction) where.amount = filters.direction === "in" ? { gt: 0 } : { lt: 0 };

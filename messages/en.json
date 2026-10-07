@@ -346,7 +346,6 @@
     "scopeGroup": "Household",
     "edit": "Edit",
     "delete": "Delete",
-    "deleteConfirm": "Delete this category? Sub-categories become roots and transactions are uncategorized.",
     "cancel": "Cancel",
     "save": "Save",
     "saving": "Saving…",
@@ -356,9 +355,26 @@
       "INVALID_PARENT": "Invalid parent category.",
       "FORBIDDEN": "Not allowed.",
       "NOT_FOUND": "Category not found.",
-      "FAILED": "Failed. Try again."
+      "FAILED": "Failed. Try again.",
+      "INVALID_TARGET": "Invalid target category."
     },
-    "actionsFor": "Actions for {name}"
+    "actionsFor": "Actions for {name}",
+    "colorInherited": "Inherited from the parent category.",
+    "inheritColor": "Use the parent's colour",
+    "deleteDialog": {
+      "title": "Delete “{name}”?",
+      "loading": "Computing the impact…",
+      "unused": "This category isn't used anywhere.",
+      "usedBy": "This deletion affects:",
+      "subcategories": "{count, plural, one {# sub-category, deleted as well} other {# sub-categories, deleted as well}}",
+      "transactions": "{count, plural, one {# transaction} other {# transactions}}",
+      "rules": "{count, plural, one {# rule} other {# rules}}",
+      "budgetLines": "{count, plural, one {# budget line} other {# budget lines}}",
+      "moveTo": "Move to",
+      "noTarget": "No category",
+      "outcomeMove": "Transactions, rules and budget lines will be moved to “{name}”.",
+      "outcomeNone": "Transactions will become uncategorized; rules and budget lines will be deleted."
+    }
   },
   "transactions": {
     "title": "Transactions",

@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
 import { MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,8 +12,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { CategoryForm, type EditableCategory, type ParentOption } from "./category-form";
-import { deleteCategoryAction } from "@/server/transport/actions/categories";
+import { CategoryForm, type EditableCategory } from "./category-form";
+import { CategoryDeleteDialog } from "./category-delete-dialog";
+import { categoryOptions, pickableCategories, type CategoryOption } from "./category-options";
 
 type Node = {
   id: string;
@@ -29,19 +29,19 @@ type Node = {
 
 function Row({
   node,
-  parents,
+  all,
   inheritedColor = null,
   depth = 0,
 }: {
   node: Node;
-  parents: ParentOption[];
+  all: CategoryOption[];
   inheritedColor?: string | null;
   depth?: number;
 }) {
   const t = useTranslations("categories");
-  const router = useRouter();
   const [editing, setEditing] = useState(false);
-  const [pending, startTransition] = useTransition();
+  const [deleting, setDeleting] = useState(false);
+  const pickable = pickableCategories(all, node.groupId, node.id);
 
   const editable: EditableCategory = {
     id: node.id,
@@ -51,16 +51,6 @@ function Row({
     parentId: node.parentId,
     groupId: node.groupId,
   };
-
-  function handleDelete() {
-    if (!confirm(t("deleteConfirm"))) return;
-    const fd = new FormData();
-    fd.set("id", node.id);
-    startTransition(async () => {
-      const r = await deleteCategoryAction(null, fd);
-      if (r?.ok) router.refresh();
-    });
-  }
 
   return (
     <>
@@ -90,7 +80,6 @@ function Row({
                 size="icon-sm"
                 className="text-muted-foreground"
                 aria-label={t("actionsFor", { name: node.name })}
-                disabled={pending}
               />
             }
           >
@@ -101,7 +90,7 @@ function Row({
               <Pencil />
               {t("edit")}
             </DropdownMenuItem>
-            <DropdownMenuItem variant="destructive" onClick={handleDelete}>
+            <DropdownMenuItem variant="destructive" onClick={() => setDeleting(true)}>
               <Trash2 />
               {t("delete")}
             </DropdownMenuItem>
@@ -110,17 +99,24 @@ function Row({
         <CategoryForm
           mode="edit"
           category={editable}
-          parents={parents}
+          parents={pickable}
           groupId={node.groupId}
           open={editing}
           onOpenChange={setEditing}
         />
+        {deleting && (
+          <CategoryDeleteDialog
+            category={node}
+            targets={pickable}
+            onClose={() => setDeleting(false)}
+          />
+        )}
       </div>
       {node.children.map((c) => (
         <Row
           key={c.id}
           node={c}
-          parents={parents}
+          all={all}
           inheritedColor={node.color ?? inheritedColor}
           depth={depth + 1}
         />
@@ -131,12 +127,12 @@ function Row({
 
 export function CategoryList({ tree }: { tree: Node[] }) {
   const t = useTranslations("categories");
-  const parents: ParentOption[] = tree.map((n) => ({ id: n.id, name: n.name }));
+  const all = categoryOptions(tree);
   if (tree.length === 0) return <p className="text-muted-foreground text-sm">{t("empty")}</p>;
   return (
     <div className="border-border bg-card overflow-hidden rounded-xl border">
       {tree.map((node) => (
-        <Row key={node.id} node={node} parents={parents} />
+        <Row key={node.id} node={node} all={all} />
       ))}
     </div>
   );

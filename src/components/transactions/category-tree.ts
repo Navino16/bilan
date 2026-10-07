@@ -49,3 +49,8 @@ export function categoryIndex(flat: FlatCategory[]): Record<string, CategoryMeta
   for (const c of flat) index[c.id] = { name: c.name, color: c.color, icon: c.icon };
   return index;
 }
+
+// Indents a name for a native <option>, where leading spaces would be collapsed.
+export function indentedName(name: string, depth: number): string {
+  return `${"   ".repeat(depth)}${name}`;
+}
