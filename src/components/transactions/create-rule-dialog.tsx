@@ -36,6 +36,8 @@ export function CreateRuleDialog({
   categoryColor: string | null;
 }) {
   const t = useTranslations("transactions");
+  const tRules = useTranslations("rules");
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const [pat, setPat] = useState(pattern);
   const [matchType, setMatchType] = useState<RuleMatchType>("CONTAINS");
@@ -49,8 +51,10 @@ export function CreateRuleDialog({
     fd.set("pattern", pat);
     fd.set("matchType", matchType);
     fd.set("categoryId", categoryId);
+    setError(null);
     startTransition(async () => {
-      await createRuleAction(null, fd);
+      const res = await createRuleAction(null, fd);
+      if (!res?.ok) return setError(res?.error ?? "FAILED");
       onOpenChange(false);
       router.refresh();
     });
@@ -61,6 +65,7 @@ export function CreateRuleDialog({
       open={open}
       onOpenChange={(n) => {
         if (!n) setPat("");
+        setError(null);
         onOpenChange(n);
       }}
     >
@@ -98,6 +103,11 @@ export function CreateRuleDialog({
             <Info className="mt-px size-3.5 shrink-0" />
             <span>{t("rulePrompt.existingNote")}</span>
           </div>
+          {error && (
+            <p role="alert" className="text-destructive text-sm">
+              {tRules(`error.${error}`)}
+            </p>
+          )}
         </div>
 
         <DialogFooter className="bg-muted/40 border-border border-t px-6 py-3">

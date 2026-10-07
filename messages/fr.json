@@ -242,6 +242,7 @@
     "disabled": "désactivée",
     "error": {
       "INVALID": "Vérifiez les champs.",
+      "INVALID_REGEX": "Expression régulière invalide ou non prise en charge (les références arrière et les assertions avant/arrière ne sont pas acceptées).",
       "FORBIDDEN": "Action non autorisée.",
       "FAILED": "Échec. Réessayez."
     }

@@ -242,6 +242,7 @@
     "disabled": "disabled",
     "error": {
       "INVALID": "Check the fields.",
+      "INVALID_REGEX": "Invalid or unsupported regular expression (backreferences and lookarounds are not allowed).",
       "FORBIDDEN": "Not allowed.",
       "FAILED": "Failed. Try again."
     }

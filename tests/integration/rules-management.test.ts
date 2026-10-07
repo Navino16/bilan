@@ -7,6 +7,7 @@ import {
   deleteRule,
   toggleRule,
   RuleAccessError,
+  RuleValidationError,
 } from "@/server/services/categorization";
 
 const owner = "rmgmt_owner";
@@ -98,5 +99,28 @@ describe("rules management", () => {
     ).rejects.toBeInstanceOf(RuleAccessError);
     await expect(deleteRule(id, { id: stranger })).rejects.toBeInstanceOf(RuleAccessError);
     await expect(toggleRule(id, false, { id: stranger })).rejects.toBeInstanceOf(RuleAccessError);
+  });
+
+  it("rejects REGEX patterns RE2 cannot run, on create and update", async () => {
+    for (const pattern of ["(unclosed", "(?<=a)b", "(a)\\1"]) {
+      await expect(
+        createRule({ pattern, matchType: "REGEX", categoryId: catA }, { id: owner }),
+      ).rejects.toBeInstanceOf(RuleValidationError);
+    }
+    const { id } = await createRule(
+      { pattern: "^uber", matchType: "REGEX", categoryId: catA },
+      { id: owner },
+    );
+    await expect(
+      updateRule(id, { pattern: "(?=x)", matchType: "REGEX", categoryId: catA }, { id: owner }),
+    ).rejects.toBeInstanceOf(RuleValidationError);
+  });
+
+  it("defaults a blank priority to 100", async () => {
+    const { id } = await createRule(
+      { pattern: "blank-priority", matchType: "CONTAINS", categoryId: catA },
+      { id: owner },
+    );
+    expect((await db.categorizationRule.findUniqueOrThrow({ where: { id } })).priority).toBe(100);
   });
 });
