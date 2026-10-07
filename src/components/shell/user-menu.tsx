@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -28,7 +29,10 @@ export function UserMenu({ user }: { user: { name?: string | null; email: string
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="ring-offset-background focus-visible:ring-ring rounded-full outline-none focus-visible:ring-2 focus-visible:ring-offset-2">
+      <DropdownMenuTrigger
+        aria-label={t("open")}
+        className="ring-offset-background focus-visible:ring-ring rounded-full outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+      >
         <Avatar className="h-9 w-9">
           <AvatarFallback className="bg-accent text-accent-foreground text-xs font-medium">
             {initials}
@@ -36,10 +40,12 @@ export function UserMenu({ user }: { user: { name?: string | null; email: string
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="flex flex-col gap-0.5">
-          <span className="truncate text-sm font-medium">{display}</span>
-          <span className="text-muted-foreground truncate text-xs font-normal">{user.email}</span>
-        </DropdownMenuLabel>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="flex flex-col gap-0.5">
+            <span className="truncate text-sm font-medium">{display}</span>
+            <span className="text-muted-foreground truncate text-xs font-normal">{user.email}</span>
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>{t("logout")}</DropdownMenuItem>
       </DropdownMenuContent>

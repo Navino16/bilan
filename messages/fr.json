@@ -112,6 +112,7 @@
       "admin": "Administration"
     },
     "userMenu": {
+      "open": "Menu du compte",
       "settings": "Préférences",
       "logout": "Se déconnecter"
     }
