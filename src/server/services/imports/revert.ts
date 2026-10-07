@@ -10,7 +10,10 @@ import {
   trimBatchMetadata,
   UNCOMMITTED_STATUSES,
 } from "@/lib/import-status";
-import { ImportAccessError } from "./index";
+import { ImportAccessError } from "./errors";
+
+// Prisma's 5 s default is too short to delete a large import with its search tokens.
+const REVERT_TIMEOUT = { maxWait: 10_000, timeout: 5 * 60_000 };
 
 export type RevertImpact = {
   transactions: number;
@@ -80,7 +83,7 @@ export async function revertImport(
       where: { importBatchId: batchId },
     });
     return { deleted, linksDissolved: await dissolveUndersizedLinks(tx, linkIds) };
-  });
+  }, REVERT_TIMEOUT);
   await logEvent({
     userId: actorId,
     action: "import.reverted",

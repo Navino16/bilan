@@ -140,4 +140,86 @@ bad;LIGNE ${stamp};1,00;;B`;
       page.locator('[data-slot="import-history-row"]', { hasText: `undo-${stamp}.csv` }),
     ).toContainText("Annulé");
   });
+
+  test("a header-only file is refused with a clear message", async ({ page }) => {
+    await page.goto("/fr/import");
+    await page.locator('input[type="file"]').setInputFiles({
+      name: "header-only.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from("Date;Libellé;Montant\n", "utf8"),
+    });
+    await expect(page.getByText("Aucune opération trouvée dans ce fichier.")).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.locator('[data-slot="import-preview-row"]')).toHaveCount(0);
+  });
+
+  test("a dropped long file is previewed page by page", async ({ page }) => {
+    const stamp = Date.now();
+    const lines = Array.from(
+      { length: 60 },
+      (_, i) => `${String(1 + (i % 28)).padStart(2, "0")}/05/2019;CB PAGE ${stamp} N${i};1,00;`,
+    );
+    const csv = `Date;Libellé;Débit;Crédit\n${lines.join("\n")}`;
+    await page.goto("/fr/import");
+    const uploaded = page.waitForResponse((r) => r.url().endsWith("/api/import/csv"), {
+      timeout: 30_000,
+    });
+    const dataTransfer = await page.evaluateHandle((text) => {
+      const dt = new DataTransfer();
+      dt.items.add(new File([text], "dropped.csv", { type: "text/csv" }));
+      return dt;
+    }, csv);
+    await page.locator('[data-slot="import-dropzone"]').dispatchEvent("drop", { dataTransfer });
+    await uploaded;
+
+    const rows = page.locator('[data-slot="import-preview-row"]');
+    await expect(rows).toHaveCount(50, { timeout: 15_000 });
+    const pager = page.locator('[data-slot="import-pager"]');
+    await expect(pager).toContainText("Lignes 1 à 50 sur 60");
+    await pager.getByRole("button", { name: /suivantes/i }).click();
+    await expect(pager).toContainText("Lignes 51 à 60 sur 60");
+    await expect(rows).toHaveCount(10);
+    await expect(rows.first()).toContainText(`CB PAGE ${stamp} N50`);
+    await page.getByRole("button", { name: "Annuler", exact: true }).click();
+  });
+
+  test("re-uploading an imported file locks its duplicates and disables validation", async ({
+    page,
+  }) => {
+    const stamp = Date.now();
+    const file = {
+      name: `dup-${stamp}.csv`,
+      mimeType: "text/csv",
+      buffer: Buffer.from(`Date;Libellé;Débit;Crédit\n03/06/2019;CB DUP ${stamp};4,00;`, "utf8"),
+    };
+    const upload = async () => {
+      await page.goto("/fr/import");
+      const uploaded = page.waitForResponse((r) => r.url().endsWith("/api/import/csv"), {
+        timeout: 30_000,
+      });
+      await page.locator('input[type="file"]').setInputFiles(file);
+      await uploaded;
+      await expect(page.locator('[data-slot="import-preview-row"]').first()).toBeVisible({
+        timeout: 15_000,
+      });
+    };
+    await upload();
+    const committed = page.waitForResponse((r) => r.url().includes("/commit"), {
+      timeout: 30_000,
+    });
+    await page.getByRole("button", { name: /valider l'import/i }).click();
+    await committed;
+    await expect(page.getByRole("link", { name: /voir les transactions/i })).toBeVisible();
+
+    await upload();
+    const box = page
+      .locator('[data-slot="import-preview-row"]')
+      .locator('input[type="checkbox"]:visible');
+    await expect(box).not.toBeChecked();
+    await expect(box).toBeDisabled();
+    await expect(page.getByRole("button", { name: /valider l'import/i })).toBeDisabled();
+    await expect(page.getByText(/rien à importer/i)).toBeVisible();
+    await page.getByRole("button", { name: "Annuler", exact: true }).click();
+  });
 });

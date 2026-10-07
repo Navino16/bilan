@@ -4,8 +4,11 @@ import { suggestMany } from "@/server/services/categorization";
 import { deriveType } from "./derive-type";
 import type { NormalizedRow, PreviewRow } from "./types";
 
+export const PREVIEW_PAGE_SIZE = 50;
+
 export type PreviewResult = {
-  rows: PreviewRow[]; // ALL rows, enriched (the preview is editable, so every row is shown)
+  rows: PreviewRow[]; // one page of enriched rows
+  page: number;
   totalRows: number;
   duplicateCount: number; // over ALL rows: already present in the destination account
   autoCategorizedCount: number; // over ALL rows: a rule matched
@@ -19,6 +22,7 @@ export async function buildPreview(
   accountId: string,
   rows: NormalizedRow[],
   userId: string,
+  page = 0,
 ): Promise<PreviewResult> {
   const externalIds = computeExternalIds(rows);
   const existing = externalIds.length
@@ -40,18 +44,22 @@ export async function buildPreview(
     if (suggestions[i].categoryId) autoCategorizedCount++;
   }
 
-  const previewRows: PreviewRow[] = rows.map((r, i) => ({
-    externalId: externalIds[i],
+  const lastPage = Math.max(0, Math.ceil(rows.length / PREVIEW_PAGE_SIZE) - 1);
+  const current = Math.min(Math.max(0, Math.trunc(page) || 0), lastPage);
+  const start = current * PREVIEW_PAGE_SIZE;
+  const previewRows: PreviewRow[] = rows.slice(start, start + PREVIEW_PAGE_SIZE).map((r, j) => ({
+    externalId: externalIds[start + j],
     date: r.date.toISOString(),
     amount: r.amount,
     rawLabel: r.rawLabel,
     type: r.type ?? deriveType(r.rawLabel),
-    suggestedCategoryId: suggestions[i].categoryId,
-    isDuplicate: dupSet.has(externalIds[i]),
+    suggestedCategoryId: suggestions[start + j].categoryId,
+    isDuplicate: dupSet.has(externalIds[start + j]),
   }));
 
   return {
     rows: previewRows,
+    page: current,
     totalRows: rows.length,
     duplicateCount,
     autoCategorizedCount,

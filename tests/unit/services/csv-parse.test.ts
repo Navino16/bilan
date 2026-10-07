@@ -9,6 +9,8 @@ import {
   normalizeType,
   inferDecimalMark,
   mapRows,
+  looksBinary,
+  hasDataRows,
 } from "@/server/services/imports/csv-parse";
 import {
   computeExternalId,
@@ -225,5 +227,35 @@ describe("computeExternalIds", () => {
     expect(new Set(ids).size).toBe(3);
     expect(ids[0]).toBe(computeExternalId(coffee.date, coffee.amount, coffee.rawLabel));
     expect(computeExternalIds([coffee, coffee])).toEqual(ids.slice(0, 2));
+  });
+});
+
+describe("looksBinary", () => {
+  it("flags images and random bytes renamed .csv", () => {
+    const png = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d]);
+    expect(looksBinary(png)).toBe(true);
+    const noise = Uint8Array.from({ length: 4096 }, (_, i) => (i * 7919 + 13) % 256);
+    expect(looksBinary(noise)).toBe(true);
+  });
+
+  it("accepts UTF-8, Latin-1 and UTF-16 (BOM) text", () => {
+    expect(looksBinary(new TextEncoder().encode(SAMPLE))).toBe(false);
+    expect(
+      looksBinary(Uint8Array.from(Buffer.from("Date;Libellé\r\n01/02/2026;CAFÉ", "latin1"))),
+    ).toBe(false);
+    const utf16 = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(SAMPLE, "utf16le")]);
+    expect(looksBinary(Uint8Array.from(utf16))).toBe(false);
+  });
+});
+
+describe("hasDataRows", () => {
+  it("is false for an empty file, a header alone or blank lines", () => {
+    expect(hasDataRows("")).toBe(false);
+    expect(hasDataRows("Date;Libellé;Montant")).toBe(false);
+    expect(hasDataRows("Date;Libellé;Montant\n;;\n\n")).toBe(false);
+  });
+
+  it("is true once a line follows the header", () => {
+    expect(hasDataRows(SAMPLE)).toBe(true);
   });
 });

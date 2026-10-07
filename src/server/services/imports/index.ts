@@ -5,7 +5,8 @@ import { logEvent } from "@/server/services/audit";
 import { csvMappingSchema, type CsvMappingInput } from "@/lib/validation/import";
 import { parseCsv, detectMapping, mapRows } from "./csv-parse";
 import { commitRows, type CommitOptions } from "./commit";
-import { buildPreview } from "./preview";
+import { buildPreview, PREVIEW_PAGE_SIZE } from "./preview";
+import { ImportAccessError } from "./errors";
 import type { CsvMapping, ImportPreview, CommitSummary } from "./types";
 
 // NOTE: the PDF service lives in `./pdf-service` (not here) so the CSV path never
@@ -13,7 +14,7 @@ import type { CsvMapping, ImportPreview, CommitSummary } from "./types";
 // package (next.config `serverExternalPackages`) for its worker to resolve, which
 // only holds for STATIC imports — so the PDF route imports pdf-service directly.
 
-export class ImportAccessError extends Error {}
+export { ImportAccessError };
 
 // Creates a PARSING ImportBatch and stores the raw CSV text in `metadata.text`
 // for the subsequent preview/commit. (MVP: text lives in the batch row; for very
@@ -62,6 +63,7 @@ export async function previewCsvBatch(
   batchId: string,
   userId: string,
   mapping?: CsvMappingInput,
+  page = 0,
 ): Promise<ImportPreview> {
   const batch = await loadBatch(batchId, userId);
   if (batch.source !== "CSV" || (batch.status !== "PARSING" && batch.status !== "REVIEW")) {
@@ -83,7 +85,7 @@ export async function previewCsvBatch(
   });
   if (count === 0) throw new ImportAccessError("NOT_COMMITTABLE");
 
-  const p = await buildPreview(batch.accountId, normalized, userId);
+  const p = await buildPreview(batch.accountId, normalized, userId, page);
   return {
     batchId,
     source: "CSV",
@@ -97,6 +99,8 @@ export async function previewCsvBatch(
     rejectedCount: rejected.length,
     rejected: rejected.slice(0, REJECTED_SHOWN),
     preview: p.rows,
+    page: p.page,
+    pageSize: PREVIEW_PAGE_SIZE,
   };
 }
 
@@ -130,7 +134,10 @@ export async function withCommitClaim<T>(batchId: string, run: () => Promise<T>)
   } catch (e) {
     await db.$transaction([
       db.transaction.deleteMany({ where: { importBatchId: batchId } }),
-      db.importBatch.update({ where: { id: batchId }, data: { status: "REVIEW" } }),
+      db.importBatch.update({
+        where: { id: batchId },
+        data: { status: "REVIEW", importedRows: 0 },
+      }),
     ]);
     throw e;
   }
@@ -138,4 +145,15 @@ export async function withCommitClaim<T>(batchId: string, run: () => Promise<T>)
 
 export async function getBatchForUser(batchId: string, userId: string) {
   return loadBatch(batchId, userId);
+}
+
+// Rows written so far by a running commit (insertRows bumps importedRows per chunk).
+export async function getCommitProgress(batchId: string, userId: string) {
+  const batch = await db.importBatch.findUnique({
+    where: { id: batchId },
+    select: { accountId: true, status: true, importedRows: true },
+  });
+  if (!batch) throw new ImportAccessError("NOT_FOUND");
+  if (!(await canWriteAccount(userId, batch.accountId))) throw new ImportAccessError("FORBIDDEN");
+  return { status: batch.status, importedRows: batch.importedRows };
 }

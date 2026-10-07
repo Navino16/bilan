@@ -359,9 +359,10 @@ describe("commit claim", () => {
       "FORBIDDEN",
     );
     expect(await db.transaction.count({ where: { importBatchId: batch.id } })).toBe(0);
-    expect((await db.importBatch.findUniqueOrThrow({ where: { id: batch.id } })).status).toBe(
-      "REVIEW",
-    );
+    expect(await db.importBatch.findUniqueOrThrow({ where: { id: batch.id } })).toMatchObject({
+      status: "REVIEW",
+      importedRows: 0,
+    });
     expect((await db.categorizationRule.findUniqueOrThrow({ where: { id: rule.id } })).hits).toBe(
       0,
     );

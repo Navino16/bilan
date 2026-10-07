@@ -52,7 +52,9 @@ export type ImportPreview = {
   autoCategorizedCount: number;
   rejectedCount: number; // rows of the file that couldn't be read with this mapping
   rejected: RejectedRow[]; // a few examples
-  preview: PreviewRow[]; // first 50 enriched rows
+  preview: PreviewRow[]; // one page of enriched rows
+  page: number;
+  pageSize: number;
 };
 
 export type CommitSummary = {
