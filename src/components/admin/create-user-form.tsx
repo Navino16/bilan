@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 
 export function CreateUserForm() {
   const t = useTranslations("admin.users");
+  const locale = useLocale();
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [state, action, pending] = useActionState(adminCreateUserAction, null);
@@ -25,6 +26,7 @@ export function CreateUserForm() {
 
   return (
     <form ref={formRef} action={action} className="space-y-4">
+      <input type="hidden" name="locale" value={locale} />
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="cu-name">{t("name")}</Label>

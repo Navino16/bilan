@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { defaultLocale, locales } from "@/i18n/config";
 
 // Kept out of the "use server" action file, which may only export async functions.
 
@@ -15,7 +16,10 @@ export const registerSchema = z.object({
   adminToken: z.string().optional(),
 });
 
-export const resetRequestSchema = z.object({ email: z.email() });
+export const resetRequestSchema = z.object({
+  email: z.email(),
+  locale: z.enum(locales).default(defaultLocale).catch(defaultLocale),
+});
 
 export const resetConfirmSchema = z.object({
   // Better Auth reset tokens are opaque random strings, not UUIDs.

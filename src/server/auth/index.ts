@@ -17,6 +17,11 @@ import { seedDefaultCategories } from "@/server/services/categories/seed-default
 import { providerCache, resolveOidcProvider, type ResolvedOidc } from "./providers";
 import { authPlugins } from "./plugins";
 import { authAuditHook, twoFactorAttemptGuard } from "./auth-audit";
+import {
+  RESET_TOKEN_TTL_SEC,
+  resetLink,
+  sendPasswordResetMail,
+} from "@/server/services/mail/password-reset";
 
 type Handler = ReturnType<typeof betterAuth>;
 let cached: { handler: Handler; builtAt: number } | null = null;
@@ -125,16 +130,24 @@ async function buildOptions(): Promise<BetterAuthOptions> {
       enabled: credentialsEnabled,
       minPasswordLength,
       autoSignIn: true,
-      // Deliver the reset link. The token is a credential, so it is NEVER
-      // persisted (audit records only the userId/event) and only surfaced on the
-      // dev console. Production must configure SMTP (8.4) for real delivery.
-      sendResetPassword: async ({ user, token }) => {
-        if (env.NODE_ENV === "development") {
-          const url = `${env.APP_URL.replace(/\/$/, "")}/fr/reset/${token}`;
-          console.info(`[bilan][dev] password reset link for ${user.email}: ${url}`);
-        }
+      revokeSessionsOnPasswordReset: true,
+      resetPasswordTokenExpiresIn: RESET_TOKEN_TTL_SEC,
+      // Not awaited: waiting on SMTP only for existing accounts would reveal them by timing.
+      sendResetPassword: async ({ user, url, token }) => {
         await logEvent({ action: "auth.password.reset_requested", userId: user.id });
+        const { link, locale, kind } = resetLink(url, token, env.APP_URL);
+        void sendPasswordResetMail({ email: user.email, link, locale, kind }).catch((e) =>
+          logEvent({
+            action: "mail.security.failed",
+            userId: user.id,
+            metadata: { kind: "password_reset", error: e instanceof Error ? e.message : "unknown" },
+          }),
+        );
       },
+    },
+    // Reset tokens are credentials: keep only their hash in the verification table.
+    verification: {
+      storeIdentifier: { default: "plain", overrides: { "reset-password:": "hashed" } },
     },
     socialProviders,
     hooks: { before: twoFactorAttemptGuard, after: authAuditHook },

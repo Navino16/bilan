@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,7 @@ import { resetRequestAction } from "@/server/transport/actions/auth";
 
 export function ResetRequestForm() {
   const t = useTranslations("auth.reset");
+  const locale = useLocale();
   const [state, action, pending] = useActionState(resetRequestAction, null);
 
   if (state?.ok) {
@@ -22,6 +23,7 @@ export function ResetRequestForm() {
 
   return (
     <form action={action} className="space-y-4">
+      <input type="hidden" name="locale" value={locale} />
       <div className="space-y-2">
         <Label htmlFor="email">{t("email")}</Label>
         <Input id="email" name="email" type="email" required autoComplete="email" />
