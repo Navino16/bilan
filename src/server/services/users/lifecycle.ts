@@ -5,6 +5,7 @@ import { logEvent } from "@/server/services/audit";
 import { eraseUser, groupSuccessions, logUserDeleted } from "@/server/services/rgpd";
 import { topRole, type InstanceRole } from "@/lib/instance-roles";
 import { lockActiveSuperAdmins } from "@/server/services/users/roles";
+import { displayName } from "@/lib/validation/name";
 
 type Client = Prisma.TransactionClient | PrismaClient;
 
@@ -114,7 +115,7 @@ export async function userDeletionImpact(
     sharedAccounts,
     transfers: successions
       .filter((s) => s.successor && !s.successorIsOwner)
-      .map((s) => ({ group: s.groupName, to: s.successor!.name?.trim() || s.successor!.email })),
+      .map((s) => ({ group: s.groupName, to: displayName(s.successor!) })),
     deletedGroups: successions.filter((s) => !s.successor).map((s) => s.groupName),
   };
 }

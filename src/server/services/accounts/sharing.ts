@@ -7,6 +7,7 @@ import {
   type AccountAccess,
 } from "@/server/services/accounts";
 import { requireGroupRole } from "@/server/services/groups/roles";
+import { displayName } from "@/lib/validation/name";
 
 export { AccountAccessError } from "@/server/services/accounts";
 
@@ -99,7 +100,7 @@ export async function listAccountsSharedWithGroup(
     color: s.account.color,
     balance: balances.get(s.account.id) ?? Number(s.account.initialBalance),
     permission: s.permission as SharePermission,
-    ownerName: s.account.owner.name ?? s.account.owner.email,
+    ownerName: displayName(s.account.owner),
   }));
 }
 

@@ -91,7 +91,7 @@ export function AppSettingsForm({
     <div className="space-y-6">
       <SettingsCard section="general">
         <Field settingKey="app_name" label={t("appName")}>
-          {(p) => <Input {...p} defaultValue={appName} />}
+          {(p) => <Input {...p} key={appName} defaultValue={appName} />}
         </Field>
       </SettingsCard>
 
@@ -117,7 +117,16 @@ export function AppSettingsForm({
 
       <SettingsCard section="security">
         <Field settingKey="min_password_length" label={t("minPasswordLength")}>
-          {(p) => <Input {...p} type="number" min={8} max={128} defaultValue={minPasswordLength} />}
+          {(p) => (
+            <Input
+              {...p}
+              key={minPasswordLength}
+              type="number"
+              min={8}
+              max={128}
+              defaultValue={minPasswordLength}
+            />
+          )}
         </Field>
         <Field settingKey="security.admin_2fa_required" label={t("admin2faRequired")}>
           {(p) => (

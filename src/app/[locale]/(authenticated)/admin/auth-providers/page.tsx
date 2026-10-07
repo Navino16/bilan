@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/server/auth/permissions";
-import { listAuthProviders } from "@/server/services/settings/auth-providers";
+import { authProviderImpact, listAuthProviders } from "@/server/services/settings/auth-providers";
 import { AuthProviderForm, type AuthProviderDefaults } from "@/components/admin/auth-provider-form";
 import { SectionCard } from "@/components/shell/section-card";
 import { StatusBadge } from "@/components/admin/status-badge";
@@ -20,13 +20,14 @@ export default async function AdminAuthProvidersPage() {
   await requirePermission("admin.settings.write");
   const t = await getTranslations("admin.authProviders");
   const providers = await listAuthProviders();
+  const impacts = await Promise.all(providers.map((p) => authProviderImpact(p)));
 
   return (
     <div className="space-y-6">
       {providers.length === 0 && (
         <SectionCard overline={t("listOverline")} title={t("listTitle")} hint={t("empty")} />
       )}
-      {providers.map((p) => {
+      {providers.map((p, i) => {
         const defaults: AuthProviderDefaults = {
           key: p.key,
           type: p.type,
@@ -45,7 +46,7 @@ export default async function AdminAuthProvidersPage() {
             title={p.displayName}
             action={<StatusBadge active={p.enabled}>{p.enabled ? t("on") : t("off")}</StatusBadge>}
           >
-            <AuthProviderForm provider={defaults} />
+            <AuthProviderForm provider={defaults} impact={impacts[i]} />
           </SectionCard>
         );
       })}

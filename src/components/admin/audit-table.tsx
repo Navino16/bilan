@@ -3,6 +3,7 @@ import type { AuditEntry } from "@/server/services/audit";
 import { listHeader } from "@/components/shell/section-card";
 import { LocalDateTime } from "@/components/shell/local-date-time";
 import { auditActionMessage } from "@/lib/audit";
+import { displayName } from "@/lib/validation/name";
 
 // Translated labels with the raw code as fallback. `t.has` is also true for a branch
 // of the message tree (`group.member`), hence the string check.
@@ -29,10 +30,9 @@ export async function AuditTable({ items }: { items: AuditEntry[] }) {
   const labels = await auditLabels();
   const action = labels.action;
   const entityType = labels.entity;
-  const entityDetail = (row: AuditEntry) =>
-    row.subject ? row.subject.name?.trim() || row.subject.email : row.entityId;
+  const entityDetail = (row: AuditEntry) => (row.subject ? displayName(row.subject) : row.entityId);
   const user = (row: AuditEntry) =>
-    row.user ? row.user.name?.trim() || row.user.email : (row.userId ?? t("system"));
+    row.user ? displayName(row.user) : (row.userId ?? t("system"));
   const date = (row: AuditEntry) => (
     <LocalDateTime value={row.createdAt} dateStyle="short" timeStyle="medium" />
   );

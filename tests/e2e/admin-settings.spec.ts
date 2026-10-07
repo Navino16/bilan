@@ -57,6 +57,33 @@ test.describe("admin settings", () => {
     }
   });
 
+  test("adds a provider, refuses a duplicate key, then deletes it (#163)", async ({ page }) => {
+    test.setTimeout(120_000);
+    const key = `e2e-${Date.now()}`;
+    const addForm = page.locator("form:has(#ap-new-key)");
+    const editForm = page.locator(`form:has(#ap-${key}-key)`);
+    const add = async () => {
+      await addForm.locator("#ap-new-key").fill(key);
+      await addForm.locator("#ap-new-type").selectOption("credentials");
+      await addForm.locator("#ap-new-displayName").fill("E2E provider");
+      await addForm.getByRole("button", { name: "Ajouter" }).click();
+    };
+    await page.goto("/fr/admin/auth-providers", { waitUntil: "domcontentloaded", timeout: 90_000 });
+    await expect(async () => {
+      await add();
+      await expect(editForm).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 30_000 });
+
+    await add();
+    await expect(addForm.getByText(/utilise déjà cette clé/)).toBeVisible();
+
+    await editForm.getByRole("button", { name: "Supprimer" }).click();
+    const dialog = page.getByRole("alertdialog");
+    await dialog.getByRole("button", { name: "Supprimer" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(editForm).toHaveCount(0);
+  });
+
   test("the admin nav only lists permitted tabs and fits a narrow viewport", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/fr/admin/users", { waitUntil: "domcontentloaded", timeout: 90_000 });

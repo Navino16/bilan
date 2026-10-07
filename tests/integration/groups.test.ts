@@ -40,6 +40,20 @@ describe("groups service", () => {
     ).not.toBeNull();
   });
 
+  it("trims names and rejects blank or oversized names and descriptions (#163)", async () => {
+    await expect(createGroup({ name: "   " }, owner)).rejects.toThrow("INVALID");
+    const g = await createGroup({ name: "  Trimmed  " }, owner);
+    expect((await getGroupDetail(g.id, owner)).name).toBe("Trimmed");
+    await expect(updateGroup(g.id, { name: "   " }, { id: owner })).rejects.toThrow("INVALID");
+    await expect(updateGroup(g.id, { name: "x".repeat(101) }, { id: owner })).rejects.toThrow(
+      "INVALID",
+    );
+    await expect(
+      updateGroup(g.id, { name: "Ok", description: "d".repeat(192) }, { id: owner }),
+    ).rejects.toThrow("INVALID");
+    expect((await getGroupDetail(g.id, owner)).name).toBe("Trimmed");
+  });
+
   it("lists only groups the user belongs to, with their role", async () => {
     const g = await createGroup({ name: "Mine" }, owner);
     expect((await listGroupsForUser(owner)).some((x) => x.id === g.id && x.role === "OWNER")).toBe(

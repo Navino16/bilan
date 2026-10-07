@@ -8,10 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-  upsertAuthProviderAction,
+  saveAuthProviderAction,
   type SettingsActionState,
 } from "@/server/transport/actions/settings";
 import { NativeSelect } from "@/components/ui/native-select";
+import { AuthProviderDelete } from "@/components/admin/auth-provider-delete";
+import type { AuthProviderImpact } from "@/server/services/settings/auth-providers";
 
 export type AuthProviderDefaults = {
   key: string;
@@ -31,11 +33,17 @@ export type AuthProviderDefaults = {
   } | null;
 };
 
-export function AuthProviderForm({ provider }: { provider?: AuthProviderDefaults }) {
+export function AuthProviderForm({
+  provider,
+  impact = { linkedAccounts: 0, lockedOut: 0 },
+}: {
+  provider?: AuthProviderDefaults;
+  impact?: AuthProviderImpact;
+}) {
   const t = useTranslations("admin.authProviders");
   const router = useRouter();
   const [state, action, pending] = useActionState<SettingsActionState, FormData>(
-    upsertAuthProviderAction,
+    saveAuthProviderAction,
     null,
   );
   useEffect(() => {
@@ -48,10 +56,12 @@ export function AuthProviderForm({ provider }: { provider?: AuthProviderDefaults
 
   return (
     <form action={action} className="space-y-4">
+      <input type="hidden" name="mode" value={isEdit ? "update" : "create"} />
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor={`${prefix}-key`}>{t("key")}</Label>
           <Input
+            key={provider?.key ?? ""}
             id={`${prefix}-key`}
             name="key"
             defaultValue={provider?.key ?? ""}
@@ -61,7 +71,13 @@ export function AuthProviderForm({ provider }: { provider?: AuthProviderDefaults
         </div>
         <div className="space-y-2">
           <Label htmlFor={`${prefix}-type`}>{t("type")}</Label>
-          <NativeSelect id={`${prefix}-type`} name="type" defaultValue={provider?.type ?? "oidc"}>
+          {provider && <input type="hidden" name="type" value={provider.type} />}
+          <NativeSelect
+            id={`${prefix}-type`}
+            name={provider ? undefined : "type"}
+            defaultValue={provider?.type ?? "oidc"}
+            disabled={isEdit}
+          >
             <option value="credentials">{t("typeCredentials")}</option>
             <option value="oidc">{t("typeOidc")}</option>
             <option value="google">{t("typeGoogle")}</option>
@@ -72,6 +88,7 @@ export function AuthProviderForm({ provider }: { provider?: AuthProviderDefaults
         <div className="space-y-2">
           <Label htmlFor={`${prefix}-displayName`}>{t("displayName")}</Label>
           <Input
+            key={provider?.displayName ?? ""}
             id={`${prefix}-displayName`}
             name="displayName"
             defaultValue={provider?.displayName ?? ""}
@@ -96,12 +113,18 @@ export function AuthProviderForm({ provider }: { provider?: AuthProviderDefaults
         <div className="mt-4 space-y-4">
           <div className="space-y-2">
             <Label htmlFor={`${prefix}-issuer`}>{t("issuer")}</Label>
-            <Input id={`${prefix}-issuer`} name="issuer" defaultValue={provider?.issuer ?? ""} />
+            <Input
+              key={provider?.issuer ?? ""}
+              id={`${prefix}-issuer`}
+              name="issuer"
+              defaultValue={provider?.issuer ?? ""}
+            />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor={`${prefix}-clientId`}>{t("clientId")}</Label>
               <Input
+                key={provider?.clientId ?? ""}
                 id={`${prefix}-clientId`}
                 name="clientId"
                 defaultValue={provider?.clientId ?? ""}
@@ -119,22 +142,38 @@ export function AuthProviderForm({ provider }: { provider?: AuthProviderDefaults
           </div>
           <div className="space-y-2">
             <Label htmlFor={`${prefix}-scopes`}>{t("scopes")}</Label>
-            <Input id={`${prefix}-scopes`} name="scopes" defaultValue={provider?.scopes ?? ""} />
+            <Input
+              key={provider?.scopes ?? ""}
+              id={`${prefix}-scopes`}
+              name="scopes"
+              defaultValue={provider?.scopes ?? ""}
+            />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor={`${prefix}-mapName`}>{t("mapName")}</Label>
-              <Input id={`${prefix}-mapName`} name="mapName" defaultValue={cfg.mapName ?? ""} />
+              <Input
+                key={cfg.mapName ?? ""}
+                id={`${prefix}-mapName`}
+                name="mapName"
+                defaultValue={cfg.mapName ?? ""}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor={`${prefix}-mapEmail`}>{t("mapEmail")}</Label>
-              <Input id={`${prefix}-mapEmail`} name="mapEmail" defaultValue={cfg.mapEmail ?? ""} />
+              <Input
+                key={cfg.mapEmail ?? ""}
+                id={`${prefix}-mapEmail`}
+                name="mapEmail"
+                defaultValue={cfg.mapEmail ?? ""}
+              />
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor={`${prefix}-authorizationUrl`}>{t("authorizationUrl")}</Label>
               <Input
+                key={cfg.authorizationUrl ?? ""}
                 id={`${prefix}-authorizationUrl`}
                 name="authorizationUrl"
                 defaultValue={cfg.authorizationUrl ?? ""}
@@ -142,13 +181,19 @@ export function AuthProviderForm({ provider }: { provider?: AuthProviderDefaults
             </div>
             <div className="space-y-2">
               <Label htmlFor={`${prefix}-tokenUrl`}>{t("tokenUrl")}</Label>
-              <Input id={`${prefix}-tokenUrl`} name="tokenUrl" defaultValue={cfg.tokenUrl ?? ""} />
+              <Input
+                key={cfg.tokenUrl ?? ""}
+                id={`${prefix}-tokenUrl`}
+                name="tokenUrl"
+                defaultValue={cfg.tokenUrl ?? ""}
+              />
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor={`${prefix}-userInfoUrl`}>{t("userInfoUrl")}</Label>
               <Input
+                key={cfg.userInfoUrl ?? ""}
                 id={`${prefix}-userInfoUrl`}
                 name="userInfoUrl"
                 defaultValue={cfg.userInfoUrl ?? ""}
@@ -179,9 +224,18 @@ export function AuthProviderForm({ provider }: { provider?: AuthProviderDefaults
           <AlertDescription>{t(`error.${state.error}`)}</AlertDescription>
         </Alert>
       )}
-      <Button type="submit" disabled={pending}>
-        {pending ? t("saving") : isEdit ? t("save") : t("add")}
-      </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="submit" disabled={pending}>
+          {pending ? t("saving") : isEdit ? t("save") : t("add")}
+        </Button>
+        {provider && (
+          <AuthProviderDelete
+            providerKey={provider.key}
+            name={provider.displayName}
+            impact={impact}
+          />
+        )}
+      </div>
     </form>
   );
 }

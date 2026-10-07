@@ -9,3 +9,12 @@ export type GroupRole = (typeof GROUP_ROLES)[number];
 // can't mint an account that outranks them.
 export const INVITABLE_GROUP_ROLES = ["ADMIN", "MEMBER"] as const;
 export type InvitableGroupRole = (typeof INVITABLE_GROUP_ROLES)[number];
+
+export const GROUP_ROLE_RANK: Record<GroupRole, number> = { OWNER: 3, ADMIN: 2, MEMBER: 1 };
+
+export const GROUP_DESCRIPTION_MAX = 191;
+
+// The last-owner guard is enforced separately, in the service.
+export function canRemoveMember(actor: GroupRole, target: GroupRole): boolean {
+  return actor === "OWNER" || (actor === "ADMIN" && target === "MEMBER");
+}

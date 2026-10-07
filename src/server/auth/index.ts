@@ -16,6 +16,7 @@ import { notifyPasswordChanged } from "@/server/services/mail/security-notificat
 import { seedDefaultCategories } from "@/server/services/categories/seed-defaults";
 import { providerCache, resolveOidcProvider, type ResolvedOidc } from "./providers";
 import { authPlugins } from "./plugins";
+import { nameOnCreate, nameOnUpdate } from "./user-name";
 import {
   RESET_TOKEN_TTL_SEC,
   resetLink,
@@ -102,7 +103,14 @@ async function buildOptions(): Promise<BetterAuthOptions> {
     account: { modelName: "authAccount" },
     databaseHooks: {
       user: {
+        update: {
+          before: async (data) => {
+            const name = nameOnUpdate(data);
+            return name ? { data: name } : undefined;
+          },
+        },
         create: {
+          before: async (user) => ({ data: { ...user, ...nameOnCreate(user) } }),
           // Seed the default category set for every new account. Locale is not
           // known here (UserPreference is written separately) so default to fr;
           // failures must never block signup.

@@ -6,7 +6,7 @@ import { requireSession } from "@/server/auth/permissions";
 import { getGroupDetail, GroupAccessError } from "@/server/services/groups";
 import { listInvitations } from "@/server/services/groups/invitations";
 import { listAccountsSharedWithGroup } from "@/server/services/accounts/sharing";
-import type { GroupRole } from "@/server/services/groups/roles";
+import { GROUP_ROLE_RANK as RANK } from "@/lib/validation/group";
 import { MemberList } from "@/components/groups/member-list";
 import { GroupDangerZone } from "@/components/groups/group-danger-zone";
 import { GroupForm } from "@/components/groups/group-form";
@@ -18,8 +18,6 @@ import { PageHeader } from "@/components/shell/page-header";
 import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
-
-const RANK: Record<GroupRole, number> = { OWNER: 3, ADMIN: 2, MEMBER: 1 };
 
 export const generateMetadata = pageTitle("group");
 

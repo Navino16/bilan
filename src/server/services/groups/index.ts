@@ -1,9 +1,10 @@
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
+import { nameSchema } from "@/lib/validation/name";
+import { GROUP_DESCRIPTION_MAX, canRemoveMember } from "@/lib/validation/group";
 import {
   GROUP_ROLES,
   GroupAccessError,
-  RANK,
   type GroupRole,
   countOwners,
   getMembership,
@@ -12,16 +13,27 @@ import {
 
 export { GroupAccessError } from "./roles";
 
+function groupName(raw: string): string {
+  const r = nameSchema.safeParse(raw);
+  if (!r.success) throw new GroupAccessError("INVALID");
+  return r.data;
+}
+
+function groupDescription(raw: string | undefined): string | null {
+  const v = raw?.trim() || null;
+  if (v && v.length > GROUP_DESCRIPTION_MAX) throw new GroupAccessError("INVALID");
+  return v;
+}
+
 export async function createGroup(
   input: { name: string; description?: string },
   ownerId: string,
 ): Promise<{ id: string }> {
-  const name = input.name.trim();
-  if (!name) throw new GroupAccessError("INVALID");
+  const name = groupName(input.name);
   const group = await db.group.create({
     data: {
       name,
-      description: input.description?.trim() || null,
+      description: groupDescription(input.description),
       createdById: ownerId,
       members: { create: { userId: ownerId, role: "OWNER" } },
     },
@@ -70,13 +82,13 @@ export async function updateGroup(
   actor: { id: string },
 ): Promise<void> {
   await requireGroupRole(groupId, actor.id, "ADMIN");
-  await db.group.update({
-    where: { id: groupId },
-    data: {
-      ...(input.name !== undefined ? { name: input.name.trim() } : {}),
-      ...(input.description !== undefined ? { description: input.description.trim() || null } : {}),
-    },
-  });
+  const data = {
+    ...(input.name !== undefined ? { name: groupName(input.name) } : {}),
+    ...(input.description !== undefined
+      ? { description: groupDescription(input.description) }
+      : {}),
+  };
+  await db.group.update({ where: { id: groupId }, data });
   await logEvent({ userId: actor.id, action: "group.updated", entity: "Group", entityId: groupId });
 }
 
@@ -120,12 +132,7 @@ export async function removeMember(
   const actorRole = await requireGroupRole(groupId, actor.id, "ADMIN");
   const target = await getMembership(groupId, targetUserId);
   if (!target) throw new GroupAccessError("NOT_MEMBER");
-  // An ADMIN may only remove members ranked strictly below them (i.e. MEMBERs);
-  // only an OWNER can remove other ADMINs or OWNERs. This mirrors changeMemberRole,
-  // which requires OWNER, so an ADMIN can neither demote nor evict a peer/superior.
-  if (actorRole !== "OWNER" && RANK[target.role] >= RANK[actorRole]) {
-    throw new GroupAccessError("FORBIDDEN");
-  }
+  if (!canRemoveMember(actorRole, target.role)) throw new GroupAccessError("FORBIDDEN");
   if (target.role === "OWNER" && (await countOwners(groupId)) <= 1) {
     throw new GroupAccessError("LAST_OWNER");
   }

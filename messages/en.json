@@ -1168,7 +1168,11 @@
       "deleteAccounts": "{count, plural, one {# bank account} other {# bank accounts}} and their history disappear{shared, plural, =0 {} one {, # of them shared: household members will no longer see it} other {, # of them shared: household members will no longer see them}}.",
       "deleteTransfer": "Household “{group}” will be handed over to {to}.",
       "deleteGroup": "Household “{group}”, of which they are the only member, will be deleted.",
-      "deleteBudgetLines": "Household budget lines that targeted their accounts will no longer be limited to an account."
+      "deleteBudgetLines": "Household budget lines that targeted their accounts will no longer be limited to an account.",
+      "roleConfirmTitle": "Change {user}'s role?",
+      "roleConfirmBody": "{from} → {to}. The change takes effect immediately.",
+      "roleConfirm": "Change role",
+      "roleSuperAdminWarning": "A super admin has every right, including over other administrators and account deletion."
     },
     "signupTokens": {
       "createTitle": "Create a token",
@@ -1326,12 +1330,24 @@
       "saving": "Saving…",
       "saved": "Provider saved.",
       "error": {
-        "INVALID": "Check the fields you entered.",
-        "FAILED": "Save failed."
+        "INVALID": "Check the fields: a lowercase key (letters, digits, - or _), a display name, and for OIDC the issuer and client ID.",
+        "FAILED": "Save failed.",
+        "KEY_EXISTS": "A provider already uses this key. Edit it in the list above.",
+        "NOT_FOUND": "This provider no longer exists.",
+        "SECRET_REQUIRED": "The client secret is required.",
+        "LOCKOUT": "Deletion refused: {count, plural, one {# user would} other {# users would}} be left with no way to sign in.",
+        "TYPE_LOCKED": "A provider's type can't be changed. Create a new one instead.",
+        "GOOGLE_EXISTS": "A Google provider already exists."
       },
       "listOverline": "Sign-in",
       "addOverline": "New",
-      "addHint": "Credentials, OIDC or Google sign-in."
+      "addHint": "Credentials, OIDC or Google sign-in.",
+      "delete": "Delete",
+      "deleting": "Deleting…",
+      "deleteTitle": "Delete the {name} provider?",
+      "deleteBody": "It disappears from the sign-in page. This cannot be undone.",
+      "deleteLinked": "{count, plural, one {# user account is linked} other {# user accounts are linked}} to this provider: those links will be removed.",
+      "deleteLockout": "{count, plural, one {# user would} other {# users would}} be left with no way to sign in (no password, passkey or other enabled provider). Disable this provider instead."
     },
     "audit": {
       "title": "Audit log",
@@ -1435,7 +1451,9 @@
             "delete": "SMTP settings removed"
           },
           "auth_provider": {
-            "update": "Auth provider changed"
+            "update": "Auth provider changed",
+            "create": "Auth provider added",
+            "delete": "Auth provider removed"
           }
         },
         "signup_token": {

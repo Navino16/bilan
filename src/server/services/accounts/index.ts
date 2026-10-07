@@ -6,6 +6,7 @@ import { dataKey, searchKey } from "@/server/crypto/keys";
 import { logEvent } from "@/server/services/audit";
 import { accountInputSchema, type AccountInput } from "@/lib/validation/account";
 import { isValidIban, normalizeIban, maskIban, formatIban } from "./iban";
+import { displayName } from "@/lib/validation/name";
 
 // Thrown for both authorization failures and invalid business input so callers
 // (Server Actions) can map any of them to a single user-facing error state.
@@ -239,7 +240,7 @@ export async function listVisibleForUser(
     ibanMasked: null, // shared viewers never see the IBAN
     access: a.shares.some((s) => s.permission === "WRITE") ? "WRITE" : "READ",
     sharedCount: 0,
-    ownerName: a.owner.name ?? a.owner.email,
+    ownerName: displayName(a.owner),
   }));
 
   return [...ownedView, ...sharedView];

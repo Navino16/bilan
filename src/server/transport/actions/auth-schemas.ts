@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { defaultLocale, locales } from "@/i18n/config";
+import { nameSchema } from "@/lib/validation/name";
 
 // Kept out of the "use server" action file, which may only export async functions.
 
@@ -13,7 +14,7 @@ export const registerSchema = z
     email: z.email(),
     password: z.string().min(12),
     confirmPassword: z.string(),
-    name: z.string().min(1),
+    name: nameSchema,
     invitationToken: z.string().optional(),
     adminToken: z.string().optional(),
   })
