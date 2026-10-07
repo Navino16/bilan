@@ -652,10 +652,14 @@
     "join": "Join",
     "joining": "…",
     "joinTitle": "Join the household",
-    "joinPrompt": "You were invited to join “{group}”.",
     "accept": "Accept invitation",
     "accepting": "…",
     "invalidLink": "This invitation cannot be found, has expired, or was already used.",
+    "joinPromptRole": "You've been invited to join \"{group}\" as {role}.",
+    "joinCodeHint": "The code only works with the account whose address was invited.",
+    "copyLink": "Copy invitation link",
+    "linkCopied": "Link copied",
+    "openGroup": "Open the household",
     "error": {
       "NOT_FOUND": "Invitation not found.",
       "EXPIRED": "This invitation has expired.",
@@ -663,7 +667,10 @@
       "ALREADY_MEMBER": "This person is already in the household.",
       "FORBIDDEN": "Action not allowed.",
       "INVALID": "Check the fields.",
-      "FAILED": "Failed. Please retry."
+      "FAILED": "Failed. Please retry.",
+      "WRONG_ACCOUNT": "This invitation was sent to {email}. Sign in with that account to accept it.",
+      "ALREADY_IN_GROUP": "You're already in this household.",
+      "RATE_LIMITED": "Too many attempts. Please try again later."
     }
   },
   "dashboard": {
