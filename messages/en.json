@@ -112,6 +112,7 @@
       "admin": "Administration"
     },
     "userMenu": {
+      "open": "Account menu",
       "settings": "Settings",
       "logout": "Sign out"
     }

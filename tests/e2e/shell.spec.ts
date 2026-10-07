@@ -56,3 +56,40 @@ test.describe("primary navigation", () => {
     }
   });
 });
+
+// Signs out a throwaway user: logging out a shared storageState would revoke the
+// session the other specs rely on.
+test.describe("user menu", () => {
+  test.skip(
+    ({ browserName }) => browserName === "webkit",
+    "Playwright WebKit doesn't deliver taps in this env (project-wide skip)",
+  );
+
+  test("opens and signs out", async ({ page }) => {
+    const email = `usermenu-${Date.now()}@e2e.local`;
+    await page.goto("/fr/register");
+    await page.fill('input[name="name"]', "E2E Menu");
+    await page.fill('input[name="email"]', email);
+    await page.fill('input[name="password"]', "e2e-usermenu-pw-123");
+    await page.click('button[type="submit"]');
+    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
+
+    const pageErrors: string[] = [];
+    page.on("pageerror", (e) => pageErrors.push(e.message));
+
+    const trigger = page.getByRole("button", { name: "Menu du compte" });
+    await expect(async () => {
+      await trigger.click();
+      await expect(page.getByRole("menuitem", { name: "Se déconnecter" })).toBeVisible({
+        timeout: 5_000,
+      });
+    }).toPass({ timeout: 20_000 });
+    await expect(page.getByRole("menu").getByText(email)).toBeVisible();
+    expect(pageErrors).toEqual([]);
+
+    await page.getByRole("menuitem", { name: "Se déconnecter" }).click();
+    await expect(page).toHaveURL(/\/login$/, { timeout: 15_000 });
+    await page.goto("/fr/dashboard");
+    await expect(page).toHaveURL(/\/login$/);
+  });
+});
