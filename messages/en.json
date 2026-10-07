@@ -285,7 +285,12 @@
       "planned": "Planned amount",
       "add": "Add a line",
       "remove": "Remove",
-      "any": "Any"
+      "anyCategory": "All categories",
+      "anyAccount": "All accounts",
+      "allSpending": "All spending",
+      "otherSpending": "Other spending",
+      "catchAllHint": "An “All categories / All accounts” line takes every expense that no other line matches.",
+      "hidden": "Hidden category or account"
     },
     "plannedTotal": "Planned total",
     "save": "Save",
@@ -299,7 +304,9 @@
       "INVALID_PERIOD": "End must be after start.",
       "FORBIDDEN": "Not allowed.",
       "NOT_FOUND": "Budget not found.",
-      "FAILED": "Failed. Try again."
+      "FAILED": "Failed. Try again.",
+      "PERIOD_MISMATCH": "The dates don't match the selected period type.",
+      "INVALID_LINE": "A line uses a category or account that isn't available for this budget."
     },
     "status": {
       "OK": "On track",
@@ -324,9 +331,11 @@
       "modeEXCLUDE": "Excluded"
     },
     "roll": "Renew",
-    "rolledOk": "Instance created.",
+    "rolledOk": "Budget renewed: {name}, from {start} to {end}.",
     "ended": "Period ended",
-    "subtitle": "Set an envelope by category or account over a period."
+    "subtitle": "Set an envelope by category or account over a period.",
+    "rolledExisting": "The next period already exists.",
+    "rollView": "View"
   },
   "categories": {
     "title": "Categories",

@@ -32,7 +32,8 @@ export function BudgetDetail({
     if (line.label) return line.label;
     if (line.categoryId && categories[line.categoryId]) return categories[line.categoryId];
     if (line.accountId && accounts[line.accountId]) return accounts[line.accountId];
-    return t("line.any");
+    if (line.categoryId || line.accountId) return t("line.hidden");
+    return detail.lines.length > 1 ? t("line.otherSpending") : t("line.allSpending");
   }
 
   return (

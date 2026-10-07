@@ -110,6 +110,51 @@ describe("createBudget", () => {
     );
   });
 
+  it("rejects dates that don't match a typed period", async () => {
+    await expect(
+      createBudget(
+        { ...baseInput, periodType: "YEAR", periodStart: "2025-12-01", periodEnd: "2026-01-31" },
+        { id: owner },
+      ),
+    ).rejects.toMatchObject({ message: "PERIOD_MISMATCH" });
+    await expect(
+      createBudget(
+        { ...baseInput, periodType: "CUSTOM", periodStart: "2025-12-01", periodEnd: "2026-01-31" },
+        { id: owner },
+      ),
+    ).resolves.toHaveProperty("id");
+  });
+
+  it("rejects a line on another user's category or on an account outside the budget scope", async () => {
+    const foreignCat = await db.category.create({ data: { userId: stranger, name: "Privée" } });
+    await expect(
+      createBudget(
+        { ...baseInput, lines: [{ categoryId: foreignCat.id, plannedAmount: 10 }] },
+        { id: owner },
+      ),
+    ).rejects.toMatchObject({ message: "INVALID_LINE" });
+    // The owner's personal account isn't shared with the group.
+    await expect(
+      createBudget(
+        { ...baseInput, groupId, lines: [{ accountId, plannedAmount: 10 }] },
+        { id: owner },
+      ),
+    ).rejects.toMatchObject({ message: "INVALID_LINE" });
+    await db.category.delete({ where: { id: foreignCat.id } });
+
+    // A category of another household the owner belongs to doesn't fit this group budget.
+    const other = await db.group.create({ data: { name: "Autre foyer", createdById: owner } });
+    await db.groupMember.create({ data: { groupId: other.id, userId: owner, role: "OWNER" } });
+    const otherCat = await db.category.create({ data: { groupId: other.id, name: "Ailleurs" } });
+    await expect(
+      createBudget(
+        { ...baseInput, groupId, lines: [{ categoryId: otherCat.id, plannedAmount: 10 }] },
+        { id: owner },
+      ),
+    ).rejects.toMatchObject({ message: "INVALID_LINE" });
+    await db.group.delete({ where: { id: other.id } });
+  });
+
   it("rejects periodEnd before periodStart", async () => {
     await expect(
       createBudget(
@@ -203,6 +248,33 @@ describe("getBudgetDetail / computeLine", () => {
     expect(listed.spentTotal).toBe(75);
     await db.transaction.deleteMany({ where: { accountId } });
     await db.category.deleteMany({ where: { id: { in: [grandChild.id, child.id] } } });
+  });
+
+  it("a catch-all line takes the expenses no other line matches, never income", async () => {
+    await tx("2026-03-03T00:00:00.000Z", -40, catId);
+    await tx("2026-03-04T00:00:00.000Z", -15, null);
+    await tx("2026-03-05T00:00:00.000Z", 2000, null); // income → ignored
+    const { id } = await createBudget(
+      {
+        ...baseInput,
+        lines: [
+          { categoryId: catId, plannedAmount: 100 },
+          { plannedAmount: 500 },
+          { accountId, plannedAmount: 900 },
+        ],
+      },
+      { id: owner },
+    );
+    const detail = await getBudgetDetail(id, owner);
+    // The account line takes both expenses and no income; the catch-all only what no line matched.
+    expect(detail.lines.map((l) => l.spent)).toEqual([40, 0, 55]);
+    expect(detail.spentTotal).toBe(55);
+
+    const alone = await createBudget(
+      { ...baseInput, lines: [{ plannedAmount: 500 }] },
+      { id: owner },
+    );
+    expect((await getBudgetDetail(alone.id, owner)).lines[0].spent).toBe(55);
   });
 
   it("EXCLUDE removes a matching tx; INCLUDE adds a non-matching one", async () => {
@@ -335,6 +407,15 @@ describe("rollRecurring", () => {
     expect(
       await db.budget.count({ where: { parentBudgetId: id, periodStart: instance.periodStart } }),
     ).toBe(1);
+  });
+
+  it("lists an ended recurring budget as rollable until its next instance exists", async () => {
+    const { id } = await createBudget({ ...baseInput, recurring: true }, { id: owner });
+    const before = (await listBudgetsForUser(owner)).find((b) => b.id === id)!;
+    expect(before.rollable).toBe(true);
+    await rollRecurring(id, { id: owner });
+    const after = (await listBudgetsForUser(owner)).find((b) => b.id === id)!;
+    expect(after.rollable).toBe(false);
   });
 
   it("rejects rolling a non-recurring budget", async () => {

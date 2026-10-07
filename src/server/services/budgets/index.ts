@@ -4,12 +4,17 @@ import { requireGroupRole } from "@/server/services/groups/roles";
 import { logEvent } from "@/server/services/audit";
 import { listVisibleForUser } from "@/server/services/accounts";
 import { canReadAccount } from "@/server/services/accounts/sharing";
-import { withDescendants } from "@/server/services/categories";
+import {
+  assertCategoryAssignable,
+  CategoryAccessError,
+  withDescendants,
+} from "@/server/services/categories";
 import { collapseLinkedRows } from "@/lib/links";
 import {
   budgetPlannedTotal,
   lineStatus,
   nextPeriod,
+  periodEndFor,
   round2,
   type BudgetStatus,
   type LineStatus,
@@ -57,11 +62,53 @@ async function assertCanManageScope(groupId: string | undefined, actorId: string
   }
 }
 
-function utcBounds(startDay: string, endDay: string): { start: Date; end: Date } {
+function utcBounds(
+  periodType: BudgetPeriodType,
+  startDay: string,
+  endDay: string,
+): { start: Date; end: Date } {
   const start = new Date(`${startDay}T00:00:00.000Z`);
   const end = new Date(`${endDay}T23:59:59.999Z`);
   if (end.getTime() < start.getTime()) throw new BudgetAccessError("INVALID_PERIOD");
+  if (periodType !== "CUSTOM" && periodEndFor(periodType, startDay) !== endDay) {
+    throw new BudgetAccessError("PERIOD_MISMATCH");
+  }
   return { start, end };
+}
+
+// Lines may only reference accounts the budget draws from, and categories the
+// actor may use: their own or, for a group budget, that group's (#155). Ids kept
+// from the budget's current lines stay valid, so another admin can still edit it.
+async function assertLinesInScope(
+  lines: { categoryId?: string; accountId?: string }[],
+  scope: { userId: string | null; groupId: string | null },
+  actorId: string,
+  current: { categoryId: string | null; accountId: string | null }[] = [],
+): Promise<void> {
+  const keptCategories = new Set(current.map((l) => l.categoryId));
+  const keptAccounts = new Set(current.map((l) => l.accountId));
+  const categoryIds = [
+    ...new Set(lines.flatMap((l) => (l.categoryId ? [l.categoryId] : []))),
+  ].filter((id) => !keptCategories.has(id));
+  for (const id of categoryIds) {
+    try {
+      await assertCategoryAssignable(id, actorId);
+    } catch (e) {
+      if (e instanceof CategoryAccessError) throw new BudgetAccessError("INVALID_LINE");
+      throw e;
+    }
+    if (scope.groupId) {
+      const cat = await db.category.findUnique({ where: { id }, select: { groupId: true } });
+      if (cat?.groupId && cat.groupId !== scope.groupId)
+        throw new BudgetAccessError("INVALID_LINE");
+    }
+  }
+  const accountIds = lines.flatMap((l) =>
+    l.accountId && !keptAccounts.has(l.accountId) ? [l.accountId] : [],
+  );
+  if (accountIds.length === 0) return;
+  const allowed = new Set(await budgetAccountIds(scope));
+  if (accountIds.some((id) => !allowed.has(id))) throw new BudgetAccessError("INVALID_LINE");
 }
 
 export async function createBudget(
@@ -70,7 +117,12 @@ export async function createBudget(
 ): Promise<{ id: string }> {
   const data = parseInput(input);
   await assertCanManageScope(data.groupId, actor.id);
-  const { start, end } = utcBounds(data.periodStart, data.periodEnd);
+  const { start, end } = utcBounds(data.periodType, data.periodStart, data.periodEnd);
+  await assertLinesInScope(
+    data.lines,
+    { userId: data.groupId ? null : actor.id, groupId: data.groupId ?? null },
+    actor.id,
+  );
 
   const budget = await db.budget.create({
     data: {
@@ -123,9 +175,14 @@ export async function updateBudget(
   input: BudgetInput,
   actor: { id: string },
 ): Promise<void> {
-  await manageableOrThrow(id, actor.id);
+  const existing = await manageableOrThrow(id, actor.id);
   const data = parseInput(input);
-  const { start, end } = utcBounds(data.periodStart, data.periodEnd);
+  const { start, end } = utcBounds(data.periodType, data.periodStart, data.periodEnd);
+  const current = await db.budgetLine.findMany({
+    where: { budgetId: id },
+    select: { categoryId: true, accountId: true },
+  });
+  await assertLinesInScope(data.lines, existing, actor.id, current);
   // Scope (user vs group) is immutable here — recreate to move it.
   await db.$transaction([
     db.budgetLine.deleteMany({ where: { budgetId: id } }),
@@ -178,6 +235,7 @@ export type BudgetListItem = {
   percent: number;
   status: BudgetStatus;
   ended: boolean; // period is over (eligible for a recurring roll)
+  rollable: boolean; // recurring, ended, manageable and its next instance doesn't exist yet
   canManage: boolean; // actor may edit/delete/roll (own, or ADMIN+ of the group)
 };
 
@@ -201,6 +259,15 @@ export async function listBudgetsForUser(userId: string): Promise<BudgetListItem
   const subtrees = await withDescendants(lineCategoryIds(rows));
   const spends = await Promise.all(rows.map((b) => computeBudgetSpend(b, accountCache, subtrees)));
   const now = Date.now();
+  const rollable = await Promise.all(
+    rows.map(
+      async (b) =>
+        b.recurring &&
+        b.periodEnd.getTime() < now &&
+        canManageBudget(b.groupId, roleByGroup) &&
+        !(await nextInstanceExists(b)),
+    ),
+  );
   return rows.map((b, i) => {
     const plannedTotal = budgetPlannedTotal(
       b.lines.map((l) => ({ plannedAmount: Number(l.plannedAmount) })),
@@ -220,6 +287,7 @@ export async function listBudgetsForUser(userId: string): Promise<BudgetListItem
       percent,
       status,
       ended: b.periodEnd.getTime() < now,
+      rollable: rollable[i],
       canManage: canManageBudget(b.groupId, roleByGroup),
     };
   });
@@ -266,6 +334,23 @@ async function budgetAccountIds(budget: {
   }
   if (!budget.userId) return [];
   return (await listVisibleForUser(budget.userId)).map((a) => a.id);
+}
+
+export type BudgetAccountOption = { id: string; name: string; groupIds: string[] };
+
+// The user's active accounts with the groups each is shared with: a personal
+// budget may use any of them, a group budget only those shared with it.
+export async function listBudgetAccountOptions(userId: string): Promise<BudgetAccountOption[]> {
+  const accounts = (await listVisibleForUser(userId)).filter((a) => !a.archived);
+  const { groupIds } = await budgetScopeForUser(userId);
+  const shares = await db.accountShare.findMany({
+    where: { accountId: { in: accounts.map((a) => a.id) }, groupId: { in: groupIds } },
+    select: { accountId: true, groupId: true },
+  });
+  const groupsOf = new Map<string, string[]>();
+  for (const sh of shares)
+    groupsOf.set(sh.accountId, [...(groupsOf.get(sh.accountId) ?? []), sh.groupId]);
+  return accounts.map((a) => ({ id: a.id, name: a.name, groupIds: groupsOf.get(a.id) ?? [] }));
 }
 
 type AccountScopeCache = Map<string, Promise<string[]>>;
@@ -357,14 +442,32 @@ type LineMatcher = {
 };
 
 // A line auto-matches a row by its category (itself or any descendant) and/or
-// account filter. A line with neither filter auto-matches nothing (spend comes
-// only from INCLUDE).
+// account. Without a category it only takes expenses, so income never counts as
+// negative spending. A line with neither filter is the catch-all (see below).
 function matchesLine(r: BudgetRow, line: LineMatcher): boolean {
   if (line.categoryIds == null && line.accountId == null) return false;
+  if (line.categoryIds == null && r.amount >= 0) return false;
   if (line.categoryIds != null && (r.categoryId == null || !line.categoryIds.has(r.categoryId)))
     return false;
   if (line.accountId != null && r.accountId !== line.accountId) return false;
   return true;
+}
+
+// Lines a row counts toward: the most specific matching category lines win
+// (#154); a row no line matches falls to the catch-all lines if it's an expense.
+function matchingLines(r: BudgetRow, filters: LineMatcher[]): number[] {
+  const matched = filters.flatMap((f, i) => (matchesLine(r, f) ? [i] : []));
+  if (matched.length === 0) {
+    if (r.amount >= 0) return [];
+    return filters.flatMap((f, i) => (f.categoryIds == null && f.accountId == null ? [i] : []));
+  }
+  return matched.filter((i) => {
+    const outer = filters[i];
+    return !matched.some((j) => {
+      const inner = filters[j].categoryId;
+      return inner != null && inner !== outer.categoryId && !!outer.categoryIds?.has(inner);
+    });
+  });
 }
 
 export type BudgetDetail = {
@@ -385,18 +488,6 @@ export type BudgetDetail = {
   plannedTotal: number;
   spentTotal: number;
 };
-
-// Among the lines a row matches, drops those whose category is an ancestor of
-// another matched line's: the most specific category line wins (#154).
-function mostSpecific(matched: number[], filters: LineMatcher[]): number[] {
-  return matched.filter((i) => {
-    const outer = filters[i];
-    return !matched.some((j) => {
-      const inner = filters[j].categoryId;
-      return inner != null && inner !== outer.categoryId && !!outer.categoryIds?.has(inner);
-    });
-  });
-}
 
 // Per-line sums for display + a budget-wide dedup sum for the total: a tx that
 // matches several lines is counted once in the total; an INCLUDE'd tx that
@@ -430,10 +521,7 @@ async function computeBudgetSpend(
   let totalSum = 0;
   for (const r of collapsed) {
     if (excluded.has(r.id)) continue;
-    const matchedIdx = mostSpecific(
-      filters.flatMap((f, i) => (matchesLine(r, f) ? [i] : [])),
-      filters,
-    );
+    const matchedIdx = matchingLines(r, filters);
     if (matchedIdx.length === 0 && !includedIds.has(r.id)) continue; // not in this budget
     totalSum += r.amount; // counted once toward the total
     if (matchedIdx.length > 0) {
@@ -555,8 +643,21 @@ export async function listAssignmentsForTx(
   });
 }
 
-// Creates the next-period instance of a recurring budget (copies scope + lines,
-// links parentBudgetId). Idempotent: no-op if that next instance already exists.
+async function nextInstanceExists(b: {
+  id: string;
+  parentBudgetId: string | null;
+  periodType: string;
+  periodStart: Date;
+  periodEnd: Date;
+}): Promise<boolean> {
+  const period = nextPeriod(b.periodType as BudgetPeriodType, b.periodStart, b.periodEnd);
+  const existing = await db.budget.findFirst({
+    where: { parentBudgetId: b.parentBudgetId ?? b.id, periodStart: period.start },
+    select: { id: true },
+  });
+  return existing != null;
+}
+
 // Core roll: create the next-period instance of a recurring budget if it doesn't
 // already exist (idempotent). `createdById` owns the new row; `auditUserId` is the
 // acting user (null for the system cron → anonymous audit).
@@ -568,12 +669,7 @@ async function rollFrom(
   if (!b.recurring) throw new BudgetAccessError("NOT_RECURRING");
   const template = b.parentBudgetId ?? b.id; // chain instances off the original template
   const period = nextPeriod(b.periodType as BudgetPeriodType, b.periodStart, b.periodEnd);
-
-  const existing = await db.budget.findFirst({
-    where: { parentBudgetId: template, periodStart: period.start },
-    select: { id: true },
-  });
-  if (existing) return { created: false };
+  if (await nextInstanceExists(b)) return { created: false };
 
   const lines = await db.budgetLine.findMany({ where: { budgetId: b.id } });
   const instance = await db.budget.create({
@@ -639,13 +735,7 @@ export async function listRollableTemplates(now: Date): Promise<{ id: string }[]
   });
   const rollable: { id: string }[] = [];
   for (const b of ended) {
-    const template = b.parentBudgetId ?? b.id;
-    const period = nextPeriod(b.periodType as BudgetPeriodType, b.periodStart, b.periodEnd);
-    const existing = await db.budget.findFirst({
-      where: { parentBudgetId: template, periodStart: period.start },
-      select: { id: true },
-    });
-    if (!existing) rollable.push({ id: b.id });
+    if (!(await nextInstanceExists(b))) rollable.push({ id: b.id });
   }
   return rollable;
 }
