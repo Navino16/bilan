@@ -44,6 +44,16 @@ test.describe("import wizard", () => {
     await expect(
       page.locator('[data-slot="transaction-row"]').filter({ hasText: "ACME STORE" }).first(),
     ).toBeVisible();
+
+    // Undo it, so a rerun doesn't meet its rows as duplicates (nothing to import).
+    await page.goto("/fr/import");
+    const row = page.locator('[data-slot="import-history-row"]', { hasText: "statement.pdf" });
+    await expect(async () => {
+      await row.first().getByRole("button").click();
+      await page.getByRole("menuitem", { name: /annuler l'import/i }).click({ timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
+    await page.getByRole("button", { name: /supprimer les transactions/i }).click();
+    await expect(row.first()).toContainText("Annulé", { timeout: 15_000 });
   });
 
   test("legacy /import/pdf redirects to the unified wizard", async ({ page }) => {

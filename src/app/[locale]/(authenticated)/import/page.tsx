@@ -25,7 +25,7 @@ export default async function ImportPage({ params }: { params: Promise<{ locale:
     <ImportWizard
       accounts={accounts}
       categories={categories}
-      history={<ImportHistory items={history} locale={locale} />}
+      history={<ImportHistory items={history} />}
     />
   );
 }

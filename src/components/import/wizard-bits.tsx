@@ -10,7 +10,10 @@ export function Stepper({ steps, current }: { steps: string[]; current: number }
     <div className="border-border bg-card flex items-center rounded-xl border px-3.5 py-3 shadow-sm">
       {steps.map((label, i) => (
         <div key={label} className="flex flex-1 items-center last:flex-none">
-          <div className={cn("flex items-center gap-2", i > current && "opacity-45")}>
+          <div
+            className="flex items-center gap-2"
+            aria-current={i === current ? "step" : undefined}
+          >
             <span
               className={cn(
                 "flex size-[22px] items-center justify-center rounded-full font-mono text-[11px] font-semibold",
@@ -18,7 +21,7 @@ export function Stepper({ steps, current }: { steps: string[]; current: number }
                   ? "bg-primary text-primary-foreground"
                   : i === current
                     ? "bg-foreground text-background"
-                    : "bg-muted text-muted-foreground",
+                    : "border-border text-muted-foreground border",
               )}
             >
               {i < current ? <Check className="size-3" strokeWidth={3} /> : i + 1}

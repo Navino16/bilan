@@ -21,7 +21,7 @@ const PRODUCTS = [
   },
 ];
 
-async function seedBatch(): Promise<string> {
+async function seedBatch(products = PRODUCTS): Promise<string> {
   const b = await db.importBatch.create({
     data: {
       accountId: courantId,
@@ -29,7 +29,7 @@ async function seedBatch(): Promise<string> {
       filename: "revolut.pdf",
       status: "REVIEW",
       createdById: owner,
-      metadata: { bank: "revolut", products: PRODUCTS } as never,
+      metadata: { bank: "revolut", products } as never,
     },
   });
   return b.id;
@@ -56,6 +56,31 @@ afterAll(async () => {
 });
 
 describe("PDF import pipeline", () => {
+  it("pages each product's preview independently", async () => {
+    const rows = Array.from({ length: 70 }, (_, i) => ({
+      date: "2025-02-03T00:00:00.000Z",
+      amount: -(i + 1),
+      rawLabel: `CB PDF PAGE ${i}`,
+    }));
+    const b = await db.importBatch.create({
+      data: {
+        accountId: courantId,
+        source: "PDF",
+        filename: "long.pdf",
+        status: "REVIEW",
+        createdById: owner,
+        metadata: { bank: null, products: [{ key: "compte", rows }, PRODUCTS[1]] } as never,
+      },
+    });
+    const p = await previewPdfBatch(b.id, owner, { pages: { compte: 1 } });
+    const [compte, depot] = p.products;
+    expect(compte.totalRows).toBe(70);
+    expect(compte.page).toBe(1);
+    expect(compte.preview).toHaveLength(20);
+    expect(compte.preview[0].rawLabel).toBe("CB PDF PAGE 50");
+    expect(depot.page).toBe(0);
+  });
+
   it("forbids preview for a user who cannot write the account", async () => {
     const id = await seedBatch();
     await expect(previewPdfBatch(id, stranger)).rejects.toBeInstanceOf(ImportAccessError);
@@ -94,6 +119,35 @@ describe("PDF import pipeline", () => {
     const id = await seedBatch();
     await expect(commitPdfBatch(id, { compte: "nope" }, { id: owner })).rejects.toBeInstanceOf(
       ImportAccessError,
+    );
+  });
+
+  it("flags duplicates against the account each product is mapped to", async () => {
+    const own = [
+      PRODUCTS[0],
+      {
+        key: "depot",
+        rows: [{ date: "2025-03-10T00:00:00.000Z", amount: 7, rawLabel: "VERSEMENT DEDUP" }],
+      },
+    ];
+    const id = await seedBatch(own);
+    await commitPdfBatch(id, { depot: depotId }, { id: owner });
+    const again = await seedBatch(own);
+    const onUpload = await previewPdfBatch(again, owner);
+    expect(onUpload.products[1].duplicateCount).toBe(0);
+    const mapped = await previewPdfBatch(again, owner, { accounts: { depot: depotId } });
+    expect(mapped.products[1].duplicateCount).toBe(1);
+    expect(mapped.products[1].preview[0].isDuplicate).toBe(true);
+    await expect(previewPdfBatch(id, owner)).rejects.toThrow("NOT_COMMITTABLE");
+  });
+
+  it("refuses a preview mapped to an account the actor cannot write", async () => {
+    const foreign = await db.bankAccount.create({
+      data: { ownerId: stranger, name: "Autre", type: "CHECKING" },
+    });
+    const id = await seedBatch();
+    await expect(previewPdfBatch(id, owner, { accounts: { depot: foreign.id } })).rejects.toThrow(
+      "FORBIDDEN",
     );
   });
 });

@@ -3,12 +3,13 @@ import { db } from "@/server/db";
 import { canWriteAccount } from "@/server/services/accounts/sharing";
 import { logEvent } from "@/server/services/audit";
 import { insertRows, finalizeBatch, type CommitOptions, type InsertTotals } from "./commit";
-import { buildPreview } from "./preview";
+import { buildPreview, PREVIEW_PAGE_SIZE } from "./preview";
 // Static import → pdfjs/pdf-parse stay externalized (next.config serverExternalPackages),
 // so the pdfjs worker resolves. Only the PDF route imports this module, so the CSV
 // path never loads pdfjs.
 import { parsePdf, type BankKey } from "./pdf";
-import { loadBatch, withCommitClaim, ImportAccessError } from "./index";
+import { loadBatch, withCommitClaim } from "./index";
+import { ImportAccessError } from "./errors";
 import type { CommitSummary, PreviewRow } from "./types";
 
 type PdfMetaRow = { date: string; amount: number; rawLabel: string };
@@ -19,6 +20,8 @@ export type PdfPreviewProduct = {
   duplicateCount: number;
   autoCategorizedCount: number;
   preview: PreviewRow[];
+  page: number;
+  pageSize: number;
 };
 export type PdfPreview = {
   batchId: string;
@@ -44,6 +47,7 @@ export async function createPdfBatch(
     })),
   }));
   const total = metaProducts.reduce((n, p) => n + p.rows.length, 0);
+  if (total === 0) throw new ImportAccessError("EMPTY");
   const batch = await db.importBatch.create({
     data: {
       accountId: input.accountId,
@@ -82,8 +86,20 @@ function readPdfMeta(meta: unknown): {
   };
 }
 
-export async function previewPdfBatch(batchId: string, userId: string): Promise<PdfPreview> {
+// `accounts` is the wizard's product → account choice: duplicates are what the
+// commit will skip, so they're looked up in the account each product goes to.
+export async function previewPdfBatch(
+  batchId: string,
+  userId: string,
+  opts: { pages?: Record<string, number>; accounts?: Record<string, string> } = {},
+): Promise<PdfPreview> {
   const batch = await loadBatch(batchId, userId);
+  if (batch.source !== "PDF" || batch.status !== "REVIEW") {
+    throw new ImportAccessError("NOT_COMMITTABLE");
+  }
+  for (const id of new Set(Object.values(opts.accounts ?? {}).filter(Boolean))) {
+    if (!(await canWriteAccount(userId, id))) throw new ImportAccessError("FORBIDDEN");
+  }
   const { bank, products, fileSizeBytes } = readPdfMeta(batch.metadata);
   const previewed: PdfPreviewProduct[] = await Promise.all(
     products.map(async (p) => {
@@ -92,13 +108,20 @@ export async function previewPdfBatch(batchId: string, userId: string): Promise<
         amount: r.amount,
         rawLabel: r.rawLabel,
       }));
-      const built = await buildPreview(batch.accountId, rows, userId);
+      const built = await buildPreview(
+        opts.accounts?.[p.key] || batch.accountId,
+        rows,
+        userId,
+        opts.pages?.[p.key] ?? 0,
+      );
       return {
         key: p.key,
         totalRows: built.totalRows,
         duplicateCount: built.duplicateCount,
         autoCategorizedCount: built.autoCategorizedCount,
         preview: built.rows,
+        page: built.page,
+        pageSize: PREVIEW_PAGE_SIZE,
       };
     }),
   );
@@ -133,7 +156,12 @@ export async function commitPdfBatch(
         amount: r.amount,
         rawLabel: r.rawLabel,
       }));
-      const r = await insertRows({ batchId: batch.id, accountId }, rows, actor, opts);
+      const r = await insertRows(
+        { batchId: batch.id, accountId, progressOffset: totals.imported },
+        rows,
+        actor,
+        opts,
+      );
       totals.imported += r.imported;
       totals.skipped += r.skipped;
       totals.total += r.total;

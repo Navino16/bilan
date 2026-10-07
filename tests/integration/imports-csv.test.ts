@@ -6,6 +6,7 @@ import {
   createCsvBatch,
   previewCsvBatch,
   commitCsvBatch,
+  getCommitProgress,
   ImportAccessError,
 } from "@/server/services/imports";
 
@@ -16,6 +17,8 @@ let accountId: string;
 const CSV = `Date;Libellé;Débit;Crédit
 05/03/2026;CB CARREFOUR CITY;82,37;
 06/03/2026;VIR SEPA SALAIRE;;2450,00`;
+// Same shape as CSV with rows of its own, so a test isn't refused as a re-import.
+const freshCsv = (tag: string) => CSV.replace(/(CARREFOUR CITY|SALAIRE)/g, `$1 ${tag}`);
 
 beforeAll(async () => {
   await db.user.deleteMany({ where: { id: { in: [owner, stranger] } } });
@@ -80,15 +83,83 @@ describe("CSV import pipeline", () => {
     expect(updated.importedRows).toBe(2);
   });
 
-  it("dedups a re-import of the same file: 0 imported, all skipped", async () => {
+  it("refuses a re-import of the same file: nothing to import, the batch stays in review", async () => {
     const batch = await createCsvBatch(
       { accountId, filename: "march3.csv", text: CSV },
       { id: owner },
     );
     const preview = await previewCsvBatch(batch.id, owner);
+    expect(preview.duplicateCount).toBe(2);
+    expect(preview.preview.every((r) => r.isDuplicate)).toBe(true);
+    await expect(commitCsvBatch(batch.id, preview.mapping, { id: owner })).rejects.toThrow(
+      "NOTHING_TO_IMPORT",
+    );
+    const after = await db.importBatch.findUniqueOrThrow({ where: { id: batch.id } });
+    expect(after.status).toBe("REVIEW");
+  });
+
+  it("refuses a commit whose rows were all unchecked", async () => {
+    const csv = `Date;Libellé;Débit;Crédit
+12/04/2026;CB ALL OFF;3,00;`;
+    const batch = await createCsvBatch(
+      { accountId, filename: "off.csv", text: csv },
+      { id: owner },
+    );
+    const preview = await previewCsvBatch(batch.id, owner);
+    await expect(
+      commitCsvBatch(
+        batch.id,
+        preview.mapping,
+        { id: owner },
+        { excludedIds: preview.preview.map((r) => r.externalId) },
+      ),
+    ).rejects.toThrow("NOTHING_TO_IMPORT");
+  });
+
+  it("pages the preview, counting over every row", async () => {
+    const lines = Array.from(
+      { length: 120 },
+      (_, i) => `${String(1 + (i % 28)).padStart(2, "0")}/01/2024;CB PAGE ${i};${i + 1},00;`,
+    );
+    const text = `Date;Libellé;Débit;Crédit\n${lines.join("\n")}`;
+    const batch = await createCsvBatch({ accountId, filename: "pages.csv", text }, { id: owner });
+    const first = await previewCsvBatch(batch.id, owner);
+    expect(first.totalRows).toBe(120);
+    expect(first.pageSize).toBe(50);
+    expect(first.preview).toHaveLength(50);
+    expect(first.preview[0].rawLabel).toBe("CB PAGE 0");
+
+    const last = await previewCsvBatch(batch.id, owner, first.mapping, 2);
+    expect(last.page).toBe(2);
+    expect(last.preview.map((r) => r.rawLabel)).toEqual(
+      Array.from({ length: 20 }, (_, i) => `CB PAGE ${100 + i}`),
+    );
+    const clamped = await previewCsvBatch(batch.id, owner, first.mapping, 99);
+    expect(clamped.page).toBe(2);
+  });
+
+  it("commits more rows than one insert chunk, each with its search tokens", async () => {
+    const lines = Array.from(
+      { length: 1203 },
+      (_, i) => `${String(1 + (i % 28)).padStart(2, "0")}/02/2024;CB CHUNK ROW${i};1,00;`,
+    );
+    const text = `Date;Libellé;Débit;Crédit\n${lines.join("\n")}`;
+    const batch = await createCsvBatch({ accountId, filename: "chunks.csv", text }, { id: owner });
+    const preview = await previewCsvBatch(batch.id, owner);
     const summary = await commitCsvBatch(batch.id, preview.mapping, { id: owner });
-    expect(summary.importedRows).toBe(0);
-    expect(summary.skippedRows).toBe(2);
+    expect(summary.importedRows).toBe(1203);
+
+    const rows = await db.transaction.findMany({
+      where: { importBatchId: batch.id },
+      select: { _count: { select: { searchTokens: true } } },
+    });
+    expect(rows).toHaveLength(1203);
+    expect(rows.every((r) => r._count.searchTokens > 0)).toBe(true);
+    expect(await getCommitProgress(batch.id, owner)).toEqual({
+      status: "COMPLETED",
+      importedRows: 1203,
+    });
+    await expect(getCommitProgress(batch.id, stranger)).rejects.toThrow("FORBIDDEN");
   });
 
   it("honours per-row edits: category override + excluded row", async () => {
@@ -237,21 +308,21 @@ pas une date;X;-1,00;Carte`;
 
   it("trims the raw CSV text from metadata once committed", async () => {
     const batch = await createCsvBatch(
-      { accountId, filename: "trim.csv", text: CSV },
+      { accountId, filename: "trim.csv", text: freshCsv("TRIM") },
       { id: owner },
     );
     const preview = await previewCsvBatch(batch.id, owner);
     await commitCsvBatch(batch.id, preview.mapping, { id: owner });
     const row = await db.importBatch.findUniqueOrThrow({ where: { id: batch.id } });
     expect(row.metadata).toEqual({
-      fileSizeBytes: Buffer.byteLength(CSV),
+      fileSizeBytes: Buffer.byteLength(freshCsv("TRIM")),
       accountIds: [accountId],
     });
   });
 
   it("refuses to commit a batch twice", async () => {
     const batch = await createCsvBatch(
-      { accountId, filename: "twice.csv", text: CSV },
+      { accountId, filename: "twice.csv", text: freshCsv("TWICE") },
       { id: owner },
     );
     const preview = await previewCsvBatch(batch.id, owner);

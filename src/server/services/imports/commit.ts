@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import {
@@ -7,6 +8,7 @@ import {
 import { recordHits, suggestMany } from "@/server/services/categorization";
 import { trimBatchMetadata } from "@/lib/import-status";
 import { deriveType } from "./derive-type";
+import { ImportAccessError } from "./errors";
 import type { CommitSummary, NormalizedRow } from "./types";
 
 // Dedups against existing `(accountId, externalId)` rows (and in-file dupes),
@@ -29,8 +31,10 @@ export type InsertTotals = {
   hitRuleIds: string[];
 };
 
+const INSERT_CHUNK = 500;
+
 export async function insertRows(
-  target: { batchId: string; accountId: string },
+  target: { batchId: string; accountId: string; progressOffset?: number },
   rows: NormalizedRow[],
   actor: { id: string },
   opts: CommitOptions = {},
@@ -58,9 +62,8 @@ export async function insertRows(
     : new Set<string>();
 
   const externalIds = computeExternalIds(rows);
-  const withIds = rows.map((r, i) => ({ row: r, externalId: externalIds[i] }));
   const existing = await db.transaction.findMany({
-    where: { accountId: target.accountId, externalId: { in: withIds.map((w) => w.externalId) } },
+    where: { accountId: target.accountId, externalId: { in: externalIds } },
     select: { externalId: true },
   });
   const seen = new Set(existing.map((e) => e.externalId));
@@ -71,10 +74,15 @@ export async function insertRows(
       )
     : null;
 
-  let imported = 0;
   let skipped = 0;
-  const hitRuleIds: string[] = [];
-  for (const [i, { row, externalId }] of withIds.entries()) {
+  const pending: {
+    data: Prisma.TransactionCreateManyInput;
+    externalId: string;
+    tokens: string[];
+    ruleId: string | null;
+  }[] = [];
+  for (const [i, row] of rows.entries()) {
+    const externalId = externalIds[i];
     if (excluded.has(externalId)) continue; // user unchecked this row in the preview
     if (seen.has(externalId)) {
       skipped++;
@@ -90,8 +98,7 @@ export async function insertRows(
         ? rawOverride
         : undefined;
     const suggestion = override === undefined ? suggestions?.[i] : null;
-    const categoryId = override || suggestion?.categoryId || null;
-    await db.transaction.create({
+    pending.push({
       data: {
         accountId: target.accountId,
         date: row.date,
@@ -102,17 +109,41 @@ export async function insertRows(
         rawLabelEnc: secure.rawLabelEnc,
         rawLabelHash: secure.rawLabelHash,
         noteEnc: null,
-        categoryId,
+        categoryId: override || suggestion?.categoryId || null,
         manuallyCategorized: override !== undefined,
         externalId,
         importBatchId: target.batchId,
         createdById: actor.id,
-        searchTokens: { create: secure.tokens.map((tokenHash) => ({ tokenHash })) },
       },
+      externalId,
+      tokens: secure.tokens,
+      ruleId: suggestion?.ruleId ?? null,
     });
-    imported++;
-    if (suggestion?.ruleId) hitRuleIds.push(suggestion.ruleId);
   }
+
+  // createMany returns no ids, so each chunk's ids are read back through the
+  // (accountId, externalId) unique key to attach the search tokens.
+  let imported = 0;
+  for (let start = 0; start < pending.length; start += INSERT_CHUNK) {
+    const chunk = pending.slice(start, start + INSERT_CHUNK);
+    await db.transaction.createMany({ data: chunk.map((p) => p.data) });
+    const created = await db.transaction.findMany({
+      where: { accountId: target.accountId, externalId: { in: chunk.map((p) => p.externalId) } },
+      select: { id: true, externalId: true },
+    });
+    const idOf = new Map(created.map((c) => [c.externalId, c.id]));
+    await db.transactionSearchToken.createMany({
+      data: chunk.flatMap((p) =>
+        p.tokens.map((tokenHash) => ({ transactionId: idOf.get(p.externalId)!, tokenHash })),
+      ),
+    });
+    imported += chunk.length;
+    await db.importBatch.update({
+      where: { id: target.batchId },
+      data: { importedRows: (target.progressOffset ?? 0) + imported },
+    });
+  }
+  const hitRuleIds = pending.flatMap((p) => (p.ruleId ? [p.ruleId] : []));
   return { imported, skipped, total: rows.length, hitRuleIds };
 }
 
@@ -124,12 +155,14 @@ function countHits(ruleIds: string[]): Record<string, number> {
 
 // Finalizes an ImportBatch after inserts: sets COMPLETED + counters, audit-logs.
 // Rule hits commit with the status so a rolled-back commit can't count them twice.
+// A commit that imports nothing fails, so no empty, undoable batch lands in the history.
 export async function finalizeBatch(
   batchId: string,
   totals: InsertTotals,
   actor: { id: string },
   accountIds: string[],
 ): Promise<CommitSummary> {
+  if (totals.imported === 0) throw new ImportAccessError("NOTHING_TO_IMPORT");
   const { metadata } = await db.importBatch.findUniqueOrThrow({
     where: { id: batchId },
     select: { metadata: true },

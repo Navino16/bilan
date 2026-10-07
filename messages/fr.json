@@ -536,13 +536,11 @@
       "validate": "Validation"
     },
     "fileSection": "Fichier",
-    "fileMeta": "{count} lignes · {size}",
+    "fileMeta": "{count, plural, one {# ligne} other {# lignes}} · {size}",
     "options": "Options",
-    "optDuplicates": "Détecter les doublons",
     "optCategorize": "Catégoriser automatiquement",
-    "optLinks": "Suggérer des liens",
     "previewTitle": "Aperçu — {count, plural, one {# transaction} other {# transactions}}",
-    "previewMeta": "{dup} doublons potentiels · {cat} catégorisées automatiquement",
+    "previewMeta": "{dup, plural, one {# doublon potentiel} other {# doublons potentiels}} · {cat, plural, one {# catégorisée automatiquement} other {# catégorisées automatiquement}}",
     "validate": "Valider l'import",
     "cancel": "Annuler",
     "include": "Inclure cette ligne",
@@ -568,7 +566,7 @@
     "rowsDetected": "{count, plural, one {# ligne détectée} other {# lignes détectées}}",
     "commit": "Importer",
     "importing": "Import en cours…",
-    "summary": "{imported} importées · {skipped} ignorées (doublons)",
+    "summary": "{imported, plural, one {# importée} other {# importées}} · {skipped, plural, one {# ignorée} other {# ignorées}} (doublons)",
     "viewTransactions": "Voir les transactions",
     "pdfDrop": "Déposez un relevé PDF ici, ou cliquez pour parcourir.",
     "bankDetected": "Banque détectée : {bank}",
@@ -576,7 +574,6 @@
     "supportedBanks": "Banques prises en charge : {list}",
     "targetAccount": "Compte de destination",
     "ignoreProduct": "Ne pas importer",
-    "moreRows": "… et {count} autres lignes seront importées (aperçu limité).",
     "banks": {
       "revolut": "Revolut",
       "lcl": "LCL"
@@ -589,18 +586,22 @@
     "error": {
       "INVALID": "Vérifiez le fichier et le compte.",
       "BAD_TYPE": "Format de fichier non supporté.",
-      "TOO_LARGE": "Fichier trop volumineux (5 Mo max).",
+      "TOO_LARGE": "Fichier trop volumineux ({max} max).",
       "FORBIDDEN": "Action non autorisée.",
       "PARSE_FAILED": "Impossible de lire le fichier.",
       "COMMIT_FAILED": "Échec de l'import. Réessayez.",
       "NOT_COMMITTABLE": "Cet import a déjà été validé ou annulé.",
-      "INVALID_MAPPING": "Choisissez au moins la date, le libellé et un montant (ou débit / crédit)."
+      "INVALID_MAPPING": "Choisissez au moins la date, le libellé et un montant (ou débit / crédit).",
+      "UNAUTHORIZED": "Votre session a expiré. Reconnectez-vous.",
+      "EMPTY": "Aucune opération trouvée dans ce fichier.",
+      "NOT_TEXT": "Ce fichier n'est pas un CSV lisible (fichier binaire ou image ?).",
+      "NOTHING_TO_IMPORT": "Rien à importer : aucune ligne n'est retenue (doublons, lignes décochées, illisibles ou produits ignorés)."
     },
     "history": {
       "overline": "Historique",
       "title": "Imports récents",
       "empty": "Aucun import pour l'instant.",
-      "rows": "{imported} importées · {skipped} ignorées",
+      "rows": "{imported, plural, one {# importée} other {# importées}} · {skipped, plural, one {# ignorée} other {# ignorées}}",
       "status": {
         "COMPLETED": "Importé",
         "REVERTED": "Annulé"
@@ -639,6 +640,19 @@
         "LABEL": "libellé vide"
       },
       "exampleNoValue": "Ligne {row} : {reason}"
+    },
+    "settings": "Paramètres de l'import",
+    "duplicatesNote": "Les opérations déjà présentes sur ce compte sont ignorées (doublons).",
+    "duplicateSkipped": "Doublon : déjà présent sur ce compte, ne sera pas importé",
+    "nothingToImport": "Rien à importer : aucune ligne n'est retenue (doublons, lignes décochées, illisibles ou produits ignorés).",
+    "progress": "{done, number} sur {total, plural, one {# transaction importée} other {# transactions importées}}…",
+    "reading": "Lecture du fichier…",
+    "limits": "CSV jusqu'à {csv}, PDF jusqu'à {pdf}.",
+    "productAccount": "Compte de destination : {product}",
+    "pager": {
+      "range": "Lignes {from} à {to} sur {total}",
+      "previous": "Précédentes",
+      "next": "Suivantes"
     }
   },
   "groups": {

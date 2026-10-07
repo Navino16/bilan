@@ -536,13 +536,11 @@
       "validate": "Validation"
     },
     "fileSection": "File",
-    "fileMeta": "{count} rows · {size}",
+    "fileMeta": "{count, plural, one {# row} other {# rows}} · {size}",
     "options": "Options",
-    "optDuplicates": "Detect duplicates",
     "optCategorize": "Categorise automatically",
-    "optLinks": "Suggest links",
     "previewTitle": "Preview — {count, plural, one {# transaction} other {# transactions}}",
-    "previewMeta": "{dup} potential duplicates · {cat} auto-categorised",
+    "previewMeta": "{dup, plural, one {# potential duplicate} other {# potential duplicates}} · {cat} auto-categorised",
     "validate": "Validate import",
     "cancel": "Cancel",
     "include": "Include this row",
@@ -576,7 +574,6 @@
     "supportedBanks": "Supported banks: {list}",
     "targetAccount": "Target account",
     "ignoreProduct": "Don't import",
-    "moreRows": "… and {count} more rows will be imported (preview is limited).",
     "banks": {
       "revolut": "Revolut",
       "lcl": "LCL"
@@ -589,12 +586,16 @@
     "error": {
       "INVALID": "Check the file and account.",
       "BAD_TYPE": "Unsupported file type.",
-      "TOO_LARGE": "File too large (5 MB max).",
+      "TOO_LARGE": "File too large ({max} max).",
       "FORBIDDEN": "Not allowed.",
       "PARSE_FAILED": "Could not read the file.",
       "COMMIT_FAILED": "Import failed. Try again.",
       "NOT_COMMITTABLE": "This import was already committed or undone.",
-      "INVALID_MAPPING": "Pick at least the date, the label and an amount (or debit / credit)."
+      "INVALID_MAPPING": "Pick at least the date, the label and an amount (or debit / credit).",
+      "UNAUTHORIZED": "Your session expired. Sign in again.",
+      "EMPTY": "No transactions found in this file.",
+      "NOT_TEXT": "This file isn't a readable CSV (a binary file or an image?).",
+      "NOTHING_TO_IMPORT": "Nothing to import: no row is left (duplicates, unchecked or unreadable rows, or ignored products)."
     },
     "history": {
       "overline": "History",
@@ -639,6 +640,19 @@
         "LABEL": "empty label"
       },
       "exampleNoValue": "Row {row}: {reason}"
+    },
+    "settings": "Import settings",
+    "duplicatesNote": "Transactions already on this account are skipped (duplicates).",
+    "duplicateSkipped": "Duplicate: already on this account, won't be imported",
+    "nothingToImport": "Nothing to import: no row is left (duplicates, unchecked or unreadable rows, or ignored products).",
+    "progress": "{done, number} of {total, plural, one {# transaction imported} other {# transactions imported}}…",
+    "reading": "Reading the file…",
+    "limits": "CSV up to {csv}, PDF up to {pdf}.",
+    "productAccount": "Target account: {product}",
+    "pager": {
+      "range": "Rows {from} to {to} of {total}",
+      "previous": "Previous",
+      "next": "Next"
     }
   },
   "groups": {

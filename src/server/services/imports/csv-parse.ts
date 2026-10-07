@@ -50,6 +50,25 @@ export function detectMapping(headers: string[]): CsvMapping {
   };
 }
 
+// Text exports never hold NUL or most other C0 control bytes; a file that does is
+// an image, an archive or some other binary renamed .csv.
+export function looksBinary(bytes: Uint8Array): boolean {
+  if ((bytes[0] === 0xff && bytes[1] === 0xfe) || (bytes[0] === 0xfe && bytes[1] === 0xff)) {
+    return false;
+  }
+  const sample = bytes.subarray(0, 8192);
+  let controls = 0;
+  for (const b of sample) {
+    if (b === 0) return true;
+    if (b < 0x20 && b !== 0x09 && b !== 0x0a && b !== 0x0c && b !== 0x0d) controls++;
+  }
+  return controls > Math.max(2, sample.length / 100);
+}
+
+export function hasDataRows(text: string): boolean {
+  return parseCsv(text).rows.some((r) => Object.values(r).some((v) => String(v ?? "").trim()));
+}
+
 // Decodes an uploaded CSV: UTF-16 when it starts with its BOM, UTF-8 when
 // valid, else Windows-1252 (French bank exports are often Latin-1).
 export function decodeCsv(bytes: ArrayBuffer | Uint8Array): string {
