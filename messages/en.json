@@ -21,6 +21,25 @@
       "or": "or",
       "passkey": "Sign in with a passkey"
     },
+    "twoFactor": {
+      "title": "Verification",
+      "hint": "Enter the 6-digit code shown by your authenticator app.",
+      "backupHint": "Enter one of your backup codes. Each code works only once.",
+      "code": "Verification code",
+      "backupCode": "Backup code",
+      "trustDevice": "Trust this device",
+      "trustDeviceHint": "The code will be asked again after 30 days without signing in from this device.",
+      "submit": "Verify",
+      "submitting": "Verifying…",
+      "back": "Back",
+      "useBackup": "Use a backup code",
+      "useTotp": "Use the authenticator app",
+      "error": {
+        "badCode": "Invalid code. Please try again.",
+        "expired": "The verification has expired. Go back and sign in again.",
+        "rateLimited": "Too many attempts. Go back and sign in again."
+      }
+    },
     "register": {
       "title": "Create an account",
       "name": "Name",
@@ -784,10 +803,12 @@
       "statusEnabled": "Two-factor authentication is enabled on your account.",
       "statusDisabled": "Two-factor authentication is not enabled yet.",
       "password": "Password",
-      "code": "6-digit code",
-      "secret": "Secret key (manual entry)",
+      "enrolScan": "1. Scan this QR code with your authenticator app (Google Authenticator, 1Password, Aegis…).",
+      "enrolManual": "Can't scan it? Enter this key:",
+      "enrolBackup": "2. Keep these backup codes somewhere safe. Each one lets you sign in once if you lose your phone.",
+      "enrolVerify": "3. Enter the code shown by the app to finish.",
+      "qrLabel": "Authenticator app setup QR code",
       "backupCodes": "Backup codes",
-      "scanHint": "Add this key to your authenticator app, then enter the generated code. Keep the backup codes somewhere safe.",
       "enable": "Enable",
       "disable": "Disable",
       "verify": "Verify and enable",

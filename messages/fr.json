@@ -21,6 +21,25 @@
       "or": "ou",
       "passkey": "Se connecter avec une clé d'accès"
     },
+    "twoFactor": {
+      "title": "Vérification",
+      "hint": "Saisissez le code à 6 chiffres affiché par votre application d'authentification.",
+      "backupHint": "Saisissez l'un de vos codes de secours. Chaque code ne fonctionne qu'une fois.",
+      "code": "Code de vérification",
+      "backupCode": "Code de secours",
+      "trustDevice": "Faire confiance à cet appareil",
+      "trustDeviceHint": "Le code sera redemandé après 30 jours sans connexion depuis cet appareil.",
+      "submit": "Vérifier",
+      "submitting": "Vérification…",
+      "back": "Retour",
+      "useBackup": "Utiliser un code de secours",
+      "useTotp": "Utiliser l'application",
+      "error": {
+        "badCode": "Code invalide. Réessayez.",
+        "expired": "La vérification a expiré. Revenez en arrière et reconnectez-vous.",
+        "rateLimited": "Trop de tentatives. Revenez en arrière et reconnectez-vous."
+      }
+    },
     "register": {
       "title": "Créer un compte",
       "name": "Nom",
@@ -784,10 +803,12 @@
       "statusEnabled": "La double authentification est activée sur votre compte.",
       "statusDisabled": "La double authentification n'est pas encore activée.",
       "password": "Mot de passe",
-      "code": "Code à 6 chiffres",
-      "secret": "Clé secrète (saisie manuelle)",
+      "enrolScan": "1. Scannez ce QR code avec votre application d'authentification (Google Authenticator, 1Password, Aegis…).",
+      "enrolManual": "Impossible de scanner ? Saisissez cette clé :",
+      "enrolBackup": "2. Gardez ces codes de secours en lieu sûr. Chacun permet de vous connecter une fois si vous perdez votre téléphone.",
+      "enrolVerify": "3. Saisissez le code affiché par l'application pour terminer.",
+      "qrLabel": "QR code de configuration de l'application d'authentification",
       "backupCodes": "Codes de secours",
-      "scanHint": "Ajoutez cette clé dans votre application d'authentification, puis saisissez le code généré. Conservez les codes de secours en lieu sûr.",
       "enable": "Activer",
       "disable": "Désactiver",
       "verify": "Vérifier et activer",

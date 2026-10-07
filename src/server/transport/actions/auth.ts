@@ -28,7 +28,7 @@ import {
 } from "./auth-schemas";
 
 export type AuthActionState =
-  | { ok: true }
+  | { ok: true; twoFactor?: true }
   | { ok: false; error: string; retryAfter?: number }
   | null;
 
@@ -58,7 +58,13 @@ export async function loginAction(
   try {
     const auth = await getAuth();
     const h = await nextHeaders();
-    await auth.api.signInEmail({ body: parsed.data, headers: h });
+    const res = await auth.api.signInEmail({ body: parsed.data, headers: h });
+    // 2FA users get a pending cookie instead of a session; the code step (audited
+    // by the after-hook) finishes the sign-in.
+    if ("twoFactorRedirect" in res && res.twoFactorRedirect) {
+      await logEvent({ action: "auth.login.2fa_pending", metadata: { email: parsed.data.email } });
+      return { ok: true, twoFactor: true };
+    }
     await logEvent({ action: "auth.login.success", metadata: { email: parsed.data.email } });
     // Best-effort security alert, sent AFTER the response so a slow/unreachable
     // SMTP host never delays the login (it also self-catches).

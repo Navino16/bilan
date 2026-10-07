@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { setRequestLocale } from "next-intl/server";
 import { getCurrentUser } from "@/server/auth/permissions";
 import { LoginForm } from "@/components/auth/login-form";
 
@@ -12,20 +11,10 @@ export default async function LoginPage({ params }: { params: Promise<{ locale: 
   setRequestLocale(locale);
   // Already authenticated → no reason to show the login page.
   if (await getCurrentUser()) redirect(`/${locale}/dashboard`);
-  const t = await getTranslations("auth.login");
 
   return (
-    <main className="space-y-6">
-      <header className="text-center">
-        <h1 className="font-display text-3xl">{t("title")}</h1>
-      </header>
+    <main>
       <LoginForm locale={locale} />
-      <p className="text-muted-foreground text-center text-sm">
-        {t("noAccount")}{" "}
-        <Link href={`/${locale}/register`} className="text-foreground hover:underline">
-          {t("registerLink")}
-        </Link>
-      </p>
     </main>
   );
 }
