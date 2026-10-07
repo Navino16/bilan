@@ -2,14 +2,14 @@ import { sendMail } from "@/server/services/mail/mailer";
 import { logEvent } from "@/server/services/audit";
 import { getAppName } from "@/server/services/settings/app-settings";
 import { describeUserAgent } from "@/lib/user-agent";
+import { normalizeIp } from "@/lib/ip";
 
 // Best-effort security emails. `sendMail` already no-ops when SMTP is disabled;
 // these wrappers additionally never throw into the auth path (a failed
 // notification must not break login / password change) — failures are audited.
 
-// IPv4 clients reach a dual-stack server as "::ffff:a.b.c.d".
 export function formatIp(ip: string | null): string {
-  return ip ? ip.replace(/^::ffff:/i, "") : "inconnue";
+  return normalizeIp(ip) ?? "inconnue";
 }
 
 export function formatDevice(userAgent: string | null): string {

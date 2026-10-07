@@ -43,7 +43,7 @@ export function DataControls({
   );
 
   useEffect(() => {
-    if (state?.ok) window.location.assign(`/${locale}`);
+    if (state?.ok) window.location.assign(`/${locale}/login?deleted=1`);
   }, [state, locale]);
 
   return (

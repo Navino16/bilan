@@ -8,13 +8,19 @@ export const loginSchema = z.object({
   password: z.string().min(1),
 });
 
-export const registerSchema = z.object({
-  email: z.email(),
-  password: z.string().min(12),
-  name: z.string().min(1),
-  invitationToken: z.string().optional(),
-  adminToken: z.string().optional(),
-});
+export const registerSchema = z
+  .object({
+    email: z.email(),
+    password: z.string().min(12),
+    confirmPassword: z.string(),
+    name: z.string().min(1),
+    invitationToken: z.string().optional(),
+    adminToken: z.string().optional(),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    path: ["confirmPassword"],
+    error: "MISMATCH",
+  });
 
 export const resetRequestSchema = z.object({
   email: z.email(),

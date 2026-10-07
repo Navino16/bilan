@@ -22,7 +22,8 @@
       "or": "or",
       "passkey": "Sign in with a passkey",
       "notice": {
-        "passwordReset": "Your password has been changed. Sign in with the new one."
+        "passwordReset": "Your password has been changed. Sign in with the new one.",
+        "accountDeleted": "Your account and all your data have been deleted."
       }
     },
     "twoFactor": {
@@ -64,8 +65,10 @@
         "TOKEN_REQUIRED": "An invitation token is required.",
         "BAD_TOKEN": "Invalid or expired invitation token.",
         "RATE_LIMITED": "Too many attempts. Try again later.",
-        "FAILED": "Could not create the account. Check your details."
-      }
+        "FAILED": "Could not create the account. Check your details.",
+        "MISMATCH": "The two passwords don't match."
+      },
+      "confirmPassword": "Confirm password"
     },
     "reset": {
       "title": "Reset password",
@@ -933,7 +936,8 @@
           "RATE_LIMITED": "Too many attempts. Try again later.",
           "INVALID": "Fill in all the fields.",
           "FAILED": "Couldn't change the password. Please try again.",
-          "REVOKE_FAILED": "Your password was changed, but your other devices couldn't be signed out."
+          "REVOKE_FAILED": "Your password was changed, but your other devices couldn't be signed out.",
+          "SAME_PASSWORD": "The new password must be different from the current one."
         }
       },
       "sessionsCard": {
@@ -955,7 +959,8 @@
           "UNAUTHORIZED": "Your session has expired. Sign in again.",
           "INVALID": "Invalid request.",
           "FAILED": "Couldn't sign this device out. Try again."
-        }
+        },
+        "signedIn": "Signed in on <time></time>"
       },
       "passkeysCard": {
         "overline": "Passkeys",
@@ -966,7 +971,7 @@
         "none": "No passkeys yet.",
         "defaultName": "Passkey",
         "unnamed": "Unnamed passkey",
-        "added": "Added on {date}",
+        "added": "Added on <date></date>",
         "synced": "Synced",
         "deviceBound": "This device only",
         "rename": "Rename {name}",

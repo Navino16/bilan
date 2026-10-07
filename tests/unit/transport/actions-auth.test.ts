@@ -12,11 +12,31 @@ describe("auth schemas", () => {
     expect(loginSchema.safeParse({ email: "not-an-email", password: "x" }).success).toBe(false);
   });
   it("requires a password of at least 12 chars on register", () => {
+    const password = "x".repeat(12);
     expect(
-      registerSchema.safeParse({ email: "a@b.co", password: "x".repeat(12), name: "Ann" }).success,
+      registerSchema.safeParse({ email: "a@b.co", password, confirmPassword: password, name: "A" })
+        .success,
     ).toBe(true);
     expect(
-      registerSchema.safeParse({ email: "a@b.co", password: "short", name: "Ann" }).success,
+      registerSchema.safeParse({
+        email: "a@b.co",
+        password: "short",
+        confirmPassword: "short",
+        name: "Ann",
+      }).success,
+    ).toBe(false);
+  });
+  it("flags a password confirmation mismatch on register (#172)", () => {
+    const r = registerSchema.safeParse({
+      email: "a@b.co",
+      password: "x".repeat(12),
+      confirmPassword: "y".repeat(12),
+      name: "Ann",
+    });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0]?.message).toBe("MISMATCH");
+    expect(
+      registerSchema.safeParse({ email: "a@b.co", password: "x".repeat(12), name: "Ann" }).success,
     ).toBe(false);
   });
   it("accepts a token on reset confirm", () => {

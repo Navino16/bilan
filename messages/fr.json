@@ -22,7 +22,8 @@
       "or": "ou",
       "passkey": "Se connecter avec une clé d'accès",
       "notice": {
-        "passwordReset": "Votre mot de passe a été modifié. Connectez-vous avec le nouveau."
+        "passwordReset": "Votre mot de passe a été modifié. Connectez-vous avec le nouveau.",
+        "accountDeleted": "Votre compte et toutes vos données ont été supprimés."
       }
     },
     "twoFactor": {
@@ -64,8 +65,10 @@
         "TOKEN_REQUIRED": "Un jeton d'invitation est requis.",
         "BAD_TOKEN": "Jeton d'invitation invalide ou expiré.",
         "RATE_LIMITED": "Trop de tentatives. Réessayez plus tard.",
-        "FAILED": "Impossible de créer le compte. Vérifiez vos informations."
-      }
+        "FAILED": "Impossible de créer le compte. Vérifiez vos informations.",
+        "MISMATCH": "Les deux mots de passe ne correspondent pas."
+      },
+      "confirmPassword": "Confirmer le mot de passe"
     },
     "reset": {
       "title": "Réinitialiser le mot de passe",
@@ -933,7 +936,8 @@
           "RATE_LIMITED": "Trop de tentatives. Réessayez plus tard.",
           "INVALID": "Remplissez tous les champs.",
           "FAILED": "Impossible de changer le mot de passe. Réessayez.",
-          "REVOKE_FAILED": "Votre mot de passe a été modifié, mais vos autres appareils n'ont pas pu être déconnectés."
+          "REVOKE_FAILED": "Votre mot de passe a été modifié, mais vos autres appareils n'ont pas pu être déconnectés.",
+          "SAME_PASSWORD": "Le nouveau mot de passe doit être différent de l'actuel."
         }
       },
       "sessionsCard": {
@@ -955,7 +959,8 @@
           "UNAUTHORIZED": "Votre session a expiré. Reconnectez-vous.",
           "INVALID": "Requête invalide.",
           "FAILED": "Impossible de déconnecter cet appareil. Réessayez."
-        }
+        },
+        "signedIn": "Connexion le <time></time>"
       },
       "passkeysCard": {
         "overline": "Clés d'accès",
@@ -966,7 +971,7 @@
         "none": "Aucune clé d'accès pour le moment.",
         "defaultName": "Clé d'accès",
         "unnamed": "Clé d'accès sans nom",
-        "added": "Ajoutée le {date}",
+        "added": "Ajoutée le <date></date>",
         "synced": "Synchronisée",
         "deviceBound": "Cet appareil uniquement",
         "rename": "Renommer {name}",

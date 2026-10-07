@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { useRef, useState, useTransition } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { KeyRound, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,8 +17,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { overline } from "@/components/transactions/bits";
+import { LocalDateTime } from "@/components/shell/local-date-time";
 import { authClient } from "@/lib/auth-client";
 import { describeUserAgent } from "@/lib/user-agent";
+import { uniqueName } from "@/lib/unique-name";
 import type { PasskeyView } from "@/server/services/users/passkeys";
 
 const NAME_MAX = 64;
@@ -43,9 +45,14 @@ function PasskeyRow({
   onDelete: () => void;
 }) {
   const t = useTranslations("settings.security.passkeysCard");
-  const format = useFormatter();
   const name = passkey.name || t("unnamed");
   const [draft, setDraft] = useState<string | null>(null);
+  const refocusRename = useRef(false);
+
+  function cancel() {
+    refocusRename.current = true;
+    setDraft(null);
+  }
 
   if (draft !== null) {
     return (
@@ -55,6 +62,13 @@ function PasskeyRow({
           onSubmit={(e) => {
             e.preventDefault();
             onRename(draft.trim(), () => setDraft(null));
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              e.preventDefault();
+              e.stopPropagation();
+              cancel();
+            }
           }}
         >
           <Input
@@ -67,7 +81,7 @@ function PasskeyRow({
           <Button type="submit" disabled={disabled || !draft.trim()}>
             {t("save")}
           </Button>
-          <Button type="button" variant="ghost" onClick={() => setDraft(null)}>
+          <Button type="button" variant="ghost" onClick={cancel}>
             {t("cancel")}
           </Button>
         </form>
@@ -81,9 +95,7 @@ function PasskeyRow({
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium">{name}</div>
         <div className="text-muted-foreground text-xs">
-          {t("added", {
-            date: format.dateTime(passkey.createdAt, { dateStyle: "medium", timeZone: "UTC" }),
-          })}
+          {t.rich("added", { date: () => <LocalDateTime value={passkey.createdAt} /> })}
           {" · "}
           {passkey.synced ? t("synced") : t("deviceBound")}
         </div>
@@ -93,6 +105,12 @@ function PasskeyRow({
         size="icon-sm"
         disabled={disabled}
         aria-label={t("rename", { name })}
+        ref={(el) => {
+          if (el && refocusRename.current) {
+            refocusRename.current = false;
+            el.focus();
+          }
+        }}
         onClick={() => setDraft(passkey.name ?? "")}
       >
         <Pencil />
@@ -123,7 +141,10 @@ export function PasskeysControls({ passkeys }: { passkeys: PasskeyView[] }) {
     setError(null);
     startTransition(async () => {
       const { browser, os } = describeUserAgent(navigator.userAgent);
-      const name = [browser, os].filter(Boolean).join(" · ") || t("defaultName");
+      const name = uniqueName(
+        [browser, os].filter(Boolean).join(" · ") || t("defaultName"),
+        passkeys.map((pk) => pk.name),
+      );
       // Named afterwards: addPasskey's name would also become the WebAuthn userName
       // shown in the device's password manager, where the email is expected.
       const res = await authClient.passkey.addPasskey();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ export function RegisterForm({ locale, mode }: { locale: string; mode: string })
   const router = useRouter();
   const params = useSearchParams();
   const [state, action, pending] = useActionState(registerAction, null);
+  const [mismatch, setMismatch] = useState(false);
 
   useEffect(() => {
     if (state?.ok) router.push(`/${locale}/dashboard`);
@@ -28,9 +29,18 @@ export function RegisterForm({ locale, mode }: { locale: string; mode: string })
   }
 
   const inviteOnly = mode === "INVITE_ONLY";
+  const error = mismatch ? "MISMATCH" : state && !state.ok ? state.error : null;
+
+  // Checked before submitting: a server-side error would reset the whole form.
+  function checkConfirmation(e: React.FormEvent<HTMLFormElement>) {
+    const data = new FormData(e.currentTarget);
+    const differs = data.get("password") !== data.get("confirmPassword");
+    setMismatch(differs);
+    if (differs) e.preventDefault();
+  }
 
   return (
-    <form action={action} className="space-y-4">
+    <form action={action} onSubmit={checkConfirmation} className="space-y-4">
       <input type="hidden" name="invitationToken" value={params.get("invitation") ?? ""} />
       {inviteOnly ? (
         <div className="space-y-2">
@@ -63,12 +73,26 @@ export function RegisterForm({ locale, mode }: { locale: string; mode: string })
           required
           minLength={12}
           autoComplete="new-password"
+          onChange={() => setMismatch(false)}
         />
         <p className="text-muted-foreground text-xs">{t("passwordHint")}</p>
       </div>
-      {state && !state.ok && (
+      <div className="space-y-2">
+        <Label htmlFor="confirmPassword">{t("confirmPassword")}</Label>
+        <Input
+          id="confirmPassword"
+          name="confirmPassword"
+          type="password"
+          required
+          minLength={12}
+          autoComplete="new-password"
+          aria-invalid={mismatch || undefined}
+          onChange={() => setMismatch(false)}
+        />
+      </div>
+      {error && (
         <Alert variant="destructive">
-          <AlertDescription>{t(`error.${state.error}`)}</AlertDescription>
+          <AlertDescription>{t(`error.${error}`)}</AlertDescription>
         </Alert>
       )}
       <Button type="submit" className="w-full" disabled={pending}>

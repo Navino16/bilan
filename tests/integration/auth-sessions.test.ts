@@ -65,6 +65,17 @@ describe("listSessions", () => {
     expect(list[0]).not.toHaveProperty("token");
   });
 
+  it("exposes each session's sign-in time and a readable IPv4 address (#172)", async () => {
+    const a = await signIn(owner.email);
+    const signedInAt = new Date("2026-10-06T12:34:00Z");
+    await db.session.update({
+      where: { id: a.sessionId },
+      data: { createdAt: signedInAt, ipAddress: "::ffff:10.0.1.1" },
+    });
+    const row = (await listSessions(owner.id, null)).find((s) => s.id === a.sessionId);
+    expect(row).toMatchObject({ signedInAt, ipAddress: "10.0.1.1" });
+  });
+
   it("skips expired sessions", async () => {
     const a = await signIn(owner.email);
     await db.session.update({
