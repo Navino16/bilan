@@ -149,10 +149,11 @@ describe("getInsights against an N-month average", () => {
       period,
       comparisonFor(period, "avg3", new Date("2026-03-10T12:00:00Z")),
     );
+    // December's data starts on the 28th, after the 10 days compared: Jan–Feb only.
     expect(data.changes).toEqual([
-      { categoryId: rent, current: 700, previous: 166.67, diff: 533.33 },
+      { categoryId: rent, current: 700, previous: 250, diff: 450 },
       { categoryId: null, current: 300, previous: 0, diff: 300 },
-      { categoryId: food, current: 50, previous: 6.67, diff: 43.33 },
+      { categoryId: food, current: 50, previous: 10, diff: 40 },
     ]);
   });
 });
@@ -173,6 +174,13 @@ describe("getCategoryHistory", () => {
       ]),
     );
     expect(h.series).toHaveLength(3);
+  });
+
+  it("marks where the data starts, so earlier months stay out of the averages", async () => {
+    const h = await getCategoryHistory(owner, monthPeriod(2026, 3), new Date("2026-10-05"));
+    expect(h.months[h.dataStart]).toEqual({ year: 2025, month: 12 }); // first tx: 2025-12-28
+    const none = await getCategoryHistory("nobody", monthPeriod(2026, 3), new Date("2026-10-05"));
+    expect(none.dataStart).toBe(12);
   });
 
   it("flags the last month while it is in progress", async () => {

@@ -32,9 +32,12 @@ export type InsightsData = {
 export type HistoryMonth = { year: number; month: number };
 export type CategorySeries = { categoryId: string | null; values: number[] };
 // Monthly spending per category, oldest month first. `inProgress` flags the last month as partial.
+// `dataStart` is the index of the first month with any transaction: the months
+// before it are empty because nothing was recorded yet, not because nothing was spent.
 export type CategoryHistory = {
   months: HistoryMonth[];
   inProgress: boolean;
+  dataStart: number;
   series: CategorySeries[];
 };
 export type HistoryRow = CategorySeries & { total: number; average: number };
@@ -114,17 +117,19 @@ export function averageMonthRows(
     .map((r) => ({ amount: r.amount / months, categoryId: r.categoryId }));
 }
 
-// The average covers whole months only: the month in progress would drag it down.
+// The average covers whole months since the first transaction only: the month in
+// progress and the months before any data would drag it down.
 export function historyRows(
   history: CategoryHistory,
   count: number,
   limit: number,
 ): { months: HistoryMonth[]; rows: HistoryRow[] } {
   const start = Math.max(0, history.months.length - count);
+  const skip = Math.max(0, history.dataStart - start);
   const rows = history.series
     .map(({ categoryId, values }) => {
       const shown = values.slice(start);
-      const whole = history.inProgress ? shown.slice(0, -1) : shown;
+      const whole = (history.inProgress ? shown.slice(0, -1) : shown).slice(skip);
       return {
         categoryId,
         values: shown,

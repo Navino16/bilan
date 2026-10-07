@@ -17,7 +17,7 @@ import {
   type Comparison,
   type Period,
 } from "@/lib/period";
-import { loadRows, referenceRows } from "./index";
+import { firstTransactionDate, loadRows, referenceRows } from "./index";
 
 const TOP_MERCHANTS = 6;
 const HISTORY_MONTHS = 12;
@@ -53,10 +53,17 @@ export async function getCategoryHistory(
   const months = historyMonths(period, HISTORY_MONTHS, now);
   const last = months[months.length - 1];
   const accountIds = (await listVisibleForUser(userId)).map((a) => a.id);
-  const { rows } = await loadRows(accountIds, monthsSpan(months));
+  const [{ rows }, first] = await Promise.all([
+    loadRows(accountIds, monthsSpan(months)),
+    firstTransactionDate(accountIds),
+  ]);
+  const dataStart = first
+    ? months.findIndex((m) => monthPeriod(m.year, m.month).to >= first)
+    : months.length;
   return {
     months,
     inProgress: periodInProgress(monthPeriod(last.year, last.month), now),
+    dataStart: dataStart === -1 ? months.length : dataStart,
     series: monthlyCategoryTotals(rows, months),
   };
 }

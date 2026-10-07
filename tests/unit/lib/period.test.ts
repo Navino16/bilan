@@ -4,6 +4,9 @@ import {
   addMonths,
   previousMonthPeriod,
   parsePeriodParams,
+  parseRangeParams,
+  parseDayBounds,
+  isValidIsoDay,
   clampPeriodToNow,
   presetPeriod,
   previousPeriod,
@@ -41,7 +44,76 @@ describe("previousMonthPeriod", () => {
   });
 });
 
+describe("isValidIsoDay", () => {
+  it("accepts real calendar days only", () => {
+    expect(isValidIsoDay("2024-02-29")).toBe(true);
+    for (const bad of ["2026-02-30", "2026-13-45", "2026-00-10", "0000-01-01", "2026-1-5", ""]) {
+      expect(isValidIsoDay(bad)).toBe(false);
+    }
+    expect(isValidIsoDay(undefined)).toBe(false);
+  });
+});
+
+describe("parseDayBounds", () => {
+  it("keeps valid days in order and leaves invalid ones open", () => {
+    expect(parseDayBounds({ from: "2026-05-20", to: "2026-05-01" })).toEqual({
+      from: "2026-05-01",
+      to: "2026-05-20",
+    });
+    expect(parseDayBounds({ from: "2010-01-01", to: "2026-13-45" })).toEqual({
+      from: "2010-01-01",
+      to: undefined,
+    });
+  });
+});
+
+describe("parseRangeParams", () => {
+  const now = new Date("2026-10-06T12:00:00.000Z");
+  const days = (p: ReturnType<typeof parseRangeParams>) =>
+    p && [p.from.toISOString().slice(0, 10), p.to.toISOString().slice(0, 10)];
+
+  it("is null when no bound is a valid day", () => {
+    expect(parseRangeParams({}, now)).toBeNull();
+    expect(parseRangeParams({ from: "2026-13-45", to: "2026-02-30" }, now)).toBeNull();
+  });
+
+  it("runs a lone `from` to today, and a lone `to` from the 1st of its month", () => {
+    expect(days(parseRangeParams({ from: "2026-09-15" }, now))).toEqual([
+      "2026-09-15",
+      "2026-10-06",
+    ]);
+    expect(days(parseRangeParams({ to: "2026-03-20" }, now))).toEqual(["2026-03-01", "2026-03-20"]);
+    expect(days(parseRangeParams({ from: "2026-09-15", to: "bad" }, now))).toEqual([
+      "2026-09-15",
+      "2026-10-06",
+    ]);
+  });
+
+  it("swaps reversed bounds", () => {
+    expect(days(parseRangeParams({ from: "2026-05-20", to: "2026-05-01" }, now))).toEqual([
+      "2026-05-01",
+      "2026-05-20",
+    ]);
+  });
+
+  it("caps the span at ten years, keeping the most recent part", () => {
+    expect(days(parseRangeParams({ from: "2010-01-01", to: "2026-10-06" }, now))).toEqual([
+      "2016-10-07",
+      "2026-10-06",
+    ]);
+  });
+});
+
 describe("parsePeriodParams", () => {
+  it("falls back to the current month on invalid days instead of throwing", () => {
+    const p = parsePeriodParams(
+      { from: "2026-13-45", to: "2026-14-01" },
+      undefined,
+      new Date("2026-10-06T12:00:00.000Z"),
+    );
+    expect(p).toMatchObject({ year: 2026, month: 10 });
+  });
+
   it("parses from/to ISO days into a custom period", () => {
     const p = parsePeriodParams({ from: "2026-01-10", to: "2026-01-20" });
     expect(p.from.toISOString()).toBe("2026-01-10T00:00:00.000Z");

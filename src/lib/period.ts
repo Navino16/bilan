@@ -41,16 +41,32 @@ export function previousMonthPeriod(p: Period): Period {
 }
 
 // Inclusive UTC bounds for an arbitrary ISO-day range.
+export const dayStart = (day: string) => new Date(`${day}T00:00:00.000Z`);
+export const dayEnd = (day: string) => new Date(`${day}T23:59:59.999Z`);
+
 function customPeriod(fromDay: string, toDay: string): Period {
   return {
-    from: new Date(`${fromDay}T00:00:00.000Z`),
-    to: new Date(`${toDay}T23:59:59.999Z`),
+    from: dayStart(fromDay),
+    to: dayEnd(toDay),
     year: null,
     month: null,
   };
 }
 
-const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
+const MIN_YEAR = 1970;
+const MAX_YEAR = 2100;
+// Longer chart windows are cut: charts and aggregates stop making sense (and get slow).
+export const MAX_RANGE_YEARS = 10;
+
+// A real calendar day in a sane year range ("2026-02-30", "2026-13-45" and
+// "0000-01-01" are rejected rather than rolled over).
+export function isValidIsoDay(day: string | undefined): day is string {
+  const m = day ? ISO_DAY.exec(day) : null;
+  if (!m) return false;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  return y >= MIN_YEAR && y <= MAX_YEAR && mo >= 1 && mo <= 12 && d >= 1 && d <= daysInMonth(y, mo);
+}
 
 // A range covering exactly one calendar month (1st → last day) is treated as a
 // month period so `year`/`month` are set and month nav keeps stepping correctly
@@ -64,17 +80,43 @@ function wholeMonthOf(fromDay: string, toDay: string): Period | null {
   return monthPeriod(fy, fm);
 }
 
-// Resolves the active period from URL params. `?from`/`?to` (ISO days) define a
-// custom range; otherwise fall back to `fallbackMonth` (defaults to "now" UTC).
+// The valid `?from`/`?to` days, in order; an invalid one is dropped (open bound).
+export function parseDayBounds(params: { from?: string; to?: string }): {
+  from?: string;
+  to?: string;
+} {
+  const from = isValidIsoDay(params.from) ? params.from : undefined;
+  const to = isValidIsoDay(params.to) ? params.to : undefined;
+  return from && to && from > to ? { from: to, to: from } : { from, to };
+}
+
+// A chart window needs both ends: a lone `from` runs to today (or that day if
+// later), a lone `to` starts on the 1st of its month, and the span is capped by
+// moving `from` so the most recent part stays. Null when no bound is valid.
+export function parseRangeParams(
+  params: { from?: string; to?: string },
+  now: Date = new Date(),
+): Period | null {
+  let { from, to } = parseDayBounds(params);
+  if (!from && !to) return null;
+  if (from && !to) to = from > toIsoDay(now) ? from : toIsoDay(now);
+  if (!from) from = `${to!.slice(0, 8)}01`;
+  const floor = new Date(`${to}T00:00:00.000Z`);
+  floor.setUTCFullYear(floor.getUTCFullYear() - MAX_RANGE_YEARS);
+  floor.setUTCDate(floor.getUTCDate() + 1);
+  if (from < toIsoDay(floor)) from = toIsoDay(floor);
+  return wholeMonthOf(from, to!) ?? customPeriod(from, to!);
+}
+
+// Resolves the active period from URL params: the requested range, else
+// `fallbackMonth` (defaults to the current UTC month).
 export function parsePeriodParams(
   params: { from?: string; to?: string },
   fallbackMonth?: { year: number; month: number },
+  now: Date = new Date(),
 ): Period {
-  const { from, to } = params;
-  if (from && to && ISO_DAY.test(from) && ISO_DAY.test(to) && from <= to) {
-    return wholeMonthOf(from, to) ?? customPeriod(from, to);
-  }
-  const now = new Date();
+  const range = parseRangeParams(params, now);
+  if (range) return range;
   const fb = fallbackMonth ?? { year: now.getUTCFullYear(), month: now.getUTCMonth() + 1 };
   return monthPeriod(fb.year, fb.month);
 }

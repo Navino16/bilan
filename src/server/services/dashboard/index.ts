@@ -3,7 +3,7 @@ import { listVisibleForUser } from "@/server/services/accounts";
 import { listTransactions, type TransactionListItem } from "@/server/services/transactions";
 import { collapseLinkedRows, type CollapsibleRow } from "@/lib/links";
 import { averageMonthRows, type AmountRow } from "@/lib/insights";
-import { monthsSpan, type Comparison, type Period } from "@/lib/period";
+import { monthPeriod, monthsSpan, type Comparison, type Period } from "@/lib/period";
 
 export type DashboardTotals = { income: number; expense: number; net: number; count: number };
 export type TracePoint = { date: string; amount: number };
@@ -33,13 +33,19 @@ const DAILY_TRACE_MAX_DAYS = 45;
 type ExpenseRow = { amount: number; date: Date; categoryId: string | null };
 
 // Mean spend per bucket + the biggest bucket and the category that drove it.
+// Buckets in the future or before the first transaction don't dilute the average.
 function summarize(
   granularity: "day" | "month",
   points: TracePoint[],
   rows: ExpenseRow[],
   keyOf: (d: Date) => string,
+  now: Date,
+  first: Date | null,
 ): DashboardTrace {
-  const avg = points.length ? round2(points.reduce((s, p) => s + p.amount, 0) / points.length) : 0;
+  const elapsed = points.filter((p) => p.date <= keyOf(now) && (!first || p.date >= keyOf(first)));
+  const avg = elapsed.length
+    ? round2(elapsed.reduce((s, p) => s + p.amount, 0) / elapsed.length)
+    : 0;
 
   const top = points.reduce<TracePoint | null>((a, p) => (a && a.amount >= p.amount ? a : p), null);
   let peak: TracePeak | null = null;
@@ -61,7 +67,12 @@ function summarize(
 }
 
 // One bucket per UTC day of the period.
-function dailyTrace(rows: ExpenseRow[], period: Period): DashboardTrace {
+function dailyTrace(
+  rows: ExpenseRow[],
+  period: Period,
+  now: Date,
+  first: Date | null,
+): DashboardTrace {
   const dayKey = (d: Date) => d.toISOString().slice(0, 10);
   const byDay = new Map<string, number>();
   for (let t = period.from.getTime(); t <= period.to.getTime(); t += 86_400_000) {
@@ -73,11 +84,16 @@ function dailyTrace(rows: ExpenseRow[], period: Period): DashboardTrace {
   }
   const points = [...byDay.entries()].map(([date, amount]) => ({ date, amount: round2(amount) }));
   points.sort((a, b) => a.date.localeCompare(b.date));
-  return summarize("day", points, rows, dayKey);
+  return summarize("day", points, rows, dayKey, now, first);
 }
 
 // One bucket per calendar month spanned by the period (keyed by its 1st day).
-function monthlyTrace(rows: ExpenseRow[], period: Period): DashboardTrace {
+function monthlyTrace(
+  rows: ExpenseRow[],
+  period: Period,
+  now: Date,
+  first: Date | null,
+): DashboardTrace {
   const monthKey = (y: number, m: number) => `${y}-${String(m + 1).padStart(2, "0")}-01`;
   const dateKey = (d: Date) => monthKey(d.getUTCFullYear(), d.getUTCMonth());
   const byMonth = new Map<string, number>();
@@ -98,7 +114,7 @@ function monthlyTrace(rows: ExpenseRow[], period: Period): DashboardTrace {
   }
   const points = [...byMonth.entries()].map(([date, amount]) => ({ date, amount: round2(amount) }));
   points.sort((a, b) => a.date.localeCompare(b.date));
-  return summarize("month", points, rows, dateKey);
+  return summarize("month", points, rows, dateKey, now, first);
 }
 
 function round2(n: number): number {
@@ -148,6 +164,16 @@ export async function loadRows(
   return { rows: collapsed, count: rows.length };
 }
 
+export async function firstTransactionDate(accountIds: string[]): Promise<Date | null> {
+  if (accountIds.length === 0) return null;
+  const first = await db.transaction.findFirst({
+    where: { accountId: { in: accountIds } },
+    orderBy: { date: "asc" },
+    select: { date: true },
+  });
+  return first?.date ?? null;
+}
+
 function totalsOf(rows: { amount: number }[], count: number): DashboardTotals {
   let income = 0;
   let expense = 0;
@@ -171,21 +197,33 @@ export async function referenceRows(
 ): Promise<AmountRow[]> {
   const { months, elapsedDays } = comparison;
   if (months.length === 0) return (await loadRows(accountIds, comparison.previous)).rows;
-  const { rows } = await loadRows(accountIds, monthsSpan(months));
-  return averageMonthRows(rows, months.length, elapsedDays);
+  const [{ rows }, first] = await Promise.all([
+    loadRows(accountIds, monthsSpan(months)),
+    firstTransactionDate(accountIds),
+  ]);
+  // Months before the first transaction hold no data, not zero spending; while the
+  // period is in progress only their first `elapsedDays` days are compared.
+  const recorded = months.filter((m) => {
+    const { from, to } = monthPeriod(m.year, m.month);
+    const end = elapsedDays ? new Date(from.getTime() + elapsedDays * 86_400_000 - 1) : to;
+    return first && end >= first;
+  });
+  return recorded.length ? averageMonthRows(rows, recorded.length, elapsedDays) : [];
 }
 
 export async function getDashboard(
   userId: string,
   period: Period,
   comparison: Comparison,
+  now: Date = new Date(),
 ): Promise<DashboardData> {
   const accountIds = (await listVisibleForUser(userId)).map((a) => a.id);
 
   // Independent queries for the two periods → run them together.
-  const [current, previousLoaded] = await Promise.all([
+  const [current, previousLoaded, first] = await Promise.all([
     loadRows(accountIds, period),
     referenceRows(accountIds, comparison),
+    firstTransactionDate(accountIds),
   ]);
   const totals = totalsOf(current.rows, current.count);
   const prev = totalsOf(previousLoaded, 0);
@@ -208,8 +246,8 @@ export async function getDashboard(
   const spanDays = Math.round((period.to.getTime() - period.from.getTime() + 1) / 86_400_000);
   const trace =
     spanDays > DAILY_TRACE_MAX_DAYS
-      ? monthlyTrace(expenseRows, period)
-      : dailyTrace(expenseRows, period);
+      ? monthlyTrace(expenseRows, period, now, first)
+      : dailyTrace(expenseRows, period, now, first);
 
   const { items: recent } = await listTransactions(userId, {
     from: period.from,

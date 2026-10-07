@@ -795,7 +795,11 @@
     "vsAvg": "{arrow} {pct} % vs moyenne {months} mois",
     "vsAvgAmount": "{arrow} {amount} vs moyenne {months} mois",
     "noSameDate": "Rien à la même date",
-    "noAvg": "Rien sur les {months} mois précédents"
+    "noAvg": "Rien sur les {months} mois précédents",
+    "rangeStart": "Début de la période",
+    "rangeEnd": "Fin de la période",
+    "rangeReversed": "La fin doit être après le début.",
+    "otherCategories": "{count, plural, one {Autre catégorie} other {# autres catégories}}"
   },
   "merchants": {
     "tab": "Marchands",

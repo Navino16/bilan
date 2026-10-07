@@ -8,7 +8,7 @@ import { listVisibleForUser } from "@/server/services/accounts";
 import { listLinkedTxIds } from "@/server/services/links";
 import { listAssignableBudgets } from "@/server/services/budgets";
 import { flattenCategories } from "@/components/transactions/category-tree";
-import { parsePeriodParams } from "@/lib/period";
+import { dayEnd, dayStart, parseDayBounds } from "@/lib/period";
 import { LIST_MAX_LIMIT, nextListLimit, parseListLimit, trimToDayBoundary } from "@/lib/list-limit";
 import {
   TransactionList,
@@ -40,7 +40,7 @@ export default async function TransactionsPage({
   const direction = sp.dir === "in" || sp.dir === "out" ? sp.dir : undefined;
   // A from/to range narrows the list; with no params the list stays unfiltered
   // (all transactions), preserving the default "show everything" behaviour.
-  const period = sp.from || sp.to ? parsePeriodParams({ from: sp.from, to: sp.to }) : undefined;
+  const bounds = parseDayBounds({ from: sp.from, to: sp.to });
   const limit = parseListLimit(sp.limit);
 
   const [{ items, total }, tree, foreignTree, accounts, linkedIds, budgets] = await Promise.all([
@@ -48,8 +48,8 @@ export default async function TransactionsPage({
       categoryId: sp.categoryId,
       direction,
       search: sp.search,
-      from: period?.from,
-      to: period?.to,
+      from: bounds.from ? dayStart(bounds.from) : undefined,
+      to: bounds.to ? dayEnd(bounds.to) : undefined,
       take: limit,
     }),
     listForUser(user.id),
@@ -125,8 +125,8 @@ export default async function TransactionsPage({
       <SelectionModeProvider>
         <TransactionFilters
           categories={[...flatCategories, ...foreignCategories]}
-          from={sp.from}
-          to={sp.to}
+          from={bounds.from}
+          to={bounds.to}
           total={total}
         />
         <TransactionList
