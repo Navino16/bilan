@@ -31,6 +31,16 @@ afterAll(async () => {
   await db.$disconnect();
 });
 
+function badPasswordAudits() {
+  return db.auditLog.count({
+    where: {
+      userId,
+      action: "auth.password.change_failed",
+      metadata: { equals: { reason: "bad_password" } },
+    },
+  });
+}
+
 describe("change password", () => {
   it("rejects a wrong current password", async () => {
     const headers = await signIn(password);
@@ -40,6 +50,31 @@ describe("change password", () => {
       revokeOtherSessions: false,
     });
     expect(res).toEqual({ ok: false, error: "BAD_PASSWORD" });
+    expect(await badPasswordAudits()).toBe(1);
+  });
+
+  it("reports a wrong current password even when the new one repeats it (#172)", async () => {
+    const headers = await signIn(password);
+    const res = await changePassword(headers, {
+      currentPassword: "not-the-password",
+      newPassword: "not-the-password",
+      revokeOtherSessions: false,
+    });
+    expect(res).toEqual({ ok: false, error: "BAD_PASSWORD" });
+    expect(await badPasswordAudits()).toBe(2);
+  });
+
+  it("rejects the current password as the new one, without auditing a change (#172)", async () => {
+    const headers = await signIn(password);
+    const res = await changePassword(headers, {
+      currentPassword: password,
+      newPassword: password,
+      revokeOtherSessions: true,
+    });
+    expect(res).toEqual({ ok: false, error: "SAME_PASSWORD" });
+    expect(await db.auditLog.count({ where: { userId, action: "auth.password.changed" } })).toBe(0);
+    expect(await badPasswordAudits()).toBe(2);
+    await expect(signIn(password)).resolves.toBeInstanceOf(Headers);
   });
 
   it("enforces the minimum password length", async () => {

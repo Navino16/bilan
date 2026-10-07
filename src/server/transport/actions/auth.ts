@@ -64,7 +64,10 @@ export async function registerAction(
   formData: FormData,
 ): Promise<AuthActionState> {
   const parsed = registerSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { ok: false, error: "INVALID" };
+  if (!parsed.success) {
+    const mismatch = parsed.error.issues.some((i) => i.message === "MISMATCH");
+    return { ok: false, error: mismatch ? "MISMATCH" : "INVALID" };
+  }
 
   const bucket = registerLimiter.consume(rlKey(parsed.data.email));
   if (!bucket.allowed)
@@ -183,18 +186,7 @@ export async function changePasswordAction(
   }
 
   const { currentPassword, newPassword, revokeOtherSessions } = parsed.data;
-  const res = await changePassword(await nextHeaders(), {
-    currentPassword,
-    newPassword,
-    revokeOtherSessions,
-  });
-  if (!res.ok && res.error === "BAD_PASSWORD")
-    await logEvent({
-      userId: user.id,
-      action: "auth.password.change_failed",
-      metadata: { reason: "bad_password" },
-    });
-  return res;
+  return changePassword(await nextHeaders(), { currentPassword, newPassword, revokeOtherSessions });
 }
 
 export async function revokeSessionAction(sessionId: string): Promise<AuthActionState> {

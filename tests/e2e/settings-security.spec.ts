@@ -29,6 +29,7 @@ test.describe("change password", () => {
     await page.fill('input[name="name"]', "E2E Password");
     await page.fill('input[name="email"]', email);
     await page.fill('input[name="password"]', oldPassword);
+    await page.fill('input[name="confirmPassword"]', oldPassword);
     await page.click('button[type="submit"]');
     await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
 
@@ -40,6 +41,13 @@ test.describe("change password", () => {
       await expect(card.getByLabel("Mot de passe actuel")).toBeVisible({ timeout: 1_000 });
     }).toPass({ timeout: 20_000 });
     await card.getByLabel("Mot de passe actuel").fill(oldPassword);
+    await card.getByLabel("Nouveau mot de passe", { exact: true }).fill(oldPassword);
+    await card.getByLabel("Confirmer le nouveau mot de passe").fill(oldPassword);
+    await card.getByRole("button", { name: "Changer le mot de passe" }).click();
+    await expect(
+      card.getByText("Le nouveau mot de passe doit être différent de l'actuel."),
+    ).toBeVisible();
+
     await card.getByLabel("Nouveau mot de passe", { exact: true }).fill(newPassword);
     await card.getByLabel("Confirmer le nouveau mot de passe").fill(newPassword);
     await card.getByRole("button", { name: "Changer le mot de passe" }).click();
@@ -73,6 +81,7 @@ test.describe("active sessions", () => {
     await page.fill('input[name="name"]', "E2E Sessions");
     await page.fill('input[name="email"]', email);
     await page.fill('input[name="password"]', password);
+    await page.fill('input[name="confirmPassword"]', password);
     await page.click('button[type="submit"]');
     await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
 
@@ -92,6 +101,7 @@ test.describe("active sessions", () => {
     const card = page.locator('[data-slot="sessions-controls"]');
     await expect(card.getByText("Cet appareil")).toBeVisible();
     await expect(card.getByText("Autres appareils · 2")).toBeVisible();
+    await expect(card.getByText(/Connexion le/)).toHaveCount(3);
     // Retry until the client island has hydrated.
     await expect(async () => {
       await card
@@ -139,6 +149,7 @@ test.describe("passkeys", () => {
     await page.fill('input[name="name"]', "E2E Passkeys");
     await page.fill('input[name="email"]', email);
     await page.fill('input[name="password"]', "e2e-passkeys-password-123");
+    await page.fill('input[name="confirmPassword"]', "e2e-passkeys-password-123");
     await page.click('button[type="submit"]');
     await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
 
@@ -159,6 +170,13 @@ test.describe("passkeys", () => {
     await card.getByLabel("Nom de la clé d'accès").fill("Clé e2e");
     await card.getByRole("button", { name: "Enregistrer" }).click();
     await expect(card.getByText("Clé e2e")).toBeVisible();
+
+    await card.getByRole("button", { name: "Renommer Clé e2e" }).click();
+    await card.getByLabel("Nom de la clé d'accès").fill("Abandonné");
+    await card.getByLabel("Nom de la clé d'accès").press("Escape");
+    await expect(card.getByLabel("Nom de la clé d'accès")).toHaveCount(0);
+    await expect(card.getByText("Clé e2e")).toBeVisible();
+    await expect(card.getByRole("button", { name: "Renommer Clé e2e" })).toBeFocused();
 
     await context.clearCookies();
     await page.goto("/fr/login");

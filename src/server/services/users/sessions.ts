@@ -2,6 +2,7 @@ import { db } from "@/server/db";
 import { getAuth } from "@/server/auth";
 import { logEvent } from "@/server/services/audit";
 import { describeUserAgent } from "@/lib/user-agent";
+import { normalizeIp } from "@/lib/ip";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -11,6 +12,7 @@ export type SessionView = {
   os: string | null;
   mobile: boolean;
   ipAddress: string | null;
+  signedInAt: Date;
   // better-auth bumps updatedAt at most once a day (session.updateAge), so day granularity.
   idleDays: number;
   current: boolean;
@@ -26,14 +28,15 @@ export async function listSessions(
 ): Promise<SessionView[]> {
   const rows = await db.session.findMany({
     where: { userId, expiresAt: { gt: now } },
-    select: { id: true, userAgent: true, ipAddress: true, updatedAt: true },
-    orderBy: { updatedAt: "desc" },
+    select: { id: true, userAgent: true, ipAddress: true, createdAt: true, updatedAt: true },
+    orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
   });
   return rows
     .map((r) => ({
       id: r.id,
       ...describeUserAgent(r.userAgent),
-      ipAddress: r.ipAddress,
+      ipAddress: normalizeIp(r.ipAddress),
+      signedInAt: r.createdAt,
       idleDays: Math.max(0, Math.floor((now.getTime() - r.updatedAt.getTime()) / DAY_MS)),
       current: r.id === currentSessionId,
     }))

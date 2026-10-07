@@ -12,8 +12,10 @@ import { loginAction } from "@/server/transport/actions/auth";
 import { PasskeySignIn } from "./passkey-sign-in";
 import { TwoFactorStep } from "./two-factor-step";
 
+export type LoginNotice = "passwordReset" | "accountDeleted";
+
 // "Back" from the code step remounts the password step to clear its action state.
-export function LoginForm({ locale, notice }: { locale: string; notice?: "passwordReset" }) {
+export function LoginForm({ locale, notice }: { locale: string; notice?: LoginNotice }) {
   const [attempt, setAttempt] = useState(0);
   return (
     <PasswordStep
@@ -31,7 +33,7 @@ function PasswordStep({
   onRestart,
 }: {
   locale: string;
-  notice?: "passwordReset";
+  notice?: LoginNotice;
   onRestart: () => void;
 }) {
   const t = useTranslations("auth.login");

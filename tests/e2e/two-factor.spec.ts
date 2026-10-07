@@ -57,6 +57,7 @@ test.describe("two-factor sign-in", () => {
     await page.fill('input[name="name"]', "E2E Two Factor");
     await page.fill('input[name="email"]', email);
     await page.fill('input[name="password"]', password);
+    await page.fill('input[name="confirmPassword"]', password);
     await page.click('button[type="submit"]');
     await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
 

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { overline } from "@/components/transactions/bits";
+import { LocalDateTime } from "@/components/shell/local-date-time";
 import { revokeOtherSessionsAction, revokeSessionAction } from "@/server/transport/actions/auth";
 import type { SessionView } from "@/server/services/users/sessions";
 
@@ -38,7 +39,9 @@ function SessionRow({
           {session.current && <Badge variant="secondary">{t("thisDevice")}</Badge>}
         </div>
         <div className="text-muted-foreground text-xs">
-          {[session.ipAddress, activity].filter(Boolean).join(" · ")}
+          {session.ipAddress && `${session.ipAddress} · `}
+          {t.rich("signedIn", { time: () => <LocalDateTime value={session.signedInAt} /> })}
+          {` · ${activity}`}
         </div>
       </div>
       {action}
