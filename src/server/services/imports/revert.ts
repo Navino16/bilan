@@ -1,4 +1,5 @@
 import { db } from "@/server/db";
+import { LONG_TX_TIMEOUT } from "@/server/db/timeouts";
 import { canWriteAccount } from "@/server/services/accounts/sharing";
 import { listVisibleForUser } from "@/server/services/accounts";
 import { logEvent } from "@/server/services/audit";
@@ -11,9 +12,6 @@ import {
   UNCOMMITTED_STATUSES,
 } from "@/lib/import-status";
 import { ImportAccessError } from "./errors";
-
-// Prisma's 5 s default is too short to delete a large import with its search tokens.
-const REVERT_TIMEOUT = { maxWait: 10_000, timeout: 5 * 60_000 };
 
 export type RevertImpact = {
   transactions: number;
@@ -83,7 +81,7 @@ export async function revertImport(
       where: { importBatchId: batchId },
     });
     return { deleted, linksDissolved: await dissolveUndersizedLinks(tx, linkIds) };
-  }, REVERT_TIMEOUT);
+  }, LONG_TX_TIMEOUT);
   await logEvent({
     userId: actorId,
     action: "import.reverted",
@@ -122,7 +120,7 @@ export type ImportHistoryItem = {
 };
 
 export async function listRecentImports(userId: string, limit = 20): Promise<ImportHistoryItem[]> {
-  const visible = await listVisibleForUser(userId);
+  const visible = await listVisibleForUser(userId, { includeArchived: true });
   const names = new Map(visible.map((a) => [a.id, a.name]));
   const writable = visible.filter((a) => a.access === "OWNER" || a.access === "WRITE");
   const batches = await db.importBatch.findMany({

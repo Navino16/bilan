@@ -1,4 +1,4 @@
-import { listVisibleForUser } from "@/server/services/accounts";
+import { visibleAccountIds } from "@/server/services/accounts";
 import { aliasMap, listAliasGroups, merchantRowsOf } from "@/server/services/merchants";
 import { round2 } from "@/lib/budgets";
 import {
@@ -27,7 +27,7 @@ export async function getInsights(
   period: Period,
   comparison: Comparison,
 ): Promise<InsightsData> {
-  const accountIds = (await listVisibleForUser(userId)).map((a) => a.id);
+  const accountIds = await visibleAccountIds(userId);
   const [current, prev, aliases] = await Promise.all([
     loadRows(accountIds, period, { withLabels: true }),
     referenceRows(accountIds, comparison),
@@ -52,7 +52,7 @@ export async function getCategoryHistory(
 ): Promise<CategoryHistory> {
   const months = historyMonths(period, HISTORY_MONTHS, now);
   const last = months[months.length - 1];
-  const accountIds = (await listVisibleForUser(userId)).map((a) => a.id);
+  const accountIds = await visibleAccountIds(userId);
   const [{ rows }, first] = await Promise.all([
     loadRows(accountIds, monthsSpan(months)),
     firstTransactionDate(accountIds),

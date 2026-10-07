@@ -2,7 +2,7 @@ import { db } from "@/server/db";
 import { decrypt, encrypt } from "@/server/crypto/encryption";
 import { hmacForSearch } from "@/server/crypto/hmac";
 import { dataKey, searchKey } from "@/server/crypto/keys";
-import { listVisibleForUser } from "@/server/services/accounts";
+import { visibleAccountIds } from "@/server/services/accounts";
 import { loadRows, type AggRow } from "@/server/services/dashboard";
 import { merchantKeySchema, merchantNameSchema } from "@/lib/validation/merchant";
 import { merchantKey } from "@/lib/merchant";
@@ -43,7 +43,7 @@ export function merchantRowsOf(rows: AggRow[]): MerchantRow[] {
 }
 
 async function allMerchantRows(userId: string): Promise<MerchantRow[]> {
-  const accountIds = (await listVisibleForUser(userId)).map((a) => a.id);
+  const accountIds = await visibleAccountIds(userId);
   return merchantRowsOf((await loadRows(accountIds, ALL_TIME, { withLabels: true })).rows);
 }
 

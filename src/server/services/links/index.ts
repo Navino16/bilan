@@ -1,16 +1,11 @@
 import { db } from "@/server/db";
-import { listVisibleForUser } from "@/server/services/accounts";
+import { visibleAccountIds } from "@/server/services/accounts";
 import { canWriteAccount } from "@/server/services/accounts/sharing";
 import { listTransactions } from "@/server/services/transactions";
 import { logEvent } from "@/server/services/audit";
 import { findSuggestedPairs, pairKeyOf, type SuggestedPair } from "@/lib/links";
 
 export class LinkAccessError extends Error {}
-
-// Account ids the user may see (owned + shared). Reused for read-only link ops.
-async function visibleAccountIds(userId: string): Promise<Set<string>> {
-  return new Set((await listVisibleForUser(userId)).map((a) => a.id));
-}
 
 // Throws unless the user has WRITE on every account in `accountIds`. Linking
 // mutates the owner's aggregates (a balanced link drops from their totals), so
@@ -82,9 +77,9 @@ export async function deleteLink(linkId: string, userId: string): Promise<void> 
 // badging rows + excluding them from suggestions).
 export async function listLinkedTxIds(userId: string): Promise<Set<string>> {
   const visible = await visibleAccountIds(userId);
-  if (visible.size === 0) return new Set();
+  if (visible.length === 0) return new Set();
   const members = await db.transactionLinkMember.findMany({
-    where: { transaction: { accountId: { in: [...visible] } } },
+    where: { transaction: { accountId: { in: visible } } },
     select: { transactionId: true },
   });
   return new Set(members.map((m) => m.transactionId));
@@ -92,7 +87,7 @@ export async function listLinkedTxIds(userId: string): Promise<Set<string>> {
 
 // The link id a transaction belongs to, or null when unlinked or not visible.
 export async function getLinkForTx(transactionId: string, userId: string): Promise<string | null> {
-  const visible = await visibleAccountIds(userId);
+  const visible = new Set(await visibleAccountIds(userId));
   const member = await db.transactionLinkMember.findUnique({
     where: { transactionId },
     select: { linkId: true, transaction: { select: { accountId: true } } },

@@ -3,6 +3,7 @@ import { logEvent } from "@/server/services/audit";
 import {
   AccountAccessError,
   accountBalances,
+  ownedOrThrow,
   type AccountAccess,
 } from "@/server/services/accounts";
 import { requireGroupRole } from "@/server/services/groups/roles";
@@ -22,12 +23,6 @@ export type SharedAccount = {
 
 const PERMISSIONS = ["READ", "WRITE"] as const;
 export type SharePermission = (typeof PERMISSIONS)[number];
-
-async function ownedOrThrow(accountId: string, actorId: string) {
-  const acc = await db.bankAccount.findUnique({ where: { id: accountId } });
-  if (!acc || acc.ownerId !== actorId) throw new AccountAccessError("FORBIDDEN");
-  return acc;
-}
 
 export async function shareAccountWithGroup(
   input: { accountId: string; groupId: string; permission: SharePermission },

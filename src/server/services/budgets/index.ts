@@ -4,7 +4,11 @@ import { decrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
 import { requireGroupRole } from "@/server/services/groups/roles";
 import { logEvent } from "@/server/services/audit";
-import { listVisibleForUser } from "@/server/services/accounts";
+import {
+  listVisibleForUser,
+  visibleAccountIds,
+  visibleAccountRefs,
+} from "@/server/services/accounts";
 import { canReadAccount } from "@/server/services/accounts/sharing";
 import {
   assertCategoryAssignable,
@@ -370,15 +374,21 @@ async function budgetAccountIds(budget: {
     return shares.map((s) => s.accountId);
   }
   if (!budget.userId) return [];
-  return (await listVisibleForUser(budget.userId)).map((a) => a.id);
+  return visibleAccountIds(budget.userId);
 }
 
-export type BudgetAccountOption = { id: string; name: string; groupIds: string[] };
+export type BudgetAccountOption = {
+  id: string;
+  name: string;
+  groupIds: string[];
+  archived: boolean;
+};
 
-// The user's active accounts with the groups each is shared with: a personal
-// budget may use any of them, a group budget only those shared with it.
+// The user's accounts with the groups each is shared with: a personal budget may
+// use any of them, a group budget only those shared with it. Archived ones are only
+// offered back to the lines that already use them.
 export async function listBudgetAccountOptions(userId: string): Promise<BudgetAccountOption[]> {
-  const accounts = (await listVisibleForUser(userId)).filter((a) => !a.archived);
+  const accounts = await listVisibleForUser(userId, { includeArchived: true });
   const { groupIds } = await budgetScopeForUser(userId);
   const shares = await db.accountShare.findMany({
     where: { accountId: { in: accounts.map((a) => a.id) }, groupId: { in: groupIds } },
@@ -387,7 +397,12 @@ export async function listBudgetAccountOptions(userId: string): Promise<BudgetAc
   const groupsOf = new Map<string, string[]>();
   for (const sh of shares)
     groupsOf.set(sh.accountId, [...(groupsOf.get(sh.accountId) ?? []), sh.groupId]);
-  return accounts.map((a) => ({ id: a.id, name: a.name, groupIds: groupsOf.get(a.id) ?? [] }));
+  return accounts.map((a) => ({
+    id: a.id,
+    name: a.name,
+    groupIds: groupsOf.get(a.id) ?? [],
+    archived: a.archived,
+  }));
 }
 
 type AccountScopeCache = Map<string, Promise<string[]>>;
@@ -606,15 +621,8 @@ async function seriesNeighbours(b: {
   return { previousId: series[i - 1]?.id ?? null, nextId: series[i + 1]?.id ?? null };
 }
 
-// Names of every account the viewer can read, archived ones included (no balances).
 async function readableAccountNames(userId: string): Promise<Map<string, string>> {
-  const rows = await db.bankAccount.findMany({
-    where: {
-      OR: [{ ownerId: userId }, { shares: { some: { group: { members: { some: { userId } } } } } }],
-    },
-    select: { id: true, name: true },
-  });
-  return new Map(rows.map((a) => [a.id, a.name]));
+  return new Map((await visibleAccountRefs(userId)).map((a) => [a.id, a.name]));
 }
 
 async function budgetTransactions(

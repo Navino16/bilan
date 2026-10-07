@@ -160,7 +160,28 @@
     "edit": "Edit",
     "addTransaction": "Add a transaction",
     "archive": "Archive",
-    "archiveConfirm": "Archive this account? It will be hidden but its transactions are kept.",
+    "archiveTitle": "Archive “{name}”?",
+    "archiveBody": "The account leaves lists and entry forms. Its history stays in transactions, budgets and the dashboard, and you can unarchive it.",
+    "unarchive": "Unarchive",
+    "archivedTitle": "Archived accounts · {count}",
+    "archivedHint": "Hidden from entry forms and the global balance; their transactions stay in your history.",
+    "archivedBadge": "Archived",
+    "delete": "Delete",
+    "deleteDialog": {
+      "title": "Delete “{name}”?",
+      "loading": "Computing the impact…",
+      "transactions": "{count, plural, =0 {No transactions to delete.} one {# transaction will be deleted.} other {# transactions will be deleted.}}",
+      "imports": "{count, plural, one {# import will leave the import history.} other {# imports will leave the import history.}}",
+      "sharedWith": "Sharing with {groups} will be removed.",
+      "budgetLines": "{count, plural, one {# budget line limited to this account will be deleted.} other {# budget lines limited to this account will be deleted.}}",
+      "emptiedBudgets": "{count, plural, one {# budget will be deleted as it only covered this account ({names}).} other {# budgets will be deleted as they only covered this account ({names}).}}",
+      "dissolvedLinks": "{count, plural, one {# link with another account will be dissolved.} other {# links with other accounts will be dissolved.}}",
+      "irreversible": "This cannot be undone. To keep the history, archive the account instead.",
+      "confirmLabel": "Type “{name}” to confirm",
+      "keep": "Keep",
+      "confirm": "Delete permanently",
+      "deleting": "Deleting…"
+    },
     "name": "Account name",
     "namePlaceholder": "Checking account",
     "type": "Account type",
@@ -207,7 +228,8 @@
       "INVALID": "Check the fields.",
       "INVALID_IBAN": "Invalid IBAN.",
       "FORBIDDEN": "Action not allowed.",
-      "FAILED": "Failed. Please retry."
+      "FAILED": "Failed. Please retry.",
+      "CONFIRMATION": "The name you typed doesn't match the account."
     },
     "legendOthers": "Others · {count}"
   },
@@ -293,7 +315,8 @@
       "allSpending": "All spending",
       "otherSpending": "Other spending",
       "catchAllHint": "An “All categories / All accounts” line takes every expense that no other line matches.",
-      "hidden": "Hidden category or account"
+      "hidden": "Hidden category or account",
+      "archivedAccount": "{name} (archived)"
     },
     "plannedTotal": "Planned total",
     "save": "Save",
@@ -478,7 +501,8 @@
       "INVALID": "Check the fields.",
       "FORBIDDEN": "Not allowed.",
       "NOT_FOUND": "Transaction not found.",
-      "FAILED": "Failed. Try again."
+      "FAILED": "Failed. Try again.",
+      "ACCOUNT_ARCHIVED": "This account is archived: unarchive it to add transactions."
     },
     "link": {
       "create": "Link",
@@ -600,7 +624,8 @@
       "UNAUTHORIZED": "Your session expired. Sign in again.",
       "EMPTY": "No transactions found in this file.",
       "NOT_TEXT": "This file isn't a readable CSV (a binary file or an image?).",
-      "NOTHING_TO_IMPORT": "Nothing to import: no row is left (duplicates, unchecked or unreadable rows, or ignored products)."
+      "NOTHING_TO_IMPORT": "Nothing to import: no row is left (duplicates, unchecked or unreadable rows, or ignored products).",
+      "ACCOUNT_ARCHIVED": "This account is archived: unarchive it to import into it."
     },
     "history": {
       "overline": "History",

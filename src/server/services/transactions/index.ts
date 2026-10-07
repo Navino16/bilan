@@ -5,7 +5,7 @@ import { dataKey, searchKey } from "@/server/crypto/keys";
 import { UNCATEGORIZED } from "@/lib/transaction-filters";
 import { logEvent } from "@/server/services/audit";
 import { canWriteAccount, canReadAccount } from "@/server/services/accounts/sharing";
-import { listVisibleForUser } from "@/server/services/accounts";
+import { isAccountArchived, visibleAccountRefs } from "@/server/services/accounts";
 import {
   assertCategoryAssignable,
   CategoryAccessError,
@@ -60,6 +60,7 @@ export async function createTransaction(
   if (!(await canWriteAccount(actor.id, data.accountId))) {
     throw new TransactionAccessError("FORBIDDEN");
   }
+  if (await isAccountArchived(data.accountId)) throw new TransactionAccessError("ACCOUNT_ARCHIVED");
   await assertAssignableCategory(data.categoryId, actor.id);
   const rawLabel = data.rawLabel?.trim() ? data.rawLabel : data.label;
   const secure = buildSecureFields({ label: data.label, rawLabel, note: data.note });
@@ -135,7 +136,7 @@ export async function listTransactions(
   userId: string,
   filters: TransactionFilters,
 ): Promise<{ items: TransactionListItem[]; total: number }> {
-  const visible = await listVisibleForUser(userId);
+  const visible = await visibleAccountRefs(userId);
   const visibleIds = visible.map((a) => a.id);
   const accountName = new Map(visible.map((a) => [a.id, a.name]));
   const accountIds =

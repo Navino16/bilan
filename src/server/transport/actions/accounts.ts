@@ -6,9 +6,15 @@ import {
   createAccount,
   updateAccount,
   archiveAccount,
+  unarchiveAccount,
   getAccountIban,
   AccountAccessError,
 } from "@/server/services/accounts";
+import {
+  deleteAccount,
+  getAccountDeleteImpact,
+  type AccountDeleteImpact,
+} from "@/server/services/accounts/delete";
 import {
   shareAccountWithGroup,
   revokeShare,
@@ -75,7 +81,44 @@ export async function revealAccountIbanAction(id: string): Promise<string | null
   return getAccountIban(id, user.id);
 }
 
+async function setArchived(formData: FormData, archived: boolean): Promise<AccountActionState> {
+  const user = await requireSession();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { ok: false, error: "INVALID" };
+  try {
+    await (archived ? archiveAccount : unarchiveAccount)(id, { id: user.id });
+  } catch (e) {
+    return { ok: false, error: e instanceof AccountAccessError ? "FORBIDDEN" : "FAILED" };
+  }
+  return { ok: true };
+}
+
 export async function archiveAccountAction(
+  _prev: AccountActionState,
+  formData: FormData,
+): Promise<AccountActionState> {
+  return setArchived(formData, true);
+}
+
+export async function unarchiveAccountAction(
+  _prev: AccountActionState,
+  formData: FormData,
+): Promise<AccountActionState> {
+  return setArchived(formData, false);
+}
+
+export async function getAccountDeleteImpactAction(
+  id: string,
+): Promise<{ ok: true; data: AccountDeleteImpact } | { ok: false; error: string }> {
+  const user = await requireSession();
+  try {
+    return { ok: true, data: await getAccountDeleteImpact(id, { id: user.id }) };
+  } catch (e) {
+    return { ok: false, error: e instanceof AccountAccessError ? "FORBIDDEN" : "FAILED" };
+  }
+}
+
+export async function deleteAccountAction(
   _prev: AccountActionState,
   formData: FormData,
 ): Promise<AccountActionState> {
@@ -83,9 +126,10 @@ export async function archiveAccountAction(
   const id = String(formData.get("id") ?? "");
   if (!id) return { ok: false, error: "INVALID" };
   try {
-    await archiveAccount(id, { id: user.id });
+    await deleteAccount(id, { id: user.id }, String(formData.get("confirmName") ?? ""));
   } catch (e) {
-    return { ok: false, error: e instanceof AccountAccessError ? "FORBIDDEN" : "FAILED" };
+    if (!(e instanceof AccountAccessError)) return { ok: false, error: "FAILED" };
+    return { ok: false, error: e.message === "CONFIRMATION" ? "CONFIRMATION" : "FORBIDDEN" };
   }
   return { ok: true };
 }

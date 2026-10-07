@@ -40,6 +40,39 @@ test.describe("accounts", () => {
     await expect(renamed.getByText("•••• 0189")).toBeVisible();
   });
 
+  test("archive, unarchive, then delete an account with a typed confirmation", async ({ page }) => {
+    const name = `Jetable ${Date.now()}`;
+    await page.goto("/fr/accounts");
+    await page.getByRole("button", { name: /nouveau compte/i }).click();
+    await page.fill('input[name="name"]', name);
+    await page.getByRole("button", { name: /créer le compte/i }).click();
+    const card = () => page.locator('[data-slot="card"]').filter({ hasText: name }).last();
+    await expect(card()).toBeVisible();
+
+    await card().getByRole("button", { name: "Modifier" }).click();
+    await page.getByRole("menuitem", { name: /^archiver$/i }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: /^archiver$/i })
+      .click();
+    const archived = page.locator('[data-slot="archived-accounts"]');
+    await expect(archived.getByText(name)).toBeVisible();
+
+    await card().getByRole("button", { name: "Modifier" }).click();
+    await page.getByRole("menuitem", { name: /désarchiver/i }).click();
+    await expect(archived.getByText(name)).toHaveCount(0);
+
+    await card().getByRole("button", { name: "Modifier" }).click();
+    await page.getByRole("menuitem", { name: /supprimer/i }).click();
+    const dialog = page.getByRole("dialog");
+    const confirm = dialog.getByRole("button", { name: /supprimer définitivement/i });
+    await expect(dialog.getByText(/aucune transaction/i)).toBeVisible();
+    await expect(confirm).toBeDisabled();
+    await dialog.getByLabel(/saisissez/i).fill(name);
+    await confirm.click();
+    await expect(page.getByText(name)).toHaveCount(0);
+  });
+
   test("share an account READ with a household; member sees it read-only", async ({
     page,
     browser,

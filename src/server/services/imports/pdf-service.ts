@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import { db } from "@/server/db";
-import { canWriteAccount } from "@/server/services/accounts/sharing";
 import { logEvent } from "@/server/services/audit";
 import { insertRows, finalizeBatch, type CommitOptions, type InsertTotals } from "./commit";
 import { buildPreview, PREVIEW_PAGE_SIZE } from "./preview";
@@ -8,7 +7,7 @@ import { buildPreview, PREVIEW_PAGE_SIZE } from "./preview";
 // so the pdfjs worker resolves. Only the PDF route imports this module, so the CSV
 // path never loads pdfjs.
 import { parsePdf, type BankKey } from "./pdf";
-import { loadBatch, withCommitClaim } from "./index";
+import { assertImportTarget, loadBatch, withCommitClaim } from "./index";
 import { ImportAccessError } from "./errors";
 import type { CommitSummary, PreviewRow } from "./types";
 
@@ -36,7 +35,7 @@ export async function createPdfBatch(
   input: { accountId: string; filename: string; buffer: Buffer },
   actor: { id: string },
 ): Promise<{ id: string; bank: BankKey | null }> {
-  if (!(await canWriteAccount(actor.id, input.accountId))) throw new ImportAccessError("FORBIDDEN");
+  await assertImportTarget(actor.id, input.accountId);
   const { bank, products } = await parsePdf(input.buffer);
   const metaProducts: PdfMetaProduct[] = products.map((p) => ({
     key: p.key,
@@ -98,7 +97,7 @@ export async function previewPdfBatch(
     throw new ImportAccessError("NOT_COMMITTABLE");
   }
   for (const id of new Set(Object.values(opts.accounts ?? {}).filter(Boolean))) {
-    if (!(await canWriteAccount(userId, id))) throw new ImportAccessError("FORBIDDEN");
+    await assertImportTarget(userId, id);
   }
   const { bank, products, fileSizeBytes } = readPdfMeta(batch.metadata);
   const previewed: PdfPreviewProduct[] = await Promise.all(
@@ -150,7 +149,7 @@ export async function commitPdfBatch(
     for (const product of products) {
       const accountId = mapping[product.key];
       if (!accountId) continue; // ignored
-      if (!(await canWriteAccount(actor.id, accountId))) throw new ImportAccessError("FORBIDDEN");
+      await assertImportTarget(actor.id, accountId);
       const rows = product.rows.map((r) => ({
         date: new Date(r.date),
         amount: r.amount,

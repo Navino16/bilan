@@ -1,5 +1,5 @@
 import { db } from "@/server/db";
-import { listVisibleForUser } from "@/server/services/accounts";
+import { visibleAccountIds } from "@/server/services/accounts";
 import { listTransactions, type TransactionListItem } from "@/server/services/transactions";
 import { collapseLinkedRows, type CollapsibleRow } from "@/lib/links";
 import { averageMonthRows, type AmountRow } from "@/lib/insights";
@@ -217,7 +217,7 @@ export async function getDashboard(
   comparison: Comparison,
   now: Date = new Date(),
 ): Promise<DashboardData> {
-  const accountIds = (await listVisibleForUser(userId)).map((a) => a.id);
+  const accountIds = await visibleAccountIds(userId);
 
   // Independent queries for the two periods → run them together.
   const [current, previousLoaded, first] = await Promise.all([
