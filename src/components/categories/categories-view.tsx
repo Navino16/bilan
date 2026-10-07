@@ -8,6 +8,7 @@ import { SegmentedTabs } from "@/components/transactions/bits";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import { CategoryForm } from "./category-form";
 import { CategoryList } from "./category-list";
+import { categoryOptions, pickableCategories } from "./category-options";
 import { RulesList, type RuleRow } from "./rules-list";
 import { RuleDialog } from "./rule-dialog";
 import { MerchantDirectory } from "@/components/merchants/merchant-directory";
@@ -33,7 +34,7 @@ export function CategoriesView({
   const tm = useTranslations("merchants");
   const [tab, setTab] = useState<"cats" | "rules" | "merchants">("cats");
   const [ruleOpen, setRuleOpen] = useState(false);
-  const parents = tree.map((n) => ({ id: n.id, name: n.name }));
+  const parents = pickableCategories(categoryOptions(tree), null);
 
   return (
     <div className="space-y-5">

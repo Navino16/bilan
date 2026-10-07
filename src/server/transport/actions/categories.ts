@@ -6,7 +6,9 @@ import {
   createCategory,
   updateCategory,
   deleteCategory,
+  getCategoryDeletionImpact,
   CategoryAccessError,
+  type CategoryDeletionImpact,
 } from "@/server/services/categories";
 
 export type CategoryActionState = { ok: true } | { ok: false; error: string } | null;
@@ -64,10 +66,22 @@ export async function deleteCategoryAction(
   const user = await requireSession();
   const id = String(formData.get("id") ?? "");
   if (!id) return { ok: false, error: "INVALID" };
+  const targetId = String(formData.get("targetId") ?? "") || null;
   try {
-    await deleteCategory(id, { id: user.id });
+    await deleteCategory(id, { id: user.id }, { targetId });
   } catch (e) {
     return { ok: false, error: mapError(e) };
   }
   return { ok: true };
+}
+
+export async function getCategoryDeletionImpactAction(
+  id: string,
+): Promise<{ ok: true; impact: CategoryDeletionImpact } | { ok: false; error: string }> {
+  const user = await requireSession();
+  try {
+    return { ok: true, impact: await getCategoryDeletionImpact(id, { id: user.id }) };
+  } catch (e) {
+    return { ok: false, error: mapError(e) };
+  }
 }

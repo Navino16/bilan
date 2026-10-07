@@ -346,7 +346,6 @@
     "scopeGroup": "Foyer",
     "edit": "Modifier",
     "delete": "Supprimer",
-    "deleteConfirm": "Supprimer cette catégorie ? Les sous-catégories deviendront des racines et les transactions seront décatégorisées.",
     "cancel": "Annuler",
     "save": "Enregistrer",
     "saving": "Enregistrement…",
@@ -356,9 +355,26 @@
       "INVALID_PARENT": "Catégorie parente invalide.",
       "FORBIDDEN": "Action non autorisée.",
       "NOT_FOUND": "Catégorie introuvable.",
-      "FAILED": "Échec. Réessayez."
+      "FAILED": "Échec. Réessayez.",
+      "INVALID_TARGET": "Catégorie de destination invalide."
     },
-    "actionsFor": "Actions pour {name}"
+    "actionsFor": "Actions pour {name}",
+    "colorInherited": "Héritée de la catégorie parente.",
+    "inheritColor": "Reprendre la couleur du parent",
+    "deleteDialog": {
+      "title": "Supprimer « {name} » ?",
+      "loading": "Calcul de l'impact…",
+      "unused": "Cette catégorie n'est utilisée nulle part.",
+      "usedBy": "La suppression concerne :",
+      "subcategories": "{count, plural, one {# sous-catégorie, supprimée elle aussi} other {# sous-catégories, supprimées elles aussi}}",
+      "transactions": "{count, plural, one {# transaction} other {# transactions}}",
+      "rules": "{count, plural, one {# règle} other {# règles}}",
+      "budgetLines": "{count, plural, one {# ligne de budget} other {# lignes de budget}}",
+      "moveTo": "Déplacer vers",
+      "noTarget": "Aucune catégorie",
+      "outcomeMove": "Les transactions, règles et lignes de budget seront rattachées à « {name} ».",
+      "outcomeNone": "Les transactions deviendront non catégorisées ; les règles et les lignes de budget seront supprimées."
+    }
   },
   "transactions": {
     "title": "Transactions",

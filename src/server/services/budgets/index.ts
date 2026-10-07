@@ -4,6 +4,7 @@ import { requireGroupRole } from "@/server/services/groups/roles";
 import { logEvent } from "@/server/services/audit";
 import { listVisibleForUser } from "@/server/services/accounts";
 import { canReadAccount } from "@/server/services/accounts/sharing";
+import { withDescendants } from "@/server/services/categories";
 import { collapseLinkedRows } from "@/lib/links";
 import {
   budgetPlannedTotal,
@@ -197,7 +198,8 @@ export async function listBudgetsForUser(userId: string): Promise<BudgetListItem
     orderBy: { periodStart: "desc" },
   });
   const accountCache: AccountScopeCache = new Map();
-  const spends = await Promise.all(rows.map((b) => computeBudgetSpend(b, accountCache)));
+  const subtrees = await withDescendants(lineCategoryIds(rows));
+  const spends = await Promise.all(rows.map((b) => computeBudgetSpend(b, accountCache, subtrees)));
   const now = Date.now();
   return rows.map((b, i) => {
     const plannedTotal = budgetPlannedTotal(
@@ -345,11 +347,22 @@ async function loadBudgetRows(
 
 type LineFilter = { categoryId: string | null; accountId: string | null };
 
-// A line auto-matches a row by its category and/or account filter. A line with
-// neither filter auto-matches nothing (spend comes only from INCLUDE).
-function matchesLine(r: BudgetRow, line: LineFilter): boolean {
-  if (line.categoryId == null && line.accountId == null) return false;
-  if (line.categoryId != null && r.categoryId !== line.categoryId) return false;
+function lineCategoryIds(budgets: { lines: LineFilter[] }[]): string[] {
+  return budgets.flatMap((b) => b.lines.flatMap((l) => (l.categoryId ? [l.categoryId] : [])));
+}
+type LineMatcher = {
+  categoryId: string | null;
+  categoryIds: Set<string> | null;
+  accountId: string | null;
+};
+
+// A line auto-matches a row by its category (itself or any descendant) and/or
+// account filter. A line with neither filter auto-matches nothing (spend comes
+// only from INCLUDE).
+function matchesLine(r: BudgetRow, line: LineMatcher): boolean {
+  if (line.categoryIds == null && line.accountId == null) return false;
+  if (line.categoryIds != null && (r.categoryId == null || !line.categoryIds.has(r.categoryId)))
+    return false;
   if (line.accountId != null && r.accountId !== line.accountId) return false;
   return true;
 }
@@ -373,6 +386,18 @@ export type BudgetDetail = {
   spentTotal: number;
 };
 
+// Among the lines a row matches, drops those whose category is an ancestor of
+// another matched line's: the most specific category line wins (#154).
+function mostSpecific(matched: number[], filters: LineMatcher[]): number[] {
+  return matched.filter((i) => {
+    const outer = filters[i];
+    return !matched.some((j) => {
+      const inner = filters[j].categoryId;
+      return inner != null && inner !== outer.categoryId && !!outer.categoryIds?.has(inner);
+    });
+  });
+}
+
 // Per-line sums for display + a budget-wide dedup sum for the total: a tx that
 // matches several lines is counted once in the total; an INCLUDE'd tx that
 // matches no line is attributed to the first line for display.
@@ -386,6 +411,7 @@ async function computeBudgetSpend(
     lines: LineFilter[];
   },
   accountCache?: AccountScopeCache,
+  subtrees?: Map<string, Set<string>>,
 ): Promise<{ lineSums: number[]; totalSum: number }> {
   const { rows, excluded, includedIds } = await loadBudgetRows(b, accountCache);
 
@@ -393,8 +419,10 @@ async function computeBudgetSpend(
   // across categories nets correctly (the offsetting member is not dropped by a
   // per-line filter). Each surviving row carries its primary's category/account.
   const collapsed = collapseLinkedRows(rows);
-  const filters: LineFilter[] = b.lines.map((l) => ({
+  const lineSubtrees = subtrees ?? (await withDescendants(lineCategoryIds([b])));
+  const filters: LineMatcher[] = b.lines.map((l) => ({
     categoryId: l.categoryId,
+    categoryIds: l.categoryId ? lineSubtrees.get(l.categoryId)! : null,
     accountId: l.accountId,
   }));
 
@@ -402,7 +430,10 @@ async function computeBudgetSpend(
   let totalSum = 0;
   for (const r of collapsed) {
     if (excluded.has(r.id)) continue;
-    const matchedIdx = filters.flatMap((f, i) => (matchesLine(r, f) ? [i] : []));
+    const matchedIdx = mostSpecific(
+      filters.flatMap((f, i) => (matchesLine(r, f) ? [i] : [])),
+      filters,
+    );
     if (matchedIdx.length === 0 && !includedIds.has(r.id)) continue; // not in this budget
     totalSum += r.amount; // counted once toward the total
     if (matchedIdx.length > 0) {

@@ -22,8 +22,10 @@ import {
   type CategoryActionState,
 } from "@/server/transport/actions/categories";
 import { NativeSelect } from "@/components/ui/native-select";
+import { indentedName } from "@/components/transactions/category-tree";
+import type { CategoryOption } from "./category-options";
 
-export type ParentOption = { id: string; name: string };
+const DEFAULT_COLOR = "#2563eb";
 export type EditableCategory = {
   id: string;
   name: string;
@@ -44,7 +46,7 @@ export function CategoryForm({
 }: {
   mode: "create" | "edit";
   category?: EditableCategory;
-  parents: ParentOption[];
+  parents: CategoryOption[];
   groupId?: string | null;
   trigger?: React.ReactNode;
   open?: boolean;
@@ -105,40 +107,7 @@ export function CategoryForm({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="cat-icon">{t("icon")}</Label>
-                <Input
-                  id="cat-icon"
-                  name="icon"
-                  defaultValue={category?.icon ?? ""}
-                  maxLength={50}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cat-color">{t("color")}</Label>
-                <Input
-                  id="cat-color"
-                  name="color"
-                  type="color"
-                  defaultValue={category?.color ?? "#2563eb"}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="cat-parent">{t("parent")}</Label>
-              <NativeSelect id="cat-parent" name="parentId" defaultValue={category?.parentId ?? ""}>
-                <option value="">{t("noParent")}</option>
-                {parents
-                  .filter((p) => p.id !== category?.id)
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-              </NativeSelect>
-            </div>
+            <ParentAndColorFields category={category} parents={parents} />
 
             {error && <p className="text-destructive text-sm">{t(`error.${error}`)}</p>}
           </div>
@@ -155,5 +124,72 @@ export function CategoryForm({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Mounted with the dialog content, so unsaved choices reset on each opening.
+// A sub-category without its own colour inherits its parent's: the colour is
+// only submitted once the user picks one.
+function ParentAndColorFields({
+  category,
+  parents,
+}: {
+  category?: EditableCategory;
+  parents: CategoryOption[];
+}) {
+  const t = useTranslations("categories");
+  const [parentId, setParentId] = useState(category?.parentId ?? "");
+  const [color, setColor] = useState<string | null>(category?.color ?? null);
+  const parent = parents.find((p) => p.id === parentId);
+  const shownColor = color ?? parent?.color ?? DEFAULT_COLOR;
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="cat-icon">{t("icon")}</Label>
+          <Input id="cat-icon" name="icon" defaultValue={category?.icon ?? ""} maxLength={50} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="cat-color">{t("color")}</Label>
+          <Input
+            id="cat-color"
+            type="color"
+            value={shownColor}
+            onChange={(e) => setColor(e.target.value)}
+          />
+          <input type="hidden" name="color" value={color ?? (parent ? "" : DEFAULT_COLOR)} />
+          {parent &&
+            (color === null ? (
+              <p className="text-muted-foreground text-xs">{t("colorInherited")}</p>
+            ) : (
+              <button
+                type="button"
+                className="text-primary text-xs underline-offset-2 hover:underline"
+                onClick={() => setColor(null)}
+              >
+                {t("inheritColor")}
+              </button>
+            ))}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="cat-parent">{t("parent")}</Label>
+        <NativeSelect
+          id="cat-parent"
+          name="parentId"
+          value={parentId}
+          onChange={(e) => setParentId(e.target.value)}
+        >
+          <option value="">{t("noParent")}</option>
+          {parents.map((p) => (
+            <option key={p.id} value={p.id}>
+              {indentedName(p.name, p.depth)}
+            </option>
+          ))}
+        </NativeSelect>
+      </div>
+    </>
   );
 }

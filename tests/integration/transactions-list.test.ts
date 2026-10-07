@@ -60,6 +60,22 @@ afterAll(async () => {
 });
 
 describe("listTransactions", () => {
+  it("a parent-category filter includes its sub-categories", async () => {
+    const parent = await db.category.create({ data: { name: "Food", userId: owner } });
+    const child = await db.category.create({
+      data: { name: "Bakery", userId: owner, parentId: parent.id },
+    });
+    const t = await createTransaction(
+      { accountId, date: "2026-01-15", amount: -3, type: "CARD", label: "Boulangerie" },
+      { id: owner },
+    );
+    await recategorizeTransaction(t.id, child.id, { id: owner });
+    const { items } = await listTransactions(owner, { categoryId: parent.id });
+    expect(items.map((i) => i.label)).toEqual(["Boulangerie"]);
+    await db.transaction.delete({ where: { id: t.id } });
+    await db.category.deleteMany({ where: { id: { in: [child.id, parent.id] } } });
+  });
+
   it("returns the owner's transactions, decrypted, newest first", async () => {
     const { items, total } = await listTransactions(owner, {});
     expect(total).toBe(3);
