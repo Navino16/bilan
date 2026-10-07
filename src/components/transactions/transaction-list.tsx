@@ -19,6 +19,9 @@ import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useSelectionMode } from "./selection-mode";
 import { SelectionBar } from "./selection-bar";
 import { DeleteTransactionsDialog } from "./delete-transactions-dialog";
+import { MIN_SEARCH_WORD } from "@/lib/text";
+import { proposeRule } from "@/lib/propose-rule";
+import { useLinkErrorMessage } from "./link-error";
 
 export type ListItem = {
   id: string;
@@ -42,16 +45,6 @@ export type AccountOption = {
   writable: boolean;
 };
 
-function proposePattern(label: string): string {
-  const tokens = label
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .split(/[^a-z0-9]+/)
-    .filter((w) => w.length >= 3);
-  return tokens.length ? tokens.reduce((a, b) => (b.length > a.length ? b : a)) : "";
-}
-
 // No date column: rows are grouped under a day header.
 const COLS = "md:grid-cols-[1fr_minmax(0,180px)_minmax(0,140px)_92px_110px]";
 
@@ -62,6 +55,8 @@ export function TransactionList({
   accounts,
   budgets = [],
   partialLastDay = false,
+  currentYear,
+  searching = false,
 }: {
   items: ListItem[];
   categories: FlatCategory[];
@@ -70,6 +65,9 @@ export function TransactionList({
   accounts: AccountOption[];
   budgets?: AssignableBudget[];
   partialLastDay?: boolean;
+  // Day headers omit the year only for this one.
+  currentYear: number;
+  searching?: boolean;
 }) {
   const t = useTranslations("transactions");
   const locale = useLocale();
@@ -87,21 +85,28 @@ export function TransactionList({
   } | null>(null);
 
   const tLink = useTranslations("transactions.link");
+  const linkErrorMessage = useLinkErrorMessage();
   const tSel = useTranslations("transactions.selection");
   const { selecting, picked, setSelecting, togglePicked } = useSelectionMode();
   // Picks survive filter changes (the provider sits above the list): act on visible rows only.
   const pickedIds = items.filter((i) => picked.has(i.id)).map((i) => i.id);
   const [linkPending, startLinkTransition] = useTransition();
+  // Tied to the picks it was raised for, so changing the selection clears it.
+  const [linkError, setLinkError] = useState<{ ids: string; message: string } | null>(null);
   const [deleteIds, setDeleteIds] = useState<string[] | null>(null);
 
   function submitLink() {
+    const ids = pickedIds.join(",");
     const fd = new FormData();
-    fd.set("transactionIds", pickedIds.join(","));
+    fd.set("transactionIds", ids);
+    setLinkError(null);
     startLinkTransition(async () => {
       const r = await createLinkAction(null, fd);
       if (r?.ok) {
         setSelecting(false);
         router.refresh();
+      } else {
+        setLinkError({ ids, message: linkErrorMessage(r?.error) });
       }
     });
   }
@@ -124,6 +129,7 @@ export function TransactionList({
     <SelectionBar
       count={pickedIds.length}
       linkPending={linkPending}
+      error={linkError?.ids === pickedIds.join(",") ? linkError.message : null}
       onExit={() => setSelecting(false)}
       onLink={submitLink}
       onDelete={() => setDeleteIds(pickedIds)}
@@ -133,13 +139,20 @@ export function TransactionList({
   if (items.length === 0)
     return (
       <>
-        <p className="text-muted-foreground text-sm">{t("empty")}</p>
+        <p className="text-muted-foreground text-sm">
+          {searching ? t("emptySearch", { min: MIN_SEARCH_WORD }) : t("empty")}
+        </p>
         {selectionBar}
       </>
     );
 
   const nf = new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" });
-  const dfDay = new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long" });
+  // Rows carry UTC days: format in UTC so every zone (and the SSR pass) shows the same day.
+  const dayOpts = { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" } as const;
+  const dfDay = new Intl.DateTimeFormat(locale, dayOpts);
+  const dfDayYear = new Intl.DateTimeFormat(locale, { ...dayOpts, year: "numeric" });
+  const dayLabel = (day: string) =>
+    (day.startsWith(String(currentYear)) ? dfDay : dfDayYear).format(new Date(day));
   const signed = (n: number) => (n > 0 ? `+${nf.format(n)}` : nf.format(n));
 
   // Group by ISO day (items already newest-first).
@@ -167,7 +180,7 @@ export function TransactionList({
       if (!r?.ok) setRecatAttempt((n) => n + 1);
       if (r?.ok) {
         router.refresh();
-        const pattern = proposePattern(it.rawLabel || it.label);
+        const pattern = proposeRule(it.rawLabel || it.label)?.pattern;
         const meta = catMeta[categoryId];
         if (pattern && meta) {
           setRule({
@@ -226,7 +239,7 @@ export function TransactionList({
         {groups.map((g, gi) => (
           <div key={g.day}>
             <div className="text-muted-foreground bg-muted/60 flex items-center justify-between border-y px-4 py-2 text-[0.7rem] font-medium tracking-[0.08em] uppercase">
-              <span>{dfDay.format(new Date(g.day))}</span>
+              <span>{dayLabel(g.day)}</span>
               {/* The per-day total only adds signal when a day has several rows;
                   for single-transaction days it would just echo the amount. */}
               {g.rows.length > 1 && !(partialLastDay && gi === groups.length - 1) && (

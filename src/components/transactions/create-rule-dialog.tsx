@@ -75,9 +75,16 @@ export function CreateRuleDialog({
           <DialogTitle className="font-display text-2xl leading-tight">
             {t("rulePrompt.title")}
           </DialogTitle>
-          <p className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-sm">
-            {t("rulePrompt.body", { pattern: pat, category: "" })}
-            <CategoryChip name={categoryName} color={categoryColor} />
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            {t.rich("rulePrompt.body", {
+              pattern: pat,
+              category: categoryName,
+              chip: () => (
+                <span className="mx-0.5 inline-flex align-middle">
+                  <CategoryChip name={categoryName} color={categoryColor} />
+                </span>
+              ),
+            })}
           </p>
         </DialogHeader>
 

@@ -14,6 +14,8 @@ import {
   BudgetAccessError,
 } from "@/server/services/budgets";
 import { budgetInputSchema } from "@/lib/validation/budget";
+import { AMOUNT_ERRORS } from "@/lib/amount";
+import { issueCode } from "@/lib/validation/amount";
 
 export type BudgetActionState = { ok: true; id?: string } | { ok: false; error: string } | null;
 
@@ -46,7 +48,7 @@ export async function createBudgetAction(
 ): Promise<BudgetActionState> {
   const user = await requireSession();
   const parsed = parse(formData);
-  if (!parsed.success) return { ok: false, error: "INVALID" };
+  if (!parsed.success) return { ok: false, error: issueCode(parsed.error.issues, AMOUNT_ERRORS) };
   try {
     const { id } = await createBudget(parsed.data, { id: user.id });
     return { ok: true, id };
@@ -63,7 +65,7 @@ export async function updateBudgetAction(
   const id = String(formData.get("id") ?? "");
   if (!id) return { ok: false, error: "INVALID" };
   const parsed = parse(formData);
-  if (!parsed.success) return { ok: false, error: "INVALID" };
+  if (!parsed.success) return { ok: false, error: issueCode(parsed.error.issues, AMOUNT_ERRORS) };
   try {
     await updateBudget(id, parsed.data, { id: user.id });
     return { ok: true };

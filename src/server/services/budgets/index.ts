@@ -779,16 +779,39 @@ export async function unassignTransaction(
 }
 
 // Budgets the actor may assign a transaction to: their own + their groups'.
-export async function listAssignableBudgets(
-  userId: string,
-): Promise<{ id: string; name: string; scope: BudgetScope }[]> {
+export type AssignableBudget = {
+  id: string;
+  name: string;
+  scope: BudgetScope;
+  groupId: string | null;
+  groupName: string | null;
+  periodStart: Date;
+  periodEnd: Date;
+};
+
+export async function listAssignableBudgets(userId: string): Promise<AssignableBudget[]> {
   const { groupIds } = await budgetScopeForUser(userId);
   const rows = await db.budget.findMany({
     where: { archived: false, OR: [{ userId }, { groupId: { in: groupIds } }] },
-    select: { id: true, name: true, groupId: true },
-    orderBy: { periodStart: "desc" },
+    select: {
+      id: true,
+      name: true,
+      groupId: true,
+      group: { select: { name: true } },
+      periodStart: true,
+      periodEnd: true,
+    },
+    orderBy: [{ periodStart: "desc" }, { name: "asc" }],
   });
-  return rows.map((b) => ({ id: b.id, name: b.name, scope: b.groupId ? "GROUP" : "USER" }));
+  return rows.map((b) => ({
+    id: b.id,
+    name: b.name,
+    scope: b.groupId ? "GROUP" : "USER",
+    groupId: b.groupId,
+    groupName: b.group?.name ?? null,
+    periodStart: b.periodStart,
+    periodEnd: b.periodEnd,
+  }));
 }
 
 // The assignments on a transaction (for the detail panel to show current state).

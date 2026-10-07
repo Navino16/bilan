@@ -97,7 +97,10 @@ test.describe("budgets", () => {
       .filter({ hasText: txLabel })
       .first()
       .click({ timeout: 15_000 });
-    await page.getByLabel(/choisir un budget/i).selectOption({ label: budgetName });
+    // Options read "name · period" (#161).
+    const budgetSelect = page.getByLabel(/choisir un budget/i);
+    const option = budgetSelect.locator("option", { hasText: budgetName });
+    await budgetSelect.selectOption((await option.getAttribute("value"))!);
     await page.getByRole("button", { name: /^inclure$/i }).click();
     await expect(page.getByText(/incluse/i).first()).toBeVisible({ timeout: 15_000 });
 

@@ -16,6 +16,8 @@ import { CategoryCombobox } from "./category-combobox";
 import { Pill, overline } from "./bits";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Trash2 } from "lucide-react";
+import { formatPeriodLabel } from "@/lib/period";
+import type { AssignableBudget } from "@/server/services/budgets";
 
 export type DetailItem = {
   id: string;
@@ -35,7 +37,7 @@ export type AccountMeta = {
   bankName: string | null;
   writable: boolean;
 };
-export type AssignableBudget = { id: string; name: string; scope: "USER" | "GROUP" };
+export type { AssignableBudget };
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -74,6 +76,7 @@ export function TransactionDetail({
   onDelete: () => void;
 }) {
   const t = useTranslations("transactions");
+  const tBudgets = useTranslations("budgets");
   const tb = useTranslations("budgets.assign");
   const td = useTranslations("transactions.delete");
   const locale = useLocale();
@@ -85,16 +88,17 @@ export function TransactionDetail({
   // Lazily load which budgets this transaction is assigned to when the panel opens.
   // Only the async result sets state (a synchronous reset here would trip
   // react-hooks/set-state-in-effect); the section isn't rendered without an item.
+  const itemId = item?.id;
   useEffect(() => {
-    if (!item || budgets.length === 0) return;
+    if (!itemId || budgets.length === 0) return;
     let active = true;
-    listAssignmentsForTxAction(item.id).then((rows) => {
+    listAssignmentsForTxAction(itemId).then((rows) => {
       if (active) setAssignments(Object.fromEntries(rows.map((r) => [r.budgetId, r.mode])));
     });
     return () => {
       active = false;
     };
-  }, [item, budgets.length]);
+  }, [itemId, budgets.length]);
 
   function refreshAssignments(txId: string) {
     listAssignmentsForTxAction(txId).then((rows) =>
@@ -131,7 +135,16 @@ export function TransactionDetail({
     day: "numeric",
     month: "long",
     year: "numeric",
+    timeZone: "UTC",
   });
+  // Same-named budgets differ by owner and period (#161).
+  const budgetLabel = (b: AssignableBudget) =>
+    `${b.name} · ${formatPeriodLabel({ from: b.periodStart, to: b.periodEnd, year: null, month: null }, locale)}`;
+  const budgetGroups = new Map<string, AssignableBudget[]>();
+  for (const b of budgets) {
+    const key = b.groupId ?? "";
+    budgetGroups.set(key, [...(budgetGroups.get(key) ?? []), b]);
+  }
 
   const acc = item ? accounts[item.accountId] : undefined;
   const category = item?.categoryId ? categoryMeta[item.categoryId] : undefined;
@@ -153,7 +166,7 @@ export function TransactionDetail({
                 {nf.format(item.amount)}
               </div>
               <div className="text-sm">{item.label}</div>
-              <div className="text-muted-foreground text-xs capitalize">
+              <div className="text-muted-foreground text-xs first-letter:uppercase">
                 {df.format(new Date(item.date))}
               </div>
             </div>
@@ -234,10 +247,17 @@ export function TransactionDetail({
                         className="min-w-0 flex-1"
                       >
                         <option value="">{tb("choose")}</option>
-                        {budgets.map((b) => (
-                          <option key={b.id} value={b.id}>
-                            {b.name}
-                          </option>
+                        {[...budgetGroups].map(([groupId, list]) => (
+                          <optgroup
+                            key={groupId}
+                            label={list[0].groupName ?? tBudgets("scopePersonal")}
+                          >
+                            {list.map((b) => (
+                              <option key={b.id} value={b.id}>
+                                {budgetLabel(b)}
+                              </option>
+                            ))}
+                          </optgroup>
                         ))}
                       </NativeSelect>
                       <Button
@@ -269,7 +289,12 @@ export function TransactionDetail({
                               key={b.id}
                               className="border-border flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
                             >
-                              <span className="min-w-0 flex-1 truncate">{b.name}</span>
+                              <span className="min-w-0 flex-1 truncate">
+                                {budgetLabel(b)}
+                                {b.groupName && (
+                                  <span className="text-muted-foreground"> · {b.groupName}</span>
+                                )}
+                              </span>
                               <Badge
                                 variant={assignments[b.id] === "EXCLUDE" ? "outline" : "secondary"}
                               >

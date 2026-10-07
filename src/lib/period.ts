@@ -132,6 +132,10 @@ export function clampPeriodToNow(p: Period, now: Date = new Date()): Period {
   return p;
 }
 
+export function currentUtcYear(now: Date = new Date()): number {
+  return now.getUTCFullYear();
+}
+
 // True while `now` falls inside the period: its comparison with the full previous
 // period is then partial (spec §7).
 export function periodInProgress(p: Period, now: Date = new Date()): boolean {

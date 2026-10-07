@@ -1,6 +1,7 @@
 import { db } from "@/server/db";
 import { decrypt } from "@/server/crypto/encryption";
-import { hmacForSearch, tokenize } from "@/server/crypto/hmac";
+import { hmacForSearch } from "@/server/crypto/hmac";
+import { tokenize } from "@/lib/text";
 import { dataKey, searchKey } from "@/server/crypto/keys";
 import { UNCATEGORIZED } from "@/lib/transaction-filters";
 import { logEvent } from "@/server/services/audit";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Tag, ChevronDown, Check, ListFilter } from "lucide-react";
@@ -21,8 +21,11 @@ import { PeriodPicker } from "@/components/dashboard/period-picker";
 import { useSelectionMode } from "./selection-mode";
 import type { FlatCategory } from "./category-picker";
 import { UNCATEGORIZED } from "@/lib/transaction-filters";
+import { hasUnsearchableWord, MIN_SEARCH_WORD } from "@/lib/text";
 
 type Direction = "" | "in" | "out";
+
+const SEARCH_DEBOUNCE_MS = 350;
 
 // Desktop: every filter inline. Mobile (issue #112 §5): search + a « Filtres » button
 // opening a bottom sheet with the period, type, category and link mode.
@@ -46,8 +49,34 @@ export function TransactionFilters({
   const { selecting, setSelecting } = useSelectionMode();
   const [sheetOpen, setSheetOpen] = useState(false);
 
+  // The box is controlled and debounced. A URL change is copied into it unless
+  // one of our own pushes is in flight (typing must not be overwritten by it).
+  const urlSearch = params.get("search") ?? "";
+  const [search, setSearch] = useState(urlSearch);
+  const [seenUrlSearch, setSeenUrlSearch] = useState(urlSearch);
+  const [pushedSearch, setPushedSearch] = useState<string | null>(null);
+  const searchTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  if (urlSearch !== seenUrlSearch) {
+    setSeenUrlSearch(urlSearch);
+    if (pushedSearch === null) setSearch(urlSearch);
+    else if (urlSearch === pushedSearch) setPushedSearch(null);
+  }
+  useEffect(() => () => clearTimeout(searchTimer.current), []);
+
+  function onSearchChange(value: string) {
+    setSearch(value);
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      const q = value.trim();
+      if (q === (new URLSearchParams(window.location.search).get("search") ?? "")) return;
+      setPushedSearch(q);
+      setParam("search", q);
+    }, SEARCH_DEBOUNCE_MS);
+  }
+
+  // Built from the live URL: the debounced search runs after later renders.
   function replaceParams(update: (next: URLSearchParams) => void) {
-    const next = new URLSearchParams(params.toString());
+    const next = new URLSearchParams(window.location.search);
     next.delete("limit");
     update(next);
     router.replace(`${pathname}?${next.toString()}`);
@@ -66,6 +95,7 @@ export function TransactionFilters({
       ? t("noCategory")
       : (categories.find((c) => c.id === activeCat)?.name ?? t("allCategories"));
   const activeCount = [from || to, dir, activeCat].filter(Boolean).length;
+  const shortWord = hasUnsearchableWord(search);
 
   const directionTabs = (
     <SegmentedTabs<Direction>
@@ -88,9 +118,10 @@ export function TransactionFilters({
       <Input
         type="search"
         placeholder={t("searchPlaceholder")}
-        defaultValue={params.get("search") ?? ""}
-        onChange={(e) => setParam("search", e.target.value)}
+        value={search}
+        onChange={(e) => onSearchChange(e.target.value)}
         aria-label={t("search")}
+        aria-describedby={shortWord ? "search-hint" : undefined}
         className="h-8 min-w-0 flex-1 md:w-56 md:flex-none"
       />
 
@@ -148,6 +179,12 @@ export function TransactionFilters({
           </span>
         )}
       </Button>
+
+      {shortWord && (
+        <p id="search-hint" className="text-muted-foreground w-full text-xs">
+          {t("searchHint", { min: MIN_SEARCH_WORD })}
+        </p>
+      )}
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent

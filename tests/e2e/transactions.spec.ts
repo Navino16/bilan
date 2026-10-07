@@ -60,6 +60,42 @@ test.describe("transactions", () => {
     expect(page.url()).not.toContain("limit=");
   });
 
+  test("manual entry explains amount problems and accepts grouped amounts", async ({ page }) => {
+    const label = `Montant ${Date.now()}`;
+    await page.goto("/fr/transactions");
+    await page.getByRole("button", { name: /nouvelle transaction/i }).click();
+    await page.fill('input[name="date"]', "2026-02-17");
+    await page.fill('input[name="label"]', label);
+    await expect(page.locator('input[name="label"]')).toHaveAttribute("maxlength", "200");
+
+    for (const [amount, message] of [
+      ["12,3456", /plus de 2 décimales/i],
+      ["1.234", /montant ambigu/i],
+      ["0", /ne peut pas être nul/i],
+    ] as const) {
+      await page.fill('input[name="amount"]', amount);
+      await page.getByRole("button", { name: /^ajouter$/i }).click();
+      await expect(page.getByRole("dialog").getByRole("alert")).toHaveText(message);
+      // A rejected submit keeps what was typed.
+      await expect(page.locator('input[name="label"]')).toHaveValue(label);
+      await expect(page.locator('input[name="date"]')).toHaveValue("2026-02-17");
+    }
+
+    await page.fill('input[name="amount"]', "-1.234,56");
+    await page.getByRole("button", { name: /^ajouter$/i }).click();
+    await expect(page.locator('input[name="label"]')).toBeHidden();
+  });
+
+  test("search is debounced and explains short words", async ({ page }) => {
+    await page.goto("/fr/transactions");
+    const box = page.getByRole("searchbox");
+    await box.pressSequentially("cb", { delay: 50 });
+    await expect(page.getByText(/mots entiers d'au moins 3 lettres/i).first()).toBeVisible();
+    await expect(page).toHaveURL(/search=cb/);
+    await box.fill("");
+    await expect(page).not.toHaveURL(/search=/);
+  });
+
   test("the header fits a narrow viewport without horizontal overflow", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/fr/transactions");

@@ -229,7 +229,10 @@
       "INVALID_IBAN": "IBAN invalide.",
       "FORBIDDEN": "Action non autorisée.",
       "FAILED": "Échec. Réessayez.",
-      "CONFIRMATION": "Le nom saisi ne correspond pas au compte."
+      "CONFIRMATION": "Le nom saisi ne correspond pas au compte.",
+      "AMOUNT_INVALID": "Montant invalide. Exemples : -12,34 ou 1 234,56.",
+      "AMOUNT_AMBIGUOUS": "Montant ambigu : écrivez 1234 ou 1,23 (sans séparateur de milliers seul).",
+      "AMOUNT_PRECISION": "Le montant ne peut pas avoir plus de 2 décimales."
     },
     "legendOthers": "Autres · {count}"
   },
@@ -331,7 +334,10 @@
       "NOT_FOUND": "Budget introuvable.",
       "FAILED": "Échec. Réessayez.",
       "PERIOD_MISMATCH": "Les dates ne correspondent pas au type de période choisi.",
-      "INVALID_LINE": "Une ligne utilise une catégorie ou un compte non disponible pour ce budget."
+      "INVALID_LINE": "Une ligne utilise une catégorie ou un compte non disponible pour ce budget.",
+      "AMOUNT_INVALID": "Montant invalide. Exemples : -12,34 ou 1 234,56.",
+      "AMOUNT_AMBIGUOUS": "Montant ambigu : écrivez 1234 ou 1,23 (sans séparateur de milliers seul).",
+      "AMOUNT_PRECISION": "Le montant ne peut pas avoir plus de 2 décimales."
     },
     "status": {
       "OK": "Dans le budget",
@@ -482,7 +488,7 @@
     "rulePrompt": {
       "learning": "Apprentissage",
       "title": "Créer une règle pour les transactions similaires ?",
-      "body": "Catégoriser automatiquement les futures transactions contenant « {pattern} » comme {category} ?",
+      "body": "Catégoriser automatiquement les futures transactions contenant « {pattern} » dans <chip>{category}</chip> ?",
       "pattern": "Motif",
       "matchType": "Type de correspondance",
       "match": {
@@ -502,14 +508,25 @@
       "FORBIDDEN": "Action non autorisée.",
       "NOT_FOUND": "Transaction introuvable.",
       "FAILED": "Échec. Réessayez.",
-      "ACCOUNT_ARCHIVED": "Ce compte est archivé : désarchivez-le pour y saisir des transactions."
+      "ACCOUNT_ARCHIVED": "Ce compte est archivé : désarchivez-le pour y saisir des transactions.",
+      "AMOUNT_INVALID": "Montant invalide. Exemples : -12,34 ou 1 234,56.",
+      "AMOUNT_PRECISION": "Le montant ne peut pas avoir plus de 2 décimales.",
+      "AMOUNT_ZERO": "Le montant ne peut pas être nul.",
+      "LABEL_TOO_LONG": "Le libellé ne peut pas dépasser 200 caractères.",
+      "AMOUNT_AMBIGUOUS": "Montant ambigu : écrivez 1234 ou 1,23 (sans séparateur de milliers seul)."
     },
     "link": {
       "create": "Lier",
       "linked": "Liée",
       "unlink": "Délier",
       "createdOk": "Transactions liées.",
-      "failed": "Échec de la liaison."
+      "failed": "Échec de la liaison.",
+      "error": {
+        "ALREADY_LINKED": "Une des opérations sélectionnées est déjà liée.",
+        "FORBIDDEN": "Vous ne pouvez pas modifier l'un de ces comptes.",
+        "NOT_FOUND": "Une opération n'existe plus. Rechargez la page.",
+        "TOO_FEW": "Sélectionnez au moins deux opérations."
+      }
     },
     "suggestions": {
       "title": "Suggestions de liens",
@@ -520,7 +537,8 @@
       "ignore": "Ignorer",
       "empty": "Aucune paire à suggérer pour le moment.",
       "back": "Retour aux transactions",
-      "hint": "Bilan repère les paires de même montant et de sens opposé (un virement entre vos comptes, un remboursement) pour que vous puissiez les lier et ne pas les compter deux fois."
+      "hint": "Bilan repère les paires de même montant et de sens opposé (un virement entre vos comptes, un remboursement) pour que vous puissiez les lier et ne pas les compter deux fois.",
+      "ignoreFailed": "Impossible d'ignorer cette paire. Réessayez."
     },
     "filterSheet": {
       "reset": "Réinitialiser",
@@ -553,7 +571,9 @@
       }
     },
     "readOnly": "lecture seule",
-    "recategorizeFailed": "La catégorie n'a pas pu être changée."
+    "recategorizeFailed": "La catégorie n'a pas pu être changée.",
+    "searchHint": "La recherche porte sur des mots entiers d'au moins {min} lettres : les mots plus courts sont ignorés.",
+    "emptySearch": "Aucune transaction ne correspond. La recherche porte sur des mots entiers d'au moins {min} lettres."
   },
   "import": {
     "title": "Importer un relevé",

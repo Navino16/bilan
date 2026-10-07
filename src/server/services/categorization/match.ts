@@ -1,4 +1,4 @@
-import { tokenize } from "@/server/crypto/hmac";
+import { foldDiacritics } from "@/lib/text";
 import type { RuleMatchType } from "@/lib/validation/rule";
 import { compileRulePattern } from "./regex";
 
@@ -11,8 +11,10 @@ export type Rule = {
   priority?: number;
 };
 
+// Case-insensitive non-REGEX rules also ignore accents: bank labels are often
+// "CREME" for "Crème" (#161). REGEX rules stay accent-sensitive.
 function prep(s: string, caseSensitive: boolean): string {
-  return caseSensitive ? s : s.toLowerCase();
+  return caseSensitive ? s : foldDiacritics(s).toLowerCase();
 }
 
 // Pure predicate: does `label` satisfy this rule? Never throws (a malformed
@@ -44,13 +46,5 @@ export function pickByPriority(rules: Rule[], label: string): Rule | null {
   return best;
 }
 
-// Suggests a rule pattern from a label for the learning dialog: the longest
-// normalized token (most distinctive), as a case-insensitive CONTAINS rule.
-export function proposeRule(
-  rawLabel: string,
-): { pattern: string; matchType: RuleMatchType } | null {
-  const tokens = tokenize(rawLabel);
-  if (tokens.length === 0) return null;
-  const pattern = tokens.reduce((a, b) => (b.length > a.length ? b : a));
-  return { pattern, matchType: "CONTAINS" };
-}
+// Lives in lib so the client list can use it without bundling re2js.
+export { proposeRule } from "@/lib/propose-rule";

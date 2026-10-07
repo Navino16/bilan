@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { parseAmount } from "@/lib/amount";
+import { AMOUNT_ERRORS } from "@/lib/amount";
+import { amountSchema } from "./amount";
 
 export const TRANSACTION_TYPES = [
   "CARD",
@@ -11,19 +12,16 @@ export const TRANSACTION_TYPES = [
 ] as const;
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 
+export const TRANSACTION_LABEL_MAX = 200;
+export const TRANSACTION_INPUT_ERRORS = [...AMOUNT_ERRORS, "AMOUNT_ZERO", "LABEL_TOO_LONG"];
+
 export const transactionInputSchema = z.object({
   accountId: z.string().min(1),
   date: z.coerce.date(),
-  // Amount in clear (Decimal(12,2)); accepts a number or a "12,34"/"12.34" string.
-  amount: z
-    .union([z.string(), z.number()])
-    .transform((v) => {
-      const n = parseAmount(v);
-      return Math.round(n * 100) / 100;
-    })
-    .refine((n) => Number.isFinite(n) && Math.abs(n) < 1e10, { message: "Invalid amount" }),
+  // Amount in clear (Decimal(12,2)). Issue messages are the codes in TRANSACTION_INPUT_ERRORS.
+  amount: amountSchema.refine((n) => n !== 0, { message: "AMOUNT_ZERO" }),
   type: z.enum(TRANSACTION_TYPES),
-  label: z.string().trim().min(1).max(200),
+  label: z.string().trim().min(1).max(TRANSACTION_LABEL_MAX, { message: "LABEL_TOO_LONG" }),
   // rawLabel defaults to label for manual entry; imports pass the bank string.
   rawLabel: z.string().trim().max(300).optional(),
   note: z

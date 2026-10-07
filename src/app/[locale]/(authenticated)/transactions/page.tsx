@@ -8,7 +8,7 @@ import { listVisibleForUser } from "@/server/services/accounts";
 import { listLinkedTxIds } from "@/server/services/links";
 import { listAssignableBudgets } from "@/server/services/budgets";
 import { flattenCategories } from "@/components/transactions/category-tree";
-import { dayEnd, dayStart, parseDayBounds } from "@/lib/period";
+import { currentUtcYear, dayEnd, dayStart, parseDayBounds } from "@/lib/period";
 import { LIST_MAX_LIMIT, nextListLimit, parseListLimit, trimToDayBoundary } from "@/lib/list-limit";
 import {
   TransactionList,
@@ -136,6 +136,8 @@ export default async function TransactionsPage({
           accounts={accountOptions}
           budgets={budgets}
           partialLastDay={partialLastDay}
+          currentYear={currentUtcYear()}
+          searching={Boolean(sp.search?.trim())}
         />
       </SelectionModeProvider>
       {truncated && (
