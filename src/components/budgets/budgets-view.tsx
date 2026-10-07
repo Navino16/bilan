@@ -4,17 +4,18 @@ import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, RefreshCw } from "lucide-react";
+import { ChevronRight, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { rollRecurringAction } from "@/server/transport/actions/budgets";
-import { nextPeriod } from "@/lib/budgets";
+import { groupBudgetSeries, nextPeriod } from "@/lib/budgets";
 import type { BudgetPeriodType } from "@/lib/validation/budget";
 import { BudgetForm, type BudgetLineOption } from "./budget-form";
 import type { CategoryOption } from "@/components/categories/category-options";
 import { BudgetBar, statusStyle } from "./budget-status";
+import { BudgetActions, toEditableBudget } from "./budget-actions";
 import type { BudgetAccountOption, BudgetListItem } from "@/server/services/budgets";
 import { PageHeader } from "@/components/shell/page-header";
 
@@ -120,21 +121,27 @@ export function BudgetsView({
         <p className="text-muted-foreground text-sm">{t("empty")}</p>
       ) : (
         <ul className="space-y-3">
-          {budgets.map((b) => (
+          {groupBudgetSeries(budgets).map(({ head: b, others }) => (
             <li key={b.id}>
-              <Link href={`/${locale}/budgets/${b.id}`} className="block">
-                <Card
-                  data-slot="budget-card"
-                  className="hover:border-primary/40 gap-3 p-4 transition-colors"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="min-w-0 truncate font-medium">{b.name}</p>
-                      <Badge style={statusStyle(b.status)} className="shrink-0 border-transparent">
-                        {t(`status.${b.status}`)}
-                      </Badge>
-                    </div>
-                    <div className="flex flex-wrap items-center justify-between gap-2">
+              <Card
+                data-slot="budget-card"
+                className="hover:ring-primary/40 gap-3 p-4 transition-shadow"
+              >
+                <div className="flex items-start gap-1">
+                  <Link
+                    href={`/${locale}/budgets/${b.id}`}
+                    className="block min-w-0 flex-1 space-y-3"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="min-w-0 truncate font-medium">{b.name}</p>
+                        <Badge
+                          style={statusStyle(b.status)}
+                          className="shrink-0 border-transparent"
+                        >
+                          {t(`status.${b.status}`)}
+                        </Badge>
+                      </div>
                       <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
                         <Badge variant={b.scope === "GROUP" ? "default" : "secondary"}>
                           {b.scope === "GROUP" ? t("scopeGroup") : t("scopePersonal")}
@@ -144,33 +151,70 @@ export function BudgetsView({
                           {df.format(b.periodStart)} – {df.format(b.periodEnd)}
                         </span>
                       </div>
-                      {b.rollable && (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={rolling}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            roll(b);
-                          }}
-                        >
-                          <RefreshCw />
-                          {t("roll")}
-                        </Button>
-                      )}
                     </div>
+                    <BudgetBar percent={b.percent} status={b.status} />
+                    <div className="text-muted-foreground flex items-center justify-between text-sm tabular-nums">
+                      <span>
+                        {nf.format(b.spentTotal)} / {nf.format(b.plannedTotal)}
+                      </span>
+                      <span>{b.percent} %</span>
+                    </div>
+                  </Link>
+                  {b.canManage && (
+                    <BudgetActions
+                      budget={toEditableBudget(b)}
+                      options={{ categories, accounts, groups }}
+                    />
+                  )}
+                </div>
+                {b.rollable && (
+                  <div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={rolling}
+                      onClick={() => roll(b)}
+                    >
+                      <RefreshCw />
+                      {t("roll")}
+                    </Button>
                   </div>
-                  <BudgetBar percent={b.percent} status={b.status} />
-                  <div className="text-muted-foreground flex items-center justify-between text-sm tabular-nums">
-                    <span>
-                      {nf.format(b.spentTotal)} / {nf.format(b.plannedTotal)}
-                    </span>
-                    <span>{b.percent} %</span>
-                  </div>
-                </Card>
-              </Link>
+                )}
+                {others.length > 0 && (
+                  <details className="group" data-slot="budget-history">
+                    <summary className="text-muted-foreground hover:text-foreground flex cursor-pointer list-none items-center gap-1 text-sm font-medium [&::-webkit-details-marker]:hidden">
+                      <ChevronRight className="size-4 transition-transform group-open:rotate-90" />
+                      {t("otherPeriods", { count: others.length })}
+                    </summary>
+                    <div className="mt-1">
+                      {others.map((o) => (
+                        <Link
+                          key={o.id}
+                          href={`/${locale}/budgets/${o.id}`}
+                          className="hover:bg-muted/50 flex items-center gap-3 border-t py-2 text-sm"
+                        >
+                          <span className="text-muted-foreground shrink-0">
+                            {df.format(o.periodStart)} – {df.format(o.periodEnd)}
+                          </span>
+                          <span className="hidden flex-1 sm:block">
+                            <BudgetBar percent={o.percent} status={o.status} />
+                          </span>
+                          <span className="text-muted-foreground ml-auto shrink-0 tabular-nums">
+                            {nf.format(o.spentTotal)} / {nf.format(o.plannedTotal)}
+                          </span>
+                          <Badge
+                            style={statusStyle(o.status)}
+                            className="hidden shrink-0 border-transparent sm:inline-flex"
+                          >
+                            {t(`status.${o.status}`)}
+                          </Badge>
+                        </Link>
+                      ))}
+                    </div>
+                  </details>
+                )}
+              </Card>
             </li>
           ))}
         </ul>

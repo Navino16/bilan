@@ -95,3 +95,31 @@ export function nextPeriod(
     end: new Date(end.getTime() + lengthDays * DAY),
   };
 }
+
+export type SeriesMember = {
+  id: string;
+  parentBudgetId: string | null;
+  periodStart: Date;
+  started: boolean;
+  ended: boolean;
+};
+
+// Groups budgets into recurring series (#156). The head is the period in
+// progress, else the latest started one, else the next to come; `others` holds
+// the rest of the series, newest first. Series are ordered by their head.
+export function groupBudgetSeries<T extends SeriesMember>(items: T[]): { head: T; others: T[] }[] {
+  const bySeries = new Map<string, T[]>();
+  for (const b of items) {
+    const key = b.parentBudgetId ?? b.id;
+    bySeries.set(key, [...(bySeries.get(key) ?? []), b]);
+  }
+  const series = [...bySeries.values()].map((members) => {
+    const desc = [...members].sort((a, b) => b.periodStart.getTime() - a.periodStart.getTime());
+    const head =
+      desc.find((b) => b.started && !b.ended) ??
+      desc.find((b) => b.started) ??
+      desc[desc.length - 1];
+    return { head, others: desc.filter((b) => b !== head) };
+  });
+  return series.sort((a, b) => b.head.periodStart.getTime() - a.head.periodStart.getTime());
+}

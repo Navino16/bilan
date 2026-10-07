@@ -10,6 +10,8 @@ import {
   unassignTransaction,
   listAssignableBudgets,
   rollRecurring,
+  getCurrentBudget,
+  listRollableTemplates,
   BudgetAccessError,
 } from "@/server/services/budgets";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
@@ -277,6 +279,72 @@ describe("getBudgetDetail / computeLine", () => {
     expect((await getBudgetDetail(alone.id, owner)).lines[0].spent).toBe(55);
   });
 
+  it("lists the counted transactions, newest first, with their decrypted label", async () => {
+    await tx("2026-03-03T00:00:00.000Z", -40, catId);
+    await tx("2026-03-10T00:00:00.000Z", -80, catId);
+    await tx("2026-03-12T00:00:00.000Z", -20, null); // not counted
+    const { id } = await createBudget(
+      { ...baseInput, lines: [{ categoryId: catId, plannedAmount: 100 }] },
+      { id: owner },
+    );
+    const detail = await getBudgetDetail(id, owner);
+    expect(detail.transactionCount).toBe(2);
+    expect(detail.transactions.map((t) => [t.amount, t.label, t.accountName])).toEqual([
+      [-80, "T", "Courant"],
+      [-40, "T", "Courant"],
+    ]);
+  });
+
+  it("masks a counted transaction the viewer can't read", async () => {
+    await db.groupMember.create({ data: { groupId, userId: stranger, role: "MEMBER" } });
+    const privateAccount = await db.bankAccount.create({
+      data: { ownerId: stranger, name: "Privé", type: "CHECKING" },
+    });
+    const s = buildSecureFields({ label: "Secret", rawLabel: "Secret" });
+    const hidden = await db.transaction.create({
+      data: {
+        accountId: privateAccount.id,
+        date: new Date("2026-03-05T00:00:00.000Z"),
+        amount: -12,
+        type: "OTHER",
+        labelEnc: s.labelEnc,
+        labelHash: s.labelHash,
+        rawLabelEnc: s.rawLabelEnc,
+        rawLabelHash: s.rawLabelHash,
+        categoryId: catId,
+        createdById: stranger,
+      },
+    });
+    try {
+      const { id } = await createBudget(
+        { ...baseInput, groupId, lines: [{ categoryId: catId, plannedAmount: 100 }] },
+        { id: owner },
+      );
+      await assignTransaction(
+        { budgetId: id, transactionId: hidden.id, mode: "INCLUDE" },
+        { id: stranger },
+      );
+      const [row] = (await getBudgetDetail(id, owner)).transactions;
+      expect(row).toMatchObject({ amount: -12, label: null, categoryId: null, accountName: null });
+      expect(row.id).not.toBe(hidden.id);
+      expect((await getBudgetDetail(id, stranger)).transactions[0].label).toBe("Secret");
+    } finally {
+      await db.budgetAssignment.deleteMany({ where: { transactionId: hidden.id } });
+      await db.transaction.delete({ where: { id: hidden.id } });
+      await db.bankAccount.delete({ where: { id: privateAccount.id } });
+      await db.groupMember.deleteMany({ where: { groupId, userId: stranger } });
+    }
+  });
+
+  it("picks the personal budget in progress for the dashboard", async () => {
+    await createBudget({ ...baseInput, groupId, name: "Foyer" }, { id: owner });
+    const { id } = await createBudget({ ...baseInput, name: "Perso" }, { id: owner });
+    const current = await getCurrentBudget(owner, new Date("2026-03-15T12:00:00.000Z"));
+    expect(current?.detail.id).toBe(id);
+    expect(current?.others).toBe(1);
+    expect(await getCurrentBudget(owner, new Date("2027-01-01T00:00:00.000Z"))).toBeNull();
+  });
+
   it("EXCLUDE removes a matching tx; INCLUDE adds a non-matching one", async () => {
     const a = await tx("2026-03-03T00:00:00.000Z", -40, catId); // matches, will EXCLUDE
     await tx("2026-03-05T00:00:00.000Z", -30, catId); // matches, stays
@@ -416,6 +484,31 @@ describe("rollRecurring", () => {
     await rollRecurring(id, { id: owner });
     const after = (await listBudgetsForUser(owner)).find((b) => b.id === id)!;
     expect(after.rollable).toBe(false);
+  });
+
+  it("links neighbouring periods and keeps the series when its template is deleted", async () => {
+    const { id } = await createBudget({ ...baseInput, recurring: true }, { id: owner });
+    const april = (await rollRecurring(id, { id: owner })).id!;
+    const may = (await rollRecurring(april, { id: owner })).id!;
+    const mid = await getBudgetDetail(april, owner);
+    expect([mid.previousId, mid.nextId]).toEqual([id, may]);
+    expect(mid.canManage).toBe(true);
+
+    await deleteBudget(id, { id: owner });
+    const heir = await db.budget.findUniqueOrThrow({ where: { id: april } });
+    expect(heir.parentBudgetId).toBeNull();
+    expect((await db.budget.findUniqueOrThrow({ where: { id: may } })).parentBudgetId).toBe(april);
+    expect((await getBudgetDetail(may, owner)).previousId).toBe(april);
+  });
+
+  it("doesn't recreate a deleted middle period", async () => {
+    const { id } = await createBudget({ ...baseInput, recurring: true }, { id: owner });
+    const april = (await rollRecurring(id, { id: owner })).id!;
+    await rollRecurring(april, { id: owner });
+    await deleteBudget(april, { id: owner });
+    const rollable = await listRollableTemplates(new Date("2026-06-15T00:00:00.000Z"));
+    expect(rollable.map((r) => r.id)).not.toContain(id);
+    expect((await rollRecurring(id, { id: owner })).created).toBe(false);
   });
 
   it("rejects rolling a non-recurring budget", async () => {

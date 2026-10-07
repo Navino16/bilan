@@ -1,5 +1,7 @@
 import type { Budget } from "@prisma/client";
 import { db } from "@/server/db";
+import { decrypt } from "@/server/crypto/encryption";
+import { dataKey } from "@/server/crypto/keys";
 import { requireGroupRole } from "@/server/services/groups/roles";
 import { logEvent } from "@/server/services/audit";
 import { listVisibleForUser } from "@/server/services/accounts";
@@ -211,7 +213,22 @@ export async function updateBudget(
 
 export async function deleteBudget(id: string, actor: { id: string }): Promise<void> {
   await manageableOrThrow(id, actor.id);
-  await db.budget.delete({ where: { id } });
+  // Deleting a series template promotes its oldest instance so the series stays linked.
+  await db.$transaction(async (tx) => {
+    const [heir, ...rest] = await tx.budget.findMany({
+      where: { parentBudgetId: id },
+      select: { id: true },
+      orderBy: { periodStart: "asc" },
+    });
+    if (heir) {
+      await tx.budget.updateMany({
+        where: { id: { in: rest.map((r) => r.id) } },
+        data: { parentBudgetId: heir.id },
+      });
+      await tx.budget.update({ where: { id: heir.id }, data: { parentBudgetId: null } });
+    }
+    await tx.budget.delete({ where: { id } });
+  });
   await logEvent({ userId: actor.id, action: "budget.deleted", entity: "Budget", entityId: id });
 }
 
@@ -234,6 +251,15 @@ export type BudgetListItem = {
   spentTotal: number;
   percent: number;
   status: BudgetStatus;
+  description: string | null;
+  parentBudgetId: string | null;
+  lines: {
+    categoryId: string | null;
+    accountId: string | null;
+    label: string | null;
+    plannedAmount: number;
+  }[];
+  started: boolean; // period has begun
   ended: boolean; // period is over (eligible for a recurring roll)
   rollable: boolean; // recurring, ended, manageable and its next instance doesn't exist yet
   canManage: boolean; // actor may edit/delete/roll (own, or ADMIN+ of the group)
@@ -252,7 +278,9 @@ export async function listBudgetsForUser(userId: string): Promise<BudgetListItem
   const { groupIds, roleByGroup } = await budgetScopeForUser(userId);
   const rows = await db.budget.findMany({
     where: { archived: false, OR: [{ userId }, { groupId: { in: groupIds } }] },
-    include: { lines: { select: { plannedAmount: true, categoryId: true, accountId: true } } },
+    include: {
+      lines: { select: { plannedAmount: true, categoryId: true, accountId: true, label: true } },
+    },
     orderBy: { periodStart: "desc" },
   });
   const accountCache: AccountScopeCache = new Map();
@@ -276,16 +304,25 @@ export async function listBudgetsForUser(userId: string): Promise<BudgetListItem
     return {
       id: b.id,
       name: b.name,
+      description: b.description,
       scope: b.groupId ? "GROUP" : "USER",
       groupId: b.groupId,
+      parentBudgetId: b.parentBudgetId,
       periodType: b.periodType,
       periodStart: b.periodStart,
       periodEnd: b.periodEnd,
       recurring: b.recurring,
+      lines: b.lines.map((l) => ({
+        categoryId: l.categoryId,
+        accountId: l.accountId,
+        label: l.label,
+        plannedAmount: Number(l.plannedAmount),
+      })),
       plannedTotal,
       spentTotal: spent,
       percent,
       status,
+      started: b.periodStart.getTime() <= now,
       ended: b.periodEnd.getTime() < now,
       rollable: rollable[i],
       canManage: canManageBudget(b.groupId, roleByGroup),
@@ -487,6 +524,25 @@ export type BudgetDetail = {
   })[];
   plannedTotal: number;
   spentTotal: number;
+  groupId: string | null;
+  canManage: boolean;
+  previousId: string | null; // neighbouring periods of the same recurring series
+  nextId: string | null;
+  transactions: BudgetTransaction[]; // newest first, capped at BUDGET_TRANSACTIONS_SHOWN
+  transactionCount: number;
+};
+
+export const BUDGET_TRANSACTIONS_SHOWN = 100;
+
+// A transaction counted in the budget. `label`/`accountName` are null when the
+// viewer can't read its account (another member's INCLUDE into a group budget).
+export type BudgetTransaction = {
+  id: string;
+  date: Date;
+  amount: number;
+  label: string | null;
+  categoryId: string | null;
+  accountName: string | null;
 };
 
 // Per-line sums for display + a budget-wide dedup sum for the total: a tx that
@@ -503,7 +559,7 @@ async function computeBudgetSpend(
   },
   accountCache?: AccountScopeCache,
   subtrees?: Map<string, Set<string>>,
-): Promise<{ lineSums: number[]; totalSum: number }> {
+): Promise<{ lineSums: number[]; totalSum: number; counted: BudgetRow[] }> {
   const { rows, excluded, includedIds } = await loadBudgetRows(b, accountCache);
 
   // Collapse links across the WHOLE loaded scope first, so a linked group split
@@ -519,10 +575,12 @@ async function computeBudgetSpend(
 
   const lineSums = new Array<number>(b.lines.length).fill(0);
   let totalSum = 0;
+  const counted: BudgetRow[] = [];
   for (const r of collapsed) {
     if (excluded.has(r.id)) continue;
     const matchedIdx = matchingLines(r, filters);
     if (matchedIdx.length === 0 && !includedIds.has(r.id)) continue; // not in this budget
+    counted.push(r);
     totalSum += r.amount; // counted once toward the total
     if (matchedIdx.length > 0) {
       for (const i of matchedIdx) lineSums[i] += r.amount;
@@ -530,12 +588,66 @@ async function computeBudgetSpend(
       lineSums[0] += r.amount; // pure INCLUDE with no matching line
     }
   }
-  return { lineSums, totalSum };
+  return { lineSums, totalSum, counted };
 }
 
-export async function getBudgetDetail(id: string, viewerId: string): Promise<BudgetDetail> {
+async function seriesNeighbours(b: {
+  id: string;
+  parentBudgetId: string | null;
+}): Promise<{ previousId: string | null; nextId: string | null }> {
+  const template = b.parentBudgetId ?? b.id;
+  const series = await db.budget.findMany({
+    where: { archived: false, OR: [{ id: template }, { parentBudgetId: template }] },
+    select: { id: true },
+    orderBy: { periodStart: "asc" },
+  });
+  const i = series.findIndex((x) => x.id === b.id);
+  if (i < 0) return { previousId: null, nextId: null };
+  return { previousId: series[i - 1]?.id ?? null, nextId: series[i + 1]?.id ?? null };
+}
+
+// Names of every account the viewer can read, archived ones included (no balances).
+async function readableAccountNames(userId: string): Promise<Map<string, string>> {
+  const rows = await db.bankAccount.findMany({
+    where: {
+      OR: [{ ownerId: userId }, { shares: { some: { group: { members: { some: { userId } } } } } }],
+    },
+    select: { id: true, name: true },
+  });
+  return new Map(rows.map((a) => [a.id, a.name]));
+}
+
+async function budgetTransactions(
+  counted: BudgetRow[],
+  viewerId: string,
+): Promise<BudgetTransaction[]> {
+  const shown = [...counted]
+    .sort((a, b) => b.date.getTime() - a.date.getTime())
+    .slice(0, BUDGET_TRANSACTIONS_SHOWN);
+  const visible = await readableAccountNames(viewerId);
+  const rows = await db.transaction.findMany({
+    where: { id: { in: shown.filter((r) => visible.has(r.accountId)).map((r) => r.id) } },
+    select: { id: true, labelEnc: true },
+  });
+  const labels = new Map(rows.map((r) => [r.id, decrypt(r.labelEnc, dataKey)]));
+  return shown.map((r, i) => ({
+    id: visible.has(r.accountId) ? r.id : `hidden-${i}`,
+    date: r.date,
+    amount: r.amount,
+    label: labels.get(r.id) ?? null,
+    categoryId: visible.has(r.accountId) ? r.categoryId : null,
+    accountName: visible.get(r.accountId) ?? null,
+  }));
+}
+
+export async function getBudgetDetail(
+  id: string,
+  viewerId: string,
+  { withTransactions = true }: { withTransactions?: boolean } = {},
+): Promise<BudgetDetail> {
   const b = await readableOrThrow(id, viewerId);
-  const { lineSums, totalSum } = await computeBudgetSpend(b);
+  const { lineSums, totalSum, counted } = await computeBudgetSpend(b);
+  const { roleByGroup } = await budgetScopeForUser(viewerId);
 
   const lines = b.lines.map((l, i) => ({
     id: l.id,
@@ -553,6 +665,7 @@ export async function getBudgetDetail(id: string, viewerId: string): Promise<Bud
     name: b.name,
     description: b.description,
     scope: b.groupId ? "GROUP" : "USER",
+    groupId: b.groupId,
     periodType: b.periodType,
     periodStart: b.periodStart,
     periodEnd: b.periodEnd,
@@ -560,7 +673,44 @@ export async function getBudgetDetail(id: string, viewerId: string): Promise<Bud
     lines,
     plannedTotal,
     spentTotal,
+    canManage: canManageBudget(b.groupId, roleByGroup),
+    ...(await seriesNeighbours(b)),
+    transactions: withTransactions ? await budgetTransactions(counted, viewerId) : [],
+    transactionCount: counted.length,
   };
+}
+
+// The budget shown on the dashboard: one whose period contains `now`, personal
+// budgets first, then the latest started. `others` counts the remaining ones.
+export async function getCurrentBudget(
+  userId: string,
+  now: Date = new Date(),
+): Promise<{
+  detail: BudgetDetail;
+  others: number;
+  accountNames: Record<string, string>;
+} | null> {
+  const { groupIds } = await budgetScopeForUser(userId);
+  const current = await db.budget.findMany({
+    where: {
+      archived: false,
+      periodStart: { lte: now },
+      periodEnd: { gte: now },
+      OR: [{ userId }, { groupId: { in: groupIds } }],
+    },
+    select: { id: true, groupId: true },
+    orderBy: { periodStart: "desc" },
+  });
+  if (current.length === 0) return null;
+  const first = current.find((b) => !b.groupId) ?? current[0];
+  const detail = await getBudgetDetail(first.id, userId, { withTransactions: false });
+  const names = await readableAccountNames(userId);
+  const accountNames = Object.fromEntries(
+    detail.lines.flatMap((l) =>
+      l.accountId && names.has(l.accountId) ? [[l.accountId, names.get(l.accountId)!]] : [],
+    ),
+  );
+  return { detail, others: current.length - 1, accountNames };
 }
 
 export async function assignTransaction(
@@ -650,9 +800,14 @@ async function nextInstanceExists(b: {
   periodStart: Date;
   periodEnd: Date;
 }): Promise<boolean> {
+  // Any later period of the series counts, so a deleted middle period isn't recreated.
   const period = nextPeriod(b.periodType as BudgetPeriodType, b.periodStart, b.periodEnd);
+  const template = b.parentBudgetId ?? b.id;
   const existing = await db.budget.findFirst({
-    where: { parentBudgetId: b.parentBudgetId ?? b.id, periodStart: period.start },
+    where: {
+      OR: [{ id: template }, { parentBudgetId: template }],
+      periodStart: { gte: period.start },
+    },
     select: { id: true },
   });
   return existing != null;

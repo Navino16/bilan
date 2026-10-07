@@ -112,4 +112,60 @@ test.describe("budgets", () => {
       timeout: 15_000,
     });
   });
+
+  test("renews a recurring budget, groups its periods, navigates, edits and deletes it", async ({
+    page,
+  }) => {
+    const name = `Série ${Date.now()}`;
+    const now = new Date();
+    const lastMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+    await page.goto("/fr/budgets");
+    await expect(async () => {
+      await page.getByRole("button", { name: /nouveau budget/i }).click();
+      await expect(page.locator('input[name="name"]')).toBeVisible();
+    }).toPass();
+    await page.fill('input[name="name"]', name);
+    await page.fill('input[name="periodStart"]', lastMonth.toISOString().slice(0, 10));
+    await page.fill('input[name="plannedAmount"]', "100");
+    await page.locator('input[name="recurring"]').check();
+    await page.getByRole("button", { name: /créer le budget/i }).click();
+
+    const card = page.locator('[data-slot="budget-card"]').filter({ hasText: name });
+    await card.getByRole("button", { name: /renouveler/i }).click({ timeout: 15_000 });
+    await expect(page.locator('[data-slot="roll-result"]')).toContainText(name);
+    await expect(card).toHaveCount(1);
+    await expect(card.locator('[data-slot="budget-history"]')).toContainText("1 autre période");
+    await expect(card.getByRole("button", { name: /renouveler/i })).toHaveCount(0);
+
+    await card.getByRole("link").first().click();
+    await expect(page.getByRole("heading", { name })).toBeVisible({ timeout: 15_000 });
+    const currentUrl = page.url();
+    await page.getByRole("link", { name: /période précédente/i }).click();
+    await expect(page).not.toHaveURL(currentUrl);
+    await expect(page.getByRole("link", { name: /période suivante/i })).toBeVisible();
+
+    await page.getByRole("button", { name: `Actions pour ${name}` }).click();
+    await page.getByRole("menuitem", { name: /modifier/i }).click();
+    await page.fill('input[name="name"]', `${name} bis`);
+    await page.getByRole("button", { name: /enregistrer/i }).click();
+    await expect(page.getByRole("heading", { name: `${name} bis` })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await page.getByRole("button", { name: `Actions pour ${name} bis` }).click();
+    await page.getByRole("menuitem", { name: /supprimer/i }).click();
+    await page
+      .locator('[data-slot="budget-delete-dialog"]')
+      .getByRole("button", { name: /^supprimer$/i })
+      .click();
+    await expect(page).toHaveURL(/\/fr\/budgets$/, { timeout: 15_000 });
+    // The renewed period survives as its own series.
+    await expect(card).toHaveCount(1);
+    await expect(card.locator('[data-slot="budget-history"]')).toHaveCount(0);
+  });
+
+  test("the dashboard shows a budget snapshot", async ({ page }) => {
+    await page.goto("/fr/dashboard");
+    await expect(page.locator('[data-slot="budget-snapshot"]')).toBeVisible();
+  });
 });

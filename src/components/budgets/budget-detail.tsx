@@ -1,23 +1,34 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { BudgetDetail as BudgetDetailData } from "@/server/services/budgets";
+import type { FlatCategory } from "@/components/transactions/category-tree";
+import { CategoryAvatar, overline } from "@/components/transactions/bits";
+import { transactionsHref } from "@/lib/transaction-filters";
 import { BudgetBar, statusStyle } from "./budget-status";
+import { BudgetActions, toEditableBudget, type BudgetFormOptions } from "./budget-actions";
 import { PageHeader } from "@/components/shell/page-header";
 
 export function BudgetDetail({
   detail,
   categories,
   accounts,
+  formOptions,
 }: {
   detail: BudgetDetailData;
-  categories: Record<string, string>;
+  categories: Record<string, FlatCategory>;
   accounts: Record<string, string>;
+  formOptions: BudgetFormOptions;
 }) {
   const t = useTranslations("budgets");
   const locale = useLocale();
+  const router = useRouter();
   const nf = new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" });
   // periodStart/periodEnd are UTC-bounded semantic dates — format in UTC so
   // server and client agree (periodEnd sits at 23:59:59.999Z).
@@ -27,19 +38,48 @@ export function BudgetDetail({
     year: "numeric",
     timeZone: "UTC",
   });
+  const txDate = new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
+  const period = { from: detail.periodStart, to: detail.periodEnd };
 
   function lineLabel(line: BudgetDetailData["lines"][number]): string {
     if (line.label) return line.label;
-    if (line.categoryId && categories[line.categoryId]) return categories[line.categoryId];
+    if (line.categoryId && categories[line.categoryId]) return categories[line.categoryId].name;
     if (line.accountId && accounts[line.accountId]) return accounts[line.accountId];
     if (line.categoryId || line.accountId) return t("line.hidden");
     return detail.lines.length > 1 ? t("line.otherSpending") : t("line.allSpending");
   }
 
+  const periodLink = (id: string | null, label: string, icon: React.ReactNode) =>
+    id ? (
+      <Link
+        href={`/${locale}/budgets/${id}`}
+        aria-label={label}
+        className={buttonVariants({ variant: "outline", size: "icon-sm" })}
+      >
+        {icon}
+      </Link>
+    ) : (
+      <Button variant="outline" size="icon-sm" aria-label={label} disabled>
+        {icon}
+      </Button>
+    );
+
   return (
     <div className="space-y-5">
       <PageHeader
-        overline={t("overline")}
+        overline={
+          <Link
+            href={`/${locale}/budgets`}
+            className="hover:text-foreground inline-flex items-center gap-1"
+          >
+            <ChevronLeft className="size-3.5" />
+            {t("pageTitle")}
+          </Link>
+        }
         title={detail.name}
         badges={
           <>
@@ -50,6 +90,23 @@ export function BudgetDetail({
           </>
         }
         subtitle={`${df.format(detail.periodStart)} – ${df.format(detail.periodEnd)}`}
+        actions={
+          <div className="flex items-center gap-2">
+            {(detail.previousId || detail.nextId) && (
+              <>
+                {periodLink(detail.previousId, t("previousPeriod"), <ChevronLeft />)}
+                {periodLink(detail.nextId, t("nextPeriod"), <ChevronRight />)}
+              </>
+            )}
+            {detail.canManage && (
+              <BudgetActions
+                budget={toEditableBudget(detail)}
+                options={formOptions}
+                afterDelete={() => router.push(`/${locale}/budgets`)}
+              />
+            )}
+          </div>
+        }
       />
 
       <Card className="flex-row items-center justify-between p-4">
@@ -76,7 +133,7 @@ export function BudgetDetail({
                   </Badge>
                 </div>
                 <BudgetBar percent={line.percent} status={line.status} />
-                <div className="text-muted-foreground flex items-center justify-between text-sm">
+                <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-x-3 text-sm">
                   <span>
                     {nf.format(line.spent)} / {nf.format(line.plannedAmount)}
                   </span>
@@ -86,11 +143,68 @@ export function BudgetDetail({
                       : t("detail.overBy", { amount: nf.format(-line.remaining) })}
                   </span>
                 </div>
+                {line.categoryId && categories[line.categoryId] && (
+                  <Link
+                    href={transactionsHref(locale, period, {
+                      dir: "out",
+                      categoryId: line.categoryId,
+                    })}
+                    className="text-primary w-fit text-sm hover:underline"
+                  >
+                    {t("detail.seeTransactions")}
+                  </Link>
+                )}
               </Card>
             </li>
           );
         })}
       </ul>
+
+      <Card className="gap-0 overflow-hidden p-0" data-slot="budget-transactions">
+        <div className="p-5">
+          <div className={overline}>{t("detail.counted")}</div>
+          <div className="font-display text-xl">
+            {t("detail.transactions", { count: detail.transactionCount })}
+          </div>
+          {detail.transactionCount > detail.transactions.length && (
+            <div className="text-muted-foreground text-xs">
+              {t("detail.latestOnly", { count: detail.transactions.length })}
+            </div>
+          )}
+        </div>
+        <div className="border-t">
+          {detail.transactions.length === 0 ? (
+            <p className="text-muted-foreground p-5 text-sm">{t("detail.noTransactions")}</p>
+          ) : (
+            detail.transactions.map((tx) => {
+              const meta = tx.categoryId ? categories[tx.categoryId] : undefined;
+              return (
+                <div
+                  key={tx.id}
+                  data-slot="budget-transaction-row"
+                  className="flex items-center gap-3 border-b px-5 py-2.5 last:border-b-0"
+                >
+                  <CategoryAvatar color={meta?.color} icon={meta?.icon} size={28} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm">{tx.label ?? t("detail.hiddenTx")}</div>
+                    <div className="text-muted-foreground truncate text-[11.5px]">
+                      {txDate.format(tx.date)}
+                      {meta ? ` · ${meta.name}` : ""}
+                      {tx.accountName ? ` · ${tx.accountName}` : ""}
+                    </div>
+                  </div>
+                  <span
+                    className="text-sm font-medium tabular-nums"
+                    style={tx.amount > 0 ? { color: "var(--income)" } : undefined}
+                  >
+                    {nf.format(tx.amount)}
+                  </span>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </Card>
     </div>
   );
 }

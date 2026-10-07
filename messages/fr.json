@@ -297,7 +297,6 @@
     "saving": "Enregistrement…",
     "createCta": "Créer le budget",
     "delete": "Supprimer",
-    "deleteConfirm": "Supprimer ce budget ?",
     "cancel": "Annuler",
     "error": {
       "INVALID": "Vérifiez les champs.",
@@ -317,7 +316,13 @@
       "spent": "Dépensé",
       "planned": "Prévu",
       "remaining": "Reste {amount}",
-      "overBy": "Dépassé de {amount}"
+      "overBy": "Dépassé de {amount}",
+      "seeTransactions": "Voir les transactions",
+      "counted": "Comptées dans ce budget",
+      "transactions": "{count, plural, =0 {Aucune transaction} one {# transaction} other {# transactions}}",
+      "latestOnly": "Les {count} plus récentes sont affichées.",
+      "noTransactions": "Aucune transaction ne compte encore dans ce budget.",
+      "hiddenTx": "Transaction d'un autre membre"
     },
     "assign": {
       "title": "Assigner à un budget",
@@ -335,7 +340,21 @@
     "ended": "Période terminée",
     "subtitle": "Définissez une enveloppe par catégorie ou compte sur une période.",
     "rolledExisting": "La période suivante existe déjà.",
-    "rollView": "Voir"
+    "rollView": "Voir",
+    "actionsFor": "Actions pour {name}",
+    "edit": "Modifier",
+    "deleteTitle": "Supprimer « {name} » ?",
+    "deleteBody": "Le budget et ses lignes seront supprimés. Les transactions ne sont pas touchées ; les autres périodes d'un budget récurrent sont conservées.",
+    "otherPeriods": "{count, plural, one {# autre période} other {# autres périodes}}",
+    "previousPeriod": "Période précédente",
+    "nextPeriod": "Période suivante",
+    "snapshot": {
+      "overline": "Budget en cours",
+      "none": "Aucun budget en cours.",
+      "detail": "Détail",
+      "others": "{count, plural, one {# autre budget en cours} other {# autres budgets en cours}}",
+      "moreLines": "{count, plural, one {# autre ligne} other {# autres lignes}}"
+    }
   },
   "categories": {
     "title": "Catégories",
