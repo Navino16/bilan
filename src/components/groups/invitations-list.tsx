@@ -1,15 +1,14 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Check, Link2, X } from "lucide-react";
+import { X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  revokeInvitationAction,
-  type InvitationActionState,
-} from "@/server/transport/actions/invitations";
+import { ConfirmDialog } from "@/components/shell/confirm-dialog";
+import { CopyLinkButton } from "@/components/shell/copy-link-button";
+import { revokeInvitationAction } from "@/server/transport/actions/invitations";
 
 export type PendingInvitation = {
   id: string;
@@ -20,53 +19,50 @@ export type PendingInvitation = {
   expiresAt: string; // ISO
 };
 
-function CopyLinkButton({ token }: { token: string }) {
+function RevokeButton({ id, email }: { id: string; email: string }) {
   const t = useTranslations("invitations");
-  const locale = useLocale();
-  const [copied, setCopied] = useState(false);
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState(false);
+  const [pending, startTransition] = useTransition();
 
-  async function copy() {
-    await navigator.clipboard.writeText(`${window.location.origin}/${locale}/groups/join/${token}`);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  function revoke() {
+    const fd = new FormData();
+    fd.set("id", id);
+    setError(false);
+    startTransition(async () => {
+      const res = await revokeInvitationAction(null, fd);
+      if (!res?.ok) return setError(true);
+      setOpen(false);
+      router.refresh();
+    });
   }
 
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon-sm"
-      onClick={copy}
-      aria-label={copied ? t("linkCopied") : t("copyLink")}
-      title={copied ? t("linkCopied") : t("copyLink")}
-    >
-      {copied ? <Check /> : <Link2 />}
-    </Button>
-  );
-}
-
-function RevokeButton({ id }: { id: string }) {
-  const t = useTranslations("invitations");
-  const router = useRouter();
-  const initial: InvitationActionState = null;
-  const [state, action] = useActionState(revokeInvitationAction, initial);
-
-  useEffect(() => {
-    if (state?.ok) router.refresh();
-  }, [state, router]);
-
-  return (
-    <form
-      action={action}
-      onSubmit={(e) => {
-        if (!window.confirm(t("revokeConfirm"))) e.preventDefault();
-      }}
-    >
-      <input type="hidden" name="id" value={id} />
-      <Button type="submit" variant="ghost" size="icon-sm" aria-label={t("revoke")}>
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        aria-label={t("revoke")}
+        onClick={() => {
+          setError(false);
+          setOpen(true);
+        }}
+      >
         <X />
       </Button>
-    </form>
+      <ConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={t("revokeConfirm")}
+        description={email}
+        confirmLabel={t("revoke")}
+        onConfirm={revoke}
+        pending={pending}
+        error={error ? t("revokeFailed") : undefined}
+      />
+    </>
   );
 }
 
@@ -94,8 +90,12 @@ export function InvitationsList({ invitations }: { invitations: PendingInvitatio
               {t("expiresAt", { date: fmtDate(inv.expiresAt) })}
             </div>
           </div>
-          <CopyLinkButton token={inv.token} />
-          <RevokeButton id={inv.id} />
+          <CopyLinkButton
+            path={`/${locale}/groups/join/${inv.token}`}
+            label={t("copyLink")}
+            copiedLabel={t("linkCopied")}
+          />
+          <RevokeButton id={inv.id} email={inv.email} />
         </div>
       ))}
     </div>

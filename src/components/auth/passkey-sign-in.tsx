@@ -12,7 +12,7 @@ export function PasskeySignIn({ locale }: { locale: string }) {
   const t = useTranslations("auth.login");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<"passkeyNotFound" | "passkeyFailed" | null>(null);
+  const [error, setError] = useState<"passkeyNotFound" | "passkeyFailed" | "disabled" | null>(null);
 
   function run() {
     setError(null);
@@ -20,6 +20,7 @@ export function PasskeySignIn({ locale }: { locale: string }) {
       const res = await signIn.passkey();
       if (res?.error) {
         const code = "code" in res.error ? res.error.code : undefined;
+        if (code === "BANNED_USER") return setError("disabled");
         return setError(code === "PASSKEY_NOT_FOUND" ? "passkeyNotFound" : "passkeyFailed");
       }
       router.push(`/${locale}/dashboard`);

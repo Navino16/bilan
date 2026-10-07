@@ -6,13 +6,21 @@ const PERMISSIONS = [
   { key: "admin.users.read", scope: "admin", description: "View users" },
   { key: "admin.users.create", scope: "admin", description: "Create users" },
   { key: "admin.users.update", scope: "admin", description: "Change user roles" },
+  { key: "admin.users.disable", scope: "admin", description: "Disable and re-enable users" },
+  { key: "admin.users.delete", scope: "admin", description: "Permanently delete users" },
   { key: "admin.signup_tokens.manage", scope: "admin", description: "Manage signup tokens" },
   { key: "admin.audit.read", scope: "admin", description: "View audit log" },
 ];
 
 const ROLES: Record<string, string[]> = {
   SUPER_ADMIN: PERMISSIONS.map((p) => p.key),
-  ADMIN: ["admin.settings.write", "admin.users.read", "admin.users.create", "admin.audit.read"],
+  ADMIN: [
+    "admin.settings.write",
+    "admin.users.read",
+    "admin.users.create",
+    "admin.users.disable",
+    "admin.audit.read",
+  ],
   USER: [],
 };
 

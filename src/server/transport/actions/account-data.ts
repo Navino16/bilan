@@ -5,7 +5,7 @@ import { requireSession } from "@/server/auth/permissions";
 import { getAuth } from "@/server/auth";
 import { db } from "@/server/db";
 import { loginLimiter } from "@/server/auth/rate-limit";
-import { deleteUser } from "@/server/services/rgpd";
+import { deleteOwnAccount, UserAdminError } from "@/server/services/users/lifecycle";
 
 export type AccountDataState = { ok: true } | { ok: false; error: string } | null;
 
@@ -43,9 +43,9 @@ export async function deleteAccountAction(
   }
 
   try {
-    await deleteUser(user.id);
-  } catch {
-    return { ok: false, error: "FAILED" };
+    await deleteOwnAccount(user.id);
+  } catch (e) {
+    return { ok: false, error: e instanceof UserAdminError ? e.code : "FAILED" };
   }
   return { ok: true };
 }

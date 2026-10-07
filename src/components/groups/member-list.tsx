@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { GROUP_ROLES, type GroupRole } from "@/lib/validation/group";
 import { changeMemberRoleAction, removeMemberAction } from "@/server/transport/actions/groups";
 import { NativeSelect } from "@/components/ui/native-select";
+import { ConfirmDialog } from "@/components/shell/confirm-dialog";
 
 type Member = { userId: string; role: GroupRole; name: string | null; email: string };
 
@@ -30,6 +31,8 @@ export function MemberList({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<Member | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const canManageRoles = viewerRole === "OWNER";
   const canRemove = RANK[viewerRole] >= RANK.ADMIN;
@@ -39,6 +42,7 @@ export function MemberList({
       const result = await action();
       if (result?.ok) {
         setError(null);
+        setConfirmOpen(false);
         router.refresh();
       } else {
         setError(result && "error" in result ? (result.error ?? "FAILED") : "FAILED");
@@ -55,7 +59,6 @@ export function MemberList({
   }
 
   function remove(userId: string) {
-    if (!window.confirm(t("removeConfirm"))) return;
     const fd = new FormData();
     fd.set("id", groupId);
     fd.set("userId", userId);
@@ -105,7 +108,11 @@ export function MemberList({
                   size="icon-sm"
                   aria-label={t("remove")}
                   disabled={pending}
-                  onClick={() => remove(m.userId)}
+                  onClick={() => {
+                    setError(null);
+                    setRemoving(m);
+                    setConfirmOpen(true);
+                  }}
                 >
                   <UserMinus />
                 </Button>
@@ -115,7 +122,17 @@ export function MemberList({
         })}
       </div>
 
-      {error && <p className="text-destructive text-sm">{t(`error.${error}`)}</p>}
+      {error && !confirmOpen && <p className="text-destructive text-sm">{t(`error.${error}`)}</p>}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={t("removeTitle", { name: removing?.name?.trim() || removing?.email || "" })}
+        description={t("removeConfirm")}
+        confirmLabel={t("remove")}
+        onConfirm={() => removing && remove(removing.userId)}
+        pending={pending}
+        error={error && confirmOpen ? t(`error.${error}`) : undefined}
+      />
     </div>
   );
 }

@@ -4,10 +4,23 @@ import { getCurrentUser, hasPermission } from "@/server/auth/permissions";
 import { adminCreateUser, adminCreateUserSchema } from "@/server/services/users/create";
 import { RoleChangeError, setUserRole } from "@/server/services/users/roles";
 import { isInstanceRole } from "@/lib/instance-roles";
-import { createSignupToken, revokeSignupToken } from "@/server/services/signup-tokens";
+import {
+  createSignupToken,
+  deleteSignupToken,
+  revokeSignupToken,
+} from "@/server/services/signup-tokens";
+import { createSignupTokenSchema, signupTokenExpiry } from "@/lib/validation/signup-token";
 import { logEvent } from "@/server/services/audit";
+import {
+  adminDeleteUser,
+  setUserDisabled,
+  UserAdminError,
+  userDeletionImpact,
+  type UserDeletionImpact,
+} from "@/server/services/users/lifecycle";
 
 export type AdminActionState = { ok: true } | { ok: false; error: string } | null;
+export type UserLifecycleState = { ok: true } | { ok: false; error: string } | null;
 
 async function requirePerm(key: string): Promise<{ id: string } | null> {
   const user = await getCurrentUser();
@@ -60,14 +73,20 @@ export async function createSignupTokenAction(
   const actor = await requirePerm("admin.signup_tokens.manage");
   if (!actor) return { ok: false, error: "UNAUTHORIZED" };
 
-  const description = String(formData.get("description") ?? "").trim() || undefined;
-  const maxUsesRaw = String(formData.get("maxUses") ?? "").trim();
-  const maxUses = maxUsesRaw ? Number(maxUsesRaw) : null;
-  if (maxUses !== null && (!Number.isInteger(maxUses) || maxUses < 1)) {
-    return { ok: false, error: "INVALID" };
-  }
+  const parsed = createSignupTokenSchema.safeParse({
+    description: String(formData.get("description") ?? ""),
+    maxUses: String(formData.get("maxUses") ?? ""),
+    expiresInDays: String(formData.get("expiresInDays") ?? ""),
+  });
+  if (!parsed.success) return { ok: false, error: "INVALID" };
+  const { description, maxUses, expiresInDays } = parsed.data;
 
-  const { id } = await createSignupToken({ description, maxUses, createdById: actor.id });
+  const { id } = await createSignupToken({
+    description,
+    maxUses,
+    expiresAt: signupTokenExpiry(expiresInDays, new Date()),
+    createdById: actor.id,
+  });
   await logEvent({
     userId: actor.id,
     action: "signup_token.created",
@@ -87,7 +106,7 @@ export async function revokeSignupTokenAction(
   const id = String(formData.get("id") ?? "").trim();
   if (!id) return { ok: false, error: "INVALID" };
 
-  await revokeSignupToken(id);
+  if (!(await revokeSignupToken(id))) return { ok: true };
   await logEvent({
     userId: actor.id,
     action: "signup_token.revoked",
@@ -95,4 +114,73 @@ export async function revokeSignupTokenAction(
     entityId: id,
   });
   return { ok: true };
+}
+
+export async function deleteSignupTokenAction(
+  _prev: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const actor = await requirePerm("admin.signup_tokens.manage");
+  if (!actor) return { ok: false, error: "UNAUTHORIZED" };
+
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return { ok: false, error: "INVALID" };
+
+  if (!(await deleteSignupToken(id))) return { ok: false, error: "STILL_ACTIVE" };
+  await logEvent({
+    userId: actor.id,
+    action: "signup_token.deleted",
+    entity: "AdminSignupToken",
+    entityId: id,
+  });
+  return { ok: true };
+}
+
+export async function setUserDisabledAction(
+  _prev: UserLifecycleState,
+  formData: FormData,
+): Promise<UserLifecycleState> {
+  const actor = await requirePerm("admin.users.disable");
+  if (!actor) return { ok: false, error: "UNAUTHORIZED" };
+
+  const userId = String(formData.get("userId") ?? "");
+  const disabled = String(formData.get("disabled") ?? "");
+  if (!userId || !["true", "false"].includes(disabled)) return { ok: false, error: "INVALID" };
+
+  try {
+    await setUserDisabled({ id: actor.id }, userId, disabled === "true");
+    return { ok: true };
+  } catch (e) {
+    if (e instanceof UserAdminError) return { ok: false, error: e.code };
+    return { ok: false, error: "FAILED" };
+  }
+}
+
+export async function adminDeleteUserAction(
+  _prev: UserLifecycleState,
+  formData: FormData,
+): Promise<UserLifecycleState> {
+  const actor = await requirePerm("admin.users.delete");
+  if (!actor) return { ok: false, error: "UNAUTHORIZED" };
+
+  const userId = String(formData.get("userId") ?? "");
+  const confirmEmail = String(formData.get("confirmEmail") ?? "");
+  if (!userId) return { ok: false, error: "INVALID" };
+
+  try {
+    await adminDeleteUser({ id: actor.id }, userId, confirmEmail);
+    return { ok: true };
+  } catch (e) {
+    if (e instanceof UserAdminError) return { ok: false, error: e.code };
+    return { ok: false, error: "FAILED" };
+  }
+}
+
+export async function getUserDeletionImpactAction(
+  userId: string,
+): Promise<{ ok: true; impact: UserDeletionImpact } | { ok: false; error: string }> {
+  const actor = await requirePerm("admin.users.delete");
+  if (!actor) return { ok: false, error: "UNAUTHORIZED" };
+  const impact = await userDeletionImpact(userId);
+  return impact ? { ok: true, impact } : { ok: false, error: "NOT_FOUND" };
 }

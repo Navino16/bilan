@@ -50,10 +50,45 @@ export async function refundSignupToken(token: string): Promise<void> {
   });
 }
 
-export async function revokeSignupToken(id: string): Promise<void> {
-  await db.adminSignupToken.update({ where: { id }, data: { revokedAt: new Date() } });
+// False when the token is unknown or already revoked (nothing to audit then).
+export async function revokeSignupToken(id: string): Promise<boolean> {
+  const { count } = await db.adminSignupToken.updateMany({
+    where: { id, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+  return count === 1;
 }
 
-export function listSignupTokens(): Promise<AdminSignupToken[]> {
-  return db.adminSignupToken.findMany({ orderBy: { createdAt: "desc" } });
+export type SignupTokenStatus = "active" | "revoked" | "expired" | "usedUp";
+
+export function signupTokenStatus(
+  tk: Pick<AdminSignupToken, "revokedAt" | "expiresAt" | "maxUses" | "usedCount">,
+  now: Date,
+): SignupTokenStatus {
+  if (tk.revokedAt) return "revoked";
+  if (tk.expiresAt && tk.expiresAt <= now) return "expired";
+  if (tk.maxUses !== null && tk.usedCount >= tk.maxUses) return "usedUp";
+  return "active";
+}
+
+export async function listSignupTokens(
+  now: Date = new Date(),
+): Promise<(AdminSignupToken & { status: SignupTokenStatus })[]> {
+  const rows = await db.adminSignupToken.findMany({ orderBy: { createdAt: "desc" } });
+  return rows.map((r) => ({ ...r, status: signupTokenStatus(r, now) }));
+}
+
+// Only a token that can no longer be used may be deleted; an active one is revoked first.
+export async function deleteSignupToken(id: string, now: Date = new Date()): Promise<boolean> {
+  const { count } = await db.adminSignupToken.deleteMany({
+    where: {
+      id,
+      OR: [
+        { revokedAt: { not: null } },
+        { expiresAt: { lte: now } },
+        { usedCount: { gte: db.adminSignupToken.fields.maxUses } },
+      ],
+    },
+  });
+  return count === 1;
 }

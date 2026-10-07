@@ -1,0 +1,154 @@
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+import { db } from "@/server/db";
+import { seedRolesAndPermissions } from "@/../prisma/seed";
+import { grantRole } from "@/server/services/users/roles";
+import { buildPermissionsChecker } from "@/server/auth/permissions";
+
+const current = vi.hoisted(() => ({ user: null as { id: string; email: string } | null }));
+vi.mock("@/server/auth/permissions", async (importOriginal) => {
+  const real = await importOriginal<typeof import("@/server/auth/permissions")>();
+  const { db } = await import("@/server/db");
+  const check = real.buildPermissionsChecker(db);
+  return {
+    ...real,
+    getCurrentUser: async () => current.user,
+    hasPermission: check,
+    requirePermission: async (key: string) => {
+      if (!current.user || !(await check(current.user.id, key))) throw new Error("FORBIDDEN");
+      return current.user;
+    },
+  };
+});
+vi.mock("next-intl/server", () => ({
+  getTranslations: async () => (key: string) => key,
+}));
+vi.mock("nodemailer", () => ({
+  default: { createTransport: () => ({ sendMail: async () => {} }) },
+}));
+
+const {
+  createSignupTokenAction,
+  deleteSignupTokenAction,
+  setUserDisabledAction,
+  adminDeleteUserAction,
+} = await import("@/server/transport/actions/admin");
+const { sendSmtpTestAction, deleteSmtpConfigAction } =
+  await import("@/server/transport/actions/settings");
+
+const stamp = Date.now();
+const users = {
+  super: { id: `act_super_${stamp}`, email: `act-super+${stamp}@bilan.local` },
+  admin: { id: `act_admin_${stamp}`, email: `act-admin+${stamp}@bilan.local` },
+  user: { id: `act_user_${stamp}`, email: `act-user+${stamp}@bilan.local` },
+};
+const all = Object.values(users).map((u) => u.id);
+const form = (data: Record<string, string>) => {
+  const fd = new FormData();
+  for (const [k, v] of Object.entries(data)) fd.set(k, v);
+  return fd;
+};
+
+beforeAll(async () => {
+  await seedRolesAndPermissions(db);
+  await db.user.createMany({ data: Object.values(users) });
+  await grantRole(db, users.super.id, "SUPER_ADMIN");
+  await grantRole(db, users.admin.id, "ADMIN");
+  await db.smtpConfig.deleteMany();
+  expect(await buildPermissionsChecker(db)(users.admin.id, "admin.users.disable")).toBe(true);
+});
+
+afterAll(async () => {
+  await db.adminSignupToken.deleteMany({ where: { createdById: { in: all } } });
+  await db.smtpConfig.deleteMany();
+  await db.auditLog.deleteMany({
+    where: { OR: [{ userId: { in: all } }, { entityId: { in: all } }] },
+  });
+  await db.user.deleteMany({ where: { id: { in: all } } });
+  await db.$disconnect();
+});
+
+describe("signup token actions", () => {
+  it("creates a token expiring after the chosen number of days", async () => {
+    current.user = users.super;
+    const before = Date.now();
+    expect(
+      await createSignupTokenAction(
+        null,
+        form({ description: `act ${stamp}`, maxUses: "", expiresInDays: "7" }),
+      ),
+    ).toEqual({ ok: true });
+    const row = await db.adminSignupToken.findFirst({ where: { description: `act ${stamp}` } });
+    const delta = row!.expiresAt!.getTime() - before;
+    expect(delta).toBeGreaterThanOrEqual(7 * 86_400_000);
+    expect(delta).toBeLessThan(7 * 86_400_000 + 60_000);
+  });
+
+  it("refuses token management to an admin without the permission", async () => {
+    current.user = users.admin;
+    expect(await deleteSignupTokenAction(null, form({ id: "x" }))).toEqual({
+      ok: false,
+      error: "UNAUTHORIZED",
+    });
+    expect(
+      await createSignupTokenAction(
+        null,
+        form({ description: "", maxUses: "", expiresInDays: "" }),
+      ),
+    ).toEqual({ ok: false, error: "UNAUTHORIZED" });
+  });
+});
+
+describe("user lifecycle actions", () => {
+  it("refuses everything to a plain user", async () => {
+    current.user = users.user;
+    expect(
+      await setUserDisabledAction(null, form({ userId: users.admin.id, disabled: "true" })),
+    ).toEqual({ ok: false, error: "UNAUTHORIZED" });
+    expect(
+      await adminDeleteUserAction(null, form({ userId: users.admin.id, confirmEmail: "" })),
+    ).toEqual({ ok: false, error: "UNAUTHORIZED" });
+  });
+
+  it("lets an admin disable a user, but not delete one", async () => {
+    current.user = users.admin;
+    expect(
+      await setUserDisabledAction(null, form({ userId: users.user.id, disabled: "true" })),
+    ).toEqual({ ok: true });
+    expect(
+      await setUserDisabledAction(null, form({ userId: users.user.id, disabled: "false" })),
+    ).toEqual({ ok: true });
+    expect(
+      await adminDeleteUserAction(
+        null,
+        form({ userId: users.user.id, confirmEmail: users.user.email }),
+      ),
+    ).toEqual({ ok: false, error: "UNAUTHORIZED" });
+  });
+
+  it("maps service refusals to error codes", async () => {
+    current.user = users.admin;
+    expect(
+      await setUserDisabledAction(null, form({ userId: users.super.id, disabled: "true" })),
+    ).toEqual({ ok: false, error: "FORBIDDEN" });
+    expect(
+      await setUserDisabledAction(null, form({ userId: users.user.id, disabled: "yes" })),
+    ).toEqual({ ok: false, error: "INVALID" });
+  });
+});
+
+describe("SMTP actions", () => {
+  it("are refused without admin.settings.write", async () => {
+    current.user = users.user;
+    await expect(sendSmtpTestAction(null, form({ locale: "fr" }))).rejects.toThrow("FORBIDDEN");
+    await expect(deleteSmtpConfigAction()).rejects.toThrow("FORBIDDEN");
+  });
+
+  it("rate-limits the SMTP test per admin", async () => {
+    current.user = users.admin;
+    const results = [];
+    for (let i = 0; i < 6; i++)
+      results.push(await sendSmtpTestAction(null, form({ locale: "fr" })));
+    expect(results.slice(0, 5).every((r) => r && !r.ok && r.error === "NOT_CONFIGURED")).toBe(true);
+    expect(results[5]).toEqual({ ok: false, error: "RATE_LIMITED" });
+  });
+});

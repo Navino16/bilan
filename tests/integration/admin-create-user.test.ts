@@ -40,4 +40,20 @@ describe("adminCreateUser", () => {
     });
     expect(audit).not.toBeNull();
   });
+
+  it("opens no session for the new user, so the admin stays signed in as themselves", async () => {
+    const email = `nosession+${Date.now()}@bilan.local`;
+    const { id } = await adminCreateUser(
+      { email, name: "No Session", role: "USER" },
+      { id: actorId },
+    );
+    expect(await db.session.count({ where: { userId: id } })).toBe(0);
+    const account = await db.authAccount.findFirst({ where: { userId: id } });
+    expect(account?.providerId).toBe("credential");
+    expect(account?.password).toBeTruthy();
+    await expect(
+      adminCreateUser({ email, name: "Twice", role: "USER" }, { id: actorId }),
+    ).rejects.toThrow();
+    await db.user.delete({ where: { id } });
+  });
 });

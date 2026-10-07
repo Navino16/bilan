@@ -1,8 +1,19 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
+import { hasLocale } from "next-intl";
 import { requirePermission } from "@/server/auth/permissions";
-import { appSettings } from "@/server/services/settings/app-settings";
-import { upsertSmtp, smtpSchema } from "@/server/services/settings/smtp";
+import { smtpTestLimiter } from "@/server/auth/rate-limit";
+import { appSettings, getAppName } from "@/server/services/settings/app-settings";
+import {
+  deleteSmtpConfig,
+  sendSmtpTest,
+  SmtpPasswordRequiredError,
+  upsertSmtp,
+  smtpSchema,
+  type SmtpFailure,
+} from "@/server/services/settings/smtp";
+import { defaultLocale, locales } from "@/i18n/config";
 import { upsertAuthProvider, upsertSchema } from "@/server/services/settings/auth-providers";
 
 export type SettingsActionState = { ok: true } | { ok: false; error: string } | null;
@@ -69,6 +80,44 @@ export async function upsertSmtpAction(
   if (!parsed.success) return { ok: false, error: "INVALID" };
   try {
     await upsertSmtp(parsed.data, { id: user.id });
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof SmtpPasswordRequiredError ? "PASSWORD_REQUIRED" : "FAILED",
+    };
+  }
+  return { ok: true };
+}
+
+export type SmtpTestState =
+  | { ok: true; to: string }
+  | { ok: false; error: "NOT_CONFIGURED" | "RATE_LIMITED" }
+  | { ok: false; error: "FAILED"; reason: SmtpFailure }
+  | null;
+
+export async function sendSmtpTestAction(
+  _prev: SmtpTestState,
+  formData: FormData,
+): Promise<SmtpTestState> {
+  const user = await requirePermission("admin.settings.write");
+  if (!smtpTestLimiter.consume(user.id).allowed) return { ok: false, error: "RATE_LIMITED" };
+  const raw = str(formData, "locale");
+  const locale = hasLocale(locales, raw) ? raw : defaultLocale;
+  const t = await getTranslations({ locale, namespace: "admin.smtp.testMail" });
+  const appName = await getAppName();
+  const res = await sendSmtpTest(
+    { to: user.email, subject: t("subject", { appName }), text: t("body", { appName }) },
+    { id: user.id },
+  );
+  if (res.ok) return { ok: true, to: user.email };
+  if (res.error === "NOT_CONFIGURED") return { ok: false, error: "NOT_CONFIGURED" };
+  return { ok: false, error: "FAILED", reason: res.reason };
+}
+
+export async function deleteSmtpConfigAction(): Promise<SettingsActionState> {
+  const user = await requirePermission("admin.settings.write");
+  try {
+    await deleteSmtpConfig({ id: user.id });
   } catch {
     return { ok: false, error: "FAILED" };
   }

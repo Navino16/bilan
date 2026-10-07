@@ -13,15 +13,25 @@ import { PasskeySignIn } from "./passkey-sign-in";
 import { TwoFactorStep } from "./two-factor-step";
 
 export type LoginNotice = "passwordReset" | "accountDeleted";
+export type SsoError = "disabled" | "ssoFailed";
 
 // "Back" from the code step remounts the password step to clear its action state.
-export function LoginForm({ locale, notice }: { locale: string; notice?: LoginNotice }) {
+export function LoginForm({
+  locale,
+  notice,
+  ssoError,
+}: {
+  locale: string;
+  notice?: LoginNotice;
+  ssoError?: SsoError;
+}) {
   const [attempt, setAttempt] = useState(0);
   return (
     <PasswordStep
       key={attempt}
       locale={locale}
       notice={notice}
+      ssoError={ssoError}
       onRestart={() => setAttempt((n) => n + 1)}
     />
   );
@@ -30,10 +40,12 @@ export function LoginForm({ locale, notice }: { locale: string; notice?: LoginNo
 function PasswordStep({
   locale,
   notice,
+  ssoError,
   onRestart,
 }: {
   locale: string;
   notice?: LoginNotice;
+  ssoError?: SsoError;
   onRestart: () => void;
 }) {
   const t = useTranslations("auth.login");
@@ -54,6 +66,11 @@ function PasswordStep({
       {notice && !state && (
         <Alert>
           <AlertDescription>{t(`notice.${notice}`)}</AlertDescription>
+        </Alert>
+      )}
+      {ssoError && !state && (
+        <Alert variant="destructive">
+          <AlertDescription>{t(`error.${ssoError}`)}</AlertDescription>
         </Alert>
       )}
       <div className="space-y-4">
@@ -83,11 +100,13 @@ function PasswordStep({
           {state && !state.ok && (
             <Alert variant="destructive">
               <AlertDescription>
-                {state.error !== "RATE_LIMITED"
-                  ? t("error.badCredentials")
-                  : state.retryAfter
-                    ? t("error.rateLimitedFor", { minutes: Math.ceil(state.retryAfter / 60) })
-                    : t("error.rateLimited")}
+                {state.error === "DISABLED"
+                  ? t("error.disabled")
+                  : state.error !== "RATE_LIMITED"
+                    ? t("error.badCredentials")
+                    : state.retryAfter
+                      ? t("error.rateLimitedFor", { minutes: Math.ceil(state.retryAfter / 60) })
+                      : t("error.rateLimited")}
               </AlertDescription>
             </Alert>
           )}

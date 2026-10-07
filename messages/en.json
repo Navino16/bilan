@@ -17,7 +17,9 @@
         "rateLimitedFor": "Too many attempts. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
         "badCredentials": "Incorrect email or password.",
         "passkeyNotFound": "This passkey is no longer recognised. Sign in with your password.",
-        "passkeyFailed": "Passkey sign-in was cancelled or didn't complete."
+        "passkeyFailed": "Passkey sign-in was cancelled or didn't complete.",
+        "disabled": "This account is disabled. Contact the instance administrator.",
+        "ssoFailed": "Signing in through the identity provider failed. Try again."
       },
       "or": "or",
       "passkey": "Sign in with a passkey",
@@ -143,6 +145,18 @@
       "open": "Account menu",
       "settings": "Settings",
       "logout": "Sign out"
+    },
+    "confirm": {
+      "cancel": "Cancel"
+    },
+    "pager": {
+      "label": "Pagination",
+      "previous": "Previous",
+      "next": "Next",
+      "status": "Page {page, number} of {pageCount, number}"
+    },
+    "copyLink": {
+      "manual": "Automatic copy isn't available on this connection. Select the link and copy it."
     }
   },
   "accounts": {
@@ -280,7 +294,8 @@
       "INVALID_REGEX": "Invalid or unsupported regular expression (backreferences and lookarounds are not allowed).",
       "FORBIDDEN": "Not allowed.",
       "FAILED": "Failed. Try again."
-    }
+    },
+    "deleteFailed": "Deleting failed. Try again."
   },
   "budgets": {
     "overline": "Planning",
@@ -752,7 +767,8 @@
     "dangerTitleOwner": "Leave or delete the household",
     "leaveHint": "You will lose access to this household's shared accounts and budgets.",
     "leaveTitle": "Leave the household",
-    "deleteHint": "Deleting removes all associated shares. This cannot be undone."
+    "deleteHint": "Deleting removes all associated shares. This cannot be undone.",
+    "removeTitle": "Remove {name}?"
   },
   "invitations": {
     "invite": "Invite",
@@ -794,7 +810,8 @@
       "WRONG_ACCOUNT": "This invitation was sent to {email}. Sign in with that account to accept it.",
       "ALREADY_IN_GROUP": "You're already in this household.",
       "RATE_LIMITED": "Too many attempts. Please try again later."
-    }
+    },
+    "revokeFailed": "Revoking failed. Try again."
   },
   "dashboard": {
     "overline": "Overview",
@@ -932,7 +949,8 @@
         "BAD_PASSWORD": "Incorrect password.",
         "BAD_CONFIRM": "The email you entered doesn't match.",
         "RATE_LIMITED": "Too many attempts. Try again later.",
-        "FAILED": "Deletion failed. Please try again."
+        "FAILED": "Deletion failed. Please try again.",
+        "LAST_SUPER_ADMIN": "You are the last active super admin: appoint another one before deleting your account."
       }
     },
     "security": {
@@ -1078,7 +1096,39 @@
         "LAST_SUPER_ADMIN": "The last super admin can't be removed.",
         "NOT_FOUND": "User not found.",
         "FAILED": "Role change failed."
-      }
+      },
+      "search": "Search",
+      "searchPlaceholder": "Name or email",
+      "clearSearch": "Clear",
+      "matchCount": "{count, plural, =0 {No match} one {# match} other {# matches}}",
+      "noMatch": "No user matches this search.",
+      "disabledBadge": "Disabled",
+      "actionsFor": "Actions for {user}",
+      "disable": "Disable",
+      "enable": "Re-enable",
+      "delete": "Delete permanently",
+      "disableTitle": "Disable {user}?",
+      "disableBody": "Their sessions are closed and every sign-in is refused (password, passkey, OIDC). Their data is kept; you can re-enable them.",
+      "enableTitle": "Re-enable {user}?",
+      "enableBody": "They will be able to sign in again.",
+      "deleteTitle": "Permanently delete {user}?",
+      "deleteBody": "Their account and all their data are erased, and the audit log is anonymised. This cannot be undone.",
+      "deleteType": "To confirm, type {email}",
+      "lifecycleError": {
+        "UNAUTHORIZED": "You are not allowed to do this.",
+        "INVALID": "Invalid request.",
+        "SELF": "You can't act on your own account.",
+        "FORBIDDEN": "Only a super admin can act on an administrator or delete an account.",
+        "LAST_SUPER_ADMIN": "Not possible: this is the last active super admin.",
+        "NOT_FOUND": "User not found.",
+        "CONFIRMATION": "The address typed doesn't match.",
+        "FAILED": "Failed. Try again."
+      },
+      "deleteLoading": "Working out the impact…",
+      "deleteAccounts": "{count, plural, one {# bank account} other {# bank accounts}} and their history disappear{shared, plural, =0 {} one {, # of them shared: household members will no longer see it} other {, # of them shared: household members will no longer see them}}.",
+      "deleteTransfer": "Household “{group}” will be handed over to {to}.",
+      "deleteGroup": "Household “{group}”, of which they are the only member, will be deleted.",
+      "deleteBudgetLines": "Household budget lines that targeted their accounts will no longer be limited to an account."
     },
     "signupTokens": {
       "createTitle": "Create a token",
@@ -1097,14 +1147,31 @@
       "statusUsedUp": "Used up",
       "error": {
         "UNAUTHORIZED": "You don't have permission to manage tokens.",
-        "INVALID": "Invalid value."
+        "INVALID": "Invalid value (max uses: 1 to 10,000).",
+        "STILL_ACTIVE": "Revoke this token before deleting it.",
+        "FAILED": "Failed. Try again."
       },
       "createOverline": "Sign-up",
-      "createHint": "A token lets someone create an account when sign-up is invite-only.",
+      "createHint": "A token lets someone sign up when registration is invite-only. Share the signup link copied from the list.",
       "listOverline": "Invitations",
       "token": "Token",
       "usesCol": "Uses",
-      "status": "Status"
+      "status": "Status",
+      "expiresIn": "Expires",
+      "expiresInDays": "{count, plural, one {In # day} other {In # days}}",
+      "never": "Never",
+      "expires": "Expires:",
+      "expiresCol": "Expires",
+      "copyLink": "Copy the signup link",
+      "linkCopied": "Link copied",
+      "delete": "Delete",
+      "revokeTitle": "Revoke this token?",
+      "revokeBody": "It can no longer be used to sign up. Accounts already created are not affected.",
+      "deleteTitle": "Delete this token?",
+      "deleteBody": "It will be removed from the list. Accounts created with it are not affected.",
+      "modeOpen": "Registration is open: anyone can sign up and tokens are not required.",
+      "modeDisabled": "Registration is disabled: tokens are rejected.",
+      "modeLink": "Change the registration mode"
     },
     "settings": {
       "appName": "Application name",
@@ -1149,7 +1216,7 @@
       "port": "Port",
       "username": "Username",
       "password": "Password",
-      "passwordKept": "Leave blank to keep the current one",
+      "passwordKept": "Leave blank to keep the current one (same server and account)",
       "fromAddress": "From address",
       "fromName": "From name",
       "secure": "Encryption",
@@ -1163,9 +1230,31 @@
       "saved": "SMTP configuration saved.",
       "error": {
         "INVALID": "Check the fields you entered.",
-        "FAILED": "Save failed."
+        "FAILED": "Save failed.",
+        "PASSWORD_REQUIRED": "Enter the password: it is only kept when the host, port, encryption and username are unchanged."
       },
-      "overline": "Email"
+      "overline": "Email",
+      "test": "Send a test email",
+      "testing": "Sending…",
+      "testHint": "The test uses the saved settings, even when disabled, and mails your own address.",
+      "testSent": "Test email sent to {to}.",
+      "testError": {
+        "NOT_CONFIGURED": "Save an SMTP configuration first.",
+        "RATE_LIMITED": "Too many tests. Try again in a minute.",
+        "EAUTH": "Failed: the SMTP server rejected the username or password.",
+        "ECONNECTION": "Failed: couldn't connect to the SMTP server (host, port or encryption).",
+        "ETIMEDOUT": "Failed: the SMTP server didn't respond.",
+        "ESOCKET": "Failed: network or TLS error with the SMTP server.",
+        "EENVELOPE": "Failed: the server rejected the sender or recipient.",
+        "OTHER": "Sending failed. Details are in the server logs."
+      },
+      "testMail": {
+        "subject": "{appName} — test email",
+        "body": "This is a test email sent from the {appName} admin area. The SMTP settings work."
+      },
+      "remove": "Remove the configuration",
+      "removeTitle": "Remove the SMTP configuration?",
+      "removeBody": "No email will be sent (invitations, password resets, security alerts) until a new configuration is saved."
     },
     "authProviders": {
       "listTitle": "Configured providers",
@@ -1207,14 +1296,185 @@
     "audit": {
       "title": "Audit log",
       "empty": "No entries.",
-      "count": "{total} entries",
+      "count": "{total, plural, =0 {No entries} one {# entry} other {# entries}}",
       "colDate": "Date",
       "colAction": "Action",
       "colEntity": "Entity",
       "colUser": "User",
       "system": "system",
       "filter": "Filter",
-      "overline": "Traceability"
+      "overline": "Traceability",
+      "all": "All",
+      "from": "From",
+      "to": "To",
+      "reset": "Reset",
+      "userPlaceholder": "Email or name",
+      "families": {
+        "auth": "Authentication",
+        "user": "Users",
+        "settings": "Settings",
+        "signup_token": "Signup tokens",
+        "group": "Households",
+        "account": "Bank accounts",
+        "transaction": "Transactions",
+        "import": "Imports",
+        "category": "Categories",
+        "rule": "Rules",
+        "budget": "Budgets",
+        "link": "Links",
+        "mail": "Emails",
+        "audit": "Audit log"
+      },
+      "entities": {
+        "User": "User",
+        "Session": "Session",
+        "Passkey": "Passkey",
+        "AppSetting": "Setting",
+        "AuthProvider": "Auth provider",
+        "SmtpConfig": "SMTP settings",
+        "AdminSignupToken": "Signup token",
+        "Group": "Household",
+        "GroupInvitation": "Household invitation",
+        "BankAccount": "Bank account",
+        "AccountShare": "Account share",
+        "Transaction": "Transaction",
+        "TransactionLink": "Link",
+        "IgnoredLinkSuggestion": "Ignored link suggestion",
+        "ImportBatch": "Import",
+        "Category": "Category",
+        "CategorizationRule": "Rule",
+        "Budget": "Budget",
+        "BudgetAssignment": "Budget assignment"
+      },
+      "actions": {
+        "settingUpdated": "Setting “{key}” changed",
+        "auth": {
+          "login": {
+            "success": "Signed in",
+            "failed": "Failed sign-in",
+            "2fa_pending": "Sign-in awaiting 2FA"
+          },
+          "2fa": {
+            "enabled": "Two-factor enabled",
+            "disabled": "Two-factor disabled"
+          },
+          "signup": "Account created (setup)",
+          "register": {
+            "success": "Registration succeeded",
+            "failed": "Registration failed"
+          },
+          "password": {
+            "changed": "Password changed",
+            "change_failed": "Password change failed",
+            "reset_requested": "Password reset requested",
+            "reset_completed": "Password reset completed"
+          },
+          "passkey": {
+            "added": "Passkey added",
+            "deleted": "Passkey deleted"
+          },
+          "session": {
+            "revoked": "Session revoked",
+            "revoked_others": "Other sessions revoked"
+          }
+        },
+        "user": {
+          "role": {
+            "granted": "Role granted",
+            "changed": "Role changed"
+          },
+          "deleted": "Account deleted",
+          "created_by_admin": "User created by an admin",
+          "disabled": "User disabled",
+          "enabled": "User re-enabled"
+        },
+        "settings": {
+          "smtp": {
+            "update": "SMTP settings changed",
+            "test": "SMTP test",
+            "delete": "SMTP settings removed"
+          },
+          "auth_provider": {
+            "update": "Auth provider changed"
+          }
+        },
+        "signup_token": {
+          "created": "Signup token created",
+          "revoked": "Signup token revoked",
+          "deleted": "Signup token deleted"
+        },
+        "group": {
+          "created": "Household created",
+          "updated": "Household updated",
+          "deleted": "Household deleted",
+          "member": {
+            "removed": "Member removed",
+            "role_changed": "Member role changed"
+          },
+          "invitation": {
+            "create": "Invitation sent",
+            "revoke": "Invitation revoked",
+            "accept": "Invitation accepted"
+          }
+        },
+        "account": {
+          "created": "Bank account created",
+          "updated": "Bank account updated",
+          "archived": "Bank account archived",
+          "share": {
+            "create": "Account shared",
+            "revoke": "Account share removed"
+          },
+          "deleted": "Bank account deleted",
+          "unarchived": "Bank account unarchived"
+        },
+        "transaction": {
+          "created": "Transaction created",
+          "deleted": "Transaction deleted",
+          "recategorized": "Transaction recategorised"
+        },
+        "import": {
+          "created": "Import started",
+          "committed": "Import committed",
+          "discarded": "Import discarded",
+          "reverted": "Import reverted",
+          "purged": "Imports purged"
+        },
+        "category": {
+          "created": "Category created",
+          "updated": "Category updated",
+          "deleted": "Category deleted"
+        },
+        "rule": {
+          "created": "Rule created",
+          "updated": "Rule updated",
+          "deleted": "Rule deleted",
+          "enabled": "Rule enabled",
+          "disabled": "Rule disabled"
+        },
+        "budget": {
+          "created": "Budget created",
+          "updated": "Budget updated",
+          "deleted": "Budget deleted",
+          "archived": "Budget archived",
+          "assignment": {
+            "create": "Transaction assigned to a budget",
+            "delete": "Budget assignment removed"
+          }
+        },
+        "link": {
+          "created": "Link created",
+          "deleted": "Link deleted"
+        },
+        "mail": {
+          "security": {
+            "failed": "Security email failed"
+          }
+        },
+        "audit": {
+          "purged": "Audit log purged"
+        }
+      }
     },
     "roles": {
       "USER": "User",

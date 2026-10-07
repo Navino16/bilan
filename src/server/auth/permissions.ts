@@ -16,7 +16,7 @@ export function buildPermissionsChecker(database: PrismaClient) {
         },
       },
     });
-    if (!user) return false;
+    if (!user || user.banned) return false;
     return user.roles.some((ur) =>
       ur.role.permissions.some((rp) => rp.permission.key === permissionKey),
     );
@@ -25,10 +25,16 @@ export function buildPermissionsChecker(database: PrismaClient) {
 
 export const hasPermission = buildPermissionsChecker(db);
 
+// A session created while its user was being disabled may survive the session purge:
+// a disabled user is treated as signed out regardless (users/lifecycle.ts).
+export function activeSession<S extends { user: object }>(session: S | null): S | null {
+  return session && !(session.user as { banned?: boolean | null }).banned ? session : null;
+}
+
 // Per-request memo: with the cookie cache off, every lookup is a DB round-trip.
 export const getCurrentSession = cache(async () => {
   const auth = await getAuth();
-  return auth.api.getSession({ headers: await nextHeaders() });
+  return activeSession(await auth.api.getSession({ headers: await nextHeaders() }));
 });
 
 export async function getCurrentUser() {
