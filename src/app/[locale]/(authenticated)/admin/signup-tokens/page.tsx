@@ -1,38 +1,57 @@
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { requirePermission } from "@/server/auth/permissions";
-import { listSignupTokens } from "@/server/services/signup-tokens";
+import { listSignupTokens, type SignupTokenStatus } from "@/server/services/signup-tokens";
+import { appSettings } from "@/server/services/settings/app-settings";
 import { SignupTokenCreateForm } from "@/components/admin/signup-token-create-form";
-import { RevokeTokenButton } from "@/components/admin/revoke-token-button";
+import { SignupTokenActions } from "@/components/admin/signup-token-actions";
 import { SectionCard, listHeader } from "@/components/shell/section-card";
+import { LocalDateTime } from "@/components/shell/local-date-time";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export const dynamic = "force-dynamic";
 
-type TokenStatus = "statusRevoked" | "statusExpired" | "statusUsedUp" | "statusActive";
+const STATUS_KEY: Record<SignupTokenStatus, string> = {
+  active: "statusActive",
+  revoked: "statusRevoked",
+  expired: "statusExpired",
+  usedUp: "statusUsedUp",
+};
 
-// Module-level (not in the component) so the Date.now() comparison isn't flagged
-// as an impure render call. Returns an i18n key suffix.
-function statusKey(tk: {
-  revokedAt: Date | null;
-  expiresAt: Date | null;
-  maxUses: number | null;
-  usedCount: number;
-}): TokenStatus {
-  if (tk.revokedAt) return "statusRevoked";
-  if (tk.expiresAt && tk.expiresAt.getTime() < Date.now()) return "statusExpired";
-  if (tk.maxUses !== null && tk.usedCount >= tk.maxUses) return "statusUsedUp";
-  return "statusActive";
-}
+const cols = "md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_90px_minmax(0,1fr)_90px_72px]";
 
-const cols = "md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_110px_90px_96px]";
-
-export default async function AdminSignupTokensPage() {
+export default async function AdminSignupTokensPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   await requirePermission("admin.signup_tokens.manage");
   const t = await getTranslations("admin.signupTokens");
-  const tokens = await listSignupTokens();
+  const [tokens, mode] = await Promise.all([
+    listSignupTokens(),
+    appSettings.get<string>("registration_mode"),
+  ]);
+  // Mirrors registerAction's default when the setting is unset.
+  const registrationMode = mode ?? "INVITE_ONLY";
+
+  const expiry = (at: Date | null) =>
+    at ? <LocalDateTime value={at} dateStyle="short" /> : t("never");
 
   return (
     <div className="space-y-6">
+      {registrationMode !== "INVITE_ONLY" && (
+        <Alert data-slot="registration-mode-notice">
+          <AlertDescription>
+            {registrationMode === "OPEN" ? t("modeOpen") : t("modeDisabled")}{" "}
+            <Link href={`/${locale}/admin/app-settings`} className="font-medium underline">
+              {t("modeLink")}
+            </Link>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <SectionCard overline={t("createOverline")} title={t("createTitle")} hint={t("createHint")}>
         <SignupTokenCreateForm />
       </SectionCard>
@@ -43,12 +62,14 @@ export default async function AdminSignupTokensPage() {
             <span>{t("token")}</span>
             <span>{t("description")}</span>
             <span>{t("usesCol")}</span>
+            <span>{t("expiresCol")}</span>
             <span>{t("status")}</span>
             <span />
           </div>
         )}
         {tokens.map((tk) => {
-          const status = statusKey(tk);
+          const label = t(STATUS_KEY[tk.status]);
+          const active = tk.status === "active";
           return (
             <div
               key={tk.id}
@@ -60,7 +81,10 @@ export default async function AdminSignupTokensPage() {
                 <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs md:hidden">
                   {tk.description && <span>{tk.description}</span>}
                   <span>{t("uses", { used: tk.usedCount, max: tk.maxUses ?? "∞" })}</span>
-                  <StatusBadge active={status === "statusActive"}>{t(status)}</StatusBadge>
+                  <span>
+                    {t("expires")} {expiry(tk.expiresAt)}
+                  </span>
+                  <StatusBadge active={active}>{label}</StatusBadge>
                 </div>
               </div>
               <span className="text-muted-foreground hidden truncate md:block">
@@ -69,12 +93,11 @@ export default async function AdminSignupTokensPage() {
               <span className="text-muted-foreground hidden tabular-nums md:block">
                 {tk.usedCount} / {tk.maxUses ?? "∞"}
               </span>
+              <span className="text-muted-foreground hidden md:block">{expiry(tk.expiresAt)}</span>
               <span className="hidden md:block">
-                <StatusBadge active={status === "statusActive"}>{t(status)}</StatusBadge>
+                <StatusBadge active={active}>{label}</StatusBadge>
               </span>
-              <div className="flex justify-end">
-                {!tk.revokedAt && <RevokeTokenButton id={tk.id} />}
-              </div>
+              <SignupTokenActions id={tk.id} token={tk.token} active={active} />
             </div>
           );
         })}

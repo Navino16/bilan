@@ -37,8 +37,11 @@ test.describe("categorization rules", () => {
     await page.getByRole("button", { name: /^Règles/ }).click();
     await expect(row).toContainText("1 utilisation");
 
-    page.once("dialog", (d) => d.accept());
     await row.getByRole("button", { name: /supprimer/i }).click();
+    await page
+      .locator('[data-slot="confirm-dialog"]')
+      .getByRole("button", { name: /^supprimer$/i })
+      .click();
     await expect(page.locator('[data-slot="rule-row"]').filter({ hasText: pattern })).toHaveCount(
       0,
     );

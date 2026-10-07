@@ -25,12 +25,23 @@ export async function adminCreateUser(
   const parsed = adminCreateUserSchema.parse(input);
   const auth = await getAuth();
 
-  const provisionalPassword = randomBytes(32).toString("base64url");
-  const res = await auth.api.signUpEmail({
-    body: { email: parsed.email, password: provisionalPassword, name: parsed.name },
+  // Not signUpEmail: with autoSignIn + nextCookies it would sign the admin in as the new user.
+  const ctx = await auth.$context;
+  const email = parsed.email.toLowerCase();
+  if (await ctx.internalAdapter.findUserByEmail(email)) throw new Error("USER_EXISTS");
+  const user = await ctx.internalAdapter.createUser({
+    email,
+    name: parsed.name,
+    emailVerified: false,
+  });
+  await ctx.internalAdapter.linkAccount({
+    userId: user.id,
+    providerId: "credential",
+    accountId: user.id,
+    password: await ctx.password.hash(randomBytes(32).toString("base64url")),
   });
 
-  await grantRole(db, res.user.id, parsed.role, actor.id);
+  await grantRole(db, user.id, parsed.role, actor.id);
   const appUrl = env.APP_URL.replace(/\/$/, "");
   await auth.api.requestPasswordReset({
     body: { email: parsed.email, redirectTo: `${appUrl}/${parsed.locale}/reset?setup=1` },
@@ -40,8 +51,8 @@ export async function adminCreateUser(
     userId: actor.id,
     action: "user.created_by_admin",
     entity: "User",
-    entityId: res.user.id,
+    entityId: user.id,
     metadata: { role: parsed.role },
   });
-  return { id: res.user.id };
+  return { id: user.id };
 }

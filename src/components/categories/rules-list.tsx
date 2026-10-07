@@ -9,6 +9,7 @@ import { CategoryChip, Pill, SegmentedTabs } from "@/components/transactions/bit
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import type { RuleMatchType } from "@/lib/validation/rule";
 import { deleteRuleAction, toggleRuleAction } from "@/server/transport/actions/rules";
+import { ConfirmDialog } from "@/components/shell/confirm-dialog";
 import { RuleDialog, type EditableRule } from "./rule-dialog";
 
 export type RuleRow = {
@@ -41,17 +42,22 @@ export function RulesList({
   const router = useRouter();
   const [editing, setEditing] = useState<EditableRule | null>(null);
   const [pending, startTransition] = useTransition();
+  const [deleting, setDeleting] = useState<RuleRow | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState(false);
   const [sort, setSort] = useState<"priority" | "hits">("priority");
   // Rules arrive in priority order; the stable sort keeps it as the tie-breaker.
   const sorted = sort === "hits" ? [...rules].sort((a, b) => b.hits - a.hits) : rules;
 
   function remove(id: string) {
-    if (!window.confirm(t("deleteConfirm"))) return;
     const fd = new FormData();
     fd.set("id", id);
+    setDeleteError(false);
     startTransition(async () => {
       const r = await deleteRuleAction(null, fd);
-      if (r?.ok) router.refresh();
+      if (!r?.ok) return setDeleteError(true);
+      setDeleteOpen(false);
+      router.refresh();
     });
   }
 
@@ -128,7 +134,11 @@ export function RulesList({
                 size="icon-sm"
                 aria-label={t("delete")}
                 disabled={pending}
-                onClick={() => remove(r.id)}
+                onClick={() => {
+                  setDeleteError(false);
+                  setDeleting(r);
+                  setDeleteOpen(true);
+                }}
               >
                 <Trash2 />
               </Button>
@@ -188,6 +198,17 @@ export function RulesList({
           );
         })}
       </div>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={t("deleteConfirm")}
+        description={deleting?.pattern}
+        confirmLabel={t("delete")}
+        onConfirm={() => deleting && remove(deleting.id)}
+        pending={pending}
+        error={deleteError ? t("deleteFailed") : undefined}
+      />
 
       {editing && (
         <RuleDialog

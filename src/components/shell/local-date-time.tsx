@@ -7,7 +7,15 @@ const noop = () => () => {};
 
 // The server can't know the viewer's time zone: its HTML shows the UTC day only,
 // then the browser renders the date and time in its own zone.
-export function LocalDateTime({ value }: { value: Date | string }) {
+export function LocalDateTime({
+  value,
+  dateStyle = "medium",
+  timeStyle = "short",
+}: {
+  value: Date | string;
+  dateStyle?: "short" | "medium";
+  timeStyle?: "short" | "medium";
+}) {
   const locale = useLocale();
   const inBrowser = useSyncExternalStore(
     noop,
@@ -16,7 +24,7 @@ export function LocalDateTime({ value }: { value: Date | string }) {
   );
   const date = new Date(value);
   const format = inBrowser
-    ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" })
-    : new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" });
+    ? new Intl.DateTimeFormat(locale, { dateStyle, timeStyle })
+    : new Intl.DateTimeFormat(locale, { dateStyle, timeZone: "UTC" });
   return <time dateTime={date.toISOString()}>{format.format(date)}</time>;
 }

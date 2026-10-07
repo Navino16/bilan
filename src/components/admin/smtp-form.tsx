@@ -1,14 +1,22 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useActionState, useEffect, useState, useTransition } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { Send, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { upsertSmtpAction, type SettingsActionState } from "@/server/transport/actions/settings";
+import {
+  deleteSmtpConfigAction,
+  sendSmtpTestAction,
+  upsertSmtpAction,
+  type SettingsActionState,
+  type SmtpTestState,
+} from "@/server/transport/actions/settings";
 import { NativeSelect } from "@/components/ui/native-select";
+import { ConfirmDialog } from "@/components/shell/confirm-dialog";
 
 export type SmtpDefaults = {
   host: string;
@@ -32,97 +40,172 @@ export function SmtpForm({ defaults }: { defaults: SmtpDefaults }) {
   }, [state, router]);
 
   return (
-    <form action={action} className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="smtp-host">{t("host")}</Label>
-          <Input id="smtp-host" name="host" defaultValue={defaults?.host ?? ""} required />
+    <div className="space-y-6">
+      <form action={action} className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="smtp-host">{t("host")}</Label>
+            <Input id="smtp-host" name="host" defaultValue={defaults?.host ?? ""} required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="smtp-port">{t("port")}</Label>
+            <Input
+              id="smtp-port"
+              name="port"
+              type="number"
+              defaultValue={defaults?.port ?? 587}
+              required
+            />
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="smtp-port">{t("port")}</Label>
-          <Input
-            id="smtp-port"
-            name="port"
-            type="number"
-            defaultValue={defaults?.port ?? 587}
-            required
-          />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="smtp-username">{t("username")}</Label>
+            <Input
+              id="smtp-username"
+              name="username"
+              defaultValue={defaults?.username ?? ""}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="smtp-password">{t("password")}</Label>
+            <Input
+              id="smtp-password"
+              name="password"
+              type="password"
+              placeholder={defaults ? t("passwordKept") : ""}
+              required={!defaults}
+            />
+          </div>
         </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="smtp-from">{t("fromAddress")}</Label>
+            <Input
+              id="smtp-from"
+              name="fromAddress"
+              type="email"
+              defaultValue={defaults?.fromAddress ?? ""}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="smtp-fromName">{t("fromName")}</Label>
+            <Input id="smtp-fromName" name="fromName" defaultValue={defaults?.fromName ?? ""} />
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="smtp-secure">{t("secure")}</Label>
+            <NativeSelect
+              id="smtp-secure"
+              name="secure"
+              defaultValue={String(defaults?.secure ?? true)}
+            >
+              <option value="true">{t("secureTls")}</option>
+              <option value="false">{t("securePlain")}</option>
+            </NativeSelect>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="smtp-enabled">{t("enabled")}</Label>
+            <NativeSelect
+              id="smtp-enabled"
+              name="enabled"
+              defaultValue={String(defaults?.enabled ?? true)}
+            >
+              <option value="true">{t("on")}</option>
+              <option value="false">{t("off")}</option>
+            </NativeSelect>
+          </div>
+        </div>
+        {state?.ok && (
+          <Alert>
+            <AlertDescription>{t("saved")}</AlertDescription>
+          </Alert>
+        )}
+        {state && !state.ok && (
+          <Alert variant="destructive">
+            <AlertDescription>{t(`error.${state.error}`)}</AlertDescription>
+          </Alert>
+        )}
+        <Button type="submit" disabled={pending}>
+          {pending ? t("saving") : t("save")}
+        </Button>
+      </form>
+      {defaults && <SmtpTools />}
+    </div>
+  );
+}
+
+function SmtpTools() {
+  const t = useTranslations("admin.smtp");
+  const locale = useLocale();
+  const router = useRouter();
+  const [test, testAction, testing] = useActionState<SmtpTestState, FormData>(
+    sendSmtpTestAction,
+    null,
+  );
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState(false);
+  const [deleting, startDelete] = useTransition();
+
+  function remove() {
+    setDeleteError(false);
+    startDelete(async () => {
+      const res = await deleteSmtpConfigAction();
+      if (!res?.ok) return setDeleteError(true);
+      setConfirmOpen(false);
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="space-y-3 border-t pt-5">
+      <p className="text-muted-foreground text-sm">{t("testHint")}</p>
+      <div className="flex flex-wrap gap-2">
+        <form action={testAction}>
+          <input type="hidden" name="locale" value={locale} />
+          <Button type="submit" variant="outline" disabled={testing}>
+            <Send />
+            {testing ? t("testing") : t("test")}
+          </Button>
+        </form>
+        <Button
+          type="button"
+          variant="ghost"
+          className="text-destructive"
+          onClick={() => {
+            setDeleteError(false);
+            setConfirmOpen(true);
+          }}
+        >
+          <Trash2 />
+          {t("remove")}
+        </Button>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="smtp-username">{t("username")}</Label>
-          <Input
-            id="smtp-username"
-            name="username"
-            defaultValue={defaults?.username ?? ""}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="smtp-password">{t("password")}</Label>
-          <Input
-            id="smtp-password"
-            name="password"
-            type="password"
-            placeholder={defaults ? t("passwordKept") : ""}
-            required={!defaults}
-          />
-        </div>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="smtp-from">{t("fromAddress")}</Label>
-          <Input
-            id="smtp-from"
-            name="fromAddress"
-            type="email"
-            defaultValue={defaults?.fromAddress ?? ""}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="smtp-fromName">{t("fromName")}</Label>
-          <Input id="smtp-fromName" name="fromName" defaultValue={defaults?.fromName ?? ""} />
-        </div>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="smtp-secure">{t("secure")}</Label>
-          <NativeSelect
-            id="smtp-secure"
-            name="secure"
-            defaultValue={String(defaults?.secure ?? true)}
-          >
-            <option value="true">{t("secureTls")}</option>
-            <option value="false">{t("securePlain")}</option>
-          </NativeSelect>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="smtp-enabled">{t("enabled")}</Label>
-          <NativeSelect
-            id="smtp-enabled"
-            name="enabled"
-            defaultValue={String(defaults?.enabled ?? true)}
-          >
-            <option value="true">{t("on")}</option>
-            <option value="false">{t("off")}</option>
-          </NativeSelect>
-        </div>
-      </div>
-      {state?.ok && (
+      {test?.ok && (
         <Alert>
-          <AlertDescription>{t("saved")}</AlertDescription>
+          <AlertDescription>{t("testSent", { to: test.to })}</AlertDescription>
         </Alert>
       )}
-      {state && !state.ok && (
+      {test && !test.ok && (
         <Alert variant="destructive">
-          <AlertDescription>{t(`error.${state.error}`)}</AlertDescription>
+          <AlertDescription>
+            {test.error === "FAILED" ? t(`testError.${test.reason}`) : t(`testError.${test.error}`)}
+          </AlertDescription>
         </Alert>
       )}
-      <Button type="submit" disabled={pending}>
-        {pending ? t("saving") : t("save")}
-      </Button>
-    </form>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={t("removeTitle")}
+        description={t("removeBody")}
+        confirmLabel={t("remove")}
+        onConfirm={remove}
+        pending={deleting}
+        error={deleteError ? t("error.FAILED") : undefined}
+      />
+    </div>
   );
 }

@@ -17,7 +17,9 @@
         "rateLimitedFor": "Trop de tentatives. Réessayez dans {minutes, plural, one {# minute} other {# minutes}}.",
         "badCredentials": "E-mail ou mot de passe incorrect.",
         "passkeyNotFound": "Cette clé d'accès n'est plus reconnue. Connectez-vous avec votre mot de passe.",
-        "passkeyFailed": "La connexion par clé d'accès a été annulée ou n'a pas abouti."
+        "passkeyFailed": "La connexion par clé d'accès a été annulée ou n'a pas abouti.",
+        "disabled": "Ce compte est désactivé. Contactez l'administrateur de l'instance.",
+        "ssoFailed": "La connexion via le fournisseur d'identité a échoué. Réessayez."
       },
       "or": "ou",
       "passkey": "Se connecter avec une clé d'accès",
@@ -143,6 +145,18 @@
       "open": "Menu du compte",
       "settings": "Préférences",
       "logout": "Se déconnecter"
+    },
+    "confirm": {
+      "cancel": "Annuler"
+    },
+    "pager": {
+      "label": "Pagination",
+      "previous": "Précédent",
+      "next": "Suivant",
+      "status": "Page {page, number} sur {pageCount, number}"
+    },
+    "copyLink": {
+      "manual": "La copie automatique n'est pas disponible sur cette connexion. Sélectionnez le lien puis copiez-le."
     }
   },
   "accounts": {
@@ -280,7 +294,8 @@
       "INVALID_REGEX": "Expression régulière invalide ou non prise en charge (les références arrière et les assertions avant/arrière ne sont pas acceptées).",
       "FORBIDDEN": "Action non autorisée.",
       "FAILED": "Échec. Réessayez."
-    }
+    },
+    "deleteFailed": "Échec de la suppression. Réessayez."
   },
   "budgets": {
     "overline": "Planification",
@@ -752,7 +767,8 @@
     "dangerTitleOwner": "Quitter ou supprimer le foyer",
     "leaveHint": "Vous perdrez l'accès aux comptes et budgets partagés de ce foyer.",
     "leaveTitle": "Quitter le foyer",
-    "deleteHint": "La suppression retire tous les partages associés. Action irréversible."
+    "deleteHint": "La suppression retire tous les partages associés. Action irréversible.",
+    "removeTitle": "Retirer {name} ?"
   },
   "invitations": {
     "invite": "Inviter",
@@ -794,7 +810,8 @@
       "WRONG_ACCOUNT": "Cette invitation a été envoyée à {email}. Connectez-vous avec ce compte pour l'accepter.",
       "ALREADY_IN_GROUP": "Vous faites déjà partie de ce foyer.",
       "RATE_LIMITED": "Trop de tentatives. Réessayez plus tard."
-    }
+    },
+    "revokeFailed": "Échec de la révocation. Réessayez."
   },
   "dashboard": {
     "overline": "Vue d'ensemble",
@@ -932,7 +949,8 @@
         "BAD_PASSWORD": "Mot de passe incorrect.",
         "BAD_CONFIRM": "L'e-mail saisi ne correspond pas.",
         "RATE_LIMITED": "Trop de tentatives. Réessayez plus tard.",
-        "FAILED": "La suppression a échoué. Réessayez."
+        "FAILED": "La suppression a échoué. Réessayez.",
+        "LAST_SUPER_ADMIN": "Vous êtes le dernier super admin actif : nommez-en un autre avant de supprimer votre compte."
       }
     },
     "security": {
@@ -1078,7 +1096,39 @@
         "LAST_SUPER_ADMIN": "Impossible de retirer le dernier super admin.",
         "NOT_FOUND": "Utilisateur introuvable.",
         "FAILED": "Échec du changement de rôle."
-      }
+      },
+      "search": "Rechercher",
+      "searchPlaceholder": "Nom ou e-mail",
+      "clearSearch": "Effacer",
+      "matchCount": "{count, plural, =0 {Aucun résultat} one {# résultat} other {# résultats}}",
+      "noMatch": "Aucun utilisateur ne correspond à cette recherche.",
+      "disabledBadge": "Désactivé",
+      "actionsFor": "Actions pour {user}",
+      "disable": "Désactiver",
+      "enable": "Réactiver",
+      "delete": "Supprimer définitivement",
+      "disableTitle": "Désactiver {user} ?",
+      "disableBody": "Ses sessions sont fermées et toute connexion est refusée (mot de passe, clé d'accès, OIDC). Ses données sont conservées ; vous pourrez le réactiver.",
+      "enableTitle": "Réactiver {user} ?",
+      "enableBody": "La personne pourra de nouveau se connecter.",
+      "deleteTitle": "Supprimer définitivement {user} ?",
+      "deleteBody": "Son compte et toutes ses données sont effacés, le journal d'audit est anonymisé. Action irréversible.",
+      "deleteType": "Pour confirmer, saisissez {email}",
+      "lifecycleError": {
+        "UNAUTHORIZED": "Vous n'avez pas la permission de faire cela.",
+        "INVALID": "Requête invalide.",
+        "SELF": "Vous ne pouvez pas agir sur votre propre compte.",
+        "FORBIDDEN": "Seul un super admin peut agir sur un administrateur ou supprimer un compte.",
+        "LAST_SUPER_ADMIN": "Impossible : c'est le dernier super admin actif.",
+        "NOT_FOUND": "Utilisateur introuvable.",
+        "CONFIRMATION": "L'adresse saisie ne correspond pas.",
+        "FAILED": "Échec. Réessayez."
+      },
+      "deleteLoading": "Calcul de l'impact…",
+      "deleteAccounts": "{count, plural, one {# compte bancaire} other {# comptes bancaires}} et leur historique disparaissent{shared, plural, =0 {} one {, dont # partagé : les membres du foyer ne le verront plus} other {, dont # partagés : les membres des foyers ne les verront plus}}.",
+      "deleteTransfer": "Le foyer « {group} » sera transmis à {to}.",
+      "deleteGroup": "Le foyer « {group} », dont la personne est seule membre, sera supprimé.",
+      "deleteBudgetLines": "Les lignes de budget de foyer qui visaient ses comptes ne seront plus limitées à un compte."
     },
     "signupTokens": {
       "createTitle": "Créer un jeton",
@@ -1097,14 +1147,31 @@
       "statusUsedUp": "Épuisé",
       "error": {
         "UNAUTHORIZED": "Vous n'avez pas la permission de gérer les jetons.",
-        "INVALID": "Valeur invalide."
+        "INVALID": "Valeur invalide (utilisations max : 1 à 10 000).",
+        "STILL_ACTIVE": "Révoquez ce jeton avant de le supprimer.",
+        "FAILED": "Échec. Réessayez."
       },
       "createOverline": "Inscription",
-      "createHint": "Un jeton permet de créer un compte lorsque l'inscription est sur invitation.",
+      "createHint": "Un jeton permet de créer un compte lorsque l'inscription est sur invitation. Partagez le lien d'inscription copié depuis la liste.",
       "listOverline": "Invitations",
       "token": "Jeton",
       "usesCol": "Utilisations",
-      "status": "Statut"
+      "status": "Statut",
+      "expiresIn": "Expiration",
+      "expiresInDays": "{count, plural, one {Dans # jour} other {Dans # jours}}",
+      "never": "Jamais",
+      "expires": "Expire :",
+      "expiresCol": "Expiration",
+      "copyLink": "Copier le lien d'inscription",
+      "linkCopied": "Lien copié",
+      "delete": "Supprimer",
+      "revokeTitle": "Révoquer ce jeton ?",
+      "revokeBody": "Il ne pourra plus servir à créer un compte. Les comptes déjà créés ne sont pas touchés.",
+      "deleteTitle": "Supprimer ce jeton ?",
+      "deleteBody": "Il disparaîtra de la liste. Les comptes créés avec ce jeton ne sont pas touchés.",
+      "modeOpen": "L'inscription est ouverte : n'importe qui peut créer un compte, les jetons ne sont pas demandés.",
+      "modeDisabled": "L'inscription est désactivée : les jetons sont refusés.",
+      "modeLink": "Changer le mode d'inscription"
     },
     "settings": {
       "appName": "Nom de l'application",
@@ -1149,7 +1216,7 @@
       "port": "Port",
       "username": "Utilisateur",
       "password": "Mot de passe",
-      "passwordKept": "Laisser vide pour conserver l'actuel",
+      "passwordKept": "Laisser vide pour conserver l'actuel (même serveur et compte)",
       "fromAddress": "Adresse d'expédition",
       "fromName": "Nom d'expéditeur",
       "secure": "Chiffrement",
@@ -1163,9 +1230,31 @@
       "saved": "Configuration SMTP enregistrée.",
       "error": {
         "INVALID": "Vérifiez les champs saisis.",
-        "FAILED": "Échec de l'enregistrement."
+        "FAILED": "Échec de l'enregistrement.",
+        "PASSWORD_REQUIRED": "Saisissez le mot de passe : il n'est conservé que si l'hôte, le port, le chiffrement et l'utilisateur sont inchangés."
       },
-      "overline": "E-mails"
+      "overline": "E-mails",
+      "test": "Envoyer un e-mail de test",
+      "testing": "Envoi…",
+      "testHint": "Le test utilise la configuration enregistrée, même désactivée, et l'envoie à votre adresse.",
+      "testSent": "E-mail de test envoyé à {to}.",
+      "testError": {
+        "NOT_CONFIGURED": "Enregistrez d'abord une configuration SMTP.",
+        "RATE_LIMITED": "Trop de tests. Réessayez dans une minute.",
+        "EAUTH": "Échec : le serveur SMTP a refusé l'identifiant ou le mot de passe.",
+        "ECONNECTION": "Échec : connexion au serveur SMTP impossible (hôte, port ou chiffrement).",
+        "ETIMEDOUT": "Échec : le serveur SMTP ne répond pas.",
+        "ESOCKET": "Échec : erreur réseau ou TLS avec le serveur SMTP.",
+        "EENVELOPE": "Échec : le serveur a refusé l'expéditeur ou le destinataire.",
+        "OTHER": "Échec de l'envoi. Les détails sont dans les journaux du serveur."
+      },
+      "testMail": {
+        "subject": "{appName} — e-mail de test",
+        "body": "Ceci est un e-mail de test envoyé depuis l'administration de {appName}. La configuration SMTP fonctionne."
+      },
+      "remove": "Supprimer la configuration",
+      "removeTitle": "Supprimer la configuration SMTP ?",
+      "removeBody": "Plus aucun e-mail ne sera envoyé (invitations, réinitialisations, alertes de sécurité) tant qu'une nouvelle configuration n'est pas enregistrée."
     },
     "authProviders": {
       "listTitle": "Fournisseurs configurés",
@@ -1207,14 +1296,185 @@
     "audit": {
       "title": "Journal d'audit",
       "empty": "Aucune entrée.",
-      "count": "{total} entrées",
+      "count": "{total, plural, =0 {Aucune entrée} one {# entrée} other {# entrées}}",
       "colDate": "Date",
       "colAction": "Action",
       "colEntity": "Entité",
       "colUser": "Utilisateur",
       "system": "système",
       "filter": "Filtrer",
-      "overline": "Traçabilité"
+      "overline": "Traçabilité",
+      "all": "Toutes",
+      "from": "Du",
+      "to": "Au",
+      "reset": "Réinitialiser",
+      "userPlaceholder": "E-mail ou nom",
+      "families": {
+        "auth": "Authentification",
+        "user": "Utilisateurs",
+        "settings": "Paramètres",
+        "signup_token": "Jetons d'invitation",
+        "group": "Foyers",
+        "account": "Comptes bancaires",
+        "transaction": "Transactions",
+        "import": "Imports",
+        "category": "Catégories",
+        "rule": "Règles",
+        "budget": "Budgets",
+        "link": "Liaisons",
+        "mail": "E-mails",
+        "audit": "Journal d'audit"
+      },
+      "entities": {
+        "User": "Utilisateur",
+        "Session": "Session",
+        "Passkey": "Clé d'accès",
+        "AppSetting": "Paramètre",
+        "AuthProvider": "Fournisseur d'authentification",
+        "SmtpConfig": "Configuration SMTP",
+        "AdminSignupToken": "Jeton d'invitation",
+        "Group": "Foyer",
+        "GroupInvitation": "Invitation de foyer",
+        "BankAccount": "Compte bancaire",
+        "AccountShare": "Partage de compte",
+        "Transaction": "Transaction",
+        "TransactionLink": "Liaison",
+        "IgnoredLinkSuggestion": "Suggestion de liaison ignorée",
+        "ImportBatch": "Import",
+        "Category": "Catégorie",
+        "CategorizationRule": "Règle",
+        "Budget": "Budget",
+        "BudgetAssignment": "Affectation de budget"
+      },
+      "actions": {
+        "settingUpdated": "Paramètre « {key} » modifié",
+        "auth": {
+          "login": {
+            "success": "Connexion réussie",
+            "failed": "Échec de connexion",
+            "2fa_pending": "Connexion en attente de 2FA"
+          },
+          "2fa": {
+            "enabled": "Double authentification activée",
+            "disabled": "Double authentification désactivée"
+          },
+          "signup": "Compte créé (installation)",
+          "register": {
+            "success": "Inscription réussie",
+            "failed": "Échec d'inscription"
+          },
+          "password": {
+            "changed": "Mot de passe modifié",
+            "change_failed": "Échec du changement de mot de passe",
+            "reset_requested": "Réinitialisation du mot de passe demandée",
+            "reset_completed": "Mot de passe réinitialisé"
+          },
+          "passkey": {
+            "added": "Clé d'accès ajoutée",
+            "deleted": "Clé d'accès supprimée"
+          },
+          "session": {
+            "revoked": "Session révoquée",
+            "revoked_others": "Autres sessions révoquées"
+          }
+        },
+        "user": {
+          "role": {
+            "granted": "Rôle attribué",
+            "changed": "Rôle modifié"
+          },
+          "deleted": "Compte supprimé",
+          "created_by_admin": "Utilisateur créé par un admin",
+          "disabled": "Utilisateur désactivé",
+          "enabled": "Utilisateur réactivé"
+        },
+        "settings": {
+          "smtp": {
+            "update": "Configuration SMTP modifiée",
+            "test": "Test SMTP",
+            "delete": "Configuration SMTP supprimée"
+          },
+          "auth_provider": {
+            "update": "Fournisseur d'authentification modifié"
+          }
+        },
+        "signup_token": {
+          "created": "Jeton d'invitation créé",
+          "revoked": "Jeton d'invitation révoqué",
+          "deleted": "Jeton d'invitation supprimé"
+        },
+        "group": {
+          "created": "Foyer créé",
+          "updated": "Foyer modifié",
+          "deleted": "Foyer supprimé",
+          "member": {
+            "removed": "Membre retiré",
+            "role_changed": "Rôle de membre modifié"
+          },
+          "invitation": {
+            "create": "Invitation envoyée",
+            "revoke": "Invitation révoquée",
+            "accept": "Invitation acceptée"
+          }
+        },
+        "account": {
+          "created": "Compte bancaire créé",
+          "updated": "Compte bancaire modifié",
+          "archived": "Compte bancaire archivé",
+          "share": {
+            "create": "Compte partagé",
+            "revoke": "Partage de compte retiré"
+          },
+          "deleted": "Compte bancaire supprimé",
+          "unarchived": "Compte bancaire désarchivé"
+        },
+        "transaction": {
+          "created": "Transaction créée",
+          "deleted": "Transaction supprimée",
+          "recategorized": "Transaction recatégorisée"
+        },
+        "import": {
+          "created": "Import démarré",
+          "committed": "Import validé",
+          "discarded": "Import abandonné",
+          "reverted": "Import annulé",
+          "purged": "Imports purgés"
+        },
+        "category": {
+          "created": "Catégorie créée",
+          "updated": "Catégorie modifiée",
+          "deleted": "Catégorie supprimée"
+        },
+        "rule": {
+          "created": "Règle créée",
+          "updated": "Règle modifiée",
+          "deleted": "Règle supprimée",
+          "enabled": "Règle activée",
+          "disabled": "Règle désactivée"
+        },
+        "budget": {
+          "created": "Budget créé",
+          "updated": "Budget modifié",
+          "deleted": "Budget supprimé",
+          "archived": "Budget archivé",
+          "assignment": {
+            "create": "Transaction affectée à un budget",
+            "delete": "Affectation de budget retirée"
+          }
+        },
+        "link": {
+          "created": "Liaison créée",
+          "deleted": "Liaison supprimée"
+        },
+        "mail": {
+          "security": {
+            "failed": "Échec d'envoi d'un e-mail de sécurité"
+          }
+        },
+        "audit": {
+          "purged": "Journal d'audit purgé"
+        }
+      }
     },
     "roles": {
       "USER": "Utilisateur",

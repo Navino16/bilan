@@ -6,7 +6,7 @@ const base = {
   actorId: "actor",
   actorIsSuperAdmin: true,
   targetId: "target",
-  superAdminCount: 2,
+  otherActiveSuperAdmins: 1,
 } as const;
 
 describe("topRole", () => {
@@ -38,11 +38,11 @@ describe("checkRoleChange", () => {
   });
 
   it("never removes the last super admin", () => {
-    expect(checkRoleChange({ ...base, superAdminCount: 1, from: "SUPER_ADMIN", to: "ADMIN" })).toBe(
-      "LAST_SUPER_ADMIN",
-    );
     expect(
-      checkRoleChange({ ...base, superAdminCount: 1, from: "USER", to: "SUPER_ADMIN" }),
+      checkRoleChange({ ...base, otherActiveSuperAdmins: 0, from: "SUPER_ADMIN", to: "ADMIN" }),
+    ).toBe("LAST_SUPER_ADMIN");
+    expect(
+      checkRoleChange({ ...base, otherActiveSuperAdmins: 0, from: "USER", to: "SUPER_ADMIN" }),
     ).toBeNull();
   });
 });

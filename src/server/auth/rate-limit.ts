@@ -43,3 +43,5 @@ export const changePasswordLimiter = new RateLimiter({ max: 5, windowMs: 15 * 60
 export const twoFactorLimiter = new RateLimiter({ max: 5, windowMs: 10 * 60_000 });
 // Keyed by user id: caps invitation-code guessing.
 export const invitationAcceptLimiter = new RateLimiter({ max: 10, windowMs: 15 * 60_000 });
+// Keyed by user id: each SMTP test opens an outbound connection.
+export const smtpTestLimiter = new RateLimiter({ max: 5, windowMs: 60_000 });

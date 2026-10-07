@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import { INSTANCE_ROLES, topRole, type InstanceRole } from "@/lib/instance-roles";
@@ -40,19 +40,36 @@ export function checkRoleChange(input: {
   targetId: string;
   from: InstanceRole;
   to: InstanceRole;
-  superAdminCount: number;
+  otherActiveSuperAdmins: number;
 }): RoleChangeRefusal | null {
   if (input.actorId === input.targetId) return "SELF";
   const touchesAdmin = [input.from, input.to].some((r) => r !== "USER");
   if (touchesAdmin && !input.actorIsSuperAdmin) return "FORBIDDEN";
-  if (input.from === "SUPER_ADMIN" && input.to !== "SUPER_ADMIN" && input.superAdminCount <= 1) {
+  if (
+    input.from === "SUPER_ADMIN" &&
+    input.to !== "SUPER_ADMIN" &&
+    input.otherActiveSuperAdmins === 0
+  ) {
     return "LAST_SUPER_ADMIN";
   }
   return null;
 }
 
-// Replaces the target's instance role. The SUPER_ADMIN rows are read FOR UPDATE so two
-// super admins demoting each other concurrently can't leave the instance without one.
+// Locks the SUPER_ADMIN role rows so concurrent actions between super admins are
+// serialised, and returns the active (not disabled) ones.
+export async function lockActiveSuperAdmins(tx: Prisma.TransactionClient): Promise<string[]> {
+  const locked = await tx.$queryRaw<{ userId: string }[]>`
+    SELECT ur.userId FROM UserRole ur JOIN Role r ON r.id = ur.roleId
+    WHERE r.\`key\` = 'SUPER_ADMIN' FOR UPDATE`;
+  const active = await tx.user.findMany({
+    where: { id: { in: locked.map((s) => s.userId) }, banned: false },
+    select: { id: true },
+  });
+  return active.map((u) => u.id);
+}
+
+// Replaces the target's instance role. Disabled super admins count neither as actors nor
+// toward the last-super-admin guard.
 export async function setUserRole(
   actor: { id: string },
   userId: string,
@@ -60,9 +77,7 @@ export async function setUserRole(
   database: PrismaClient = db,
 ): Promise<void> {
   const from = await database.$transaction(async (tx) => {
-    const superAdmins = await tx.$queryRaw<{ userId: string }[]>`
-      SELECT ur.userId FROM UserRole ur JOIN Role r ON r.id = ur.roleId
-      WHERE r.\`key\` = 'SUPER_ADMIN' FOR UPDATE`;
+    const superAdmins = await lockActiveSuperAdmins(tx);
     const target = await tx.user.findUnique({
       where: { id: userId },
       select: { roles: { select: { role: { select: { key: true } } } } },
@@ -72,11 +87,11 @@ export async function setUserRole(
     const from = topRole(target.roles.map((r) => r.role.key));
     const refusal = checkRoleChange({
       actorId: actor.id,
-      actorIsSuperAdmin: superAdmins.some((s) => s.userId === actor.id),
+      actorIsSuperAdmin: superAdmins.includes(actor.id),
       targetId: userId,
       from,
       to,
-      superAdminCount: superAdmins.length,
+      otherActiveSuperAdmins: superAdmins.filter((id) => id !== userId).length,
     });
     if (refusal) throw new RoleChangeError(refusal);
     if (from === to) return null;

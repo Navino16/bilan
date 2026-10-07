@@ -55,6 +55,8 @@ export async function loginAction(
       const retryAfter = (e.body as { retryAfter?: number }).retryAfter;
       return { ok: false, error: "RATE_LIMITED", retryAfter };
     }
+    // Raised only once the password checked out, so it reveals nothing to a guesser.
+    if (isAPIError(e) && e.body?.code === "BANNED_USER") return { ok: false, error: "DISABLED" };
     return { ok: false, error: "BAD_CREDENTIALS" };
   }
 }

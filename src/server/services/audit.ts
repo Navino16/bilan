@@ -1,5 +1,7 @@
-import type { AuditLog, PrismaClient } from "@prisma/client";
+import type { AuditLog, Prisma, PrismaClient } from "@prisma/client";
 import { db } from "@/server/db";
+import { ADMIN_PAGE_SIZE, pageWindow } from "@/lib/pagination";
+import { AUDIT_FAMILIES } from "@/lib/audit";
 
 export async function logEvent(input: {
   userId?: string | null;
@@ -24,46 +26,86 @@ export async function logEvent(input: {
 }
 
 export type AuditLogFilter = {
+  /** Prefix of the action code (`group` matches `group.created`). */
   action?: string;
   entity?: string;
-  userId?: string;
-  take?: number;
-  skip?: number;
+  /** Fragment of the acting user's email or name, or an exact user id. */
+  user?: string;
+  /** Inclusive lower bound. */
+  from?: Date;
+  /** Exclusive upper bound. */
+  to?: Date;
+  page?: number;
+  pageSize?: number;
 };
 
+type UserRef = { name: string | null; email: string };
+
 // `user` is null for system events and for users deleted since (userId has no FK).
-export type AuditEntry = AuditLog & { user: { name: string | null; email: string } | null };
+// `subject` is the user an entity="User" row is about, resolved the same way.
+export type AuditEntry = AuditLog & { user: UserRef | null; subject: UserRef | null };
+
+export type AuditPage = { items: AuditEntry[]; total: number; page: number; pageCount: number };
 
 // Paginated audit-log read for the admin viewer, newest first.
 export async function listAuditLog(
   filter: AuditLogFilter = {},
   database: PrismaClient = db,
-): Promise<{ items: AuditEntry[]; total: number }> {
-  const where = {
-    ...(filter.action ? { action: filter.action } : {}),
-    ...(filter.entity ? { entity: filter.entity } : {}),
-    ...(filter.userId ? { userId: filter.userId } : {}),
-  };
-  const [items, total] = await Promise.all([
-    database.auditLog.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take: filter.take ?? 50,
-      skip: filter.skip ?? 0,
-    }),
-    database.auditLog.count({ where }),
-  ]);
-  const ids = [...new Set(items.flatMap((i) => (i.userId ? [i.userId] : [])))];
-  const users = ids.length
+): Promise<AuditPage> {
+  const pageSize = filter.pageSize ?? ADMIN_PAGE_SIZE;
+  const where: Prisma.AuditLogWhereInput = {};
+  if (filter.action) {
+    const family = (AUDIT_FAMILIES as readonly string[]).includes(filter.action);
+    where.action = { startsWith: family ? `${filter.action}.` : filter.action };
+  }
+  if (filter.entity) where.entity = filter.entity;
+  if (filter.from || filter.to) {
+    where.createdAt = {
+      ...(filter.from ? { gte: filter.from } : {}),
+      ...(filter.to ? { lt: filter.to } : {}),
+    };
+  }
+  const userQuery = filter.user?.trim();
+  if (userQuery) {
+    // AuditLog.userId has no FK (rows outlive their user), so no relation filter: the
+    // matching ids are resolved first, uncapped.
+    const matches = await database.user.findMany({
+      where: { OR: [{ email: { contains: userQuery } }, { name: { contains: userQuery } }] },
+      select: { id: true },
+    });
+    where.userId = { in: [userQuery, ...matches.map((u) => u.id)] };
+  }
+
+  const total = await database.auditLog.count({ where });
+  const { page, pageCount, skip } = pageWindow(total, filter.page ?? 1, pageSize);
+  const items = await database.auditLog.findMany({
+    where,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: pageSize,
+    skip,
+  });
+
+  const ids = new Set<string>();
+  for (const i of items) {
+    if (i.userId) ids.add(i.userId);
+    if (i.entity === "User" && i.entityId) ids.add(i.entityId);
+  }
+  const users = ids.size
     ? await database.user.findMany({
-        where: { id: { in: ids } },
+        where: { id: { in: [...ids] } },
         select: { id: true, name: true, email: true },
       })
     : [];
   const byId = new Map(users.map((u) => [u.id, { name: u.name, email: u.email }]));
   return {
-    items: items.map((i) => ({ ...i, user: i.userId ? (byId.get(i.userId) ?? null) : null })),
+    items: items.map((i) => ({
+      ...i,
+      user: i.userId ? (byId.get(i.userId) ?? null) : null,
+      subject: i.entity === "User" && i.entityId ? (byId.get(i.entityId) ?? null) : null,
+    })),
     total,
+    page,
+    pageCount,
   };
 }
 

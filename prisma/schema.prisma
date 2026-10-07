@@ -228,6 +228,8 @@ model AuditLog {
   @@index([userId, createdAt])
   @@index([entity, entityId])
   @@index([action, createdAt])
+  @@index([createdAt])
+  @@index([entity, createdAt])
 }
 
 model AdminSignupToken {
