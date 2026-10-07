@@ -35,6 +35,14 @@ export function PeriodPicker({
   const [customOpen, setCustomOpen] = useState(false);
   const [start, setStart] = useState(from);
   const [end, setEnd] = useState(to);
+  // Arrow navigation changes the period from outside: the inputs follow it.
+  const [shown, setShown] = useState({ from, to });
+  if (shown.from !== from || shown.to !== to) {
+    setShown({ from, to });
+    setStart(from);
+    setEnd(to);
+  }
+  const reversed = !!start && !!end && end < start;
 
   // Keeps the other filters (search, type, category); a new window resets the page size.
   function go(nextFrom: string, nextTo: string) {
@@ -50,7 +58,7 @@ export function PeriodPicker({
     go(toIsoDay(p.from), toIsoDay(p.to));
   }
   function applyCustom() {
-    if (start && end && start <= end) go(start, end);
+    if (start && end && !reversed) go(start, end);
   }
 
   const active = activePreset(from, to);
@@ -61,7 +69,7 @@ export function PeriodPicker({
         ...PERIOD_PRESETS.map((p) => ({ id: p, label: t(`preset.${p}`) })),
         { id: "custom", label: t("preset.custom") },
       ]}
-      value={customOpen ? "custom" : (active ?? "")}
+      value={customOpen || (!active && from && to) ? "custom" : (active ?? "")}
       onChange={(id) =>
         id === "custom" ? setCustomOpen((v) => !v) : applyPreset(id as PeriodPreset)
       }
@@ -73,13 +81,16 @@ export function PeriodPicker({
       {wrap ? (
         <div className="-mx-0.5 max-w-full px-0.5">{presets}</div>
       ) : (
-        <ScrollFade className="-mx-0.5 max-w-full px-0.5">{presets}</ScrollFade>
+        <ScrollFade className="-m-1 max-w-full p-1">{presets}</ScrollFade>
       )}
       {customOpen && (
         <div className="flex flex-wrap items-center gap-2">
           <input
             type="date"
             value={start}
+            min="1970-01-01"
+            max="2100-12-31"
+            aria-label={t("rangeStart")}
             onChange={(e) => setStart(e.target.value)}
             className="border-input bg-card h-8 rounded-md border px-2 text-sm shadow-sm"
           />
@@ -87,12 +98,21 @@ export function PeriodPicker({
           <input
             type="date"
             value={end}
+            min={start || "1970-01-01"}
+            max="2100-12-31"
+            aria-label={t("rangeEnd")}
+            aria-invalid={reversed || undefined}
             onChange={(e) => setEnd(e.target.value)}
-            className="border-input bg-card h-8 rounded-md border px-2 text-sm shadow-sm"
+            className="border-input bg-card aria-invalid:border-destructive h-8 rounded-md border px-2 text-sm shadow-sm"
           />
-          <Button size="sm" onClick={applyCustom}>
+          <Button size="sm" onClick={applyCustom} disabled={!start || !end || reversed}>
             {t("apply")}
           </Button>
+          {reversed && (
+            <p role="alert" className="text-destructive w-full text-xs">
+              {t("rangeReversed")}
+            </p>
+          )}
         </div>
       )}
     </div>

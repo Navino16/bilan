@@ -69,38 +69,64 @@ export function Donut({
   );
 }
 
+const MAX_BAR_WIDTH = 40;
+
 export function MiniBars({
   values,
   width = 380,
   height = 100,
   highlightMax = true,
+  axis,
 }: {
   values: number[];
   width?: number;
   height?: number;
   highlightMax?: boolean;
+  // First and last bucket labels, aligned under the bars actually drawn.
+  axis?: [string, string];
 }) {
   const max = Math.max(1, ...values);
   const maxIdx = values.indexOf(Math.max(...values));
-  const gap = 1.2;
-  const barW = (width - gap * Math.max(1, values.length - 1)) / Math.max(1, values.length);
+  const n = Math.max(1, values.length);
+  // The gap shrinks with many bars (never a negative width) and a few bars stay
+  // narrow and centred instead of stretching across the chart.
+  const gap = Math.min(1.2, (width / n) * 0.2);
+  const barW = Math.min((width - gap * (n - 1)) / n, MAX_BAR_WIDTH);
+  const left = (width - (barW * n + gap * (n - 1))) / 2;
+  const inset = `${(left / width) * 100}%`;
   return (
-    <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
-      {values.map((v, i) => {
-        const barH = (v / max) * (height - 4);
-        return (
-          <rect
-            key={i}
-            x={i * (barW + gap)}
-            y={height - (barH || 1)}
-            width={barW}
-            height={barH || 1}
-            rx={Math.min(barW / 2, 1.5)}
-            fill={highlightMax && i === maxIdx ? "var(--foreground)" : "var(--muted-foreground)"}
-            opacity={0.85}
-          />
-        );
-      })}
-    </svg>
+    <div className="space-y-1.5">
+      <svg
+        width="100%"
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="none"
+      >
+        {values.map((v, i) => {
+          const barH = (v / max) * (height - 4);
+          return (
+            <rect
+              key={i}
+              x={left + i * (barW + gap)}
+              y={height - (barH || 1)}
+              width={barW}
+              height={barH || 1}
+              rx={Math.min(barW / 2, 1.5)}
+              fill={highlightMax && i === maxIdx ? "var(--foreground)" : "var(--muted-foreground)"}
+              opacity={0.85}
+            />
+          );
+        })}
+      </svg>
+      {axis && (
+        <div
+          className="text-muted-foreground flex justify-between text-[11px]"
+          style={{ paddingLeft: inset, paddingRight: inset }}
+        >
+          <span>{axis[0]}</span>
+          {n > 1 && <span>{axis[1]}</span>}
+        </div>
+      )}
+    </div>
   );
 }

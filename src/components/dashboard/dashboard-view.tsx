@@ -16,11 +16,13 @@ import { ComparisonNote } from "./comparison-note";
 import { BudgetSnapshot, type CurrentBudget } from "./budget-snapshot";
 
 const DEFAULT_COLOR = "#2563eb";
+const OTHERS_COLOR = "var(--ink-4)";
+const DONUT_SLICES = 6;
 
-function delta(cur: number, prev: number): { pct: number; up: boolean } | null {
+function delta(cur: number, prev: number): { pct: number; arrow: string } | null {
   if (!prev) return null;
-  const pct = Math.round(((cur - prev) / Math.abs(prev)) * 100);
-  return { pct, up: pct >= 0 };
+  const pct = Math.round(((cur - prev) / Math.abs(prev)) * 100) || 0;
+  return { pct, arrow: pct > 0 ? "↗" : pct < 0 ? "↘" : "=" };
 }
 
 export async function DashboardView({
@@ -59,13 +61,6 @@ export async function DashboardView({
         : p.date.slice(8, 10);
   const tracePoints = data.trace.points;
 
-  // Compact money for the secondary stats ("1,2 k €"); the peak's day/month label.
-  const moneyCompact = new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency: "EUR",
-    notation: "compact",
-    maximumFractionDigits: 1,
-  });
   const peakDateFmt = new Intl.DateTimeFormat(
     locale,
     isMonthlyTrace
@@ -79,7 +74,8 @@ export async function DashboardView({
     timeZone: "UTC",
   });
   const peak = data.trace.peak;
-  const peakCatName = peak?.categoryId ? catById.get(peak.categoryId)?.name : undefined;
+  const peakCatName =
+    (peak?.categoryId ? catById.get(peak.categoryId)?.name : undefined) ?? t("noCategory");
 
   const months = comparison.months.length;
   const noReference = comparison.elapsedDays
@@ -89,7 +85,7 @@ export async function DashboardView({
       : t("noPrev");
   const pctNote = (d: ReturnType<typeof delta>) => {
     if (!d) return noReference;
-    const args = { arrow: d.up ? "↗" : "↘", pct: pctFmt.format(Math.abs(d.pct)) };
+    const args = { arrow: d.arrow, pct: pctFmt.format(Math.abs(d.pct)) };
     return months ? t("vsAvg", { ...args, months }) : t("vsPrev", args);
   };
   // The net can change sign between periods, which makes a % meaningless (issue #112 §7):
@@ -121,7 +117,7 @@ export async function DashboardView({
       value: data.totals.net,
       note: hasPrevious
         ? t(months ? "vsAvgAmount" : "vsPrevAmount", {
-            arrow: netDiff >= 0 ? "↗" : "↘",
+            arrow: netDiff > 0 ? "↗" : netDiff < 0 ? "↘" : "=",
             amount: diffFmt.format(netDiff),
             months,
           })
@@ -130,8 +126,30 @@ export async function DashboardView({
     },
   ] as const;
 
-  const topCats = data.byCategory.slice(0, 6);
-  const sliceColors = categorySliceColors(topCats, catById, DEFAULT_COLOR);
+  // Beyond 6 categories the 6th slice groups the rest, so the arcs add up to the
+  // total like the legend's percentages do.
+  const overflow = data.byCategory.length > DONUT_SLICES;
+  const named = data.byCategory.slice(0, overflow ? DONUT_SLICES - 1 : DONUT_SLICES);
+  const namedColors = categorySliceColors(named, catById, DEFAULT_COLOR);
+  const slices = [
+    ...named.map((c, i) => ({
+      key: c.categoryId ?? "none",
+      name: (c.categoryId ? catById.get(c.categoryId)?.name : undefined) ?? t("noCategory"),
+      amount: c.amount,
+      color: namedColors[i],
+    })),
+    ...(overflow
+      ? [
+          {
+            key: "others",
+            name: t("otherCategories", { count: data.byCategory.length - named.length }),
+            amount: data.byCategory.slice(named.length).reduce((s, c) => s + c.amount, 0),
+            color: OTHERS_COLOR,
+          },
+        ]
+      : []),
+  ];
+  const range = `from=${toIsoDay(period.from)}&to=${toIsoDay(period.to)}`;
 
   return (
     <div className="space-y-6">
@@ -181,27 +199,28 @@ export async function DashboardView({
           ) : (
             <div className="flex flex-col items-center gap-6 sm:flex-row">
               <Donut
-                data={topCats.map((c, i) => ({ value: c.amount, color: sliceColors[i] }))}
+                data={slices.map((s) => ({ value: s.amount, color: s.color }))}
                 centerLabel={money.format(data.totals.expense)}
                 centerSub={t("spentThisPeriod")}
               />
               <div className="flex w-full flex-1 flex-col gap-2">
-                {topCats.map((c, i) => {
-                  const meta = c.categoryId ? catById.get(c.categoryId) : undefined;
-                  return (
-                    <div key={c.categoryId ?? "none"} className="flex items-center gap-2.5 text-sm">
-                      <span
-                        className="size-2.5 shrink-0 rounded-full"
-                        style={{ background: sliceColors[i] }}
-                      />
-                      <span className="flex-1 truncate">{meta?.name ?? t("noCategory")}</span>
-                      <span className="tabular-nums">{money.format(c.amount)}</span>
-                      <span className="text-muted-foreground w-10 text-right text-[11.5px] tabular-nums">
-                        {Math.round((c.amount / data.totals.expense) * 100)} %
-                      </span>
-                    </div>
-                  );
-                })}
+                {slices.map((s) => (
+                  <div
+                    key={s.key}
+                    data-slot="donut-legend-row"
+                    className="flex items-center gap-2.5 text-sm"
+                  >
+                    <span
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ background: s.color }}
+                    />
+                    <span className="flex-1 truncate">{s.name}</span>
+                    <span className="tabular-nums">{money.format(s.amount)}</span>
+                    <span className="text-muted-foreground w-10 text-right text-[11.5px] tabular-nums">
+                      {Math.round((s.amount / data.totals.expense) * 100)} %
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -218,30 +237,25 @@ export async function DashboardView({
           {!peak ? (
             <p className="text-muted-foreground text-sm">{t("noExpenses")}</p>
           ) : (
-            <>
-              <MiniBars values={tracePoints.map((p) => p.amount)} />
-              <div className="text-muted-foreground flex justify-between text-[11px]">
-                <span>{traceAxis(tracePoints[0])}</span>
-                <span>{traceAxis(tracePoints[tracePoints.length - 1])}</span>
-              </div>
-            </>
+            <MiniBars
+              values={tracePoints.map((p) => p.amount)}
+              axis={[traceAxis(tracePoints[0]), traceAxis(tracePoints[tracePoints.length - 1])]}
+            />
           )}
           {peak && (
             <div className="grid grid-cols-2 gap-3 border-t pt-3">
               <div className="space-y-0.5">
                 <div className={overline}>{t(isMonthlyTrace ? "avgPerMonth" : "avgPerDay")}</div>
                 <div className="font-display text-xl tabular-nums">
-                  {moneyCompact.format(data.trace.avg)}
+                  {money.format(data.trace.avg)}
                 </div>
               </div>
               <div className="space-y-0.5">
                 <div className={overline}>{t(isMonthlyTrace ? "peakMonth" : "peakDay")}</div>
-                <div className="font-display text-xl tabular-nums">
-                  {moneyCompact.format(peak.amount)}
-                </div>
+                <div className="font-display text-xl tabular-nums">{money.format(peak.amount)}</div>
                 <div className="text-muted-foreground truncate text-[11.5px]">
                   {peakDateFmt.format(new Date(`${peak.date}T00:00:00.000Z`))}
-                  {peakCatName ? ` · ${peakCatName}` : ""}
+                  {` · ${peakCatName}`}
                 </div>
               </div>
             </div>
@@ -256,7 +270,10 @@ export async function DashboardView({
         <Card className="gap-0 overflow-hidden p-0">
           <div className="flex items-center justify-between p-5">
             <div className="font-display text-xl">{t("recent")}</div>
-            <Link href={`/${locale}/transactions`} className="text-primary text-sm hover:underline">
+            <Link
+              href={`/${locale}/transactions?${range}`}
+              className="text-primary text-sm hover:underline"
+            >
               {t("seeAll")}
             </Link>
           </div>

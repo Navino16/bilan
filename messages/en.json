@@ -795,7 +795,11 @@
     "vsAvg": "{arrow} {pct} % vs {months}-month average",
     "vsAvgAmount": "{arrow} {amount} vs {months}-month average",
     "noSameDate": "Nothing at the same date",
-    "noAvg": "Nothing over the previous {months} months"
+    "noAvg": "Nothing over the previous {months} months",
+    "rangeStart": "Period start",
+    "rangeEnd": "Period end",
+    "rangeReversed": "The end must be after the start.",
+    "otherCategories": "{count, plural, one {Other category} other {# other categories}}"
   },
   "merchants": {
     "tab": "Merchants",

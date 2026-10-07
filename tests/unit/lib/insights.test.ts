@@ -209,11 +209,14 @@ describe("monthlyCategoryTotals", () => {
   });
 });
 
+const round = (n: number) => Math.round(n * 100) / 100;
+
 describe("historyRows", () => {
   const months = Array.from({ length: 12 }, (_, i) => ({ year: 2026, month: i + 1 }));
-  const history = (inProgress: boolean): CategoryHistory => ({
+  const history = (inProgress: boolean, dataStart = 0): CategoryHistory => ({
     months,
     inProgress,
+    dataStart,
     series: [
       { categoryId: "rent", values: Array(12).fill(800) },
       { categoryId: "food", values: [900, 900, 900, 900, 900, 900, 300, 300, 300, 300, 300, 30] },
@@ -237,6 +240,14 @@ describe("historyRows", () => {
   it("leaves the month in progress out of the average", () => {
     const { rows } = historyRows(history(true), 6, 10);
     expect(rows.find((r) => r.categoryId === "food")?.average).toBe(300);
+  });
+
+  it("leaves the months before the first transaction out of the average", () => {
+    const { rows } = historyRows(history(false, 9), 12, 10);
+    const food = rows.find((r) => r.categoryId === "food")!;
+    expect(food.values).toHaveLength(12);
+    expect(food.average).toBe(round(630 / 3));
+    expect(rows.find((r) => r.categoryId === "rent")?.average).toBe(800);
   });
 
   it("limits the number of rows", () => {

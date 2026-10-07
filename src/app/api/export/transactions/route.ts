@@ -3,7 +3,7 @@ import { listTransactions } from "@/server/services/transactions";
 import { listForUser, listForeignCategories } from "@/server/services/categories";
 import { flattenCategories } from "@/components/transactions/category-tree";
 import { transactionsToCsv, type CsvRow } from "@/server/services/export/csv";
-import { parsePeriodParams, toIsoDay } from "@/lib/period";
+import { dayEnd, dayStart, parseDayBounds, toIsoDay } from "@/lib/period";
 
 export const runtime = "nodejs";
 
@@ -17,14 +17,14 @@ export async function GET(req: Request): Promise<Response> {
   const direction: "in" | "out" | undefined = dir === "in" || dir === "out" ? dir : undefined;
   const from = q.get("from") ?? undefined;
   const to = q.get("to") ?? undefined;
-  const period = from || to ? parsePeriodParams({ from, to }) : undefined;
+  const bounds = parseDayBounds({ from, to });
 
   const filters = {
     categoryId: q.get("categoryId") ?? undefined,
     direction,
     search: q.get("search") ?? undefined,
-    from: period?.from,
-    to: period?.to,
+    from: bounds.from ? dayStart(bounds.from) : undefined,
+    to: bounds.to ? dayEnd(bounds.to) : undefined,
   };
 
   // Paginate through the full result set so the export is never silently

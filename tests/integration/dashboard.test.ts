@@ -109,7 +109,7 @@ describe("getDashboard", () => {
     expect(data.trace.points.find((p) => p.date === "2026-01-01")?.amount).toBe(0);
     expect(data.trace.points.find((p) => p.date === "2026-02-01")?.amount).toBe(500);
     expect(data.trace.points.find((p) => p.date === "2026-03-01")?.amount).toBe(750);
-    expect(data.trace.avg).toBeCloseTo((0 + 500 + 750) / 3, 2);
+    expect(data.trace.avg).toBeCloseTo((500 + 750) / 2, 2); // nothing recorded before Feb
     expect(data.trace.peak).toEqual({ date: "2026-03-01", amount: 750, categoryId: catB });
   });
 });
@@ -117,9 +117,21 @@ describe("getDashboard", () => {
 describe("getDashboard comparison baselines", () => {
   const period = monthPeriod(2026, 3);
 
-  it("compares with the monthly average of the months before", async () => {
+  it("averages only the months since the first transaction", async () => {
+    // Dec–Feb, but nothing was recorded before February: Feb alone is the average.
     const data = await getDashboard(owner, period, comparisonFor(period, "avg3", later));
-    expect(data.previous).toEqual({ income: 333.33, expense: 166.67, net: 166.67 });
+    expect(data.previous).toEqual({ income: 1000, expense: 500, net: 500 });
+  });
+
+  it("averages the trace over the days elapsed so far", async () => {
+    const data = await getDashboard(
+      owner,
+      period,
+      comparisonFor(period, "prev", later),
+      new Date("2026-03-10T12:00:00Z"),
+    );
+    expect(data.trace.points).toHaveLength(31);
+    expect(data.trace.avg).toBeCloseTo(750 / 10, 2);
   });
 
   it("cuts the previous month to the same days while the month is in progress", async () => {
