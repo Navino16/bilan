@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, type ReactNode } from "react";
+import { useRef, useState, useTransition, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -46,11 +46,15 @@ type Preview = {
   totalRows?: number;
   duplicateCount?: number;
   autoCategorizedCount?: number;
+  rejectedCount?: number;
+  rejected?: { row: number; reason: string; value: string }[];
   preview?: PreviewRow[];
   products?: Product[];
   error?: string;
 };
-type Summary = { importedRows: number; skippedRows: number };
+const ERROR_KEYS = { INVALID_MAPPING: 1, NOT_COMMITTABLE: 1, FORBIDDEN: 1, PARSE_FAILED: 1 };
+
+type Summary = { importedRows: number; skippedRows: number; rejectedRows?: number };
 
 function formatBytes(n: number | null): string {
   if (!n) return "";
@@ -88,11 +92,13 @@ export function ImportWizard({
   const [reverted, setReverted] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [remapping, setRemapping] = useState(false);
+  const remapSeq = useRef(0);
   const [pending, startTransition] = useTransition();
 
   const step = summary ? 3 : preview ? 2 : loading ? 1 : 0;
   // An upload replaces (and discards) the previewed batch: nothing may commit or re-upload meanwhile.
-  const busy = loading || pending;
+  const busy = loading || pending || remapping;
 
   async function upload(f: File, account: string) {
     discard(preview?.batchId);
@@ -123,6 +129,42 @@ export function ImportWizard({
       setProductAccount(Object.fromEntries(prods.map((p, i) => [p.key, i === 0 ? account : ""])));
     } finally {
       setLoading(false);
+    }
+  }
+
+  // The preview is rebuilt with the edited mapping, so it shows exactly what a
+  // commit will import; the rows' keys change, hence the reset per-row edits.
+  async function remap(field: string, header: string) {
+    if (!preview || preview.source !== "CSV") return;
+    const next = { ...columns, [field]: header };
+    const shown = Object.fromEntries(
+      Object.entries(preview.mapping ?? {}).filter(([, v]) => v),
+    ) as Record<string, string>;
+    setColumns(next);
+    const seq = ++remapSeq.current;
+    setRemapping(true);
+    try {
+      const res = await fetch(`/api/import/csv/${preview.batchId}/preview`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mapping: Object.fromEntries(Object.entries(next).filter(([, v]) => v)),
+        }),
+      });
+      const data = (await res.json()) as Preview;
+      if (seq !== remapSeq.current) return;
+      if (!res.ok) throw new Error(data.error ?? "PARSE_FAILED");
+      setError(null);
+      setPreview(data);
+      setOverrides({});
+      setExcluded({});
+    } catch (e) {
+      if (seq !== remapSeq.current) return;
+      // The preview didn't change, so neither does the mapping a commit will use.
+      setColumns(shown);
+      setError(e instanceof Error && e.message in ERROR_KEYS ? e.message : "PARSE_FAILED");
+    } finally {
+      if (seq === remapSeq.current) setRemapping(false);
     }
   }
 
@@ -172,7 +214,7 @@ export function ImportWizard({
             mapping: Object.fromEntries(Object.entries(productAccount).filter(([, v]) => v)),
             ...edits,
           }
-        : { mapping: columns, ...edits };
+        : { mapping: preview.mapping, ...edits };
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -261,6 +303,8 @@ export function ImportWizard({
             <>
               <p className="text-sm">
                 {t("summary", { imported: summary.importedRows, skipped: summary.skippedRows })}
+                {!!summary.rejectedRows &&
+                  ` · ${t("rejected.count", { count: summary.rejectedRows })}`}
               </p>
               <div className="flex flex-wrap gap-2">
                 <Link href={`/${locale}/transactions`} className={buttonVariants()}>
@@ -376,7 +420,9 @@ export function ImportWizard({
                   <FieldMap key={field} label={t(`col${field[0].toUpperCase()}${field.slice(1)}`)}>
                     <NativeSelect
                       value={columns[field] ?? ""}
-                      onChange={(e) => setColumns((m) => ({ ...m, [field]: e.target.value }))}
+                      aria-label={t(`col${field[0].toUpperCase()}${field.slice(1)}`)}
+                      onChange={(e) => void remap(field, e.target.value)}
+                      disabled={busy}
                       size="sm"
                     >
                       <option value="">{t("none")}</option>
@@ -423,6 +469,33 @@ export function ImportWizard({
                 <div className="text-muted-foreground text-xs">
                   {t("previewMeta", { dup: dupCount, cat: catCount })}
                 </div>
+                {!!preview.rejectedCount && (
+                  <div
+                    className="mt-2 text-xs"
+                    data-slot="import-rejected"
+                    style={{ color: "var(--warning)" }}
+                  >
+                    <div className="font-medium">
+                      {t("rejected.count", { count: preview.rejectedCount })}
+                    </div>
+                    <ul className="mt-0.5 space-y-0.5">
+                      {preview.rejected?.map((r) => (
+                        <li key={r.row}>
+                          {r.value
+                            ? t("rejected.example", {
+                                row: r.row,
+                                reason: t(`rejected.reason.${r.reason}`),
+                                value: r.value,
+                              })
+                            : t("rejected.exampleNoValue", {
+                                row: r.row,
+                                reason: t(`rejected.reason.${r.reason}`),
+                              })}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <Button size="sm" variant="ghost" onClick={reset} disabled={busy}>

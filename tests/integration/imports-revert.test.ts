@@ -181,6 +181,30 @@ describe("revertImport", () => {
     expect(await db.transaction.count({ where: { importBatchId: again } })).toBe(1);
   });
 
+  it("takes back the rule hits credited by the reverted import", async () => {
+    const cat = await db.category.create({ data: { userId: owner, name: "Revert hits" } });
+    const tag = `RH${Date.now()}`;
+    const rule = await db.categorizationRule.create({
+      data: { pattern: tag, matchType: "CONTAINS", categoryId: cat.id, userId: owner, hits: 5 },
+    });
+    const batch = await createCsvBatch(
+      {
+        accountId: accA,
+        filename: "hits.csv",
+        text: `Date;Libellé;Débit;Crédit\n01/06/2026;CB ${tag} A;1,00;\n02/06/2026;CB ${tag} B;2,00;`,
+      },
+      { id: owner },
+    );
+    const p = await previewCsvBatch(batch.id, owner);
+    await commitCsvBatch(batch.id, p.mapping, { id: owner });
+    const hits = async () =>
+      (await db.categorizationRule.findUniqueOrThrow({ where: { id: rule.id } })).hits;
+    expect(await hits()).toBe(7);
+    await revertImport(owner, batch.id);
+    expect(await hits()).toBe(5);
+    await db.category.delete({ where: { id: cat.id } });
+  });
+
   it("refuses a second revert, and a batch that is not completed", async () => {
     const batchId = await committedBatch([{ accountId: accA, labels: ["TWICE ONE"] }]);
     await revertImport(owner, batchId);

@@ -1,11 +1,22 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
 import {
   parseCsv,
+  decodeCsv,
   detectMapping,
   normalizeAmount,
   normalizeDate,
+  normalizeType,
+  inferDecimalMark,
   mapRows,
 } from "@/server/services/imports/csv-parse";
+import {
+  computeExternalId,
+  computeExternalIds,
+} from "@/server/services/transactions/secure-fields";
+
+const fixture = (name: string) =>
+  decodeCsv(readFileSync(new URL(`../../fixtures/import/${name}`, import.meta.url)));
 
 const SAMPLE = `Date;Libellé;Débit;Crédit
 01/02/2026;CB CARREFOUR CITY;42,90;
@@ -65,25 +76,154 @@ describe("mapRows", () => {
   it("turns raw rows into normalized rows (debit negative, credit positive)", () => {
     const { headers, rows } = parseCsv(SAMPLE);
     const mapping = detectMapping(headers);
-    const normalized = mapRows(rows, mapping);
+    const { rows: normalized } = mapRows(rows, mapping);
     expect(normalized).toEqual([
       { date: new Date("2026-02-01T00:00:00.000Z"), amount: -42.9, rawLabel: "CB CARREFOUR CITY" },
       { date: new Date("2026-02-03T00:00:00.000Z"), amount: 2450, rawLabel: "VIR SEPA SALAIRE" },
     ]);
   });
 
-  it("drops rows with an unparseable date or amount", () => {
+  it("reports rows with an unparseable date or amount instead of importing them", () => {
     const rows = [{ Date: "xx", Libellé: "X", Débit: "1", Crédit: "" }];
     const mapping = { date: "Date", label: "Libellé", debit: "Débit", credit: "Crédit" } as const;
-    expect(mapRows(rows, mapping)).toEqual([]);
+    expect(mapRows(rows, mapping)).toEqual({
+      rows: [],
+      rejected: [{ row: 2, reason: "DATE", value: "xx" }],
+    });
   });
 
   it("uses the credit when the unused debit column carries a literal zero", () => {
     // Many bank CSVs print "0,00" in the empty column instead of leaving it blank.
     const rows = [{ Date: "03/02/2026", Libellé: "VIR SALAIRE", Débit: "0,00", Crédit: "2450,00" }];
     const mapping = { date: "Date", label: "Libellé", debit: "Débit", credit: "Crédit" } as const;
-    expect(mapRows(rows, mapping)).toEqual([
+    expect(mapRows(rows, mapping).rows).toEqual([
       { date: new Date("2026-02-03T00:00:00.000Z"), amount: 2450, rawLabel: "VIR SALAIRE" },
     ]);
+  });
+});
+
+describe("normalizeAmount — bank formats (#157)", () => {
+  it("reads currency suffixes, parentheses, trailing minus and plus signs", () => {
+    expect(normalizeAmount("(12,34)")).toBe(-12.34);
+    expect(normalizeAmount("-12,34 €")).toBe(-12.34);
+    expect(normalizeAmount("12,34 EUR")).toBe(12.34);
+    expect(normalizeAmount("12,34-")).toBe(-12.34);
+    expect(normalizeAmount("+15,00")).toBe(15);
+    expect(normalizeAmount("-1\u00a0234,56")).toBe(-1234.56);
+  });
+
+  it("reads an ambiguous lone separator as thousands unless the column says otherwise", () => {
+    expect(normalizeAmount("1.234")).toBe(1234);
+    expect(normalizeAmount("-1,234")).toBe(-1234);
+    expect(normalizeAmount("45,500", ",")).toBe(45.5);
+    expect(normalizeAmount("1.005", ",")).toBe(1005);
+    expect(normalizeAmount("1.234.567")).toBe(1234567);
+    expect(normalizeAmount("0,125")).toBe(0.125);
+    expect(normalizeAmount("12,5")).toBe(12.5);
+  });
+
+  it("rejects malformed groupings and contradictory signs", () => {
+    for (const raw of ["1,2,3.4,5", "1,5,3", "12.34.56", "--5", "-5-", "(-5)", "12,", ",5"]) {
+      expect(normalizeAmount(raw), raw).toBeNull();
+    }
+    expect(normalizeAmount("\u221212,34")).toBe(-12.34);
+  });
+
+  it("infers a column's decimal mark from its unambiguous values", () => {
+    expect(inferDecimalMark(["1.234", "45,50"])).toBe(",");
+    expect(inferDecimalMark(["1,234.56"])).toBe(".");
+    expect(inferDecimalMark(["1.234", "2.000", ""])).toBeNull();
+    const rows = [
+      { D: "01/02/2026", L: "A", M: "45,500" },
+      { D: "01/02/2026", L: "B", M: "12,5" },
+    ];
+    expect(mapRows(rows, { date: "D", label: "L", amount: "M" }).rows.map((r) => r.amount)).toEqual(
+      [45.5, 12.5],
+    );
+  });
+});
+
+describe("normalizeDate — more formats (#157)", () => {
+  it.each([
+    ["22/9/2026", "2026-09-22"],
+    ["22/09/26", "2026-09-22"],
+    ["2026/09/23", "2026-09-23"],
+    ["23.09.2026", "2026-09-23"],
+    ["23-09-2026", "2026-09-23"],
+    ["2026-09-23 10:15:00", "2026-09-23"],
+  ])("%s → %s", (raw, iso) => {
+    expect(normalizeDate(raw)?.toISOString().slice(0, 10)).toBe(iso);
+  });
+});
+
+describe("normalizeType", () => {
+  it("maps a bank's type column", () => {
+    expect(normalizeType("Carte bancaire")).toBe("CARD");
+    expect(normalizeType("Prélèvement")).toBe("DIRECT_DEBIT");
+    expect(normalizeType("VIR")).toBe("TRANSFER");
+    expect(normalizeType("Chèque")).toBe("CHEQUE");
+    expect(normalizeType("Retrait DAB")).toBe("ATM");
+    expect(normalizeType("Divers")).toBeUndefined();
+  });
+
+  it("is used when a type column is mapped", () => {
+    const rows = [{ Date: "01/02/2026", L: "PAIEMENT", M: "-3", T: "Carte" }];
+    expect(mapRows(rows, { date: "Date", label: "L", amount: "M", type: "T" }).rows[0].type).toBe(
+      "CARD",
+    );
+  });
+});
+
+describe("fixtures (#157)", () => {
+  it("decodes a Windows-1252 file and auto-maps its accented headers", () => {
+    const { headers, rows } = parseCsv(fixture("d-cp1252.csv"));
+    expect(headers).toContain("Libellé");
+    const mapping = detectMapping(headers);
+    expect(mapping).toMatchObject({ debit: "Débit", credit: "Crédit" });
+    const out = mapRows(rows, mapping);
+    expect(out.rejected).toEqual([]);
+    expect(out.rows.map((r) => [r.rawLabel, r.amount])).toEqual([
+      ["QA LATIN1 PRÉLÈVEMENT ÉDF", -55],
+      ["QA LATIN1 REMISE CHÈQUE", 120],
+    ]);
+  });
+
+  it("strips the BOM of a UTF-8 file", () => {
+    expect(parseCsv(fixture("c-bom-crlf.csv")).headers[0]).toBe("Date");
+  });
+
+  it("decodes a UTF-16 file from its BOM", () => {
+    const text = "Date;Libellé;Montant\n01/02/2026;CAFÉ;-2,50";
+    const le = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(text, "utf16le")]);
+    expect(decodeCsv(le)).toBe(text);
+  });
+
+  it("reads tab-separated files", () => {
+    const { headers, rows } = parseCsv(fixture("p-tab.csv"));
+    expect(mapRows(rows, detectMapping(headers)).rows).toHaveLength(1);
+  });
+
+  it("reads the tricky rows and reports every rejected one", () => {
+    const { headers, rows } = parseCsv(fixture("e-tricky.csv"));
+    const out = mapRows(rows, detectMapping(headers));
+    expect(out.rows.map((r) => r.amount)).toEqual([
+      -12.34, -12.34, -12.34, -5, -5, -5, -5, -7, 15, -1234.56,
+    ]);
+    expect(out.rejected.map((r) => [r.row, r.reason])).toEqual([
+      [7, "DATE"],
+      [10, "LABEL"],
+      [11, "AMOUNT"],
+      [14, "AMOUNT_RANGE"],
+    ]);
+  });
+});
+
+describe("computeExternalIds", () => {
+  it("keeps identical twins of one file apart, stably across re-imports", () => {
+    const coffee = { date: new Date("2026-09-01T00:00:00.000Z"), amount: -2.5, rawLabel: "CAFE" };
+    const ids = computeExternalIds([coffee, coffee, { ...coffee, rawLabel: "PAIN" }]);
+    expect(new Set(ids).size).toBe(3);
+    expect(ids[0]).toBe(computeExternalId(coffee.date, coffee.amount, coffee.rawLabel));
+    expect(computeExternalIds([coffee, coffee])).toEqual(ids.slice(0, 2));
   });
 });

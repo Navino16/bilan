@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@/server/auth/permissions";
 import { createCsvBatch, previewCsvBatch, ImportAccessError } from "@/server/services/imports";
+import { decodeCsv } from "@/server/services/imports/csv-parse";
 
 export const runtime = "nodejs";
 
@@ -21,9 +22,12 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: "BAD_TYPE" }, { status: 415 });
   }
 
-  const text = await file.text();
+  const text = decodeCsv(await file.arrayBuffer());
   try {
-    const batch = await createCsvBatch({ accountId, filename: file.name, text }, { id: user.id });
+    const batch = await createCsvBatch(
+      { accountId, filename: file.name, text, fileSizeBytes: file.size },
+      { id: user.id },
+    );
     const preview = await previewCsvBatch(batch.id, user.id);
     return Response.json(preview);
   } catch (e) {

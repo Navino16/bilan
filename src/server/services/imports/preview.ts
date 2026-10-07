@@ -1,5 +1,5 @@
 import { db } from "@/server/db";
-import { computeExternalId } from "@/server/services/transactions/secure-fields";
+import { computeExternalIds } from "@/server/services/transactions/secure-fields";
 import { suggestMany } from "@/server/services/categorization";
 import { deriveType } from "./derive-type";
 import type { NormalizedRow, PreviewRow } from "./types";
@@ -20,7 +20,7 @@ export async function buildPreview(
   rows: NormalizedRow[],
   userId: string,
 ): Promise<PreviewResult> {
-  const externalIds = rows.map((r) => computeExternalId(r.date, r.amount, r.rawLabel));
+  const externalIds = computeExternalIds(rows);
   const existing = externalIds.length
     ? await db.transaction.findMany({
         where: { accountId, externalId: { in: externalIds } },
@@ -45,7 +45,7 @@ export async function buildPreview(
     date: r.date.toISOString(),
     amount: r.amount,
     rawLabel: r.rawLabel,
-    type: deriveType(r.rawLabel),
+    type: r.type ?? deriveType(r.rawLabel),
     suggestedCategoryId: suggestions[i].categoryId,
     isDuplicate: dupSet.has(externalIds[i]),
   }));

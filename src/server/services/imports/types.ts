@@ -1,4 +1,5 @@
 import type { TransactionInput } from "@/lib/validation/transaction";
+import type { RejectedRow } from "./csv-parse";
 
 type TxType = TransactionInput["type"];
 
@@ -8,6 +9,7 @@ export type NormalizedRow = {
   date: Date;
   amount: number; // signed: negative = expense, positive = income
   rawLabel: string;
+  type?: TxType; // from a mapped "Type" column; otherwise derived from the label
 };
 
 // A statement parses into one or more products (e.g. Revolut bundles a current
@@ -48,6 +50,8 @@ export type ImportPreview = {
   totalRows: number;
   duplicateCount: number;
   autoCategorizedCount: number;
+  rejectedCount: number; // rows of the file that couldn't be read with this mapping
+  rejected: RejectedRow[]; // a few examples
   preview: PreviewRow[]; // first 50 enriched rows
 };
 
@@ -56,4 +60,5 @@ export type CommitSummary = {
   totalRows: number;
   importedRows: number;
   skippedRows: number;
+  rejectedRows?: number;
 };
