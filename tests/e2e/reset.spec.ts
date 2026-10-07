@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
 
+test.skip(
+  ({ browserName }) => browserName === "webkit",
+  "Playwright WebKit doesn't deliver taps in this env (project-wide skip)",
+);
+
 test("reset request always reports success (no email enumeration)", async ({ page }) => {
   await page.goto("/en/reset");
   await page.fill('input[name="email"]', `nobody-${Date.now()}@bilan.local`);
