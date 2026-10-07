@@ -20,12 +20,31 @@ export type VisibleAccount = {
   color: string | null;
   icon: string | null;
   archived: boolean;
-  balance: number; // displayed balance: opening balance for now, + transactions later
+  initialBalance: number;
+  balance: number; // opening balance + every transaction of the account
   ibanMasked: string | null;
   access: AccountAccess;
   sharedCount: number; // groups this account is shared with (owner view only; 0 otherwise)
   ownerName: string | null; // null when the viewer owns it
 };
+
+// Current balance per account: opening balance + sum of its transactions.
+export async function accountBalances(
+  accounts: { id: string; initialBalance: unknown }[],
+): Promise<Map<string, number>> {
+  const sums = await db.transaction.groupBy({
+    by: ["accountId"],
+    where: { accountId: { in: accounts.map((a) => a.id) } },
+    _sum: { amount: true },
+  });
+  const byId = new Map(sums.map((s) => [s.accountId, Number(s._sum.amount ?? 0)]));
+  return new Map(
+    accounts.map((a) => [
+      a.id,
+      Math.round((Number(a.initialBalance) + (byId.get(a.id) ?? 0)) * 100) / 100,
+    ]),
+  );
+}
 
 function ibanFields(iban: string | undefined): {
   ibanEnc: string | null;
@@ -68,14 +87,20 @@ async function ownedOrThrow(id: string, actorId: string) {
   return acc;
 }
 
+// A blank IBAN keeps the stored one; `removeIban` clears it.
 export async function updateAccount(
   id: string,
   input: AccountInput,
   actor: { id: string },
+  opts: { removeIban?: boolean } = {},
 ): Promise<void> {
   await ownedOrThrow(id, actor.id);
   const data = accountInputSchema.parse(input);
-  const { ibanEnc, ibanHash } = ibanFields(data.iban);
+  const iban = data.iban
+    ? ibanFields(data.iban)
+    : opts.removeIban
+      ? { ibanEnc: null, ibanHash: null }
+      : {};
   await db.bankAccount.update({
     where: { id },
     data: {
@@ -85,8 +110,7 @@ export async function updateAccount(
       color: data.color ?? undefined,
       icon: data.icon ?? null,
       initialBalance: data.initialBalance,
-      ibanEnc,
-      ibanHash,
+      ...iban,
     },
   });
   await logEvent({
@@ -143,6 +167,8 @@ export async function listVisibleForUser(userId: string): Promise<VisibleAccount
     orderBy: { createdAt: "desc" },
   });
 
+  const balances = await accountBalances([...owned, ...shared]);
+
   const ownedView: VisibleAccount[] = owned.map((a) => ({
     id: a.id,
     name: a.name,
@@ -151,7 +177,8 @@ export async function listVisibleForUser(userId: string): Promise<VisibleAccount
     color: a.color,
     icon: a.icon,
     archived: a.archived,
-    balance: Number(a.initialBalance),
+    initialBalance: Number(a.initialBalance),
+    balance: balances.get(a.id) ?? Number(a.initialBalance),
     ibanMasked: a.ibanEnc ? maskIban(decrypt(a.ibanEnc, dataKey)) : null,
     access: "OWNER",
     sharedCount: a._count.shares,
@@ -166,7 +193,8 @@ export async function listVisibleForUser(userId: string): Promise<VisibleAccount
     color: a.color,
     icon: a.icon,
     archived: a.archived,
-    balance: Number(a.initialBalance),
+    initialBalance: Number(a.initialBalance),
+    balance: balances.get(a.id) ?? Number(a.initialBalance),
     ibanMasked: null, // shared viewers never see the IBAN
     access: a.shares.some((s) => s.permission === "WRITE") ? "WRITE" : "READ",
     sharedCount: 0,

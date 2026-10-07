@@ -1,6 +1,10 @@
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
-import { AccountAccessError, type AccountAccess } from "@/server/services/accounts";
+import {
+  AccountAccessError,
+  accountBalances,
+  type AccountAccess,
+} from "@/server/services/accounts";
 import { requireGroupRole } from "@/server/services/groups/roles";
 
 export { AccountAccessError } from "@/server/services/accounts";
@@ -91,13 +95,14 @@ export async function listAccountsSharedWithGroup(
     include: { account: { include: { owner: true } } },
     orderBy: { createdAt: "desc" },
   });
+  const balances = await accountBalances(shares.map((s) => s.account));
   return shares.map((s) => ({
     id: s.account.id,
     name: s.account.name,
     type: s.account.type,
     bankName: s.account.bankName,
     color: s.account.color,
-    balance: Number(s.account.initialBalance),
+    balance: balances.get(s.account.id) ?? Number(s.account.initialBalance),
     permission: s.permission as SharePermission,
     ownerName: s.account.owner.name ?? s.account.owner.email,
   }));

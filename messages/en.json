@@ -164,6 +164,8 @@
     "iban": "IBAN",
     "ibanEncrypted": "IBAN (optional, encrypted)",
     "ibanPlaceholder": "FR76 …",
+    "ibanKeep": "{iban} — leave blank to keep it",
+    "ibanRemove": "Remove the saved IBAN",
     "bankName": "Bank",
     "bankPlaceholder": "First Bank",
     "initialBalance": "Opening balance",

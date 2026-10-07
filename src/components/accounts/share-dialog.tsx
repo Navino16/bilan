@@ -36,6 +36,7 @@ export function ShareDialog({
   const router = useRouter();
   const [shares, setShares] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -53,12 +54,15 @@ export function ShareDialog({
       const fd = new FormData();
       fd.set("accountId", accountId);
       fd.set("groupId", groupId);
+      setError(null);
+      let result;
       if (value === "NONE") {
-        await revokeShareAction(null, fd);
+        result = await revokeShareAction(null, fd);
       } else {
         fd.set("permission", value);
-        await shareAccountAction(null, fd);
+        result = await shareAccountAction(null, fd);
       }
+      if (!result?.ok) return setError(result?.error ?? "FAILED");
       setShares((s) => {
         const next = { ...s };
         if (value === "NONE") delete next[groupId];
@@ -80,7 +84,12 @@ export function ShareDialog({
           <DialogDescription>{t("shareSubtitle")}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="flex-1 space-y-3 overflow-y-auto px-6 py-5">
+          {error && (
+            <p role="alert" className="text-destructive text-sm">
+              {t(`error.${error}`)}
+            </p>
+          )}
           {groups.length === 0 ? (
             <p className="text-muted-foreground text-sm">{t("noGroups")}</p>
           ) : (

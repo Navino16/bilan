@@ -55,7 +55,14 @@ export async function updateAccountAction(
   const parsed = parse(formData);
   if (!parsed.success) return { ok: false, error: "INVALID" };
   try {
-    await updateAccount(id, parsed.data, { id: user.id });
+    await updateAccount(
+      id,
+      parsed.data,
+      { id: user.id },
+      {
+        removeIban: formData.get("removeIban") === "1",
+      },
+    );
   } catch (e) {
     return { ok: false, error: e instanceof AccountAccessError ? "FORBIDDEN" : "FAILED" };
   }
