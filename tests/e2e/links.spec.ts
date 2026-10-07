@@ -67,6 +67,22 @@ test.describe("transaction links", () => {
     await expect(page.locator('[data-slot="selection-bar"]').getByRole("alert")).toHaveText(
       /déjà liée/i,
     );
+
+    // The detail says what the row is linked to, and unlinks it.
+    await page.getByRole("button", { name: /quitter la sélection/i }).click();
+    await page
+      .locator('[data-slot="transaction-row"]')
+      .filter({ hasText: expense })
+      .first()
+      .click();
+    const summary = page.locator('[data-slot="link-summary"]');
+    await expect(summary).toContainText(refund);
+    await summary.getByRole("button", { name: /^délier$/i }).click();
+    await expect(summary).toBeHidden({ timeout: 15_000 });
+    await page.keyboard.press("Escape");
+    await expect(
+      page.locator('[data-slot="transaction-row"]').filter({ hasText: expense }).getByText("Liée"),
+    ).toHaveCount(0);
   });
 
   test("accepts a suggested pair and persists an ignore", async ({ page }) => {
@@ -107,6 +123,8 @@ test.describe("transaction links", () => {
     // labels), not by amount — pairs accumulate across runs on the dev DB.
     const row = page.locator('[data-slot="suggestion-row"]').filter({ hasText: ref }).first();
     await expect(row).toBeVisible({ timeout: 20_000 });
+    // Each leg shows its day.
+    await expect(row).toContainText("2 avr. 2026");
     await row.getByRole("button", { name: /ignorer/i }).click();
     // After ignoring, that pair no longer appears on reload.
     await expect(async () => {
@@ -115,5 +133,17 @@ test.describe("transaction links", () => {
         page.locator('[data-slot="suggestion-row"]').filter({ hasText: ref }),
       ).toHaveCount(0);
     }).toPass({ timeout: 30_000 });
+
+    // It is listed among the ignored pairs and can be restored.
+    const ignored = page.locator('[data-slot="ignored-suggestions"]');
+    await ignored.locator("summary").click();
+    await ignored
+      .locator('[data-slot="ignored-row"]')
+      .filter({ hasText: ref })
+      .getByRole("button", { name: /restaurer/i })
+      .click();
+    await expect(
+      page.locator('[data-slot="suggestion-row"]').filter({ hasText: ref }).first(),
+    ).toBeVisible({ timeout: 20_000 });
   });
 });

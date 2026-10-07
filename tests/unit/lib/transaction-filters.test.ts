@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { UNCATEGORIZED, transactionsHref } from "@/lib/transaction-filters";
+import {
+  FILTER_PARAMS,
+  UNCATEGORIZED,
+  parseTransactionFilters,
+  transactionsHref,
+} from "@/lib/transaction-filters";
 
 const period = {
   from: new Date(Date.UTC(2026, 2, 1)),
@@ -22,6 +27,68 @@ describe("transactionsHref", () => {
     const href = transactionsHref("fr", period, { search: "CARREFOUR CITY", dir: "out" });
     expect(href).toBe(
       "/fr/transactions?from=2026-03-01&to=2026-03-31&dir=out&search=CARREFOUR+CITY",
+    );
+  });
+});
+
+describe("parseTransactionFilters", () => {
+  it("defaults to an unfiltered, newest-first list", () => {
+    expect(parseTransactionFilters({})).toEqual({ sort: "date-desc" });
+  });
+
+  it("keeps the known account, type, direction and sort values", () => {
+    expect(
+      parseTransactionFilters({
+        accountId: "acc1",
+        type: "TRANSFER",
+        dir: "out",
+        sort: "amount-asc",
+        categoryId: "cat1",
+        search: "loyer",
+      }),
+    ).toEqual({
+      accountId: "acc1",
+      type: "TRANSFER",
+      direction: "out",
+      sort: "amount-asc",
+      categoryId: "cat1",
+      search: "loyer",
+    });
+  });
+
+  it("drops unknown types, directions and sorts", () => {
+    expect(parseTransactionFilters({ type: "WIRE", dir: "up", sort: "label" })).toEqual({
+      sort: "date-desc",
+    });
+  });
+
+  it("reads amount bounds as absolute values with the strict money parser", () => {
+    expect(parseTransactionFilters({ min: "-12,50", max: "1 000" })).toMatchObject({
+      amountMin: 12.5,
+      amountMax: 1000,
+    });
+  });
+
+  it("ignores unparseable or ambiguous amounts and orders swapped bounds", () => {
+    expect(parseTransactionFilters({ min: "abc", max: "1.234" })).toEqual({ sort: "date-desc" });
+    expect(parseTransactionFilters({ min: "100", max: "20" })).toMatchObject({
+      amountMin: 20,
+      amountMax: 100,
+    });
+  });
+
+  it("keeps only valid calendar days", () => {
+    expect(parseTransactionFilters({ from: "2026-13-45", to: "2026-03-31" })).toEqual({
+      sort: "date-desc",
+      to: "2026-03-31",
+    });
+  });
+});
+
+describe("FILTER_PARAMS", () => {
+  it("lists every param the reset button clears, but not the search", () => {
+    expect([...FILTER_PARAMS].sort()).toEqual(
+      ["accountId", "categoryId", "dir", "from", "max", "min", "sort", "to", "type"].sort(),
     );
   });
 });

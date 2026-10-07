@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AMOUNT_ERRORS } from "@/lib/amount";
+import { dayStart, isValidIsoDay } from "@/lib/period";
 import { amountSchema } from "./amount";
 
 export const TRANSACTION_TYPES = [
@@ -38,3 +39,25 @@ export const transactionInputSchema = z.object({
 });
 
 export type TransactionInput = z.input<typeof transactionInputSchema>;
+
+export const TRANSACTION_UPDATE_ERRORS = [...TRANSACTION_INPUT_ERRORS, "DATE_INVALID"];
+
+// Absent date/amount/type are left unchanged; an absent or blank note clears it.
+export const transactionUpdateSchema = z.object({
+  label: transactionInputSchema.shape.label,
+  note: z
+    .string()
+    .trim()
+    .max(1000)
+    .optional()
+    .transform((v) => v || null),
+  date: z
+    .string()
+    .refine(isValidIsoDay, { message: "DATE_INVALID" })
+    .transform(dayStart)
+    .optional(),
+  amount: transactionInputSchema.shape.amount.optional(),
+  type: z.enum(TRANSACTION_TYPES).optional(),
+});
+
+export type TransactionUpdateInput = z.input<typeof transactionUpdateSchema>;

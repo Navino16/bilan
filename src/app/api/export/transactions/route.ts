@@ -3,7 +3,8 @@ import { listTransactions } from "@/server/services/transactions";
 import { listForUser, listForeignCategories } from "@/server/services/categories";
 import { flattenCategories } from "@/components/transactions/category-tree";
 import { transactionsToCsv, type CsvRow } from "@/server/services/export/csv";
-import { dayEnd, dayStart, parseDayBounds, toIsoDay } from "@/lib/period";
+import { dayEnd, dayStart, toIsoDay } from "@/lib/period";
+import { parseTransactionFilters } from "@/lib/transaction-filters";
 import { defaultLocale, locales, type Locale } from "@/i18n/config";
 
 export const runtime = "nodejs";
@@ -12,22 +13,17 @@ export async function GET(req: Request): Promise<Response> {
   const user = await getCurrentUser();
   if (!user) return Response.json({ error: "UNAUTHORIZED" }, { status: 401 });
 
-  const url = new URL(req.url);
-  const q = url.searchParams;
-  const dir = q.get("dir");
-  const direction: "in" | "out" | undefined = dir === "in" || dir === "out" ? dir : undefined;
-  const from = q.get("from") ?? undefined;
-  const to = q.get("to") ?? undefined;
-  const bounds = parseDayBounds({ from, to });
+  const q = new URL(req.url).searchParams;
   const requested = q.get("locale");
   const locale: Locale = locales.find((l) => l === requested) ?? defaultLocale;
 
+  // Same filters as the list; the CSV stays in date order whatever the list sort.
+  const { from, to, ...rest } = parseTransactionFilters(Object.fromEntries(q));
   const filters = {
-    categoryId: q.get("categoryId") ?? undefined,
-    direction,
-    search: q.get("search") ?? undefined,
-    from: bounds.from ? dayStart(bounds.from) : undefined,
-    to: bounds.to ? dayEnd(bounds.to) : undefined,
+    ...rest,
+    sort: undefined,
+    from: from ? dayStart(from) : undefined,
+    to: to ? dayEnd(to) : undefined,
   };
 
   // Paginate through the full result set so the export is never silently

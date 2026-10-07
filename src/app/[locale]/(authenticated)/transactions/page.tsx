@@ -8,7 +8,8 @@ import { listVisibleForUser } from "@/server/services/accounts";
 import { listLinkedTxIds } from "@/server/services/links";
 import { listAssignableBudgets } from "@/server/services/budgets";
 import { flattenCategories } from "@/components/transactions/category-tree";
-import { currentUtcYear, dayEnd, dayStart, parseDayBounds } from "@/lib/period";
+import { currentUtcYear, dayEnd, dayStart } from "@/lib/period";
+import { parseTransactionFilters } from "@/lib/transaction-filters";
 import { LIST_MAX_LIMIT, nextListLimit, parseListLimit, trimToDayBoundary } from "@/lib/list-limit";
 import {
   TransactionList,
@@ -40,19 +41,15 @@ export default async function TransactionsPage({
   const user = await requireSession();
   const t = await getTranslations("transactions");
 
-  const direction = sp.dir === "in" || sp.dir === "out" ? sp.dir : undefined;
-  // A from/to range narrows the list; with no params the list stays unfiltered
-  // (all transactions), preserving the default "show everything" behaviour.
-  const bounds = parseDayBounds({ from: sp.from, to: sp.to });
+  const { from, to, ...filters } = parseTransactionFilters(sp);
   const limit = parseListLimit(sp.limit);
+  const groupByDay = filters.sort.startsWith("date");
 
   const [{ items, total }, tree, foreignTree, accounts, linkedIds, budgets] = await Promise.all([
     listTransactions(user.id, {
-      categoryId: sp.categoryId,
-      direction,
-      search: sp.search,
-      from: bounds.from ? dayStart(bounds.from) : undefined,
-      to: bounds.to ? dayEnd(bounds.to) : undefined,
+      ...filters,
+      from: from ? dayStart(from) : undefined,
+      to: to ? dayEnd(to) : undefined,
       take: limit,
     }),
     listForUser(user.id),
@@ -70,6 +67,7 @@ export default async function TransactionsPage({
     color: a.color,
     bankName: a.bankName,
     writable: a.access !== "READ",
+    archived: a.archived,
   }));
   const formAccounts = accounts.filter((a) => !a.archived).map((a) => ({ id: a.id, name: a.name }));
   const allItems: ListItem[] = items.map((i) => ({
@@ -84,9 +82,12 @@ export default async function TransactionsPage({
     accountName: i.accountName,
     categoryId: i.categoryId,
     linked: linkedIds.has(i.id),
+    imported: i.imported,
   }));
   const truncated = items.length < total;
-  const { items: listItems, partialLastDay } = trimToDayBoundary(allItems, truncated);
+  const { items: listItems, partialLastDay } = groupByDay
+    ? trimToDayBoundary(allItems, truncated)
+    : { items: allItems, partialLastDay: false };
   const moreParams = new URLSearchParams(
     Object.entries(sp).filter((e): e is [string, string] => e[1] !== undefined),
   );
@@ -128,8 +129,9 @@ export default async function TransactionsPage({
       <SelectionModeProvider>
         <TransactionFilters
           categories={[...flatCategories, ...foreignCategories]}
-          from={bounds.from}
-          to={bounds.to}
+          accounts={accounts.map((a) => ({ id: a.id, name: a.name }))}
+          from={from}
+          to={to}
           total={total}
         />
         <TransactionList
@@ -141,6 +143,7 @@ export default async function TransactionsPage({
           partialLastDay={partialLastDay}
           currentYear={currentUtcYear()}
           searching={Boolean(sp.search?.trim())}
+          groupByDay={groupByDay}
         />
       </SelectionModeProvider>
       {truncated && (

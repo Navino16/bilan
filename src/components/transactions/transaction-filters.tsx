@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Tag, ChevronDown, Check, ListFilter } from "lucide-react";
+import { Tag, ChevronDown, Check, ListFilter, Landmark, Shapes, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -20,22 +20,112 @@ import { SegmentedTabs, overline } from "./bits";
 import { PeriodPicker } from "@/components/dashboard/period-picker";
 import { useSelectionMode } from "./selection-mode";
 import type { FlatCategory } from "./category-picker";
-import { UNCATEGORIZED } from "@/lib/transaction-filters";
+import {
+  DEFAULT_SORT,
+  FILTER_PARAMS,
+  TRANSACTION_SORTS,
+  UNCATEGORIZED,
+} from "@/lib/transaction-filters";
+import { TRANSACTION_TYPES } from "@/lib/validation/transaction";
+import { readAmount } from "@/lib/amount";
 import { hasUnsearchableWord, MIN_SEARCH_WORD } from "@/lib/text";
 
 type Direction = "" | "in" | "out";
 
 const SEARCH_DEBOUNCE_MS = 350;
 
+const trigger =
+  "border-border bg-card text-muted-foreground hover:text-foreground inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[0.8rem]";
+
+function FilterMenu({
+  icon,
+  activeLabel,
+  allLabel,
+  value,
+  options,
+  onSelect,
+}: {
+  icon: React.ReactNode;
+  activeLabel: string;
+  allLabel: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onSelect: (value: string) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={<button type="button" className={trigger} />}>
+        {icon}
+        <span className="max-w-32 truncate">{activeLabel}</span>
+        <ChevronDown className="size-3.5" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="max-h-80 w-56 overflow-auto">
+        {[{ value: "", label: allLabel }, ...options].map((o) => (
+          <DropdownMenuItem key={o.value} onClick={() => onSelect(o.value)}>
+            <span className="flex-1 truncate">{o.label}</span>
+            {value === o.value && <Check className="size-3.5" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+// Committed on blur/Enter as an absolute amount; an unparseable entry stays local, flagged.
+function AmountBoundInput({
+  value,
+  label,
+  className,
+  onCommit,
+}: {
+  value: string;
+  label: string;
+  className?: string;
+  onCommit: (value: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  const [seen, setSeen] = useState(value);
+  if (value !== seen) {
+    setSeen(value);
+    setDraft(value);
+  }
+  const parsed = draft.trim() ? readAmount(draft) : null;
+  const invalid = parsed !== null && !parsed.ok;
+
+  function commit() {
+    if (invalid) return;
+    const next = parsed?.ok ? String(Math.abs(parsed.value)) : "";
+    if (next !== value) onCommit(next);
+  }
+
+  return (
+    <Input
+      inputMode="decimal"
+      aria-label={label}
+      placeholder={label}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") commit();
+      }}
+      aria-invalid={invalid || undefined}
+      className={className}
+    />
+  );
+}
+
 // Desktop: every filter inline. Mobile (issue #112 §5): search + a « Filtres » button
-// opening a bottom sheet with the period, type, category and link mode.
+// opening a bottom sheet with the other filters, the sort and link mode.
 export function TransactionFilters({
   categories,
+  accounts,
   from,
   to,
   total,
 }: {
   categories: FlatCategory[];
+  accounts: { id: string; name: string }[];
   from?: string;
   to?: string;
   total: number;
@@ -85,7 +175,7 @@ export function TransactionFilters({
     replaceParams((next) => (value ? next.set(key, value) : next.delete(key)));
   }
   function resetFilters() {
-    replaceParams((next) => ["dir", "categoryId", "from", "to"].forEach((k) => next.delete(k)));
+    replaceParams((next) => FILTER_PARAMS.forEach((k) => next.delete(k)));
   }
 
   const dir = (params.get("dir") ?? "") as Direction;
@@ -94,8 +184,37 @@ export function TransactionFilters({
     activeCat === UNCATEGORIZED
       ? t("noCategory")
       : (categories.find((c) => c.id === activeCat)?.name ?? t("allCategories"));
-  const activeCount = [from || to, dir, activeCat].filter(Boolean).length;
+  const activeAccount = params.get("accountId") ?? "";
+  const activeType = params.get("type") ?? "";
+  const min = params.get("min") ?? "";
+  const max = params.get("max") ?? "";
+  const sort = params.get("sort") || DEFAULT_SORT;
+  const activeCount = [from || to, dir, activeCat, activeAccount, activeType, min || max].filter(
+    Boolean,
+  ).length;
+  const resettable = activeCount > 0 || sort !== DEFAULT_SORT;
   const shortWord = hasUnsearchableWord(search);
+
+  const accountOptions = accounts.map((a) => ({ value: a.id, label: a.name }));
+  const typeOptions = TRANSACTION_TYPES.map((ty) => ({ value: ty, label: t(`types.${ty}`) }));
+  const optionLabel = (options: { value: string; label: string }[], v: string, all: string) =>
+    options.find((o) => o.value === v)?.label ?? all;
+
+  const sortSelect = (id?: string, className?: string) => (
+    <NativeSelect
+      id={id}
+      aria-label={t("sortLabel")}
+      value={sort}
+      onChange={(e) => setParam("sort", e.target.value === DEFAULT_SORT ? "" : e.target.value)}
+      className={className}
+    >
+      {TRANSACTION_SORTS.map((s) => (
+        <option key={s} value={s}>
+          {t(`sort.${s}`)}
+        </option>
+      ))}
+    </NativeSelect>
+  );
 
   const directionTabs = (
     <SegmentedTabs<Direction>
@@ -128,14 +247,7 @@ export function TransactionFilters({
       <div className="hidden md:contents">
         {directionTabs}
         <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <button
-                type="button"
-                className="border-border bg-card text-muted-foreground hover:text-foreground inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[0.8rem]"
-              />
-            }
-          >
+          <DropdownMenuTrigger render={<button type="button" className={trigger} />}>
             <Tag className="size-3.5" />
             <span className="max-w-32 truncate">{activeCatName}</span>
             <ChevronDown className="size-3.5" />
@@ -162,6 +274,46 @@ export function TransactionFilters({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+        <FilterMenu
+          icon={<Landmark className="size-3.5" />}
+          activeLabel={optionLabel(accountOptions, activeAccount, t("allAccounts"))}
+          allLabel={t("allAccounts")}
+          value={activeAccount}
+          options={accountOptions}
+          onSelect={(v) => setParam("accountId", v)}
+        />
+        <FilterMenu
+          icon={<Shapes className="size-3.5" />}
+          activeLabel={optionLabel(typeOptions, activeType, t("allTypes"))}
+          allLabel={t("allTypes")}
+          value={activeType}
+          options={typeOptions}
+          onSelect={(v) => setParam("type", v)}
+        />
+        <AmountBoundInput
+          value={min}
+          label={t("amountMin")}
+          className="h-8 w-28"
+          onCommit={(v) => setParam("min", v)}
+        />
+        <AmountBoundInput
+          value={max}
+          label={t("amountMax")}
+          className="h-8 w-28"
+          onCommit={(v) => setParam("max", v)}
+        />
+        {sortSelect(undefined, "w-52")}
+        {resettable && (
+          <button
+            type="button"
+            onClick={resetFilters}
+            data-slot="filters-reset"
+            className="text-muted-foreground hover:text-foreground inline-flex h-8 items-center gap-1 px-1 text-[0.8rem] underline-offset-2 hover:underline"
+          >
+            <X className="size-3.5" />
+            {tSheet("reset")}
+          </button>
+        )}
       </div>
 
       <Button
@@ -198,7 +350,7 @@ export function TransactionFilters({
             <button
               type="button"
               onClick={resetFilters}
-              disabled={activeCount === 0}
+              disabled={!resettable}
               className="text-muted-foreground text-sm underline underline-offset-2 disabled:opacity-40"
             >
               {tSheet("reset")}
@@ -211,7 +363,7 @@ export function TransactionFilters({
           </div>
 
           <div className="space-y-2">
-            <div className={overline}>{t("type")}</div>
+            <div className={overline}>{t("direction")}</div>
             {directionTabs}
           </div>
 
@@ -232,6 +384,65 @@ export function TransactionFilters({
                 </option>
               ))}
             </NativeSelect>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="filter-account" className={overline}>
+              {t("account")}
+            </Label>
+            <NativeSelect
+              id="filter-account"
+              value={activeAccount}
+              onChange={(e) => setParam("accountId", e.target.value)}
+            >
+              <option value="">{t("allAccounts")}</option>
+              {accountOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </NativeSelect>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="filter-type" className={overline}>
+              {t("type")}
+            </Label>
+            <NativeSelect
+              id="filter-type"
+              value={activeType}
+              onChange={(e) => setParam("type", e.target.value)}
+            >
+              <option value="">{t("allTypes")}</option>
+              {typeOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </NativeSelect>
+          </div>
+
+          <div className="space-y-2">
+            <div className={overline}>{t("amountRange")}</div>
+            <div className="grid grid-cols-2 gap-3">
+              <AmountBoundInput
+                value={min}
+                label={t("amountMin")}
+                onCommit={(v) => setParam("min", v)}
+              />
+              <AmountBoundInput
+                value={max}
+                label={t("amountMax")}
+                onCommit={(v) => setParam("max", v)}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="filter-sort" className={overline}>
+              {t("sortLabel")}
+            </Label>
+            {sortSelect("filter-sort")}
           </div>
 
           <label className="flex items-center justify-between gap-4 border-t pt-4">

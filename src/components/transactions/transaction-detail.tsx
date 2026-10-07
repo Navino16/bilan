@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,14 +11,19 @@ import {
   unassignTransactionAction,
   listAssignmentsForTxAction,
 } from "@/server/transport/actions/budgets";
+import { deleteLinkAction, getLinkSummaryAction } from "@/server/transport/actions/links";
 import { type FlatCategory } from "./category-picker";
 import type { CategoryMeta } from "./category-tree";
 import { CategoryCombobox } from "./category-combobox";
 import { Pill, overline } from "./bits";
+import { TransactionEditForm } from "./transaction-edit-form";
+import { useLinkErrorMessage } from "./link-error";
 import { NativeSelect } from "@/components/ui/native-select";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2, Unlink } from "lucide-react";
 import { formatPeriodLabel } from "@/lib/period";
+import { editScope } from "@/lib/transaction-edit";
 import type { AssignableBudget } from "@/server/services/budgets";
+import type { LinkSummary } from "@/server/services/links";
 
 export type DetailItem = {
   id: string;
@@ -29,6 +35,8 @@ export type DetailItem = {
   note: string | null;
   accountId: string;
   categoryId: string | null;
+  imported: boolean;
+  linked: boolean;
 };
 
 export type AccountMeta = {
@@ -36,6 +44,7 @@ export type AccountMeta = {
   color: string | null;
   bankName: string | null;
   writable: boolean;
+  archived: boolean;
 };
 export type { AssignableBudget };
 
@@ -79,11 +88,51 @@ export function TransactionDetail({
   const tBudgets = useTranslations("budgets");
   const tb = useTranslations("budgets.assign");
   const td = useTranslations("transactions.delete");
+  const tLink = useTranslations("transactions.link");
+  const linkErrorMessage = useLinkErrorMessage();
   const locale = useLocale();
+  const router = useRouter();
 
   const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [chosen, setChosen] = useState("");
   const [, startAssign] = useTransition();
+  // Keyed by transaction id so switching rows needs no reset effect.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [link, setLink] = useState<{ txId: string; summary: LinkSummary | null } | null>(null);
+  const [unlinkError, setUnlinkError] = useState<{ txId: string; message: string } | null>(null);
+  const [unlinking, startUnlink] = useTransition();
+
+  const linkedId = item?.linked ? item.id : undefined;
+  const itemLabel = item?.label;
+  const itemAmount = item?.amount;
+  useEffect(() => {
+    if (!linkedId) return;
+    let active = true;
+    getLinkSummaryAction(linkedId).then((summary) => {
+      if (active) setLink({ txId: linkedId, summary });
+    });
+    return () => {
+      active = false;
+    };
+  }, [linkedId, itemLabel, itemAmount]);
+
+  function unlink(txId: string, linkId: string) {
+    const fd = new FormData();
+    fd.set("linkId", linkId);
+    setUnlinkError(null);
+    startUnlink(async () => {
+      const r = await deleteLinkAction(null, fd);
+      if (r?.ok) return router.refresh();
+      const message =
+        r?.error === "FORBIDDEN"
+          ? linkErrorMessage(r.error)
+          : r?.error === "NOT_FOUND"
+            ? tLink("unlinkGone")
+            : tLink("unlinkFailed");
+      setUnlinkError({ txId, message });
+      if (r?.error === "NOT_FOUND") router.refresh();
+    });
+  }
 
   // Lazily load which budgets this transaction is assigned to when the panel opens.
   // Only the async result sets state (a synchronous reset here would trip
@@ -148,9 +197,30 @@ export function TransactionDetail({
 
   const acc = item ? accounts[item.accountId] : undefined;
   const category = item?.categoryId ? categoryMeta[item.categoryId] : undefined;
+  const editing = !!item && editingId === item.id && !!acc?.writable;
+  const limitedBy =
+    item && editScope({ imported: item.imported, archived: !!acc?.archived }) === "text"
+      ? item.imported
+        ? "imported"
+        : "archived"
+      : null;
+  const linkSummary = item?.linked && link?.txId === item.id ? link.summary : null;
+  const shortDate = new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 
   return (
-    <Sheet open={!!item} onOpenChange={(o) => !o && onClose()}>
+    <Sheet
+      open={!!item}
+      onOpenChange={(o) => {
+        if (o) return;
+        setEditingId(null);
+        onClose();
+      }}
+    >
       <SheetContent
         side={side}
         className="w-full gap-0 p-0 data-[side=bottom]:max-h-[85dvh] data-[side=bottom]:rounded-t-2xl sm:max-w-[380px]"
@@ -169,155 +239,239 @@ export function TransactionDetail({
               <div className="text-muted-foreground text-xs first-letter:uppercase">
                 {df.format(new Date(item.date))}
               </div>
-            </div>
-
-            <div className="flex flex-col gap-5 px-6 py-6">
-              <Field label={t("category")}>
-                {acc?.writable ? (
-                  <CategoryCombobox
-                    key={`${item.id}-${item.categoryId}-${categoryAttempt}`}
-                    name={`detail-cat-${item.id}`}
-                    categories={categories}
-                    defaultValue={item.categoryId}
-                    unlisted={category}
-                    onChange={onRecategorize}
-                  />
-                ) : (
-                  <div
-                    data-slot="category-readonly"
-                    className="border-border bg-muted/40 flex h-9 items-center gap-2 rounded-md border px-3 text-sm"
-                  >
-                    {category && (
-                      <span
-                        aria-hidden
-                        className="size-2.5 shrink-0 rounded-full"
-                        style={{ background: category.color ?? "var(--ink-3)" }}
-                      />
-                    )}
-                    <span className="flex-1 truncate">{category?.name ?? t("noCategory")}</span>
-                    <span className="text-muted-foreground text-xs">{t("readOnly")}</span>
-                  </div>
-                )}
-                {categoryError && (
-                  <p role="alert" className="text-destructive text-xs">
-                    {t("recategorizeFailed")}
-                  </p>
-                )}
-              </Field>
-
-              <Field label={t("account")}>
-                <div className="border-border bg-card flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-sm">
-                  <span
-                    aria-hidden
-                    className="size-2 shrink-0 rounded-full"
-                    style={{ background: acc?.color ?? "var(--ink-3)" }}
-                  />
-                  <span>{acc?.name}</span>
-                  <span className="flex-1" />
-                  {acc?.bankName && (
-                    <span className="text-muted-foreground text-xs">{acc.bankName}</span>
-                  )}
-                </div>
-              </Field>
-
-              <Field label={t("type")}>
-                <Pill>{t(`types.${item.type}`)}</Pill>
-              </Field>
-
-              <Field label={t("originalLabel")}>
-                <div className="border-border bg-muted rounded-lg border px-3 py-2.5 font-mono text-xs break-words">
-                  {item.rawLabel}
-                </div>
-              </Field>
-
-              <Field label={t("note")}>
-                <div className="text-muted-foreground border-border rounded-lg border border-dashed px-3 py-2.5 text-sm">
-                  {item.note || t("notePlaceholder")}
-                </div>
-              </Field>
-
-              {budgets.length > 0 && (
-                <Field label={tb("title")}>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <NativeSelect
-                        aria-label={tb("choose")}
-                        value={chosen}
-                        onChange={(e) => setChosen(e.target.value)}
-                        className="min-w-0 flex-1"
-                      >
-                        <option value="">{tb("choose")}</option>
-                        {[...budgetGroups].map(([groupId, list]) => (
-                          <optgroup
-                            key={groupId}
-                            label={list[0].groupName ?? tBudgets("scopePersonal")}
-                          >
-                            {list.map((b) => (
-                              <option key={b.id} value={b.id}>
-                                {budgetLabel(b)}
-                              </option>
-                            ))}
-                          </optgroup>
-                        ))}
-                      </NativeSelect>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={!chosen}
-                        onClick={() => assign("INCLUDE")}
-                      >
-                        {tb("include")}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={!chosen}
-                        onClick={() => assign("EXCLUDE")}
-                      >
-                        {tb("exclude")}
-                      </Button>
-                    </div>
-
-                    {Object.keys(assignments).length > 0 && (
-                      <ul className="space-y-1.5">
-                        {budgets
-                          .filter((b) => assignments[b.id])
-                          .map((b) => (
-                            <li
-                              key={b.id}
-                              className="border-border flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
-                            >
-                              <span className="min-w-0 flex-1 truncate">
-                                {budgetLabel(b)}
-                                {b.groupName && (
-                                  <span className="text-muted-foreground"> · {b.groupName}</span>
-                                )}
-                              </span>
-                              <Badge
-                                variant={assignments[b.id] === "EXCLUDE" ? "outline" : "secondary"}
-                              >
-                                {tb(`mode${assignments[b.id]}`)}
-                              </Badge>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => unassign(b.id)}
-                              >
-                                {tb("remove")}
-                              </Button>
-                            </li>
-                          ))}
-                      </ul>
-                    )}
-                  </div>
-                </Field>
+              {acc?.writable && !editing && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="mt-2"
+                  onClick={() => setEditingId(item.id)}
+                >
+                  <Pencil />
+                  {t("edit")}
+                </Button>
               )}
             </div>
 
-            {acc?.writable && (
+            {editing ? (
+              <div className="px-6 py-6">
+                <div className={`${overline} mb-4`}>{t("editTitle")}</div>
+                <TransactionEditForm
+                  key={item.id}
+                  item={item}
+                  limitedBy={limitedBy}
+                  onCancel={() => setEditingId(null)}
+                  onSaved={() => {
+                    setEditingId(null);
+                    router.refresh();
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col gap-5 px-6 py-6">
+                <Field label={t("category")}>
+                  {acc?.writable ? (
+                    <CategoryCombobox
+                      key={`${item.id}-${item.categoryId}-${categoryAttempt}`}
+                      name={`detail-cat-${item.id}`}
+                      categories={categories}
+                      defaultValue={item.categoryId}
+                      unlisted={category}
+                      onChange={onRecategorize}
+                    />
+                  ) : (
+                    <div
+                      data-slot="category-readonly"
+                      className="border-border bg-muted/40 flex h-9 items-center gap-2 rounded-md border px-3 text-sm"
+                    >
+                      {category && (
+                        <span
+                          aria-hidden
+                          className="size-2.5 shrink-0 rounded-full"
+                          style={{ background: category.color ?? "var(--ink-3)" }}
+                        />
+                      )}
+                      <span className="flex-1 truncate">{category?.name ?? t("noCategory")}</span>
+                      <span className="text-muted-foreground text-xs">{t("readOnly")}</span>
+                    </div>
+                  )}
+                  {categoryError && (
+                    <p role="alert" className="text-destructive text-xs">
+                      {t("recategorizeFailed")}
+                    </p>
+                  )}
+                </Field>
+
+                <Field label={t("account")}>
+                  <div className="border-border bg-card flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-sm">
+                    <span
+                      aria-hidden
+                      className="size-2 shrink-0 rounded-full"
+                      style={{ background: acc?.color ?? "var(--ink-3)" }}
+                    />
+                    <span>{acc?.name}</span>
+                    <span className="flex-1" />
+                    {acc?.bankName && (
+                      <span className="text-muted-foreground text-xs">{acc.bankName}</span>
+                    )}
+                  </div>
+                </Field>
+
+                <Field label={t("type")}>
+                  <Pill>{t(`types.${item.type}`)}</Pill>
+                </Field>
+
+                <Field label={t("originalLabel")}>
+                  <div className="border-border bg-muted rounded-lg border px-3 py-2.5 font-mono text-xs break-words">
+                    {item.rawLabel}
+                  </div>
+                </Field>
+
+                <Field label={t("note")}>
+                  <div
+                    className={`bg-muted/40 rounded-lg px-3 py-2.5 text-sm break-words ${item.note ? "" : "text-muted-foreground"}`}
+                  >
+                    {item.note || t("notePlaceholder")}
+                  </div>
+                </Field>
+
+                {linkSummary && (
+                  <Field label={tLink("linkedTo")}>
+                    <div data-slot="link-summary" className="space-y-2">
+                      <ul className="space-y-1.5">
+                        {linkSummary.others.map((o) => (
+                          <li
+                            key={o.id}
+                            className="border-border flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                          >
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate">{o.label}</span>
+                              <span className="text-muted-foreground block truncate text-xs">
+                                {o.accountName} · {shortDate.format(new Date(o.date))}
+                              </span>
+                            </span>
+                            <span
+                              className="tabular-nums"
+                              style={o.amount > 0 ? { color: "var(--income)" } : undefined}
+                            >
+                              {nf.format(o.amount)}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                      {linkSummary.hiddenCount > 0 && (
+                        <p className="text-muted-foreground text-xs">
+                          {tLink("hiddenMembers", { count: linkSummary.hiddenCount })}
+                        </p>
+                      )}
+                      {linkSummary.canUnlink ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={unlinking}
+                          onClick={() => unlink(item.id, linkSummary.linkId)}
+                        >
+                          <Unlink />
+                          {tLink("unlink")}
+                        </Button>
+                      ) : (
+                        <p className="text-muted-foreground text-xs">{tLink("unlinkNeedsWrite")}</p>
+                      )}
+                      {unlinkError?.txId === item.id && (
+                        <p role="alert" className="text-destructive text-xs">
+                          {unlinkError.message}
+                        </p>
+                      )}
+                    </div>
+                  </Field>
+                )}
+
+                {budgets.length > 0 && (
+                  <Field label={tb("title")}>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <NativeSelect
+                          aria-label={tb("choose")}
+                          value={chosen}
+                          onChange={(e) => setChosen(e.target.value)}
+                          className="min-w-0 flex-1"
+                        >
+                          <option value="">{tb("choose")}</option>
+                          {[...budgetGroups].map(([groupId, list]) => (
+                            <optgroup
+                              key={groupId}
+                              label={list[0].groupName ?? tBudgets("scopePersonal")}
+                            >
+                              {list.map((b) => (
+                                <option key={b.id} value={b.id}>
+                                  {budgetLabel(b)}
+                                </option>
+                              ))}
+                            </optgroup>
+                          ))}
+                        </NativeSelect>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={!chosen}
+                          onClick={() => assign("INCLUDE")}
+                        >
+                          {tb("include")}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={!chosen}
+                          onClick={() => assign("EXCLUDE")}
+                        >
+                          {tb("exclude")}
+                        </Button>
+                      </div>
+
+                      {Object.keys(assignments).length > 0 && (
+                        <ul className="space-y-1.5">
+                          {budgets
+                            .filter((b) => assignments[b.id])
+                            .map((b) => (
+                              <li
+                                key={b.id}
+                                className="border-border flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                              >
+                                <span className="min-w-0 flex-1 truncate">
+                                  {budgetLabel(b)}
+                                  {b.groupName && (
+                                    <span className="text-muted-foreground"> · {b.groupName}</span>
+                                  )}
+                                </span>
+                                <Badge
+                                  variant={
+                                    assignments[b.id] === "EXCLUDE" ? "outline" : "secondary"
+                                  }
+                                >
+                                  {tb(`mode${assignments[b.id]}`)}
+                                </Badge>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => unassign(b.id)}
+                                >
+                                  {tb("remove")}
+                                </Button>
+                              </li>
+                            ))}
+                        </ul>
+                      )}
+                    </div>
+                  </Field>
+                )}
+              </div>
+            )}
+
+            {acc?.writable && !editing && (
               <div className="border-border bg-card sticky bottom-0 mt-auto border-t px-6 pt-3 pb-4">
                 <Button
                   type="button"

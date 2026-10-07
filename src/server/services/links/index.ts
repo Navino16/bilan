@@ -1,5 +1,8 @@
 import { db } from "@/server/db";
-import { visibleAccountIds } from "@/server/services/accounts";
+import { decrypt } from "@/server/crypto/encryption";
+import { dataKey } from "@/server/crypto/keys";
+import { toIsoDay } from "@/lib/period";
+import { visibleAccountIds, visibleAccountRefs } from "@/server/services/accounts";
 import { canWriteAccount } from "@/server/services/accounts/sharing";
 import { listTransactions } from "@/server/services/transactions";
 import { logEvent } from "@/server/services/audit";
@@ -96,11 +99,13 @@ export async function getLinkForTx(transactionId: string, userId: string): Promi
   return member.linkId;
 }
 
-export type SuggestedPairView = SuggestedPair & {
-  positiveLabel: string;
-  negativeLabel: string;
-  date: string; // ISO day of the negative (expense) leg
-};
+export type PairLeg = { id: string; label: string; date: string; accountName: string };
+
+export type SuggestedPairView = SuggestedPair & { positive: PairLeg; negative: PairLeg };
+
+function legOf(t: { id: string; label: string; date: Date; accountName: string }): PairLeg {
+  return { id: t.id, label: t.label, date: toIsoDay(t.date), accountName: t.accountName };
+}
 
 // Suggests +X/-X pairs over the user's visible, not-yet-linked transactions,
 // within UserPreference.linkWindowDays / linkMinAmount, excluding ignored pairs.
@@ -126,10 +131,125 @@ export async function suggestPairs(userId: string): Promise<SuggestedPairView[]>
   const byId = new Map(candidates.map((t) => [t.id, t]));
   return pairs.map((p) => ({
     ...p,
-    positiveLabel: byId.get(p.positiveId)?.label ?? "",
-    negativeLabel: byId.get(p.negativeId)?.label ?? "",
-    date: (byId.get(p.negativeId)?.date ?? new Date()).toISOString().slice(0, 10),
+    positive: legOf(byId.get(p.positiveId)!),
+    negative: legOf(byId.get(p.negativeId)!),
   }));
+}
+
+export type IgnoredPairView = { key: string; amount: number; positive: PairLeg; negative: PairLeg };
+
+// The user's dismissed pairs whose two legs still exist, are visible and unlinked
+// (any other pair could never be suggested again), most recently ignored first.
+export async function listIgnoredSuggestions(userId: string): Promise<IgnoredPairView[]> {
+  const ignored = await db.ignoredLinkSuggestion.findMany({
+    where: { userId },
+    orderBy: { ignoredAt: "desc" },
+    take: 200,
+    select: { pairKey: true },
+  });
+  if (ignored.length === 0) return [];
+  const visible = await visibleAccountRefs(userId);
+  const accountName = new Map(visible.map((a) => [a.id, a.name]));
+  const ids = [...new Set(ignored.flatMap((r) => r.pairKey.split("|")))];
+  const rows = await db.transaction.findMany({
+    where: { id: { in: ids }, accountId: { in: [...accountName.keys()] }, linkMembership: null },
+    select: { id: true, accountId: true, date: true, amount: true, labelEnc: true },
+  });
+  const byId = new Map(
+    rows.map((r) => [
+      r.id,
+      {
+        amount: Number(r.amount),
+        leg: legOf({
+          id: r.id,
+          label: decrypt(r.labelEnc, dataKey),
+          date: r.date,
+          accountName: accountName.get(r.accountId) ?? "",
+        }),
+      },
+    ]),
+  );
+
+  const out: IgnoredPairView[] = [];
+  for (const { pairKey } of ignored) {
+    const [a, b] = pairKey.split("|").map((id) => byId.get(id));
+    if (!a || !b) continue;
+    const [pos, neg] = a.amount > 0 ? [a, b] : [b, a];
+    out.push({ key: pairKey, amount: Math.abs(pos.amount), positive: pos.leg, negative: neg.leg });
+  }
+  return out;
+}
+
+export async function restoreSuggestion(userId: string, pairKey: string): Promise<void> {
+  const { count } = await db.ignoredLinkSuggestion.deleteMany({ where: { userId, pairKey } });
+  if (count === 0) throw new LinkAccessError("NOT_FOUND");
+  await logEvent({
+    userId,
+    action: "link.suggestionRestored",
+    entity: "IgnoredLinkSuggestion",
+    entityId: pairKey,
+  });
+}
+
+export type LinkSummary = {
+  linkId: string;
+  others: (PairLeg & { amount: number })[];
+  hiddenCount: number; // members on accounts the viewer can't read
+  canUnlink: boolean;
+};
+
+// What a visible transaction is linked to, from the viewer's standpoint; null
+// when it isn't linked or isn't visible. Unlinking needs WRITE on every member.
+export async function getLinkSummary(
+  transactionId: string,
+  userId: string,
+): Promise<LinkSummary | null> {
+  const member = await db.transactionLinkMember.findUnique({
+    where: { transactionId },
+    select: {
+      linkId: true,
+      link: {
+        select: {
+          members: {
+            select: {
+              transaction: {
+                select: { id: true, accountId: true, date: true, amount: true, labelEnc: true },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+  if (!member) return null;
+  const visible = await visibleAccountRefs(userId);
+  const accountName = new Map(visible.map((a) => [a.id, a.name]));
+  const txs = member.link.members.map((m) => m.transaction);
+  const self = txs.find((t) => t.id === transactionId)!;
+  if (!accountName.has(self.accountId)) return null;
+
+  const others = txs
+    .filter((t) => t.id !== transactionId && accountName.has(t.accountId))
+    .sort((x, y) => x.date.getTime() - y.date.getTime())
+    .map((t) => ({
+      ...legOf({
+        id: t.id,
+        label: decrypt(t.labelEnc, dataKey),
+        date: t.date,
+        accountName: accountName.get(t.accountId)!,
+      }),
+      amount: Number(t.amount),
+    }));
+  let canUnlink = true;
+  for (const accId of new Set(txs.map((t) => t.accountId))) {
+    if (!(await canWriteAccount(userId, accId))) canUnlink = false;
+  }
+  return {
+    linkId: member.linkId,
+    others,
+    hiddenCount: txs.length - 1 - others.length,
+    canUnlink,
+  };
 }
 
 // Records that the user dismissed a suggested pair so it stops resurfacing.

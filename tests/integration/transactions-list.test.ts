@@ -5,7 +5,7 @@ import {
   listTransactions,
   recategorizeTransaction,
 } from "@/server/services/transactions";
-import { UNCATEGORIZED } from "@/lib/transaction-filters";
+import { UNCATEGORIZED, type TransactionSort } from "@/lib/transaction-filters";
 
 const owner = "txl_owner";
 const member = "txl_member";
@@ -134,5 +134,45 @@ describe("listTransactions", () => {
     expect(after.categoryId).toBeNull();
     expect(after.manuallyCategorized).toBe(true);
     await db.transaction.delete({ where: { id: t.id } });
+  });
+});
+
+describe("listTransactions filters and sort (#162)", () => {
+  it("narrows to one visible account and ignores a foreign one", async () => {
+    const other = await db.bankAccount.create({
+      data: { ownerId: owner, name: "Livret", type: "SAVINGS" },
+    });
+    await createTransaction(
+      { accountId: other.id, date: "2026-02-05", amount: 200, type: "TRANSFER", label: "Epargne" },
+      { id: owner },
+    );
+    const mine = await listTransactions(owner, { accountId: other.id });
+    expect(mine.items.map((i) => i.label)).toEqual(["Epargne"]);
+    // The livret isn't shared: the member gets nothing rather than every account.
+    const foreign = await listTransactions(member, { accountId: other.id });
+    expect(foreign.items).toEqual([]);
+    await db.bankAccount.delete({ where: { id: other.id } });
+  });
+
+  it("filters on the absolute amount, combined with the direction", async () => {
+    const between = await listTransactions(owner, { amountMin: 15, amountMax: 2000 });
+    expect(between.items.map((i) => i.label)).toEqual(["Salaire", "Leclerc Drive"]);
+    const small = await listTransactions(owner, { amountMax: 15 });
+    expect(small.items.map((i) => i.label)).toEqual(["Carrefour"]);
+    const bigOut = await listTransactions(owner, { amountMin: 15, direction: "out" });
+    expect(bigOut.items.map((i) => i.label)).toEqual(["Leclerc Drive"]);
+  });
+
+  it("combines the amount filter with a multi-word search", async () => {
+    const r = await listTransactions(owner, { amountMin: 15, search: "leclerc drive" });
+    expect(r.items.map((i) => i.label)).toEqual(["Leclerc Drive"]);
+  });
+
+  it("sorts by date or by signed amount", async () => {
+    const labels = async (sort: TransactionSort) =>
+      (await listTransactions(owner, { sort })).items.map((i) => i.label);
+    expect(await labels("date-asc")).toEqual(["Carrefour", "Leclerc Drive", "Salaire"]);
+    expect(await labels("amount-asc")).toEqual(["Leclerc Drive", "Carrefour", "Salaire"]);
+    expect(await labels("amount-desc")).toEqual(["Salaire", "Carrefour", "Leclerc Drive"]);
   });
 });
