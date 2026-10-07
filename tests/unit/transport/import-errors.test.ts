@@ -8,6 +8,7 @@ describe("importErrorResponse", () => {
       ["INVALID_MAPPING", 400],
       ["NOT_COMMITTABLE", 409],
       ["NOTHING_TO_IMPORT", 409],
+      ["ACCOUNT_ARCHIVED", 409],
       ["EMPTY", 422],
     ] as const) {
       const res = importErrorResponse(new ImportAccessError(code), "COMMIT_FAILED");

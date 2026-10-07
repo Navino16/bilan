@@ -2,26 +2,19 @@
 
 import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
-import { Eye, EyeOff, MoreVertical, Pencil, Archive, Share2, Plus } from "lucide-react";
+import { Eye, EyeOff, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { AccountForm } from "@/components/accounts/account-form";
-import { ShareDialog, type ShareGroup } from "@/components/accounts/share-dialog";
+import { AccountRowActions } from "@/components/accounts/account-row-actions";
+import type { ShareGroup } from "@/components/accounts/share-dialog";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import type { VisibleAccount } from "@/server/services/accounts";
 import { balanceLegend } from "@/lib/balance-legend";
+import { revealAccountIbanAction } from "@/server/transport/actions/accounts";
 
 const OTHERS_COLOR = "var(--ink-3)";
-import { archiveAccountAction, revealAccountIbanAction } from "@/server/transport/actions/accounts";
 
 function useMoney() {
   const locale = useLocale();
@@ -63,72 +56,101 @@ function IbanReveal({ id, masked }: { id: string; masked: string }) {
   );
 }
 
-type EditableAccount = {
-  id: string;
-  name: string;
-  type: string;
-  bankName: string | null;
-  color: string | null;
-  initialBalance: number;
-  ibanMasked: string | null;
+type CardProps = {
+  groups: ShareGroup[];
+  categories: FlatCategory[];
+  writableAccounts: { id: string; name: string }[];
 };
 
-function RowActions({ account, groups }: { account: EditableAccount; groups: ShareGroup[] }) {
+function AccountCard({
+  account: a,
+  groups,
+  categories,
+  writableAccounts,
+}: CardProps & { account: VisibleAccount }) {
   const t = useTranslations("accounts");
-  const router = useRouter();
-  const [editOpen, setEditOpen] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
-  const [pending, startTransition] = useTransition();
-
-  function archive() {
-    if (!window.confirm(t("archiveConfirm"))) return;
-    const fd = new FormData();
-    fd.set("id", account.id);
-    startTransition(async () => {
-      const result = await archiveAccountAction(null, fd);
-      if (result?.ok) router.refresh();
-    });
-  }
-
+  const money = useMoney();
   return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button variant="ghost" size="icon-sm" aria-label={t("edit")} disabled={pending} />
-          }
-        >
-          <MoreVertical />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-40">
-          <DropdownMenuItem onClick={() => setEditOpen(true)}>
-            <Pencil />
-            {t("edit")}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setShareOpen(true)}>
-            <Share2 />
-            {t("share")}
-          </DropdownMenuItem>
-          <DropdownMenuItem variant="destructive" onClick={archive}>
-            <Archive />
-            {t("archive")}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <AccountForm mode="edit" account={account} open={editOpen} onOpenChange={setEditOpen} />
-      <ShareDialog
-        accountId={account.id}
-        accountName={account.name}
-        groups={groups}
-        open={shareOpen}
-        onOpenChange={setShareOpen}
-      />
-    </>
+    <Card className="gap-0 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-2.5">
+          <span
+            aria-hidden
+            className="mt-1 size-3 shrink-0 rounded-full"
+            style={{ backgroundColor: a.color ?? "#2563eb" }}
+          />
+          <div className="min-w-0 space-y-0.5">
+            <div className="flex items-center gap-2">
+              <span className="truncate font-medium">{a.name}</span>
+              {a.archived ? (
+                <Badge variant="outline">{t("archivedBadge")}</Badge>
+              ) : a.access !== "OWNER" ? (
+                <Badge variant="secondary">{t(`access.${a.access}`)}</Badge>
+              ) : a.sharedCount > 0 ? (
+                <Badge variant="secondary">{t("shared")}</Badge>
+              ) : (
+                <Badge variant="outline">{t("private")}</Badge>
+              )}
+            </div>
+            {a.bankName && (
+              <div className="text-muted-foreground truncate text-xs">{a.bankName}</div>
+            )}
+            {a.access !== "OWNER" && a.ownerName && (
+              <div className="text-muted-foreground text-xs">
+                {t("sharedBy", { name: a.ownerName })}
+              </div>
+            )}
+          </div>
+        </div>
+        <Badge variant="outline">{t(`types.${a.type}`)}</Badge>
+      </div>
+
+      <div className="mt-auto flex flex-wrap items-end justify-between gap-2 pt-3">
+        <div className="min-w-0">
+          <div className="font-display text-xl">{money(a.balance)}</div>
+          {/* Reserved-height slot so the balance stays aligned across cards
+              whether or not an IBAN is present. */}
+          <div className="mt-0.5 flex h-5 items-center">
+            {a.ibanMasked && <IbanReveal id={a.id} masked={a.ibanMasked} />}
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          {!a.archived && (a.access === "OWNER" || a.access === "WRITE") && (
+            <TransactionForm
+              accounts={writableAccounts}
+              categories={categories}
+              defaultAccountId={a.id}
+              trigger={
+                <Button variant="outline" size="sm">
+                  <Plus />
+                  {t("addTransaction")}
+                </Button>
+              }
+            />
+          )}
+          {a.access === "OWNER" && (
+            <AccountRowActions
+              account={{
+                id: a.id,
+                name: a.name,
+                type: a.type,
+                bankName: a.bankName,
+                color: a.color,
+                initialBalance: a.initialBalance,
+                ibanMasked: a.ibanMasked,
+                archived: a.archived,
+              }}
+              groups={groups}
+            />
+          )}
+        </div>
+      </div>
+    </Card>
   );
 }
 
 export function AccountList({
-  accounts,
+  accounts: allAccounts,
   groups,
   categories,
 }: {
@@ -138,9 +160,12 @@ export function AccountList({
 }) {
   const t = useTranslations("accounts");
   const money = useMoney();
+  const archived = allAccounts.filter((a) => a.archived);
+  const accounts = allAccounts.filter((a) => !a.archived);
   const writableAccounts = accounts
     .filter((a) => a.access === "OWNER" || a.access === "WRITE")
     .map((a) => ({ id: a.id, name: a.name }));
+  const cardProps = { groups, categories, writableAccounts };
   const total = accounts.reduce((sum, a) => sum + a.balance, 0);
   const legend = balanceLegend(accounts);
   const segments = [
@@ -212,80 +237,25 @@ export function AccountList({
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {accounts.map((a) => (
-            <Card key={a.id} className="gap-0 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex min-w-0 items-start gap-2.5">
-                  <span
-                    aria-hidden
-                    className="mt-1 size-3 shrink-0 rounded-full"
-                    style={{ backgroundColor: a.color ?? "#2563eb" }}
-                  />
-                  <div className="min-w-0 space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate font-medium">{a.name}</span>
-                      {a.access !== "OWNER" ? (
-                        <Badge variant="secondary">{t(`access.${a.access}`)}</Badge>
-                      ) : a.sharedCount > 0 ? (
-                        <Badge variant="secondary">{t("shared")}</Badge>
-                      ) : (
-                        <Badge variant="outline">{t("private")}</Badge>
-                      )}
-                    </div>
-                    {a.bankName && (
-                      <div className="text-muted-foreground truncate text-xs">{a.bankName}</div>
-                    )}
-                    {a.access !== "OWNER" && a.ownerName && (
-                      <div className="text-muted-foreground text-xs">
-                        {t("sharedBy", { name: a.ownerName })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <Badge variant="outline">{t(`types.${a.type}`)}</Badge>
-              </div>
-
-              <div className="mt-auto flex flex-wrap items-end justify-between gap-2 pt-3">
-                <div className="min-w-0">
-                  <div className="font-display text-xl">{money(a.balance)}</div>
-                  {/* Reserved-height slot so the balance stays aligned across cards
-                      whether or not an IBAN is present. */}
-                  <div className="mt-0.5 flex h-5 items-center">
-                    {a.ibanMasked && <IbanReveal id={a.id} masked={a.ibanMasked} />}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  {(a.access === "OWNER" || a.access === "WRITE") && (
-                    <TransactionForm
-                      accounts={writableAccounts}
-                      categories={categories}
-                      defaultAccountId={a.id}
-                      trigger={
-                        <Button variant="outline" size="sm">
-                          <Plus />
-                          {t("addTransaction")}
-                        </Button>
-                      }
-                    />
-                  )}
-                  {a.access === "OWNER" && (
-                    <RowActions
-                      account={{
-                        id: a.id,
-                        name: a.name,
-                        type: a.type,
-                        bankName: a.bankName,
-                        color: a.color,
-                        initialBalance: a.initialBalance,
-                        ibanMasked: a.ibanMasked,
-                      }}
-                      groups={groups}
-                    />
-                  )}
-                </div>
-              </div>
-            </Card>
+            <AccountCard key={a.id} account={a} {...cardProps} />
           ))}
         </div>
+      )}
+
+      {archived.length > 0 && (
+        <section className="space-y-3 pt-2" data-slot="archived-accounts">
+          <div>
+            <h2 className="text-muted-foreground text-[0.7rem] font-medium tracking-[0.14em] uppercase">
+              {t("archivedTitle", { count: archived.length })}
+            </h2>
+            <p className="text-muted-foreground mt-1 text-xs">{t("archivedHint")}</p>
+          </div>
+          <div className="grid gap-3 opacity-80 sm:grid-cols-2">
+            {archived.map((a) => (
+              <AccountCard key={a.id} account={a} {...cardProps} />
+            ))}
+          </div>
+        </section>
       )}
     </div>
   );

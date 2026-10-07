@@ -81,7 +81,7 @@ export async function createAccount(input: AccountInput, ownerId: string): Promi
   return { id: acc.id };
 }
 
-async function ownedOrThrow(id: string, actorId: string) {
+export async function ownedOrThrow(id: string, actorId: string) {
   const acc = await db.bankAccount.findUnique({ where: { id } });
   if (!acc || acc.ownerId !== actorId) throw new AccountAccessError("FORBIDDEN");
   return acc;
@@ -132,6 +132,17 @@ export async function archiveAccount(id: string, actor: { id: string }): Promise
   });
 }
 
+export async function unarchiveAccount(id: string, actor: { id: string }): Promise<void> {
+  await ownedOrThrow(id, actor.id);
+  await db.bankAccount.update({ where: { id }, data: { archived: false } });
+  await logEvent({
+    userId: actor.id,
+    action: "account.unarchived",
+    entity: "BankAccount",
+    entityId: id,
+  });
+}
+
 export async function getAccountForUser(id: string, userId: string) {
   const acc = await db.bankAccount.findUnique({ where: { id } });
   if (!acc || acc.ownerId !== userId) return null;
@@ -146,17 +157,41 @@ export async function getAccountIban(id: string, userId: string): Promise<string
   return formatIban(decrypt(acc.ibanEnc, dataKey));
 }
 
-// Owned (non-archived) accounts plus accounts shared via the viewer's groups.
-// Owner access wins; shared viewers never receive the IBAN.
-export async function listVisibleForUser(userId: string): Promise<VisibleAccount[]> {
+export async function isAccountArchived(id: string): Promise<boolean> {
+  const acc = await db.bankAccount.findUnique({ where: { id }, select: { archived: true } });
+  return acc?.archived ?? false;
+}
+
+// Every account whose history the user can read (owned or shared), archived ones
+// included: archiving hides an account from pickers, not from history (#174).
+export async function visibleAccountRefs(userId: string): Promise<{ id: string; name: string }[]> {
+  return db.bankAccount.findMany({
+    where: {
+      OR: [{ ownerId: userId }, { shares: { some: { group: { members: { some: { userId } } } } } }],
+    },
+    select: { id: true, name: true },
+  });
+}
+
+export async function visibleAccountIds(userId: string): Promise<string[]> {
+  return (await visibleAccountRefs(userId)).map((a) => a.id);
+}
+
+// Owned accounts plus accounts shared via the viewer's groups; archived ones only
+// on request. Owner access wins; shared viewers never receive the IBAN.
+export async function listVisibleForUser(
+  userId: string,
+  opts: { includeArchived?: boolean } = {},
+): Promise<VisibleAccount[]> {
+  const archived = opts.includeArchived ? {} : { archived: false };
   const owned = await db.bankAccount.findMany({
-    where: { ownerId: userId, archived: false },
+    where: { ownerId: userId, ...archived },
     include: { _count: { select: { shares: true } } },
     orderBy: { createdAt: "desc" },
   });
   const shared = await db.bankAccount.findMany({
     where: {
-      archived: false,
+      ...archived,
       ownerId: { not: userId },
       shares: { some: { group: { members: { some: { userId } } } } },
     },

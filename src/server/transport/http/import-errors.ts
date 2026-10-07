@@ -4,6 +4,7 @@ const STATUS: Record<string, number> = {
   INVALID_MAPPING: 400,
   NOT_COMMITTABLE: 409,
   NOTHING_TO_IMPORT: 409,
+  ACCOUNT_ARCHIVED: 409,
   EMPTY: 422,
 };
 

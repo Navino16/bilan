@@ -17,7 +17,7 @@ export default async function AccountsPage({ params }: { params: Promise<{ local
   setRequestLocale(locale);
   const user = await requireSession();
   const t = await getTranslations("accounts");
-  const accounts = await listVisibleForUser(user.id);
+  const accounts = await listVisibleForUser(user.id, { includeArchived: true });
   const categories = flattenCategories(await listForUser(user.id));
   const groups = (await listGroupsForUser(user.id)).map((g) => ({ id: g.id, name: g.name }));
 

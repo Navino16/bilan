@@ -160,7 +160,28 @@
     "edit": "Modifier",
     "addTransaction": "Saisir une transaction",
     "archive": "Archiver",
-    "archiveConfirm": "Archiver ce compte ? Il sera masqué mais ses transactions resteront.",
+    "archiveTitle": "Archiver « {name} » ?",
+    "archiveBody": "Le compte disparaît des listes et des saisies. Son historique reste dans les transactions, les budgets et le tableau de bord, et vous pourrez le désarchiver.",
+    "unarchive": "Désarchiver",
+    "archivedTitle": "Comptes archivés · {count}",
+    "archivedHint": "Masqués des saisies et du solde global ; leurs transactions restent dans l'historique.",
+    "archivedBadge": "Archivé",
+    "delete": "Supprimer",
+    "deleteDialog": {
+      "title": "Supprimer « {name} » ?",
+      "loading": "Calcul de l'impact…",
+      "transactions": "{count, plural, =0 {Aucune transaction à supprimer.} one {# transaction sera supprimée.} other {# transactions seront supprimées.}}",
+      "imports": "{count, plural, one {# import disparaîtra de l'historique des imports.} other {# imports disparaîtront de l'historique des imports.}}",
+      "sharedWith": "Le partage avec {groups} sera retiré.",
+      "budgetLines": "{count, plural, one {# ligne de budget limitée à ce compte sera supprimée.} other {# lignes de budget limitées à ce compte seront supprimées.}}",
+      "emptiedBudgets": "{count, plural, one {# budget sera supprimé car il ne portait que sur ce compte ({names}).} other {# budgets seront supprimés car ils ne portaient que sur ce compte ({names}).}}",
+      "dissolvedLinks": "{count, plural, one {# lien avec un autre compte sera dissous.} other {# liens avec d'autres comptes seront dissous.}}",
+      "irreversible": "Cette action est irréversible. Pour garder l'historique, archivez plutôt le compte.",
+      "confirmLabel": "Saisissez « {name} » pour confirmer",
+      "keep": "Conserver",
+      "confirm": "Supprimer définitivement",
+      "deleting": "Suppression…"
+    },
     "name": "Nom du compte",
     "namePlaceholder": "Compte courant",
     "type": "Type de compte",
@@ -207,7 +228,8 @@
       "INVALID": "Vérifiez les champs.",
       "INVALID_IBAN": "IBAN invalide.",
       "FORBIDDEN": "Action non autorisée.",
-      "FAILED": "Échec. Réessayez."
+      "FAILED": "Échec. Réessayez.",
+      "CONFIRMATION": "Le nom saisi ne correspond pas au compte."
     },
     "legendOthers": "Autres · {count}"
   },
@@ -293,7 +315,8 @@
       "allSpending": "Toutes les dépenses",
       "otherSpending": "Autres dépenses",
       "catchAllHint": "Une ligne « Toutes catégories / Tous comptes » reprend toutes les dépenses qui n'entrent dans aucune autre ligne.",
-      "hidden": "Catégorie ou compte non visible"
+      "hidden": "Catégorie ou compte non visible",
+      "archivedAccount": "{name} (archivé)"
     },
     "plannedTotal": "Total prévu",
     "save": "Enregistrer",
@@ -478,7 +501,8 @@
       "INVALID": "Vérifiez les champs.",
       "FORBIDDEN": "Action non autorisée.",
       "NOT_FOUND": "Transaction introuvable.",
-      "FAILED": "Échec. Réessayez."
+      "FAILED": "Échec. Réessayez.",
+      "ACCOUNT_ARCHIVED": "Ce compte est archivé : désarchivez-le pour y saisir des transactions."
     },
     "link": {
       "create": "Lier",
@@ -600,7 +624,8 @@
       "UNAUTHORIZED": "Votre session a expiré. Reconnectez-vous.",
       "EMPTY": "Aucune opération trouvée dans ce fichier.",
       "NOT_TEXT": "Ce fichier n'est pas un CSV lisible (fichier binaire ou image ?).",
-      "NOTHING_TO_IMPORT": "Rien à importer : aucune ligne n'est retenue (doublons, lignes décochées, illisibles ou produits ignorés)."
+      "NOTHING_TO_IMPORT": "Rien à importer : aucune ligne n'est retenue (doublons, lignes décochées, illisibles ou produits ignorés).",
+      "ACCOUNT_ARCHIVED": "Ce compte est archivé : désarchivez-le pour y importer des opérations."
     },
     "history": {
       "overline": "Historique",

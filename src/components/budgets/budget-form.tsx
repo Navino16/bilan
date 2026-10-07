@@ -103,7 +103,7 @@ function BudgetFormBody({
   mode,
   budget,
   categories,
-  accounts,
+  accounts: allAccounts,
   groups,
   onDone,
 }: FormProps & { onDone: () => void }) {
@@ -130,6 +130,8 @@ function BudgetFormBody({
   const scopeCategories = groupId
     ? categories.filter((c) => c.groupId === null || c.groupId === groupId)
     : categories;
+  const usedAccountIds = new Set(budget?.lines.map((l) => l.accountId) ?? []);
+  const accounts = allAccounts.filter((a) => !a.archived || usedAccountIds.has(a.id));
   const scopeAccounts = groupId ? accounts.filter((a) => a.groupIds.includes(groupId)) : accounts;
 
   const plannedTotal = useMemo(
@@ -316,7 +318,7 @@ function BudgetFormBody({
                 <option value="">{t("line.anyAccount")}</option>
                 {scopeAccounts.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.name}
+                    {a.archived ? t("line.archivedAccount", { name: a.name }) : a.name}
                   </option>
                 ))}
               </NativeSelect>

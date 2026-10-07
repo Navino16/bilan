@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { db } from "@/server/db";
 import { canWriteAccount } from "@/server/services/accounts/sharing";
+import { isAccountArchived } from "@/server/services/accounts";
 import { logEvent } from "@/server/services/audit";
 import { csvMappingSchema, type CsvMappingInput } from "@/lib/validation/import";
 import { parseCsv, detectMapping, mapRows } from "./csv-parse";
@@ -16,6 +17,12 @@ import type { CsvMapping, ImportPreview, CommitSummary } from "./types";
 
 export { ImportAccessError };
 
+// Rows may only land on an account the actor can write that isn't archived (#174).
+export async function assertImportTarget(userId: string, accountId: string): Promise<void> {
+  if (!(await canWriteAccount(userId, accountId))) throw new ImportAccessError("FORBIDDEN");
+  if (await isAccountArchived(accountId)) throw new ImportAccessError("ACCOUNT_ARCHIVED");
+}
+
 // Creates a PARSING ImportBatch and stores the raw CSV text in `metadata.text`
 // for the subsequent preview/commit. (MVP: text lives in the batch row; for very
 // large files a blob store would be used — out of scope.)
@@ -23,7 +30,7 @@ export async function createCsvBatch(
   input: { accountId: string; filename: string; text: string; fileSizeBytes?: number },
   actor: { id: string },
 ): Promise<{ id: string }> {
-  if (!(await canWriteAccount(actor.id, input.accountId))) throw new ImportAccessError("FORBIDDEN");
+  await assertImportTarget(actor.id, input.accountId);
   const batch = await db.importBatch.create({
     data: {
       accountId: input.accountId,
@@ -111,6 +118,7 @@ export async function commitCsvBatch(
   opts: CommitOptions = {},
 ): Promise<CommitSummary> {
   const batch = await loadBatch(batchId, actor.id);
+  await assertImportTarget(actor.id, batch.accountId);
   const parsedMapping = csvMappingSchema.parse(mapping) as CsvMapping;
   const text = (batch.metadata as { text?: string } | null)?.text ?? "";
   const { rows } = parseCsv(text);

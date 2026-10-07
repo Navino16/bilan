@@ -44,3 +44,14 @@ export const accountInputSchema = z.object({
 // Use the *input* type: `iban`/`bankName` are optional keys callers may omit;
 // the schema's transforms normalise empty strings to `undefined` on parse.
 export type AccountInput = z.input<typeof accountInputSchema>;
+
+const comparableName = (s: string) =>
+  s
+    .normalize("NFKC")
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+
+export function confirmsAccountName(typed: string, name: string): boolean {
+  return comparableName(typed) === comparableName(name);
+}

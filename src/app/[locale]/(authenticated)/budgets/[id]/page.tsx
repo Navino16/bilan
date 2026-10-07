@@ -35,7 +35,7 @@ export default async function BudgetDetailPage({
   const [tree, foreign, accountRows, accountOptions, groupRows] = await Promise.all([
     listForUser(user.id),
     listForeignCategories(user.id),
-    listVisibleForUser(user.id),
+    listVisibleForUser(user.id, { includeArchived: true }),
     listBudgetAccountOptions(user.id),
     listGroupsForUser(user.id),
   ]);

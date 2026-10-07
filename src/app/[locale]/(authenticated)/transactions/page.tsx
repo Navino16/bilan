@@ -54,7 +54,7 @@ export default async function TransactionsPage({
     }),
     listForUser(user.id),
     listForeignCategories(user.id),
-    listVisibleForUser(user.id),
+    listVisibleForUser(user.id, { includeArchived: true }),
     listLinkedTxIds(user.id),
     listAssignableBudgets(user.id),
   ]);
@@ -68,7 +68,7 @@ export default async function TransactionsPage({
     bankName: a.bankName,
     writable: a.access !== "READ",
   }));
-  const formAccounts = accounts.map((a) => ({ id: a.id, name: a.name }));
+  const formAccounts = accounts.filter((a) => !a.archived).map((a) => ({ id: a.id, name: a.name }));
   const allItems: ListItem[] = items.map((i) => ({
     id: i.id,
     date: i.date.toISOString(),
@@ -102,7 +102,7 @@ export default async function TransactionsPage({
             >
               {t("suggestions.open")}
             </Link>
-            {accountOptions.length === 0 ? (
+            {formAccounts.length === 0 ? (
               <Button disabled>
                 <Plus />
                 {t("create")}
