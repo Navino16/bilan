@@ -9,8 +9,11 @@ import { JoinByCode } from "@/components/groups/join-by-code";
 import { PendingInvitations } from "@/components/groups/pending-invitations";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shell/page-header";
+import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
+
+export const generateMetadata = pageTitle("groups");
 
 export default async function GroupsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;

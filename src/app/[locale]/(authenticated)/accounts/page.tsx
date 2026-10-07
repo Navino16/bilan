@@ -9,8 +9,11 @@ import { AccountList } from "@/components/accounts/account-list";
 import { AccountForm } from "@/components/accounts/account-form";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shell/page-header";
+import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
+
+export const generateMetadata = pageTitle("accounts");
 
 export default async function AccountsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;

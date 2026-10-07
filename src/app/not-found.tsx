@@ -13,6 +13,7 @@ export default function RootNotFound() {
         title={e.notFound.title}
         message={e.notFound.message}
         action={{ href: "/fr/dashboard", label: e.back }}
+        documentTitle={`${fr.meta.titles.notFound} · Bilan`}
       />
     </DocumentShell>
   );

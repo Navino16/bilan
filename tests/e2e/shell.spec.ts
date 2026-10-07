@@ -94,3 +94,88 @@ test.describe("user menu", () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 });
+
+test.describe("deep links", () => {
+  test.skip(
+    ({ browserName }) => browserName === "webkit",
+    "Playwright WebKit doesn't deliver taps in this env (project-wide skip)",
+  );
+
+  const signIn = async (page: import("@playwright/test").Page) => {
+    await page.fill('input[name="email"]', "owner@e2e.local");
+    await page.fill('input[name="password"]', "e2e-owner-pw-123456");
+    await page.click('button[type="submit"]');
+  };
+
+  test("a signed-out deep link survives the password login", async ({ page }) => {
+    await page.goto("/fr/transactions?month=2026-09");
+    await expect(page).toHaveURL(
+      /\/fr\/login\?callbackUrl=%2Ffr%2Ftransactions%3Fmonth%3D2026-09$/,
+    );
+    await signIn(page);
+    await expect(page).toHaveURL(/\/fr\/transactions\?month=2026-09$/, { timeout: 15_000 });
+    await expect(page).toHaveTitle("Transactions · Bilan");
+  });
+
+  test("a stale session cookie still keeps the deep link", async ({ page, context, baseURL }) => {
+    await context.addCookies([
+      { name: "better-auth.session_token", value: "stale.token", url: baseURL! },
+    ]);
+    await page.goto("/fr/accounts?tab=archived");
+    await expect(page).toHaveURL(/\/fr\/login\?callbackUrl=%2Ffr%2Faccounts%3Ftab%3Darchived$/);
+  });
+
+  test("an off-site callbackUrl falls back to the dashboard", async ({ page, baseURL }) => {
+    await page.goto("/fr/login?callbackUrl=%2F%2Fevil.example%2Ffr%2Fdashboard");
+    await signIn(page);
+    await expect(page).toHaveURL(`${baseURL}/fr/dashboard`, { timeout: 15_000 });
+  });
+
+  test("the password field can be revealed", async ({ page }) => {
+    await page.goto("/fr/login");
+    const password = page.locator('input[name="password"]');
+    await expect(password).toHaveAttribute("type", "password");
+    await page.getByRole("button", { name: "Afficher le mot de passe" }).click();
+    await expect(password).toHaveAttribute("type", "text");
+  });
+});
+
+test.describe("shell chrome", () => {
+  test.use({ storageState: "tests/e2e/.auth/owner.json" });
+  test.skip(
+    ({ browserName }) => browserName === "webkit",
+    "Playwright WebKit doesn't deliver taps in this env (project-wide skip)",
+  );
+
+  test("switching language keeps the query string", async ({ page }) => {
+    await page.goto("/fr/transactions?month=2026-09");
+    await page.getByRole("button", { name: "Switch language to en" }).click();
+    await expect(page).toHaveURL(/\/en\/transactions\?month=2026-09$/);
+    await expect(page).toHaveTitle("Transactions · Bilan");
+  });
+
+  test("the desktop sidebar stays in view while the page scrolls", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 600 });
+    await page.goto("/fr/dashboard");
+    // Guarantees a scrollable page whatever the fixture data.
+    await page.locator("main").evaluate((main) => {
+      const spacer = document.createElement("div");
+      spacer.style.height = "3000px";
+      main.append(spacer);
+    });
+    await page.evaluate(() => window.scrollTo(0, 2000));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(300);
+    const top = await page.locator("aside").evaluate((el) => el.getBoundingClientRect().top);
+    expect(Math.abs(top)).toBeLessThan(1);
+  });
+
+  test("the mobile drawer scrolls and exposes sign-out at 320x640", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.goto("/fr/insights");
+    const tabs = page.getByRole("navigation", { name: /bottom/i });
+    await expect(tabs.locator('[aria-current="page"]')).toHaveText("Accueil");
+    await page.getByRole("button", { name: "Ouvrir le menu" }).click();
+    await expect(page.getByRole("button", { name: "Se déconnecter" })).toBeInViewport();
+    await expect(page.getByRole("dialog").getByText("owner@e2e.local")).toBeVisible();
+  });
+});

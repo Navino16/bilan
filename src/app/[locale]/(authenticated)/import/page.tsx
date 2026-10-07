@@ -6,8 +6,11 @@ import { flattenCategories } from "@/components/transactions/category-tree";
 import { ImportWizard } from "@/components/import/import-wizard";
 import { ImportHistory } from "@/components/import/import-history";
 import { listRecentImports } from "@/server/services/imports/revert";
+import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
+
+export const generateMetadata = pageTitle("import");
 
 export default async function ImportPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;

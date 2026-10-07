@@ -5,9 +5,12 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getCurrentUser } from "@/server/auth/permissions";
 import { appSettings } from "@/server/services/settings/app-settings";
 import { RegisterForm } from "@/components/auth/register-form";
+import { pageTitle } from "@/i18n/metadata";
 
 // Reads the session (DB) to bounce already-authenticated users, so it must be dynamic.
 export const dynamic = "force-dynamic";
+
+export const generateMetadata = pageTitle("register");
 
 export default async function RegisterPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;

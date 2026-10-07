@@ -97,6 +97,10 @@
         "invalid": "Check the password (at least 12 characters)."
       },
       "requestAgain": "Request a new link"
+    },
+    "passwordVisibility": {
+      "show": "Show password",
+      "hide": "Hide password"
     }
   },
   "errors": {
@@ -120,7 +124,7 @@
     }
   },
   "shell": {
-    "tagline": "Finances · 2026",
+    "tagline": "Finances · {year}",
     "themeToggle": "Dark theme",
     "openMenu": "Open menu",
     "groups": {
@@ -140,6 +144,13 @@
       "security": "Security",
       "data": "Data",
       "admin": "Administration"
+    },
+    "tabs": {
+      "dashboard": "Home",
+      "transactions": "Activity",
+      "budgets": "Budgets",
+      "accounts": "Accounts",
+      "categories": "Categories"
     },
     "userMenu": {
       "open": "Account menu",
@@ -1482,19 +1493,6 @@
       "SUPER_ADMIN": "Super admin"
     }
   },
-  "home": {
-    "intro": "Bilan is a self-hosted personal finance app — multi-account, multi-household.",
-    "themeToggleLabel": "Dark theme",
-    "languageHint": "Switch language by visiting /fr or /en.",
-    "previewHeading": "Design system preview",
-    "balanceLabel": "Current balance",
-    "expenseLabel": "Month expenses",
-    "incomeLabel": "Month income",
-    "demoButton": "Primary action",
-    "demoButtonSecondary": "Secondary",
-    "demoBadgeIncome": "Income",
-    "demoBadgeExpense": "Expense"
-  },
   "setup": {
     "title": "Welcome to Bilan",
     "subtitle": "Let's set up your instance. It only takes a minute.",
@@ -1568,6 +1566,40 @@
           "description": "Only an admin can create accounts."
         }
       }
+    }
+  },
+  "meta": {
+    "titles": {
+      "dashboard": "Dashboard",
+      "insights": "Insights",
+      "transactions": "Transactions",
+      "suggestions": "Category suggestions",
+      "import": "Import",
+      "importCsv": "CSV import",
+      "importPdf": "PDF import",
+      "budgets": "Budgets",
+      "budget": "Budget",
+      "accounts": "Accounts",
+      "categories": "Categories",
+      "groups": "Households",
+      "group": "Household",
+      "joinGroup": "Join a household",
+      "security": "Security",
+      "data": "Data",
+      "admin": "Administration",
+      "adminUsers": "Users · Administration",
+      "adminSignupTokens": "Invitation tokens · Administration",
+      "adminAuthProviders": "Auth providers · Administration",
+      "adminSmtp": "SMTP · Administration",
+      "adminAppSettings": "Settings · Administration",
+      "adminAudit": "Audit log · Administration",
+      "login": "Sign in",
+      "register": "Sign up",
+      "reset": "Forgot password",
+      "resetConfirm": "New password",
+      "setup": "Setup",
+      "forbidden": "Access denied",
+      "notFound": "Page not found"
     }
   }
 }

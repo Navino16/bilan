@@ -97,6 +97,10 @@
         "invalid": "Vérifiez le mot de passe (12 caractères minimum)."
       },
       "requestAgain": "Demander un nouveau lien"
+    },
+    "passwordVisibility": {
+      "show": "Afficher le mot de passe",
+      "hide": "Masquer le mot de passe"
     }
   },
   "errors": {
@@ -120,7 +124,7 @@
     }
   },
   "shell": {
-    "tagline": "Finances · 2026",
+    "tagline": "Finances · {year}",
     "themeToggle": "Thème sombre",
     "openMenu": "Ouvrir le menu",
     "groups": {
@@ -140,6 +144,13 @@
       "security": "Sécurité",
       "data": "Données",
       "admin": "Administration"
+    },
+    "tabs": {
+      "dashboard": "Accueil",
+      "transactions": "Transac.",
+      "budgets": "Budgets",
+      "accounts": "Comptes",
+      "categories": "Catégories"
     },
     "userMenu": {
       "open": "Menu du compte",
@@ -1482,19 +1493,6 @@
       "SUPER_ADMIN": "Super admin"
     }
   },
-  "home": {
-    "intro": "Bilan est une app personnelle de finances, multi-comptes et multi-foyers, auto-hébergée.",
-    "themeToggleLabel": "Thème sombre",
-    "languageHint": "Changez la langue en visitant /fr ou /en.",
-    "previewHeading": "Aperçu du système de design",
-    "balanceLabel": "Solde courant",
-    "expenseLabel": "Dépenses du mois",
-    "incomeLabel": "Revenus du mois",
-    "demoButton": "Action principale",
-    "demoButtonSecondary": "Secondaire",
-    "demoBadgeIncome": "Revenu",
-    "demoBadgeExpense": "Dépense"
-  },
   "setup": {
     "title": "Bienvenue dans Bilan",
     "subtitle": "Configurons votre instance. Cela ne prend qu'une minute.",
@@ -1568,6 +1566,40 @@
           "description": "Seul un administrateur peut créer des comptes."
         }
       }
+    }
+  },
+  "meta": {
+    "titles": {
+      "dashboard": "Tableau de bord",
+      "insights": "Analyses",
+      "transactions": "Transactions",
+      "suggestions": "Suggestions de catégories",
+      "import": "Importer",
+      "importCsv": "Import CSV",
+      "importPdf": "Import PDF",
+      "budgets": "Budgets",
+      "budget": "Budget",
+      "accounts": "Comptes",
+      "categories": "Catégories",
+      "groups": "Foyers",
+      "group": "Foyer",
+      "joinGroup": "Rejoindre un foyer",
+      "security": "Sécurité",
+      "data": "Données",
+      "admin": "Administration",
+      "adminUsers": "Utilisateurs · Administration",
+      "adminSignupTokens": "Jetons d'invitation · Administration",
+      "adminAuthProviders": "Fournisseurs d'authentification · Administration",
+      "adminSmtp": "SMTP · Administration",
+      "adminAppSettings": "Paramètres · Administration",
+      "adminAudit": "Journal d'audit · Administration",
+      "login": "Connexion",
+      "register": "Inscription",
+      "reset": "Mot de passe oublié",
+      "resetConfirm": "Nouveau mot de passe",
+      "setup": "Installation",
+      "forbidden": "Accès refusé",
+      "notFound": "Page introuvable"
     }
   }
 }

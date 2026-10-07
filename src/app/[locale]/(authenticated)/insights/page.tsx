@@ -5,8 +5,11 @@ import { flattenCategories } from "@/components/transactions/category-tree";
 import { getCategoryHistory, getInsights } from "@/server/services/dashboard/insights";
 import { parsePeriodParams, clampPeriodToNow, parseBaseline, comparisonFor } from "@/lib/period";
 import { InsightsView } from "@/components/insights/insights-view";
+import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
+
+export const generateMetadata = pageTitle("insights");
 
 export default async function InsightsPage({
   params,

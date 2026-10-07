@@ -7,8 +7,11 @@ import { getMerchantDirectory } from "@/server/services/merchants";
 import { flattenCategories } from "@/components/transactions/category-tree";
 import { CategoriesView } from "@/components/categories/categories-view";
 import type { RuleMatchType } from "@/lib/validation/rule";
+import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
+
+export const generateMetadata = pageTitle("categories");
 
 export default async function CategoriesPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;

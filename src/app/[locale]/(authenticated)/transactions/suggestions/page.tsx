@@ -5,8 +5,11 @@ import { requireSession } from "@/server/auth/permissions";
 import { suggestPairs } from "@/server/services/links";
 import { SuggestionsList } from "@/components/transactions/suggestions-list";
 import { PageHeader } from "@/components/shell/page-header";
+import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
+
+export const generateMetadata = pageTitle("suggestions");
 
 export default async function SuggestionsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;

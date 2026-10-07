@@ -5,12 +5,14 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { hasLocale } from "next-intl";
 import { locales } from "@/i18n/config";
 import { DocumentShell } from "@/components/shell/document-shell";
+import { THEME_COLOR } from "@/lib/theme";
+import { currentTheme } from "@/server/theme";
 import { getAppName } from "@/server/services/settings/app-settings";
 
 export async function generateMetadata(): Promise<Metadata> {
   const appName = await getAppName();
   return {
-    title: appName,
+    title: { default: appName, template: `%s · ${appName}` },
     description: "Self-hosted multi-user personal finance app",
     manifest: "/manifest.webmanifest",
     appleWebApp: { capable: true, statusBarStyle: "default", title: appName },
@@ -18,15 +20,21 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f4ed" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f1114" },
-  ],
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-};
+export async function generateViewport(): Promise<Viewport> {
+  const theme = await currentTheme();
+  return {
+    themeColor:
+      theme === "system"
+        ? [
+            { media: "(prefers-color-scheme: light)", color: THEME_COLOR.light },
+            { media: "(prefers-color-scheme: dark)", color: THEME_COLOR.dark },
+          ]
+        : THEME_COLOR[theme],
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
+  };
+}
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));

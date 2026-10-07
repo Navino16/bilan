@@ -1,8 +1,11 @@
 import { requirePermission } from "@/server/auth/permissions";
 import { appSettings } from "@/server/services/settings/app-settings";
 import { AppSettingsForm } from "@/components/admin/app-settings-form";
+import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
+
+export const generateMetadata = pageTitle("adminAppSettings");
 
 export default async function AdminAppSettingsPage() {
   await requirePermission("admin.settings.write");

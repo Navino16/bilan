@@ -13,6 +13,7 @@ test.describe("error pages", () => {
     });
     expect(res?.status()).toBe(404);
     await expect(page.getByRole("heading", { level: 1, name: /page introuvable/i })).toBeVisible();
+    await expect(page).toHaveTitle("Page introuvable · Bilan");
   });
 
   test("a top-level path bypassing the locale proxy renders the themed root 404", async ({

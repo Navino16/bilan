@@ -11,8 +11,11 @@ import { SessionsControls } from "@/components/settings/sessions-controls";
 import { TwoFactorControls } from "@/components/settings/two-factor-controls";
 import { PageHeader } from "@/components/shell/page-header";
 import { SectionCard } from "@/components/shell/section-card";
+import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
+
+export const generateMetadata = pageTitle("security");
 
 export default async function SecuritySettingsPage({
   params,

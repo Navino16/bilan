@@ -64,5 +64,5 @@ test.describe("import wizard", () => {
 
 test("unauthenticated /import redirects to login", async ({ page }) => {
   await page.goto("/fr/import");
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/login\?callbackUrl=%2Ffr%2Fimport$/);
 });

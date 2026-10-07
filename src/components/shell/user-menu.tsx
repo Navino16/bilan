@@ -1,7 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -12,20 +11,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { signOut } from "@/lib/auth-client";
+import { useSignOut } from "./use-sign-out";
+import { userDisplay, type ShellUser } from "./user-identity";
 
-export function UserMenu({ user }: { user: { name?: string | null; email: string } }) {
+export function UserMenu({ user }: { user: ShellUser }) {
   const t = useTranslations("shell.userMenu");
-  const locale = useLocale();
-  const router = useRouter();
-  const display = user.name?.trim() || user.email;
-  const initials = display.slice(0, 2).toUpperCase();
-
-  async function handleSignOut() {
-    await signOut();
-    router.push(`/${locale}/login`);
-    router.refresh();
-  }
+  const handleSignOut = useSignOut();
+  const { display, initials } = userDisplay(user);
 
   return (
     <DropdownMenu>

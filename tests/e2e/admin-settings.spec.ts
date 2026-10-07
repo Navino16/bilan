@@ -50,7 +50,7 @@ test.describe("admin settings", () => {
     try {
       await saveName("Maison E2E");
       await page.goto("/fr/dashboard");
-      await expect(page).toHaveTitle("Maison E2E");
+      await expect(page).toHaveTitle("Tableau de bord · Maison E2E");
       await expect(page.locator("aside").getByRole("link", { name: "Maison E2E" })).toBeVisible();
     } finally {
       await saveName("Bilan");

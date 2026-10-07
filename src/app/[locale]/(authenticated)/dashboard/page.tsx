@@ -6,8 +6,11 @@ import { getDashboard } from "@/server/services/dashboard";
 import { getCurrentBudget } from "@/server/services/budgets";
 import { parsePeriodParams, clampPeriodToNow, parseBaseline, comparisonFor } from "@/lib/period";
 import { DashboardView } from "@/components/dashboard/dashboard-view";
+import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
+
+export const generateMetadata = pageTitle("dashboard");
 
 export default async function DashboardPage({
   params,

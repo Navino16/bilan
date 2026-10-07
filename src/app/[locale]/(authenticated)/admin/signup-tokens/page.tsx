@@ -9,6 +9,7 @@ import { SectionCard, listHeader } from "@/components/shell/section-card";
 import { LocalDateTime } from "@/components/shell/local-date-time";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,8 @@ const STATUS_KEY: Record<SignupTokenStatus, string> = {
 };
 
 const cols = "md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_90px_minmax(0,1fr)_90px_72px]";
+
+export const generateMetadata = pageTitle("adminSignupTokens");
 
 export default async function AdminSignupTokensPage({
   params,

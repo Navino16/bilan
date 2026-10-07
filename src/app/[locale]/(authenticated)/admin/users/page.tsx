@@ -13,10 +13,13 @@ import { SectionCard, listHeader } from "@/components/shell/section-card";
 import { Pager } from "@/components/shell/pager";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
 
 const cols = "md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_140px_32px]";
+
+export const generateMetadata = pageTitle("adminUsers");
 
 export default async function AdminUsersPage({
   params,

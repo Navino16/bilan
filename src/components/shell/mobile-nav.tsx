@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Menu } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Button } from "@/components/ui/button";
+import type { Theme } from "@/lib/theme";
 import {
   Sheet,
   SheetContent,
@@ -15,10 +17,25 @@ import {
 } from "@/components/ui/sheet";
 import { ACCOUNT_NAV, WORKSPACE_NAV } from "./nav-items";
 import { NavLink } from "./nav-link";
+import { useSignOut } from "./use-sign-out";
+import { UserIdentity, type ShellUser } from "./user-identity";
 
-export function MobileNav({ canAdmin, appName }: { canAdmin: boolean; appName: string }) {
+export function MobileNav({
+  user,
+  canAdmin,
+  appName,
+  year,
+  theme,
+}: {
+  user: ShellUser;
+  canAdmin: boolean;
+  appName: string;
+  year: number;
+  theme: Theme;
+}) {
   const [open, setOpen] = useState(false);
   const t = useTranslations("shell");
+  const signOut = useSignOut();
   const accountItems = ACCOUNT_NAV.filter((item) => !item.permission || canAdmin);
   const close = () => setOpen(false);
 
@@ -31,14 +48,14 @@ export function MobileNav({ canAdmin, appName }: { canAdmin: boolean; appName: s
         <Menu className="h-5 w-5" />
       </SheetTrigger>
       <SheetContent side="left" className="bg-sidebar flex w-72 flex-col gap-0 p-0">
-        <SheetHeader className="px-5 py-6 text-left">
+        <SheetHeader className="shrink-0 px-5 py-6 text-left">
           <SheetTitle className="font-display text-2xl tracking-tight">{appName}</SheetTitle>
           <SheetDescription className="text-[10px] tracking-[0.12em] uppercase">
-            {t("tagline")}
+            {t("tagline", { year: String(year) })}
           </SheetDescription>
         </SheetHeader>
 
-        <nav className="flex-1 space-y-6 px-3">
+        <nav className="min-h-0 flex-1 space-y-6 overflow-y-auto px-3 pb-4">
           <div className="space-y-1">
             <p className="text-muted-foreground px-3 pb-1 text-[11px] font-medium tracking-wide uppercase">
               {t("groups.workspace")}
@@ -57,9 +74,25 @@ export function MobileNav({ canAdmin, appName }: { canAdmin: boolean; appName: s
           </div>
         </nav>
 
-        <div className="border-border flex items-center justify-between gap-3 border-t px-5 py-4">
-          <ThemeToggle label={t("themeToggle")} />
-          <LanguageSwitcher />
+        <div className="border-border shrink-0 space-y-3 border-t px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <UserIdentity user={user} />
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={signOut}
+              aria-label={t("userMenu.logout")}
+              title={t("userMenu.logout")}
+            >
+              <LogOut />
+            </Button>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <ThemeToggle label={t("themeToggle")} theme={theme} />
+            <LanguageSwitcher />
+          </div>
         </div>
       </SheetContent>
     </Sheet>

@@ -21,8 +21,11 @@ import { TransactionForm } from "@/components/transactions/transaction-form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/shell/page-header";
+import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
+
+export const generateMetadata = pageTitle("transactions");
 
 export default async function TransactionsPage({
   params,

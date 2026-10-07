@@ -4,7 +4,7 @@ import { test, expect } from "@playwright/test";
 // authenticated area (here /admin) to /login before the layout guard runs.
 test("unauthenticated access to /admin redirects to login", async ({ page }) => {
   await page.goto("/fr/admin");
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/login\?callbackUrl=%2Ffr%2Fadmin$/);
 });
 
 test.describe("non-admin forbidden", () => {

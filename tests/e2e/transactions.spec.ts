@@ -111,5 +111,5 @@ test.describe("transactions", () => {
 
 test("unauthenticated /transactions redirects to login", async ({ page }) => {
   await page.goto("/fr/transactions");
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/login\?callbackUrl=%2Ffr%2Ftransactions$/);
 });

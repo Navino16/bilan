@@ -84,5 +84,5 @@ test.describe("categories", () => {
 
 test("unauthenticated /categories redirects to login", async ({ page }) => {
   await page.goto("/fr/categories");
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/login\?callbackUrl=%2Ffr%2Fcategories$/);
 });

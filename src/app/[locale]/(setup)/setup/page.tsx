@@ -3,10 +3,13 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { db } from "@/server/db";
 import { env } from "@/env";
 import { Stepper } from "@/components/setup/stepper";
+import { pageTitle } from "@/i18n/metadata";
 
 // Depends on runtime DB state (User.count), so it must never be statically
 // prerendered at build time (no DB available then).
 export const dynamic = "force-dynamic";
+
+export const generateMetadata = pageTitle("setup");
 
 export default async function SetupPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;

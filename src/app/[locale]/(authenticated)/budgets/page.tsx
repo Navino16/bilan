@@ -5,8 +5,11 @@ import { listForUser } from "@/server/services/categories";
 import { listGroupsForUser } from "@/server/services/groups";
 import { categoryOptions } from "@/components/categories/category-options";
 import { BudgetsView } from "@/components/budgets/budgets-view";
+import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
+
+export const generateMetadata = pageTitle("budgets");
 
 export default async function BudgetsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;

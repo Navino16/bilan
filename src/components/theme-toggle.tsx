@@ -2,23 +2,44 @@
 
 import { useEffect, useState } from "react";
 import { Switch } from "@/components/ui/switch";
-import { THEME_COOKIE } from "@/lib/theme";
+import { THEME_COLOR, THEME_COOKIE, type Theme } from "@/lib/theme";
 
-export function ThemeToggle({ label }: { label: string }) {
-  // The server set the `.dark` class on <html> from the theme cookie; read it
-  // back from the DOM so the Switch reflects the current theme on mount.
-  const [isDark, setIsDark] = useState(false);
+const OS_DARK = "(prefers-color-scheme: dark)";
+
+function effectiveDark(): boolean {
+  const root = document.documentElement.classList;
+  if (root.contains("dark")) return true;
+  if (root.contains("light")) return false;
+  return window.matchMedia(OS_DARK).matches;
+}
+
+function setThemeColor(color: string) {
+  // Updated in place rather than removed: the tags are React-managed.
+  for (const meta of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) {
+    meta.removeAttribute("media");
+    meta.content = color;
+  }
+}
+
+export function ThemeToggle({ label, theme }: { label: string; theme: Theme }) {
+  const [isDark, setIsDark] = useState(theme === "dark");
 
   useEffect(() => {
+    if (theme !== "system") return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsDark(document.documentElement.classList.contains("dark"));
-  }, []);
+    setIsDark(effectiveDark());
+    const media = window.matchMedia(OS_DARK);
+    const sync = () => setIsDark(effectiveDark());
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, [theme]);
 
   function toggle(next: boolean) {
     setIsDark(next);
-    document.documentElement.classList.toggle("dark", next);
-    // Persist for one year; the server reads this cookie on the next request to
-    // SSR the right theme with no flash.
+    const root = document.documentElement.classList;
+    root.toggle("dark", next);
+    root.toggle("light", !next);
+    setThemeColor(next ? THEME_COLOR.dark : THEME_COLOR.light);
     document.cookie = `${THEME_COOKIE}=${next ? "dark" : "light"}; path=/; max-age=31536000; samesite=lax`;
   }
 
