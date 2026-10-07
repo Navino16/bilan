@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseAmount } from "@/lib/amount";
 
 export const TRANSACTION_TYPES = [
   "CARD",
@@ -17,7 +18,7 @@ export const transactionInputSchema = z.object({
   amount: z
     .union([z.string(), z.number()])
     .transform((v) => {
-      const n = typeof v === "number" ? v : Number(String(v).replace(/\s/g, "").replace(",", "."));
+      const n = parseAmount(v);
       return Math.round(n * 100) / 100;
     })
     .refine((n) => Number.isFinite(n) && Math.abs(n) < 1e10, { message: "Invalid amount" }),

@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { budgetPlannedTotal, lineStatus, nextPeriod } from "@/lib/budgets";
+import { budgetPlannedTotal, lineStatus, nextPeriod, periodEndFor } from "@/lib/budgets";
+import { parseAmount } from "@/lib/amount";
+import { budgetLineSchema } from "@/lib/validation/budget";
 
 describe("budgetPlannedTotal", () => {
   it("sums line planned amounts, rounded to cents", () => {
@@ -71,14 +73,55 @@ describe("nextPeriod", () => {
     expect(p.start.toISOString()).toBe("2026-03-09T00:00:00.000Z");
     expect(p.end.toISOString()).toBe("2026-03-15T23:59:59.999Z");
   });
-  it("shifts a MONTH with non-calendar bounds by its span (no gap/overlap)", () => {
-    // 15 Jan – 14 Feb (31-day window) is not a calendar month → span-preserving.
+  it("rolls a MONTH with non-calendar bounds to the next month without drifting", () => {
     const p = nextPeriod(
       "MONTH",
       new Date("2026-01-15T00:00:00.000Z"),
       new Date("2026-02-14T23:59:59.999Z"),
     );
     expect(p.start.toISOString()).toBe("2026-02-15T00:00:00.000Z");
-    expect(p.end.toISOString()).toBe("2026-03-17T23:59:59.999Z");
+    expect(p.end.toISOString()).toBe("2026-03-14T23:59:59.999Z");
+  });
+  it("shifts CUSTOM by the window length", () => {
+    const p = nextPeriod(
+      "CUSTOM",
+      new Date("2026-03-01T00:00:00.000Z"),
+      new Date("2026-03-10T23:59:59.999Z"),
+    );
+    expect(p.start.toISOString()).toBe("2026-03-11T00:00:00.000Z");
+    expect(p.end.toISOString()).toBe("2026-03-20T23:59:59.999Z");
+  });
+});
+
+describe("periodEndFor", () => {
+  it("derives the end of typed periods", () => {
+    expect(periodEndFor("WEEK", "2026-03-02")).toBe("2026-03-08");
+    expect(periodEndFor("MONTH", "2026-03-01")).toBe("2026-03-31");
+    expect(periodEndFor("MONTH", "2026-03-15")).toBe("2026-04-14");
+    expect(periodEndFor("MONTH", "2026-01-31")).toBe("2026-02-28");
+    expect(periodEndFor("MONTH", "2026-01-28")).toBe("2026-02-27");
+    expect(periodEndFor("QUARTER", "2026-01-01")).toBe("2026-03-31");
+    expect(periodEndFor("YEAR", "2025-12-01")).toBe("2026-11-30");
+  });
+
+  it("is null for CUSTOM or an invalid date", () => {
+    expect(periodEndFor("CUSTOM", "2026-03-01")).toBeNull();
+    expect(periodEndFor("MONTH", "2026-02-30")).toBeNull();
+    expect(periodEndFor("MONTH", "")).toBeNull();
+  });
+});
+
+describe("parseAmount / budget line amount", () => {
+  it("accepts a decimal comma and grouping spaces", () => {
+    expect(parseAmount("300,5")).toBe(300.5);
+    expect(parseAmount("1\u202f234,56")).toBe(1234.56);
+    expect(parseAmount("12.5")).toBe(12.5);
+    expect(parseAmount("")).toBeNaN();
+  });
+
+  it("stores 300,5 as 300.5, not 3005", () => {
+    expect(budgetLineSchema.parse({ plannedAmount: "300,5" }).plannedAmount).toBe(300.5);
+    expect(budgetLineSchema.safeParse({ plannedAmount: "abc" }).success).toBe(false);
+    expect(budgetLineSchema.safeParse({ plannedAmount: "-1" }).success).toBe(false);
   });
 });

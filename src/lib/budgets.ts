@@ -40,44 +40,58 @@ export function lineStatus(plannedAmount: number, spent: number): LineStatus {
 const DAY = 86_400_000;
 const lastDayUtc = (y: number, m0: number) => new Date(Date.UTC(y, m0 + 1, 0)).getUTCDate();
 
-// The period immediately after [start, end] for a budget of the given type.
-// MONTH/QUARTER/YEAR step by calendar unit **only when the bounds are actually
-// calendar-aligned** (1st 00:00:00.000 → last-day 23:59:59.999); otherwise —
-// like WEEK/CUSTOM — they shift by the window length so the span is preserved
-// and consecutive instances neither gap nor overlap. Bounds stay UTC-inclusive.
+const PERIOD_MONTHS: Partial<Record<BudgetPeriodType, number>> = { MONTH: 1, QUARTER: 3, YEAR: 12 };
+
+// Date.UTC maps years 0–99 to 1900–1999; setUTCFullYear doesn't.
+function utcDay(y: number, m0: number, d: number): number {
+  const date = new Date(0);
+  date.setUTCFullYear(y, m0, d);
+  return date.getTime();
+}
+
+const isoDay = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+
+// Last day (YYYY-MM-DD) of a WEEK/MONTH/QUARTER/YEAR period starting on
+// `startDay`; null for CUSTOM or an invalid date. A month-type period ends the
+// day before the same day-of-month N months later, or at the end of that month
+// when it is too short (31 Jan → 28 Feb).
+export function periodEndFor(periodType: BudgetPeriodType, startDay: string): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(startDay);
+  if (!m || periodType === "CUSTOM") return null;
+  const [y, m0, d] = [Number(m[1]), Number(m[2]) - 1, Number(m[3])];
+  const start = utcDay(y, m0, d);
+  if (new Date(start).getUTCDate() !== d) return null;
+  let next: number;
+  if (periodType === "WEEK") {
+    next = start + 7 * DAY;
+  } else {
+    const target = m0 + PERIOD_MONTHS[periodType]!;
+    next = d > lastDayUtc(y, target) ? utcDay(y, target + 1, 1) : utcDay(y, target, d);
+  }
+  return isoDay(next - DAY);
+}
+
+// The period immediately after [start, end]: a typed period starts the day
+// after `end` and spans its type again; a CUSTOM one shifts by its length in
+// whole days. Bounds stay UTC-inclusive.
 export function nextPeriod(
   periodType: BudgetPeriodType,
   start: Date,
   end: Date,
 ): { start: Date; end: Date } {
-  if (periodType === "MONTH" || periodType === "QUARTER" || periodType === "YEAR") {
-    const months = periodType === "MONTH" ? 1 : periodType === "QUARTER" ? 3 : 12;
-    const y = start.getUTCFullYear();
-    const m0 = start.getUTCMonth();
-    // Is [start, end] exactly the calendar block of `months` starting this month?
-    const lastZero = y * 12 + m0 + months - 1;
-    const ly = Math.floor(lastZero / 12);
-    const lm0 = ((lastZero % 12) + 12) % 12;
-    const alignedStart = Date.UTC(y, m0, 1, 0, 0, 0, 0);
-    const alignedEnd = Date.UTC(ly, lm0, lastDayUtc(ly, lm0), 23, 59, 59, 999);
-    if (start.getTime() === alignedStart && end.getTime() === alignedEnd) {
-      const zeroFrom = y * 12 + m0 + months;
-      const zeroTo = zeroFrom + months - 1;
-      const sy = Math.floor(zeroFrom / 12);
-      const sm0 = ((zeroFrom % 12) + 12) % 12;
-      const ey = Math.floor(zeroTo / 12);
-      const em0 = ((zeroTo % 12) + 12) % 12;
-      return {
-        start: new Date(Date.UTC(sy, sm0, 1, 0, 0, 0, 0)),
-        end: new Date(Date.UTC(ey, em0, lastDayUtc(ey, em0), 23, 59, 59, 999)),
-      };
-    }
-    // Non-calendar bounds → fall through to the span-preserving shift.
+  if (periodType !== "CUSTOM") {
+    const startDay = isoDay(
+      utcDay(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()) + DAY,
+    );
+    const endDay = periodEndFor(periodType, startDay)!;
+    return {
+      start: new Date(`${startDay}T00:00:00.000Z`),
+      end: new Date(`${endDay}T23:59:59.999Z`),
+    };
   }
-  // WEEK / CUSTOM (and non-aligned M/Q/Y) → shift both bounds by the window
-  // length in whole days.
   const lengthDays = Math.round((end.getTime() - start.getTime() + 1) / DAY);
-  const nextStart = new Date(start.getTime() + lengthDays * DAY);
-  const nextEnd = new Date(end.getTime() + lengthDays * DAY);
-  return { start: nextStart, end: nextEnd };
+  return {
+    start: new Date(start.getTime() + lengthDays * DAY),
+    end: new Date(end.getTime() + lengthDays * DAY),
+  };
 }

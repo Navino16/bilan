@@ -285,7 +285,12 @@
       "planned": "Montant prévu",
       "add": "Ajouter une ligne",
       "remove": "Retirer",
-      "any": "Toutes"
+      "anyCategory": "Toutes catégories",
+      "anyAccount": "Tous comptes",
+      "allSpending": "Toutes les dépenses",
+      "otherSpending": "Autres dépenses",
+      "catchAllHint": "Une ligne « Toutes catégories / Tous comptes » reprend toutes les dépenses qui n'entrent dans aucune autre ligne.",
+      "hidden": "Catégorie ou compte non visible"
     },
     "plannedTotal": "Total prévu",
     "save": "Enregistrer",
@@ -299,7 +304,9 @@
       "INVALID_PERIOD": "La fin doit suivre le début.",
       "FORBIDDEN": "Action non autorisée.",
       "NOT_FOUND": "Budget introuvable.",
-      "FAILED": "Échec. Réessayez."
+      "FAILED": "Échec. Réessayez.",
+      "PERIOD_MISMATCH": "Les dates ne correspondent pas au type de période choisi.",
+      "INVALID_LINE": "Une ligne utilise une catégorie ou un compte non disponible pour ce budget."
     },
     "status": {
       "OK": "Dans le budget",
@@ -324,9 +331,11 @@
       "modeEXCLUDE": "Exclue"
     },
     "roll": "Renouveler",
-    "rolledOk": "Instance créée.",
+    "rolledOk": "Budget renouvelé : {name}, du {start} au {end}.",
     "ended": "Période terminée",
-    "subtitle": "Définissez une enveloppe par catégorie ou compte sur une période."
+    "subtitle": "Définissez une enveloppe par catégorie ou compte sur une période.",
+    "rolledExisting": "La période suivante existe déjà.",
+    "rollView": "Voir"
   },
   "categories": {
     "title": "Catégories",

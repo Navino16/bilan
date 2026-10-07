@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -8,10 +8,14 @@ import { Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { rollRecurringAction } from "@/server/transport/actions/budgets";
+import { nextPeriod } from "@/lib/budgets";
+import type { BudgetPeriodType } from "@/lib/validation/budget";
 import { BudgetForm, type BudgetLineOption } from "./budget-form";
+import type { CategoryOption } from "@/components/categories/category-options";
 import { BudgetBar, statusStyle } from "./budget-status";
-import type { BudgetListItem } from "@/server/services/budgets";
+import type { BudgetAccountOption, BudgetListItem } from "@/server/services/budgets";
 import { PageHeader } from "@/components/shell/page-header";
 
 export function BudgetsView({
@@ -21,8 +25,8 @@ export function BudgetsView({
   groups,
 }: {
   budgets: BudgetListItem[];
-  categories: BudgetLineOption[];
-  accounts: BudgetLineOption[];
+  categories: CategoryOption[];
+  accounts: BudgetAccountOption[];
   groups: BudgetLineOption[];
 }) {
   const t = useTranslations("budgets");
@@ -39,14 +43,31 @@ export function BudgetsView({
     timeZone: "UTC",
   });
 
-  function roll(id: string) {
+  const [rollResult, setRollResult] = useState<
+    { ok: true; id?: string; from: BudgetListItem } | { ok: false; error: string } | null
+  >(null);
+
+  function roll(b: BudgetListItem) {
     const fd = new FormData();
-    fd.set("id", id);
+    fd.set("id", b.id);
     startRoll(async () => {
       const r = await rollRecurringAction(null, fd);
+      setRollResult(
+        r?.ok
+          ? { ok: true, id: r.id, from: b }
+          : { ok: false, error: r?.error === "FORBIDDEN" ? "FORBIDDEN" : "FAILED" },
+      );
       if (r?.ok) router.refresh();
     });
   }
+
+  const rolledPeriod =
+    rollResult?.ok &&
+    nextPeriod(
+      rollResult.from.periodType as BudgetPeriodType,
+      rollResult.from.periodStart,
+      rollResult.from.periodEnd,
+    );
 
   return (
     <div className="space-y-5">
@@ -68,6 +89,32 @@ export function BudgetsView({
           />
         }
       />
+
+      {rollResult && (
+        <Alert variant={rollResult.ok ? "default" : "destructive"} data-slot="roll-result">
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+            {!rollResult.ok ? (
+              t(`error.${rollResult.error}`)
+            ) : !rollResult.id ? (
+              t("rolledExisting")
+            ) : (
+              <>
+                <span>
+                  {rolledPeriod &&
+                    t("rolledOk", {
+                      name: rollResult.from.name,
+                      start: df.format(rolledPeriod.start),
+                      end: df.format(rolledPeriod.end),
+                    })}
+                </span>
+                <Link href={`/${locale}/budgets/${rollResult.id}`} className="underline">
+                  {t("rollView")}
+                </Link>
+              </>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {budgets.length === 0 ? (
         <p className="text-muted-foreground text-sm">{t("empty")}</p>
@@ -97,7 +144,7 @@ export function BudgetsView({
                           {df.format(b.periodStart)} – {df.format(b.periodEnd)}
                         </span>
                       </div>
-                      {b.recurring && b.ended && b.canManage && (
+                      {b.rollable && (
                         <Button
                           type="button"
                           size="sm"
@@ -106,7 +153,7 @@ export function BudgetsView({
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            roll(b.id);
+                            roll(b);
                           }}
                         >
                           <RefreshCw />

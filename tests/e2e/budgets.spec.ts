@@ -13,10 +13,24 @@ test.describe("budgets", () => {
     }).toPass();
     await page.fill('input[name="name"]', name);
     await page.fill('input[name="periodStart"]', "2026-03-01");
-    await page.fill('input[name="periodEnd"]', "2026-03-31");
-    await page.fill('input[name="plannedAmount"]', "300");
+    await expect(page.locator('input[name="periodEnd"]')).toHaveValue("2026-03-31");
+    await page.fill('input[name="plannedAmount"]', "300,5");
+    await expect(page.getByText("Total prévu : 300,50 €")).toBeVisible();
     await page.getByRole("button", { name: /créer le budget/i }).click();
-    await expect(page.getByText(name).first()).toBeVisible({ timeout: 15_000 });
+    const card = page.locator('[data-slot="budget-card"]').filter({ hasText: name });
+    await expect(card).toContainText("/ 300,50 €", { timeout: 15_000 });
+  });
+
+  test("a cancelled draft is not kept for the next budget", async ({ page }) => {
+    await page.goto("/fr/budgets");
+    await expect(async () => {
+      await page.getByRole("button", { name: /nouveau budget/i }).click();
+      await expect(page.locator('input[name="name"]')).toBeVisible();
+    }).toPass();
+    await page.fill('input[name="plannedAmount"]', "1234,5");
+    await page.getByRole("button", { name: /^annuler$/i }).click();
+    await page.getByRole("button", { name: /nouveau budget/i }).click();
+    await expect(page.locator('input[name="plannedAmount"]')).toHaveValue("");
   });
 
   test("opens a budget's detail and shows per-line progress + status", async ({ page }) => {
@@ -27,8 +41,7 @@ test.describe("budgets", () => {
       await expect(page.locator('input[name="name"]')).toBeVisible();
     }).toPass();
     await page.fill('input[name="name"]', name);
-    await page.fill('input[name="periodStart"]', "2026-03-01");
-    await page.fill('input[name="periodEnd"]', "2026-03-31");
+    await page.fill('input[name="periodStart"]', "2031-02-01");
     await page.fill('input[name="plannedAmount"]', "250");
     await page.getByRole("button", { name: /créer le budget/i }).click();
 
@@ -62,15 +75,14 @@ test.describe("budgets", () => {
     await page.getByRole("button", { name: /^ajouter$/i }).click();
     await expect(page.locator('input[name="label"]')).toBeHidden();
 
-    // 2) Create a budget with a single unfiltered line (INCLUDE-only spend).
+    // 2) Create a budget on a period with no transaction, so only the INCLUDE counts.
     await page.goto("/fr/budgets");
     await expect(async () => {
       await page.getByRole("button", { name: /nouveau budget/i }).click();
       await expect(page.locator('input[name="name"]')).toBeVisible();
     }).toPass();
     await page.fill('input[name="name"]', budgetName);
-    await page.fill('input[name="periodStart"]', "2026-03-01");
-    await page.fill('input[name="periodEnd"]', "2026-03-31");
+    await page.fill('input[name="periodStart"]', "2031-01-01");
     await page.fill('input[name="plannedAmount"]', "200");
     await page.getByRole("button", { name: /créer le budget/i }).click();
     await expect(page.getByText(budgetName).first()).toBeVisible({ timeout: 15_000 });
