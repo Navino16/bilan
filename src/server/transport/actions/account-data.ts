@@ -26,15 +26,12 @@ export async function deleteAccountAction(
   if (credential) {
     const password = String(formData.get("password") ?? "");
     if (!password) return { ok: false, error: "INVALID" };
-    // Rate-limit the password re-auth (shared login limiter) to stop brute force.
+    // Rate-limits the password re-auth (own key in the login limiter).
     const bucket = loginLimiter.consume(`delete:${user.id}`);
     if (!bucket.allowed) return { ok: false, error: "RATE_LIMITED" };
     const auth = await getAuth();
     try {
-      await auth.api.signInEmail({
-        body: { email: user.email, password },
-        headers: await nextHeaders(),
-      });
+      await auth.api.verifyPassword({ body: { password }, headers: await nextHeaders() });
     } catch {
       return { ok: false, error: "BAD_PASSWORD" };
     }

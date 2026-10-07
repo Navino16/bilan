@@ -14,6 +14,7 @@
       "registerLink": "Créer un compte",
       "error": {
         "rateLimited": "Trop de tentatives. Réessayez plus tard.",
+        "rateLimitedFor": "Trop de tentatives. Réessayez dans {minutes, plural, one {# minute} other {# minutes}}.",
         "badCredentials": "E-mail ou mot de passe incorrect.",
         "passkeyNotFound": "Cette clé d'accès n'est plus reconnue. Connectez-vous avec votre mot de passe.",
         "passkeyFailed": "La connexion par clé d'accès a été annulée ou n'a pas abouti."

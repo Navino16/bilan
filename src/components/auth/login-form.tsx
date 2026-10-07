@@ -81,9 +81,11 @@ function PasswordStep({
           {state && !state.ok && (
             <Alert variant="destructive">
               <AlertDescription>
-                {state.error === "RATE_LIMITED"
-                  ? t("error.rateLimited")
-                  : t("error.badCredentials")}
+                {state.error !== "RATE_LIMITED"
+                  ? t("error.badCredentials")
+                  : state.retryAfter
+                    ? t("error.rateLimitedFor", { minutes: Math.ceil(state.retryAfter / 60) })
+                    : t("error.rateLimited")}
               </AlertDescription>
             </Alert>
           )}

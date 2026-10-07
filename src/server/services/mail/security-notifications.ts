@@ -1,10 +1,22 @@
 import { sendMail } from "@/server/services/mail/mailer";
 import { logEvent } from "@/server/services/audit";
 import { getAppName } from "@/server/services/settings/app-settings";
+import { describeUserAgent } from "@/lib/user-agent";
 
 // Best-effort security emails. `sendMail` already no-ops when SMTP is disabled;
 // these wrappers additionally never throw into the auth path (a failed
 // notification must not break login / password change) — failures are audited.
+
+// IPv4 clients reach a dual-stack server as "::ffff:a.b.c.d".
+export function formatIp(ip: string | null): string {
+  return ip ? ip.replace(/^::ffff:/i, "") : "inconnue";
+}
+
+export function formatDevice(userAgent: string | null): string {
+  const { browser, os } = describeUserAgent(userAgent);
+  const known = [browser, os].filter(Boolean).join(" · ");
+  return known || userAgent?.slice(0, 80) || "inconnu";
+}
 
 function formatAt(at: Date): string {
   return new Intl.DateTimeFormat("fr-FR", {
@@ -29,8 +41,8 @@ export async function notifyNewLogin(input: {
         `Une nouvelle connexion à votre compte ${appName} vient d'avoir lieu.`,
         "",
         `Date : ${formatAt(input.at)} (UTC)`,
-        `Adresse IP : ${input.ip ?? "inconnue"}`,
-        `Appareil : ${input.userAgent ?? "inconnu"}`,
+        `Adresse IP : ${formatIp(input.ip)}`,
+        `Appareil : ${formatDevice(input.userAgent)}`,
         "",
         "Si vous êtes à l'origine de cette connexion, aucune action n'est requise.",
         "Sinon, changez immédiatement votre mot de passe.",
@@ -82,8 +94,8 @@ export async function notifyPasskeyAdded(input: {
         `Une nouvelle clé d'accès (passkey) permet désormais de se connecter à votre compte ${appName}.`,
         "",
         `Date : ${formatAt(input.at)} (UTC)`,
-        `Adresse IP : ${input.ip ?? "inconnue"}`,
-        `Appareil : ${input.userAgent ?? "inconnu"}`,
+        `Adresse IP : ${formatIp(input.ip)}`,
+        `Appareil : ${formatDevice(input.userAgent)}`,
         "",
         "Si vous êtes à l'origine de cet ajout, aucune action n'est requise.",
         "Sinon, supprimez-la depuis la page Sécurité et changez immédiatement votre mot de passe.",
@@ -112,8 +124,8 @@ export async function notifyTwoFactorDisabled(input: {
         `La double authentification vient d'être désactivée sur votre compte ${appName}.`,
         "",
         `Date : ${formatAt(input.at)} (UTC)`,
-        `Adresse IP : ${input.ip ?? "inconnue"}`,
-        `Appareil : ${input.userAgent ?? "inconnu"}`,
+        `Adresse IP : ${formatIp(input.ip)}`,
+        `Appareil : ${formatDevice(input.userAgent)}`,
         "",
         "Si vous êtes à l'origine de ce changement, aucune action n'est requise.",
         "Sinon, changez immédiatement votre mot de passe et réactivez la double authentification.",

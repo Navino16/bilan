@@ -16,7 +16,6 @@ import { notifyPasswordChanged } from "@/server/services/mail/security-notificat
 import { seedDefaultCategories } from "@/server/services/categories/seed-defaults";
 import { providerCache, resolveOidcProvider, type ResolvedOidc } from "./providers";
 import { authPlugins } from "./plugins";
-import { authAuditHook, twoFactorAttemptGuard } from "./auth-audit";
 import {
   RESET_TOKEN_TTL_SEC,
   resetLink,
@@ -150,17 +149,11 @@ async function buildOptions(): Promise<BetterAuthOptions> {
       storeIdentifier: { default: "plain", overrides: { "reset-password:": "hashed" } },
     },
     socialProviders,
-    hooks: { before: twoFactorAttemptGuard, after: authAuditHook },
     session: {
       expiresIn: 60 * 60 * 24 * 7, // 7 days
       updateAge: 60 * 60 * 24, // refresh after 1 day
       // No cookie cache: a revoked session must stop working on its next request (#142).
       cookieCache: { enabled: false },
-    },
-    advanced: {
-      cookies: {
-        sessionToken: { attributes: { sameSite: "strict", httpOnly: true } },
-      },
     },
     // nextCookies() must be last: it sets Better Auth's Set-Cookie headers on
     // server-action / route-handler responses (so autoSignIn during setup

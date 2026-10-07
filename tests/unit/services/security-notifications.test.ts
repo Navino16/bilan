@@ -7,6 +7,8 @@ vi.mock("@/server/services/settings/app-settings", () => ({
 }));
 
 import {
+  formatDevice,
+  formatIp,
   notifyNewLogin,
   notifyPasskeyAdded,
   notifyPasswordChanged,
@@ -53,5 +55,17 @@ describe("security notifications", () => {
     expect(arg.subject).toMatch(/clé d'accès/);
     expect(arg.subject).toContain("Maison");
     expect(arg.text).toContain("203.0.113.7");
+  });
+
+  it("formats the IP and device readably", () => {
+    expect(formatIp("::ffff:10.0.1.1")).toBe("10.0.1.1");
+    expect(formatIp(null)).toBe("inconnue");
+    expect(
+      formatDevice(
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36",
+      ),
+    ).toBe("Chrome · Linux");
+    expect(formatDevice("curl/8.5.0")).toBe("curl/8.5.0");
+    expect(formatDevice(null)).toBe("inconnu");
   });
 });

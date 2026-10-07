@@ -1,10 +1,4 @@
-import {
-  APIError,
-  createAuthMiddleware,
-  getSessionFromCtx,
-  isAPIError,
-  type AuthMiddleware,
-} from "better-auth/api";
+import { createAuthMiddleware, getSessionFromCtx, isAPIError } from "better-auth/api";
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import {
@@ -12,7 +6,6 @@ import {
   notifyPasskeyAdded,
   notifyTwoFactorDisabled,
 } from "@/server/services/mail/security-notifications";
-import { twoFactorLimiter } from "./rate-limit";
 
 type AuditInput = Parameters<typeof logEvent>[0];
 
@@ -23,8 +16,6 @@ export type AuditContext = {
   // Better Auth rotates the session when a TOTP verification really enables 2FA.
   sessionRotated: boolean;
 };
-
-const TWO_FACTOR_VERIFY = new Set(["/two-factor/verify-totp", "/two-factor/verify-backup-code"]);
 
 export async function authAuditEvent(
   path: string,
@@ -67,6 +58,26 @@ export async function authAuditEvent(
         metadata: { method: "passkey", email: user.email },
       };
     }
+    case "/sign-in/email": {
+      const email = String((body as { email?: unknown } | null)?.email ?? "")
+        .trim()
+        .toLowerCase();
+      if (failed) {
+        return {
+          action: "auth.login.failed",
+          metadata: { method: "password", email, reason: returned.body?.code ?? null },
+        };
+      }
+      if ((returned as { twoFactorRedirect?: boolean }).twoFactorRedirect) {
+        return { action: "auth.login.2fa_pending", metadata: { email } };
+      }
+      const { user } = returned as { user: { id: string; email: string } };
+      return {
+        userId: user.id,
+        action: "auth.login.success",
+        metadata: { method: "password", email: user.email },
+      };
+    }
     case "/two-factor/verify-totp":
     case "/two-factor/verify-backup-code": {
       const method = path.endsWith("totp") ? "totp" : "backup_code";
@@ -102,9 +113,9 @@ export async function authAuditEvent(
   }
 }
 
-// Passkey and two-factor endpoints are called straight from the browser, not
-// through our Server Actions, so they are audited from a better-auth after-hook.
-export const authAuditHook = createAuthMiddleware(async (ctx) => {
+// Sign-ins and passkey / two-factor endpoints can be reached without our Server
+// Actions (browser or direct API calls), so they are audited from the after-hook.
+export async function auditAuthRequest(ctx: HookContext): Promise<void> {
   try {
     const event = await authAuditEvent(ctx.path, ctx.context.returned, ctx.body, {
       sessionUserId: async () => (await getSessionFromCtx(ctx))?.user.id ?? null,
@@ -145,29 +156,14 @@ export const authAuditHook = createAuthMiddleware(async (ctx) => {
   } catch {
     // best-effort: an audit failure must not fail the auth request
   }
-});
+}
 
-type HookContext = Parameters<Parameters<typeof createAuthMiddleware>[0]>[0];
+export type HookContext = Parameters<Parameters<typeof createAuthMiddleware>[0]>[0];
 
-async function pendingTwoFactor(ctx: HookContext) {
+export async function pendingTwoFactor(ctx: HookContext) {
   const cookie = ctx.context.createAuthCookie("two_factor");
   const id = await ctx.getSignedCookie(cookie.name, ctx.context.secret);
   if (!id) return null;
   const verification = await ctx.context.internalAdapter.findVerificationValue(id);
   return verification ? { id, userId: verification.value } : null;
 }
-
-// Better Auth only rate-limits code attempts per IP in production; this caps
-// guesses per pending sign-in, then forces the (email-limited) password step again.
-export const twoFactorAttemptGuard: AuthMiddleware = createAuthMiddleware(async (ctx) => {
-  if (!TWO_FACTOR_VERIFY.has(ctx.path)) return;
-  const pending = await pendingTwoFactor(ctx);
-  if (!pending || twoFactorLimiter.consume(pending.id).allowed) return;
-  await ctx.context.internalAdapter.deleteVerificationByIdentifier(pending.id);
-  await logEvent({
-    userId: pending.userId,
-    action: "auth.login.failed",
-    metadata: { method: "two_factor", reason: "TOO_MANY_ATTEMPTS" },
-  });
-  throw new APIError("TOO_MANY_REQUESTS", { code: "TOO_MANY_ATTEMPTS" });
-});
