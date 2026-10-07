@@ -15,7 +15,7 @@ export function ResetConfirmForm({ token, locale }: { token: string; locale: str
   const [state, action, pending] = useActionState(resetConfirmAction, null);
 
   useEffect(() => {
-    if (state?.ok) router.push(`/${locale}/login`);
+    if (state?.ok) router.push(`/${locale}/login?reset=1`);
   }, [state, router, locale]);
 
   return (

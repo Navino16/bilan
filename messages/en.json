@@ -19,7 +19,10 @@
         "passkeyFailed": "Passkey sign-in was cancelled or didn't complete."
       },
       "or": "or",
-      "passkey": "Sign in with a passkey"
+      "passkey": "Sign in with a passkey",
+      "notice": {
+        "passwordReset": "Your password has been changed. Sign in with the new one."
+      }
     },
     "twoFactor": {
       "title": "Verification",
@@ -86,7 +89,8 @@
       "error": {
         "invalidToken": "This link is invalid or expired. Request a new one.",
         "invalid": "Check the password (at least 12 characters)."
-      }
+      },
+      "requestAgain": "Request a new link"
     }
   },
   "errors": {

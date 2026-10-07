@@ -19,7 +19,10 @@
         "passkeyFailed": "La connexion par clé d'accès a été annulée ou n'a pas abouti."
       },
       "or": "ou",
-      "passkey": "Se connecter avec une clé d'accès"
+      "passkey": "Se connecter avec une clé d'accès",
+      "notice": {
+        "passwordReset": "Votre mot de passe a été modifié. Connectez-vous avec le nouveau."
+      }
     },
     "twoFactor": {
       "title": "Vérification",
@@ -86,7 +89,8 @@
       "error": {
         "invalidToken": "Ce lien est invalide ou expiré. Refaites une demande.",
         "invalid": "Vérifiez le mot de passe (12 caractères minimum)."
-      }
+      },
+      "requestAgain": "Demander un nouveau lien"
     }
   },
   "errors": {

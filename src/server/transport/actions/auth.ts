@@ -146,12 +146,12 @@ export async function resetRequestAction(
     return { ok: false, error: "RATE_LIMITED", retryAfter: bucket.retryAfterSec };
 
   // Always report success to avoid leaking whether the email is registered.
-  // The reset link is delivered by the sendResetPassword callback (dev console
-  // only; the token is never persisted — real SMTP delivery lands in 8.4).
+  // The sendResetPassword callback mails a link to `redirectTo/<token>`.
   try {
     const auth = await getAuth();
+    const appUrl = env.APP_URL.replace(/\/$/, "");
     await auth.api.requestPasswordReset({
-      body: { email: parsed.data.email, redirectTo: `${env.APP_URL}/reset` },
+      body: { email: parsed.data.email, redirectTo: `${appUrl}/${parsed.data.locale}/reset` },
     });
   } catch {
     // swallow — do not reveal failures to the caller

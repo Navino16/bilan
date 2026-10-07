@@ -13,12 +13,27 @@ import { PasskeySignIn } from "./passkey-sign-in";
 import { TwoFactorStep } from "./two-factor-step";
 
 // "Back" from the code step remounts the password step to clear its action state.
-export function LoginForm({ locale }: { locale: string }) {
+export function LoginForm({ locale, notice }: { locale: string; notice?: "passwordReset" }) {
   const [attempt, setAttempt] = useState(0);
-  return <PasswordStep key={attempt} locale={locale} onRestart={() => setAttempt((n) => n + 1)} />;
+  return (
+    <PasswordStep
+      key={attempt}
+      locale={locale}
+      notice={notice}
+      onRestart={() => setAttempt((n) => n + 1)}
+    />
+  );
 }
 
-function PasswordStep({ locale, onRestart }: { locale: string; onRestart: () => void }) {
+function PasswordStep({
+  locale,
+  notice,
+  onRestart,
+}: {
+  locale: string;
+  notice?: "passwordReset";
+  onRestart: () => void;
+}) {
   const t = useTranslations("auth.login");
   const router = useRouter();
   const [state, action, pending] = useActionState(loginAction, null);
@@ -34,6 +49,11 @@ function PasswordStep({ locale, onRestart }: { locale: string; onRestart: () => 
       <header className="text-center">
         <h1 className="font-display text-3xl">{t("title")}</h1>
       </header>
+      {notice && !state && (
+        <Alert>
+          <AlertDescription>{t(`notice.${notice}`)}</AlertDescription>
+        </Alert>
+      )}
       <div className="space-y-4">
         <form action={action} className="space-y-4">
           <div className="space-y-2">

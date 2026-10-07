@@ -4,20 +4,20 @@ import { db } from "@/server/db";
 import { getAuth } from "@/server/auth";
 import { grantRole } from "@/server/services/users/roles";
 import { logEvent } from "@/server/services/audit";
+import { env } from "@/env";
+import { defaultLocale, locales } from "@/i18n/config";
 
 export const adminCreateUserSchema = z.object({
   email: z.email(),
   name: z.string().min(1),
   role: z.enum(["USER", "ADMIN"]).default("USER"),
+  locale: z.enum(locales).default(defaultLocale).catch(defaultLocale),
 });
 
-export type AdminCreateUserInput = z.infer<typeof adminCreateUserSchema>;
+export type AdminCreateUserInput = z.input<typeof adminCreateUserSchema>;
 
-// Admin-provisions a user: creates the account with a throwaway password, grants
-// the chosen role, then triggers the password-reset flow so the user sets their
-// own password via the existing /reset/[token] page (link delivered by
-// sendResetPassword — dev console now, SMTP in 8.4). The setup token is never
-// returned or logged.
+// Admin-provisions a user with a throwaway password, then sends the reset flow as a
+// "choose your password" mail (`setup=1`). The setup token is never returned or logged.
 export async function adminCreateUser(
   input: AdminCreateUserInput,
   actor: { id: string },
@@ -31,7 +31,10 @@ export async function adminCreateUser(
   });
 
   await grantRole(db, res.user.id, parsed.role, actor.id);
-  await auth.api.requestPasswordReset({ body: { email: parsed.email } });
+  const appUrl = env.APP_URL.replace(/\/$/, "");
+  await auth.api.requestPasswordReset({
+    body: { email: parsed.email, redirectTo: `${appUrl}/${parsed.locale}/reset?setup=1` },
+  });
 
   await logEvent({
     userId: actor.id,
