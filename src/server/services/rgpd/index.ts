@@ -8,16 +8,34 @@ export type UserDataExport = {
   exportedAt: string;
   user: { id: string; email: string; name: string | null; createdAt: Date };
   preference: unknown;
-  accounts: unknown[];
+  accounts: {
+    id: string;
+    name: string;
+    type: string;
+    initialBalance: number;
+    iban: string | null;
+    bankName: string | null;
+    color: string | null;
+    icon: string | null;
+    archived: boolean;
+    createdAt: Date;
+  }[];
   transactions: {
     id: string;
     date: Date;
     amount: number;
     type: string;
     label: string;
+    rawLabel: string;
     note: string | null;
     categoryId: string | null;
+    manuallyCategorized: boolean;
     accountId: string;
+    importBatchId: string | null;
+    linkId: string | null;
+    externalId: string | null;
+    createdAt: Date;
+    updatedAt: Date;
   }[];
   categories: unknown[];
   rules: unknown[];
@@ -25,22 +43,38 @@ export type UserDataExport = {
   budgets: unknown[];
   groups: unknown[];
   invitationsSent: unknown[];
+  links: { id: string; name: string | null; createdAt: Date; transactionIds: string[] }[];
+  ignoredLinkSuggestions: { transactionIds: string[]; ignoredAt: Date }[];
+  imports: {
+    id: string;
+    source: string;
+    filename: string | null;
+    status: string;
+    accountIds: string[];
+    totalRows: number;
+    importedRows: number;
+    skippedRows: number;
+    errorMessage: string | null;
+    createdAt: Date;
+    completedAt: Date | null;
+  }[];
   auditLog: unknown[];
 };
 
-// Gathers the full data graph a user is entitled to under RGPD, decrypting the
-// transaction labels/notes. Read-only. Callers stream the result as JSON.
+// Gathers the full data graph a user is entitled to under RGPD (owned accounts
+// only), decrypting the IBANs and transaction labels/notes. Read-only.
 export async function exportUserData(userId: string): Promise<UserDataExport> {
   const [
     user,
     preference,
-    accounts,
+    accountRows,
     categories,
     rules,
     aliases,
     budgets,
     memberships,
     invitationsSent,
+    ignoredRows,
     auditLog,
   ] = await Promise.all([
     db.user.findUniqueOrThrow({
@@ -48,32 +82,116 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
       select: { id: true, email: true, name: true, createdAt: true },
     }),
     db.userPreference.findUnique({ where: { userId } }),
-    db.bankAccount.findMany({ where: { ownerId: userId } }),
+    db.bankAccount.findMany({ where: { ownerId: userId }, orderBy: { createdAt: "asc" } }),
     db.category.findMany({ where: { userId } }),
     db.categorizationRule.findMany({ where: { userId } }),
     loadAliases(userId),
     db.budget.findMany({ where: { userId }, include: { lines: true, assignments: true } }),
     db.groupMember.findMany({ where: { userId }, include: { group: true } }),
-    db.groupInvitation.findMany({ where: { invitedById: userId } }),
+    db.groupInvitation.findMany({
+      where: { invitedById: userId },
+      omit: { token: true, code: true },
+    }),
+    db.ignoredLinkSuggestion.findMany({
+      where: { userId },
+      select: { pairKey: true, ignoredAt: true },
+    }),
     db.auditLog.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 5000 }),
   ]);
 
+  const accounts = accountRows.map((a) => ({
+    id: a.id,
+    name: a.name,
+    type: a.type,
+    initialBalance: Number(a.initialBalance),
+    iban: a.ibanEnc ? decrypt(a.ibanEnc, dataKey) : null,
+    bankName: a.bankName,
+    color: a.color,
+    icon: a.icon,
+    archived: a.archived,
+    createdAt: a.createdAt,
+  }));
+
   const accountIds = accounts.map((a) => a.id);
-  const txRows = accountIds.length
-    ? await db.transaction.findMany({
-        where: { accountId: { in: accountIds } },
-        orderBy: { date: "desc" },
-      })
-    : [];
+  const [txRows, linkRows, batchRows] = await Promise.all([
+    accountIds.length
+      ? db.transaction.findMany({
+          where: { accountId: { in: accountIds } },
+          orderBy: { date: "desc" },
+          include: { linkMembership: { select: { linkId: true } } },
+        })
+      : [],
+    db.transactionLink.findMany({
+      where: { members: { some: { transaction: { accountId: { in: accountIds } } } } },
+      include: {
+        members: {
+          where: { transaction: { accountId: { in: accountIds } } },
+          select: { transactionId: true },
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+    db.importBatch.findMany({
+      where: {
+        OR: [
+          { accountId: { in: accountIds } },
+          { createdById: userId },
+          { transactions: { some: { accountId: { in: accountIds } } } },
+        ],
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+
   const transactions = txRows.map((r) => ({
     id: r.id,
     date: r.date,
     amount: Number(r.amount),
     type: r.type,
     label: decrypt(r.labelEnc, dataKey),
+    rawLabel: decrypt(r.rawLabelEnc, dataKey),
     note: r.noteEnc ? decrypt(r.noteEnc, dataKey) : null,
     categoryId: r.categoryId,
+    manuallyCategorized: r.manuallyCategorized,
     accountId: r.accountId,
+    importBatchId: r.importBatchId,
+    linkId: r.linkMembership?.linkId ?? null,
+    externalId: r.externalId,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+  }));
+
+  // Links, ignored suggestions and imports can span other users' shared accounts:
+  // only ids belonging to the exported (owned) accounts are kept (#171).
+  const links = linkRows.map((l) => ({
+    id: l.id,
+    name: l.name,
+    createdAt: l.createdAt,
+    transactionIds: l.members.map((m) => m.transactionId),
+  }));
+
+  const txIds = new Set(transactions.map((t) => t.id));
+  const ignoredLinkSuggestions = ignoredRows.flatMap(({ pairKey, ignoredAt }) => {
+    const transactionIds = pairKey.split("|").filter((id) => txIds.has(id));
+    return transactionIds.length ? [{ transactionIds, ignoredAt }] : [];
+  });
+
+  const owned = new Set(accountIds);
+  // `metadata` is left out: it holds the raw uploaded file while a batch is under review.
+  const imports = batchRows.map((b) => ({
+    id: b.id,
+    source: b.source,
+    filename: b.filename,
+    status: b.status,
+    accountIds: (
+      (b.metadata as { accountIds?: string[] } | null)?.accountIds ?? [b.accountId]
+    ).filter((id) => owned.has(id)),
+    totalRows: b.totalRows,
+    importedRows: b.importedRows,
+    skippedRows: b.skippedRows,
+    errorMessage: b.errorMessage,
+    createdAt: b.createdAt,
+    completedAt: b.completedAt,
   }));
 
   return {
@@ -88,6 +206,9 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
     budgets,
     groups: memberships,
     invitationsSent,
+    links,
+    ignoredLinkSuggestions,
+    imports,
     auditLog,
   };
 }
@@ -95,7 +216,7 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
 // Self-service deletion. The caller must be the user themselves (enforced in the
 // action). Cascade FKs remove the owned graph; three FK-less columns are cleaned
 // explicitly, and the audit trail is anonymised (retained, userId nulled).
-export async function deleteUser(userId: string, _actor: { id: string }): Promise<void> {
+export async function deleteUser(userId: string): Promise<void> {
   // FK-less columns that Prisma cascade does not reach — clean explicitly first.
   await db.transactionLink.deleteMany({ where: { createdById: userId } });
   await db.ignoredLinkSuggestion.deleteMany({ where: { userId } });

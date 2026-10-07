@@ -869,6 +869,8 @@
       "exportHint": "Download your transactions as CSV, or your full data (GDPR) as JSON.",
       "exportCsv": "Transactions (CSV)",
       "exportJson": "All my data (JSON)",
+      "exporting": "Preparing export…",
+      "exportFailed": "The export failed. Please try again.",
       "dangerZone": "Danger zone",
       "deleteTitle": "Delete my account",
       "deleteWarning": "This action is irreversible: all your data will be permanently deleted.",

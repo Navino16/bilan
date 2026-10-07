@@ -869,6 +869,8 @@
       "exportHint": "Téléchargez vos transactions au format CSV, ou l'intégralité de vos données (RGPD) au format JSON.",
       "exportCsv": "Transactions (CSV)",
       "exportJson": "Toutes mes données (JSON)",
+      "exporting": "Préparation de l'export…",
+      "exportFailed": "L'export a échoué. Réessayez.",
       "dangerZone": "Zone de danger",
       "deleteTitle": "Supprimer mon compte",
       "deleteWarning": "Cette action est irréversible : toutes vos données seront définitivement supprimées.",
