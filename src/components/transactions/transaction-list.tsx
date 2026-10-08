@@ -35,6 +35,7 @@ export type ListItem = {
   accountName: string;
   categoryId: string | null;
   linked: boolean;
+  imported: boolean;
 };
 
 export type AccountOption = {
@@ -43,6 +44,7 @@ export type AccountOption = {
   color: string | null;
   bankName: string | null;
   writable: boolean;
+  archived: boolean;
 };
 
 // No date column: rows are grouped under a day header.
@@ -57,6 +59,7 @@ export function TransactionList({
   partialLastDay = false,
   currentYear,
   searching = false,
+  groupByDay = true,
 }: {
   items: ListItem[];
   categories: FlatCategory[];
@@ -68,6 +71,8 @@ export function TransactionList({
   // Day headers omit the year only for this one.
   currentYear: number;
   searching?: boolean;
+  // False for amount sorts: one flat list, each row showing its own date.
+  groupByDay?: boolean;
 }) {
   const t = useTranslations("transactions");
   const locale = useLocale();
@@ -121,7 +126,13 @@ export function TransactionList({
   const accMeta: Record<string, AccountMeta> = Object.fromEntries(
     accounts.map((a) => [
       a.id,
-      { name: a.name, color: a.color, bankName: a.bankName, writable: a.writable },
+      {
+        name: a.name,
+        color: a.color,
+        bankName: a.bankName,
+        writable: a.writable,
+        archived: a.archived,
+      },
     ]),
   );
 
@@ -154,11 +165,18 @@ export function TransactionList({
   const dayLabel = (day: string) =>
     (day.startsWith(String(currentYear)) ? dfDay : dfDayYear).format(new Date(day));
   const signed = (n: number) => (n > 0 ? `+${nf.format(n)}` : nf.format(n));
+  const dfRow = new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+  const rowDate = (it: ListItem) => (groupByDay ? null : dfRow.format(new Date(it.date)));
 
-  // Group by ISO day (items already newest-first).
+  // Group by ISO day, in list order; a flat list is one header-less group.
   const groups: { day: string; rows: ListItem[]; total: number }[] = [];
   for (const it of items) {
-    const day = it.date.slice(0, 10);
+    const day = groupByDay ? it.date.slice(0, 10) : "";
     let g = groups.find((x) => x.day === day);
     if (!g) {
       g = { day, rows: [], total: 0 };
@@ -206,6 +224,8 @@ export function TransactionList({
         note: selected.note,
         accountId: selected.accountId,
         categoryId: selected.categoryId,
+        imported: selected.imported,
+        linked: selected.linked,
       }
     : null;
 
@@ -238,14 +258,16 @@ export function TransactionList({
 
         {groups.map((g, gi) => (
           <div key={g.day}>
-            <div className="text-muted-foreground bg-muted/60 flex items-center justify-between border-y px-4 py-2 text-[0.7rem] font-medium tracking-[0.08em] uppercase">
-              <span>{dayLabel(g.day)}</span>
-              {/* The per-day total only adds signal when a day has several rows;
-                  for single-transaction days it would just echo the amount. */}
-              {g.rows.length > 1 && !(partialLastDay && gi === groups.length - 1) && (
-                <span className="tabular-nums">{signed(g.total)}</span>
-              )}
-            </div>
+            {groupByDay && (
+              <div className="text-muted-foreground bg-muted/60 flex items-center justify-between border-y px-4 py-2 text-[0.7rem] font-medium tracking-[0.08em] uppercase">
+                <span>{dayLabel(g.day)}</span>
+                {/* The per-day total only adds signal when a day has several rows;
+                    for single-transaction days it would just echo the amount. */}
+                {g.rows.length > 1 && !(partialLastDay && gi === groups.length - 1) && (
+                  <span className="tabular-nums">{signed(g.total)}</span>
+                )}
+              </div>
+            )}
 
             {g.rows.map((it) => {
               const meta = it.categoryId ? catMeta[it.categoryId] : undefined;
@@ -266,7 +288,12 @@ export function TransactionList({
                   <span className={`hidden items-center gap-3 px-4 py-2.5 md:grid ${COLS}`}>
                     <span className="flex min-w-0 items-center gap-2.5">
                       <CategoryAvatar color={meta?.color} icon={meta?.icon} size={26} />
-                      <span className="truncate text-sm">{it.label}</span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm">{it.label}</span>
+                        {rowDate(it) && (
+                          <span className="text-muted-foreground block text-xs">{rowDate(it)}</span>
+                        )}
+                      </span>
                       {it.linked && <Pill>{tLink("linked")}</Pill>}
                     </span>
                     <span className="min-w-0">
@@ -297,6 +324,7 @@ export function TransactionList({
                         {it.linked && <Pill>{tLink("linked")}</Pill>}
                       </span>
                       <span className="text-muted-foreground block truncate text-xs">
+                        {rowDate(it) ? `${rowDate(it)} · ` : ""}
                         {meta?.name ? `${meta.name} · ` : ""}
                         {it.accountName}
                       </span>

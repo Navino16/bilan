@@ -1,12 +1,19 @@
 "use server";
 
 import { requireSession } from "@/server/auth/permissions";
-import { TRANSACTION_INPUT_ERRORS, transactionInputSchema } from "@/lib/validation/transaction";
+import {
+  TRANSACTION_INPUT_ERRORS,
+  TRANSACTION_UPDATE_ERRORS,
+  transactionInputSchema,
+  transactionUpdateSchema,
+  type TransactionUpdateInput,
+} from "@/lib/validation/transaction";
 import { issueCode } from "@/lib/validation/amount";
 import {
   createTransaction,
   recategorizeTransaction,
   TransactionAccessError,
+  updateTransaction,
 } from "@/server/services/transactions";
 import {
   deleteTransactions,
@@ -75,6 +82,32 @@ export async function recategorizeTransactionAction(
     return { ok: false, error: mapError(e) };
   }
   return { ok: true };
+}
+
+export async function updateTransactionAction(formData: FormData): Promise<TxActionState> {
+  const user = await requireSession();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { ok: false, error: "INVALID" };
+  const optional = (key: string) => {
+    const v = formData.get(key);
+    return typeof v === "string" ? v : undefined;
+  };
+  const input = {
+    label: optional("label") ?? "",
+    note: optional("note"),
+    date: optional("date"),
+    amount: optional("amount"),
+    type: optional("type"),
+  };
+  const parsed = transactionUpdateSchema.safeParse(input);
+  if (!parsed.success)
+    return { ok: false, error: issueCode(parsed.error.issues, TRANSACTION_UPDATE_ERRORS) };
+  try {
+    await updateTransaction(id, input as TransactionUpdateInput, { id: user.id });
+    return { ok: true, id };
+  } catch (e) {
+    return { ok: false, error: mapError(e) };
+  }
 }
 
 export type TxResult<T> = { ok: true; data: T } | { ok: false; error: string };

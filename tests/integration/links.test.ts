@@ -4,7 +4,11 @@ import { buildSecureFields } from "@/server/services/transactions/secure-fields"
 import {
   createLink,
   deleteLink,
+  getLinkSummary,
+  listIgnoredSuggestions,
   listLinkedTxIds,
+  pairKeyOf,
+  restoreSuggestion,
   suggestPairs,
   ignoreSuggestion,
   LinkAccessError,
@@ -174,12 +178,24 @@ describe("suggestPairs", () => {
     const first = await suggestPairs(owner);
     expect(first.map((p) => p.key)).toContain([a, b].sort().join("|"));
     // Carries decrypted labels for display.
-    expect(first[0].positiveLabel).toBeTruthy();
-    expect(first[0].negativeLabel).toBeTruthy();
+    expect(first[0].positive.label).toBe("REMB FNAC");
+    expect(first[0].negative.label).toBe("CB FNAC");
 
     await ignoreSuggestion(owner, [a, b].sort().join("|"));
     const second = await suggestPairs(owner);
     expect(second.some((p) => p.key === [a, b].sort().join("|"))).toBe(false);
+  });
+
+  it("carries each leg's day and account name", async () => {
+    const a = await tx(accountId, "2026-03-02T00:00:00.000Z", -40, "CB BOULANGER");
+    const b = await tx(strangerAccountId, "2026-03-06T00:00:00.000Z", 40, "REMB BOULANGER");
+    await tx(accountId, "2026-03-06T00:00:00.000Z", 40, "VIR INTERNE");
+    const [pair] = (await suggestPairs(owner)).filter((p) => p.negativeId === a);
+    expect(pair).toMatchObject({
+      negative: { date: "2026-03-02", accountName: "Courant", label: "CB BOULANGER" },
+      positive: { date: "2026-03-06", accountName: "Courant", label: "VIR INTERNE" },
+    });
+    expect(pair.positiveId).not.toBe(b);
   });
 
   it("excludes transactions already linked", async () => {
@@ -188,5 +204,92 @@ describe("suggestPairs", () => {
     await createLink({ transactionIds: [a, b], userId: owner });
     const pairs = await suggestPairs(owner);
     expect(pairs.some((p) => p.key === [a, b].sort().join("|"))).toBe(false);
+  });
+});
+
+describe("ignored suggestions", () => {
+  it("lists the user's ignored pairs with both legs and restores one", async () => {
+    const a = await tx(accountId, "2026-03-02T00:00:00.000Z", -30, "CB CINEMA");
+    const b = await tx(accountId, "2026-03-03T00:00:00.000Z", 30, "REMB CINEMA");
+    const key = pairKeyOf(a, b);
+    await ignoreSuggestion(owner, key);
+
+    const ignored = await listIgnoredSuggestions(owner);
+    expect(ignored).toEqual([
+      {
+        key,
+        amount: 30,
+        negative: { id: a, label: "CB CINEMA", date: "2026-03-02", accountName: "Courant" },
+        positive: { id: b, label: "REMB CINEMA", date: "2026-03-03", accountName: "Courant" },
+      },
+    ]);
+    expect(await listIgnoredSuggestions(stranger)).toEqual([]);
+
+    await restoreSuggestion(owner, key);
+    expect(await listIgnoredSuggestions(owner)).toEqual([]);
+    expect((await suggestPairs(owner)).map((p) => p.key)).toContain(key);
+  });
+
+  it("hides pairs whose legs were deleted, linked or are no longer visible", async () => {
+    const a = await tx(accountId, "2026-03-02T00:00:00.000Z", -30, "A");
+    const b = await tx(accountId, "2026-03-03T00:00:00.000Z", 30, "B");
+    const c = await tx(accountId, "2026-03-04T00:00:00.000Z", -12, "C");
+    const d = await tx(accountId, "2026-03-05T00:00:00.000Z", 12, "D");
+    const foreign = await tx(strangerAccountId, "2026-03-05T00:00:00.000Z", 30, "F");
+    await ignoreSuggestion(owner, pairKeyOf(a, b));
+    await ignoreSuggestion(owner, pairKeyOf(c, d));
+    await ignoreSuggestion(owner, pairKeyOf(a, foreign));
+    await db.transaction.delete({ where: { id: b } });
+    await createLink({ transactionIds: [c, d], userId: owner });
+    expect(await listIgnoredSuggestions(owner)).toEqual([]);
+  });
+
+  it("refuses to restore a pair the user never ignored", async () => {
+    await expect(restoreSuggestion(owner, "x|y")).rejects.toBeInstanceOf(LinkAccessError);
+  });
+});
+
+describe("getLinkSummary", () => {
+  it("lists the other members and whether the viewer may unlink", async () => {
+    const a = await tx(accountId, "2026-03-02T00:00:00.000Z", -50, "CB FNAC");
+    const b = await tx(accountId, "2026-03-05T00:00:00.000Z", 50, "REMB FNAC");
+    const { id } = await createLink({ transactionIds: [a, b], userId: owner });
+
+    expect(await getLinkSummary(a, owner)).toEqual({
+      linkId: id,
+      others: [
+        { id: b, label: "REMB FNAC", date: "2026-03-05", accountName: "Courant", amount: 50 },
+      ],
+      hiddenCount: 0,
+      canUnlink: true,
+    });
+    expect((await getLinkSummary(a, reader))?.canUnlink).toBe(false);
+    expect((await getLinkSummary(a, writer))?.canUnlink).toBe(true);
+  });
+
+  it("counts members on accounts the viewer can't see without revealing them", async () => {
+    const a = await tx(accountId, "2026-03-02T00:00:00.000Z", -50, "CB FNAC");
+    const foreign = await tx(strangerAccountId, "2026-03-05T00:00:00.000Z", 50, "SECRET");
+    const link = await db.transactionLink.create({
+      data: {
+        createdById: owner,
+        members: { create: [{ transactionId: a }, { transactionId: foreign }] },
+      },
+    });
+    const summary = await getLinkSummary(a, owner);
+    expect(summary).toMatchObject({
+      linkId: link.id,
+      others: [],
+      hiddenCount: 1,
+      canUnlink: false,
+    });
+  });
+
+  it("returns null for an unlinked or invisible transaction", async () => {
+    const a = await tx(accountId, "2026-03-02T00:00:00.000Z", -50, "CB FNAC");
+    expect(await getLinkSummary(a, owner)).toBeNull();
+    const b = await tx(accountId, "2026-03-05T00:00:00.000Z", 50, "REMB FNAC");
+    await createLink({ transactionIds: [a, b], userId: owner });
+    expect(await getLinkSummary(a, stranger)).toBeNull();
   });
 });

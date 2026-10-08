@@ -539,7 +539,9 @@
       "AMOUNT_PRECISION": "Le montant ne peut pas avoir plus de 2 décimales.",
       "AMOUNT_ZERO": "Le montant ne peut pas être nul.",
       "LABEL_TOO_LONG": "Le libellé ne peut pas dépasser 200 caractères.",
-      "AMOUNT_AMBIGUOUS": "Montant ambigu : écrivez 1234 ou 1,23 (sans séparateur de milliers seul)."
+      "AMOUNT_AMBIGUOUS": "Montant ambigu : écrivez 1234 ou 1,23 (sans séparateur de milliers seul).",
+      "DATE_INVALID": "Date invalide.",
+      "LOCKED_FIELDS": "Le montant, la date et le type de cette opération ne sont pas modifiables."
     },
     "link": {
       "create": "Lier",
@@ -552,7 +554,12 @@
         "FORBIDDEN": "Vous ne pouvez pas modifier l'un de ces comptes.",
         "NOT_FOUND": "Une opération n'existe plus. Rechargez la page.",
         "TOO_FEW": "Sélectionnez au moins deux opérations."
-      }
+      },
+      "linkedTo": "Liée à",
+      "hiddenMembers": "{count, plural, one {+ # opération sur un compte que vous ne voyez pas} other {+ # opérations sur des comptes que vous ne voyez pas}}",
+      "unlinkFailed": "Impossible de délier. Réessayez.",
+      "unlinkGone": "Cette liaison n'existe plus.",
+      "unlinkNeedsWrite": "Délier demande un accès en écriture à chaque compte de la liaison."
     },
     "suggestions": {
       "title": "Suggestions de liens",
@@ -564,7 +571,11 @@
       "empty": "Aucune paire à suggérer pour le moment.",
       "back": "Retour aux transactions",
       "hint": "Bilan repère les paires de même montant et de sens opposé (un virement entre vos comptes, un remboursement) pour que vous puissiez les lier et ne pas les compter deux fois.",
-      "ignoreFailed": "Impossible d'ignorer cette paire. Réessayez."
+      "ignoreFailed": "Impossible d'ignorer cette paire. Réessayez.",
+      "ignored": "{count, plural, one {# paire ignorée} other {# paires ignorées}}",
+      "ignoredHint": "Une paire restaurée peut de nouveau être suggérée.",
+      "restore": "Restaurer",
+      "restoreFailed": "Impossible de restaurer cette paire. Réessayez."
     },
     "filterSheet": {
       "reset": "Réinitialiser",
@@ -599,7 +610,25 @@
     "readOnly": "lecture seule",
     "recategorizeFailed": "La catégorie n'a pas pu être changée.",
     "searchHint": "La recherche porte sur des mots entiers d'au moins {min} lettres : les mots plus courts sont ignorés.",
-    "emptySearch": "Aucune transaction ne correspond. La recherche porte sur des mots entiers d'au moins {min} lettres."
+    "emptySearch": "Aucune transaction ne correspond. La recherche porte sur des mots entiers d'au moins {min} lettres.",
+    "edit": "Modifier",
+    "editTitle": "Modifier l'opération",
+    "editLinkedWarning": "Cette opération est liée : changer son montant ou son sens peut déséquilibrer la liaison et modifier les totaux du tableau de bord et des budgets.",
+    "editLimited": {
+      "imported": "Opération importée : le montant, la date et le type suivent le relevé bancaire, seuls le libellé et la note sont modifiables.",
+      "archived": "Compte archivé : seuls le libellé et la note sont modifiables."
+    },
+    "amountMin": "Montant min.",
+    "amountMax": "Montant max.",
+    "amountRange": "Montant",
+    "direction": "Sens",
+    "sortLabel": "Tri",
+    "sort": {
+      "date-desc": "Plus récentes d'abord",
+      "date-asc": "Plus anciennes d'abord",
+      "amount-asc": "Plus grosses dépenses d'abord",
+      "amount-desc": "Plus grosses entrées d'abord"
+    }
   },
   "import": {
     "title": "Importer un relevé",
@@ -1442,7 +1471,8 @@
         "transaction": {
           "created": "Transaction créée",
           "deleted": "Transaction supprimée",
-          "recategorized": "Transaction recatégorisée"
+          "recategorized": "Transaction recatégorisée",
+          "updated": "Transaction modifiée"
         },
         "import": {
           "created": "Import démarré",
@@ -1475,7 +1505,9 @@
         },
         "link": {
           "created": "Liaison créée",
-          "deleted": "Liaison supprimée"
+          "deleted": "Liaison supprimée",
+          "suggestionIgnored": "Suggestion de liaison ignorée",
+          "suggestionRestored": "Suggestion de liaison restaurée"
         },
         "mail": {
           "security": {

@@ -539,7 +539,9 @@
       "AMOUNT_PRECISION": "The amount can't have more than 2 decimals.",
       "AMOUNT_ZERO": "The amount can't be zero.",
       "LABEL_TOO_LONG": "The label can't exceed 200 characters.",
-      "AMOUNT_AMBIGUOUS": "Ambiguous amount: write 1234 or 1.23 (no lone thousands separator)."
+      "AMOUNT_AMBIGUOUS": "Ambiguous amount: write 1234 or 1.23 (no lone thousands separator).",
+      "DATE_INVALID": "Invalid date.",
+      "LOCKED_FIELDS": "The amount, date and type of this transaction can't be changed."
     },
     "link": {
       "create": "Link",
@@ -552,7 +554,12 @@
         "FORBIDDEN": "You can't edit one of these accounts.",
         "NOT_FOUND": "A transaction no longer exists. Reload the page.",
         "TOO_FEW": "Select at least two transactions."
-      }
+      },
+      "linkedTo": "Linked to",
+      "hiddenMembers": "{count, plural, one {+ # transaction on an account you can't see} other {+ # transactions on accounts you can't see}}",
+      "unlinkFailed": "Couldn't unlink. Try again.",
+      "unlinkGone": "This link no longer exists.",
+      "unlinkNeedsWrite": "Unlinking needs write access to every account in the link."
     },
     "suggestions": {
       "title": "Link suggestions",
@@ -564,7 +571,11 @@
       "empty": "No pairs to suggest right now.",
       "back": "Back to transactions",
       "hint": "Bilan spots pairs with the same amount and opposite signs (a transfer between your accounts, a refund) so you can link them and not count them twice.",
-      "ignoreFailed": "Couldn't ignore this pair. Try again."
+      "ignoreFailed": "Couldn't ignore this pair. Try again.",
+      "ignored": "{count, plural, one {# ignored pair} other {# ignored pairs}}",
+      "ignoredHint": "A restored pair can be suggested again.",
+      "restore": "Restore",
+      "restoreFailed": "Couldn't restore this pair. Try again."
     },
     "filterSheet": {
       "reset": "Reset",
@@ -599,7 +610,25 @@
     "readOnly": "read-only",
     "recategorizeFailed": "The category couldn't be changed.",
     "searchHint": "Search matches whole words of at least {min} letters: shorter words are ignored.",
-    "emptySearch": "No matching transaction. Search matches whole words of at least {min} letters."
+    "emptySearch": "No matching transaction. Search matches whole words of at least {min} letters.",
+    "edit": "Edit",
+    "editTitle": "Edit transaction",
+    "editLinkedWarning": "This transaction is linked: changing its amount or sign can unbalance the link and shift dashboard and budget totals.",
+    "editLimited": {
+      "imported": "Imported transaction: amount, date and type follow the bank statement; only the label and note can be edited.",
+      "archived": "Archived account: only the label and note can be edited."
+    },
+    "amountMin": "Min amount",
+    "amountMax": "Max amount",
+    "amountRange": "Amount",
+    "direction": "Direction",
+    "sortLabel": "Sort",
+    "sort": {
+      "date-desc": "Newest first",
+      "date-asc": "Oldest first",
+      "amount-asc": "Largest expenses first",
+      "amount-desc": "Largest income first"
+    }
   },
   "import": {
     "title": "Import a statement",
@@ -1442,7 +1471,8 @@
         "transaction": {
           "created": "Transaction created",
           "deleted": "Transaction deleted",
-          "recategorized": "Transaction recategorised"
+          "recategorized": "Transaction recategorised",
+          "updated": "Transaction edited"
         },
         "import": {
           "created": "Import started",
@@ -1475,7 +1505,9 @@
         },
         "link": {
           "created": "Link created",
-          "deleted": "Link deleted"
+          "deleted": "Link deleted",
+          "suggestionIgnored": "Link suggestion ignored",
+          "suggestionRestored": "Link suggestion restored"
         },
         "mail": {
           "security": {

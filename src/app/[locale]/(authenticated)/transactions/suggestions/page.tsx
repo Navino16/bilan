@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ChevronLeft } from "lucide-react";
 import { requireSession } from "@/server/auth/permissions";
-import { suggestPairs } from "@/server/services/links";
+import { listIgnoredSuggestions, suggestPairs } from "@/server/services/links";
 import { SuggestionsList } from "@/components/transactions/suggestions-list";
 import { PageHeader } from "@/components/shell/page-header";
 import { pageTitle } from "@/i18n/metadata";
@@ -16,7 +16,10 @@ export default async function SuggestionsPage({ params }: { params: Promise<{ lo
   setRequestLocale(locale);
   const user = await requireSession();
   const t = await getTranslations("transactions.suggestions");
-  const pairs = await suggestPairs(user.id);
+  const [pairs, ignored] = await Promise.all([
+    suggestPairs(user.id),
+    listIgnoredSuggestions(user.id),
+  ]);
 
   return (
     <div className="space-y-5">
@@ -32,7 +35,7 @@ export default async function SuggestionsPage({ params }: { params: Promise<{ lo
         title={t("title")}
         subtitle={t("hint")}
       />
-      <SuggestionsList items={pairs} />
+      <SuggestionsList items={pairs} ignored={ignored} />
     </div>
   );
 }
