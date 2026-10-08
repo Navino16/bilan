@@ -24,7 +24,7 @@ export function SelectionBar({
   return (
     <div
       data-slot="selection-bar"
-      className="bg-card fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-[480px] flex-wrap items-center gap-2 rounded-2xl border p-2.5 shadow-lg md:bottom-6"
+      className="bg-card fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-[480px] flex-wrap items-center gap-2 rounded-2xl border p-2.5 shadow-lg lg:bottom-6"
     >
       {error && (
         <p role="alert" className="text-destructive w-full px-1.5 text-sm">

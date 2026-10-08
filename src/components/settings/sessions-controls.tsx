@@ -38,7 +38,7 @@ function SessionRow({
           {name}
           {session.current && <Badge variant="secondary">{t("thisDevice")}</Badge>}
         </div>
-        <div className="text-muted-foreground text-xs">
+        <div className="text-muted-foreground text-xs wrap-anywhere">
           {session.ipAddress && `${session.ipAddress} · `}
           {t.rich("signedIn", { time: () => <LocalDateTime value={session.signedInAt} /> })}
           {` · ${activity}`}

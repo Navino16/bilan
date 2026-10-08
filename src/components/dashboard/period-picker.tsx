@@ -79,7 +79,7 @@ export function PeriodPicker({
   );
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-none sm:flex-row sm:flex-wrap sm:items-center">
+    <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-initial sm:flex-row sm:flex-wrap sm:items-center">
       {wrap ? (
         <div className="-mx-0.5 max-w-full px-0.5">{presets}</div>
       ) : (

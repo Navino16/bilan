@@ -208,7 +208,7 @@
     "archiveTitle": "Archive “{name}”?",
     "archiveBody": "The account leaves lists and entry forms. Its history stays in transactions, budgets and the dashboard, and you can unarchive it.",
     "unarchive": "Unarchive",
-    "archivedTitle": "Archived accounts · {count, number}",
+    "archivedTitle": "Archived accounts · {count, number}",
     "archivedHint": "Hidden from entry forms and the global balance; their transactions stay in your history.",
     "archivedBadge": "Archived",
     "delete": "Delete",
@@ -279,7 +279,7 @@
       "AMOUNT_AMBIGUOUS": "Ambiguous amount: write 1234 or 1.23 (no lone thousands separator).",
       "AMOUNT_PRECISION": "The amount can’t have more than 2 decimals."
     },
-    "legendOthers": "Others · {count, number}"
+    "legendOthers": "Others · {count, number}"
   },
   "rules": {
     "pageTitle": "Categories & rules",
@@ -1075,7 +1075,7 @@
         "unknownBrowser": "Unknown browser",
         "activeNow": "Active now",
         "active": "{days, plural, =0 {Active today} =1 {Active yesterday} other {Active # days ago}}",
-        "others": "Other devices · {count, number}",
+        "others": "Other devices · {count, number}",
         "none": "No other device is signed in.",
         "revoke": "Sign out",
         "revokeAll": "Sign out all",
@@ -1093,7 +1093,7 @@
         "overline": "Passkeys",
         "title": "Passwordless sign-in",
         "hint": "Sign in with your fingerprint, your face or your device’s PIN.",
-        "count": "Your passkeys · {count}",
+        "count": "Your passkeys · {count}",
         "add": "Add",
         "none": "No passkeys yet.",
         "defaultName": "Passkey",
@@ -1121,7 +1121,7 @@
         "overline": "Connected identities",
         "title": "Sign in through an identity provider",
         "hint": "Link a Google identity or your organization’s to sign in with it.",
-        "count": "Your identities · {count}",
+        "count": "Your identities · {count}",
         "none": "No linked identity yet.",
         "linkedAt": "Linked on <date></date>",
         "providerDisabled": "Provider disabled by the administrator",

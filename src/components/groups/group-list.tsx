@@ -33,14 +33,14 @@ export function GroupList({ groups }: { groups: GroupListItem[] }) {
         <Card key={g.id} className="p-0">
           <Link
             href={`/${locale}/groups/${g.id}`}
-            className="hover:bg-muted/40 flex items-center gap-3 rounded-xl p-4 transition-colors"
+            className="hover:bg-muted/40 flex h-full items-center gap-3 rounded-xl p-4 transition-colors"
           >
             <div className="bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-lg">
               <Users className="size-4" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <span className="truncate font-medium">{g.name}</span>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="min-w-0 truncate font-medium">{g.name}</span>
                 <Badge variant="outline">{t(`roles.${g.role}`)}</Badge>
               </div>
               <div className="text-muted-foreground truncate text-xs">
