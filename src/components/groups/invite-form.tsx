@@ -1,6 +1,5 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Send } from "lucide-react";
@@ -9,29 +8,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { INVITABLE_GROUP_ROLES } from "@/lib/validation/group";
-import {
-  createInvitationAction,
-  type InvitationActionState,
-} from "@/server/transport/actions/invitations";
+import { createInvitationAction } from "@/server/transport/actions/invitations";
 import { NativeSelect } from "@/components/ui/native-select";
+import { useActionForm } from "@/components/forms/use-action-form";
+import { FieldError } from "@/components/forms/field-error";
 
 export function InviteForm({ groupId }: { groupId: string }) {
   const t = useTranslations("invitations");
   const tg = useTranslations("groups");
   const router = useRouter();
-  const formRef = useRef<HTMLFormElement>(null);
-  const initial: InvitationActionState = null;
-  const [state, action, pending] = useActionState(createInvitationAction, initial);
-
-  useEffect(() => {
-    if (state?.ok) {
-      formRef.current?.reset();
-      router.refresh();
-    }
-  }, [state, router]);
+  const form = useActionForm(createInvitationAction, { onSuccess: () => router.refresh() });
 
   return (
-    <form ref={formRef} action={action} className="space-y-3">
+    <form {...form.formProps} className="space-y-3">
       <input type="hidden" name="groupId" value={groupId} />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="flex-1 space-y-2">
@@ -42,7 +31,9 @@ export function InviteForm({ groupId }: { groupId: string }) {
             type="email"
             required
             placeholder={t("emailPlaceholder")}
+            {...form.fieldProps("email")}
           />
+          <FieldError form={form} name="email" />
         </div>
         <div className="space-y-2">
           <Label htmlFor="inv-role">{t("role")}</Label>
@@ -54,14 +45,14 @@ export function InviteForm({ groupId }: { groupId: string }) {
             ))}
           </NativeSelect>
         </div>
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" disabled={form.pending}>
           <Send />
-          {pending ? t("sending") : t("send")}
+          {form.pending ? t("sending") : t("send")}
         </Button>
       </div>
-      {state && !state.ok && (
+      {form.error && (
         <Alert variant="destructive">
-          <AlertDescription>{t(`error.${state.error}`)}</AlertDescription>
+          <AlertDescription>{t(`error.${form.error}`)}</AlertDescription>
         </Alert>
       )}
     </form>

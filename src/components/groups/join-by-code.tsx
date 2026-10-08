@@ -1,36 +1,31 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { acceptInvitationAction } from "@/server/transport/actions/invitations";
+import { useActionForm } from "@/components/forms/use-action-form";
 
 export function JoinByCode() {
   const t = useTranslations("invitations");
   const locale = useLocale();
   const router = useRouter();
-  const [error, setError] = useState<{ code: string; hint?: string } | null>(null);
-  const [pending, startTransition] = useTransition();
   const [redirecting, setRedirecting] = useState(false);
-
-  function handleAction(formData: FormData) {
-    startTransition(async () => {
-      const result = await acceptInvitationAction(null, formData);
-      if (result?.ok) {
-        setError(null);
-        setRedirecting(true);
-        router.push(`/${locale}/groups/${result.groupId}`);
-      } else {
-        setError(result ? { code: result.error, hint: result.hint } : { code: "FAILED" });
-      }
-    });
-  }
+  const form = useActionForm(acceptInvitationAction, {
+    resetOnSuccess: false,
+    onSuccess: (result) => {
+      setRedirecting(true);
+      router.push(`/${locale}/groups/${result.groupId}`);
+    },
+  });
+  const { state, pending } = form;
+  const error = state && !state.ok ? state : null;
 
   return (
-    <form action={handleAction} className="flex flex-col gap-2 sm:flex-row sm:items-start">
+    <form {...form.formProps} className="flex flex-col gap-2 sm:flex-row sm:items-start">
       <div className="flex-1">
         <Input
           name="code"
@@ -46,7 +41,7 @@ export function JoinByCode() {
         {error && (
           <Alert variant="destructive" className="mt-2">
             <AlertDescription>
-              {t(`error.${error.code}`, { email: error.hint ?? "" })}
+              {t(`error.${error.error}`, { email: error.hint ?? "" })}
             </AlertDescription>
           </Alert>
         )}

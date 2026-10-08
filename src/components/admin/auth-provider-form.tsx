@@ -1,16 +1,16 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  saveAuthProviderAction,
-  type SettingsActionState,
-} from "@/server/transport/actions/settings";
+import { saveAuthProviderAction } from "@/server/transport/actions/settings";
+import { NAME_MAX } from "@/lib/validation/name";
+import { PROVIDER_KEY_MAX, PROVIDER_TEXT_MAX } from "@/lib/validation/auth-provider";
+import { useActionForm } from "@/components/forms/use-action-form";
+import { FieldError } from "@/components/forms/field-error";
 import { NativeSelect } from "@/components/ui/native-select";
 import { AuthProviderDelete } from "@/components/admin/auth-provider-delete";
 import type { AuthProviderImpact } from "@/server/services/settings/auth-providers";
@@ -43,20 +43,18 @@ export function AuthProviderForm({
 }) {
   const t = useTranslations("admin.authProviders");
   const router = useRouter();
-  const [state, action, pending] = useActionState<SettingsActionState, FormData>(
-    saveAuthProviderAction,
-    null,
-  );
-  useEffect(() => {
-    if (state?.ok) router.refresh();
-  }, [state, router]);
-
   const isEdit = Boolean(provider);
+  const form = useActionForm(saveAuthProviderAction, {
+    resetOnSuccess: !isEdit,
+    onSuccess: () => router.refresh(),
+  });
+  const { state, pending } = form;
+
   const cfg = provider?.config ?? {};
   const prefix = provider ? `ap-${provider.key}` : "ap-new";
 
   return (
-    <form action={action} className="space-y-4">
+    <form {...form.formProps} className="space-y-4">
       <input type="hidden" name="mode" value={isEdit ? "update" : "create"} />
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
@@ -68,7 +66,10 @@ export function AuthProviderForm({
             defaultValue={provider?.key ?? ""}
             readOnly={isEdit}
             required
+            maxLength={PROVIDER_KEY_MAX}
+            {...form.fieldProps("key")}
           />
+          <FieldError form={form} name="key" />
         </div>
         <div className="space-y-2">
           <Label htmlFor={`${prefix}-type`}>{t("type")}</Label>
@@ -94,7 +95,10 @@ export function AuthProviderForm({
             name="displayName"
             defaultValue={provider?.displayName ?? ""}
             required
+            maxLength={NAME_MAX}
+            {...form.fieldProps("displayName")}
           />
+          <FieldError form={form} name="displayName" />
         </div>
         <div className="space-y-2">
           <Label htmlFor={`${prefix}-enabled`}>{t("enabled")}</Label>
@@ -136,7 +140,10 @@ export function AuthProviderForm({
               id={`${prefix}-issuer`}
               name="issuer"
               defaultValue={provider?.issuer ?? ""}
+              maxLength={PROVIDER_TEXT_MAX}
+              {...form.fieldProps("issuer")}
             />
+            <FieldError form={form} name="issuer" />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -146,7 +153,10 @@ export function AuthProviderForm({
                 id={`${prefix}-clientId`}
                 name="clientId"
                 defaultValue={provider?.clientId ?? ""}
+                maxLength={PROVIDER_TEXT_MAX}
+                {...form.fieldProps("clientId")}
               />
+              <FieldError form={form} name="clientId" />
             </div>
             <div className="space-y-2">
               <Label htmlFor={`${prefix}-clientSecret`}>{t("clientSecret")}</Label>
@@ -155,7 +165,9 @@ export function AuthProviderForm({
                 name="clientSecret"
                 type="password"
                 placeholder={isEdit ? t("secretKept") : ""}
+                {...form.fieldProps("clientSecret")}
               />
+              <FieldError form={form} name="clientSecret" />
             </div>
           </div>
           <div className="space-y-2">
@@ -165,7 +177,10 @@ export function AuthProviderForm({
               id={`${prefix}-scopes`}
               name="scopes"
               defaultValue={provider?.scopes ?? ""}
+              maxLength={PROVIDER_TEXT_MAX}
+              {...form.fieldProps("scopes")}
             />
+            <FieldError form={form} name="scopes" />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -175,7 +190,9 @@ export function AuthProviderForm({
                 id={`${prefix}-mapName`}
                 name="mapName"
                 defaultValue={cfg.mapName ?? ""}
+                {...form.fieldProps("mapName")}
               />
+              <FieldError form={form} name="mapName" />
             </div>
             <div className="space-y-2">
               <Label htmlFor={`${prefix}-mapEmail`}>{t("mapEmail")}</Label>
@@ -184,7 +201,9 @@ export function AuthProviderForm({
                 id={`${prefix}-mapEmail`}
                 name="mapEmail"
                 defaultValue={cfg.mapEmail ?? ""}
+                {...form.fieldProps("mapEmail")}
               />
+              <FieldError form={form} name="mapEmail" />
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -195,7 +214,9 @@ export function AuthProviderForm({
                 id={`${prefix}-authorizationUrl`}
                 name="authorizationUrl"
                 defaultValue={cfg.authorizationUrl ?? ""}
+                {...form.fieldProps("authorizationUrl")}
               />
+              <FieldError form={form} name="authorizationUrl" />
             </div>
             <div className="space-y-2">
               <Label htmlFor={`${prefix}-tokenUrl`}>{t("tokenUrl")}</Label>
@@ -204,7 +225,9 @@ export function AuthProviderForm({
                 id={`${prefix}-tokenUrl`}
                 name="tokenUrl"
                 defaultValue={cfg.tokenUrl ?? ""}
+                {...form.fieldProps("tokenUrl")}
               />
+              <FieldError form={form} name="tokenUrl" />
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -215,7 +238,9 @@ export function AuthProviderForm({
                 id={`${prefix}-userInfoUrl`}
                 name="userInfoUrl"
                 defaultValue={cfg.userInfoUrl ?? ""}
+                {...form.fieldProps("userInfoUrl")}
               />
+              <FieldError form={form} name="userInfoUrl" />
             </div>
             <div className="flex items-end gap-2">
               <input

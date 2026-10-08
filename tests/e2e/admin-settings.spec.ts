@@ -84,6 +84,42 @@ test.describe("admin settings", () => {
     await expect(editForm).toHaveCount(0);
   });
 
+  test("a saved select keeps its new value across consecutive saves (#165)", async ({ page }) => {
+    test.setTimeout(120_000);
+    const key = `e2e-sel-${Date.now()}`;
+    const addForm = page.locator("form:has(#ap-new-key)");
+    const editForm = page.locator(`form:has(#ap-${key}-key)`);
+    await page.goto("/fr/admin/auth-providers", { waitUntil: "domcontentloaded", timeout: 90_000 });
+    await expect(async () => {
+      await addForm.locator("#ap-new-key").fill(key);
+      await addForm.locator("#ap-new-type").selectOption("credentials");
+      await addForm.locator("#ap-new-displayName").fill("E2E select");
+      await addForm.getByRole("button", { name: "Ajouter" }).click();
+      await expect(editForm).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 30_000 });
+
+    try {
+      const enabled = editForm.locator(`#ap-${key}-enabled`);
+      await enabled.selectOption("false");
+      await editForm.getByRole("button", { name: "Enregistrer" }).click();
+      await expect(editForm.getByText("Fournisseur enregistré.")).toBeVisible();
+      await expect(enabled).toHaveValue("false");
+
+      // A second save must not send the select's mount-time default back.
+      await editForm.locator(`#ap-${key}-displayName`).fill("E2E select renamed");
+      await editForm.getByRole("button", { name: "Enregistrer" }).click();
+      await expect(editForm.locator(`#ap-${key}-displayName`)).toHaveValue("E2E select renamed");
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await expect(editForm.locator(`#ap-${key}-enabled`)).toHaveValue("false");
+      await expect(editForm.locator(`#ap-${key}-displayName`)).toHaveValue("E2E select renamed");
+    } finally {
+      await editForm.getByRole("button", { name: "Supprimer" }).click();
+      const dialog = page.getByRole("alertdialog");
+      await dialog.getByRole("button", { name: "Supprimer" }).click();
+      await expect(editForm).toHaveCount(0);
+    }
+  });
+
   test("the admin nav only lists permitted tabs and fits a narrow viewport", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/fr/admin/users", { waitUntil: "domcontentloaded", timeout: 90_000 });

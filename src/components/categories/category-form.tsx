@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
@@ -16,11 +16,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  createCategoryAction,
-  updateCategoryAction,
-  type CategoryActionState,
-} from "@/server/transport/actions/categories";
+import { createCategoryAction, updateCategoryAction } from "@/server/transport/actions/categories";
+import { CATEGORY_NAME_MAX, CATEGORY_ICON_MAX } from "@/lib/validation/category";
+import { useActionForm, type ActionForm } from "@/components/forms/use-action-form";
+import { FieldError } from "@/components/forms/field-error";
 import { NativeSelect } from "@/components/ui/native-select";
 import { indentedName } from "@/components/transactions/category-tree";
 import type { CategoryOption } from "./category-options";
@@ -57,29 +56,19 @@ export function CategoryForm({
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = controlledOpen ?? uncontrolledOpen;
   const setOpen = onOpenChange ?? setUncontrolledOpen;
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
-
-  function handleAction(formData: FormData) {
-    startTransition(async () => {
-      const act = mode === "create" ? createCategoryAction : updateCategoryAction;
-      const result: CategoryActionState = await act(null, formData);
-      if (result?.ok) {
-        setError(null);
-        setOpen(false);
-        router.refresh();
-      } else {
-        setError(result?.error ?? "FAILED");
-      }
-    });
-  }
+  const form = useActionForm(mode === "create" ? createCategoryAction : updateCategoryAction, {
+    onSuccess: (_, { stale }) => {
+      if (!stale) setOpen(false);
+      router.refresh();
+    },
+  });
 
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) setError(null);
+        if (!next) form.reset();
       }}
     >
       {trigger && <DialogTrigger render={trigger as React.ReactElement} />}
@@ -91,7 +80,7 @@ export function CategoryForm({
           <DialogDescription>{t("subtitle")}</DialogDescription>
         </DialogHeader>
 
-        <form action={handleAction} className="flex min-h-0 flex-1 flex-col">
+        <form {...form.formProps} className="flex min-h-0 flex-1 flex-col">
           <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-5">
             {mode === "edit" && <input type="hidden" name="id" value={category!.id} />}
             {groupId ? <input type="hidden" name="groupId" value={groupId} /> : null}
@@ -104,21 +93,28 @@ export function CategoryForm({
                 defaultValue={category?.name}
                 placeholder={t("namePlaceholder")}
                 required
+                maxLength={CATEGORY_NAME_MAX}
+                {...form.fieldProps("name")}
               />
+              <FieldError form={form} name="name" />
             </div>
 
-            <ParentAndColorFields category={category} parents={parents} />
+            <ParentAndColorFields category={category} parents={parents} form={form} />
 
-            {error && <p className="text-destructive text-sm">{t(`error.${error}`)}</p>}
+            {form.error && (
+              <p role="alert" className="text-destructive text-sm">
+                {t(`error.${form.error}`)}
+              </p>
+            )}
           </div>
 
           <DialogFooter className="bg-muted/40 border-border shrink-0 border-t px-6 py-3">
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
               {t("cancel")}
             </Button>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={form.pending}>
               <Check />
-              {pending ? t("saving") : mode === "create" ? t("createCta") : t("save")}
+              {form.pending ? t("saving") : mode === "create" ? t("createCta") : t("save")}
             </Button>
           </DialogFooter>
         </form>
@@ -133,9 +129,11 @@ export function CategoryForm({
 function ParentAndColorFields({
   category,
   parents,
+  form,
 }: {
   category?: EditableCategory;
   parents: CategoryOption[];
+  form: ActionForm;
 }) {
   const t = useTranslations("categories");
   const [parentId, setParentId] = useState(category?.parentId ?? "");
@@ -148,7 +146,14 @@ function ParentAndColorFields({
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="cat-icon">{t("icon")}</Label>
-          <Input id="cat-icon" name="icon" defaultValue={category?.icon ?? ""} maxLength={50} />
+          <Input
+            id="cat-icon"
+            name="icon"
+            defaultValue={category?.icon ?? ""}
+            maxLength={CATEGORY_ICON_MAX}
+            {...form.fieldProps("icon")}
+          />
+          <FieldError form={form} name="icon" />
         </div>
         <div className="space-y-2">
           <Label htmlFor="cat-color">{t("color")}</Label>

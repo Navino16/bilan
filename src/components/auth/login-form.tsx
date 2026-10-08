@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -12,6 +12,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { loginAction } from "@/server/transport/actions/auth";
 import { PasskeySignIn } from "./passkey-sign-in";
 import { TwoFactorStep } from "./two-factor-step";
+import { useActionForm } from "@/components/forms/use-action-form";
+import { FieldError } from "@/components/forms/field-error";
 
 export type LoginNotice = "passwordReset" | "accountDeleted";
 export type SsoError = "disabled" | "ssoFailed" | "ssoSignUpDisabled" | "ssoNotLinked";
@@ -56,7 +58,8 @@ function PasswordStep({
 }) {
   const t = useTranslations("auth.login");
   const router = useRouter();
-  const [state, action, pending] = useActionState(loginAction, null);
+  const form = useActionForm(loginAction, { resetOnSuccess: false });
+  const { state, pending } = form;
 
   useEffect(() => {
     if (state?.ok && !state.twoFactor) router.push(redirectTo);
@@ -81,10 +84,18 @@ function PasswordStep({
         </Alert>
       )}
       <div className="space-y-4">
-        <form action={action} className="space-y-4">
+        <form {...form.formProps} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">{t("email")}</Label>
-            <Input id="email" name="email" type="email" required autoComplete="email" />
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              {...form.fieldProps("email")}
+            />
+            <FieldError form={form} name="email" />
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -96,7 +107,14 @@ function PasswordStep({
                 {t("forgot")}
               </Link>
             </div>
-            <PasswordInput id="password" name="password" required autoComplete="current-password" />
+            <PasswordInput
+              id="password"
+              name="password"
+              required
+              autoComplete="current-password"
+              {...form.fieldProps("password")}
+            />
+            <FieldError form={form} name="password" />
           </div>
           {state && !state.ok && (
             <Alert variant="destructive">

@@ -1,17 +1,19 @@
 "use client";
 
-import { useActionState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { resetRequestAction } from "@/server/transport/actions/auth";
+import { useActionForm } from "@/components/forms/use-action-form";
+import { FieldError } from "@/components/forms/field-error";
 
 export function ResetRequestForm() {
   const t = useTranslations("auth.reset");
   const locale = useLocale();
-  const [state, action, pending] = useActionState(resetRequestAction, null);
+  const form = useActionForm(resetRequestAction);
+  const { state, pending } = form;
 
   if (state?.ok) {
     return (
@@ -22,11 +24,19 @@ export function ResetRequestForm() {
   }
 
   return (
-    <form action={action} className="space-y-4">
+    <form {...form.formProps} className="space-y-4">
       <input type="hidden" name="locale" value={locale} />
       <div className="space-y-2">
         <Label htmlFor="email">{t("email")}</Label>
-        <Input id="email" name="email" type="email" required autoComplete="email" />
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          required
+          autoComplete="email"
+          {...form.fieldProps("email")}
+        />
+        <FieldError form={form} name="email" />
       </div>
       {state && !state.ok && (
         <Alert variant="destructive">

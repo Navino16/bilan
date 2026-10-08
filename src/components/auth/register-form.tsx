@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -9,13 +9,16 @@ import { Label } from "@/components/ui/label";
 import { PasswordInput } from "./password-input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { registerAction } from "@/server/transport/actions/auth";
+import { NAME_MAX } from "@/lib/validation/name";
+import { useActionForm } from "@/components/forms/use-action-form";
+import { FieldError } from "@/components/forms/field-error";
 
 export function RegisterForm({ locale, mode }: { locale: string; mode: string }) {
   const t = useTranslations("auth.register");
   const router = useRouter();
   const params = useSearchParams();
-  const [state, action, pending] = useActionState(registerAction, null);
-  const [mismatch, setMismatch] = useState(false);
+  const form = useActionForm(registerAction, { resetOnSuccess: false });
+  const { state, pending, error } = form;
 
   useEffect(() => {
     if (state?.ok) router.push(`/${locale}/dashboard`);
@@ -30,18 +33,9 @@ export function RegisterForm({ locale, mode }: { locale: string; mode: string })
   }
 
   const inviteOnly = mode === "INVITE_ONLY";
-  const error = mismatch ? "MISMATCH" : state && !state.ok ? state.error : null;
-
-  // Checked before submitting: a server-side error would reset the whole form.
-  function checkConfirmation(e: React.FormEvent<HTMLFormElement>) {
-    const data = new FormData(e.currentTarget);
-    const differs = data.get("password") !== data.get("confirmPassword");
-    setMismatch(differs);
-    if (differs) e.preventDefault();
-  }
 
   return (
-    <form action={action} onSubmit={checkConfirmation} className="space-y-4">
+    <form {...form.formProps} className="space-y-4">
       <input type="hidden" name="invitationToken" value={params.get("invitation") ?? ""} />
       {inviteOnly ? (
         <div className="space-y-2">
@@ -51,19 +45,39 @@ export function RegisterForm({ locale, mode }: { locale: string; mode: string })
             name="adminToken"
             required
             defaultValue={params.get("adminToken") ?? ""}
+            {...form.fieldProps("adminToken", "adminToken-hint")}
           />
-          <p className="text-muted-foreground text-xs">{t("tokenHint")}</p>
+          <FieldError form={form} name="adminToken" />
+          <p id="adminToken-hint" className="text-muted-foreground text-xs">
+            {t("tokenHint")}
+          </p>
         </div>
       ) : (
         <input type="hidden" name="adminToken" value={params.get("adminToken") ?? ""} />
       )}
       <div className="space-y-2">
         <Label htmlFor="name">{t("name")}</Label>
-        <Input id="name" name="name" required autoComplete="name" />
+        <Input
+          id="name"
+          name="name"
+          required
+          maxLength={NAME_MAX}
+          autoComplete="name"
+          {...form.fieldProps("name")}
+        />
+        <FieldError form={form} name="name" />
       </div>
       <div className="space-y-2">
         <Label htmlFor="email">{t("email")}</Label>
-        <Input id="email" name="email" type="email" required autoComplete="email" />
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          required
+          autoComplete="email"
+          {...form.fieldProps("email")}
+        />
+        <FieldError form={form} name="email" />
       </div>
       <div className="space-y-2">
         <Label htmlFor="password">{t("password")}</Label>
@@ -73,9 +87,12 @@ export function RegisterForm({ locale, mode }: { locale: string; mode: string })
           required
           minLength={12}
           autoComplete="new-password"
-          onChange={() => setMismatch(false)}
+          {...form.fieldProps("password", "password-hint")}
         />
-        <p className="text-muted-foreground text-xs">{t("passwordHint")}</p>
+        <FieldError form={form} name="password" />
+        <p id="password-hint" className="text-muted-foreground text-xs">
+          {t("passwordHint")}
+        </p>
       </div>
       <div className="space-y-2">
         <Label htmlFor="confirmPassword">{t("confirmPassword")}</Label>
@@ -85,9 +102,9 @@ export function RegisterForm({ locale, mode }: { locale: string; mode: string })
           required
           minLength={12}
           autoComplete="new-password"
-          aria-invalid={mismatch || undefined}
-          onChange={() => setMismatch(false)}
+          {...form.fieldProps("confirmPassword")}
         />
+        <FieldError form={form} name="confirmPassword" />
       </div>
       {error && (
         <Alert variant="destructive">

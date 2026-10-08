@@ -3,6 +3,7 @@ import { Prisma, type PrismaClient, type AuthProvider } from "@prisma/client";
 import { db } from "@/server/db";
 import { encrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
+import { PROVIDER_KEY_MAX, PROVIDER_TEXT_MAX } from "@/lib/validation/auth-provider";
 import { invalidateAuthCache } from "@/server/auth";
 import { logEvent } from "@/server/services/audit";
 import { appSettings } from "@/server/services/settings/app-settings";
@@ -16,15 +17,16 @@ export const providerSchema = z
     key: z
       .string()
       .trim()
-      .regex(/^[a-z0-9][a-z0-9_-]{0,63}$/)
+      .max(PROVIDER_KEY_MAX)
+      .regex(/^[a-z0-9][a-z0-9_-]*$/)
       .refine((k) => !RESERVED_KEYS.includes(k)),
     type: z.enum(["credentials", "oidc", "google"]),
     displayName: z.string().trim().min(1).max(100),
     enabled: z.boolean(),
-    issuer: z.string().trim().max(191).pipe(z.url()).optional().nullable(),
-    clientId: z.string().trim().max(191).optional().nullable(),
+    issuer: z.string().trim().max(PROVIDER_TEXT_MAX).pipe(z.url()).optional().nullable(),
+    clientId: z.string().trim().max(PROVIDER_TEXT_MAX).optional().nullable(),
     clientSecret: z.string().optional().nullable(),
-    scopes: z.string().max(191).optional().nullable(),
+    scopes: z.string().max(PROVIDER_TEXT_MAX).optional().nullable(),
     // Advanced OIDC options (stored in the `config` JSON column). Endpoints are an
     // explicit fallback when the issuer's discovery document isn't usable; mapName
     // /mapEmail let the admin pick which userinfo claims map to name/email.

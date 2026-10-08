@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,10 +17,9 @@ import {
   DialogDescription,
   DialogClose,
 } from "@/components/ui/dialog";
-import {
-  deleteAccountAction,
-  type AccountDataState,
-} from "@/server/transport/actions/account-data";
+import { deleteAccountAction } from "@/server/transport/actions/account-data";
+import { useActionForm } from "@/components/forms/use-action-form";
+import { FieldError } from "@/components/forms/field-error";
 import { PageHeader } from "@/components/shell/page-header";
 import { SectionCard } from "@/components/shell/section-card";
 import { DownloadButton } from "./download-button";
@@ -37,14 +36,10 @@ export function DataControls({
   const t = useTranslations("settings.data");
   const [open, setOpen] = useState(false);
   const [exportFailed, setExportFailed] = useState(false);
-  const [state, action, pending] = useActionState<AccountDataState, FormData>(
-    deleteAccountAction,
-    null,
-  );
-
-  useEffect(() => {
-    if (state?.ok) window.location.assign(`/${locale}/login?deleted=1`);
-  }, [state, locale]);
+  const form = useActionForm(deleteAccountAction, {
+    resetOnSuccess: false,
+    onSuccess: () => window.location.assign(`/${locale}/login?deleted=1`),
+  });
 
   return (
     <div className="space-y-6">
@@ -84,7 +79,13 @@ export function DataControls({
         title={t("deleteTitle")}
         hint={t("deleteWarning")}
       >
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog
+          open={open}
+          onOpenChange={(next) => {
+            setOpen(next);
+            if (!next) form.reset();
+          }}
+        >
           <DialogTrigger
             render={
               <Button variant="destructive" className="w-full sm:w-auto sm:self-start">
@@ -94,7 +95,7 @@ export function DataControls({
             }
           />
           <DialogContent>
-            <form action={action} className="space-y-4">
+            <form {...form.formProps} className="space-y-4">
               <DialogHeader>
                 <DialogTitle>{t("deleteTitle")}</DialogTitle>
                 <DialogDescription>{t("deleteWarning")}</DialogDescription>
@@ -108,7 +109,9 @@ export function DataControls({
                     type="password"
                     required
                     autoComplete="current-password"
+                    {...form.fieldProps("password")}
                   />
+                  <FieldError form={form} name="password" />
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -120,22 +123,22 @@ export function DataControls({
                     required
                     autoComplete="off"
                     placeholder={email}
+                    {...form.fieldProps("confirmEmail")}
                   />
+                  <FieldError form={form} name="confirmEmail" />
                 </div>
               )}
-              {state && !state.ok && (
+              {form.error && (
                 <Alert variant="destructive">
-                  <AlertDescription>
-                    {t(`error.${state.error}` as "error.INVALID")}
-                  </AlertDescription>
+                  <AlertDescription>{t(`error.${form.error}` as "error.INVALID")}</AlertDescription>
                 </Alert>
               )}
               <DialogFooter>
                 <DialogClose render={<Button variant="ghost" type="button" />}>
                   {t("cancel")}
                 </DialogClose>
-                <Button variant="destructive" type="submit" disabled={pending}>
-                  {pending ? t("deleting") : t("confirmDelete")}
+                <Button variant="destructive" type="submit" disabled={form.pending}>
+                  {form.pending ? t("deleting") : t("confirmDelete")}
                 </Button>
               </DialogFooter>
             </form>

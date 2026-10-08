@@ -21,8 +21,9 @@ import {
   providerSchema,
   updateAuthProvider,
 } from "@/server/services/settings/auth-providers";
+import { invalidInput, type FormFailure } from "@/lib/validation/field-errors";
 
-export type SettingsActionState = { ok: true } | { ok: false; error: string } | null;
+export type SettingsActionState = { ok: true } | FormFailure | null;
 
 function str(formData: FormData, key: string): string {
   return String(formData.get(key) ?? "").trim();
@@ -61,7 +62,7 @@ export async function saveAuthProviderAction(
     mapEmail: optional(str(formData, "mapEmail")),
     allowSignUp: bool(formData, "allowSignUp"),
   });
-  if (!parsed.success) return { ok: false, error: "INVALID" };
+  if (!parsed.success) return invalidInput(parsed.error, Object.fromEntries(formData));
   try {
     const save = mode === "create" ? createAuthProvider : updateAuthProvider;
     await save(parsed.data, { id: user.id });
@@ -100,7 +101,7 @@ export async function upsertSmtpAction(
     fromName: optional(str(formData, "fromName")),
     enabled: bool(formData, "enabled"),
   });
-  if (!parsed.success) return { ok: false, error: "INVALID" };
+  if (!parsed.success) return invalidInput(parsed.error, Object.fromEntries(formData));
   try {
     await upsertSmtp(parsed.data, { id: user.id });
   } catch (e) {
@@ -175,14 +176,16 @@ export async function setAppSettingsAction(
 ): Promise<SettingsActionState> {
   const user = await requirePermission("admin.settings.write");
   const values: [string, unknown][] = [];
+  const fieldErrors: Record<string, string> = {};
   for (const [field, raw] of formData.entries()) {
     if (!field.startsWith(SETTING_FIELD)) continue;
     if (typeof raw !== "string") return { ok: false, error: "INVALID" };
     const key = field.slice(SETTING_FIELD.length);
     const value = coerceAppSetting(key, raw.trim());
-    if (value === undefined) return { ok: false, error: "INVALID" };
-    values.push([key, value]);
+    if (value === undefined) fieldErrors[field] = raw.trim() ? "INVALID" : "REQUIRED";
+    else values.push([key, value]);
   }
+  if (Object.keys(fieldErrors).length) return { ok: false, error: "INVALID", fieldErrors };
   try {
     await appSettings.setMany(values, user.id);
   } catch {

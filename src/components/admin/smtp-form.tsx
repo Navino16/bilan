@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Send, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -12,11 +12,12 @@ import {
   deleteSmtpConfigAction,
   sendSmtpTestAction,
   upsertSmtpAction,
-  type SettingsActionState,
   type SmtpTestState,
 } from "@/server/transport/actions/settings";
 import { NativeSelect } from "@/components/ui/native-select";
 import { ConfirmDialog } from "@/components/shell/confirm-dialog";
+import { useActionForm } from "@/components/forms/use-action-form";
+import { FieldError } from "@/components/forms/field-error";
 
 export type SmtpDefaults = {
   host: string;
@@ -31,21 +32,26 @@ export type SmtpDefaults = {
 export function SmtpForm({ defaults }: { defaults: SmtpDefaults }) {
   const t = useTranslations("admin.smtp");
   const router = useRouter();
-  const [state, action, pending] = useActionState<SettingsActionState, FormData>(
-    upsertSmtpAction,
-    null,
-  );
-  useEffect(() => {
-    if (state?.ok) router.refresh();
-  }, [state, router]);
+  const form = useActionForm(upsertSmtpAction, {
+    resetOnSuccess: false,
+    onSuccess: () => router.refresh(),
+  });
+  const { state, pending } = form;
 
   return (
     <div className="space-y-6">
-      <form action={action} className="space-y-4">
+      <form {...form.formProps} className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="smtp-host">{t("host")}</Label>
-            <Input id="smtp-host" name="host" defaultValue={defaults?.host ?? ""} required />
+            <Input
+              id="smtp-host"
+              name="host"
+              defaultValue={defaults?.host ?? ""}
+              required
+              {...form.fieldProps("host")}
+            />
+            <FieldError form={form} name="host" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="smtp-port">{t("port")}</Label>
@@ -55,7 +61,9 @@ export function SmtpForm({ defaults }: { defaults: SmtpDefaults }) {
               type="number"
               defaultValue={defaults?.port ?? 587}
               required
+              {...form.fieldProps("port")}
             />
+            <FieldError form={form} name="port" />
           </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -66,7 +74,9 @@ export function SmtpForm({ defaults }: { defaults: SmtpDefaults }) {
               name="username"
               defaultValue={defaults?.username ?? ""}
               required
+              {...form.fieldProps("username")}
             />
+            <FieldError form={form} name="username" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="smtp-password">{t("password")}</Label>
@@ -76,7 +86,9 @@ export function SmtpForm({ defaults }: { defaults: SmtpDefaults }) {
               type="password"
               placeholder={defaults ? t("passwordKept") : ""}
               required={!defaults}
+              {...form.fieldProps("password")}
             />
+            <FieldError form={form} name="password" />
           </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -88,7 +100,9 @@ export function SmtpForm({ defaults }: { defaults: SmtpDefaults }) {
               type="email"
               defaultValue={defaults?.fromAddress ?? ""}
               required
+              {...form.fieldProps("fromAddress")}
             />
+            <FieldError form={form} name="fromAddress" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="smtp-fromName">{t("fromName")}</Label>

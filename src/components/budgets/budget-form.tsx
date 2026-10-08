@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Check, Plus, X } from "lucide-react";
@@ -18,12 +18,14 @@ import {
 } from "@/components/ui/dialog";
 import { budgetPlannedTotal, periodEndFor } from "@/lib/budgets";
 import { parseAmount } from "@/lib/amount";
-import { BUDGET_PERIOD_TYPES, type BudgetPeriodType } from "@/lib/validation/budget";
 import {
-  createBudgetAction,
-  updateBudgetAction,
-  type BudgetActionState,
-} from "@/server/transport/actions/budgets";
+  BUDGET_NAME_MAX,
+  BUDGET_PERIOD_TYPES,
+  type BudgetPeriodType,
+} from "@/lib/validation/budget";
+import { createBudgetAction, updateBudgetAction } from "@/server/transport/actions/budgets";
+import { useActionForm } from "@/components/forms/use-action-form";
+import { FieldError } from "@/components/forms/field-error";
 import { NativeSelect } from "@/components/ui/native-select";
 import { indentedName } from "@/components/transactions/category-tree";
 import type { CategoryOption } from "@/components/categories/category-options";
@@ -110,8 +112,6 @@ function BudgetFormBody({
   const t = useTranslations("budgets");
   const locale = useLocale();
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
   const [groupId, setGroupId] = useState(budget?.groupId ?? "");
   const [periodType, setPeriodType] = useState<BudgetPeriodType>(
     (budget?.periodType as BudgetPeriodType) ?? "MONTH",
@@ -187,21 +187,15 @@ function BudgetFormBody({
     }
   }
 
-  function handleAction(formData: FormData) {
-    startTransition(async () => {
-      const act = mode === "create" ? createBudgetAction : updateBudgetAction;
-      const result: BudgetActionState = await act(null, formData);
-      if (result?.ok) {
-        onDone();
-        router.refresh();
-      } else {
-        setError(result?.error ?? "FAILED");
-      }
-    });
-  }
+  const form = useActionForm(mode === "create" ? createBudgetAction : updateBudgetAction, {
+    onSuccess: () => {
+      onDone();
+      router.refresh();
+    },
+  });
 
   return (
-    <form action={handleAction} className="flex min-h-0 flex-1 flex-col">
+    <form {...form.formProps} className="flex min-h-0 flex-1 flex-col">
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-5">
         {mode === "edit" && <input type="hidden" name="id" value={budget!.id} />}
         <input type="hidden" name="lines" value={linesPayload} />
@@ -214,7 +208,10 @@ function BudgetFormBody({
             defaultValue={budget?.name}
             placeholder={t("namePlaceholder")}
             required
+            maxLength={BUDGET_NAME_MAX}
+            {...form.fieldProps("name")}
           />
+          <FieldError form={form} name="name" />
         </div>
 
         <div className="space-y-2">
@@ -260,7 +257,9 @@ function BudgetFormBody({
               value={periodStart}
               onChange={(e) => changePeriod(periodType, e.target.value)}
               required
+              {...form.fieldProps("periodStart")}
             />
+            <FieldError form={form} name="periodStart" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="bud-end">{t("periodEnd")}</Label>
@@ -271,7 +270,9 @@ function BudgetFormBody({
               value={periodEnd}
               onChange={(e) => changeEnd(e.target.value)}
               required
+              {...form.fieldProps("periodEnd")}
             />
+            <FieldError form={form} name="periodEnd" />
           </div>
         </div>
 
@@ -333,6 +334,8 @@ function BudgetFormBody({
                 onChange={(e) => updateLine(i, { plannedAmount: e.target.value })}
                 className="sm:w-28"
                 required
+                data-field={`lines.${i}.plannedAmount`}
+                {...form.fieldProps(`lines.${i}.plannedAmount`)}
               />
               <Button
                 type="button"
@@ -340,10 +343,16 @@ function BudgetFormBody({
                 size="icon"
                 aria-label={t("line.remove")}
                 disabled={lines.length === 1}
-                onClick={() => setLines((prev) => prev.filter((_, j) => j !== i))}
+                onClick={() => {
+                  setLines((prev) => prev.filter((_, j) => j !== i));
+                  form.clearFieldErrors((name) => name.startsWith("lines."));
+                }}
               >
                 <X />
               </Button>
+              <div className="empty:hidden sm:col-span-4">
+                <FieldError form={form} name={`lines.${i}.plannedAmount`} />
+              </div>
             </div>
           ))}
           <p className="text-muted-foreground text-xs">{t("line.catchAllHint")}</p>
@@ -358,16 +367,20 @@ function BudgetFormBody({
           </Button>
         </div>
 
-        {error && <p className="text-destructive text-sm">{t(`error.${error}`)}</p>}
+        {form.error && (
+          <p role="alert" className="text-destructive text-sm">
+            {t(`error.${form.error}`)}
+          </p>
+        )}
       </div>
 
       <DialogFooter className="bg-muted/40 border-border shrink-0 border-t px-6 py-3">
         <Button type="button" variant="ghost" onClick={onDone}>
           {t("cancel")}
         </Button>
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" disabled={form.pending}>
           <Check />
-          {pending ? t("saving") : mode === "create" ? t("createCta") : t("save")}
+          {form.pending ? t("saving") : mode === "create" ? t("createCta") : t("save")}
         </Button>
       </DialogFooter>
     </form>

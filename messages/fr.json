@@ -1700,5 +1700,22 @@
       "body": "Un budget fixe une enveloppe par catégorie ou par compte sur une période et suit vos dépenses.",
       "cta": "Créer mon premier budget"
     }
+  },
+  "forms": {
+    "fieldError": {
+      "REQUIRED": "Ce champ est requis.",
+      "TOO_LONG": "Ce texte est trop long.",
+      "TOO_SHORT": "Ce texte est trop court.",
+      "TOO_BIG": "Cette valeur est trop grande.",
+      "TOO_SMALL": "Cette valeur est trop petite.",
+      "INVALID_EMAIL": "Adresse e-mail invalide.",
+      "INVALID_URL": "URL invalide (https://…).",
+      "INVALID_FORMAT": "Format invalide.",
+      "INVALID": "Valeur invalide.",
+      "MISMATCH": "Les deux mots de passe ne correspondent pas.",
+      "AMOUNT_INVALID": "Montant invalide. Exemples : -12,34 ou 1 234,56.",
+      "AMOUNT_AMBIGUOUS": "Montant ambigu : écrivez 1234 ou 1,23 (sans séparateur de milliers seul).",
+      "AMOUNT_PRECISION": "Le montant ne peut pas avoir plus de 2 décimales."
+    }
   }
 }

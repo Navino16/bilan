@@ -28,6 +28,31 @@ test.describe("groups", () => {
     await expect(page.getByRole("main").getByText("owner@e2e.local")).toBeVisible();
   });
 
+  test("a server-side error keeps the typed values, flags the field and focuses it (#165)", async ({
+    page,
+  }) => {
+    await page.goto("/fr/groups");
+    await page.getByRole("button", { name: /nouveau foyer/i }).click();
+    const dialog = page.getByRole("dialog");
+    const name = dialog.locator('input[name="name"]');
+    const description = dialog.locator('textarea[name="description"]');
+    // Spaces pass the browser's `required` check but not the server's trimmed nameSchema.
+    await name.fill("   ");
+    await description.fill("Une description à garder");
+    await dialog.getByRole("button", { name: /créer le foyer/i }).click();
+
+    const fieldError = dialog.getByText("Ce champ est requis.");
+    await expect(fieldError).toBeVisible();
+    await expect(dialog.getByRole("alert")).toBeVisible();
+    await expect(name).toHaveAttribute("aria-invalid", "true");
+    await expect(name).toBeFocused();
+    const describedBy = (await name.getAttribute("aria-describedby")) ?? "";
+    expect(describedBy).toBe(await fieldError.getAttribute("id"));
+    await expect(name).toHaveValue("   ");
+    await expect(description).toHaveValue("Une description à garder");
+    await expect(name).toHaveAttribute("maxlength", "100");
+  });
+
   test("invite a member by code and let them join", async ({ page, browser }) => {
     const name = `Foyer invite ${Date.now()}`;
     // Owner creates a group and opens it.

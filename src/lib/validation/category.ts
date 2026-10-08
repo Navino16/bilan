@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const CATEGORY_NAME_MAX = 60;
+export const CATEGORY_ICON_MAX = 50;
 
 const emptyToUndefined = (v: unknown) => (typeof v === "string" && v.trim() === "" ? undefined : v);
 
@@ -16,7 +17,7 @@ export const categoryInputSchema = z.object({
       .regex(/^#[0-9a-fA-F]{6}$/)
       .optional(),
   ),
-  icon: z.preprocess(emptyToUndefined, z.string().trim().max(50).optional()),
+  icon: z.preprocess(emptyToUndefined, z.string().trim().max(CATEGORY_ICON_MAX).optional()),
   parentId: z.preprocess(emptyToUndefined, z.string().trim().optional()),
   groupId: z.preprocess(emptyToUndefined, z.string().trim().optional()),
 });

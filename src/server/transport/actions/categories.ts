@@ -2,6 +2,7 @@
 
 import { requireSession } from "@/server/auth/permissions";
 import { categoryInputSchema } from "@/lib/validation/category";
+import { invalidInput, type FormFailure } from "@/lib/validation/field-errors";
 import {
   createCategory,
   updateCategory,
@@ -11,7 +12,7 @@ import {
   type CategoryDeletionImpact,
 } from "@/server/services/categories";
 
-export type CategoryActionState = { ok: true } | { ok: false; error: string } | null;
+export type CategoryActionState = { ok: true } | FormFailure | null;
 
 function parse(formData: FormData) {
   return categoryInputSchema.safeParse({
@@ -33,7 +34,7 @@ export async function createCategoryAction(
 ): Promise<CategoryActionState> {
   const user = await requireSession();
   const parsed = parse(formData);
-  if (!parsed.success) return { ok: false, error: "INVALID" };
+  if (!parsed.success) return invalidInput(parsed.error);
   try {
     await createCategory(parsed.data, { id: user.id });
   } catch (e) {
@@ -50,7 +51,7 @@ export async function updateCategoryAction(
   const id = String(formData.get("id") ?? "");
   if (!id) return { ok: false, error: "INVALID" };
   const parsed = parse(formData);
-  if (!parsed.success) return { ok: false, error: "INVALID" };
+  if (!parsed.success) return invalidInput(parsed.error);
   try {
     await updateCategory(id, parsed.data, { id: user.id });
   } catch (e) {

@@ -1,6 +1,5 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -13,31 +12,29 @@ import {
   SIGNUP_TOKEN_DEFAULT_EXPIRY_DAYS,
   SIGNUP_TOKEN_EXPIRY_DAYS,
   SIGNUP_TOKEN_MAX_USES,
+  SIGNUP_TOKEN_DESCRIPTION_MAX,
 } from "@/lib/validation/signup-token";
+import { useActionForm } from "@/components/forms/use-action-form";
+import { FieldError } from "@/components/forms/field-error";
 
 export function SignupTokenCreateForm() {
   const t = useTranslations("admin.signupTokens");
   const router = useRouter();
-  const formRef = useRef<HTMLFormElement>(null);
-  const [state, action, pending] = useActionState(createSignupTokenAction, null);
-
-  useEffect(() => {
-    if (state?.ok) {
-      formRef.current?.reset();
-      router.refresh();
-    }
-  }, [state, router]);
+  const form = useActionForm(createSignupTokenAction, { onSuccess: () => router.refresh() });
+  const { pending } = form;
 
   return (
-    <form ref={formRef} action={action} className="flex flex-wrap items-end gap-4">
+    <form {...form.formProps} className="flex flex-wrap items-end gap-4">
       <div className="min-w-48 flex-1 space-y-2">
         <Label htmlFor="st-desc">{t("description")}</Label>
         <Input
           id="st-desc"
           name="description"
-          maxLength={191}
+          maxLength={SIGNUP_TOKEN_DESCRIPTION_MAX}
           placeholder={t("descriptionPlaceholder")}
+          {...form.fieldProps("description")}
         />
+        <FieldError form={form} name="description" />
       </div>
       <div className="space-y-2">
         <Label htmlFor="st-max">{t("maxUses")}</Label>
@@ -49,7 +46,9 @@ export function SignupTokenCreateForm() {
           max={SIGNUP_TOKEN_MAX_USES}
           placeholder="∞"
           className="w-28"
+          {...form.fieldProps("maxUses")}
         />
+        <FieldError form={form} name="maxUses" />
       </div>
       <div className="space-y-2">
         <Label htmlFor="st-expiry">{t("expiresIn")}</Label>
@@ -70,9 +69,9 @@ export function SignupTokenCreateForm() {
       <Button type="submit" disabled={pending}>
         {pending ? t("creating") : t("create")}
       </Button>
-      {state && !state.ok && (
+      {form.error && (
         <Alert variant="destructive" className="w-full">
-          <AlertDescription>{t(`error.${state.error}`)}</AlertDescription>
+          <AlertDescription>{t(`error.${form.error}`)}</AlertDescription>
         </Alert>
       )}
     </form>
