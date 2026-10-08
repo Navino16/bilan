@@ -53,7 +53,7 @@ test.describe("groups", () => {
     await expect(name).toHaveAttribute("maxlength", "100");
   });
 
-  test("invite a member by code and let them join", async ({ page, browser }) => {
+  test("invite a member by code and let them join", async ({ page, browser, baseURL }) => {
     const name = `Foyer invite ${Date.now()}`;
     // Owner creates a group and opens it.
     await page.goto("/fr/groups");
@@ -73,7 +73,7 @@ test.describe("groups", () => {
     // The member joins with the code from a separate session.
     const memberCtx = await browser.newContext({
       storageState: "tests/e2e/.auth/member.json",
-      baseURL: "http://localhost:3000",
+      baseURL,
     });
     const mp = await memberCtx.newPage();
     await mp.goto("/fr/groups");
@@ -89,6 +89,7 @@ test.describe("groups", () => {
   test("an invitation link only works for the invited address", async ({
     page,
     browser,
+    baseURL,
     context,
     browserName,
   }) => {
@@ -111,7 +112,7 @@ test.describe("groups", () => {
 
     const memberCtx = await browser.newContext({
       storageState: "tests/e2e/.auth/member.json",
-      baseURL: "http://localhost:3000",
+      baseURL,
     });
     const mp = await memberCtx.newPage();
     await mp.goto(new URL(link).pathname);

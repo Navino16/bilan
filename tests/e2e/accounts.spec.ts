@@ -76,6 +76,7 @@ test.describe("accounts", () => {
   test("share an account READ with a household; member sees it read-only", async ({
     page,
     browser,
+    baseURL,
   }) => {
     const name = `Partagé ${Date.now()}`;
     // Owner creates an account.
@@ -98,7 +99,7 @@ test.describe("accounts", () => {
     // The member of that household sees the account read-only (no mutate menu).
     const memberCtx = await browser.newContext({
       storageState: "tests/e2e/.auth/member.json",
-      baseURL: "http://localhost:3000",
+      baseURL,
     });
     const mp = await memberCtx.newPage();
     await mp.goto("/fr/accounts");

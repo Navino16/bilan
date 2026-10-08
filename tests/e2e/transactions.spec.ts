@@ -127,7 +127,8 @@ test.describe("transactions", () => {
   test("filters by account, type and amount, sorts by amount and resets", async ({ page }) => {
     const stamp = Date.now();
     await page.goto(`/fr/transactions?search=${stamp}`);
-    let accountName = "";
+    // The seeded account: the form defaults to the newest one, which a concurrent run may change.
+    const accountName = "E2E Courant";
     for (const [suffix, amount, type] of [
       ["petit", "-5", "CARD"],
       ["gros", "-150", "TRANSFER"],
@@ -136,7 +137,7 @@ test.describe("transactions", () => {
         await page.getByRole("button", { name: /nouvelle transaction/i }).click();
         await expect(page.locator('input[name="label"]')).toBeVisible();
       }).toPass();
-      accountName = (await page.locator("#tx-account option:checked").innerText()).trim();
+      await page.selectOption("#tx-account", { label: accountName });
       await page.fill('input[name="date"]', "2026-02-20");
       await page.fill('input[name="amount"]', amount);
       await page.fill('input[name="label"]', `Filtre ${stamp} ${suffix}`);
@@ -153,30 +154,34 @@ test.describe("transactions", () => {
     await expect(rows).toHaveCount(1);
     await expect(rows.first()).toContainText("gros");
 
+    // Filters build on the live URL, so the next one must wait for the reset to land.
     const reset = page.locator('[data-slot="filters-reset"]');
-    await reset.click();
+    const resetFilters = async () => {
+      await reset.click();
+      await expect(reset).toBeHidden();
+    };
+    await resetFilters();
     await expect(page).not.toHaveURL(/type=/);
     await expect(rows).toHaveCount(2);
-    await expect(reset).toBeHidden();
 
     await page.getByRole("textbox", { name: "Montant min." }).fill("100");
     await page.getByRole("textbox", { name: "Montant min." }).press("Enter");
     await expect(page).toHaveURL(/min=100/);
     await expect(rows).toHaveCount(1);
-    await reset.click();
+    await resetFilters();
 
     await page.getByRole("button", { name: /tous les comptes/i }).click();
     await page.getByRole("menuitem", { name: accountName, exact: true }).click();
     await expect(page).toHaveURL(/accountId=/);
     await expect(rows).toHaveCount(2);
-    await reset.click();
+    await resetFilters();
 
     await page.getByRole("combobox", { name: "Tri" }).selectOption("amount-asc");
     await expect(page).toHaveURL(/sort=amount-asc/);
     await expect(rows.first()).toContainText("gros");
     await page.getByRole("combobox", { name: "Tri" }).selectOption("amount-desc");
     await expect(rows.first()).toContainText("petit");
-    await reset.click();
+    await resetFilters();
     await expect(page).not.toHaveURL(/sort=/);
     await expect(page).toHaveURL(new RegExp(`search=${stamp}`));
   });
