@@ -8,6 +8,7 @@ import { RoleSelect } from "@/components/admin/role-select";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { UserActions } from "@/components/admin/user-actions";
 import { topRole } from "@/lib/instance-roles";
+import { displayName } from "@/lib/validation/name";
 import { parsePage } from "@/lib/pagination";
 import { SectionCard, listHeader } from "@/components/shell/section-card";
 import { Pager } from "@/components/shell/pager";
@@ -100,7 +101,7 @@ export default async function AdminUsersPage({
           >
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="truncate font-medium">{u.name ?? u.email}</span>
+                <span className="truncate font-medium">{displayName(u)}</span>
                 {u.disabled && <StatusBadge active={false}>{t("disabledBadge")}</StatusBadge>}
               </div>
               <div className="text-muted-foreground truncate text-xs md:hidden">{u.email}</div>
@@ -108,11 +109,7 @@ export default async function AdminUsersPage({
             <div className="text-muted-foreground hidden truncate md:block">{u.email}</div>
             <div className="flex items-center justify-end gap-1 md:contents">
               {canUpdate && u.id !== viewer.id ? (
-                <RoleSelect
-                  userId={u.id}
-                  role={topRole(u.roleKeys)}
-                  userLabel={u.name ?? u.email}
-                />
+                <RoleSelect userId={u.id} role={topRole(u.roleKeys)} userLabel={displayName(u)} />
               ) : (
                 <RoleBadge roles={u.roleKeys} />
               )}
@@ -125,7 +122,7 @@ export default async function AdminUsersPage({
                   <UserActions
                     userId={u.id}
                     email={u.email}
-                    label={u.name ?? u.email}
+                    label={displayName(u)}
                     disabled={u.disabled}
                     canDisable={disable}
                     canDelete={remove}

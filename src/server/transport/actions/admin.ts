@@ -81,12 +81,17 @@ export async function createSignupTokenAction(
   if (!parsed.success) return { ok: false, error: "INVALID" };
   const { description, maxUses, expiresInDays } = parsed.data;
 
-  const { id } = await createSignupToken({
-    description,
-    maxUses,
-    expiresAt: signupTokenExpiry(expiresInDays, new Date()),
-    createdById: actor.id,
-  });
+  let id: string;
+  try {
+    ({ id } = await createSignupToken({
+      description,
+      maxUses,
+      expiresAt: signupTokenExpiry(expiresInDays, new Date()),
+      createdById: actor.id,
+    }));
+  } catch {
+    return { ok: false, error: "FAILED" };
+  }
   await logEvent({
     userId: actor.id,
     action: "signup_token.created",

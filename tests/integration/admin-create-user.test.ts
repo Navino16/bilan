@@ -41,6 +41,14 @@ describe("adminCreateUser", () => {
     expect(audit).not.toBeNull();
   });
 
+  it("rejects a blank name before creating anything (#163)", async () => {
+    const email = `blank+${Date.now()}@bilan.local`;
+    await expect(
+      adminCreateUser({ email, name: "   ", role: "USER" }, { id: actorId }),
+    ).rejects.toThrow();
+    expect(await db.user.findUnique({ where: { email } })).toBeNull();
+  });
+
   it("opens no session for the new user, so the admin stays signed in as themselves", async () => {
     const email = `nosession+${Date.now()}@bilan.local`;
     const { id } = await adminCreateUser(

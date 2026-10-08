@@ -7,13 +7,14 @@ import { completeSetup } from "@/server/services/bootstrap";
 import { isSetupNeeded } from "@/server/services/setup-status";
 import { appSettings } from "@/server/services/settings/app-settings";
 import { upsertSmtp, smtpSchema } from "@/server/services/settings/smtp";
-import { upsertAuthProvider, upsertSchema } from "@/server/services/settings/auth-providers";
+import { createAuthProvider, providerSchema } from "@/server/services/settings/auth-providers";
 import { getCurrentUser, hasPermission } from "@/server/auth/permissions";
+import { nameSchema } from "@/lib/validation/name";
 
 export type ActionState = { ok: true } | { ok: false; error: string } | null;
 
 const setupSchema = z.object({
-  name: z.string().min(1),
+  name: nameSchema,
   email: z.email(),
   password: z.string().min(12),
   locale: z.enum(["fr", "en"]).default("fr"),
@@ -189,9 +190,9 @@ export async function completeSetupAction(
   }
 
   // Validate optional OIDC up front.
-  let oidc: z.infer<typeof upsertSchema> | null = null;
+  let oidc: z.infer<typeof providerSchema> | null = null;
   if (str(formData, "oidc_issuer")) {
-    const r = upsertSchema.safeParse({
+    const r = providerSchema.safeParse({
       key: "oidc",
       type: "oidc",
       displayName: str(formData, "oidc_displayName") || "OIDC",
@@ -207,7 +208,7 @@ export async function completeSetupAction(
       mapName: str(formData, "oidc_mapName") || undefined,
       mapEmail: str(formData, "oidc_mapEmail") || undefined,
     });
-    if (!r.success) return { ok: false, error: "INVALID_OIDC" };
+    if (!r.success || !r.data.clientSecret) return { ok: false, error: "INVALID_OIDC" };
     oidc = r.data;
   }
 
@@ -222,7 +223,7 @@ export async function completeSetupAction(
     });
     await appSettings.set("registration_mode", parsed.data.mode, userId);
     if (smtp) await upsertSmtp(smtp, { id: userId });
-    if (oidc) await upsertAuthProvider(oidc, { id: userId });
+    if (oidc) await createAuthProvider(oidc, { id: userId });
     return { ok: true };
   } catch {
     return { ok: false, error: "FAILED" };

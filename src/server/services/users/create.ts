@@ -6,10 +6,11 @@ import { grantRole } from "@/server/services/users/roles";
 import { logEvent } from "@/server/services/audit";
 import { env } from "@/env";
 import { defaultLocale, locales } from "@/i18n/config";
+import { nameSchema } from "@/lib/validation/name";
 
 export const adminCreateUserSchema = z.object({
   email: z.email(),
-  name: z.string().min(1),
+  name: nameSchema,
   role: z.enum(["USER", "ADMIN"]).default("USER"),
   locale: z.enum(locales).default(defaultLocale).catch(defaultLocale),
 });

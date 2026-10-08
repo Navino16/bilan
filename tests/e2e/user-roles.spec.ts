@@ -23,6 +23,11 @@ test.describe("admin user roles", () => {
         // Retry until the client island has hydrated and the change is persisted.
         await expect(async () => {
           await select.selectOption({ label });
+          await page
+            .getByRole("alertdialog")
+            .getByRole("button", { name: "Changer le rôle" })
+            .click({ timeout: 2000 });
+          await expect(page.getByRole("alertdialog")).toBeHidden();
           await page.reload({ waitUntil: "domcontentloaded" });
           await expect(select).toHaveValue(value, { timeout: 2000 });
         }).toPass({ timeout: 30_000 });
@@ -38,6 +43,24 @@ test.describe("admin user roles", () => {
       } finally {
         await setRole("Utilisateur", "USER");
       }
+    });
+
+    test("asks for confirmation and leaves the role unchanged on cancel (#163)", async ({
+      page,
+    }) => {
+      await page.goto("/fr/admin/users", { waitUntil: "domcontentloaded", timeout: 90_000 });
+      const select = targetRow(page).getByRole("combobox");
+      const dialog = page.getByRole("alertdialog");
+      await expect(async () => {
+        await select.selectOption({ label: "Super admin" });
+        await expect(dialog).toBeVisible({ timeout: 2000 });
+      }).toPass({ timeout: 30_000 });
+      await expect(dialog).toContainText("E2E Roles Target");
+      await dialog.getByRole("button", { name: "Annuler" }).click();
+      await expect(dialog).toBeHidden();
+      await expect(select).toHaveValue("USER");
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await expect(select).toHaveValue("USER");
     });
 
     test("cannot change their own role", async ({ page }) => {

@@ -26,6 +26,12 @@ describe("auth schemas", () => {
       }).success,
     ).toBe(false);
   });
+  it("trims the register name and rejects a blank one (#163)", () => {
+    const password = "x".repeat(12);
+    const base = { email: "a@b.co", password, confirmPassword: password };
+    expect(registerSchema.safeParse({ ...base, name: "  Ann " }).data?.name).toBe("Ann");
+    expect(registerSchema.safeParse({ ...base, name: "   " }).success).toBe(false);
+  });
   it("flags a password confirmation mismatch on register (#172)", () => {
     const r = registerSchema.safeParse({
       email: "a@b.co",

@@ -14,7 +14,13 @@ import {
   type SmtpFailure,
 } from "@/server/services/settings/smtp";
 import { defaultLocale, locales } from "@/i18n/config";
-import { upsertAuthProvider, upsertSchema } from "@/server/services/settings/auth-providers";
+import {
+  AuthProviderError,
+  createAuthProvider,
+  deleteAuthProvider,
+  providerSchema,
+  updateAuthProvider,
+} from "@/server/services/settings/auth-providers";
 
 export type SettingsActionState = { ok: true } | { ok: false; error: string } | null;
 
@@ -31,19 +37,20 @@ function optional(value: string): string | null {
   return value.length > 0 ? value : null;
 }
 
-export async function upsertAuthProviderAction(
+export async function saveAuthProviderAction(
   _prev: SettingsActionState,
   formData: FormData,
 ): Promise<SettingsActionState> {
   const user = await requirePermission("admin.settings.write");
-  const parsed = upsertSchema.safeParse({
+  const mode = str(formData, "mode");
+  if (mode !== "create" && mode !== "update") return { ok: false, error: "INVALID" };
+  const parsed = providerSchema.safeParse({
     key: str(formData, "key"),
     type: str(formData, "type"),
     displayName: str(formData, "displayName"),
     enabled: bool(formData, "enabled"),
     issuer: optional(str(formData, "issuer")),
     clientId: optional(str(formData, "clientId")),
-    // Empty secret → keep the stored one (the service only overwrites when set).
     clientSecret: optional(str(formData, "clientSecret")),
     scopes: optional(str(formData, "scopes")),
     pkce: bool(formData, "pkce"),
@@ -55,8 +62,23 @@ export async function upsertAuthProviderAction(
   });
   if (!parsed.success) return { ok: false, error: "INVALID" };
   try {
-    await upsertAuthProvider(parsed.data, { id: user.id });
-  } catch {
+    const save = mode === "create" ? createAuthProvider : updateAuthProvider;
+    await save(parsed.data, { id: user.id });
+  } catch (e) {
+    return { ok: false, error: e instanceof AuthProviderError ? e.code : "FAILED" };
+  }
+  return { ok: true };
+}
+
+export type DeleteProviderState = { ok: true } | { ok: false; error: string; count?: number };
+
+export async function deleteAuthProviderAction(key: unknown): Promise<DeleteProviderState> {
+  const user = await requirePermission("admin.settings.write");
+  if (typeof key !== "string" || !key.trim()) return { ok: false, error: "INVALID" };
+  try {
+    await deleteAuthProvider(key.trim(), { id: user.id });
+  } catch (e) {
+    if (e instanceof AuthProviderError) return { ok: false, error: e.code, count: e.count };
     return { ok: false, error: "FAILED" };
   }
   return { ok: true };

@@ -23,7 +23,12 @@ export function PageHeader({
       <div className="min-w-0 space-y-1.5">
         <div className={overlineClass}>{overline}</div>
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <h1 className="font-display min-w-0 truncate text-[2rem] leading-[1.1]">{title}</h1>
+          <h1
+            className="font-display min-w-0 truncate text-[2rem] leading-[1.1]"
+            title={typeof title === "string" ? title : undefined}
+          >
+            {title}
+          </h1>
           {badges}
         </div>
         {subtitle && <div className="text-muted-foreground text-sm">{subtitle}</div>}

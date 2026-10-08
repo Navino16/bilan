@@ -1,9 +1,7 @@
 import { db } from "@/server/db";
-import type { GroupRole } from "@/lib/validation/group";
+import { GROUP_ROLE_RANK as RANK, type GroupRole } from "@/lib/validation/group";
 
 export { GROUP_ROLES, type GroupRole } from "@/lib/validation/group";
-
-export const RANK: Record<GroupRole, number> = { OWNER: 3, ADMIN: 2, MEMBER: 1 };
 
 export class GroupAccessError extends Error {}
 

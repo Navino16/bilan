@@ -20,6 +20,8 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { createGroupAction, updateGroupAction } from "@/server/transport/actions/groups";
+import { NAME_MAX } from "@/lib/validation/name";
+import { GROUP_DESCRIPTION_MAX } from "@/lib/validation/group";
 
 type EditableGroup = { id: string; name: string; description: string | null };
 
@@ -66,7 +68,7 @@ export function GroupForm({
     <>
       <DialogHeader className="border-border shrink-0 border-b px-6 pt-5 pb-4 text-left">
         <span className="text-muted-foreground text-[0.7rem] font-medium tracking-[0.14em] uppercase">
-          {t("new")}
+          {mode === "create" ? t("new") : t("edit")}
         </span>
         <DialogTitle className="font-display text-2xl">
           {mode === "create" ? t("createTitle") : t("editTitle")}
@@ -84,6 +86,7 @@ export function GroupForm({
               name="name"
               defaultValue={group?.name}
               placeholder={t("namePlaceholder")}
+              maxLength={NAME_MAX}
               required
             />
           </div>
@@ -94,6 +97,7 @@ export function GroupForm({
               name="description"
               defaultValue={group?.description ?? ""}
               placeholder={t("descriptionPlaceholder")}
+              maxLength={GROUP_DESCRIPTION_MAX}
               rows={3}
               className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 w-full rounded-lg border bg-transparent px-2.5 py-1.5 text-sm outline-none focus-visible:ring-3"
             />

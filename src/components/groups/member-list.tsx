@@ -7,14 +7,13 @@ import { UserMinus } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { GROUP_ROLES, type GroupRole } from "@/lib/validation/group";
+import { GROUP_ROLES, canRemoveMember, type GroupRole } from "@/lib/validation/group";
 import { changeMemberRoleAction, removeMemberAction } from "@/server/transport/actions/groups";
 import { NativeSelect } from "@/components/ui/native-select";
 import { ConfirmDialog } from "@/components/shell/confirm-dialog";
+import { displayName } from "@/lib/validation/name";
 
 type Member = { userId: string; role: GroupRole; name: string | null; email: string };
-
-const RANK: Record<GroupRole, number> = { OWNER: 3, ADMIN: 2, MEMBER: 1 };
 
 export function MemberList({
   groupId,
@@ -35,7 +34,6 @@ export function MemberList({
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const canManageRoles = viewerRole === "OWNER";
-  const canRemove = RANK[viewerRole] >= RANK.ADMIN;
 
   function run(action: () => Promise<{ ok: boolean; error?: string } | null>) {
     startTransition(async () => {
@@ -70,7 +68,7 @@ export function MemberList({
       <div className="border-border divide-border divide-y rounded-lg border">
         {members.map((m) => {
           const isSelf = m.userId === viewerId;
-          const display = m.name?.trim() || m.email;
+          const display = displayName(m);
           return (
             <div key={m.userId} className="flex items-center gap-3 px-4 py-3">
               <Avatar className="size-8">
@@ -102,7 +100,7 @@ export function MemberList({
               ) : (
                 <Badge variant="outline">{t(`roles.${m.role}`)}</Badge>
               )}
-              {canRemove && !isSelf && (
+              {!isSelf && canRemoveMember(viewerRole, m.role) && (
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -126,7 +124,7 @@ export function MemberList({
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title={t("removeTitle", { name: removing?.name?.trim() || removing?.email || "" })}
+        title={t("removeTitle", { name: removing ? displayName(removing) : "" })}
         description={t("removeConfirm")}
         confirmLabel={t("remove")}
         onConfirm={() => removing && remove(removing.userId)}

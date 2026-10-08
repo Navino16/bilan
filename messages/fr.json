@@ -1168,7 +1168,11 @@
       "deleteAccounts": "{count, plural, one {# compte bancaire} other {# comptes bancaires}} et leur historique disparaissent{shared, plural, =0 {} one {, dont # partagé : les membres du foyer ne le verront plus} other {, dont # partagés : les membres des foyers ne les verront plus}}.",
       "deleteTransfer": "Le foyer « {group} » sera transmis à {to}.",
       "deleteGroup": "Le foyer « {group} », dont la personne est seule membre, sera supprimé.",
-      "deleteBudgetLines": "Les lignes de budget de foyer qui visaient ses comptes ne seront plus limitées à un compte."
+      "deleteBudgetLines": "Les lignes de budget de foyer qui visaient ses comptes ne seront plus limitées à un compte.",
+      "roleConfirmTitle": "Changer le rôle de {user} ?",
+      "roleConfirmBody": "{from} → {to}. Le changement prend effet immédiatement.",
+      "roleConfirm": "Changer le rôle",
+      "roleSuperAdminWarning": "Un super admin a tous les droits, y compris sur les autres administrateurs et la suppression de comptes."
     },
     "signupTokens": {
       "createTitle": "Créer un jeton",
@@ -1326,12 +1330,24 @@
       "saving": "Enregistrement…",
       "saved": "Fournisseur enregistré.",
       "error": {
-        "INVALID": "Vérifiez les champs saisis.",
-        "FAILED": "Échec de l'enregistrement."
+        "INVALID": "Vérifiez les champs : clé en minuscules (lettres, chiffres, - ou _), nom affiché, et pour OIDC l'issuer et le client ID.",
+        "FAILED": "Échec de l'enregistrement.",
+        "KEY_EXISTS": "Un fournisseur utilise déjà cette clé. Modifiez-le dans la liste ci-dessus.",
+        "NOT_FOUND": "Ce fournisseur n'existe plus.",
+        "SECRET_REQUIRED": "Le client secret est requis.",
+        "LOCKOUT": "Suppression refusée : {count, plural, one {# utilisateur n'aurait} other {# utilisateurs n'auraient}} plus aucun moyen de se connecter.",
+        "TYPE_LOCKED": "Le type d'un fournisseur ne peut pas être modifié. Créez-en un nouveau.",
+        "GOOGLE_EXISTS": "Un fournisseur Google existe déjà."
       },
       "listOverline": "Connexion",
       "addOverline": "Nouveau",
-      "addHint": "Connexion par identifiants, OIDC ou Google."
+      "addHint": "Connexion par identifiants, OIDC ou Google.",
+      "delete": "Supprimer",
+      "deleting": "Suppression…",
+      "deleteTitle": "Supprimer le fournisseur {name} ?",
+      "deleteBody": "Il disparaît de la page de connexion. Action irréversible.",
+      "deleteLinked": "{count, plural, one {# compte utilisateur est lié} other {# comptes utilisateurs sont liés}} à ce fournisseur : ces liaisons seront supprimées.",
+      "deleteLockout": "{count, plural, one {# utilisateur n'aurait} other {# utilisateurs n'auraient}} plus aucun moyen de se connecter (ni mot de passe, ni clé d'accès, ni autre fournisseur actif). Désactivez plutôt ce fournisseur."
     },
     "audit": {
       "title": "Journal d'audit",
@@ -1435,7 +1451,9 @@
             "delete": "Configuration SMTP supprimée"
           },
           "auth_provider": {
-            "update": "Fournisseur d'authentification modifié"
+            "update": "Fournisseur d'authentification modifié",
+            "create": "Fournisseur d'authentification ajouté",
+            "delete": "Fournisseur d'authentification supprimé"
           }
         },
         "signup_token": {

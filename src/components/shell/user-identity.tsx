@@ -1,9 +1,10 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { displayName } from "@/lib/validation/name";
 
 export type ShellUser = { name?: string | null; email: string };
 
 export function userDisplay(user: ShellUser) {
-  const display = user.name?.trim() || user.email;
+  const display = displayName(user);
   return { display, initials: display.slice(0, 2).toUpperCase() };
 }
 
