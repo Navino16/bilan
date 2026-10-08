@@ -18,6 +18,8 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { discardImportAction } from "@/server/transport/actions/imports";
 import { cn } from "@/lib/utils";
 import { RevertImportDialog } from "./revert-import-dialog";
+import { AddBlockedState, ADD_BLOCKED_ID } from "@/components/onboarding/add-blocked";
+import type { AddTransactionBlocker } from "@/lib/onboarding";
 
 type Account = { id: string; name: string; bankName: string | null };
 type PreviewRow = {
@@ -80,10 +82,12 @@ function formatBytes(n: number | null, locale: string): string {
 
 export function ImportWizard({
   accounts,
+  addBlocker = null,
   categories,
   history,
 }: {
   accounts: Account[];
+  addBlocker?: AddTransactionBlocker | null;
   categories: FlatCategory[];
   history?: ReactNode;
 }) {
@@ -446,16 +450,23 @@ export function ImportWizard({
         title={t("title")}
         subtitle={t("formats")}
         actions={
-          <TransactionForm
-            accounts={accounts}
-            categories={categories}
-            trigger={
-              <Button variant="outline" disabled={accounts.length === 0}>
-                <PenLine />
-                {t("manualEntry")}
-              </Button>
-            }
-          />
+          accounts.length === 0 ? (
+            <Button variant="outline" aria-disabled="true" aria-describedby={ADD_BLOCKED_ID}>
+              <PenLine />
+              {t("manualEntry")}
+            </Button>
+          ) : (
+            <TransactionForm
+              accounts={accounts}
+              categories={categories}
+              trigger={
+                <Button variant="outline">
+                  <PenLine />
+                  {t("manualEntry")}
+                </Button>
+              }
+            />
+          )
         }
       />
 
@@ -497,6 +508,11 @@ export function ImportWizard({
             </>
           )}
         </Card>
+      ) : !preview && accounts.length === 0 ? (
+        <div className="mx-auto max-w-xl space-y-4 pt-4">
+          <AddBlockedState reason={addBlocker ?? "NO_ACCOUNT"} />
+          {history}
+        </div>
       ) : !preview ? (
         <div className="mx-auto max-w-xl space-y-4 pt-4">
           <label className="flex items-center gap-3">

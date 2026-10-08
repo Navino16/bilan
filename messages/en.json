@@ -173,7 +173,6 @@
   "accounts": {
     "overline": "Wealth",
     "title": "Accounts",
-    "empty": "No accounts yet. Create one to get started.",
     "new": "New",
     "create": "New account",
     "createTitle": "Add an account",
@@ -311,7 +310,6 @@
   "budgets": {
     "overline": "Planning",
     "pageTitle": "Budgets",
-    "empty": "No budgets yet.",
     "create": "New budget",
     "createTitle": "New budget",
     "editTitle": "Edit budget",
@@ -1650,6 +1648,47 @@
       "setup": "Setup",
       "forbidden": "Access denied",
       "notFound": "Page not found"
+    }
+  },
+  "onboarding": {
+    "createAccount": "Create an account",
+    "manageAccounts": "Manage accounts",
+    "importStatement": "Import a statement",
+    "addTransaction": "Add a transaction",
+    "blockedTitle": {
+      "NO_ACCOUNT": "Start by creating an account",
+      "READ_ONLY": "Read-only accounts",
+      "ARCHIVED": "All your accounts are archived"
+    },
+    "blocked": {
+      "NO_ACCOUNT": "Every transaction belongs to a bank account. Create one, then import a statement or add a transaction.",
+      "READ_ONLY": "The accounts shared with you are read-only. Create your own account to import or add transactions.",
+      "ARCHIVED": "Unarchive an account or create a new one to import or add transactions."
+    },
+    "welcome": {
+      "overline": "Getting started",
+      "title": "Welcome to Bilan",
+      "heading": "Two steps to see your finances here",
+      "step1": "Create a bank account",
+      "step1Hint": "Checking, savings, card… Your transactions will belong to it.",
+      "step1Done": "You have an account ready for transactions.",
+      "step2": "Import a statement or add a transaction",
+      "step2Hint": "A CSV or PDF file exported from your bank, or a manual entry.",
+      "done": "Done"
+    },
+    "transactions": {
+      "title": "No transactions yet",
+      "body": "Import a bank statement or add your first transaction."
+    },
+    "accounts": {
+      "title": "No accounts yet",
+      "body": "Add a checking account, a savings account or a card to import your statements into.",
+      "cta": "Create my first account"
+    },
+    "budgets": {
+      "title": "No budgets yet",
+      "body": "A budget sets an envelope per category or account over a period and tracks your spending.",
+      "cta": "Create my first budget"
     }
   }
 }

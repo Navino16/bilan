@@ -2,7 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Eye, EyeOff, Plus } from "lucide-react";
+import { Eye, EyeOff, Landmark, Plus } from "lucide-react";
+import { AccountForm } from "@/components/accounts/account-form";
+import { EmptyState } from "@/components/shell/empty-state";
+import { writableActiveAccounts } from "@/lib/onboarding";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -159,12 +162,14 @@ export function AccountList({
   categories: FlatCategory[];
 }) {
   const t = useTranslations("accounts");
+  const tOnboarding = useTranslations("onboarding");
   const money = useMoney();
   const archived = allAccounts.filter((a) => a.archived);
   const accounts = allAccounts.filter((a) => !a.archived);
-  const writableAccounts = accounts
-    .filter((a) => a.access === "OWNER" || a.access === "WRITE")
-    .map((a) => ({ id: a.id, name: a.name }));
+  const writableAccounts = writableActiveAccounts(accounts).map((a) => ({
+    id: a.id,
+    name: a.name,
+  }));
   const cardProps = { groups, categories, writableAccounts };
   const total = accounts.reduce((sum, a) => sum + a.balance, 0);
   const legend = balanceLegend(accounts);
@@ -231,9 +236,22 @@ export function AccountList({
       )}
 
       {accounts.length === 0 ? (
-        <div className="text-muted-foreground border-border rounded-lg border border-dashed px-4 py-10 text-center text-sm">
-          {t("empty")}
-        </div>
+        <EmptyState
+          icon={Landmark}
+          title={tOnboarding("accounts.title")}
+          body={tOnboarding("accounts.body")}
+          actions={
+            <AccountForm
+              mode="create"
+              trigger={
+                <Button>
+                  <Plus />
+                  {tOnboarding("accounts.cta")}
+                </Button>
+              }
+            />
+          }
+        />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {accounts.map((a) => (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Check, Info, Lock, Plus } from "lucide-react";
@@ -18,7 +18,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useIsMobile } from "@/hooks/use-is-mobile";
+import { MOBILE_QUERY, useIsMobile } from "@/hooks/use-is-mobile";
 import { cn } from "@/lib/utils";
 import { ACCOUNT_TYPES, type AccountType } from "@/lib/validation/account";
 import { createAccountAction, updateAccountAction } from "@/server/transport/actions/accounts";
@@ -53,6 +53,7 @@ export function AccountForm({
   trigger,
   open: controlledOpen,
   onOpenChange,
+  defaultOpen = false,
 }: {
   mode: "create" | "edit";
   account?: EditableAccount;
@@ -60,6 +61,7 @@ export function AccountForm({
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  defaultOpen?: boolean;
 }) {
   const t = useTranslations("accounts");
   const locale = useLocale();
@@ -75,6 +77,16 @@ export function AccountForm({
   // fields. Re-sync only when closed. `isMobile` is captured on open below.
   const [openMobile, setOpenMobile] = useState(liveMobile);
   const isMobile = open ? openMobile : liveMobile;
+
+  // Opened after mount: useIsMobile only resolves post-hydration, so read the viewport here.
+  useEffect(() => {
+    if (!defaultOpen) return;
+    const frame = requestAnimationFrame(() => {
+      setOpenMobile(window.matchMedia(MOBILE_QUERY).matches);
+      setUncontrolledOpen(true);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [defaultOpen]);
 
   const [type, setType] = useState<AccountType>((account?.type as AccountType) ?? "CHECKING");
   const [color, setColor] = useState<string>(account?.color ?? DEFAULT_COLOR);

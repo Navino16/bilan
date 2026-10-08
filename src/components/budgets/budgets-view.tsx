@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronRight, Plus, RefreshCw } from "lucide-react";
+import { ChevronRight, Plus, RefreshCw, Target } from "lucide-react";
+import { EmptyState } from "@/components/shell/empty-state";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -31,6 +32,7 @@ export function BudgetsView({
   groups: BudgetLineOption[];
 }) {
   const t = useTranslations("budgets");
+  const tOnboarding = useTranslations("onboarding");
   const locale = useLocale();
   const router = useRouter();
   const [rolling, startRoll] = useTransition();
@@ -118,7 +120,25 @@ export function BudgetsView({
       )}
 
       {budgets.length === 0 ? (
-        <p className="text-muted-foreground text-sm">{t("empty")}</p>
+        <EmptyState
+          icon={Target}
+          title={tOnboarding("budgets.title")}
+          body={tOnboarding("budgets.body")}
+          actions={
+            <BudgetForm
+              mode="create"
+              categories={categories}
+              accounts={accounts}
+              groups={groups}
+              trigger={
+                <Button>
+                  <Plus />
+                  {tOnboarding("budgets.cta")}
+                </Button>
+              }
+            />
+          }
+        />
       ) : (
         <ul className="space-y-3">
           {groupBudgetSeries(budgets).map(({ head: b, others }) => (

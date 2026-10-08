@@ -3,6 +3,7 @@ import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { seedRolesAndPermissions, seedAppSettings } from "../prisma/seed";
 import { getAuth } from "@/server/auth";
 import { grantRole } from "@/server/services/users/roles";
+import { createTransaction } from "@/server/services/transactions";
 
 // Puts the e2e database into a post-setup state: roles/permissions + app
 // settings seeded, plus credentialed users the Playwright auth.setup project can
@@ -84,12 +85,31 @@ async function ensureOwnerAccount(): Promise<void> {
   });
 }
 
+// One old transaction so the owner is past first run (#170): dashboard specs expect
+// the KPI row, not the welcome checklist, whatever spec order created data first.
+async function ensureOwnerTransaction(): Promise<void> {
+  const owner = await db.user.findUnique({ where: { email: "owner@e2e.local" } });
+  if (!owner) return;
+  if (await db.transaction.findFirst({ where: { accountId: OWNER_ACCOUNT_ID } })) return;
+  await createTransaction(
+    {
+      accountId: OWNER_ACCOUNT_ID,
+      date: "2020-01-15",
+      amount: "-1",
+      type: "OTHER",
+      label: "E2E seed",
+    },
+    { id: owner.id },
+  );
+}
+
 async function main(): Promise<void> {
   await seedRolesAndPermissions(db);
   await seedAppSettings(db);
   await ensureUsers();
   await ensureSharedGroup();
   await ensureOwnerAccount();
+  await ensureOwnerTransaction();
 }
 
 main()

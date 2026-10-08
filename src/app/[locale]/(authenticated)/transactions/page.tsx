@@ -1,6 +1,14 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { ArrowRightLeft, PenLine, Plus, Upload } from "lucide-react";
+import { getOnboardingState } from "@/server/services/onboarding";
+import { writableActiveAccounts } from "@/lib/onboarding";
+import {
+  AddBlockedNotice,
+  AddBlockedState,
+  ADD_BLOCKED_ID,
+} from "@/components/onboarding/add-blocked";
+import { EmptyState } from "@/components/shell/empty-state";
 import { requireSession } from "@/server/auth/permissions";
 import { listTransactions } from "@/server/services/transactions";
 import { listForUser, listForeignCategories } from "@/server/services/categories";
@@ -40,24 +48,28 @@ export default async function TransactionsPage({
   const sp = await searchParams;
   const user = await requireSession();
   const t = await getTranslations("transactions");
+  const tOnboarding = await getTranslations("onboarding");
 
   const { from, to, ...filters } = parseTransactionFilters(sp);
   const limit = parseListLimit(sp.limit);
   const groupByDay = filters.sort.startsWith("date");
 
-  const [{ items, total }, tree, foreignTree, accounts, linkedIds, budgets] = await Promise.all([
-    listTransactions(user.id, {
-      ...filters,
-      from: from ? dayStart(from) : undefined,
-      to: to ? dayEnd(to) : undefined,
-      take: limit,
-    }),
-    listForUser(user.id),
-    listForeignCategories(user.id),
-    listVisibleForUser(user.id, { includeArchived: true }),
-    listLinkedTxIds(user.id),
-    listAssignableBudgets(user.id),
-  ]);
+  const [{ items, total }, tree, foreignTree, accounts, linkedIds, budgets, onboarding] =
+    await Promise.all([
+      listTransactions(user.id, {
+        ...filters,
+        from: from ? dayStart(from) : undefined,
+        to: to ? dayEnd(to) : undefined,
+        take: limit,
+      }),
+      listForUser(user.id),
+      listForeignCategories(user.id),
+      listVisibleForUser(user.id, { includeArchived: true }),
+      listLinkedTxIds(user.id),
+      listAssignableBudgets(user.id),
+      getOnboardingState(user.id),
+    ]);
+  const blocker = onboarding.addBlocker;
 
   const flatCategories = flattenCategories(tree);
   const foreignCategories = flattenCategories(foreignTree);
@@ -69,7 +81,7 @@ export default async function TransactionsPage({
     writable: a.access !== "READ",
     archived: a.archived,
   }));
-  const formAccounts = accounts.filter((a) => !a.archived).map((a) => ({ id: a.id, name: a.name }));
+  const formAccounts = writableActiveAccounts(accounts).map((a) => ({ id: a.id, name: a.name }));
   const allItems: ListItem[] = items.map((i) => ({
     id: i.id,
     date: i.date.toISOString(),
@@ -92,6 +104,7 @@ export default async function TransactionsPage({
     Object.entries(sp).filter((e): e is [string, string] => e[1] !== undefined),
   );
   moreParams.set("limit", String(nextListLimit(limit)));
+  moreParams.delete("new");
 
   return (
     <div className="space-y-5">
@@ -106,8 +119,8 @@ export default async function TransactionsPage({
             >
               {t("suggestions.open")}
             </Link>
-            {formAccounts.length === 0 ? (
-              <Button disabled>
+            {blocker || formAccounts.length === 0 ? (
+              <Button aria-disabled="true" aria-describedby={ADD_BLOCKED_ID}>
                 <Plus />
                 {t("create")}
               </Button>
@@ -115,6 +128,7 @@ export default async function TransactionsPage({
               <TransactionForm
                 accounts={formAccounts}
                 categories={flatCategories}
+                defaultOpen={sp.new === "1"}
                 trigger={
                   <Button>
                     <Plus />
@@ -126,26 +140,59 @@ export default async function TransactionsPage({
           </>
         }
       />
-      <SelectionModeProvider>
-        <TransactionFilters
-          categories={[...flatCategories, ...foreignCategories]}
-          accounts={accounts.map((a) => ({ id: a.id, name: a.name }))}
-          from={from}
-          to={to}
-          total={total}
-        />
-        <TransactionList
-          items={listItems}
-          categories={flatCategories}
-          foreignCategories={foreignCategories}
-          accounts={accountOptions}
-          budgets={budgets}
-          partialLastDay={partialLastDay}
-          currentYear={currentUtcYear()}
-          searching={Boolean(sp.search?.trim())}
-          groupByDay={groupByDay}
-        />
-      </SelectionModeProvider>
+      {!onboarding.hasTransaction ? (
+        blocker ? (
+          <AddBlockedState reason={blocker} />
+        ) : (
+          <EmptyState
+            icon={ArrowRightLeft}
+            title={tOnboarding("transactions.title")}
+            body={tOnboarding("transactions.body")}
+            actions={
+              <>
+                <Link href={`/${locale}/import`} className={buttonVariants()}>
+                  <Upload />
+                  {tOnboarding("importStatement")}
+                </Link>
+                <TransactionForm
+                  accounts={formAccounts}
+                  categories={flatCategories}
+                  trigger={
+                    <Button variant="outline">
+                      <PenLine />
+                      {tOnboarding("addTransaction")}
+                    </Button>
+                  }
+                />
+              </>
+            }
+          />
+        )
+      ) : (
+        <>
+          {blocker && <AddBlockedNotice reason={blocker} />}
+          <SelectionModeProvider>
+            <TransactionFilters
+              categories={[...flatCategories, ...foreignCategories]}
+              accounts={accounts.map((a) => ({ id: a.id, name: a.name }))}
+              from={from}
+              to={to}
+              total={total}
+            />
+            <TransactionList
+              items={listItems}
+              categories={flatCategories}
+              foreignCategories={foreignCategories}
+              accounts={accountOptions}
+              budgets={budgets}
+              partialLastDay={partialLastDay}
+              currentYear={currentUtcYear()}
+              searching={Boolean(sp.search?.trim())}
+              groupByDay={groupByDay}
+            />
+          </SelectionModeProvider>
+        </>
+      )}
       {truncated && (
         <div
           data-slot="transactions-more"

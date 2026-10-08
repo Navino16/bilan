@@ -122,7 +122,12 @@ export async function DashboardView({
             months,
           })
         : noReference,
-      tone: data.totals.net >= 0 ? "var(--income)" : "var(--expense)",
+      tone:
+        data.totals.net > 0
+          ? "var(--income)"
+          : data.totals.net < 0
+            ? "var(--expense)"
+            : "var(--foreground)",
     },
   ] as const;
 

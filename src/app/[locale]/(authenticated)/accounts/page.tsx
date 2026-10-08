@@ -15,8 +15,15 @@ export const dynamic = "force-dynamic";
 
 export const generateMetadata = pageTitle("accounts");
 
-export default async function AccountsPage({ params }: { params: Promise<{ locale: string }> }) {
+export default async function AccountsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ new?: string }>;
+}) {
   const { locale } = await params;
+  const sp = await searchParams;
   setRequestLocale(locale);
   const user = await requireSession();
   const t = await getTranslations("accounts");
@@ -32,6 +39,7 @@ export default async function AccountsPage({ params }: { params: Promise<{ local
         actions={
           <AccountForm
             mode="create"
+            defaultOpen={sp.new === "1"}
             trigger={
               <Button>
                 <Plus />
