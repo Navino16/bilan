@@ -3,6 +3,8 @@ import { BottomNav } from "@/components/shell/bottom-nav";
 import { Header } from "@/components/shell/header";
 import { Sidebar } from "@/components/shell/sidebar";
 import { NavigationPending } from "@/components/shell/navigation-pending";
+import { SkipLink } from "@/components/shell/skip-link";
+import { MAIN_ID } from "@/lib/landmarks";
 import { RegisterSw } from "@/components/pwa/register-sw";
 import { currentUtcYear } from "@/lib/period";
 import { hasPermission, requireSession } from "@/server/auth/permissions";
@@ -34,6 +36,7 @@ export default async function AuthenticatedLayout({
 
   return (
     <div className="bg-background flex min-h-screen">
+      <SkipLink />
       <Sidebar
         user={identity}
         canAdmin={canAdmin}
@@ -44,7 +47,11 @@ export default async function AuthenticatedLayout({
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <Header user={identity} canAdmin={canAdmin} appName={appName} year={year} theme={theme} />
-        <main className="flex-1 px-4 pt-6 pb-24 md:px-8 md:pb-8">
+        <main
+          id={MAIN_ID}
+          tabIndex={-1}
+          className="flex-1 px-4 pt-6 pb-24 outline-none md:px-8 md:pb-8"
+        >
           <NavigationPending className="mx-auto w-full max-w-5xl">{children}</NavigationPending>
         </main>
         <BottomNav className="md:hidden" />

@@ -9,12 +9,13 @@ import { BOTTOM_NAV } from "./nav-items";
 export function BottomNav({ className }: { className?: string }) {
   const t = useTranslations("shell.tabs");
   const tFull = useTranslations("shell.nav");
+  const tShell = useTranslations("shell");
   const locale = useLocale();
   const pathname = usePathname();
 
   return (
     <nav
-      aria-label="bottom"
+      aria-label={tShell("tabsNav")}
       className={cn(
         "bg-sidebar border-border fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t pb-[env(safe-area-inset-bottom)]",
         className,

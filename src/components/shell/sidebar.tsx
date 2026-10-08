@@ -44,7 +44,7 @@ export function Sidebar({
         </p>
       </div>
 
-      <nav aria-label="sidebar" className="min-h-0 flex-1 space-y-6 overflow-y-auto px-3">
+      <nav aria-label={t("mainNav")} className="min-h-0 flex-1 space-y-6 overflow-y-auto px-3">
         <div className="space-y-1">
           <p className="text-muted-foreground px-3 pb-1 text-[11px] font-medium tracking-wide uppercase">
             {t("groups.workspace")}

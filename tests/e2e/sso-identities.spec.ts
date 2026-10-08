@@ -81,7 +81,7 @@ test.describe("SSO identities (#204)", () => {
   });
 
   test.afterAll(async () => {
-    await new Promise<void>((resolve) => idp.close(() => resolve()));
+    if (idp) await new Promise<void>((resolve) => idp.close(() => resolve()));
   });
 
   test("links an OIDC identity from Settings, signs in with it, then unlinks it", async ({

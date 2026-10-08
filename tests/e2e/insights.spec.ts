@@ -134,7 +134,7 @@ test.describe("insights", () => {
       /moyenne déc\.\s2025\s–\sfévr\.\s2026/,
     );
 
-    await page.getByRole("button", { name: "prev" }).click();
+    await page.getByRole("button", { name: "Période précédente" }).click();
     await expect(page).toHaveURL(/from=2026-02-01.*vs=avg3|vs=avg3.*from=2026-02-01/, {
       timeout: 60_000,
     });

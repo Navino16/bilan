@@ -26,7 +26,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ local
   const ssoProviders = mode === "OPEN" ? await listSsoProviders({ signUpOnly: true }) : [];
 
   return (
-    <main className="space-y-6">
+    <div className="space-y-6">
       <header className="text-center">
         <h1 className="font-display text-3xl">{t("title")}</h1>
       </header>
@@ -40,10 +40,10 @@ export default async function RegisterPage({ params }: { params: Promise<{ local
       </Suspense>
       <p className="text-muted-foreground text-center text-sm">
         {t("haveAccount")}{" "}
-        <Link href={`/${locale}/login`} className="text-foreground hover:underline">
+        <Link href={`/${locale}/login`} className="text-foreground underline underline-offset-4">
           {t("loginLink")}
         </Link>
       </p>
-    </main>
+    </div>
   );
 }

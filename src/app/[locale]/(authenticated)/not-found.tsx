@@ -11,6 +11,7 @@ export default async function NotFound() {
   ]);
   return (
     <ErrorShell
+      landmark={false}
       code="404"
       title={t("notFound.title")}
       message={t("notFound.message")}

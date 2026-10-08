@@ -5,6 +5,7 @@ export default async function Unauthorized() {
   const [t, locale] = await Promise.all([getTranslations("errors"), getLocale()]);
   return (
     <ErrorShell
+      landmark={false}
       code="401"
       title={t("unauthorized.title")}
       message={t("unauthorized.message")}

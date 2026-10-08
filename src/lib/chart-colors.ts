@@ -1,4 +1,4 @@
-export const UNCATEGORIZED_COLOR = "var(--ink-3)";
+export const UNCATEGORIZED_COLOR = "var(--cat-other)";
 
 // 1st slice of a family keeps the root color, the next ones alternate lighter/darker.
 const SHADES = [0, 0.4, -0.3, 0.65, -0.5];

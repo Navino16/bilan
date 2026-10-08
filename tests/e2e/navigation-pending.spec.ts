@@ -26,7 +26,7 @@ test.describe("navigation pending state", () => {
     const busy = page.locator('[aria-busy="true"][data-pending]');
     // A click before PeriodNav hydrates is a no-op: retry until the transition starts.
     await expect(async () => {
-      await page.getByRole("button", { name: "prev", exact: true }).click();
+      await page.getByRole("button", { name: "Période précédente" }).click();
       await expect(busy).toBeVisible({ timeout: 2_000 });
     }).toPass();
     await expect(page.locator('[data-slot="navigation-progress"]')).toBeAttached();

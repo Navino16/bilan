@@ -371,6 +371,7 @@ export function ImportWizard({
   function categorySelect(r: PreviewRow) {
     return (
       <CategoryCombobox
+        aria-label={t("rowCategory", { label: r.rawLabel })}
         categories={categories}
         defaultValue={overrides[r.externalId] ?? r.suggestedCategoryId ?? ""}
         onChange={(id) => setOverrides((o) => ({ ...o, [r.externalId]: id }))}
@@ -422,7 +423,7 @@ export function ImportWizard({
         <span className="flex gap-2">
           <Button
             variant="outline"
-            className="h-9 md:h-8"
+            className="h-10 md:h-8"
             disabled={busy || product.page === 0}
             onClick={() => void goToPage(product.key, product.page - 1)}
           >
@@ -431,7 +432,7 @@ export function ImportWizard({
           </Button>
           <Button
             variant="outline"
-            className="h-9 md:h-8"
+            className="h-10 md:h-8"
             disabled={busy || product.page >= last}
             onClick={() => void goToPage(product.key, product.page + 1)}
           >
@@ -725,7 +726,7 @@ export function ImportWizard({
                   <div
                     className="mt-2 text-xs"
                     data-slot="import-rejected"
-                    style={{ color: "var(--warning)" }}
+                    style={{ color: "var(--warning-text)" }}
                   >
                     <div className="font-medium">
                       {t("rejected.count", { count: preview.rejectedCount })}
@@ -750,11 +751,11 @@ export function ImportWizard({
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <Button className="h-9 md:h-7" variant="ghost" onClick={reset} disabled={busy}>
+                <Button className="h-10 md:h-7" variant="ghost" onClick={reset} disabled={busy}>
                   {t("cancel")}
                 </Button>
                 <Button
-                  className="h-9 md:h-7"
+                  className="h-10 md:h-7"
                   onClick={commit}
                   disabled={busy || importable === 0}
                   title={importable === 0 ? t("nothingToImport") : undefined}
@@ -823,7 +824,7 @@ export function ImportWizard({
                   const dupBadge = r.isDuplicate ? (
                     <span
                       className="inline-flex h-5 shrink-0 items-center gap-1 rounded-full px-2 text-[0.65rem] font-medium"
-                      style={{ color: "var(--warning)", background: "var(--warning-bg)" }}
+                      style={{ color: "var(--warning-text)", background: "var(--warning-bg)" }}
                     >
                       <span
                         className="size-1.5 rounded-full"
@@ -832,6 +833,7 @@ export function ImportWizard({
                       {t("duplicate")}
                     </span>
                   ) : null;
+                  // Muted color keeps dimmed rows at AA contrast.
                   const dimmed = r.isDuplicate || excluded[r.externalId];
                   return (
                     <div
@@ -844,7 +846,7 @@ export function ImportWizard({
                       <div
                         className={cn(
                           "hidden grid-cols-[28px_60px_minmax(0,1fr)_172px_96px] items-center gap-3 px-5 py-2 md:grid",
-                          dimmed && "opacity-60",
+                          dimmed && "text-muted-foreground",
                         )}
                       >
                         {includeCheckbox(r, product.key)}
@@ -866,21 +868,28 @@ export function ImportWizard({
                         <span className="min-w-0">{categorySelect(r)}</span>
                         <span
                           className="text-right text-sm font-medium tabular-nums"
-                          style={r.amount > 0 ? { color: "var(--income)" } : undefined}
+                          style={r.amount > 0 && !dimmed ? { color: "var(--income)" } : undefined}
                         >
                           {money.format(r.amount)}
                         </span>
                       </div>
 
                       {/* Mobile compact */}
-                      <div className={cn("flex gap-3 px-4 py-3 md:hidden", dimmed && "opacity-60")}>
+                      <div
+                        className={cn(
+                          "flex gap-3 px-4 py-3 md:hidden",
+                          dimmed && "text-muted-foreground",
+                        )}
+                      >
                         <div className="pt-0.5">{includeCheckbox(r, product.key)}</div>
                         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                           <div className="flex items-start justify-between gap-3">
                             <span className="truncate font-mono text-[12.5px]">{r.rawLabel}</span>
                             <span
                               className="shrink-0 text-sm font-medium tabular-nums"
-                              style={r.amount > 0 ? { color: "var(--income)" } : undefined}
+                              style={
+                                r.amount > 0 && !dimmed ? { color: "var(--income)" } : undefined
+                              }
                             >
                               {money.format(r.amount)}
                             </span>

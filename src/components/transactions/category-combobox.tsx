@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown, Check } from "lucide-react";
 import {
@@ -15,12 +15,16 @@ import type { FlatCategory } from "./category-tree";
 // hierarchy). Works as a form field via a hidden input named `name`, and calls
 // `onChange` when the selection changes.
 export function CategoryCombobox({
+  id,
+  "aria-label": ariaLabel,
   name,
   categories,
   defaultValue,
   unlisted,
   onChange,
 }: {
+  id?: string;
+  "aria-label"?: string;
   // When set, mirrors the value into a hidden input (form-field use). Omit for a
   // purely controlled chooser (e.g. the import preview rows).
   name?: string;
@@ -31,6 +35,7 @@ export function CategoryCombobox({
   onChange?: (id: string) => void;
 }) {
   const t = useTranslations("transactions");
+  const valueId = useId();
   const [value, setValue] = useState(defaultValue ?? "");
   const current =
     categories.find((c) => c.id === value) ??
@@ -46,6 +51,9 @@ export function CategoryCombobox({
       {name && <input type="hidden" name={name} value={value} />}
       <DropdownMenu>
         <DropdownMenuTrigger
+          id={id}
+          aria-label={ariaLabel}
+          aria-describedby={id || ariaLabel ? valueId : undefined}
           render={
             <button
               type="button"
@@ -58,10 +66,12 @@ export function CategoryCombobox({
             <span
               aria-hidden
               className="size-2.5 shrink-0 rounded-full"
-              style={{ background: current.color ?? "var(--ink-3)" }}
+              style={{ background: current.color ?? "var(--cat-other)" }}
             />
           )}
-          <span className="flex-1 truncate text-left">{current?.name ?? t("noCategory")}</span>
+          <span id={valueId} className="flex-1 truncate text-left">
+            {current?.name ?? t("noCategory")}
+          </span>
           <ChevronDown className="size-4 shrink-0 opacity-60" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="max-h-80 w-64 overflow-auto">
@@ -74,7 +84,7 @@ export function CategoryCombobox({
               <span
                 aria-hidden
                 className="size-2 shrink-0 rounded-full"
-                style={{ marginLeft: c.depth * 10, background: c.color ?? "var(--ink-3)" }}
+                style={{ marginLeft: c.depth * 10, background: c.color ?? "var(--cat-other)" }}
               />
               <span className="flex-1 truncate">{c.name}</span>
               {value === c.id && <Check className="size-3.5" />}

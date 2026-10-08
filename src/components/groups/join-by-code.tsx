@@ -32,6 +32,7 @@ export function JoinByCode() {
           required
           autoComplete="off"
           placeholder={t("joinPlaceholder")}
+          aria-label={t("joinByCode")}
           className="uppercase"
           aria-describedby="join-code-hint"
         />

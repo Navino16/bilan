@@ -150,7 +150,7 @@ export function TransactionForm({
             </div>
             <div className="space-y-2">
               <Label htmlFor="tx-category">{t("category")}</Label>
-              <CategoryCombobox name="categoryId" categories={categories} />
+              <CategoryCombobox id="tx-category" name="categoryId" categories={categories} />
             </div>
           </div>
           <div className="space-y-2">

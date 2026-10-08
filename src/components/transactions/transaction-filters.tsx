@@ -271,7 +271,7 @@ export function TransactionFilters({
                 <span
                   aria-hidden
                   className="size-2 shrink-0 rounded-full"
-                  style={{ marginLeft: c.depth * 10, background: c.color ?? "var(--ink-3)" }}
+                  style={{ marginLeft: c.depth * 10, background: c.color ?? "var(--cat-other)" }}
                 />
                 <span className="flex-1 truncate">{c.name}</span>
                 {activeCat === c.id && <Check className="size-3.5" />}

@@ -180,6 +180,15 @@
     },
     "copyLink": {
       "manual": "Automatic copy isn't available on this connection. Select the link and copy it."
+    },
+    "skipToContent": "Skip to main content",
+    "mainNav": "Main navigation",
+    "tabsNav": "Quick navigation",
+    "close": "Close",
+    "switchLanguage": "Switch to French (FR)",
+    "period": {
+      "previous": "Previous period",
+      "next": "Next period"
     }
   },
   "accounts": {
@@ -768,7 +777,8 @@
       "range": "Rows {from} to {to} of {total}",
       "previous": "Previous",
       "next": "Next"
-    }
+    },
+    "rowCategory": "Category for {label}"
   },
   "groups": {
     "overline": "Sharing",

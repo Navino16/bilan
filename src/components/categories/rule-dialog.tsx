@@ -112,8 +112,9 @@ export function RuleDialog({
             />
           </div>
           <div className="space-y-1.5">
-            <Label>{t("category")}</Label>
+            <Label htmlFor="rule-category">{t("category")}</Label>
             <CategoryCombobox
+              id="rule-category"
               categories={categories}
               defaultValue={categoryId}
               onChange={setCategoryId}

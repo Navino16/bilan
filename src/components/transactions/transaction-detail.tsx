@@ -274,6 +274,7 @@ export function TransactionDetail({
                     <CategoryCombobox
                       key={`${item.id}-${item.categoryId}-${categoryAttempt}`}
                       name={`detail-cat-${item.id}`}
+                      aria-label={t("category")}
                       categories={categories}
                       defaultValue={item.categoryId}
                       unlisted={category}
@@ -288,7 +289,7 @@ export function TransactionDetail({
                         <span
                           aria-hidden
                           className="size-2.5 shrink-0 rounded-full"
-                          style={{ background: category.color ?? "var(--ink-3)" }}
+                          style={{ background: category.color ?? "var(--cat-other)" }}
                         />
                       )}
                       <span className="flex-1 truncate">{category?.name ?? t("noCategory")}</span>
@@ -307,7 +308,7 @@ export function TransactionDetail({
                     <span
                       aria-hidden
                       className="size-2 shrink-0 rounded-full"
-                      style={{ background: acc?.color ?? "var(--ink-3)" }}
+                      style={{ background: acc?.color ?? "var(--cat-other)" }}
                     />
                     <span>{acc?.name}</span>
                     <span className="flex-1" />
