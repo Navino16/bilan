@@ -13,7 +13,8 @@ import {
 } from "@/lib/callback-url";
 
 export function buildPermissionsChecker(database: PrismaClient) {
-  return async function hasPermission(userId: string, permissionKey: string): Promise<boolean> {
+  // Memoized per server render: the layouts and the page each check permissions.
+  const permissionKeysOf = cache(async (userId: string): Promise<ReadonlySet<string>> => {
     const user = await database.user.findUnique({
       where: { id: userId },
       include: {
@@ -22,10 +23,11 @@ export function buildPermissionsChecker(database: PrismaClient) {
         },
       },
     });
-    if (!user || user.banned) return false;
-    return user.roles.some((ur) =>
-      ur.role.permissions.some((rp) => rp.permission.key === permissionKey),
-    );
+    if (!user || user.banned) return new Set();
+    return new Set(user.roles.flatMap((ur) => ur.role.permissions.map((rp) => rp.permission.key)));
+  });
+  return async function hasPermission(userId: string, permissionKey: string): Promise<boolean> {
+    return (await permissionKeysOf(userId)).has(permissionKey);
   };
 }
 

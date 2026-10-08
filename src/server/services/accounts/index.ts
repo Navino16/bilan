@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { db } from "@/server/db";
 import { encrypt, decrypt } from "@/server/crypto/encryption";
 import { hmacForSearch } from "@/server/crypto/hmac";
@@ -164,14 +165,19 @@ export async function isAccountArchived(id: string): Promise<boolean> {
 
 // Every account whose history the user can read (owned or shared), archived ones
 // included: archiving hides an account from pickers, not from history (#174).
-export async function visibleAccountRefs(userId: string): Promise<{ id: string; name: string }[]> {
-  return db.bankAccount.findMany({
-    where: {
-      OR: [{ ownerId: userId }, { shares: { some: { group: { members: { some: { userId } } } } } }],
-    },
-    select: { id: true, name: true },
-  });
-}
+// Memoized per server render (React `cache`): a page reaches it through several services.
+export const visibleAccountRefs = cache(
+  async (userId: string): Promise<readonly { id: string; name: string }[]> =>
+    db.bankAccount.findMany({
+      where: {
+        OR: [
+          { ownerId: userId },
+          { shares: { some: { group: { members: { some: { userId } } } } } },
+        ],
+      },
+      select: { id: true, name: true },
+    }),
+);
 
 export async function visibleAccountIds(userId: string): Promise<string[]> {
   return (await visibleAccountRefs(userId)).map((a) => a.id);

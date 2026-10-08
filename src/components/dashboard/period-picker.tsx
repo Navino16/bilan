@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { useNavigationTransition } from "@/components/shell/navigation-pending";
 import { SegmentedTabs } from "@/components/transactions/bits";
 import { ScrollFade } from "@/components/ui/scroll-fade";
 import { PERIOD_PRESETS, presetPeriod, toIsoDay, type PeriodPreset } from "@/lib/period";
@@ -32,6 +33,7 @@ export function PeriodPicker({
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const [, startNavigation] = useNavigationTransition();
   const [customOpen, setCustomOpen] = useState(false);
   const [start, setStart] = useState(from);
   const [end, setEnd] = useState(to);
@@ -50,7 +52,7 @@ export function PeriodPicker({
     next.delete("limit");
     next.set("from", nextFrom);
     next.set("to", nextTo);
-    router.push(`${pathname}?${next.toString()}`);
+    startNavigation(() => router.push(`${pathname}?${next.toString()}`));
   }
   function applyPreset(preset: PeriodPreset) {
     setCustomOpen(false);

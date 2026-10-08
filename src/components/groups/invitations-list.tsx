@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shell/confirm-dialog";
 import { CopyLinkButton } from "@/components/shell/copy-link-button";
+import { LocalDateTime } from "@/components/shell/local-date-time";
 import { revokeInvitationAction } from "@/server/transport/actions/invitations";
 
 export type PendingInvitation = {
@@ -70,7 +71,6 @@ export function InvitationsList({ invitations }: { invitations: PendingInvitatio
   const t = useTranslations("invitations");
   const tg = useTranslations("groups");
   const locale = useLocale();
-  const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(locale);
 
   if (invitations.length === 0) {
     return <p className="text-muted-foreground text-sm">{t("noPending")}</p>;
@@ -87,7 +87,7 @@ export function InvitationsList({ invitations }: { invitations: PendingInvitatio
             </div>
             <div className="text-muted-foreground text-xs">
               {t("code")}: <span className="font-mono">{inv.code}</span> ·{" "}
-              {t("expiresAt", { date: fmtDate(inv.expiresAt) })}
+              {t.rich("expiresAt", { date: () => <LocalDateTime value={inv.expiresAt} /> })}
             </div>
           </div>
           <CopyLinkButton

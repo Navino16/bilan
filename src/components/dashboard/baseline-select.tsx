@@ -1,9 +1,10 @@
 "use client";
 
-import { useOptimistic, useTransition } from "react";
+import { useOptimistic } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { NativeSelect } from "@/components/ui/native-select";
+import { useNavigationTransition } from "@/components/shell/navigation-pending";
 import { BASELINES, type Baseline } from "@/lib/period";
 
 export function BaselineSelect({ value }: { value: Baseline }) {
@@ -11,7 +12,7 @@ export function BaselineSelect({ value }: { value: Baseline }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const [pending, startTransition] = useTransition();
+  const [, startTransition] = useNavigationTransition();
   // Shows the new choice right away instead of snapping back during the server round-trip.
   const [shown, setShown] = useOptimistic(value);
 
@@ -31,7 +32,6 @@ export function BaselineSelect({ value }: { value: Baseline }) {
       <NativeSelect
         size="sm"
         data-slot="baseline-select"
-        aria-busy={pending}
         value={shown}
         onChange={(e) => change(e.target.value as Baseline)}
       >

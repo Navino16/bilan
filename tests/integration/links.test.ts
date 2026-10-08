@@ -205,6 +205,59 @@ describe("suggestPairs", () => {
     const pairs = await suggestPairs(owner);
     expect(pairs.some((p) => p.key === [a, b].sort().join("|"))).toBe(false);
   });
+
+  it("decrypts only each leg's own label and keeps its own date and account", async () => {
+    const neg = await tx(accountId, "2026-04-02T00:00:00.000Z", -42.5, "CB DECATHLON");
+    const pos = await tx(accountId, "2026-04-06T00:00:00.000Z", 42.5, "REMB DECATHLON");
+    await tx(accountId, "2026-04-03T00:00:00.000Z", -13, "CB BOULANGERIE");
+
+    expect(await suggestPairs(owner)).toEqual([
+      {
+        key: [neg, pos].sort().join("|"),
+        positiveId: pos,
+        negativeId: neg,
+        amount: 42.5,
+        dayDelta: 4,
+        positive: { id: pos, label: "REMB DECATHLON", date: "2026-04-06", accountName: "Courant" },
+        negative: { id: neg, label: "CB DECATHLON", date: "2026-04-02", accountName: "Courant" },
+      },
+    ]);
+  });
+
+  it("covers accounts shared with the user and nothing for a user without accounts", async () => {
+    const a = await tx(accountId, "2026-05-02T00:00:00.000Z", -30, "CB SPORT");
+    const b = await tx(accountId, "2026-05-03T00:00:00.000Z", 30, "REMB SPORT");
+    expect((await suggestPairs(reader)).map((p) => p.key)).toEqual([[a, b].sort().join("|")]);
+    expect(await suggestPairs("link_nobody")).toEqual([]);
+  });
+
+  it("keeps each user's pairs to the accounts they can see", async () => {
+    const own = [
+      await tx(accountId, "2026-06-02T00:00:00.000Z", -20, "CB OWNER"),
+      await tx(accountId, "2026-06-03T00:00:00.000Z", 20, "REMB OWNER"),
+    ];
+    const foreign = [
+      await tx(strangerAccountId, "2026-06-02T00:00:00.000Z", -20, "CB STRANGER"),
+      await tx(strangerAccountId, "2026-06-03T00:00:00.000Z", 20, "REMB STRANGER"),
+    ];
+    expect((await suggestPairs(owner)).map((p) => p.key)).toEqual([own.sort().join("|")]);
+    expect((await suggestPairs(stranger)).map((p) => p.key)).toEqual([foreign.sort().join("|")]);
+  });
+
+  it("still suggests pairs on an archived account", async () => {
+    const archived = await db.bankAccount.create({
+      data: { ownerId: owner, name: "Ancien", type: "CHECKING", archived: true },
+    });
+    try {
+      const a = await tx(archived.id, "2026-07-02T00:00:00.000Z", -15, "CB ARCHIVE");
+      const b = await tx(archived.id, "2026-07-04T00:00:00.000Z", 15, "REMB ARCHIVE");
+      const pairs = await suggestPairs(owner);
+      expect(pairs.map((p) => p.key)).toEqual([[a, b].sort().join("|")]);
+      expect(pairs[0].negative.accountName).toBe("Ancien");
+    } finally {
+      await db.bankAccount.delete({ where: { id: archived.id } });
+    }
+  });
 });
 
 describe("ignored suggestions", () => {
