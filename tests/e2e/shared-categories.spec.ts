@@ -7,7 +7,11 @@ test.describe("categories on a shared account", () => {
     "Mobile dialog refinement deferred to Phase 8.3",
   );
 
-  test("a READ member sees the owner's category, without a picker", async ({ page, browser }) => {
+  test("a READ member sees the owner's category, without a picker", async ({
+    page,
+    browser,
+    baseURL,
+  }) => {
     test.setTimeout(90_000);
     const stamp = Date.now();
     const category = `Cat159 ${stamp}`;
@@ -46,7 +50,7 @@ test.describe("categories on a shared account", () => {
 
     const memberCtx = await browser.newContext({
       storageState: "tests/e2e/.auth/member.json",
-      baseURL: "http://localhost:3000",
+      baseURL,
     });
     try {
       const mp = await memberCtx.newPage();

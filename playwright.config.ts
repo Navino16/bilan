@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// Targets an already-running server (e.g. a worktree build on another port) instead of booting one.
+const externalBaseURL = process.env.PLAYWRIGHT_BASE_URL;
+
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,
@@ -11,7 +14,7 @@ export default defineConfig({
     ["html", { outputFolder: ".reports/playwright-report", open: "never" }],
   ],
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: externalBaseURL ?? "http://localhost:3000",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     // The app registers a PWA service worker in production; block it in tests so
@@ -23,15 +26,17 @@ export default defineConfig({
     { name: "chromium", use: { ...devices["Desktop Chrome"] }, dependencies: ["setup"] },
     { name: "mobile", use: { ...devices["iPhone 14"] }, dependencies: ["setup"] },
   ],
-  webServer: {
-    // In CI, serve a production build: `next dev` (Turbopack) compiles routes
-    // on demand and its compiler hangs under the full-suite load on the runner
-    // (static assets keep serving, but any route needing compilation times out).
-    // `next start` pre-compiles everything → stable. Locally we reuse the running
-    // dev server for fast iteration.
-    command: process.env.CI ? "npm run start" : "npm run dev",
-    port: 3000,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  webServer: externalBaseURL
+    ? undefined
+    : {
+        // In CI, serve a production build: `next dev` (Turbopack) compiles routes
+        // on demand and its compiler hangs under the full-suite load on the runner
+        // (static assets keep serving, but any route needing compilation times out).
+        // `next start` pre-compiles everything → stable. Locally we reuse the running
+        // dev server for fast iteration.
+        command: process.env.CI ? "npm run start" : "npm run dev",
+        port: 3000,
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
+      },
 });

@@ -159,6 +159,11 @@ unset in the app.
 | `npm run db:seed-dev`                | Seed the demo user (above)      |
 | `bash scripts/prod-smoke.sh`         | Boot and check the prod compose |
 
+`npm run test:e2e` reuses (or starts) the server on `http://localhost:3000`. To target a
+server already running elsewhere, set `PLAYWRIGHT_BASE_URL` (no server is started then):
+`PLAYWRIGHT_BASE_URL=http://localhost:3209 npm run test:e2e`. That server's database must be
+seeded with `scripts/seed-e2e.ts`, and its `APP_URL` must use the same host.
+
 ## Docs
 
 - Design spec: `docs/superpowers/specs/2026-05-26-budget-app-design.md`
