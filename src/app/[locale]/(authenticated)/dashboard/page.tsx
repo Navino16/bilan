@@ -1,11 +1,14 @@
-import { setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { requireSession } from "@/server/auth/permissions";
 import { listForUser, listForeignCategories } from "@/server/services/categories";
 import { flattenCategories } from "@/components/transactions/category-tree";
 import { getDashboard } from "@/server/services/dashboard";
 import { getCurrentBudget } from "@/server/services/budgets";
+import { getOnboardingState } from "@/server/services/onboarding";
 import { parsePeriodParams, clampPeriodToNow, parseBaseline, comparisonFor } from "@/lib/period";
 import { DashboardView } from "@/components/dashboard/dashboard-view";
+import { WelcomeCard } from "@/components/onboarding/welcome-card";
+import { PageHeader } from "@/components/shell/page-header";
 import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +26,18 @@ export default async function DashboardPage({
   const sp = await searchParams;
   setRequestLocale(locale);
   const user = await requireSession();
+
+  const onboarding = await getOnboardingState(user.id);
+  if (!onboarding.hasTransaction) {
+    const t = await getTranslations("dashboard");
+    const tWelcome = await getTranslations("onboarding.welcome");
+    return (
+      <div className="space-y-6">
+        <PageHeader overline={t("overline")} title={tWelcome("title")} />
+        <WelcomeCard state={onboarding} />
+      </div>
+    );
+  }
 
   const period = clampPeriodToNow(parsePeriodParams({ from: sp.from, to: sp.to }));
   const comparison = comparisonFor(period, parseBaseline(sp.vs, period));

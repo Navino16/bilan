@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
@@ -17,7 +17,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useIsMobile } from "@/hooks/use-is-mobile";
+import { MOBILE_QUERY, useIsMobile } from "@/hooks/use-is-mobile";
 import { type FlatCategory } from "./category-picker";
 import { CategoryCombobox } from "./category-combobox";
 import { TRANSACTION_LABEL_MAX, TRANSACTION_TYPES } from "@/lib/validation/transaction";
@@ -31,11 +31,13 @@ export function TransactionForm({
   accounts,
   categories,
   defaultAccountId,
+  defaultOpen = false,
   trigger,
 }: {
   accounts: { id: string; name: string }[];
   categories: FlatCategory[];
   defaultAccountId?: string;
+  defaultOpen?: boolean;
   trigger: React.ReactNode;
 }) {
   const t = useTranslations("transactions");
@@ -47,6 +49,16 @@ export function TransactionForm({
   // Frozen while open: swapping Sheet↔Dialog mid-entry would remount and wipe the fields.
   const [openMobile, setOpenMobile] = useState(liveMobile);
   const isMobile = open ? openMobile : liveMobile;
+
+  // Opened after mount: useIsMobile only resolves post-hydration, so read the viewport here.
+  useEffect(() => {
+    if (!defaultOpen) return;
+    const frame = requestAnimationFrame(() => {
+      setOpenMobile(window.matchMedia(MOBILE_QUERY).matches);
+      setOpen(true);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [defaultOpen]);
 
   function handleAction(formData: FormData) {
     startTransition(async () => {

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { db } from "@/server/db";
 import { visibleAccountIds } from "@/server/services/accounts";
 import { listTransactions, type TransactionListItem } from "@/server/services/transactions";
@@ -164,7 +165,8 @@ export async function loadRows(
   return { rows: collapsed, count: rows.length };
 }
 
-export async function firstTransactionDate(accountIds: string[]): Promise<Date | null> {
+// Memoized per render by array identity: getDashboard passes the same ids twice.
+export const firstTransactionDate = cache(async (accountIds: string[]): Promise<Date | null> => {
   if (accountIds.length === 0) return null;
   const first = await db.transaction.findFirst({
     where: { accountId: { in: accountIds } },
@@ -172,7 +174,7 @@ export async function firstTransactionDate(accountIds: string[]): Promise<Date |
     select: { date: true },
   });
   return first?.date ?? null;
-}
+});
 
 function totalsOf(rows: { amount: number }[], count: number): DashboardTotals {
   let income = 0;

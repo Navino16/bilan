@@ -173,7 +173,6 @@
   "accounts": {
     "overline": "Patrimoine",
     "title": "Comptes",
-    "empty": "Aucun compte. Créez-en un pour commencer.",
     "new": "Nouveau",
     "create": "Nouveau compte",
     "createTitle": "Ajouter un compte",
@@ -311,7 +310,6 @@
   "budgets": {
     "overline": "Planification",
     "pageTitle": "Budgets",
-    "empty": "Aucun budget pour le moment.",
     "create": "Nouveau budget",
     "createTitle": "Nouveau budget",
     "editTitle": "Modifier le budget",
@@ -1650,6 +1648,47 @@
       "setup": "Installation",
       "forbidden": "Accès refusé",
       "notFound": "Page introuvable"
+    }
+  },
+  "onboarding": {
+    "createAccount": "Créer un compte",
+    "manageAccounts": "Gérer les comptes",
+    "importStatement": "Importer un relevé",
+    "addTransaction": "Saisir une transaction",
+    "blockedTitle": {
+      "NO_ACCOUNT": "Commencez par créer un compte",
+      "READ_ONLY": "Comptes en lecture seule",
+      "ARCHIVED": "Tous vos comptes sont archivés"
+    },
+    "blocked": {
+      "NO_ACCOUNT": "Chaque transaction est rattachée à un compte bancaire. Créez-en un, puis importez un relevé ou saisissez une transaction.",
+      "READ_ONLY": "Les comptes partagés avec vous sont en lecture seule. Créez votre propre compte pour importer ou saisir des transactions.",
+      "ARCHIVED": "Désarchivez un compte ou créez-en un nouveau pour importer ou saisir des transactions."
+    },
+    "welcome": {
+      "overline": "Premiers pas",
+      "title": "Bienvenue sur Bilan",
+      "heading": "Deux étapes pour voir vos finances ici",
+      "step1": "Créer un compte bancaire",
+      "step1Hint": "Compte courant, livret, carte… Vos transactions y seront rattachées.",
+      "step1Done": "Vous avez un compte prêt à recevoir des transactions.",
+      "step2": "Importer un relevé ou saisir une transaction",
+      "step2Hint": "Un fichier CSV ou PDF exporté depuis votre banque, ou une saisie à la main.",
+      "done": "Fait"
+    },
+    "transactions": {
+      "title": "Aucune transaction pour l’instant",
+      "body": "Importez un relevé bancaire ou saisissez votre première transaction."
+    },
+    "accounts": {
+      "title": "Aucun compte pour l’instant",
+      "body": "Ajoutez un compte courant, un livret ou une carte pour y importer vos relevés.",
+      "cta": "Créer mon premier compte"
+    },
+    "budgets": {
+      "title": "Aucun budget pour l’instant",
+      "body": "Un budget fixe une enveloppe par catégorie ou par compte sur une période et suit vos dépenses.",
+      "cta": "Créer mon premier budget"
     }
   }
 }
