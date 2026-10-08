@@ -20,8 +20,12 @@
         "passkeyFailed": "Passkey sign-in was cancelled or didn't complete.",
         "disabled": "This account is disabled. Contact the instance administrator.",
         "ssoFailed": "Signing in through the identity provider failed. Try again.",
-        "ssoSignUpDisabled": "No Bilan account matches this identity, and this provider does not allow sign-up. Ask the instance administrator for an account.",
-        "ssoNotLinked": "No account is linked to this identity. Sign in, then link it from Settings > Security."
+        "ssoSignUpDisabled": "No Bilan account matches this identity, and account creation isn’t allowed, either by this provider or because registration is closed. Ask the instance administrator for an account.",
+        "ssoNotLinked": "No account is linked to this identity. Sign in with another sign-in method, then link it from Settings > Security.",
+        "ssoDenied": "Sign-in was cancelled or refused at the identity provider.",
+        "ssoProvider": "The identity provider returned an error. Try again later or use another sign-in method.",
+        "ssoExpired": "The sign-in request expired or was opened in another browser. Start again.",
+        "ssoNoEmail": "The identity provider didn’t share an email address. Contact the instance administrator."
       },
       "or": "or",
       "passkey": "Sign in with a passkey",
@@ -103,6 +107,12 @@
     "passwordVisibility": {
       "show": "Show password",
       "hide": "Hide password"
+    },
+    "sso": {
+      "continueWith": "Continue with {name}",
+      "signUpWith": "Sign up with {name}",
+      "startFailed": "Couldn’t reach the identity provider. Try again.",
+      "badOrigin": "Can’t sign in from this address. Open the app from its configured address."
     }
   },
   "errors": {
@@ -1095,6 +1105,41 @@
           "FAILED": "Something went wrong. Please try again."
         },
         "signInAgain": "Sign in again"
+      },
+      "identitiesCard": {
+        "overline": "Connected identities",
+        "title": "Sign in through an identity provider",
+        "hint": "Link a Google identity or your organisation’s to sign in with it.",
+        "count": "Your identities · {count}",
+        "none": "No linked identity yet.",
+        "linkedAt": "Linked on <date></date>",
+        "providerDisabled": "Provider disabled by the administrator",
+        "onlyMethod": "This is your only way to sign in: add a passkey or link another identity before unlinking it.",
+        "link": "Link {name}",
+        "unlink": "Unlink {name}",
+        "unlinkTitle": "Unlink this identity?",
+        "unlinkBody": "You will no longer be able to sign in with “{name}”. You can link it again later.",
+        "unlinkConfirm": "Unlink",
+        "cancel": "Cancel",
+        "linkedNotice": "“{name}” is now linked to your account.",
+        "signInAgain": "Sign in again",
+        "error": {
+          "NOT_FRESH": "For your security, sign in again before changing your connected identities.",
+          "LOCKOUT": "You can’t unlink your last way to sign in.",
+          "ALREADY_LINKED": "An identity from this provider is already linked to your account.",
+          "UNAVAILABLE": "This identity provider is no longer available.",
+          "FAILED": "Something went wrong. Try again.",
+          "BAD_ORIGIN": "Can’t link from this address. Open the app from its configured address."
+        },
+        "linkError": {
+          "denied": "Linking was cancelled or refused at the identity provider.",
+          "provider": "The identity provider returned an error. Try again later.",
+          "expired": "The link request expired or was opened in another browser. Start again.",
+          "noEmail": "The identity provider didn’t share an email address.",
+          "emailMismatch": "This identity’s email address doesn’t match your account’s.",
+          "linkedElsewhere": "This identity is already linked to another account.",
+          "failed": "Linking didn’t complete. Try again."
+        }
       }
     }
   },
@@ -1317,7 +1362,7 @@
       "on": "On",
       "off": "Off",
       "allowSignUp": "Allow sign-up",
-      "allowSignUpHint": "Creates a Bilan account on the first sign-in of an identity no account is linked to. When unchecked, this provider only signs in identities already linked to an account. Same email is not enough: an existing user links the identity from Settings > Security.",
+      "allowSignUpHint": "Creates a Bilan account on the first sign-in of an identity no account is linked to, only while the registration mode is “Open”. Otherwise this provider only signs in identities already linked to an account. Same email is not enough: an existing user links the identity from Settings > Security.",
       "oidcSection": "OIDC options",
       "issuer": "Issuer",
       "clientId": "Client ID",
@@ -1439,6 +1484,11 @@
           "session": {
             "revoked": "Session revoked",
             "revoked_others": "Other sessions revoked"
+          },
+          "identity": {
+            "linked": "SSO identity linked",
+            "unlinked": "SSO identity unlinked",
+            "link_failed": "SSO identity link failed"
           }
         },
         "user": {
@@ -1584,7 +1634,7 @@
       "description": "Optional — log in via an external provider (Google, OIDC). Leave blank to add one later in admin settings.",
       "redirectUri": "Redirect URL",
       "redirectUriHint": "Register this as an allowed redirect URI in your identity provider.",
-      "signUpHint": "This provider only signs in identities linked to a Bilan account, and a matching email does not link them. To let it create accounts on first sign-in, allow sign-up in Administration > Auth providers.",
+      "signUpHint": "This provider only signs in identities linked to a Bilan account, and a matching email does not link them. To let it create accounts on first sign-in, allow sign-up in Administration > Auth providers and set the registration mode to “Open”.",
       "displayName": "Display name",
       "issuer": "Issuer (URL)",
       "clientId": "Client ID",

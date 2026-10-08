@@ -83,7 +83,8 @@ kept), then serves on port 3000 (`BILAN_PORT`). Serve it over HTTPS: put a TLS r
 (Caddy, Traefik, nginx…) in front of that port and set `APP_URL` to its public `https://`
 URL. The app sends HSTS and `upgrade-insecure-requests`, and auth only trusts `APP_URL`,
 so plain `http://host:3000` does not work. Open `APP_URL`: a fresh install lands on the setup
-wizard, which creates the first (super admin) account.
+wizard, which creates the first (super admin) account. SSO sign-in and identity linking also
+refuse any other address ("Open the app from its configured address").
 
 Keep `app.env`, `db.env` and the keyring file safe: without the keyring the database files
 can't be read, and without `DATA_ENCRYPTION_KEY` the transaction labels can't be decrypted.

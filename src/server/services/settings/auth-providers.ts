@@ -5,6 +5,7 @@ import { encrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
 import { PROVIDER_KEY_MAX, PROVIDER_TEXT_MAX } from "@/lib/validation/auth-provider";
 import { invalidateAuthCache } from "@/server/auth";
+import { isServedProvider } from "@/server/auth/providers";
 import { logEvent } from "@/server/services/audit";
 import { appSettings } from "@/server/services/settings/app-settings";
 
@@ -97,7 +98,7 @@ export function listAuthProviders(database: PrismaClient = db): Promise<AuthProv
 }
 
 // AuthAccount.providerId of the users signed in through this row (see server/auth buildOptions).
-function linkedProviderId(row: Pick<AuthProvider, "type" | "key">): string | null {
+export function linkedProviderId(row: Pick<AuthProvider, "type" | "key">): string | null {
   if (row.type === "google") return "google";
   if (row.type === "oidc") return row.key;
   return null;
@@ -109,19 +110,30 @@ export type UserSignInMethods = {
   hasPasskey: boolean;
 };
 
-// Users left with no usable sign-in method once `removed` goes away. A password only
-// counts while credentials login is enabled; a provider only while its row is enabled.
+export type SignInUsability = {
+  credentialsEnabled: boolean;
+  enabledProviderIds: ReadonlySet<string>;
+};
+
+// A password only counts while credentials login is enabled; a provider only while its row is enabled.
+export function hasUsableSignIn(u: UserSignInMethods, usable: SignInUsability): boolean {
+  return (
+    (u.hasPassword && usable.credentialsEnabled) ||
+    u.hasPasskey ||
+    u.providerIds.some((id) => usable.enabledProviderIds.has(id))
+  );
+}
+
+// Users left with no usable sign-in method once `removed` goes away.
 // Banned users are counted too: a ban is reversible.
 export function countLockouts(
   users: UserSignInMethods[],
   removed: string,
-  usable: { credentialsEnabled: boolean; enabledProviderIds: ReadonlySet<string> },
+  usable: SignInUsability,
 ): number {
   return users.filter(
     (u) =>
-      !(u.hasPassword && usable.credentialsEnabled) &&
-      !u.hasPasskey &&
-      !u.providerIds.some((id) => id !== removed && usable.enabledProviderIds.has(id)),
+      !hasUsableSignIn({ ...u, providerIds: u.providerIds.filter((id) => id !== removed) }, usable),
   ).length;
 }
 
@@ -129,9 +141,67 @@ export type AuthProviderImpact = { linkedAccounts: number; lockedOut: number };
 
 type Client = Prisma.TransactionClient | PrismaClient;
 
-// Serialises provider deletions and Google creations so their checks can't race.
-async function lockProviders(tx: Prisma.TransactionClient): Promise<void> {
+// Serialises provider deletions, Google creations and identity unlinks so their checks can't race.
+export async function lockProviders(tx: Prisma.TransactionClient): Promise<void> {
   await tx.$queryRaw`SELECT id FROM AuthProvider FOR UPDATE`;
+}
+
+export async function signInUsability(
+  database: Client = db,
+  excludeRowId?: string,
+): Promise<SignInUsability> {
+  const [rows, credentialsEnabled] = await Promise.all([
+    database.authProvider.findMany({
+      where: { enabled: true, ...(excludeRowId ? { id: { not: excludeRowId } } : {}) },
+      select: { type: true, key: true, issuer: true, clientId: true, clientSecretEnc: true },
+    }),
+    appSettings.get<boolean>("credentials_enabled"),
+  ]);
+  return {
+    credentialsEnabled: credentialsEnabled ?? true,
+    enabledProviderIds: new Set(
+      rows
+        .filter(isServedProvider)
+        .map(linkedProviderId)
+        .filter((id): id is string => !!id),
+    ),
+  };
+}
+
+/** Sign-in methods per user, as if the `excludeAccountId` AuthAccount row were already gone. */
+export async function signInMethodsOf(
+  userIds: string[],
+  database: Client = db,
+  excludeAccountId?: string,
+): Promise<Map<string, UserSignInMethods>> {
+  const [accounts, passkeys] = await Promise.all([
+    database.authAccount.findMany({
+      where: {
+        userId: { in: userIds },
+        ...(excludeAccountId ? { id: { not: excludeAccountId } } : {}),
+      },
+      select: { userId: true, providerId: true, password: true },
+    }),
+    database.passkey.findMany({
+      where: { userId: { in: userIds } },
+      select: { userId: true },
+      distinct: ["userId"],
+    }),
+  ]);
+  const withPasskey = new Set(passkeys.map((p) => p.userId));
+  return new Map(
+    userIds.map((userId) => {
+      const own = accounts.filter((a) => a.userId === userId);
+      return [
+        userId,
+        {
+          providerIds: own.map((a) => a.providerId),
+          hasPassword: own.some((a) => a.providerId === "credential" && !!a.password),
+          hasPasskey: withPasskey.has(userId),
+        },
+      ];
+    }),
+  );
 }
 
 export async function authProviderImpact(
@@ -146,40 +216,13 @@ export async function authProviderImpact(
   });
   if (linked.length === 0) return { linkedAccounts: 0, lockedOut: 0 };
   const userIds = [...new Set(linked.map((a) => a.userId))];
-  const [accounts, passkeys, others, credentialsEnabled] = await Promise.all([
-    database.authAccount.findMany({
-      where: { userId: { in: userIds } },
-      select: { userId: true, providerId: true, password: true },
-    }),
-    database.passkey.findMany({
-      where: { userId: { in: userIds } },
-      select: { userId: true },
-      distinct: ["userId"],
-    }),
-    database.authProvider.findMany({
-      where: { enabled: true, id: { not: row.id } },
-      select: { type: true, key: true },
-    }),
-    appSettings.get<boolean>("credentials_enabled"),
+  const [methods, usable] = await Promise.all([
+    signInMethodsOf(userIds, database),
+    signInUsability(database, row.id),
   ]);
-  const withPasskey = new Set(passkeys.map((p) => p.userId));
-  const users = userIds.map((userId) => {
-    const own = accounts.filter((a) => a.userId === userId);
-    return {
-      providerIds: own.map((a) => a.providerId),
-      hasPassword: own.some((a) => a.providerId === "credential" && !!a.password),
-      hasPasskey: withPasskey.has(userId),
-    };
-  });
-  const enabledProviderIds = new Set(
-    others.map(linkedProviderId).filter((id): id is string => id !== null),
-  );
   return {
     linkedAccounts: linked.length,
-    lockedOut: countLockouts(users, providerId, {
-      credentialsEnabled: credentialsEnabled ?? true,
-      enabledProviderIds,
-    }),
+    lockedOut: countLockouts([...methods.values()], providerId, usable),
   };
 }
 

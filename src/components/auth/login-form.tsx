@@ -14,33 +14,27 @@ import { PasskeySignIn } from "./passkey-sign-in";
 import { TwoFactorStep } from "./two-factor-step";
 import { useActionForm } from "@/components/forms/use-action-form";
 import { FieldError } from "@/components/forms/field-error";
+import type { SsoError } from "@/lib/sso-errors";
+import { loginRedirectPath } from "@/lib/callback-url";
+import type { SsoProviderView } from "@/server/services/users/identities";
+import { OrSeparator } from "./or-separator";
+import { SsoButtons } from "./sso-buttons";
 
 export type LoginNotice = "passwordReset" | "accountDeleted";
-export type SsoError = "disabled" | "ssoFailed" | "ssoSignUpDisabled" | "ssoNotLinked";
 
-// "Back" from the code step remounts the password step to clear its action state.
-export function LoginForm({
-  locale,
-  redirectTo,
-  notice,
-  ssoError,
-}: {
+type LoginProps = {
   locale: string;
   redirectTo: string;
   notice?: LoginNotice;
   ssoError?: SsoError;
-}) {
+  credentialsEnabled: boolean;
+  ssoProviders: SsoProviderView[];
+};
+
+// "Back" from the code step remounts the password step to clear its action state.
+export function LoginForm(props: LoginProps) {
   const [attempt, setAttempt] = useState(0);
-  return (
-    <PasswordStep
-      key={attempt}
-      locale={locale}
-      redirectTo={redirectTo}
-      notice={notice}
-      ssoError={ssoError}
-      onRestart={() => setAttempt((n) => n + 1)}
-    />
-  );
+  return <PasswordStep key={attempt} {...props} onRestart={() => setAttempt((n) => n + 1)} />;
 }
 
 function PasswordStep({
@@ -48,14 +42,10 @@ function PasswordStep({
   redirectTo,
   notice,
   ssoError,
+  credentialsEnabled,
+  ssoProviders,
   onRestart,
-}: {
-  locale: string;
-  redirectTo: string;
-  notice?: LoginNotice;
-  ssoError?: SsoError;
-  onRestart: () => void;
-}) {
+}: LoginProps & { onRestart: () => void }) {
   const t = useTranslations("auth.login");
   const router = useRouter();
   const form = useActionForm(loginAction, { resetOnSuccess: false });
@@ -84,55 +74,66 @@ function PasswordStep({
         </Alert>
       )}
       <div className="space-y-4">
-        <form {...form.formProps} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">{t("email")}</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              {...form.fieldProps("email")}
-            />
-            <FieldError form={form} name="email" />
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">{t("password")}</Label>
-              <Link
-                href={`/${locale}/reset`}
-                className="text-muted-foreground text-xs hover:underline"
-              >
-                {t("forgot")}
-              </Link>
-            </div>
-            <PasswordInput
-              id="password"
-              name="password"
-              required
-              autoComplete="current-password"
-              {...form.fieldProps("password")}
-            />
-            <FieldError form={form} name="password" />
-          </div>
-          {state && !state.ok && (
-            <Alert variant="destructive">
-              <AlertDescription>
-                {state.error === "DISABLED"
-                  ? t("error.disabled")
-                  : state.error !== "RATE_LIMITED"
-                    ? t("error.badCredentials")
-                    : state.retryAfter
-                      ? t("error.rateLimitedFor", { minutes: Math.ceil(state.retryAfter / 60) })
-                      : t("error.rateLimited")}
-              </AlertDescription>
-            </Alert>
-          )}
-          <Button type="submit" className="w-full" disabled={pending}>
-            {pending ? t("submitting") : t("submit")}
-          </Button>
-        </form>
+        {credentialsEnabled && (
+          <>
+            <form {...form.formProps} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">{t("email")}</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  {...form.fieldProps("email")}
+                />
+                <FieldError form={form} name="email" />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">{t("password")}</Label>
+                  <Link
+                    href={`/${locale}/reset`}
+                    className="text-muted-foreground text-xs hover:underline"
+                  >
+                    {t("forgot")}
+                  </Link>
+                </div>
+                <PasswordInput
+                  id="password"
+                  name="password"
+                  required
+                  autoComplete="current-password"
+                  {...form.fieldProps("password")}
+                />
+                <FieldError form={form} name="password" />
+              </div>
+              {state && !state.ok && (
+                <Alert variant="destructive">
+                  <AlertDescription>
+                    {state.error === "DISABLED"
+                      ? t("error.disabled")
+                      : state.error !== "RATE_LIMITED"
+                        ? t("error.badCredentials")
+                        : state.retryAfter
+                          ? t("error.rateLimitedFor", { minutes: Math.ceil(state.retryAfter / 60) })
+                          : t("error.rateLimited")}
+                  </AlertDescription>
+                </Alert>
+              )}
+              <Button type="submit" className="w-full" disabled={pending}>
+                {pending ? t("submitting") : t("submit")}
+              </Button>
+            </form>
+            <OrSeparator />
+          </>
+        )}
+        <SsoButtons
+          providers={ssoProviders}
+          label="continueWith"
+          callbackURL={redirectTo}
+          errorCallbackURL={loginRedirectPath(locale, redirectTo)}
+        />
         <PasskeySignIn redirectTo={redirectTo} />
       </div>
       <p className="text-muted-foreground text-center text-sm">

@@ -12,11 +12,16 @@ import { buildOptions, getAuth, invalidateAuthCache } from "@/server/auth";
 import { providerCache } from "@/server/auth/providers";
 import { encrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
+import { appSettings } from "@/server/services/settings/app-settings";
 import {
   createAuthProvider,
   updateAuthProvider,
   type ProviderInput,
 } from "@/server/services/settings/auth-providers";
+import { snapshotSetting } from "./support/app-setting-snapshot";
+
+// Each case signs users up and in (scrypt) and runs a full OAuth round trip.
+vi.setConfig({ testTimeout: 20_000 });
 
 const tag = "sso-signup";
 const actorId = `${tag}-actor`;
@@ -95,10 +100,15 @@ async function cleanup() {
   await db.authProvider.deleteMany({ where: { key: { in: [closedKey, openKey] } } });
 }
 
+let restoreMode: () => Promise<void>;
+const setMode = (mode: string) => appSettings.set("registration_mode", mode, actorId);
+
 beforeAll(async () => {
   await cleanup();
   await db.user.deleteMany({ where: { id: actorId } });
   await db.user.create({ data: { id: actorId, email: `${tag}-actor@bilan.local` } });
+  restoreMode = await snapshotSetting("registration_mode");
+  await setMode("OPEN");
   await createAuthProvider(provider(closedKey, false), { id: actorId });
   await createAuthProvider(provider(openKey, true), { id: actorId });
 });
@@ -108,6 +118,7 @@ afterEach(() => {
 });
 
 afterAll(async () => {
+  await restoreMode();
   await cleanup();
   await db.user.deleteMany({ where: { id: actorId } });
   invalidateAuthCache();
@@ -196,6 +207,81 @@ describe("per-provider SSO sign-up (#200)", () => {
   });
 });
 
+describe("registration mode gates SSO sign-up (#204)", () => {
+  afterEach(async () => {
+    await setMode("OPEN");
+  });
+
+  it.each(["INVITE_ONLY", "DISABLED"])(
+    "refuses an unknown IdP user in %s mode even when the provider allows sign-up",
+    async (mode) => {
+      await setMode(mode);
+      const email = emailFor(`mode-${mode}`);
+      stubIdp({ sub: `sub-mode-${mode}`, email, name: "Mode" });
+      expect((await ssoLogin(openKey)).location).toBe(`${appUrl}/login?error=signup_disabled`);
+      expect(await db.user.findUnique({ where: { email } })).toBeNull();
+    },
+  );
+
+  it("doesn't let the core social callback sign an OIDC identity up", async () => {
+    await setMode("INVITE_ONLY");
+    const email = emailFor("core-callback");
+    stubIdp({ sub: "sub-core-callback", email, name: "Core" });
+    const auth = await getAuth();
+    const start = await auth.handler(
+      new Request(`${appUrl}/api/auth/sign-in/oauth2`, {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: appUrl },
+        body: JSON.stringify({ providerId: openKey, callbackURL: "/fr/dashboard" }),
+      }),
+    );
+    const { url } = (await start.json()) as { url: string };
+    const state = new URL(url).searchParams.get("state")!;
+    const res = await auth.handler(
+      new Request(`${appUrl}/api/auth/callback/${openKey}?code=c0de&state=${state}`, {
+        headers: {
+          cookie: start.headers
+            .getSetCookie()
+            .map((c) => c.split(";")[0])
+            .join("; "),
+        },
+      }),
+    );
+    expect(res.status).toBe(404);
+    expect(await db.user.findUnique({ where: { email } })).toBeNull();
+  });
+
+  it("creates the user in OPEN mode", async () => {
+    const email = emailFor("mode-open");
+    stubIdp({ sub: "sub-mode-open", email, name: "Open" });
+    expect((await ssoLogin(openKey)).location).toBe("/fr/dashboard");
+    expect(await db.user.findUnique({ where: { email } })).not.toBeNull();
+  });
+
+  it.each(["OPEN", "INVITE_ONLY", "DISABLED"])(
+    "still signs in an already linked user in %s mode",
+    async (mode) => {
+      await setMode(mode);
+      const email = emailFor(`linked-${mode}`);
+      const id = `${tag}-linked-${mode}-${Date.now()}`;
+      await db.user.create({
+        data: {
+          id,
+          email,
+          name: "Linked",
+          emailVerified: true,
+          authAccounts: {
+            create: { id: `${id}-acc`, accountId: `sub-linked-${mode}`, providerId: openKey },
+          },
+        },
+      });
+      stubIdp({ sub: `sub-linked-${mode}`, email, name: "Linked" });
+      expect((await ssoLogin(openKey)).location).toBe("/fr/dashboard");
+      expect(await db.session.count({ where: { userId: id } })).toBe(1);
+    },
+  );
+});
+
 describe("Google sign-up flag (#200)", () => {
   const google = (allowSignUp: boolean) =>
     ({
@@ -254,11 +340,14 @@ describe("Google sign-up flag (#200)", () => {
   });
 
   it.each([
-    [false, true],
-    [true, false],
-  ])("allowSignUp=%s sets disableSignUp=%s on the social provider", async (allow, disabled) => {
+    [false, "OPEN", true],
+    [true, "OPEN", false],
+    [true, "INVITE_ONLY", true],
+    [true, "DISABLED", true],
+  ])("allowSignUp=%s in %s mode sets disableSignUp=%s", async (allow, mode, disabled) => {
     const spy = vi.spyOn(providerCache, "get").mockResolvedValue([google(allow)]);
     try {
+      await setMode(mode);
       const options = await buildOptions();
       expect(options.socialProviders?.google).toMatchObject({
         disableSignUp: disabled,
@@ -267,6 +356,7 @@ describe("Google sign-up flag (#200)", () => {
       expect(options.socialProviders?.google).not.toHaveProperty("disableImplicitSignUp");
     } finally {
       spy.mockRestore();
+      await setMode("OPEN");
     }
   });
 });

@@ -1,21 +1,17 @@
 import { redirect } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { getCurrentUser } from "@/server/auth/permissions";
+import { appSettings } from "@/server/services/settings/app-settings";
+import { listSsoProviders } from "@/server/services/users/identities";
 import { postLoginPath } from "@/lib/callback-url";
-import { LoginForm, type LoginNotice, type SsoError } from "@/components/auth/login-form";
+import { loginSsoError } from "@/lib/sso-errors";
+import { LoginForm, type LoginNotice } from "@/components/auth/login-form";
 import { pageTitle } from "@/i18n/metadata";
 
 // Reads the session (DB) to bounce already-authenticated users, so it must be dynamic.
 export const dynamic = "force-dynamic";
 
 export const generateMetadata = pageTitle("login");
-
-// Failed OAuth/OIDC callbacks land here through onAPIError.errorURL, with an `error` code.
-const SSO_ERRORS = new Map<string, SsoError>([
-  ["banned", "disabled"],
-  ["signup_disabled", "ssoSignUpDisabled"],
-  ["account_not_linked", "ssoNotLinked"],
-]);
 
 export default async function LoginPage({
   params,
@@ -35,17 +31,32 @@ export default async function LoginPage({
   ]);
   setRequestLocale(locale);
   const redirectTo = postLoginPath(callbackUrl, locale);
-  // Already authenticated → no reason to show the login page.
-  if (await getCurrentUser()) redirect(redirectTo);
+  if (await getCurrentUser()) {
+    // Failed OAuth/OIDC callbacks land here through onAPIError.errorURL, with an `error` code;
+    // a signed-in user only gets one from a Settings > Security link attempt.
+    redirect(
+      error
+        ? `/${locale}/settings/security?error=${encodeURIComponent(String(error))}`
+        : redirectTo,
+    );
+  }
+  const [credentialsEnabled, ssoProviders] = await Promise.all([
+    appSettings.get<boolean>("credentials_enabled"),
+    listSsoProviders(),
+  ]);
   const notice: LoginNotice | undefined =
     deleted === "1" ? "accountDeleted" : reset === "1" ? "passwordReset" : undefined;
-  const ssoError: SsoError | undefined = error
-    ? (SSO_ERRORS.get(String(error)) ?? "ssoFailed")
-    : undefined;
 
   return (
     <main>
-      <LoginForm locale={locale} redirectTo={redirectTo} notice={notice} ssoError={ssoError} />
+      <LoginForm
+        locale={locale}
+        redirectTo={redirectTo}
+        notice={notice}
+        ssoError={error ? loginSsoError(String(error)) : undefined}
+        credentialsEnabled={credentialsEnabled ?? true}
+        ssoProviders={ssoProviders}
+      />
     </main>
   );
 }
