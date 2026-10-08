@@ -40,4 +40,12 @@ describe("RateLimiter", () => {
     rl.reset("k");
     expect(rl.consume("k").allowed).toBe(true);
   });
+
+  it("limiters given the same buckets share their counters", () => {
+    const buckets = new Map();
+    const first = new RateLimiter({ max: 1, windowMs: 60_000 }, buckets);
+    const second = new RateLimiter({ max: 1, windowMs: 60_000 }, buckets);
+    expect(first.consume("k").allowed).toBe(true);
+    expect(second.consume("k").allowed).toBe(false);
+  });
 });

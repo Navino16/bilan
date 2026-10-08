@@ -6,6 +6,7 @@ import { getOAuthState } from "better-auth/api";
 import { db } from "@/server/db";
 import { env } from "@/env";
 import { CLIENT_IP_HEADER } from "@/server/http/client-ip";
+import { processState } from "@/server/process-state";
 import { dataKey } from "@/server/crypto/keys";
 import { decrypt } from "@/server/crypto/encryption";
 import {
@@ -31,7 +32,10 @@ import {
 } from "@/server/services/mail/password-reset";
 
 type Handler = ReturnType<typeof betterAuth>;
-let cached: { handler: Handler; builtAt: number } | null = null;
+// Only the generation is process-wide: a shared handler would keep closures from a module
+// copy that dev hot reload replaced. Each copy rebuilds its own handler once per invalidation.
+const handlerGeneration = processState("auth.handler", () => ({ value: 0 }));
+let cached: { handler: Handler; builtAt: number; generation: number } | null = null;
 const CACHE_TTL_MS = 60_000;
 const linkRequests = new WeakSet<object>();
 
@@ -260,13 +264,18 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
 
 export async function getAuth(): Promise<Handler> {
   const now = Date.now();
-  if (cached && now - cached.builtAt < CACHE_TTL_MS) return cached.handler;
+  const generation = handlerGeneration.value;
+  if (cached && cached.generation === generation && now - cached.builtAt < CACHE_TTL_MS) {
+    return cached.handler;
+  }
   const handler = betterAuth(await buildOptions());
-  cached = { handler, builtAt: now };
+  // Built from settings read before an invalidateAuthCache(): use it once, don't cache it.
+  if (handlerGeneration.value === generation) cached = { handler, builtAt: now, generation };
   return handler;
 }
 
 export function invalidateAuthCache(): void {
   cached = null;
+  handlerGeneration.value += 1;
   providerCache.invalidate();
 }
