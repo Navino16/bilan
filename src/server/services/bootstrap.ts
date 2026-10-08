@@ -16,6 +16,8 @@ export async function completeSetup(
   const auth = await getAuth();
   const res = await auth.api.signUpEmail({
     body: { email: input.email, password: input.password, name: input.name },
+    // The signup hook seeds the default categories in this locale.
+    headers: new Headers({ "accept-language": input.locale ?? "fr" }),
   });
   await grantRole(db, res.user.id, "SUPER_ADMIN", null);
   await db.userPreference.upsert({

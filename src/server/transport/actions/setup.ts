@@ -5,7 +5,7 @@ import { request as httpsRequest } from "node:https";
 import { z } from "zod";
 import { completeSetup } from "@/server/services/bootstrap";
 import { isSetupNeeded } from "@/server/services/setup-status";
-import { appSettings } from "@/server/services/settings/app-settings";
+import { appSettings, getMinPasswordLength } from "@/server/services/settings/app-settings";
 import { upsertSmtp, smtpSchema } from "@/server/services/settings/smtp";
 import { createAuthProvider, providerSchema } from "@/server/services/settings/auth-providers";
 import { getCurrentUser, hasPermission } from "@/server/auth/permissions";
@@ -16,7 +16,7 @@ export type ActionState = { ok: true } | { ok: false; error: string } | null;
 const setupSchema = z.object({
   name: nameSchema,
   email: z.email(),
-  password: z.string().min(12),
+  password: z.string().min(8),
   locale: z.enum(["fr", "en"]).default("fr"),
   mode: z.enum(["OPEN", "INVITE_ONLY", "DISABLED"]),
 });
@@ -171,6 +171,8 @@ export async function completeSetupAction(
 ): Promise<ActionState> {
   const parsed = setupSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: "INVALID" };
+  if (parsed.data.password.length < (await getMinPasswordLength()))
+    return { ok: false, error: "PASSWORD_TOO_SHORT" };
 
   // Validate optional SMTP up front so we can surface a precise error.
   let smtp: z.infer<typeof smtpSchema> | null = null;

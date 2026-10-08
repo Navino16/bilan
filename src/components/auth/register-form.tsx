@@ -21,11 +21,13 @@ export function RegisterForm({
   mode,
   credentialsEnabled,
   ssoProviders,
+  minPasswordLength,
 }: {
   locale: string;
   mode: string;
   credentialsEnabled: boolean;
   ssoProviders: SsoProviderView[];
+  minPasswordLength: number;
 }) {
   const t = useTranslations("auth.register");
   const router = useRouter();
@@ -110,13 +112,13 @@ export function RegisterForm({
             id="password"
             name="password"
             required
-            minLength={12}
+            minLength={minPasswordLength}
             autoComplete="new-password"
             {...form.fieldProps("password", "password-hint")}
           />
-          <FieldError form={form} name="password" />
+          <FieldError form={form} name="password" values={{ count: minPasswordLength }} />
           <p id="password-hint" className="text-muted-foreground text-xs">
-            {t("passwordHint")}
+            {t("passwordHint", { count: minPasswordLength })}
           </p>
         </div>
         <div className="space-y-2">
@@ -125,7 +127,7 @@ export function RegisterForm({
             id="confirmPassword"
             name="confirmPassword"
             required
-            minLength={12}
+            minLength={minPasswordLength}
             autoComplete="new-password"
             {...form.fieldProps("confirmPassword")}
           />

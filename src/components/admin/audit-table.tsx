@@ -33,9 +33,7 @@ export async function AuditTable({ items }: { items: AuditEntry[] }) {
   const entityDetail = (row: AuditEntry) => (row.subject ? displayName(row.subject) : row.entityId);
   const user = (row: AuditEntry) =>
     row.user ? displayName(row.user) : (row.userId ?? t("system"));
-  const date = (row: AuditEntry) => (
-    <LocalDateTime value={row.createdAt} dateStyle="short" timeStyle="medium" />
-  );
+  const date = (row: AuditEntry) => <LocalDateTime value={row.createdAt} seconds />;
   const entity = (row: AuditEntry) =>
     row.entity ? (
       <>

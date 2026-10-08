@@ -17,6 +17,7 @@ import { PageHeader } from "@/components/shell/page-header";
 import { NativeSelect } from "@/components/ui/native-select";
 import { discardImportAction } from "@/server/transport/actions/imports";
 import { cn } from "@/lib/utils";
+import { formatBytes, formatCount, formatDayMonth } from "@/lib/format";
 import { RevertImportDialog } from "./revert-import-dialog";
 import { AddBlockedState, ADD_BLOCKED_ID } from "@/components/onboarding/add-blocked";
 import type { AddTransactionBlocker } from "@/lib/onboarding";
@@ -68,18 +69,6 @@ function isPdfFile(f: File): boolean {
   return f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf";
 }
 
-function formatBytes(n: number | null, locale: string): string {
-  if (!n) return "";
-  const [value, unit] =
-    n < 1024 ? [n, "byte"] : n < 1024 ** 2 ? [n / 1024, "kilobyte"] : [n / 1024 ** 2, "megabyte"];
-  return new Intl.NumberFormat(locale, {
-    style: "unit",
-    unit,
-    unitDisplay: "short",
-    maximumFractionDigits: unit === "byte" ? 0 : 1,
-  }).format(value);
-}
-
 export function ImportWizard({
   accounts,
   addBlocker = null,
@@ -96,12 +85,6 @@ export function ImportWizard({
   const locale = useLocale();
   const router = useRouter();
   const money = new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" });
-  const dayMonth = new Intl.DateTimeFormat(locale, {
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  });
-  const count = new Intl.NumberFormat(locale);
 
   const [file, setFile] = useState<File | null>(null);
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
@@ -415,9 +398,9 @@ export function ImportWizard({
       >
         <span>
           {t("pager.range", {
-            from: count.format(from),
-            to: count.format(to),
-            total: count.format(product.totalRows),
+            from: formatCount(from, locale),
+            to: formatCount(to, locale),
+            total: formatCount(product.totalRows, locale),
           })}
         </span>
         <span className="flex gap-2">
@@ -621,7 +604,9 @@ export function ImportWizard({
                     <div className="text-muted-foreground text-[11px]">
                       {t("fileMeta", {
                         count: total,
-                        size: formatBytes(preview.fileSizeBytes, locale),
+                        size: preview.fileSizeBytes
+                          ? formatBytes(preview.fileSizeBytes, locale)
+                          : "",
                       })}
                     </div>
                   </div>
@@ -851,7 +836,7 @@ export function ImportWizard({
                       >
                         {includeCheckbox(r, product.key)}
                         <span className="text-muted-foreground text-xs">
-                          {dayMonth.format(new Date(r.date))}
+                          {formatDayMonth(r.date, locale)}
                         </span>
                         <span className="flex min-w-0 flex-col gap-0.5">
                           <span
@@ -895,9 +880,7 @@ export function ImportWizard({
                             </span>
                           </div>
                           <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
-                            <span className="tabular-nums">
-                              {dayMonth.format(new Date(r.date))}
-                            </span>
+                            <span className="tabular-nums">{formatDayMonth(r.date, locale)}</span>
                             <span aria-hidden>·</span>
                             <span>{tType(`types.${r.type}`)}</span>
                             {dupBadge}

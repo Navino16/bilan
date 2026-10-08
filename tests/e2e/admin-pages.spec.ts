@@ -42,7 +42,7 @@ test.describe("admin pages (#164)", () => {
       });
       await expect(page.locator("#f-action")).toHaveValue("signup_token");
       await expect(
-        page.locator('[data-slot="audit-row"]', { hasText: "Jeton d'invitation supprimé" }).first(),
+        page.locator('[data-slot="audit-row"]', { hasText: "Jeton d’invitation supprimé" }).first(),
       ).toBeVisible();
     });
 

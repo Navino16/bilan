@@ -7,6 +7,7 @@ import { db } from "@/server/db";
 import { env } from "@/env";
 import { CLIENT_IP_HEADER } from "@/server/http/client-ip";
 import { processState } from "@/server/process-state";
+import { requestLocale } from "@/server/http/request-locale";
 import { dataKey } from "@/server/crypto/keys";
 import { decrypt } from "@/server/crypto/encryption";
 import {
@@ -170,12 +171,12 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
         },
         create: {
           before: async (user) => ({ data: { ...user, ...nameOnCreate(user) } }),
-          // Seed the default category set for every new account. Locale is not
-          // known here (UserPreference is written separately) so default to fr;
-          // failures must never block signup.
-          after: async (user) => {
+          // Seeds the default categories in the signup page's locale; failures must never block signup.
+          // No request context = adminCreateUser, which seeds with the locale the admin picked.
+          after: async (user, ctx) => {
+            if (!ctx) return;
             try {
-              await seedDefaultCategories(user.id, "fr");
+              await seedDefaultCategories(user.id, requestLocale(ctx.headers));
             } catch {
               // best-effort
             }

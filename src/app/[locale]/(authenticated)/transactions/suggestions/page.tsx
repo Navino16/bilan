@@ -5,6 +5,7 @@ import { requireSession } from "@/server/auth/permissions";
 import { listIgnoredSuggestions, suggestPairs } from "@/server/services/links";
 import { SuggestionsList } from "@/components/transactions/suggestions-list";
 import { PageHeader } from "@/components/shell/page-header";
+import { Badge } from "@/components/ui/badge";
 import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,7 @@ export default async function SuggestionsPage({ params }: { params: Promise<{ lo
   setRequestLocale(locale);
   const user = await requireSession();
   const t = await getTranslations("transactions.suggestions");
+  const tTx = await getTranslations("transactions");
   const [pairs, ignored] = await Promise.all([
     suggestPairs(user.id),
     listIgnoredSuggestions(user.id),
@@ -31,8 +33,9 @@ export default async function SuggestionsPage({ params }: { params: Promise<{ lo
         {t("back")}
       </Link>
       <PageHeader
-        overline={t("subtitle", { count: pairs.length })}
+        overline={tTx("title")}
         title={t("title")}
+        badges={<Badge variant="secondary">{t("subtitle", { count: pairs.length })}</Badge>}
         subtitle={t("hint")}
       />
       <SuggestionsList items={pairs} ignored={ignored} />

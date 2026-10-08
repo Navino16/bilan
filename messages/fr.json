@@ -7,19 +7,19 @@
       "title": "Connexion",
       "email": "Adresse e-mail",
       "password": "Mot de passe",
-      "forgot": "Mot de passe oublié ?",
+      "forgot": "Mot de passe oublié ?",
       "submit": "Se connecter",
       "submitting": "Connexion…",
-      "noAccount": "Pas encore de compte ?",
+      "noAccount": "Pas encore de compte ?",
       "registerLink": "Créer un compte",
       "error": {
         "rateLimited": "Trop de tentatives. Réessayez plus tard.",
         "rateLimitedFor": "Trop de tentatives. Réessayez dans {minutes, plural, one {# minute} other {# minutes}}.",
         "badCredentials": "E-mail ou mot de passe incorrect.",
-        "passkeyNotFound": "Cette clé d'accès n'est plus reconnue. Connectez-vous avec votre mot de passe.",
-        "passkeyFailed": "La connexion par clé d'accès a été annulée ou n'a pas abouti.",
-        "disabled": "Ce compte est désactivé. Contactez l'administrateur de l'instance.",
-        "ssoFailed": "La connexion via le fournisseur d'identité a échoué. Réessayez.",
+        "passkeyNotFound": "Cette clé d’accès n’est plus reconnue. Connectez-vous avec votre mot de passe.",
+        "passkeyFailed": "La connexion par clé d’accès a été annulée ou n’a pas abouti.",
+        "disabled": "Ce compte est désactivé. Contactez l’administrateur de l’instance.",
+        "ssoFailed": "La connexion via le fournisseur d’identité a échoué. Réessayez.",
         "ssoSignUpDisabled": "Aucun compte Bilan ne correspond à cette identité, et la création de compte n’est pas autorisée, par ce fournisseur ou parce que les inscriptions sont fermées. Demandez un compte à l’administrateur de l’instance.",
         "ssoNotLinked": "Aucun compte n’est lié à cette identité. Connectez-vous avec un autre moyen de connexion, puis liez-la depuis Paramètres > Sécurité.",
         "ssoDenied": "La connexion a été annulée ou refusée chez le fournisseur d’identité.",
@@ -28,7 +28,7 @@
         "ssoNoEmail": "Le fournisseur d’identité n’a pas transmis d’adresse e-mail. Contactez l’administrateur de l’instance."
       },
       "or": "ou",
-      "passkey": "Se connecter avec une clé d'accès",
+      "passkey": "Se connecter avec une clé d’accès",
       "notice": {
         "passwordReset": "Votre mot de passe a été modifié. Connectez-vous avec le nouveau.",
         "accountDeleted": "Votre compte et toutes vos données ont été supprimés."
@@ -36,8 +36,8 @@
     },
     "twoFactor": {
       "title": "Vérification",
-      "hint": "Saisissez le code à 6 chiffres affiché par votre application d'authentification.",
-      "backupHint": "Saisissez l'un de vos codes de secours. Chaque code ne fonctionne qu'une fois.",
+      "hint": "Saisissez le code à 6 chiffres affiché par votre application d’authentification.",
+      "backupHint": "Saisissez l’un de vos codes de secours. Chaque code ne fonctionne qu’une fois.",
       "code": "Code de vérification",
       "backupCode": "Code de secours",
       "trustDevice": "Faire confiance à cet appareil",
@@ -46,7 +46,7 @@
       "submitting": "Vérification…",
       "back": "Retour",
       "useBackup": "Utiliser un code de secours",
-      "useTotp": "Utiliser l'application",
+      "useTotp": "Utiliser l’application",
       "error": {
         "badCode": "Code invalide. Réessayez.",
         "expired": "La vérification a expiré. Revenez en arrière et reconnectez-vous.",
@@ -59,19 +59,19 @@
       "name": "Nom",
       "email": "Adresse e-mail",
       "password": "Mot de passe",
-      "passwordHint": "12 caractères minimum.",
+      "passwordHint": "{count} caractères minimum.",
       "submit": "Créer le compte",
       "submitting": "Création…",
-      "haveAccount": "Déjà un compte ?",
+      "haveAccount": "Déjà un compte ?",
       "loginLink": "Se connecter",
       "closed": "Les inscriptions sont fermées sur cette instance.",
-      "token": "Jeton d'invitation",
+      "token": "Jeton d’invitation",
       "tokenHint": "Fourni par un administrateur.",
       "error": {
         "INVALID": "Vérifiez les champs saisis.",
         "DISABLED": "Les inscriptions sont fermées sur cette instance.",
-        "TOKEN_REQUIRED": "Un jeton d'invitation est requis.",
-        "BAD_TOKEN": "Jeton d'invitation invalide ou expiré.",
+        "TOKEN_REQUIRED": "Un jeton d’invitation est requis.",
+        "BAD_TOKEN": "Jeton d’invitation invalide ou expiré.",
         "RATE_LIMITED": "Trop de tentatives. Réessayez plus tard.",
         "FAILED": "Impossible de créer le compte. Vérifiez vos informations.",
         "MISMATCH": "Les deux mots de passe ne correspondent pas."
@@ -95,12 +95,12 @@
       "title": "Nouveau mot de passe",
       "subtitle": "Choisissez un nouveau mot de passe.",
       "password": "Nouveau mot de passe",
-      "passwordHint": "12 caractères minimum.",
+      "passwordHint": "{count} caractères minimum.",
       "submit": "Réinitialiser",
       "submitting": "Réinitialisation…",
       "error": {
         "invalidToken": "Ce lien est invalide ou expiré. Refaites une demande.",
-        "invalid": "Vérifiez le mot de passe (12 caractères minimum)."
+        "invalid": "Vérifiez le mot de passe ({count} caractères minimum)."
       },
       "requestAgain": "Demander un nouveau lien"
     },
@@ -119,16 +119,16 @@
     "back": "Retour au tableau de bord",
     "notFound": {
       "title": "Page introuvable",
-      "message": "Cette page n'existe pas ou a été déplacée."
+      "message": "Cette page n’existe pas ou a été déplacée."
     },
     "serverError": {
       "title": "Une erreur est survenue",
-      "message": "Un problème inattendu s'est produit. Réessayez dans un instant.",
+      "message": "Un problème inattendu s’est produit. Réessayez dans un instant.",
       "retry": "Réessayer"
     },
     "forbidden": {
       "title": "Accès refusé",
-      "message": "Vous n'avez pas accès à cette page."
+      "message": "Vous n’avez pas accès à cette page."
     },
     "unauthorized": {
       "title": "Connexion requise",
@@ -179,7 +179,7 @@
       "status": "Page {page, number} sur {pageCount, number}"
     },
     "copyLink": {
-      "manual": "La copie automatique n'est pas disponible sur cette connexion. Sélectionnez le lien puis copiez-le."
+      "manual": "La copie automatique n’est pas disponible sur cette connexion. Sélectionnez le lien puis copiez-le."
     },
     "skipToContent": "Aller au contenu principal",
     "mainNav": "Navigation principale",
@@ -205,24 +205,24 @@
     "edit": "Modifier",
     "addTransaction": "Saisir une transaction",
     "archive": "Archiver",
-    "archiveTitle": "Archiver « {name} » ?",
+    "archiveTitle": "Archiver « {name} » ?",
     "archiveBody": "Le compte disparaît des listes et des saisies. Son historique reste dans les transactions, les budgets et le tableau de bord, et vous pourrez le désarchiver.",
     "unarchive": "Désarchiver",
-    "archivedTitle": "Comptes archivés · {count}",
-    "archivedHint": "Masqués des saisies et du solde global ; leurs transactions restent dans l'historique.",
+    "archivedTitle": "Comptes archivés · {count, number}",
+    "archivedHint": "Masqués des saisies et du solde global ; leurs transactions restent dans l’historique.",
     "archivedBadge": "Archivé",
     "delete": "Supprimer",
     "deleteDialog": {
-      "title": "Supprimer « {name} » ?",
-      "loading": "Calcul de l'impact…",
+      "title": "Supprimer « {name} » ?",
+      "loading": "Calcul de l’impact…",
       "transactions": "{count, plural, =0 {Aucune transaction à supprimer.} one {# transaction sera supprimée.} other {# transactions seront supprimées.}}",
-      "imports": "{count, plural, one {# import disparaîtra de l'historique des imports.} other {# imports disparaîtront de l'historique des imports.}}",
+      "imports": "{count, plural, one {# import disparaîtra de l’historique des imports.} other {# imports disparaîtront de l’historique des imports.}}",
       "sharedWith": "Le partage avec {groups} sera retiré.",
       "budgetLines": "{count, plural, one {# ligne de budget limitée à ce compte sera supprimée.} other {# lignes de budget limitées à ce compte seront supprimées.}}",
       "emptiedBudgets": "{count, plural, one {# budget sera supprimé car il ne portait que sur ce compte ({names}).} other {# budgets seront supprimés car ils ne portaient que sur ce compte ({names}).}}",
-      "dissolvedLinks": "{count, plural, one {# lien avec un autre compte sera dissous.} other {# liens avec d'autres comptes seront dissous.}}",
-      "irreversible": "Cette action est irréversible. Pour garder l'historique, archivez plutôt le compte.",
-      "confirmLabel": "Saisissez « {name} » pour confirmer",
+      "dissolvedLinks": "{count, plural, one {# lien avec un autre compte sera dissous.} other {# liens avec d’autres comptes seront dissous.}}",
+      "irreversible": "Cette action est irréversible. Pour garder l’historique, archivez plutôt le compte.",
+      "confirmLabel": "Saisissez « {name} » pour confirmer",
       "keep": "Conserver",
       "confirm": "Supprimer définitivement",
       "deleting": "Suppression…"
@@ -234,7 +234,7 @@
     "ibanEncrypted": "IBAN (optionnel, chiffré)",
     "ibanPlaceholder": "FR76 …",
     "ibanKeep": "{iban} — laisser vide pour conserver",
-    "ibanRemove": "Retirer l'IBAN enregistré",
+    "ibanRemove": "Retirer l’IBAN enregistré",
     "bankName": "Banque",
     "bankPlaceholder": "Crédit Coopératif",
     "initialBalance": "Solde initial",
@@ -242,12 +242,12 @@
     "globalBalance": "Solde global",
     "color": "Couleur",
     "customColor": "Couleur personnalisée",
-    "privacyNote": "Ce compte sera privé par défaut. Vous pourrez le partager avec un groupe une fois créé.",
+    "privacyNote": "Ce compte sera privé par défaut. Vous pourrez le partager avec un foyer une fois créé.",
     "save": "Enregistrer",
     "saving": "Enregistrement…",
     "owner": "Propriétaire",
-    "showIban": "Afficher l'IBAN",
-    "hideIban": "Masquer l'IBAN",
+    "showIban": "Afficher l’IBAN",
+    "hideIban": "Masquer l’IBAN",
     "sharedBy": "Partagé par {name}",
     "share": "Partager",
     "private": "Privé",
@@ -255,8 +255,8 @@
     "sharedAccounts": "Comptes partagés",
     "noSharedAccounts": "Aucun compte partagé avec ce foyer.",
     "shareTitle": "Partager le compte",
-    "shareSubtitle": "Choisissez les foyers et leur niveau d'accès.",
-    "noGroups": "Vous n'appartenez à aucun foyer.",
+    "shareSubtitle": "Choisissez les foyers et leur niveau d’accès.",
+    "noGroups": "Vous n’appartenez à aucun foyer.",
     "permNone": "Aucun",
     "access": {
       "OWNER": "Propriétaire",
@@ -275,11 +275,11 @@
       "FORBIDDEN": "Action non autorisée.",
       "FAILED": "Échec. Réessayez.",
       "CONFIRMATION": "Le nom saisi ne correspond pas au compte.",
-      "AMOUNT_INVALID": "Montant invalide. Exemples : -12,34 ou 1 234,56.",
-      "AMOUNT_AMBIGUOUS": "Montant ambigu : écrivez 1234 ou 1,23 (sans séparateur de milliers seul).",
+      "AMOUNT_INVALID": "Montant invalide. Exemples : -12,34 ou 1 234,56.",
+      "AMOUNT_AMBIGUOUS": "Montant ambigu : écrivez 1234 ou 1,23 (sans séparateur de milliers seul).",
       "AMOUNT_PRECISION": "Le montant ne peut pas avoir plus de 2 décimales."
     },
-    "legendOthers": "Autres · {count}"
+    "legendOthers": "Autres · {count, number}"
   },
   "rules": {
     "pageTitle": "Catégories & règles",
@@ -318,7 +318,7 @@
     "cancel": "Annuler",
     "edit": "Modifier",
     "delete": "Supprimer",
-    "deleteConfirm": "Supprimer cette règle ?",
+    "deleteConfirm": "Supprimer cette règle ?",
     "disabled": "désactivée",
     "error": {
       "INVALID": "Vérifiez les champs.",
@@ -362,7 +362,7 @@
       "anyAccount": "Tous comptes",
       "allSpending": "Toutes les dépenses",
       "otherSpending": "Autres dépenses",
-      "catchAllHint": "Une ligne « Toutes catégories / Tous comptes » reprend toutes les dépenses qui n'entrent dans aucune autre ligne.",
+      "catchAllHint": "Une ligne « Toutes catégories / Tous comptes » reprend toutes les dépenses qui n’entrent dans aucune autre ligne.",
       "hidden": "Catégorie ou compte non visible",
       "archivedAccount": "{name} (archivé)"
     },
@@ -380,8 +380,8 @@
       "FAILED": "Échec. Réessayez.",
       "PERIOD_MISMATCH": "Les dates ne correspondent pas au type de période choisi.",
       "INVALID_LINE": "Une ligne utilise une catégorie ou un compte non disponible pour ce budget.",
-      "AMOUNT_INVALID": "Montant invalide. Exemples : -12,34 ou 1 234,56.",
-      "AMOUNT_AMBIGUOUS": "Montant ambigu : écrivez 1234 ou 1,23 (sans séparateur de milliers seul).",
+      "AMOUNT_INVALID": "Montant invalide. Exemples : -12,34 ou 1 234,56.",
+      "AMOUNT_AMBIGUOUS": "Montant ambigu : écrivez 1234 ou 1,23 (sans séparateur de milliers seul).",
       "AMOUNT_PRECISION": "Le montant ne peut pas avoir plus de 2 décimales."
     },
     "status": {
@@ -397,9 +397,9 @@
       "seeTransactions": "Voir les transactions",
       "counted": "Comptées dans ce budget",
       "transactions": "{count, plural, =0 {Aucune transaction} one {# transaction} other {# transactions}}",
-      "latestOnly": "Les {count} plus récentes sont affichées.",
+      "latestOnly": "Les {count, number} plus récentes sont affichées.",
       "noTransactions": "Aucune transaction ne compte encore dans ce budget.",
-      "hiddenTx": "Transaction d'un autre membre"
+      "hiddenTx": "Transaction d’un autre membre"
     },
     "assign": {
       "title": "Assigner à un budget",
@@ -413,15 +413,15 @@
       "modeEXCLUDE": "Exclue"
     },
     "roll": "Renouveler",
-    "rolledOk": "Budget renouvelé : {name}, du {start} au {end}.",
+    "rolledOk": "Budget renouvelé : {name}, du {start} au {end}.",
     "ended": "Période terminée",
     "subtitle": "Définissez une enveloppe par catégorie ou compte sur une période.",
     "rolledExisting": "La période suivante existe déjà.",
     "rollView": "Voir",
     "actionsFor": "Actions pour {name}",
     "edit": "Modifier",
-    "deleteTitle": "Supprimer « {name} » ?",
-    "deleteBody": "Le budget et ses lignes seront supprimés. Les transactions ne sont pas touchées ; les autres périodes d'un budget récurrent sont conservées.",
+    "deleteTitle": "Supprimer « {name} » ?",
+    "deleteBody": "Le budget et ses lignes seront supprimés. Les transactions ne sont pas touchées ; les autres périodes d’un budget récurrent sont conservées.",
     "otherPeriods": "{count, plural, one {# autre période} other {# autres périodes}}",
     "previousPeriod": "Période précédente",
     "nextPeriod": "Période suivante",
@@ -431,7 +431,8 @@
       "detail": "Détail",
       "others": "{count, plural, one {# autre budget en cours} other {# autres budgets en cours}}",
       "moreLines": "{count, plural, one {# autre ligne} other {# autres lignes}}"
-    }
+    },
+    "plannedTotalValue": "Total prévu : {amount}"
   },
   "categories": {
     "title": "Catégories",
@@ -467,23 +468,23 @@
     "colorInherited": "Héritée de la catégorie parente.",
     "inheritColor": "Reprendre la couleur du parent",
     "deleteDialog": {
-      "title": "Supprimer « {name} » ?",
-      "loading": "Calcul de l'impact…",
-      "unused": "Cette catégorie n'est utilisée nulle part.",
-      "usedBy": "La suppression concerne :",
+      "title": "Supprimer « {name} » ?",
+      "loading": "Calcul de l’impact…",
+      "unused": "Cette catégorie n’est utilisée nulle part.",
+      "usedBy": "La suppression concerne :",
       "subcategories": "{count, plural, one {# sous-catégorie, supprimée elle aussi} other {# sous-catégories, supprimées elles aussi}}",
       "transactions": "{count, plural, one {# transaction} other {# transactions}}",
       "rules": "{count, plural, one {# règle} other {# règles}}",
       "budgetLines": "{count, plural, one {# ligne de budget} other {# lignes de budget}}",
       "moveTo": "Déplacer vers",
       "noTarget": "Aucune catégorie",
-      "outcomeMove": "Les transactions, règles et lignes de budget seront rattachées à « {name} ».",
-      "outcomeNone": "Les transactions deviendront non catégorisées ; les règles et les lignes de budget seront supprimées."
+      "outcomeMove": "Les transactions, règles et lignes de budget seront rattachées à « {name} ».",
+      "outcomeNone": "Les transactions deviendront non catégorisées ; les règles et les lignes de budget seront supprimées."
     }
   },
   "transactions": {
     "title": "Transactions",
-    "subtitle": "Vos opérations sur tous les comptes visibles.",
+    "subtitle": "Vos transactions sur tous les comptes visibles.",
     "empty": "Aucune transaction.",
     "create": "Nouvelle transaction",
     "createTitle": "Ajouter une transaction",
@@ -502,9 +503,9 @@
     "allAccounts": "Tous les comptes",
     "allCategories": "Toutes les catégories",
     "allTypes": "Tous les types",
-    "opCount": "{count, plural, one {# opération} other {# opérations}}",
-    "shownOf": "{shown} sur {total} opérations affichées",
-    "loadMore": "Afficher {count} de plus",
+    "opCount": "{count, plural, one {# transaction} other {# transactions}}",
+    "shownOf": "{shown, number} sur {total, plural, one {# transaction affichée} other {# transactions affichées}}",
+    "loadMore": "Afficher {count, number} de plus",
     "refineToSeeMore": "Affinez les filtres pour voir les plus anciennes.",
     "tab": {
       "all": "Toutes",
@@ -512,7 +513,7 @@
       "out": "Sorties"
     },
     "detailOverline": "Transaction",
-    "originalLabel": "Libellé d'origine",
+    "originalLabel": "Libellé d’origine",
     "notePlaceholder": "Aucune note.",
     "selectCategory": "Choisir une catégorie",
     "close": "Fermer",
@@ -532,8 +533,8 @@
     },
     "rulePrompt": {
       "learning": "Apprentissage",
-      "title": "Créer une règle pour les transactions similaires ?",
-      "body": "Catégoriser automatiquement les futures transactions contenant « {pattern} » dans <chip>{category}</chip> ?",
+      "title": "Créer une règle pour les transactions similaires ?",
+      "body": "Catégoriser automatiquement les futures transactions contenant « {pattern} » dans <chip>{category}</chip> ?",
       "pattern": "Motif",
       "matchType": "Type de correspondance",
       "match": {
@@ -553,14 +554,14 @@
       "FORBIDDEN": "Action non autorisée.",
       "NOT_FOUND": "Transaction introuvable.",
       "FAILED": "Échec. Réessayez.",
-      "ACCOUNT_ARCHIVED": "Ce compte est archivé : désarchivez-le pour y saisir des transactions.",
-      "AMOUNT_INVALID": "Montant invalide. Exemples : -12,34 ou 1 234,56.",
+      "ACCOUNT_ARCHIVED": "Ce compte est archivé : désarchivez-le pour y saisir des transactions.",
+      "AMOUNT_INVALID": "Montant invalide. Exemples : -12,34 ou 1 234,56.",
       "AMOUNT_PRECISION": "Le montant ne peut pas avoir plus de 2 décimales.",
       "AMOUNT_ZERO": "Le montant ne peut pas être nul.",
       "LABEL_TOO_LONG": "Le libellé ne peut pas dépasser 200 caractères.",
-      "AMOUNT_AMBIGUOUS": "Montant ambigu : écrivez 1234 ou 1,23 (sans séparateur de milliers seul).",
+      "AMOUNT_AMBIGUOUS": "Montant ambigu : écrivez 1234 ou 1,23 (sans séparateur de milliers seul).",
       "DATE_INVALID": "Date invalide.",
-      "LOCKED_FIELDS": "Le montant, la date et le type de cette opération ne sont pas modifiables."
+      "LOCKED_FIELDS": "Le montant, la date et le type de cette transaction ne sont pas modifiables."
     },
     "link": {
       "create": "Lier",
@@ -569,28 +570,28 @@
       "createdOk": "Transactions liées.",
       "failed": "Échec de la liaison.",
       "error": {
-        "ALREADY_LINKED": "Une des opérations sélectionnées est déjà liée.",
-        "FORBIDDEN": "Vous ne pouvez pas modifier l'un de ces comptes.",
-        "NOT_FOUND": "Une opération n'existe plus. Rechargez la page.",
-        "TOO_FEW": "Sélectionnez au moins deux opérations."
+        "ALREADY_LINKED": "Une des transactions sélectionnées est déjà liée.",
+        "FORBIDDEN": "Vous ne pouvez pas modifier l’un de ces comptes.",
+        "NOT_FOUND": "Une transaction n’existe plus. Rechargez la page.",
+        "TOO_FEW": "Sélectionnez au moins deux transactions."
       },
       "linkedTo": "Liée à",
-      "hiddenMembers": "{count, plural, one {+ # opération sur un compte que vous ne voyez pas} other {+ # opérations sur des comptes que vous ne voyez pas}}",
+      "hiddenMembers": "{count, plural, one {+ # transaction sur un compte que vous ne voyez pas} other {+ # transactions sur des comptes que vous ne voyez pas}}",
       "unlinkFailed": "Impossible de délier. Réessayez.",
-      "unlinkGone": "Cette liaison n'existe plus.",
+      "unlinkGone": "Cette liaison n’existe plus.",
       "unlinkNeedsWrite": "Délier demande un accès en écriture à chaque compte de la liaison."
     },
     "suggestions": {
       "title": "Suggestions de liens",
       "subtitle": "{count, plural, =0 {Aucune suggestion} one {# paire suggérée} other {# paires suggérées}}",
       "open": "Suggestions",
-      "pairWithin": "à {days, plural, one {# jour} other {# jours}} d'écart",
+      "pairWithin": "à {days, plural, one {# jour} other {# jours}} d’écart",
       "link": "Lier",
       "ignore": "Ignorer",
       "empty": "Aucune paire à suggérer pour le moment.",
       "back": "Retour aux transactions",
       "hint": "Bilan repère les paires de même montant et de sens opposé (un virement entre vos comptes, un remboursement) pour que vous puissiez les lier et ne pas les compter deux fois.",
-      "ignoreFailed": "Impossible d'ignorer cette paire. Réessayez.",
+      "ignoreFailed": "Impossible d’ignorer cette paire. Réessayez.",
       "ignored": "{count, plural, one {# paire ignorée} other {# paires ignorées}}",
       "ignoredHint": "Une paire restaurée peut de nouveau être suggérée.",
       "restore": "Restaurer",
@@ -599,43 +600,43 @@
     "filterSheet": {
       "reset": "Réinitialiser",
       "period": "Période",
-      "show": "{count, plural, =0 {Aucune opération} one {Voir # opération} other {Voir # opérations}}"
+      "show": "{count, plural, =0 {Aucune transaction} one {Voir # transaction} other {Voir # transactions}}"
     },
     "selection": {
       "mode": "Sélectionner",
       "exit": "Quitter la sélection",
       "selected": "{count, plural, =0 {Aucune sélection} one {# sélectionnée} other {# sélectionnées}}",
-      "hint": "Lier ou supprimer plusieurs opérations."
+      "hint": "Lier ou supprimer plusieurs transactions."
     },
     "delete": {
       "action": "Supprimer",
       "detailAction": "Supprimer la transaction",
-      "title": "{count, plural, one {Supprimer cette transaction ?} other {Supprimer # transactions ?}}",
-      "loading": "Calcul de l'impact…",
+      "title": "{count, plural, one {Supprimer cette transaction ?} other {Supprimer # transactions ?}}",
+      "loading": "Calcul de l’impact…",
       "deleted": "{count, plural, one {Cette transaction sera supprimée définitivement.} other {# transactions seront supprimées définitivement.}}",
-      "dissolvedLinks": "{count, plural, one {# lien sera dissous (il ne resterait qu'une transaction).} other {# liens seront dissous (il ne resterait qu'une transaction).}}",
+      "dissolvedLinks": "{count, plural, one {# lien sera dissous (il ne resterait qu’une transaction).} other {# liens seront dissous (il ne resterait qu’une transaction).}}",
       "leavingLink": "{count, plural, one {# transaction quittera son lien, qui reste actif.} other {# transactions quitteront leur lien, qui reste actif.}}",
-      "budgeted": "{count, plural, one {# transaction est affectée à un budget : elle en sera retirée.} other {# transactions sont affectées à un budget : elles en seront retirées.}}",
+      "budgeted": "{count, plural, one {# transaction est affectée à un budget : elle en sera retirée.} other {# transactions sont affectées à un budget : elles en seront retirées.}}",
       "irreversible": "Cette action est irréversible.",
       "keep": "Conserver",
       "confirm": "Supprimer",
       "error": {
         "INVALID": "Sélection invalide (500 transactions au maximum).",
-        "NOT_FOUND": "Une transaction n'existe plus. Rechargez la page.",
-        "FORBIDDEN": "Vous ne pouvez pas modifier l'un de ces comptes.",
+        "NOT_FOUND": "Une transaction n’existe plus. Rechargez la page.",
+        "FORBIDDEN": "Vous ne pouvez pas modifier l’un de ces comptes.",
         "FAILED": "Échec de la suppression. Réessayez."
       }
     },
     "readOnly": "lecture seule",
-    "recategorizeFailed": "La catégorie n'a pas pu être changée.",
-    "searchHint": "La recherche porte sur des mots entiers d'au moins {min} lettres : les mots plus courts sont ignorés.",
-    "emptySearch": "Aucune transaction ne correspond. La recherche porte sur des mots entiers d'au moins {min} lettres.",
+    "recategorizeFailed": "La catégorie n’a pas pu être changée.",
+    "searchHint": "La recherche porte sur des mots entiers d’au moins {min} lettres : les mots plus courts sont ignorés.",
+    "emptySearch": "Aucune transaction ne correspond. La recherche porte sur des mots entiers d’au moins {min} lettres.",
     "edit": "Modifier",
-    "editTitle": "Modifier l'opération",
-    "editLinkedWarning": "Cette opération est liée : changer son montant ou son sens peut déséquilibrer la liaison et modifier les totaux du tableau de bord et des budgets.",
+    "editTitle": "Modifier la transaction",
+    "editLinkedWarning": "Cette transaction est liée : changer son montant ou son sens peut déséquilibrer la liaison et modifier les totaux du tableau de bord et des budgets.",
     "editLimited": {
-      "imported": "Opération importée : le montant, la date et le type suivent le relevé bancaire, seuls le libellé et la note sont modifiables.",
-      "archived": "Compte archivé : seuls le libellé et la note sont modifiables."
+      "imported": "Transaction importée : le montant, la date et le type suivent le relevé bancaire, seuls le libellé et la note sont modifiables.",
+      "archived": "Compte archivé : seuls le libellé et la note sont modifiables."
     },
     "amountMin": "Montant min.",
     "amountMax": "Montant max.",
@@ -643,10 +644,10 @@
     "direction": "Sens",
     "sortLabel": "Tri",
     "sort": {
-      "date-desc": "Plus récentes d'abord",
-      "date-asc": "Plus anciennes d'abord",
-      "amount-asc": "Plus grosses dépenses d'abord",
-      "amount-desc": "Plus grosses entrées d'abord"
+      "date-desc": "Plus récentes d’abord",
+      "date-asc": "Plus anciennes d’abord",
+      "amount-asc": "Plus grosses dépenses d’abord",
+      "amount-desc": "Plus grosses entrées d’abord"
     }
   },
   "import": {
@@ -664,7 +665,7 @@
     "optCategorize": "Catégoriser automatiquement",
     "previewTitle": "Aperçu — {count, plural, one {# transaction} other {# transactions}}",
     "previewMeta": "{dup, plural, one {# doublon potentiel} other {# doublons potentiels}} · {cat, plural, one {# catégorisée automatiquement} other {# catégorisées automatiquement}}",
-    "validate": "Valider l'import",
+    "validate": "Valider l’import",
     "cancel": "Annuler",
     "include": "Inclure cette ligne",
     "duplicate": "doublon",
@@ -692,9 +693,9 @@
     "summary": "{imported, plural, one {# importée} other {# importées}} · {skipped, plural, one {# ignorée} other {# ignorées}} (doublons)",
     "viewTransactions": "Voir les transactions",
     "pdfDrop": "Déposez un relevé PDF ici, ou cliquez pour parcourir.",
-    "bankDetected": "Banque détectée : {bank}",
-    "bankUnknown": "Banque non reconnue — vérifiez les lignes ci-dessous avant d'importer.",
-    "supportedBanks": "Banques prises en charge : {list}",
+    "bankDetected": "Banque détectée : {bank}",
+    "bankUnknown": "Banque non reconnue — vérifiez les lignes ci-dessous avant d’importer.",
+    "supportedBanks": "Banques prises en charge : {list}",
     "targetAccount": "Compte de destination",
     "ignoreProduct": "Ne pas importer",
     "banks": {
@@ -712,67 +713,67 @@
       "TOO_LARGE": "Fichier trop volumineux ({max} max).",
       "FORBIDDEN": "Action non autorisée.",
       "PARSE_FAILED": "Impossible de lire le fichier.",
-      "COMMIT_FAILED": "Échec de l'import. Réessayez.",
+      "COMMIT_FAILED": "Échec de l’import. Réessayez.",
       "NOT_COMMITTABLE": "Cet import a déjà été validé ou annulé.",
       "INVALID_MAPPING": "Choisissez au moins la date, le libellé et un montant (ou débit / crédit).",
       "UNAUTHORIZED": "Votre session a expiré. Reconnectez-vous.",
-      "EMPTY": "Aucune opération trouvée dans ce fichier.",
-      "NOT_TEXT": "Ce fichier n'est pas un CSV lisible (fichier binaire ou image ?).",
-      "NOTHING_TO_IMPORT": "Rien à importer : aucune ligne n'est retenue (doublons, lignes décochées, illisibles ou produits ignorés).",
-      "ACCOUNT_ARCHIVED": "Ce compte est archivé : désarchivez-le pour y importer des opérations."
+      "EMPTY": "Aucune transaction trouvée dans ce fichier.",
+      "NOT_TEXT": "Ce fichier n’est pas un CSV lisible (fichier binaire ou image ?).",
+      "NOTHING_TO_IMPORT": "Rien à importer : aucune ligne n’est retenue (doublons, lignes décochées, illisibles ou produits ignorés).",
+      "ACCOUNT_ARCHIVED": "Ce compte est archivé : désarchivez-le pour y importer des transactions."
     },
     "history": {
       "overline": "Historique",
       "title": "Imports récents",
-      "empty": "Aucun import pour l'instant.",
+      "empty": "Aucun import pour l’instant.",
       "rows": "{imported, plural, one {# importée} other {# importées}} · {skipped, plural, one {# ignorée} other {# ignorées}}",
       "status": {
         "COMPLETED": "Importé",
         "REVERTED": "Annulé"
       },
-      "actions": "Actions de l'import"
+      "actions": "Actions de l’import"
     },
     "revert": {
-      "action": "Annuler l'import",
-      "title": "Annuler cet import ?",
-      "loading": "Calcul de l'impact…",
+      "action": "Annuler l’import",
+      "title": "Annuler cet import ?",
+      "loading": "Calcul de l’impact…",
       "deleted": "{count, plural, one {# transaction sera supprimée} other {# transactions seront supprimées}}",
-      "linked": "{count, plural, one {# est liée à d'autres transactions : elle sortira de son lien} other {# sont liées à d'autres transactions : elles sortiront de leur lien}}",
+      "linked": "{count, plural, one {# est liée à d’autres transactions : elle sortira de son lien} other {# sont liées à d’autres transactions : elles sortiront de leur lien}}",
       "budgeted": "{count, plural, one {# est affectée à un budget} other {# sont affectées à un budget}}",
-      "edited": "{count, plural, one {# a été modifiée depuis l'import} other {# ont été modifiées depuis l'import}}",
+      "edited": "{count, plural, one {# a été modifiée depuis l’import} other {# ont été modifiées depuis l’import}}",
       "irreversible": "Cette action est définitive.",
       "keep": "Garder",
       "confirm": "Supprimer les transactions",
-      "done": "Import annulé : {count, plural, one {# transaction supprimée} other {# transactions supprimées}}.",
+      "done": "Import annulé : {count, plural, one {# transaction supprimée} other {# transactions supprimées}}.",
       "newImport": "Nouvel import",
       "error": {
         "NOT_REVERTIBLE": "Cet import a déjà été annulé.",
         "NOT_FOUND": "Import introuvable.",
         "FORBIDDEN": "Action non autorisée.",
-        "FAILED": "Échec de l'annulation. Réessayez."
+        "FAILED": "Échec de l’annulation. Réessayez."
       }
     },
-    "formats": "Formats acceptés : CSV et PDF.",
+    "formats": "Formats acceptés : CSV et PDF.",
     "manualEntry": "Saisie manuelle",
     "rejected": {
       "count": "{count, plural, one {# ligne illisible ignorée} other {# lignes illisibles ignorées}}",
-      "example": "Ligne {row} : {reason} ({value})",
+      "example": "Ligne {row} : {reason} ({value})",
       "reason": {
         "DATE": "date non reconnue",
         "AMOUNT": "montant non reconnu",
         "AMOUNT_RANGE": "montant hors limites",
         "LABEL": "libellé vide"
       },
-      "exampleNoValue": "Ligne {row} : {reason}"
+      "exampleNoValue": "Ligne {row} : {reason}"
     },
-    "settings": "Paramètres de l'import",
-    "duplicatesNote": "Les opérations déjà présentes sur ce compte sont ignorées (doublons).",
-    "duplicateSkipped": "Doublon : déjà présent sur ce compte, ne sera pas importé",
-    "nothingToImport": "Rien à importer : aucune ligne n'est retenue (doublons, lignes décochées, illisibles ou produits ignorés).",
+    "settings": "Paramètres de l’import",
+    "duplicatesNote": "Les transactions déjà présentes sur ce compte sont ignorées (doublons).",
+    "duplicateSkipped": "Doublon : déjà présent sur ce compte, ne sera pas importé",
+    "nothingToImport": "Rien à importer : aucune ligne n’est retenue (doublons, lignes décochées, illisibles ou produits ignorés).",
     "progress": "{done, number} sur {total, plural, one {# transaction importée} other {# transactions importées}}…",
     "reading": "Lecture du fichier…",
-    "limits": "CSV jusqu'à {csv}, PDF jusqu'à {pdf}.",
-    "productAccount": "Compte de destination : {product}",
+    "limits": "CSV jusqu’à {csv}, PDF jusqu’à {pdf}.",
+    "productAccount": "Compte de destination : {product}",
     "pager": {
       "range": "Lignes {from} à {to} sur {total}",
       "previous": "Précédentes",
@@ -805,11 +806,11 @@
     "you": "Vous",
     "role": "Rôle",
     "remove": "Retirer",
-    "removeConfirm": "Retirer ce membre du foyer ?",
+    "removeConfirm": "Retirer ce membre du foyer ?",
     "leave": "Quitter",
-    "leaveConfirm": "Quitter ce foyer ?",
+    "leaveConfirm": "Quitter ce foyer ?",
     "delete": "Supprimer le foyer",
-    "deleteConfirm": "Supprimer définitivement ce foyer ? Les partages associés seront retirés.",
+    "deleteConfirm": "Supprimer définitivement ce foyer ? Les partages associés seront retirés.",
     "back": "Retour aux foyers",
     "roles": {
       "OWNER": "Propriétaire",
@@ -819,16 +820,16 @@
     "error": {
       "FORBIDDEN": "Action non autorisée.",
       "INVALID": "Vérifiez les champs.",
-      "LAST_OWNER": "Impossible : il doit rester au moins un propriétaire.",
-      "NOT_MEMBER": "Ce membre n'appartient pas au foyer.",
+      "LAST_OWNER": "Impossible : il doit rester au moins un propriétaire.",
+      "NOT_MEMBER": "Ce membre n’appartient pas au foyer.",
       "FAILED": "Échec. Réessayez."
     },
     "dangerZone": "Zone de danger",
     "dangerTitleOwner": "Quitter ou supprimer le foyer",
-    "leaveHint": "Vous perdrez l'accès aux comptes et budgets partagés de ce foyer.",
+    "leaveHint": "Vous perdrez l’accès aux comptes et budgets partagés de ce foyer.",
     "leaveTitle": "Quitter le foyer",
     "deleteHint": "La suppression retire tous les partages associés. Action irréversible.",
-    "removeTitle": "Retirer {name} ?"
+    "removeTitle": "Retirer {name} ?"
   },
   "invitations": {
     "invite": "Inviter",
@@ -836,27 +837,27 @@
     "email": "Adresse e-mail",
     "emailPlaceholder": "membre@exemple.com",
     "role": "Rôle",
-    "send": "Envoyer l'invitation",
+    "send": "Envoyer l’invitation",
     "sending": "Envoi…",
     "pending": "Invitations en attente",
     "code": "Code",
     "expiresAt": "Expire le <date></date>",
     "revoke": "Révoquer",
-    "revokeConfirm": "Révoquer cette invitation ?",
+    "revokeConfirm": "Révoquer cette invitation ?",
     "noPending": "Aucune invitation en attente.",
     "pendingForYou": "Invitations en attente pour vous",
-    "fromGroup": "Foyer « {group} »",
+    "fromGroup": "Foyer « {group} »",
     "joinByCode": "Rejoindre avec un code",
     "joinPlaceholder": "Code à 6 caractères",
     "join": "Rejoindre",
     "joining": "…",
     "joinTitle": "Rejoindre le foyer",
-    "accept": "Accepter l'invitation",
+    "accept": "Accepter l’invitation",
     "accepting": "…",
     "invalidLink": "Cette invitation est introuvable, expirée ou déjà utilisée.",
-    "joinPromptRole": "Vous avez été invité à rejoindre « {group} » en tant que {role}.",
-    "joinCodeHint": "Le code ne fonctionne qu'avec le compte dont l'adresse a été invitée.",
-    "copyLink": "Copier le lien d'invitation",
+    "joinPromptRole": "Vous avez été invité à rejoindre « {group} » en tant que {role}.",
+    "joinCodeHint": "Le code ne fonctionne qu’avec le compte dont l’adresse a été invitée.",
+    "copyLink": "Copier le lien d’invitation",
     "linkCopied": "Lien copié",
     "openGroup": "Ouvrir le foyer",
     "error": {
@@ -867,21 +868,21 @@
       "FORBIDDEN": "Action non autorisée.",
       "INVALID": "Vérifiez les champs.",
       "FAILED": "Échec. Réessayez.",
-      "WRONG_ACCOUNT": "Cette invitation a été envoyée à {email}. Connectez-vous avec ce compte pour l'accepter.",
+      "WRONG_ACCOUNT": "Cette invitation a été envoyée à {email}. Connectez-vous avec ce compte pour l’accepter.",
       "ALREADY_IN_GROUP": "Vous faites déjà partie de ce foyer.",
       "RATE_LIMITED": "Trop de tentatives. Réessayez plus tard."
     },
     "revokeFailed": "Échec de la révocation. Réessayez."
   },
   "dashboard": {
-    "overline": "Vue d'ensemble",
+    "overline": "Vue d’ensemble",
     "txCount": "{count, plural, one {# transaction} other {# transactions}}",
     "kpi": {
       "income": "Revenus",
       "expense": "Dépenses",
       "net": "Solde net"
     },
-    "vsPrev": "{arrow} {pct} % vs période précédente",
+    "vsPrev": "{arrow} {pct} vs période précédente",
     "noPrev": "Rien sur la période précédente",
     "breakdown": "Répartition",
     "byCategory": "Dépenses par catégorie",
@@ -915,9 +916,9 @@
       "avg6": "la moyenne sur 6 mois",
       "avg12": "la moyenne sur 12 mois"
     },
-    "inProgressPrev": "Période en cours : comparée au même nombre de jours de la période précédente ({previous}).",
-    "inProgressAvg": "Période en cours : comparée à la même date ({day, plural, =1 {le 1er} other {du 1er au #}} de chaque mois).",
-    "vsAvg": "{arrow} {pct} % vs moyenne {months} mois",
+    "inProgressPrev": "Période en cours : comparée au même nombre de jours de la période précédente ({previous}).",
+    "inProgressAvg": "Période en cours : comparée à la même date ({day, plural, =1 {le 1er} other {du 1er au #}} de chaque mois).",
+    "vsAvg": "{arrow} {pct} vs moyenne {months} mois",
     "vsAvgAmount": "{arrow} {amount} vs moyenne {months} mois",
     "noSameDate": "Rien à la même date",
     "noAvg": "Rien sur les {months} mois précédents",
@@ -930,28 +931,28 @@
     "tab": "Marchands",
     "rename": "Renommer {name}",
     "title": "Renommer le marchand",
-    "bankLabel": "Libellé de la banque : {labels}",
-    "bankLabels": "Regroupe : {labels}",
+    "bankLabel": "Libellé de la banque : {labels}",
+    "bankLabels": "Regroupe : {labels}",
     "name": "Nom affiché",
-    "existing": "Ou regrouper sous un nom existant :",
+    "existing": "Ou regrouper sous un nom existant :",
     "hint": "Les marchands renommés avec le même nom sont additionnés.",
     "removeKey": "Retirer {key} de {name}",
     "reset": "Rétablir",
     "cancel": "Annuler",
     "save": "Enregistrer",
     "saving": "Enregistrement…",
-    "empty": "Aucune dépense pour l'instant : les marchands apparaîtront après un import.",
+    "empty": "Aucune dépense pour l’instant : les marchands apparaîtront après un import.",
     "error": {
       "INVALID": "Le nom doit faire entre 1 et 60 caractères.",
-      "NOT_FOUND": "Ce nom n'existe plus. Rechargez la page.",
-      "FAILED": "L'enregistrement a échoué."
+      "NOT_FOUND": "Ce nom n’existe plus. Rechargez la page.",
+      "FAILED": "L’enregistrement a échoué."
     },
     "search": "Rechercher un marchand",
     "renamedSection": "Renommés",
     "othersSection": "Autres marchands",
-    "showMore": "Afficher {count} de plus",
+    "showMore": "Afficher {count, number} de plus",
     "noMatch": "Aucun marchand ne correspond.",
-    "count": "{count}×",
+    "count": "{count, number}×",
     "noCategory": "Sans catégorie"
   },
   "insights": {
@@ -965,9 +966,9 @@
     "changesOverline": "Évolution",
     "changesTitle": "Ce qui a changé",
     "changesSub": "{current} vs {previous} · dépenses par catégorie",
-    "merchantsOverline": "Où part l'argent",
+    "merchantsOverline": "Où part l’argent",
     "merchantsTitle": "Top marchands",
-    "merchantsCount": "{count}×",
+    "merchantsCount": "{count, number}×",
     "noMerchants": "Aucun marchand sur cette période.",
     "incomeOverline": "Entrées",
     "incomeTitle": "Revenus par catégorie",
@@ -978,9 +979,9 @@
     "historyTitle": "Historique par catégorie",
     "historySub": "Moyenne mensuelle sur les mois complets",
     "historyAverage": "moy.",
-    "historyMonths": "{count} mois",
+    "historyMonths": "{count, plural, one {# mois} other {# mois}}",
     "historyInProgress": "{month} (en cours)",
-    "historyBar": "{month} : {amount}",
+    "historyBar": "{month} : {amount}",
     "historyEmpty": "Aucune dépense sur ces {count} mois.",
     "changesSubAvg": "{current} vs moyenne {months} · dépenses par catégorie"
   },
@@ -991,14 +992,14 @@
       "subtitle": "Exportez vos données ou supprimez définitivement votre compte.",
       "exportOverline": "Export",
       "exportTitle": "Exporter mes données",
-      "exportHint": "Téléchargez vos transactions au format CSV, ou l'intégralité de vos données (RGPD) au format JSON.",
+      "exportHint": "Téléchargez vos transactions au format CSV, ou l’intégralité de vos données (RGPD) au format JSON.",
       "exportCsv": "Transactions (CSV)",
       "exportJson": "Toutes mes données (JSON)",
-      "exporting": "Préparation de l'export…",
-      "exportFailed": "L'export a échoué. Réessayez.",
+      "exporting": "Préparation de l’export…",
+      "exportFailed": "L’export a échoué. Réessayez.",
       "dangerZone": "Zone de danger",
       "deleteTitle": "Supprimer mon compte",
-      "deleteWarning": "Cette action est irréversible : toutes vos données seront définitivement supprimées.",
+      "deleteWarning": "Cette action est irréversible : toutes vos données seront définitivement supprimées.",
       "passwordLabel": "Mot de passe",
       "confirmEmailLabel": "Saisissez votre e-mail ({email}) pour confirmer",
       "cancel": "Annuler",
@@ -1007,10 +1008,10 @@
       "error": {
         "INVALID": "Veuillez saisir votre mot de passe.",
         "BAD_PASSWORD": "Mot de passe incorrect.",
-        "BAD_CONFIRM": "L'e-mail saisi ne correspond pas.",
+        "BAD_CONFIRM": "L’e-mail saisi ne correspond pas.",
         "RATE_LIMITED": "Trop de tentatives. Réessayez plus tard.",
         "FAILED": "La suppression a échoué. Réessayez.",
-        "LAST_SUPER_ADMIN": "Vous êtes le dernier super admin actif : nommez-en un autre avant de supprimer votre compte."
+        "LAST_SUPER_ADMIN": "Vous êtes le dernier super admin actif : nommez-en un autre avant de supprimer votre compte."
       }
     },
     "security": {
@@ -1018,16 +1019,16 @@
       "title": "Sécurité",
       "subtitle": "Renforcez la protection de votre compte.",
       "twoFactor": "Double authentification",
-      "twoFactorTitle": "Application d'authentification (TOTP)",
+      "twoFactorTitle": "Application d’authentification (TOTP)",
       "twoFactorHint": "Ajoutez un code à usage unique en plus de votre mot de passe.",
       "statusEnabled": "La double authentification est activée sur votre compte.",
-      "statusDisabled": "La double authentification n'est pas encore activée.",
+      "statusDisabled": "La double authentification n’est pas encore activée.",
       "password": "Mot de passe",
-      "enrolScan": "1. Scannez ce QR code avec votre application d'authentification (Google Authenticator, 1Password, Aegis…).",
-      "enrolManual": "Impossible de scanner ? Saisissez cette clé :",
+      "enrolScan": "1. Scannez ce QR code avec votre application d’authentification (Google Authenticator, 1Password, Aegis…).",
+      "enrolManual": "Impossible de scanner ? Saisissez cette clé :",
       "enrolBackup": "2. Gardez ces codes de secours en lieu sûr. Chacun permet de vous connecter une fois si vous perdez votre téléphone.",
-      "enrolVerify": "3. Saisissez le code affiché par l'application pour terminer.",
-      "qrLabel": "QR code de configuration de l'application d'authentification",
+      "enrolVerify": "3. Saisissez le code affiché par l’application pour terminer.",
+      "qrLabel": "QR code de configuration de l’application d’authentification",
       "backupCodes": "Codes de secours",
       "enable": "Activer",
       "disable": "Désactiver",
@@ -1062,26 +1063,26 @@
           "RATE_LIMITED": "Trop de tentatives. Réessayez plus tard.",
           "INVALID": "Remplissez tous les champs.",
           "FAILED": "Impossible de changer le mot de passe. Réessayez.",
-          "REVOKE_FAILED": "Votre mot de passe a été modifié, mais vos autres appareils n'ont pas pu être déconnectés.",
-          "SAME_PASSWORD": "Le nouveau mot de passe doit être différent de l'actuel."
+          "REVOKE_FAILED": "Votre mot de passe a été modifié, mais vos autres appareils n’ont pas pu être déconnectés.",
+          "SAME_PASSWORD": "Le nouveau mot de passe doit être différent de l’actuel."
         }
       },
       "sessionsCard": {
         "overline": "Sessions",
         "title": "Appareils connectés",
-        "hint": "Déconnectez un appareil que vous ne reconnaissez pas ou que vous n'utilisez plus.",
+        "hint": "Déconnectez un appareil que vous ne reconnaissez pas ou que vous n’utilisez plus.",
         "thisDevice": "Cet appareil",
         "unknownBrowser": "Navigateur inconnu",
         "activeNow": "Actif maintenant",
-        "active": "{days, plural, =0 {Actif aujourd'hui} =1 {Actif hier} other {Actif il y a # jours}}",
-        "others": "Autres appareils · {count}",
+        "active": "{days, plural, =0 {Actif aujourd’hui} =1 {Actif hier} other {Actif il y a # jours}}",
+        "others": "Autres appareils · {count, number}",
         "none": "Aucun autre appareil connecté.",
         "revoke": "Déconnecter",
         "revokeAll": "Tout déconnecter",
         "revokeDevice": "Déconnecter {device}",
         "error": {
           "NOT_FOUND": "Cet appareil est déjà déconnecté.",
-          "CURRENT": "Pour cet appareil, utilisez « Se déconnecter ».",
+          "CURRENT": "Pour cet appareil, utilisez « Se déconnecter ».",
           "UNAUTHORIZED": "Votre session a expiré. Reconnectez-vous.",
           "INVALID": "Requête invalide.",
           "FAILED": "Impossible de déconnecter cet appareil. Réessayez."
@@ -1089,30 +1090,30 @@
         "signedIn": "Connexion le <time></time>"
       },
       "passkeysCard": {
-        "overline": "Clés d'accès",
+        "overline": "Clés d’accès",
         "title": "Connexion sans mot de passe",
         "hint": "Connectez-vous avec votre empreinte digitale, votre visage ou le code de votre appareil.",
-        "count": "Vos clés d'accès · {count}",
+        "count": "Vos clés d’accès · {count}",
         "add": "Ajouter",
-        "none": "Aucune clé d'accès pour le moment.",
-        "defaultName": "Clé d'accès",
-        "unnamed": "Clé d'accès sans nom",
+        "none": "Aucune clé d’accès pour le moment.",
+        "defaultName": "Clé d’accès",
+        "unnamed": "Clé d’accès sans nom",
         "added": "Ajoutée le <date></date>",
         "synced": "Synchronisée",
         "deviceBound": "Cet appareil uniquement",
         "rename": "Renommer {name}",
         "delete": "Supprimer {name}",
-        "nameLabel": "Nom de la clé d'accès",
+        "nameLabel": "Nom de la clé d’accès",
         "save": "Enregistrer",
         "cancel": "Annuler",
-        "deleteTitle": "Supprimer cette clé d'accès ?",
-        "deleteBody": "« {name} » ne permettra plus de vous connecter. Pensez aussi à la retirer du gestionnaire de mots de passe de votre appareil.",
+        "deleteTitle": "Supprimer cette clé d’accès ?",
+        "deleteBody": "« {name} » ne permettra plus de vous connecter. Pensez aussi à la retirer du gestionnaire de mots de passe de votre appareil.",
         "deleteConfirm": "Supprimer",
         "error": {
-          "NOT_FRESH": "Par sécurité, reconnectez-vous avant d'ajouter une clé d'accès.",
-          "ALREADY_REGISTERED": "Cet appareil a déjà une clé d'accès pour votre compte.",
-          "ADD_FAILED": "L'ajout de la clé d'accès a été annulé ou n'a pas abouti.",
-          "FAILED": "L'opération a échoué. Réessayez."
+          "NOT_FRESH": "Par sécurité, reconnectez-vous avant d’ajouter une clé d’accès.",
+          "ALREADY_REGISTERED": "Cet appareil a déjà une clé d’accès pour votre compte.",
+          "ADD_FAILED": "L’ajout de la clé d’accès a été annulé ou n’a pas abouti.",
+          "FAILED": "L’opération a échoué. Réessayez."
         },
         "signInAgain": "Se reconnecter"
       },
@@ -1127,7 +1128,7 @@
         "onlyMethod": "C’est votre seul moyen de connexion : ajoutez une clé d’accès ou liez une autre identité avant de la délier.",
         "link": "Lier {name}",
         "unlink": "Délier {name}",
-        "unlinkTitle": "Délier cette identité ?",
+        "unlinkTitle": "Délier cette identité ?",
         "unlinkBody": "Vous ne pourrez plus vous connecter avec « {name} ». Vous pourrez la lier de nouveau plus tard.",
         "unlinkConfirm": "Délier",
         "cancel": "Annuler",
@@ -1158,11 +1159,11 @@
     "title": "Administration",
     "nav": {
       "users": "Utilisateurs",
-      "signupTokens": "Jetons d'invitation",
-      "authProviders": "Fournisseurs d'authentification",
+      "signupTokens": "Jetons d’invitation",
+      "authProviders": "Fournisseurs d’authentification",
       "smtp": "SMTP",
       "appSettings": "Paramètres",
-      "audit": "Journal d'audit"
+      "audit": "Journal d’audit"
     },
     "users": {
       "createTitle": "Créer un utilisateur",
@@ -1177,9 +1178,9 @@
       "created": "Utilisateur créé. Un lien de définition du mot de passe lui a été envoyé.",
       "empty": "Aucun utilisateur.",
       "error": {
-        "UNAUTHORIZED": "Vous n'avez pas la permission de créer des utilisateurs.",
+        "UNAUTHORIZED": "Vous n’avez pas la permission de créer des utilisateurs.",
         "INVALID": "Vérifiez les champs saisis.",
-        "FAILED": "Échec de la création (l'e-mail existe peut-être déjà)."
+        "FAILED": "Échec de la création (l’e-mail existe peut-être déjà)."
       },
       "createOverline": "Invitation",
       "createHint": "La personne reçoit par e-mail un lien pour définir son mot de passe.",
@@ -1187,10 +1188,10 @@
       "count": "{count, plural, =0 {Aucun compte} one {# compte} other {# comptes}}",
       "roleFor": "Rôle de {user}",
       "roleError": {
-        "UNAUTHORIZED": "Vous n'avez pas la permission de changer les rôles.",
+        "UNAUTHORIZED": "Vous n’avez pas la permission de changer les rôles.",
         "INVALID": "Rôle invalide.",
         "SELF": "Vous ne pouvez pas changer votre propre rôle.",
-        "FORBIDDEN": "Seul un super admin peut attribuer ou retirer un rôle d'administration.",
+        "FORBIDDEN": "Seul un super admin peut attribuer ou retirer un rôle d’administration.",
         "LAST_SUPER_ADMIN": "Impossible de retirer le dernier super admin.",
         "NOT_FOUND": "Utilisateur introuvable.",
         "FAILED": "Échec du changement de rôle."
@@ -1205,29 +1206,29 @@
       "disable": "Désactiver",
       "enable": "Réactiver",
       "delete": "Supprimer définitivement",
-      "disableTitle": "Désactiver {user} ?",
-      "disableBody": "Ses sessions sont fermées et toute connexion est refusée (mot de passe, clé d'accès, OIDC). Ses données sont conservées ; vous pourrez le réactiver.",
-      "enableTitle": "Réactiver {user} ?",
+      "disableTitle": "Désactiver {user} ?",
+      "disableBody": "Ses sessions sont fermées et toute connexion est refusée (mot de passe, clé d’accès, OIDC). Ses données sont conservées ; vous pourrez le réactiver.",
+      "enableTitle": "Réactiver {user} ?",
       "enableBody": "La personne pourra de nouveau se connecter.",
-      "deleteTitle": "Supprimer définitivement {user} ?",
-      "deleteBody": "Son compte et toutes ses données sont effacés, le journal d'audit est anonymisé. Action irréversible.",
+      "deleteTitle": "Supprimer définitivement {user} ?",
+      "deleteBody": "Son compte et toutes ses données sont effacés, le journal d’audit est anonymisé. Action irréversible.",
       "deleteType": "Pour confirmer, saisissez {email}",
       "lifecycleError": {
-        "UNAUTHORIZED": "Vous n'avez pas la permission de faire cela.",
+        "UNAUTHORIZED": "Vous n’avez pas la permission de faire cela.",
         "INVALID": "Requête invalide.",
         "SELF": "Vous ne pouvez pas agir sur votre propre compte.",
         "FORBIDDEN": "Seul un super admin peut agir sur un administrateur ou supprimer un compte.",
-        "LAST_SUPER_ADMIN": "Impossible : c'est le dernier super admin actif.",
+        "LAST_SUPER_ADMIN": "Impossible : c’est le dernier super admin actif.",
         "NOT_FOUND": "Utilisateur introuvable.",
-        "CONFIRMATION": "L'adresse saisie ne correspond pas.",
+        "CONFIRMATION": "L’adresse saisie ne correspond pas.",
         "FAILED": "Échec. Réessayez."
       },
-      "deleteLoading": "Calcul de l'impact…",
-      "deleteAccounts": "{count, plural, one {# compte bancaire} other {# comptes bancaires}} et leur historique disparaissent{shared, plural, =0 {} one {, dont # partagé : les membres du foyer ne le verront plus} other {, dont # partagés : les membres des foyers ne les verront plus}}.",
-      "deleteTransfer": "Le foyer « {group} » sera transmis à {to}.",
-      "deleteGroup": "Le foyer « {group} », dont la personne est seule membre, sera supprimé.",
+      "deleteLoading": "Calcul de l’impact…",
+      "deleteAccounts": "{count, plural, one {# compte bancaire} other {# comptes bancaires}} et leur historique disparaissent{shared, plural, =0 {} one {, dont # partagé : les membres du foyer ne le verront plus} other {, dont # partagés : les membres des foyers ne les verront plus}}.",
+      "deleteTransfer": "Le foyer « {group} » sera transmis à {to}.",
+      "deleteGroup": "Le foyer « {group} », dont la personne est seule membre, sera supprimé.",
       "deleteBudgetLines": "Les lignes de budget de foyer qui visaient ses comptes ne seront plus limitées à un compte.",
-      "roleConfirmTitle": "Changer le rôle de {user} ?",
+      "roleConfirmTitle": "Changer le rôle de {user} ?",
       "roleConfirmBody": "{from} → {to}. Le changement prend effet immédiatement.",
       "roleConfirm": "Changer le rôle",
       "roleSuperAdminWarning": "Un super admin a tous les droits, y compris sur les autres administrateurs et la suppression de comptes."
@@ -1248,13 +1249,13 @@
       "statusExpired": "Expiré",
       "statusUsedUp": "Épuisé",
       "error": {
-        "UNAUTHORIZED": "Vous n'avez pas la permission de gérer les jetons.",
-        "INVALID": "Valeur invalide (utilisations max : 1 à 10 000).",
+        "UNAUTHORIZED": "Vous n’avez pas la permission de gérer les jetons.",
+        "INVALID": "Valeur invalide (utilisations max : 1 à 10 000).",
         "STILL_ACTIVE": "Révoquez ce jeton avant de le supprimer.",
         "FAILED": "Échec. Réessayez."
       },
       "createOverline": "Inscription",
-      "createHint": "Un jeton permet de créer un compte lorsque l'inscription est sur invitation. Partagez le lien d'inscription copié depuis la liste.",
+      "createHint": "Un jeton permet de créer un compte lorsque l’inscription est sur invitation. Partagez le lien d’inscription copié depuis la liste.",
       "listOverline": "Invitations",
       "token": "Jeton",
       "usesCol": "Utilisations",
@@ -1262,22 +1263,22 @@
       "expiresIn": "Expiration",
       "expiresInDays": "{count, plural, one {Dans # jour} other {Dans # jours}}",
       "never": "Jamais",
-      "expires": "Expire :",
+      "expires": "Expire :",
       "expiresCol": "Expiration",
-      "copyLink": "Copier le lien d'inscription",
+      "copyLink": "Copier le lien d’inscription",
       "linkCopied": "Lien copié",
       "delete": "Supprimer",
-      "revokeTitle": "Révoquer ce jeton ?",
+      "revokeTitle": "Révoquer ce jeton ?",
       "revokeBody": "Il ne pourra plus servir à créer un compte. Les comptes déjà créés ne sont pas touchés.",
-      "deleteTitle": "Supprimer ce jeton ?",
+      "deleteTitle": "Supprimer ce jeton ?",
       "deleteBody": "Il disparaîtra de la liste. Les comptes créés avec ce jeton ne sont pas touchés.",
-      "modeOpen": "L'inscription est ouverte : n'importe qui peut créer un compte, les jetons ne sont pas demandés.",
-      "modeDisabled": "L'inscription est désactivée : les jetons sont refusés.",
-      "modeLink": "Changer le mode d'inscription"
+      "modeOpen": "L’inscription est ouverte : n’importe qui peut créer un compte, les jetons ne sont pas demandés.",
+      "modeDisabled": "L’inscription est désactivée : les jetons sont refusés.",
+      "modeLink": "Changer le mode d’inscription"
     },
     "settings": {
-      "appName": "Nom de l'application",
-      "registrationMode": "Mode d'inscription",
+      "appName": "Nom de l’application",
+      "registrationMode": "Mode d’inscription",
       "credentialsEnabled": "Connexion par mot de passe",
       "minPasswordLength": "Longueur minimale du mot de passe",
       "admin2faRequired": "Double authentification obligatoire (admin)",
@@ -1293,12 +1294,12 @@
       "saved": "Enregistré.",
       "error": {
         "INVALID": "Valeur invalide.",
-        "FAILED": "Échec de l'enregistrement."
+        "FAILED": "Échec de l’enregistrement."
       },
       "general": {
         "overline": "Général",
         "title": "Identité",
-        "hint": "Nom affiché dans l'interface, les e-mails et l'onglet du navigateur."
+        "hint": "Nom affiché dans l’interface, les e-mails et l’onglet du navigateur."
       },
       "access": {
         "overline": "Accès",
@@ -1313,14 +1314,14 @@
     },
     "smtp": {
       "title": "Serveur SMTP",
-      "subtitle": "Configuration de l'envoi d'e-mails (invitations, réinitialisation).",
+      "subtitle": "Configuration de l’envoi d’e-mails (invitations, réinitialisation).",
       "host": "Hôte",
       "port": "Port",
       "username": "Utilisateur",
       "password": "Mot de passe",
-      "passwordKept": "Laisser vide pour conserver l'actuel (même serveur et compte)",
-      "fromAddress": "Adresse d'expédition",
-      "fromName": "Nom d'expéditeur",
+      "passwordKept": "Laisser vide pour conserver l’actuel (même serveur et compte)",
+      "fromAddress": "Adresse d’expédition",
+      "fromName": "Nom d’expéditeur",
       "secure": "Chiffrement",
       "secureTls": "TLS/SSL",
       "securePlain": "Aucun",
@@ -1332,31 +1333,31 @@
       "saved": "Configuration SMTP enregistrée.",
       "error": {
         "INVALID": "Vérifiez les champs saisis.",
-        "FAILED": "Échec de l'enregistrement.",
-        "PASSWORD_REQUIRED": "Saisissez le mot de passe : il n'est conservé que si l'hôte, le port, le chiffrement et l'utilisateur sont inchangés."
+        "FAILED": "Échec de l’enregistrement.",
+        "PASSWORD_REQUIRED": "Saisissez le mot de passe : il n’est conservé que si l’hôte, le port, le chiffrement et l’utilisateur sont inchangés."
       },
       "overline": "E-mails",
       "test": "Envoyer un e-mail de test",
       "testing": "Envoi…",
-      "testHint": "Le test utilise la configuration enregistrée, même désactivée, et l'envoie à votre adresse.",
+      "testHint": "Le test utilise la configuration enregistrée, même désactivée, et l’envoie à votre adresse.",
       "testSent": "E-mail de test envoyé à {to}.",
       "testError": {
-        "NOT_CONFIGURED": "Enregistrez d'abord une configuration SMTP.",
+        "NOT_CONFIGURED": "Enregistrez d’abord une configuration SMTP.",
         "RATE_LIMITED": "Trop de tests. Réessayez dans une minute.",
-        "EAUTH": "Échec : le serveur SMTP a refusé l'identifiant ou le mot de passe.",
-        "ECONNECTION": "Échec : connexion au serveur SMTP impossible (hôte, port ou chiffrement).",
-        "ETIMEDOUT": "Échec : le serveur SMTP ne répond pas.",
-        "ESOCKET": "Échec : erreur réseau ou TLS avec le serveur SMTP.",
-        "EENVELOPE": "Échec : le serveur a refusé l'expéditeur ou le destinataire.",
-        "OTHER": "Échec de l'envoi. Les détails sont dans les journaux du serveur."
+        "EAUTH": "Échec : le serveur SMTP a refusé l’identifiant ou le mot de passe.",
+        "ECONNECTION": "Échec : connexion au serveur SMTP impossible (hôte, port ou chiffrement).",
+        "ETIMEDOUT": "Échec : le serveur SMTP ne répond pas.",
+        "ESOCKET": "Échec : erreur réseau ou TLS avec le serveur SMTP.",
+        "EENVELOPE": "Échec : le serveur a refusé l’expéditeur ou le destinataire.",
+        "OTHER": "Échec de l’envoi. Les détails sont dans les journaux du serveur."
       },
       "testMail": {
         "subject": "{appName} — e-mail de test",
-        "body": "Ceci est un e-mail de test envoyé depuis l'administration de {appName}. La configuration SMTP fonctionne."
+        "body": "Ceci est un e-mail de test envoyé depuis l’administration de {appName}. La configuration SMTP fonctionne."
       },
       "remove": "Supprimer la configuration",
-      "removeTitle": "Supprimer la configuration SMTP ?",
-      "removeBody": "Plus aucun e-mail ne sera envoyé (invitations, réinitialisations, alertes de sécurité) tant qu'une nouvelle configuration n'est pas enregistrée."
+      "removeTitle": "Supprimer la configuration SMTP ?",
+      "removeBody": "Plus aucun e-mail ne sera envoyé (invitations, réinitialisations, alertes de sécurité) tant qu’une nouvelle configuration n’est pas enregistrée."
     },
     "authProviders": {
       "listTitle": "Fournisseurs configurés",
@@ -1371,17 +1372,17 @@
       "enabled": "État",
       "on": "Activé",
       "off": "Désactivé",
-      "allowSignUp": "Autoriser l'inscription",
+      "allowSignUp": "Autoriser l’inscription",
       "allowSignUpHint": "Crée un compte Bilan à la première connexion d’une identité liée à aucun compte, uniquement si le mode d’inscription est « Ouvert ». Sinon, ce fournisseur ne connecte que les identités déjà liées à un compte. Une adresse e-mail identique ne suffit pas : un utilisateur existant lie l’identité depuis Paramètres > Sécurité.",
       "oidcSection": "Options OIDC",
       "issuer": "Issuer",
       "clientId": "Client ID",
       "clientSecret": "Client secret",
-      "secretKept": "Laisser vide pour conserver l'actuel",
+      "secretKept": "Laisser vide pour conserver l’actuel",
       "scopes": "Scopes",
       "mapName": "Claim → nom",
       "mapEmail": "Claim → e-mail",
-      "authorizationUrl": "URL d'autorisation",
+      "authorizationUrl": "URL d’autorisation",
       "tokenUrl": "URL de token",
       "userInfoUrl": "URL userinfo",
       "pkce": "PKCE",
@@ -1390,13 +1391,13 @@
       "saving": "Enregistrement…",
       "saved": "Fournisseur enregistré.",
       "error": {
-        "INVALID": "Vérifiez les champs : clé en minuscules (lettres, chiffres, - ou _), nom affiché, et pour OIDC l'issuer et le client ID.",
-        "FAILED": "Échec de l'enregistrement.",
+        "INVALID": "Vérifiez les champs : clé en minuscules (lettres, chiffres, - ou _), nom affiché, et pour OIDC l’issuer et le client ID.",
+        "FAILED": "Échec de l’enregistrement.",
         "KEY_EXISTS": "Un fournisseur utilise déjà cette clé. Modifiez-le dans la liste ci-dessus.",
-        "NOT_FOUND": "Ce fournisseur n'existe plus.",
+        "NOT_FOUND": "Ce fournisseur n’existe plus.",
         "SECRET_REQUIRED": "Le client secret est requis.",
-        "LOCKOUT": "Suppression refusée : {count, plural, one {# utilisateur n'aurait} other {# utilisateurs n'auraient}} plus aucun moyen de se connecter.",
-        "TYPE_LOCKED": "Le type d'un fournisseur ne peut pas être modifié. Créez-en un nouveau.",
+        "LOCKOUT": "Suppression refusée : {count, plural, one {# utilisateur n’aurait} other {# utilisateurs n’auraient}} plus aucun moyen de se connecter.",
+        "TYPE_LOCKED": "Le type d’un fournisseur ne peut pas être modifié. Créez-en un nouveau.",
         "GOOGLE_EXISTS": "Un fournisseur Google existe déjà."
       },
       "listOverline": "Connexion",
@@ -1404,13 +1405,13 @@
       "addHint": "Connexion par identifiants, OIDC ou Google.",
       "delete": "Supprimer",
       "deleting": "Suppression…",
-      "deleteTitle": "Supprimer le fournisseur {name} ?",
+      "deleteTitle": "Supprimer le fournisseur {name} ?",
       "deleteBody": "Il disparaît de la page de connexion. Action irréversible.",
-      "deleteLinked": "{count, plural, one {# compte utilisateur est lié} other {# comptes utilisateurs sont liés}} à ce fournisseur : ces liaisons seront supprimées.",
-      "deleteLockout": "{count, plural, one {# utilisateur n'aurait} other {# utilisateurs n'auraient}} plus aucun moyen de se connecter (ni mot de passe, ni clé d'accès, ni autre fournisseur actif). Désactivez plutôt ce fournisseur."
+      "deleteLinked": "{count, plural, one {# compte utilisateur est lié} other {# comptes utilisateurs sont liés}} à ce fournisseur : ces liaisons seront supprimées.",
+      "deleteLockout": "{count, plural, one {# utilisateur n’aurait} other {# utilisateurs n’auraient}} plus aucun moyen de se connecter (ni mot de passe, ni clé d’accès, ni autre fournisseur actif). Désactivez plutôt ce fournisseur."
     },
     "audit": {
-      "title": "Journal d'audit",
+      "title": "Journal d’audit",
       "empty": "Aucune entrée.",
       "count": "{total, plural, =0 {Aucune entrée} one {# entrée} other {# entrées}}",
       "colDate": "Date",
@@ -1429,7 +1430,7 @@
         "auth": "Authentification",
         "user": "Utilisateurs",
         "settings": "Paramètres",
-        "signup_token": "Jetons d'invitation",
+        "signup_token": "Jetons d’invitation",
         "group": "Foyers",
         "account": "Comptes bancaires",
         "transaction": "Transactions",
@@ -1439,16 +1440,16 @@
         "budget": "Budgets",
         "link": "Liaisons",
         "mail": "E-mails",
-        "audit": "Journal d'audit"
+        "audit": "Journal d’audit"
       },
       "entities": {
         "User": "Utilisateur",
         "Session": "Session",
-        "Passkey": "Clé d'accès",
+        "Passkey": "Clé d’accès",
         "AppSetting": "Paramètre",
-        "AuthProvider": "Fournisseur d'authentification",
+        "AuthProvider": "Fournisseur d’authentification",
         "SmtpConfig": "Configuration SMTP",
-        "AdminSignupToken": "Jeton d'invitation",
+        "AdminSignupToken": "Jeton d’invitation",
         "Group": "Foyer",
         "GroupInvitation": "Invitation de foyer",
         "BankAccount": "Compte bancaire",
@@ -1463,7 +1464,7 @@
         "BudgetAssignment": "Affectation de budget"
       },
       "actions": {
-        "settingUpdated": "Paramètre « {key} » modifié",
+        "settingUpdated": "Paramètre « {key} » modifié",
         "auth": {
           "login": {
             "success": "Connexion réussie",
@@ -1473,13 +1474,13 @@
           "2fa": {
             "enabled": "Double authentification activée",
             "disabled": "Double authentification désactivée",
-            "enable_failed": "Échec d'activation de la double authentification",
+            "enable_failed": "Échec d’activation de la double authentification",
             "disable_failed": "Échec de désactivation de la double authentification"
           },
           "signup": "Compte créé (installation)",
           "register": {
             "success": "Inscription réussie",
-            "failed": "Échec d'inscription"
+            "failed": "Échec d’inscription"
           },
           "password": {
             "changed": "Mot de passe modifié",
@@ -1488,8 +1489,8 @@
             "reset_completed": "Mot de passe réinitialisé"
           },
           "passkey": {
-            "added": "Clé d'accès ajoutée",
-            "deleted": "Clé d'accès supprimée"
+            "added": "Clé d’accès ajoutée",
+            "deleted": "Clé d’accès supprimée"
           },
           "session": {
             "revoked": "Session révoquée",
@@ -1518,15 +1519,15 @@
             "delete": "Configuration SMTP supprimée"
           },
           "auth_provider": {
-            "update": "Fournisseur d'authentification modifié",
-            "create": "Fournisseur d'authentification ajouté",
-            "delete": "Fournisseur d'authentification supprimé"
+            "update": "Fournisseur d’authentification modifié",
+            "create": "Fournisseur d’authentification ajouté",
+            "delete": "Fournisseur d’authentification supprimé"
           }
         },
         "signup_token": {
-          "created": "Jeton d'invitation créé",
-          "revoked": "Jeton d'invitation révoqué",
-          "deleted": "Jeton d'invitation supprimé"
+          "created": "Jeton d’invitation créé",
+          "revoked": "Jeton d’invitation révoqué",
+          "deleted": "Jeton d’invitation supprimé"
         },
         "group": {
           "created": "Foyer créé",
@@ -1596,11 +1597,11 @@
         },
         "mail": {
           "security": {
-            "failed": "Échec d'envoi d'un e-mail de sécurité"
+            "failed": "Échec d’envoi d’un e-mail de sécurité"
           }
         },
         "audit": {
-          "purged": "Journal d'audit purgé"
+          "purged": "Journal d’audit purgé"
         }
       }
     },
@@ -1612,7 +1613,7 @@
   },
   "setup": {
     "title": "Bienvenue dans Bilan",
-    "subtitle": "Configurons votre instance. Cela ne prend qu'une minute.",
+    "subtitle": "Configurons votre instance. Cela ne prend qu’une minute.",
     "steps": {
       "account": "Compte administrateur",
       "smtp": "E-mail (SMTP)",
@@ -1623,27 +1624,27 @@
       "name": "Nom",
       "email": "Adresse e-mail",
       "password": "Mot de passe",
-      "passwordHint": "12 caractères minimum.",
-      "error": "Vérifiez les champs : nom requis, e-mail valide, mot de passe d'au moins 12 caractères.",
+      "passwordHint": "{count} caractères minimum.",
+      "error": "Vérifiez les champs : nom requis, e-mail valide, mot de passe d’au moins {count} caractères.",
       "submit": "Continuer"
     },
     "smtp": {
-      "description": "Optionnel — pour l'envoi d'e-mails (réinitialisation de mot de passe, invitations). Laissez vide pour configurer plus tard dans l'administration.",
+      "description": "Optionnel — pour l’envoi d’e-mails (réinitialisation de mot de passe, invitations). Laissez vide pour configurer plus tard dans l’administration.",
       "host": "Serveur",
       "port": "Port",
       "username": "Identifiant",
       "password": "Mot de passe",
-      "fromAddress": "Adresse d'expéditeur",
-      "fromName": "Nom d'expéditeur",
+      "fromAddress": "Adresse d’expéditeur",
+      "fromName": "Nom d’expéditeur",
       "secure": "Connexion sécurisée (TLS)",
-      "error": "Champs SMTP incomplets : serveur, port, identifiant, mot de passe et adresse d'expéditeur valide sont requis.",
+      "error": "Champs SMTP incomplets : serveur, port, identifiant, mot de passe et adresse d’expéditeur valide sont requis.",
       "save": "Enregistrer et continuer",
       "skip": "Passer"
     },
     "oidc": {
-      "description": "Optionnel — connexion via un fournisseur externe (Google, OIDC). Laissez vide pour en ajouter plus tard dans l'administration.",
+      "description": "Optionnel — connexion via un fournisseur externe (Google, OIDC). Laissez vide pour en ajouter plus tard dans l’administration.",
       "redirectUri": "URL de redirection",
-      "redirectUriHint": "À enregistrer comme URI de redirection autorisée chez votre fournisseur d'identité.",
+      "redirectUriHint": "À enregistrer comme URI de redirection autorisée chez votre fournisseur d’identité.",
       "signUpHint": "Ce fournisseur ne connecte que les identités liées à un compte Bilan, et une adresse e-mail identique ne les lie pas. Pour qu’il crée un compte à la première connexion, autorisez l’inscription dans Administration > Fournisseurs d’authentification et choisissez le mode d’inscription « Ouvert ».",
       "displayName": "Nom affiché",
       "issuer": "Issuer (URL)",
@@ -1657,12 +1658,12 @@
       "advanced": "Options avancées",
       "pkce": "Activer PKCE",
       "endpointsHint": "Renseignez ces endpoints uniquement si la découverte automatique (.well-known) de votre fournisseur ne fonctionne pas.",
-      "authorizationUrl": "URL d'autorisation",
+      "authorizationUrl": "URL d’autorisation",
       "tokenUrl": "URL de token",
       "userInfoUrl": "URL userinfo",
       "mapName": "Claim pour le nom",
-      "mapEmail": "Claim pour l'e-mail",
-      "error": "Champs OIDC incomplets : une URL d'issuer valide, le client ID et le client secret sont requis.",
+      "mapEmail": "Claim pour l’e-mail",
+      "error": "Champs OIDC incomplets : une URL d’issuer valide, le client ID et le client secret sont requis.",
       "save": "Enregistrer et continuer",
       "skip": "Passer"
     },
@@ -1673,11 +1674,11 @@
       "modes": {
         "INVITE_ONLY": {
           "label": "Sur invitation",
-          "description": "Les nouveaux comptes nécessitent un jeton d'invitation. Recommandé."
+          "description": "Les nouveaux comptes nécessitent un jeton d’invitation. Recommandé."
         },
         "OPEN": {
           "label": "Ouvertes",
-          "description": "N'importe qui peut créer un compte."
+          "description": "N’importe qui peut créer un compte."
         },
         "DISABLED": {
           "label": "Désactivées",
@@ -1691,7 +1692,7 @@
       "dashboard": "Tableau de bord",
       "insights": "Analyses",
       "transactions": "Transactions",
-      "suggestions": "Suggestions de catégories",
+      "suggestions": "Suggestions de liens",
       "import": "Importer",
       "importCsv": "Import CSV",
       "importPdf": "Import PDF",
@@ -1706,11 +1707,11 @@
       "data": "Données",
       "admin": "Administration",
       "adminUsers": "Utilisateurs · Administration",
-      "adminSignupTokens": "Jetons d'invitation · Administration",
-      "adminAuthProviders": "Fournisseurs d'authentification · Administration",
+      "adminSignupTokens": "Jetons d’invitation · Administration",
+      "adminAuthProviders": "Fournisseurs d’authentification · Administration",
       "adminSmtp": "SMTP · Administration",
       "adminAppSettings": "Paramètres · Administration",
-      "adminAudit": "Journal d'audit · Administration",
+      "adminAudit": "Journal d’audit · Administration",
       "login": "Connexion",
       "register": "Inscription",
       "reset": "Mot de passe oublié",
@@ -1773,9 +1774,10 @@
       "INVALID_FORMAT": "Format invalide.",
       "INVALID": "Valeur invalide.",
       "MISMATCH": "Les deux mots de passe ne correspondent pas.",
-      "AMOUNT_INVALID": "Montant invalide. Exemples : -12,34 ou 1 234,56.",
+      "AMOUNT_INVALID": "Montant invalide. Exemples : -12,34 ou 1 234,56.",
       "AMOUNT_AMBIGUOUS": "Montant ambigu : écrivez 1234 ou 1,23 (sans séparateur de milliers seul).",
-      "AMOUNT_PRECISION": "Le montant ne peut pas avoir plus de 2 décimales."
+      "AMOUNT_PRECISION": "Le montant ne peut pas avoir plus de 2 décimales.",
+      "PASSWORD_TOO_SHORT": "Au moins {count} caractères."
     }
   }
 }

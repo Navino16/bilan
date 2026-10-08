@@ -7,6 +7,7 @@ import { overline } from "@/components/transactions/bits";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import type { getCurrentBudget } from "@/server/services/budgets";
 import { BudgetBar, statusStyle } from "@/components/budgets/budget-status";
+import { formatDateRange } from "@/lib/format";
 
 export type CurrentBudget = Awaited<ReturnType<typeof getCurrentBudget>>;
 
@@ -29,7 +30,6 @@ export async function BudgetSnapshot({
     notation: "compact",
     maximumFractionDigits: 1,
   });
-  const df = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" });
 
   if (!budget) {
     return (
@@ -49,7 +49,7 @@ export async function BudgetSnapshot({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className={overline}>
-            {df.format(detail.periodStart)} – {df.format(detail.periodEnd)}
+            {formatDateRange(detail.periodStart, detail.periodEnd, locale)}
           </div>
           <div className="font-display truncate text-xl">{detail.name}</div>
         </div>

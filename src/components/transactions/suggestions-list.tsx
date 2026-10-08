@@ -11,6 +11,7 @@ import {
 } from "@/server/transport/actions/links";
 import type { IgnoredPairView, PairLeg, SuggestedPairView } from "@/server/services/links";
 import { useLinkErrorMessage } from "./link-error";
+import { formatDate } from "@/lib/format";
 
 const buttonPrimary =
   "bg-primary text-primary-foreground inline-flex h-8 items-center rounded-lg px-3 text-[0.8rem] font-medium disabled:opacity-50";
@@ -21,13 +22,7 @@ function useFormats() {
   const locale = useLocale();
   return {
     money: new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" }),
-    // Legs carry UTC days: format in UTC so the SSR pass and every zone agree.
-    day: new Intl.DateTimeFormat(locale, {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      timeZone: "UTC",
-    }),
+    day: (d: string | Date) => formatDate(d, locale),
   };
 }
 
@@ -40,7 +35,7 @@ function Legs({ negative, positive }: { negative: PairLeg; positive: PairLeg }) 
       </span>
       <span className="truncate">{l.label}</span>
       <span className="text-muted-foreground shrink-0">
-        {l.accountName} · {day.format(new Date(l.date))}
+        {l.accountName} · {day(l.date)}
       </span>
     </li>
   );

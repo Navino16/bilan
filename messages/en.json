@@ -16,13 +16,13 @@
         "rateLimited": "Too many attempts. Try again later.",
         "rateLimitedFor": "Too many attempts. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
         "badCredentials": "Incorrect email or password.",
-        "passkeyNotFound": "This passkey is no longer recognised. Sign in with your password.",
-        "passkeyFailed": "Passkey sign-in was cancelled or didn't complete.",
+        "passkeyNotFound": "This passkey is no longer recognized. Sign in with your password.",
+        "passkeyFailed": "Passkey sign-in was canceled or didn’t complete.",
         "disabled": "This account is disabled. Contact the instance administrator.",
         "ssoFailed": "Signing in through the identity provider failed. Try again.",
         "ssoSignUpDisabled": "No Bilan account matches this identity, and account creation isn’t allowed, either by this provider or because registration is closed. Ask the instance administrator for an account.",
         "ssoNotLinked": "No account is linked to this identity. Sign in with another sign-in method, then link it from Settings > Security.",
-        "ssoDenied": "Sign-in was cancelled or refused at the identity provider.",
+        "ssoDenied": "Sign-in was canceled or refused at the identity provider.",
         "ssoProvider": "The identity provider returned an error. Try again later or use another sign-in method.",
         "ssoExpired": "The sign-in request expired or was opened in another browser. Start again.",
         "ssoNoEmail": "The identity provider didn’t share an email address. Contact the instance administrator."
@@ -59,7 +59,7 @@
       "name": "Name",
       "email": "Email address",
       "password": "Password",
-      "passwordHint": "At least 12 characters.",
+      "passwordHint": "At least {count} characters.",
       "submit": "Create account",
       "submitting": "Creating…",
       "haveAccount": "Already have an account?",
@@ -74,7 +74,7 @@
         "BAD_TOKEN": "Invalid or expired invitation token.",
         "RATE_LIMITED": "Too many attempts. Try again later.",
         "FAILED": "Could not create the account. Check your details.",
-        "MISMATCH": "The two passwords don't match."
+        "MISMATCH": "The two passwords don’t match."
       },
       "confirmPassword": "Confirm password"
     },
@@ -95,12 +95,12 @@
       "title": "New password",
       "subtitle": "Choose a new password.",
       "password": "New password",
-      "passwordHint": "At least 12 characters.",
+      "passwordHint": "At least {count} characters.",
       "submit": "Reset",
       "submitting": "Resetting…",
       "error": {
         "invalidToken": "This link is invalid or expired. Request a new one.",
-        "invalid": "Check the password (at least 12 characters)."
+        "invalid": "Check the password (at least {count} characters)."
       },
       "requestAgain": "Request a new link"
     },
@@ -119,7 +119,7 @@
     "back": "Back to dashboard",
     "notFound": {
       "title": "Page not found",
-      "message": "This page doesn't exist or has moved."
+      "message": "This page doesn’t exist or has moved."
     },
     "serverError": {
       "title": "Something went wrong",
@@ -128,7 +128,7 @@
     },
     "forbidden": {
       "title": "Access denied",
-      "message": "You don't have access to this page."
+      "message": "You don’t have access to this page."
     },
     "unauthorized": {
       "title": "Sign-in required",
@@ -179,7 +179,7 @@
       "status": "Page {page, number} of {pageCount, number}"
     },
     "copyLink": {
-      "manual": "Automatic copy isn't available on this connection. Select the link and copy it."
+      "manual": "Automatic copy isn’t available on this connection. Select the link and copy it."
     },
     "skipToContent": "Skip to main content",
     "mainNav": "Main navigation",
@@ -199,7 +199,7 @@
     "createTitle": "Add an account",
     "createSubtitle": "The account becomes visible in imports, budgets and sharing.",
     "editTitle": "Edit account",
-    "editSubtitle": "Update this account's details.",
+    "editSubtitle": "Update this account’s details.",
     "createCta": "Create account",
     "cancel": "Cancel",
     "edit": "Edit",
@@ -208,7 +208,7 @@
     "archiveTitle": "Archive “{name}”?",
     "archiveBody": "The account leaves lists and entry forms. Its history stays in transactions, budgets and the dashboard, and you can unarchive it.",
     "unarchive": "Unarchive",
-    "archivedTitle": "Archived accounts · {count}",
+    "archivedTitle": "Archived accounts · {count, number}",
     "archivedHint": "Hidden from entry forms and the global balance; their transactions stay in your history.",
     "archivedBadge": "Archived",
     "delete": "Delete",
@@ -242,7 +242,7 @@
     "globalBalance": "Global balance",
     "color": "Color",
     "customColor": "Custom color",
-    "privacyNote": "This account is private by default. You can share it with a group once created.",
+    "privacyNote": "This account is private by default. You can share it with a household once created.",
     "save": "Save",
     "saving": "Saving…",
     "owner": "Owner",
@@ -256,7 +256,7 @@
     "noSharedAccounts": "No accounts shared with this household.",
     "shareTitle": "Share account",
     "shareSubtitle": "Choose households and their access level.",
-    "noGroups": "You don't belong to any household.",
+    "noGroups": "You don’t belong to any household.",
     "permNone": "None",
     "access": {
       "OWNER": "Owner",
@@ -274,20 +274,20 @@
       "INVALID_IBAN": "Invalid IBAN.",
       "FORBIDDEN": "Action not allowed.",
       "FAILED": "Failed. Please retry.",
-      "CONFIRMATION": "The name you typed doesn't match the account.",
+      "CONFIRMATION": "The name you typed doesn’t match the account.",
       "AMOUNT_INVALID": "Invalid amount. Examples: -12.34 or 1,234.56.",
       "AMOUNT_AMBIGUOUS": "Ambiguous amount: write 1234 or 1.23 (no lone thousands separator).",
-      "AMOUNT_PRECISION": "The amount can't have more than 2 decimals."
+      "AMOUNT_PRECISION": "The amount can’t have more than 2 decimals."
     },
-    "legendOthers": "Others · {count}"
+    "legendOthers": "Others · {count, number}"
   },
   "rules": {
     "pageTitle": "Categories & rules",
-    "overline": "Organisation",
+    "overline": "Organization",
     "tabCategories": "Categories",
     "tabRules": "Rules",
     "new": "New rule",
-    "empty": "No rules yet. Create one to auto-categorise your imports and entries.",
+    "empty": "No rules yet. Create one to auto-categorize your imports and entries.",
     "colPriority": "Prio.",
     "colPattern": "Pattern",
     "colMatch": "Type",
@@ -378,11 +378,11 @@
       "FORBIDDEN": "Not allowed.",
       "NOT_FOUND": "Budget not found.",
       "FAILED": "Failed. Try again.",
-      "PERIOD_MISMATCH": "The dates don't match the selected period type.",
-      "INVALID_LINE": "A line uses a category or account that isn't available for this budget.",
+      "PERIOD_MISMATCH": "The dates don’t match the selected period type.",
+      "INVALID_LINE": "A line uses a category or account that isn’t available for this budget.",
       "AMOUNT_INVALID": "Invalid amount. Examples: -12.34 or 1,234.56.",
       "AMOUNT_AMBIGUOUS": "Ambiguous amount: write 1234 or 1.23 (no lone thousands separator).",
-      "AMOUNT_PRECISION": "The amount can't have more than 2 decimals."
+      "AMOUNT_PRECISION": "The amount can’t have more than 2 decimals."
     },
     "status": {
       "OK": "On track",
@@ -397,9 +397,9 @@
       "seeTransactions": "See transactions",
       "counted": "Counted in this budget",
       "transactions": "{count, plural, =0 {No transactions} one {# transaction} other {# transactions}}",
-      "latestOnly": "Showing the {count} most recent.",
+      "latestOnly": "Showing the {count, number} most recent.",
       "noTransactions": "No transaction counts in this budget yet.",
-      "hiddenTx": "Another member's transaction"
+      "hiddenTx": "Another member’s transaction"
     },
     "assign": {
       "title": "Assign to a budget",
@@ -431,7 +431,8 @@
       "detail": "Details",
       "others": "{count, plural, one {# other budget in progress} other {# other budgets in progress}}",
       "moreLines": "{count, plural, one {# more line} other {# more lines}}"
-    }
+    },
+    "plannedTotalValue": "Planned total: {amount}"
   },
   "categories": {
     "title": "Categories",
@@ -465,11 +466,11 @@
     },
     "actionsFor": "Actions for {name}",
     "colorInherited": "Inherited from the parent category.",
-    "inheritColor": "Use the parent's colour",
+    "inheritColor": "Use the parent’s color",
     "deleteDialog": {
       "title": "Delete “{name}”?",
       "loading": "Computing the impact…",
-      "unused": "This category isn't used anywhere.",
+      "unused": "This category isn’t used anywhere.",
       "usedBy": "This deletion affects:",
       "subcategories": "{count, plural, one {# sub-category, deleted as well} other {# sub-categories, deleted as well}}",
       "transactions": "{count, plural, one {# transaction} other {# transactions}}",
@@ -483,7 +484,7 @@
   },
   "transactions": {
     "title": "Transactions",
-    "subtitle": "Your operations across all visible accounts.",
+    "subtitle": "Your transactions across all visible accounts.",
     "empty": "No transactions yet.",
     "create": "New transaction",
     "createTitle": "Add a transaction",
@@ -503,8 +504,8 @@
     "allCategories": "All categories",
     "allTypes": "All types",
     "opCount": "{count, plural, one {# transaction} other {# transactions}}",
-    "shownOf": "Showing {shown} of {total} transactions",
-    "loadMore": "Show {count} more",
+    "shownOf": "Showing {shown, number} of {total, plural, one {# transaction} other {# transactions}}",
+    "loadMore": "Show {count, number} more",
     "refineToSeeMore": "Narrow the filters to see older ones.",
     "tab": {
       "all": "All",
@@ -533,7 +534,7 @@
     "rulePrompt": {
       "learning": "Learning",
       "title": "Create a rule for similar transactions?",
-      "body": "Automatically categorize future transactions containing \"{pattern}\" as <chip>{category}</chip>?",
+      "body": "Automatically categorize future transactions containing “{pattern}” as <chip>{category}</chip>?",
       "pattern": "Pattern",
       "matchType": "Match type",
       "match": {
@@ -555,12 +556,12 @@
       "FAILED": "Failed. Try again.",
       "ACCOUNT_ARCHIVED": "This account is archived: unarchive it to add transactions.",
       "AMOUNT_INVALID": "Invalid amount. Examples: -12.34 or 1,234.56.",
-      "AMOUNT_PRECISION": "The amount can't have more than 2 decimals.",
-      "AMOUNT_ZERO": "The amount can't be zero.",
-      "LABEL_TOO_LONG": "The label can't exceed 200 characters.",
+      "AMOUNT_PRECISION": "The amount can’t have more than 2 decimals.",
+      "AMOUNT_ZERO": "The amount can’t be zero.",
+      "LABEL_TOO_LONG": "The label can’t exceed 200 characters.",
       "AMOUNT_AMBIGUOUS": "Ambiguous amount: write 1234 or 1.23 (no lone thousands separator).",
       "DATE_INVALID": "Invalid date.",
-      "LOCKED_FIELDS": "The amount, date and type of this transaction can't be changed."
+      "LOCKED_FIELDS": "The amount, date and type of this transaction can’t be changed."
     },
     "link": {
       "create": "Link",
@@ -570,13 +571,13 @@
       "failed": "Linking failed.",
       "error": {
         "ALREADY_LINKED": "One of the selected transactions is already linked.",
-        "FORBIDDEN": "You can't edit one of these accounts.",
+        "FORBIDDEN": "You can’t edit one of these accounts.",
         "NOT_FOUND": "A transaction no longer exists. Reload the page.",
         "TOO_FEW": "Select at least two transactions."
       },
       "linkedTo": "Linked to",
-      "hiddenMembers": "{count, plural, one {+ # transaction on an account you can't see} other {+ # transactions on accounts you can't see}}",
-      "unlinkFailed": "Couldn't unlink. Try again.",
+      "hiddenMembers": "{count, plural, one {+ # transaction on an account you can’t see} other {+ # transactions on accounts you can’t see}}",
+      "unlinkFailed": "Couldn’t unlink. Try again.",
       "unlinkGone": "This link no longer exists.",
       "unlinkNeedsWrite": "Unlinking needs write access to every account in the link."
     },
@@ -590,11 +591,11 @@
       "empty": "No pairs to suggest right now.",
       "back": "Back to transactions",
       "hint": "Bilan spots pairs with the same amount and opposite signs (a transfer between your accounts, a refund) so you can link them and not count them twice.",
-      "ignoreFailed": "Couldn't ignore this pair. Try again.",
+      "ignoreFailed": "Couldn’t ignore this pair. Try again.",
       "ignored": "{count, plural, one {# ignored pair} other {# ignored pairs}}",
       "ignoredHint": "A restored pair can be suggested again.",
       "restore": "Restore",
-      "restoreFailed": "Couldn't restore this pair. Try again."
+      "restoreFailed": "Couldn’t restore this pair. Try again."
     },
     "filterSheet": {
       "reset": "Reset",
@@ -616,18 +617,18 @@
       "dissolvedLinks": "{count, plural, one {# link will be dissolved (only one transaction would be left).} other {# links will be dissolved (only one transaction would be left).}}",
       "leavingLink": "{count, plural, one {# transaction will leave its link, which stays active.} other {# transactions will leave their link, which stays active.}}",
       "budgeted": "{count, plural, one {# transaction is assigned to a budget and will be removed from it.} other {# transactions are assigned to a budget and will be removed from them.}}",
-      "irreversible": "This can't be undone.",
+      "irreversible": "This can’t be undone.",
       "keep": "Keep",
       "confirm": "Delete",
       "error": {
         "INVALID": "Invalid selection (500 transactions at most).",
         "NOT_FOUND": "A transaction no longer exists. Reload the page.",
-        "FORBIDDEN": "You can't edit one of these accounts.",
+        "FORBIDDEN": "You can’t edit one of these accounts.",
         "FAILED": "Deletion failed. Try again."
       }
     },
     "readOnly": "read-only",
-    "recategorizeFailed": "The category couldn't be changed.",
+    "recategorizeFailed": "The category couldn’t be changed.",
     "searchHint": "Search matches whole words of at least {min} letters: shorter words are ignored.",
     "emptySearch": "No matching transaction. Search matches whole words of at least {min} letters.",
     "edit": "Edit",
@@ -661,14 +662,14 @@
     "fileSection": "File",
     "fileMeta": "{count, plural, one {# row} other {# rows}} · {size}",
     "options": "Options",
-    "optCategorize": "Categorise automatically",
+    "optCategorize": "Categorize automatically",
     "previewTitle": "Preview — {count, plural, one {# transaction} other {# transactions}}",
-    "previewMeta": "{dup, plural, one {# potential duplicate} other {# potential duplicates}} · {cat} auto-categorised",
+    "previewMeta": "{dup, plural, one {# potential duplicate} other {# potential duplicates}} · {cat, number} auto-categorized",
     "validate": "Validate import",
     "cancel": "Cancel",
     "include": "Include this row",
     "duplicate": "duplicate",
-    "noCategory": "Uncategorised",
+    "noCategory": "Uncategorized",
     "colRawLabel": "Raw label",
     "colCategory": "Suggested category",
     "autoDetected": "auto-detected",
@@ -689,14 +690,14 @@
     "rowsDetected": "{count, plural, one {# row detected} other {# rows detected}}",
     "commit": "Import",
     "importing": "Importing…",
-    "summary": "{imported} imported · {skipped} skipped (duplicates)",
+    "summary": "{imported, number} imported · {skipped, number} skipped (duplicates)",
     "viewTransactions": "View transactions",
     "pdfDrop": "Drop a PDF statement here, or click to browse.",
     "bankDetected": "Detected bank: {bank}",
-    "bankUnknown": "Bank not recognised — review the rows below before importing.",
+    "bankUnknown": "Bank not recognized — review the rows below before importing.",
     "supportedBanks": "Supported banks: {list}",
     "targetAccount": "Target account",
-    "ignoreProduct": "Don't import",
+    "ignoreProduct": "Don’t import",
     "banks": {
       "revolut": "Revolut",
       "lcl": "LCL"
@@ -717,7 +718,7 @@
       "INVALID_MAPPING": "Pick at least the date, the label and an amount (or debit / credit).",
       "UNAUTHORIZED": "Your session expired. Sign in again.",
       "EMPTY": "No transactions found in this file.",
-      "NOT_TEXT": "This file isn't a readable CSV (a binary file or an image?).",
+      "NOT_TEXT": "This file isn’t a readable CSV (a binary file or an image?).",
       "NOTHING_TO_IMPORT": "Nothing to import: no row is left (duplicates, unchecked or unreadable rows, or ignored products).",
       "ACCOUNT_ARCHIVED": "This account is archived: unarchive it to import into it."
     },
@@ -725,7 +726,7 @@
       "overline": "History",
       "title": "Recent imports",
       "empty": "No imports yet.",
-      "rows": "{imported} imported · {skipped} skipped",
+      "rows": "{imported, number} imported · {skipped, number} skipped",
       "status": {
         "COMPLETED": "Imported",
         "REVERTED": "Undone"
@@ -740,7 +741,7 @@
       "linked": "{count, plural, one {# is linked to other transactions and will leave its link} other {# are linked to other transactions and will leave their links}}",
       "budgeted": "{count, plural, one {# is assigned to a budget} other {# are assigned to a budget}}",
       "edited": "{count, plural, one {# was edited since the import} other {# were edited since the import}}",
-      "irreversible": "This can't be undone.",
+      "irreversible": "This can’t be undone.",
       "keep": "Keep",
       "confirm": "Delete the transactions",
       "done": "Import undone: {count, plural, one {# transaction deleted} other {# transactions deleted}}.",
@@ -758,8 +759,8 @@
       "count": "{count, plural, one {# unreadable row skipped} other {# unreadable rows skipped}}",
       "example": "Row {row}: {reason} ({value})",
       "reason": {
-        "DATE": "unrecognised date",
-        "AMOUNT": "unrecognised amount",
+        "DATE": "unrecognized date",
+        "AMOUNT": "unrecognized amount",
         "AMOUNT_RANGE": "amount out of range",
         "LABEL": "empty label"
       },
@@ -767,7 +768,7 @@
     },
     "settings": "Import settings",
     "duplicatesNote": "Transactions already on this account are skipped (duplicates).",
-    "duplicateSkipped": "Duplicate: already on this account, won't be imported",
+    "duplicateSkipped": "Duplicate: already on this account, won’t be imported",
     "nothingToImport": "Nothing to import: no row is left (duplicates, unchecked or unreadable rows, or ignored products).",
     "progress": "{done, number} of {total, plural, one {# transaction imported} other {# transactions imported}}…",
     "reading": "Reading the file…",
@@ -825,7 +826,7 @@
     },
     "dangerZone": "Danger zone",
     "dangerTitleOwner": "Leave or delete the household",
-    "leaveHint": "You will lose access to this household's shared accounts and budgets.",
+    "leaveHint": "You will lose access to this household’s shared accounts and budgets.",
     "leaveTitle": "Leave the household",
     "deleteHint": "Deleting removes all associated shares. This cannot be undone.",
     "removeTitle": "Remove {name}?"
@@ -854,7 +855,7 @@
     "accept": "Accept invitation",
     "accepting": "…",
     "invalidLink": "This invitation cannot be found, has expired, or was already used.",
-    "joinPromptRole": "You've been invited to join \"{group}\" as {role}.",
+    "joinPromptRole": "You’ve been invited to join “{group}” as {role}.",
     "joinCodeHint": "The code only works with the account whose address was invited.",
     "copyLink": "Copy invitation link",
     "linkCopied": "Link copied",
@@ -868,7 +869,7 @@
       "INVALID": "Check the fields.",
       "FAILED": "Failed. Please retry.",
       "WRONG_ACCOUNT": "This invitation was sent to {email}. Sign in with that account to accept it.",
-      "ALREADY_IN_GROUP": "You're already in this household.",
+      "ALREADY_IN_GROUP": "You’re already in this household.",
       "RATE_LIMITED": "Too many attempts. Please try again later."
     },
     "revokeFailed": "Revoking failed. Try again."
@@ -881,13 +882,13 @@
       "expense": "Expenses",
       "net": "Net balance"
     },
-    "vsPrev": "{arrow} {pct} % vs previous period",
+    "vsPrev": "{arrow} {pct} vs previous period",
     "noPrev": "Nothing in the previous period",
     "breakdown": "Breakdown",
     "byCategory": "Spending by category",
     "spentThisPeriod": "spent this period",
     "noExpenses": "No spending this period.",
-    "noCategory": "Uncategorised",
+    "noCategory": "Uncategorized",
     "daily": "Daily",
     "dayByDay": "Day-by-day spending",
     "monthly": "Monthly",
@@ -917,7 +918,7 @@
     },
     "inProgressPrev": "Period in progress: compared with the same number of days of the previous period ({previous}).",
     "inProgressAvg": "Period in progress: compared with the same days ({day, plural, =1 {the 1st} other {days 1–#}} of each month).",
-    "vsAvg": "{arrow} {pct} % vs {months}-month average",
+    "vsAvg": "{arrow} {pct} vs {months}-month average",
     "vsAvgAmount": "{arrow} {amount} vs {months}-month average",
     "noSameDate": "Nothing at the same date",
     "noAvg": "Nothing over the previous {months} months",
@@ -949,16 +950,16 @@
     "search": "Search a merchant",
     "renamedSection": "Renamed",
     "othersSection": "Other merchants",
-    "showMore": "Show {count} more",
+    "showMore": "Show {count, number} more",
     "noMatch": "No merchant matches.",
-    "count": "{count}×",
+    "count": "{count, number}×",
     "noCategory": "Uncategorized"
   },
   "insights": {
     "overline": "Insights",
     "pageTitle": "Insights",
     "noData": "No spending this period.",
-    "noCategory": "Uncategorised",
+    "noCategory": "Uncategorized",
     "biggestIncrease": "Biggest increase",
     "biggestDecrease": "Biggest decrease",
     "noChange": "None",
@@ -967,7 +968,7 @@
     "changesSub": "{current} vs {previous} · spending by category",
     "merchantsOverline": "Where the money goes",
     "merchantsTitle": "Top merchants",
-    "merchantsCount": "{count}×",
+    "merchantsCount": "{count, number}×",
     "noMerchants": "No merchants this period.",
     "incomeOverline": "Income",
     "incomeTitle": "Income by category",
@@ -978,7 +979,7 @@
     "historyTitle": "Category history",
     "historySub": "Monthly average over whole months",
     "historyAverage": "avg.",
-    "historyMonths": "{count} months",
+    "historyMonths": "{count, plural, one {# month} other {# months}}",
     "historyInProgress": "{month} (in progress)",
     "historyBar": "{month}: {amount}",
     "historyEmpty": "No spending over these {count} months.",
@@ -1007,7 +1008,7 @@
       "error": {
         "INVALID": "Please enter your password.",
         "BAD_PASSWORD": "Incorrect password.",
-        "BAD_CONFIRM": "The email you entered doesn't match.",
+        "BAD_CONFIRM": "The email you entered doesn’t match.",
         "RATE_LIMITED": "Too many attempts. Try again later.",
         "FAILED": "Deletion failed. Please try again.",
         "LAST_SUPER_ADMIN": "You are the last active super admin: appoint another one before deleting your account."
@@ -1016,7 +1017,7 @@
     "security": {
       "overline": "Account",
       "title": "Security",
-      "subtitle": "Strengthen your account's protection.",
+      "subtitle": "Strengthen your account’s protection.",
       "twoFactor": "Two-factor authentication",
       "twoFactorTitle": "Authenticator app (TOTP)",
       "twoFactorHint": "Add a one-time code on top of your password.",
@@ -1024,7 +1025,7 @@
       "statusDisabled": "Two-factor authentication is not enabled yet.",
       "password": "Password",
       "enrolScan": "1. Scan this QR code with your authenticator app (Google Authenticator, 1Password, Aegis…).",
-      "enrolManual": "Can't scan it? Enter this key:",
+      "enrolManual": "Can’t scan it? Enter this key:",
       "enrolBackup": "2. Keep these backup codes somewhere safe. Each one lets you sign in once if you lose your phone.",
       "enrolVerify": "3. Enter the code shown by the app to finish.",
       "qrLabel": "Authenticator app setup QR code",
@@ -1058,23 +1059,23 @@
           "BAD_PASSWORD": "Incorrect current password.",
           "TOO_SHORT": "The new password is too short.",
           "TOO_LONG": "The new password is too long.",
-          "MISMATCH": "The two passwords don't match.",
+          "MISMATCH": "The two passwords don’t match.",
           "RATE_LIMITED": "Too many attempts. Try again later.",
           "INVALID": "Fill in all the fields.",
-          "FAILED": "Couldn't change the password. Please try again.",
-          "REVOKE_FAILED": "Your password was changed, but your other devices couldn't be signed out.",
+          "FAILED": "Couldn’t change the password. Please try again.",
+          "REVOKE_FAILED": "Your password was changed, but your other devices couldn’t be signed out.",
           "SAME_PASSWORD": "The new password must be different from the current one."
         }
       },
       "sessionsCard": {
         "overline": "Sessions",
         "title": "Signed-in devices",
-        "hint": "Sign out a device you don't recognise or no longer use.",
+        "hint": "Sign out a device you don’t recognize or no longer use.",
         "thisDevice": "This device",
         "unknownBrowser": "Unknown browser",
         "activeNow": "Active now",
         "active": "{days, plural, =0 {Active today} =1 {Active yesterday} other {Active # days ago}}",
-        "others": "Other devices · {count}",
+        "others": "Other devices · {count, number}",
         "none": "No other device is signed in.",
         "revoke": "Sign out",
         "revokeAll": "Sign out all",
@@ -1084,14 +1085,14 @@
           "CURRENT": "Use “Sign out” for this device.",
           "UNAUTHORIZED": "Your session has expired. Sign in again.",
           "INVALID": "Invalid request.",
-          "FAILED": "Couldn't sign this device out. Try again."
+          "FAILED": "Couldn’t sign this device out. Try again."
         },
         "signedIn": "Signed in on <time></time>"
       },
       "passkeysCard": {
         "overline": "Passkeys",
         "title": "Passwordless sign-in",
-        "hint": "Sign in with your fingerprint, your face or your device's PIN.",
+        "hint": "Sign in with your fingerprint, your face or your device’s PIN.",
         "count": "Your passkeys · {count}",
         "add": "Add",
         "none": "No passkeys yet.",
@@ -1106,12 +1107,12 @@
         "save": "Save",
         "cancel": "Cancel",
         "deleteTitle": "Delete this passkey?",
-        "deleteBody": "“{name}” will no longer sign you in. Also remove it from your device's password manager.",
+        "deleteBody": "“{name}” will no longer sign you in. Also remove it from your device’s password manager.",
         "deleteConfirm": "Delete",
         "error": {
           "NOT_FRESH": "For your security, sign in again before adding a passkey.",
           "ALREADY_REGISTERED": "This device already has a passkey for your account.",
-          "ADD_FAILED": "Adding the passkey was cancelled or didn't complete.",
+          "ADD_FAILED": "Adding the passkey was canceled or didn’t complete.",
           "FAILED": "Something went wrong. Please try again."
         },
         "signInAgain": "Sign in again"
@@ -1119,7 +1120,7 @@
       "identitiesCard": {
         "overline": "Connected identities",
         "title": "Sign in through an identity provider",
-        "hint": "Link a Google identity or your organisation’s to sign in with it.",
+        "hint": "Link a Google identity or your organization’s to sign in with it.",
         "count": "Your identities · {count}",
         "none": "No linked identity yet.",
         "linkedAt": "Linked on <date></date>",
@@ -1142,7 +1143,7 @@
           "BAD_ORIGIN": "Can’t link from this address. Open the app from its configured address."
         },
         "linkError": {
-          "denied": "Linking was cancelled or refused at the identity provider.",
+          "denied": "Linking was canceled or refused at the identity provider.",
           "provider": "The identity provider returned an error. Try again later.",
           "expired": "The link request expired or was opened in another browser. Start again.",
           "noEmail": "The identity provider didn’t share an email address.",
@@ -1177,7 +1178,7 @@
       "created": "User created. A password-setup link has been sent to them.",
       "empty": "No users.",
       "error": {
-        "UNAUTHORIZED": "You don't have permission to create users.",
+        "UNAUTHORIZED": "You don’t have permission to create users.",
         "INVALID": "Check the fields you entered.",
         "FAILED": "Creation failed (the email may already exist)."
       },
@@ -1185,13 +1186,13 @@
       "createHint": "They receive an email with a link to set their password.",
       "listOverline": "Accounts",
       "count": "{count, plural, =0 {No accounts} one {# account} other {# accounts}}",
-      "roleFor": "{user}'s role",
+      "roleFor": "{user}’s role",
       "roleError": {
-        "UNAUTHORIZED": "You don't have permission to change roles.",
+        "UNAUTHORIZED": "You don’t have permission to change roles.",
         "INVALID": "Invalid role.",
-        "SELF": "You can't change your own role.",
+        "SELF": "You can’t change your own role.",
         "FORBIDDEN": "Only a super admin can grant or revoke an admin role.",
-        "LAST_SUPER_ADMIN": "The last super admin can't be removed.",
+        "LAST_SUPER_ADMIN": "The last super admin can’t be removed.",
         "NOT_FOUND": "User not found.",
         "FAILED": "Role change failed."
       },
@@ -1210,16 +1211,16 @@
       "enableTitle": "Re-enable {user}?",
       "enableBody": "They will be able to sign in again.",
       "deleteTitle": "Permanently delete {user}?",
-      "deleteBody": "Their account and all their data are erased, and the audit log is anonymised. This cannot be undone.",
+      "deleteBody": "Their account and all their data are erased, and the audit log is anonymized. This cannot be undone.",
       "deleteType": "To confirm, type {email}",
       "lifecycleError": {
         "UNAUTHORIZED": "You are not allowed to do this.",
         "INVALID": "Invalid request.",
-        "SELF": "You can't act on your own account.",
+        "SELF": "You can’t act on your own account.",
         "FORBIDDEN": "Only a super admin can act on an administrator or delete an account.",
         "LAST_SUPER_ADMIN": "Not possible: this is the last active super admin.",
         "NOT_FOUND": "User not found.",
-        "CONFIRMATION": "The address typed doesn't match.",
+        "CONFIRMATION": "The address typed doesn’t match.",
         "FAILED": "Failed. Try again."
       },
       "deleteLoading": "Working out the impact…",
@@ -1227,7 +1228,7 @@
       "deleteTransfer": "Household “{group}” will be handed over to {to}.",
       "deleteGroup": "Household “{group}”, of which they are the only member, will be deleted.",
       "deleteBudgetLines": "Household budget lines that targeted their accounts will no longer be limited to an account.",
-      "roleConfirmTitle": "Change {user}'s role?",
+      "roleConfirmTitle": "Change {user}’s role?",
       "roleConfirmBody": "{from} → {to}. The change takes effect immediately.",
       "roleConfirm": "Change role",
       "roleSuperAdminWarning": "A super admin has every right, including over other administrators and account deletion."
@@ -1248,7 +1249,7 @@
       "statusExpired": "Expired",
       "statusUsedUp": "Used up",
       "error": {
-        "UNAUTHORIZED": "You don't have permission to manage tokens.",
+        "UNAUTHORIZED": "You don’t have permission to manage tokens.",
         "INVALID": "Invalid value (max uses: 1 to 10,000).",
         "STILL_ACTIVE": "Revoke this token before deleting it.",
         "FAILED": "Failed. Try again."
@@ -1344,8 +1345,8 @@
         "NOT_CONFIGURED": "Save an SMTP configuration first.",
         "RATE_LIMITED": "Too many tests. Try again in a minute.",
         "EAUTH": "Failed: the SMTP server rejected the username or password.",
-        "ECONNECTION": "Failed: couldn't connect to the SMTP server (host, port or encryption).",
-        "ETIMEDOUT": "Failed: the SMTP server didn't respond.",
+        "ECONNECTION": "Failed: couldn’t connect to the SMTP server (host, port or encryption).",
+        "ETIMEDOUT": "Failed: the SMTP server didn’t respond.",
         "ESOCKET": "Failed: network or TLS error with the SMTP server.",
         "EENVELOPE": "Failed: the server rejected the sender or recipient.",
         "OTHER": "Sending failed. Details are in the server logs."
@@ -1396,7 +1397,7 @@
         "NOT_FOUND": "This provider no longer exists.",
         "SECRET_REQUIRED": "The client secret is required.",
         "LOCKOUT": "Deletion refused: {count, plural, one {# user would} other {# users would}} be left with no way to sign in.",
-        "TYPE_LOCKED": "A provider's type can't be changed. Create a new one instead.",
+        "TYPE_LOCKED": "A provider’s type can’t be changed. Create a new one instead.",
         "GOOGLE_EXISTS": "A Google provider already exists."
       },
       "listOverline": "Sign-in",
@@ -1429,7 +1430,7 @@
         "auth": "Authentication",
         "user": "Users",
         "settings": "Settings",
-        "signup_token": "Signup tokens",
+        "signup_token": "Invitation tokens",
         "group": "Households",
         "account": "Bank accounts",
         "transaction": "Transactions",
@@ -1448,7 +1449,7 @@
         "AppSetting": "Setting",
         "AuthProvider": "Auth provider",
         "SmtpConfig": "SMTP settings",
-        "AdminSignupToken": "Signup token",
+        "AdminSignupToken": "Invitation token",
         "Group": "Household",
         "GroupInvitation": "Household invitation",
         "BankAccount": "Bank account",
@@ -1524,9 +1525,9 @@
           }
         },
         "signup_token": {
-          "created": "Signup token created",
-          "revoked": "Signup token revoked",
-          "deleted": "Signup token deleted"
+          "created": "Invitation token created",
+          "revoked": "Invitation token revoked",
+          "deleted": "Invitation token deleted"
         },
         "group": {
           "created": "Household created",
@@ -1556,7 +1557,7 @@
         "transaction": {
           "created": "Transaction created",
           "deleted": "Transaction deleted",
-          "recategorized": "Transaction recategorised",
+          "recategorized": "Transaction recategorized",
           "updated": "Transaction edited"
         },
         "import": {
@@ -1612,7 +1613,7 @@
   },
   "setup": {
     "title": "Welcome to Bilan",
-    "subtitle": "Let's set up your instance. It only takes a minute.",
+    "subtitle": "Let’s set up your instance. It only takes a minute.",
     "steps": {
       "account": "Admin account",
       "smtp": "Email (SMTP)",
@@ -1623,8 +1624,8 @@
       "name": "Name",
       "email": "Email address",
       "password": "Password",
-      "passwordHint": "At least 12 characters.",
-      "error": "Check the fields: name required, valid email, password of at least 12 characters.",
+      "passwordHint": "At least {count} characters.",
+      "error": "Check the fields: name required, valid email, password of at least {count} characters.",
       "submit": "Continue"
     },
     "smtp": {
@@ -1656,7 +1657,7 @@
       "testFailed": "Test failed",
       "advanced": "Advanced options",
       "pkce": "Enable PKCE",
-      "endpointsHint": "Only set these endpoints if your provider's automatic (.well-known) discovery doesn't work.",
+      "endpointsHint": "Only set these endpoints if your provider’s automatic (.well-known) discovery doesn’t work.",
       "authorizationUrl": "Authorization URL",
       "tokenUrl": "Token URL",
       "userInfoUrl": "Userinfo URL",
@@ -1691,7 +1692,7 @@
       "dashboard": "Dashboard",
       "insights": "Insights",
       "transactions": "Transactions",
-      "suggestions": "Category suggestions",
+      "suggestions": "Link suggestions",
       "import": "Import",
       "importCsv": "CSV import",
       "importPdf": "PDF import",
@@ -1775,7 +1776,8 @@
       "MISMATCH": "The two passwords don’t match.",
       "AMOUNT_INVALID": "Invalid amount. Examples: -12.34 or 1,234.56.",
       "AMOUNT_AMBIGUOUS": "Ambiguous amount: write 1234 or 1.23 (no lone thousands separator).",
-      "AMOUNT_PRECISION": "The amount can’t have more than 2 decimals."
+      "AMOUNT_PRECISION": "The amount can’t have more than 2 decimals.",
+      "PASSWORD_TOO_SHORT": "At least {count} characters."
     }
   }
 }

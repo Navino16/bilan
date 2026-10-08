@@ -11,7 +11,7 @@ describe("auth schemas", () => {
   it("rejects an invalid email on login", () => {
     expect(loginSchema.safeParse({ email: "not-an-email", password: "x" }).success).toBe(false);
   });
-  it("requires a password of at least 12 chars on register", () => {
+  it("rejects a password under the 8-char floor on register", () => {
     const password = "x".repeat(12);
     expect(
       registerSchema.safeParse({ email: "a@b.co", password, confirmPassword: password, name: "A" })

@@ -38,7 +38,7 @@ test.describe("categories", () => {
       .click();
     await page.getByRole("menuitem", { name: /supprimer/i }).click();
     const dialog = page.locator('[data-slot="category-delete-dialog"]');
-    await expect(dialog).toContainText("n'est utilisée nulle part");
+    await expect(dialog).toContainText("n’est utilisée nulle part");
     await dialog.getByRole("button", { name: /^supprimer$/i }).click();
     await expect(
       page.locator('[data-slot="category-row"]').filter({ hasText: `${name} edited` }),

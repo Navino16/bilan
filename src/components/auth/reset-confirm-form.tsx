@@ -11,7 +11,15 @@ import { resetConfirmAction } from "@/server/transport/actions/auth";
 import { useActionForm } from "@/components/forms/use-action-form";
 import { FieldError } from "@/components/forms/field-error";
 
-export function ResetConfirmForm({ token, locale }: { token: string; locale: string }) {
+export function ResetConfirmForm({
+  token,
+  locale,
+  minPasswordLength,
+}: {
+  token: string;
+  locale: string;
+  minPasswordLength: number;
+}) {
   const t = useTranslations("auth.resetConfirm");
   const router = useRouter();
   const form = useActionForm(resetConfirmAction, { resetOnSuccess: false });
@@ -30,19 +38,21 @@ export function ResetConfirmForm({ token, locale }: { token: string; locale: str
           id="password"
           name="password"
           required
-          minLength={12}
+          minLength={minPasswordLength}
           autoComplete="new-password"
           {...form.fieldProps("password", "password-hint")}
         />
-        <FieldError form={form} name="password" />
+        <FieldError form={form} name="password" values={{ count: minPasswordLength }} />
         <p id="password-hint" className="text-muted-foreground text-xs">
-          {t("passwordHint")}
+          {t("passwordHint", { count: minPasswordLength })}
         </p>
       </div>
       {state && !state.ok && (
         <Alert variant="destructive">
           <AlertDescription>
-            {state.error === "INVALID_TOKEN" ? t("error.invalidToken") : t("error.invalid")}
+            {state.error === "INVALID_TOKEN"
+              ? t("error.invalidToken")
+              : t("error.invalid", { count: minPasswordLength })}
           </AlertDescription>
         </Alert>
       )}

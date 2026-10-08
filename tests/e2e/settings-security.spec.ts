@@ -45,7 +45,7 @@ test.describe("change password", () => {
     await card.getByLabel("Confirmer le nouveau mot de passe").fill(oldPassword);
     await card.getByRole("button", { name: "Changer le mot de passe" }).click();
     await expect(
-      card.getByText("Le nouveau mot de passe doit être différent de l'actuel."),
+      card.getByText("Le nouveau mot de passe doit être différent de l’actuel."),
     ).toBeVisible();
 
     await card.getByLabel("Nouveau mot de passe", { exact: true }).fill(newPassword);
@@ -155,11 +155,11 @@ test.describe("passkeys", () => {
 
     await page.goto("/fr/settings/security", { waitUntil: "domcontentloaded", timeout: 90_000 });
     const card = page.locator('[data-slot="passkeys-controls"]');
-    await expect(card.getByText("Aucune clé d'accès pour le moment.")).toBeVisible();
+    await expect(card.getByText("Aucune clé d’accès pour le moment.")).toBeVisible();
     // Retry until the client island has hydrated.
     await expect(async () => {
       await card.getByRole("button", { name: "Ajouter" }).click();
-      await expect(card.getByText("Vos clés d'accès · 1")).toBeVisible({ timeout: 5_000 });
+      await expect(card.getByText("Vos clés d’accès · 1")).toBeVisible({ timeout: 5_000 });
     }).toPass({ timeout: 20_000 });
     // A retried click on an already-added passkey would surface ALREADY_REGISTERED.
     await expect(card.getByRole("alert")).toHaveCount(0);
@@ -167,21 +167,21 @@ test.describe("passkeys", () => {
     expect(credentials.map((c) => c.userName)).toEqual([email]);
 
     await card.getByRole("button", { name: /^Renommer/ }).click();
-    await card.getByLabel("Nom de la clé d'accès").fill("Clé e2e");
+    await card.getByLabel("Nom de la clé d’accès").fill("Clé e2e");
     await card.getByRole("button", { name: "Enregistrer" }).click();
     await expect(card.getByText("Clé e2e")).toBeVisible();
 
     await card.getByRole("button", { name: "Renommer Clé e2e" }).click();
-    await card.getByLabel("Nom de la clé d'accès").fill("Abandonné");
-    await card.getByLabel("Nom de la clé d'accès").press("Escape");
-    await expect(card.getByLabel("Nom de la clé d'accès")).toHaveCount(0);
+    await card.getByLabel("Nom de la clé d’accès").fill("Abandonné");
+    await card.getByLabel("Nom de la clé d’accès").press("Escape");
+    await expect(card.getByLabel("Nom de la clé d’accès")).toHaveCount(0);
     await expect(card.getByText("Clé e2e")).toBeVisible();
     await expect(card.getByRole("button", { name: "Renommer Clé e2e" })).toBeFocused();
 
     await context.clearCookies();
     await page.goto("/fr/login");
     await expect(async () => {
-      await page.getByRole("button", { name: "Se connecter avec une clé d'accès" }).click();
+      await page.getByRole("button", { name: "Se connecter avec une clé d’accès" }).click();
       await expect(page).toHaveURL(/\/dashboard$/, { timeout: 10_000 });
     }).toPass({ timeout: 20_000 });
 
@@ -191,7 +191,7 @@ test.describe("passkeys", () => {
       await expect(page.getByRole("dialog")).toBeVisible({ timeout: 1_000 });
     }).toPass({ timeout: 20_000 });
     await page.getByRole("dialog").getByRole("button", { name: "Supprimer" }).click();
-    await expect(card.getByText("Aucune clé d'accès pour le moment.")).toBeVisible({
+    await expect(card.getByText("Aucune clé d’accès pour le moment.")).toBeVisible({
       timeout: 15_000,
     });
   });

@@ -76,7 +76,7 @@ bad;LIGNE ${stamp};1,00;;B`;
       (r) => r.url().includes("/commit") && r.request().method() === "POST",
       { timeout: 30_000 },
     );
-    await page.getByRole("button", { name: /valider l'import/i }).click();
+    await page.getByRole("button", { name: /valider l’import/i }).click();
     await committed;
     await page.getByRole("link", { name: /voir les transactions/i }).click({ timeout: 15_000 });
     await expect(page).toHaveURL(/\/transactions/, { timeout: 30_000 });
@@ -119,12 +119,12 @@ bad;LIGNE ${stamp};1,00;;B`;
       (r) => r.url().includes("/commit") && r.request().method() === "POST",
       { timeout: 30_000 },
     );
-    await page.getByRole("button", { name: /valider l'import/i }).click();
+    await page.getByRole("button", { name: /valider l’import/i }).click();
     await committed;
 
     const dialog = page.locator('[data-slot="revert-import-dialog"]');
     await expect(async () => {
-      await page.getByRole("button", { name: /annuler l'import/i }).click();
+      await page.getByRole("button", { name: /annuler l’import/i }).click();
       await expect(dialog).toBeVisible({ timeout: 2_000 });
     }).toPass({ timeout: 20_000 });
     await expect(dialog).toContainText("2 transactions seront supprimées");
@@ -148,7 +148,7 @@ bad;LIGNE ${stamp};1,00;;B`;
       mimeType: "text/csv",
       buffer: Buffer.from("Date;Libellé;Montant\n", "utf8"),
     });
-    await expect(page.getByText("Aucune opération trouvée dans ce fichier.")).toBeVisible({
+    await expect(page.getByText("Aucune transaction trouvée dans ce fichier.")).toBeVisible({
       timeout: 30_000,
     });
     await expect(page.locator('[data-slot="import-preview-row"]')).toHaveCount(0);
@@ -208,7 +208,7 @@ bad;LIGNE ${stamp};1,00;;B`;
     const committed = page.waitForResponse((r) => r.url().includes("/commit"), {
       timeout: 30_000,
     });
-    await page.getByRole("button", { name: /valider l'import/i }).click();
+    await page.getByRole("button", { name: /valider l’import/i }).click();
     await committed;
     await expect(page.getByRole("link", { name: /voir les transactions/i })).toBeVisible();
 
@@ -218,7 +218,7 @@ bad;LIGNE ${stamp};1,00;;B`;
       .locator('input[type="checkbox"]:visible');
     await expect(box).not.toBeChecked();
     await expect(box).toBeDisabled();
-    await expect(page.getByRole("button", { name: /valider l'import/i })).toBeDisabled();
+    await expect(page.getByRole("button", { name: /valider l’import/i })).toBeDisabled();
     await expect(page.getByText(/rien à importer/i)).toBeVisible();
     await page.getByRole("button", { name: "Annuler", exact: true }).click();
   });

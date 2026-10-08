@@ -6,7 +6,7 @@ import { isAPIError } from "better-auth/api";
 import { getAuth } from "@/server/auth";
 import { changePasswordLimiter, registerLimiter, resetLimiter } from "@/server/auth/rate-limit";
 import { requireSession } from "@/server/auth/permissions";
-import { appSettings } from "@/server/services/settings/app-settings";
+import { appSettings, getMinPasswordLength } from "@/server/services/settings/app-settings";
 import { consumeSignupToken, refundSignupToken } from "@/server/services/signup-tokens";
 import { userExistsByEmail } from "@/server/services/users/lookup";
 import { changePassword } from "@/server/services/users/password";
@@ -35,6 +35,16 @@ export type AuthActionState =
 // trusted-proxy resolution and lands in scope 8.5.
 function rlKey(email: string): string {
   return email.trim().toLowerCase();
+}
+
+const PASSWORD_TOO_SHORT: AuthActionState = {
+  ok: false,
+  error: "INVALID",
+  fieldErrors: { password: "PASSWORD_TOO_SHORT" },
+};
+
+async function passwordTooShort(password: string): Promise<boolean> {
+  return password.length < (await getMinPasswordLength());
 }
 
 export async function loginAction(
@@ -73,6 +83,7 @@ export async function registerAction(
     const mismatch = parsed.error.issues.some((i) => i.message === "MISMATCH");
     return invalidInput(parsed.error, input, mismatch ? "MISMATCH" : "INVALID");
   }
+  if (await passwordTooShort(parsed.data.password)) return PASSWORD_TOO_SHORT;
 
   const bucket = registerLimiter.consume(rlKey(parsed.data.email));
   if (!bucket.allowed)
@@ -156,6 +167,7 @@ export async function resetConfirmAction(
   const input = Object.fromEntries(formData);
   const parsed = resetConfirmSchema.safeParse(input);
   if (!parsed.success) return invalidInput(parsed.error, input);
+  if (await passwordTooShort(parsed.data.password)) return PASSWORD_TOO_SHORT;
 
   try {
     const auth = await getAuth();

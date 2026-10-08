@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { rollRecurringAction } from "@/server/transport/actions/budgets";
 import { groupBudgetSeries, nextPeriod } from "@/lib/budgets";
+import { formatDate, formatDateRange, formatPercent } from "@/lib/format";
 import type { BudgetPeriodType } from "@/lib/validation/budget";
 import { BudgetForm, type BudgetLineOption } from "./budget-form";
 import type { CategoryOption } from "@/components/categories/category-options";
@@ -37,14 +38,6 @@ export function BudgetsView({
   const router = useRouter();
   const [rolling, startRoll] = useTransition();
   const nf = new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" });
-  // periodStart/periodEnd are UTC-bounded semantic dates — format in UTC so
-  // server and client agree (periodEnd sits at 23:59:59.999Z).
-  const df = new Intl.DateTimeFormat(locale, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  });
 
   const [rollResult, setRollResult] = useState<
     { ok: true; id?: string; from: BudgetListItem } | { ok: false; error: string } | null
@@ -106,8 +99,8 @@ export function BudgetsView({
                   {rolledPeriod &&
                     t("rolledOk", {
                       name: rollResult.from.name,
-                      start: df.format(rolledPeriod.start),
-                      end: df.format(rolledPeriod.end),
+                      start: formatDate(rolledPeriod.start, locale),
+                      end: formatDate(rolledPeriod.end, locale),
                     })}
                 </span>
                 <Link href={`/${locale}/budgets/${rollResult.id}`} className="underline">
@@ -167,9 +160,7 @@ export function BudgetsView({
                           {b.scope === "GROUP" ? t("scopeGroup") : t("scopePersonal")}
                         </Badge>
                         {b.recurring && <Badge variant="outline">{t("recurring")}</Badge>}
-                        <span>
-                          {df.format(b.periodStart)} – {df.format(b.periodEnd)}
-                        </span>
+                        <span>{formatDateRange(b.periodStart, b.periodEnd, locale)}</span>
                       </div>
                     </div>
                     <BudgetBar percent={b.percent} status={b.status} />
@@ -177,7 +168,7 @@ export function BudgetsView({
                       <span>
                         {nf.format(b.spentTotal)} / {nf.format(b.plannedTotal)}
                       </span>
-                      <span>{b.percent} %</span>
+                      <span>{formatPercent(b.percent / 100, locale)}</span>
                     </div>
                   </Link>
                   {b.canManage && (
@@ -215,7 +206,7 @@ export function BudgetsView({
                           className="hover:bg-muted/50 flex items-center gap-3 border-t py-2 text-sm"
                         >
                           <span className="text-muted-foreground shrink-0">
-                            {df.format(o.periodStart)} – {df.format(o.periodEnd)}
+                            {formatDateRange(o.periodStart, o.periodEnd, locale)}
                           </span>
                           <span className="hidden flex-1 sm:block">
                             <BudgetBar percent={o.percent} status={o.status} />

@@ -47,7 +47,7 @@ async function uploadCsv(page: Page, csv: string) {
 // review step shows a duplicate badge and a dimmed row.
 async function openImportReview(page: Page) {
   await uploadCsv(page, DUP_ROW);
-  const validate = page.getByRole("button", { name: /valider l'import/i });
+  const validate = page.getByRole("button", { name: /valider l’import/i });
   if (await validate.isEnabled()) {
     const committed = page.waitForResponse((r) => r.url().includes("/commit"), {
       timeout: 30_000,

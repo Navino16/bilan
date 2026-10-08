@@ -11,13 +11,14 @@ import { env } from "@/env";
 import { getAuth, invalidateAuthCache } from "@/server/auth";
 import { appSettings } from "@/server/services/settings/app-settings";
 import { createSignupToken } from "@/server/services/signup-tokens";
-import { registerAction } from "@/server/transport/actions/auth";
+import { registerAction, resetConfirmAction } from "@/server/transport/actions/auth";
 
 const actorId = "signup_http_actor";
 const tag = "signup-http";
 const password = "correct-horse-battery";
 const appUrl = env.APP_URL.replace(/\/$/, "");
 let savedMode: AppSetting | null = null;
+let savedMinLength: AppSetting | null = null;
 
 const email = (label: string) => `${tag}-${label}+${Date.now()}@bilan.local`;
 
@@ -43,6 +44,7 @@ async function cleanup() {
 
 beforeAll(async () => {
   savedMode = await db.appSetting.findUnique({ where: { key: "registration_mode" } });
+  savedMinLength = await db.appSetting.findUnique({ where: { key: "min_password_length" } });
   await cleanup();
   await db.user.deleteMany({ where: { id: actorId } });
   await db.user.create({ data: { id: actorId, email: `${tag}-actor@bilan.local` } });
@@ -55,6 +57,12 @@ afterAll(async () => {
       data: { value: savedMode.value as never, updatedById: savedMode.updatedById },
     });
   } else await db.appSetting.deleteMany({ where: { key: "registration_mode" } });
+  if (savedMinLength) {
+    await db.appSetting.update({
+      where: { key: "min_password_length" },
+      data: { value: savedMinLength.value as never, updatedById: savedMinLength.updatedById },
+    });
+  } else await db.appSetting.deleteMany({ where: { key: "min_password_length" } });
   invalidateAuthCache();
   await cleanup();
   await db.user.deleteMany({ where: { id: actorId } });
@@ -193,5 +201,44 @@ describe("HTTP sign-up endpoint (#197)", () => {
       ),
     ).toEqual({ ok: false, error: "DISABLED" });
     expect(await db.user.count({ where: { email: { in: [noToken, disabled] } } })).toBe(0);
+  });
+
+  it("seeds the default categories in the signup page's locale (#169)", async () => {
+    const auth = await getAuth();
+    const roots = async (userId: string) =>
+      (await db.category.findMany({ where: { userId, parentId: null } })).map((c) => c.name);
+
+    const en = await auth.api.signUpEmail({
+      body: { email: email("locale-en"), password, name: "En" },
+      headers: new Headers({ referer: `${appUrl}/en/register` }),
+    });
+    expect(await roots(en.user.id)).toContain("Income");
+
+    const fallback = await auth.api.signUpEmail({
+      body: { email: email("locale-default"), password, name: "Fr" },
+    });
+    expect(await roots(fallback.user.id)).toContain("Revenus");
+  });
+
+  it("registerAction enforces the configured minimum password length (#169)", async () => {
+    await appSettings.set("registration_mode", "OPEN", actorId);
+    await appSettings.set("min_password_length", password.length + 1, actorId);
+    const target = email("short");
+    expect(
+      await registerAction(
+        null,
+        registerForm({ email: target, password, confirmPassword: password, name: "S" }),
+      ),
+    ).toEqual({ ok: false, error: "INVALID", fieldErrors: { password: "PASSWORD_TOO_SHORT" } });
+    expect(await db.user.findUnique({ where: { email: target } })).toBeNull();
+  });
+
+  it("resetConfirmAction enforces the configured minimum password length (#169)", async () => {
+    await appSettings.set("min_password_length", password.length + 1, actorId);
+    expect(await resetConfirmAction(null, registerForm({ token: "any-token", password }))).toEqual({
+      ok: false,
+      error: "INVALID",
+      fieldErrors: { password: "PASSWORD_TOO_SHORT" },
+    });
   });
 });

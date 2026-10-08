@@ -65,7 +65,7 @@ test.describe("groups", () => {
 
     // Invite the member and read the generated code from the pending list.
     await page.fill('input[name="email"]', "member@e2e.local");
-    await page.getByRole("button", { name: /envoyer l'invitation/i }).click();
+    await page.getByRole("button", { name: /envoyer l’invitation/i }).click();
     await expect(page.getByText("member@e2e.local")).toBeVisible();
     const code = (await page.locator("span.font-mono").first().textContent())?.trim() ?? "";
     expect(code).toMatch(/^[A-Z0-9]{6}$/);
@@ -104,8 +104,8 @@ test.describe("groups", () => {
     await page.waitForURL(/\/groups\/[a-z0-9]+$/i);
 
     await page.fill('input[name="email"]', "someone-else@e2e.local");
-    await page.getByRole("button", { name: /envoyer l'invitation/i }).click();
-    await page.getByRole("button", { name: "Copier le lien d'invitation" }).click();
+    await page.getByRole("button", { name: /envoyer l’invitation/i }).click();
+    await page.getByRole("button", { name: "Copier le lien d’invitation" }).click();
     await expect(page.getByRole("button", { name: "Lien copié" })).toBeVisible();
     const link = await page.evaluate(() => navigator.clipboard.readText());
     expect(link).toMatch(/\/fr\/groups\/join\/[\w-]+$/);

@@ -16,12 +16,15 @@ export function StepRegistrationMode({
   data,
   onChange,
   locale,
+  minPasswordLength,
 }: {
   data: SetupData;
   onChange: (p: Partial<SetupData>) => void;
   locale: string;
+  minPasswordLength: number;
 }) {
   const t = useTranslations("setup.registration");
+  const tField = useTranslations("forms.fieldError");
   const router = useRouter();
   const [state, action, pending] = useActionState(completeSetupAction, null);
 
@@ -79,7 +82,11 @@ export function StepRegistrationMode({
       </RadioGroup>
       {state && !state.ok && (
         <Alert variant="destructive">
-          <AlertDescription>{t("error")}</AlertDescription>
+          <AlertDescription>
+            {state.error === "PASSWORD_TOO_SHORT"
+              ? tField("PASSWORD_TOO_SHORT", { count: minPasswordLength })
+              : t("error")}
+          </AlertDescription>
         </Alert>
       )}
       <Button type="submit" className="w-full" disabled={pending}>

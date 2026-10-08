@@ -47,7 +47,7 @@ test.describe("transactions", () => {
     const rows = page.locator('[data-slot="transaction-row"]');
     const more = page.locator('[data-slot="transactions-more"]');
     await expect(rows).toHaveCount(1);
-    await expect(more).toContainText("1 sur 3 opérations affichées");
+    await expect(more).toContainText("1 sur 3 transactions affichées");
 
     await more.getByRole("link", { name: /afficher 100 de plus/i }).click();
     await expect(page).toHaveURL(/limit=102/);
@@ -190,7 +190,7 @@ test.describe("transactions", () => {
     await page.goto("/fr/transactions");
     const box = page.getByRole("searchbox");
     await box.pressSequentially("cb", { delay: 50 });
-    await expect(page.getByText(/mots entiers d'au moins 3 lettres/i).first()).toBeVisible();
+    await expect(page.getByText(/mots entiers d’au moins 3 lettres/i).first()).toBeVisible();
     await expect(page).toHaveURL(/search=cb/);
     await box.fill("");
     await expect(page).not.toHaveURL(/search=/);
