@@ -50,16 +50,23 @@ type AdvancedConfig = {
   mapEmail?: string;
 };
 
+/** Whether the auth handler can serve this SSO row: it has the credentials its type needs. */
+export function isServedProvider<
+  T extends Pick<AuthProvider, "type" | "issuer" | "clientId" | "clientSecretEnc">,
+>(row: T): row is T & { clientId: string; clientSecretEnc: string } {
+  if (!row.clientId || !row.clientSecretEnc) return false;
+  return row.type === "google" || (row.type === "oidc" && !!row.issuer);
+}
+
 /** Decrypt clientSecretEnc and merge the advanced `config` into a structure ready to feed Better Auth. */
 export function resolveOidcProvider(row: AuthProvider): ResolvedOidc | null {
-  if (row.type !== "oidc") return null;
-  if (!row.issuer || !row.clientId || !row.clientSecretEnc) return null;
+  if (row.type !== "oidc" || !isServedProvider(row)) return null;
   const cfg = (row.config ?? {}) as AdvancedConfig;
   return {
     providerId: row.key,
     clientId: row.clientId,
     clientSecret: decrypt(row.clientSecretEnc, dataKey),
-    issuer: row.issuer,
+    issuer: row.issuer!,
     scopes: row.scopes
       ? row.scopes.split(",").map((s) => s.trim())
       : ["openid", "email", "profile"],

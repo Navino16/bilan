@@ -2,7 +2,12 @@ import { APIError, createAuthMiddleware, isAPIError } from "better-auth/api";
 import type { BetterAuthPlugin } from "better-auth";
 import { z } from "zod";
 import { logEvent } from "@/server/services/audit";
-import { auditAuthRequest, pendingTwoFactor, type HookContext } from "./auth-audit";
+import {
+  auditAuthRequest,
+  auditLinkFailure,
+  pendingTwoFactor,
+  type HookContext,
+} from "./auth-audit";
 import { loginLimiter, twoFactorLimiter } from "./rate-limit";
 
 const TWO_FACTOR_VERIFY = new Set(["/two-factor/verify-totp", "/two-factor/verify-backup-code"]);
@@ -59,6 +64,22 @@ async function twoFactorAttemptGuard(ctx: HookContext): Promise<void> {
   throw new APIError("TOO_MANY_REQUESTS", { code: "TOO_MANY_ATTEMPTS" });
 }
 
+// genericOAuth also registers its OIDC configs as social providers, without their
+// disableSignUp: the core social routes would sign them up whatever the gate says (#204).
+function coreSocialRouteGuard(ctx: HookContext): void {
+  const builtIn = Object.keys(ctx.context.options.socialProviders ?? {});
+  const provider =
+    ctx.path === "/sign-in/social"
+      ? (ctx.body as { provider?: unknown } | null)?.provider
+      : ctx.path === "/callback/:id"
+        ? (ctx.params as { id?: string } | undefined)?.id
+        : null;
+  if (provider === null) return;
+  if (typeof provider !== "string" || !builtIn.includes(provider)) {
+    throw new APIError("NOT_FOUND", { code: "PROVIDER_NOT_FOUND" });
+  }
+}
+
 // A plugin rather than `options.hooks`: plugin after-hooks run after the user ones,
 // and ours must see the twoFactor plugin's rewrite of the sign-in response
 // (`{ twoFactorRedirect }`), so it is registered after twoFactor().
@@ -69,6 +90,7 @@ export const authGuardPlugin = {
       {
         matcher: () => true,
         handler: createAuthMiddleware(async (ctx) => {
+          coreSocialRouteGuard(ctx);
           await passwordAttemptGuard(ctx);
           await twoFactorAttemptGuard(ctx);
         }),
@@ -80,6 +102,7 @@ export const authGuardPlugin = {
         handler: createAuthMiddleware(async (ctx) => {
           clearOnCompletedSignIn(ctx);
           await auditAuthRequest(ctx);
+          await auditLinkFailure(ctx);
         }),
       },
     ],

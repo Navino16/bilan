@@ -1,4 +1,9 @@
-import { createAuthMiddleware, getSessionFromCtx, isAPIError } from "better-auth/api";
+import {
+  createAuthMiddleware,
+  getOAuthState,
+  getSessionFromCtx,
+  isAPIError,
+} from "better-auth/api";
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import { resolveClientIp } from "@/server/http/client-ip";
@@ -111,6 +116,29 @@ export async function authAuditEvent(
     }
     default:
       return null;
+  }
+}
+
+const LINK_CALLBACKS = new Set(["/callback/:id", "/oauth2/callback/:providerId"]);
+
+// A Settings > Security link callback (#204) that redirects with `?error=`. Not audited: an OIDC
+// IdP refusal, which generic-oauth redirects before parsing the state that identifies the user.
+export async function auditLinkFailure(ctx: HookContext): Promise<void> {
+  if (!LINK_CALLBACKS.has(ctx.path)) return;
+  try {
+    const link = (await getOAuthState())?.link;
+    const location = ctx.context.responseHeaders?.get("location");
+    if (!link || !location) return;
+    const error = new URL(location, "http://callback.invalid").searchParams.get("error");
+    if (!error) return;
+    const params = (ctx.params ?? {}) as { id?: string; providerId?: string };
+    await logEvent({
+      userId: link.userId,
+      action: "auth.identity.link_failed",
+      metadata: { providerId: params.id ?? params.providerId ?? null, error: error.slice(0, 64) },
+    });
+  } catch {
+    // best-effort: an audit failure must not fail the auth request
   }
 }
 

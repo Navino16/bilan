@@ -44,6 +44,11 @@ export class AppSettingsService {
     this.ttlMs = opts.ttlMs ?? 60_000;
   }
 
+  /** Drops a cached value written behind the service's back. */
+  forget(key: string): void {
+    this.cache.delete(key);
+  }
+
   async get<T = unknown>(key: string): Promise<T | null> {
     const cached = this.cache.get(key);
     const now = Date.now();

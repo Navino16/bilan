@@ -20,8 +20,12 @@
         "passkeyFailed": "La connexion par clé d'accès a été annulée ou n'a pas abouti.",
         "disabled": "Ce compte est désactivé. Contactez l'administrateur de l'instance.",
         "ssoFailed": "La connexion via le fournisseur d'identité a échoué. Réessayez.",
-        "ssoSignUpDisabled": "Aucun compte Bilan ne correspond à cette identité et ce fournisseur n'autorise pas l'inscription. Demandez un compte à l'administrateur de l'instance.",
-        "ssoNotLinked": "Aucun compte n'est lié à cette identité. Connectez-vous puis liez-la depuis Paramètres > Sécurité."
+        "ssoSignUpDisabled": "Aucun compte Bilan ne correspond à cette identité, et la création de compte n’est pas autorisée, par ce fournisseur ou parce que les inscriptions sont fermées. Demandez un compte à l’administrateur de l’instance.",
+        "ssoNotLinked": "Aucun compte n’est lié à cette identité. Connectez-vous avec un autre moyen de connexion, puis liez-la depuis Paramètres > Sécurité.",
+        "ssoDenied": "La connexion a été annulée ou refusée chez le fournisseur d’identité.",
+        "ssoProvider": "Le fournisseur d’identité a renvoyé une erreur. Réessayez plus tard ou utilisez un autre moyen de connexion.",
+        "ssoExpired": "La demande de connexion a expiré ou a été ouverte dans un autre navigateur. Recommencez.",
+        "ssoNoEmail": "Le fournisseur d’identité n’a pas transmis d’adresse e-mail. Contactez l’administrateur de l’instance."
       },
       "or": "ou",
       "passkey": "Se connecter avec une clé d'accès",
@@ -103,6 +107,12 @@
     "passwordVisibility": {
       "show": "Afficher le mot de passe",
       "hide": "Masquer le mot de passe"
+    },
+    "sso": {
+      "continueWith": "Continuer avec {name}",
+      "signUpWith": "S’inscrire avec {name}",
+      "startFailed": "Impossible de joindre le fournisseur d’identité. Réessayez.",
+      "badOrigin": "Connexion impossible depuis cette adresse. Ouvrez l’application depuis son adresse configurée."
     }
   },
   "errors": {
@@ -1095,6 +1105,41 @@
           "FAILED": "L'opération a échoué. Réessayez."
         },
         "signInAgain": "Se reconnecter"
+      },
+      "identitiesCard": {
+        "overline": "Identités connectées",
+        "title": "Connexion via un fournisseur d’identité",
+        "hint": "Liez une identité Google ou celle de votre organisation pour vous connecter avec elle.",
+        "count": "Vos identités · {count}",
+        "none": "Aucune identité liée pour le moment.",
+        "linkedAt": "Liée le <date></date>",
+        "providerDisabled": "Fournisseur désactivé par l’administrateur",
+        "onlyMethod": "C’est votre seul moyen de connexion : ajoutez une clé d’accès ou liez une autre identité avant de la délier.",
+        "link": "Lier {name}",
+        "unlink": "Délier {name}",
+        "unlinkTitle": "Délier cette identité ?",
+        "unlinkBody": "Vous ne pourrez plus vous connecter avec « {name} ». Vous pourrez la lier de nouveau plus tard.",
+        "unlinkConfirm": "Délier",
+        "cancel": "Annuler",
+        "linkedNotice": "« {name} » est maintenant liée à votre compte.",
+        "signInAgain": "Se reconnecter",
+        "error": {
+          "NOT_FRESH": "Par sécurité, reconnectez-vous avant de modifier vos identités connectées.",
+          "LOCKOUT": "Impossible de délier votre dernier moyen de connexion.",
+          "ALREADY_LINKED": "Une identité de ce fournisseur est déjà liée à votre compte.",
+          "UNAVAILABLE": "Ce fournisseur d’identité n’est plus disponible.",
+          "FAILED": "L’opération a échoué. Réessayez.",
+          "BAD_ORIGIN": "Liaison impossible depuis cette adresse. Ouvrez l’application depuis son adresse configurée."
+        },
+        "linkError": {
+          "denied": "La liaison a été annulée ou refusée chez le fournisseur d’identité.",
+          "provider": "Le fournisseur d’identité a renvoyé une erreur. Réessayez plus tard.",
+          "expired": "La demande de liaison a expiré ou a été ouverte dans un autre navigateur. Recommencez.",
+          "noEmail": "Le fournisseur d’identité n’a pas transmis d’adresse e-mail.",
+          "emailMismatch": "L’adresse e-mail de cette identité ne correspond pas à celle de votre compte.",
+          "linkedElsewhere": "Cette identité est déjà liée à un autre compte.",
+          "failed": "La liaison n’a pas abouti. Réessayez."
+        }
       }
     }
   },
@@ -1317,7 +1362,7 @@
       "on": "Activé",
       "off": "Désactivé",
       "allowSignUp": "Autoriser l'inscription",
-      "allowSignUpHint": "Crée un compte Bilan à la première connexion d'une identité liée à aucun compte. Décoché, ce fournisseur ne connecte que les identités déjà liées à un compte. Une adresse e-mail identique ne suffit pas : un utilisateur existant lie l'identité depuis Paramètres > Sécurité.",
+      "allowSignUpHint": "Crée un compte Bilan à la première connexion d’une identité liée à aucun compte, uniquement si le mode d’inscription est « Ouvert ». Sinon, ce fournisseur ne connecte que les identités déjà liées à un compte. Une adresse e-mail identique ne suffit pas : un utilisateur existant lie l’identité depuis Paramètres > Sécurité.",
       "oidcSection": "Options OIDC",
       "issuer": "Issuer",
       "clientId": "Client ID",
@@ -1439,6 +1484,11 @@
           "session": {
             "revoked": "Session révoquée",
             "revoked_others": "Autres sessions révoquées"
+          },
+          "identity": {
+            "linked": "Identité SSO liée",
+            "unlinked": "Identité SSO déliée",
+            "link_failed": "Échec de liaison d’une identité SSO"
           }
         },
         "user": {
@@ -1584,7 +1634,7 @@
       "description": "Optionnel — connexion via un fournisseur externe (Google, OIDC). Laissez vide pour en ajouter plus tard dans l'administration.",
       "redirectUri": "URL de redirection",
       "redirectUriHint": "À enregistrer comme URI de redirection autorisée chez votre fournisseur d'identité.",
-      "signUpHint": "Ce fournisseur ne connecte que les identités liées à un compte Bilan, et une adresse e-mail identique ne les lie pas. Pour qu'il crée un compte à la première connexion, autorisez l'inscription dans Administration > Fournisseurs d'authentification.",
+      "signUpHint": "Ce fournisseur ne connecte que les identités liées à un compte Bilan, et une adresse e-mail identique ne les lie pas. Pour qu’il crée un compte à la première connexion, autorisez l’inscription dans Administration > Fournisseurs d’authentification et choisissez le mode d’inscription « Ouvert ».",
       "displayName": "Nom affiché",
       "issuer": "Issuer (URL)",
       "clientId": "Client ID",

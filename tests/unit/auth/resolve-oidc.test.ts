@@ -60,10 +60,15 @@ describe("resolveOidcProvider", () => {
   });
 
   it("refuses unknown IdP users unless the row allows sign-up (#200)", () => {
-    const closed = toOAuthConfig(resolveOidcProvider(row({}))!);
+    const closed = toOAuthConfig(resolveOidcProvider(row({}))!, true);
     expect(closed.disableSignUp).toBe(true);
     expect(closed).not.toHaveProperty("disableImplicitSignUp");
-    const open = toOAuthConfig(resolveOidcProvider(row({ allowSignUp: true }))!);
+    const open = toOAuthConfig(resolveOidcProvider(row({ allowSignUp: true }))!, true);
     expect(open.disableSignUp).toBe(false);
+  });
+
+  it("refuses unknown IdP users while registration is not open (#204)", () => {
+    const allowed = resolveOidcProvider(row({ allowSignUp: true }))!;
+    expect(toOAuthConfig(allowed, false).disableSignUp).toBe(true);
   });
 });

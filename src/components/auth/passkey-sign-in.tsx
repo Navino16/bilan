@@ -29,11 +29,6 @@ export function PasskeySignIn({ redirectTo }: { redirectTo: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="text-muted-foreground flex items-center gap-3 text-xs">
-        <span className="bg-border h-px flex-1" />
-        {t("or")}
-        <span className="bg-border h-px flex-1" />
-      </div>
       <Button type="button" variant="outline" className="w-full" disabled={pending} onClick={run}>
         <KeyRound />
         {t("passkey")}

@@ -2,6 +2,7 @@ import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from "bette
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { genericOAuth } from "better-auth/plugins";
 import { nextCookies } from "better-auth/next-js";
+import { getOAuthState } from "better-auth/api";
 import { db } from "@/server/db";
 import { env } from "@/env";
 import { CLIENT_IP_HEADER } from "@/server/http/client-ip";
@@ -15,7 +16,12 @@ import {
 import { logEvent } from "@/server/services/audit";
 import { notifyPasswordChanged } from "@/server/services/mail/security-notifications";
 import { seedDefaultCategories } from "@/server/services/categories/seed-defaults";
-import { providerCache, resolveOidcProvider, type ResolvedOidc } from "./providers";
+import {
+  isServedProvider,
+  providerCache,
+  resolveOidcProvider,
+  type ResolvedOidc,
+} from "./providers";
 import { authPlugins } from "./plugins";
 import { nameOnCreate, nameOnUpdate } from "./user-name";
 import {
@@ -27,11 +33,12 @@ import {
 type Handler = ReturnType<typeof betterAuth>;
 let cached: { handler: Handler; builtAt: number } | null = null;
 const CACHE_TTL_MS = 60_000;
+const linkRequests = new WeakSet<object>();
 
 // Map a resolved OIDC row to a generic-oauth config entry. discoveryUrl is the
 // default; explicit endpoints (when set) override it. A claim mapping builds a
 // mapProfileToUser so the admin can pick which userinfo claims feed name/email.
-export function toOAuthConfig(o: ResolvedOidc) {
+export function toOAuthConfig(o: ResolvedOidc, registrationOpen: boolean) {
   const mapProfileToUser =
     o.mapName || o.mapEmail
       ? (profile: Record<string, unknown>) => ({
@@ -47,7 +54,7 @@ export function toOAuthConfig(o: ResolvedOidc) {
     clientSecret: o.clientSecret,
     scopes: o.scopes,
     // Not disableImplicitSignUp: a client lifts that one with `requestSignUp: true` (#200).
-    disableSignUp: !o.allowSignUp,
+    disableSignUp: !o.allowSignUp || !registrationOpen,
     ...(o.pkce ? { pkce: true } : {}),
     ...(o.authorizationUrl ? { authorizationUrl: o.authorizationUrl } : {}),
     ...(o.tokenUrl ? { tokenUrl: o.tokenUrl } : {}),
@@ -69,6 +76,8 @@ const ADMIN_PLUGIN_PATHS = pluginEndpointPaths("admin");
 
 export async function buildOptions(): Promise<BetterAuthOptions> {
   const credentialsEnabled = (await appSettings.get<boolean>("credentials_enabled")) ?? true;
+  // SSO sign-up also needs open registration: the IdP round trip can't carry an invite token.
+  const registrationOpen = (await appSettings.get<string>("registration_mode")) === "OPEN";
   const minPasswordLength = await getMinPasswordLength();
   const appName = await getAppName();
   const providers = await providerCache.get();
@@ -82,11 +91,11 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
   > = {};
   const oidcProviders: ResolvedOidc[] = [];
   for (const p of providers) {
-    if (p.type === "google" && p.clientId && p.clientSecretEnc) {
+    if (p.type === "google" && isServedProvider(p)) {
       socialProviders.google = {
         clientId: p.clientId,
         clientSecret: decrypt(p.clientSecretEnc, dataKey),
-        disableSignUp: !p.allowSignUp,
+        disableSignUp: !p.allowSignUp || !registrationOpen,
         // POST /sign-in/social with an idToken ignores disableSignUp (#200); only the redirect flow is used.
         disableIdTokenSignIn: true,
       };
@@ -96,7 +105,9 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
   }
 
   const oidcPlugin =
-    oidcProviders.length > 0 ? [genericOAuth({ config: oidcProviders.map(toOAuthConfig) })] : [];
+    oidcProviders.length > 0
+      ? [genericOAuth({ config: oidcProviders.map((o) => toOAuthConfig(o, registrationOpen)) })]
+      : [];
 
   return {
     appName,
@@ -125,9 +136,13 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
       "/two-factor/generate-backup-codes",
       "/two-factor/send-otp",
       "/two-factor/verify-otp",
-      // Linking is explicit only; the Settings flow will go through Server Actions (#200, #204).
+      // Linking is explicit only: Settings > Security starts it through Server Actions (#200, #204).
       "/link-social",
       "/oauth2/link",
+      // Unused, and they would hand IdP tokens or userinfo to the browser (#204).
+      "/get-access-token",
+      "/refresh-token",
+      "/account-info",
       // The admin plugin is kept for its ban check; its endpoints would bypass app permissions,
       // the last-super-admin lock and audit (#200).
       ...ADMIN_PLUGIN_PATHS,
@@ -164,6 +179,27 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
         },
       },
       account: {
+        // Link callbacks (Settings > Security, #204) create the row from the OAuth state's `link`.
+        // Only create.before still runs inside the request state, so it flags the endpoint context.
+        create: {
+          before: async (account, ctx) => {
+            if (!ctx) return;
+            const state = await getOAuthState().catch(() => null);
+            if (state?.link?.userId === account.userId) linkRequests.add(ctx);
+          },
+          after: async (account, ctx) => {
+            if (!ctx || !linkRequests.delete(ctx)) return;
+            try {
+              await logEvent({
+                userId: account.userId,
+                action: "auth.identity.linked",
+                metadata: { providerId: account.providerId },
+              });
+            } catch {
+              // best-effort
+            }
+          },
+        },
         update: {
           // A credential account's row updates when the password is reset or
           // changed → audit + security alert. Skipped for OIDC token refreshes
