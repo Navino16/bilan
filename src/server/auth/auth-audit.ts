@@ -1,6 +1,7 @@
 import { createAuthMiddleware, getSessionFromCtx, isAPIError } from "better-auth/api";
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
+import { resolveClientIp } from "@/server/http/client-ip";
 import {
   notifyNewLogin,
   notifyPasskeyAdded,
@@ -134,7 +135,7 @@ export async function auditAuthRequest(ctx: HookContext): Promise<void> {
     }
     const h = ctx.headers;
     const origin = {
-      ip: h?.get("x-forwarded-for")?.split(",")[0]?.trim() ?? h?.get("x-real-ip") ?? null,
+      ip: resolveClientIp(h),
       userAgent: h?.get("user-agent") ?? null,
       at: new Date(),
     };

@@ -23,6 +23,7 @@ export type AuthProviderDefaults = {
   issuer: string | null;
   clientId: string | null;
   scopes: string | null;
+  allowSignUp: boolean;
   config: {
     pkce?: boolean;
     authorizationUrl?: string;
@@ -105,6 +106,23 @@ export function AuthProviderForm({
             <option value="true">{t("on")}</option>
             <option value="false">{t("off")}</option>
           </NativeSelect>
+        </div>
+      </div>
+      <div className="flex items-start gap-2">
+        <input
+          id={`${prefix}-allowSignUp`}
+          name="allowSignUp"
+          type="checkbox"
+          value="true"
+          defaultChecked={provider?.allowSignUp ?? false}
+          aria-describedby={`${prefix}-allowSignUp-hint`}
+          className="mt-0.5 size-4"
+        />
+        <div className="space-y-1">
+          <Label htmlFor={`${prefix}-allowSignUp`}>{t("allowSignUp")}</Label>
+          <p id={`${prefix}-allowSignUp-hint`} className="text-muted-foreground text-xs">
+            {t("allowSignUpHint")}
+          </p>
         </div>
       </div>
 

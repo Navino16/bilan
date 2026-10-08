@@ -188,6 +188,8 @@ model AuthProvider {
   clientSecretEnc String?  @db.Text
   scopes          String?
   config          Json?
+  // OIDC/Google only: an unknown IdP user may create an account on first sign-in (#200).
+  allowSignUp     Boolean  @default(false)
   updatedAt       DateTime @updatedAt
   updatedById     String?
 }

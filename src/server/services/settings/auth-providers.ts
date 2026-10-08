@@ -34,6 +34,7 @@ export const providerSchema = z
     userInfoUrl: z.url().optional().nullable(),
     mapName: z.string().optional().nullable(),
     mapEmail: z.string().optional().nullable(),
+    allowSignUp: z.boolean().optional(),
   })
   .superRefine((p, ctx) => {
     // Better Auth's built-in Google provider owns the "google" providerId.
@@ -192,6 +193,7 @@ function columns(p: ParsedProvider, actorId: string) {
     clientId: p.clientId || null,
     scopes: p.scopes || null,
     config: buildAdvancedConfig(p) ?? Prisma.DbNull,
+    allowSignUp: p.type !== "credentials" && (p.allowSignUp ?? false),
     updatedById: actorId,
   };
 }
@@ -201,7 +203,7 @@ function auditFields(row: AuthProvider, actor: { id: string }) {
     userId: actor.id,
     entity: "AuthProvider",
     entityId: row.id,
-    metadata: { key: row.key, enabled: row.enabled },
+    metadata: { key: row.key, enabled: row.enabled, allowSignUp: row.allowSignUp },
   };
 }
 

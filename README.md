@@ -57,6 +57,9 @@ Every variable of `app.env` and `db.env` is mandatory:
 | `app.env` | `DATABASE_URL`                                                          | `mysql://bilan:<MARIADB_PASSWORD>@mariadb:3306/bilan`                  |
 | `db.env`  | `MARIADB_ROOT_PASSWORD`, `MARIADB_PASSWORD`                             | `openssl rand -hex 24` each (hex, because it goes into `DATABASE_URL`) |
 
+`app.env` also takes an optional `TRUSTED_IP_HEADER`, covered under
+[Client IP behind the reverse proxy](#client-ip-behind-the-reverse-proxy).
+
 Optional, from the shell or a `.env` next to the compose file: `BILAN_VERSION` (image tag,
 default `latest`; use `develop` until the first release is tagged) and `BILAN_PORT`
 (default `3000`).
@@ -93,6 +96,24 @@ Overriding its command skips the migration and gives a shell to repair it:
 To upgrade, set the new `BILAN_VERSION`, take that release's `docker-compose.prod.yml` if it
 changed, then
 `docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d`.
+
+### Client IP behind the reverse proxy
+
+Rate limits, the sessions list and new-login alerts use the client IP that the reverse proxy
+puts in a request header. `TRUSTED_IP_HEADER` in `app.env` names that header:
+
+- `x-forwarded-for` (default): Bilan reads the **last** entry, the peer your proxy saw.
+  Earlier entries come from the client and can be forged. Traefik and Caddy replace a value
+  from an untrusted client with their own; nginx (`$proxy_add_x_forwarded_for`) appends the
+  peer to it. Either way the last entry is the client.
+- A single-value header your proxy overwrites, e.g. `x-real-ip` (Traefik sets it). Bilan
+  reads it as is. Use this when several proxies are chained, because the last
+  `x-forwarded-for` entry is then the previous proxy, not the client.
+- `cf-connecting-ip` behind Cloudflare: only safe if Traefik accepts connections from
+  Cloudflare's addresses alone, otherwise anyone reaching Traefik directly can forge it.
+
+The app trusts the header blindly, so only the proxy may reach the app port: set
+`BILAN_PORT=127.0.0.1:3000`, use a Docker network shared with the proxy, or firewall it.
 
 ## Scheduled jobs
 

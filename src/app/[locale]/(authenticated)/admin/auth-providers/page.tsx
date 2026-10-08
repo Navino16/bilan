@@ -36,6 +36,7 @@ export default async function AdminAuthProvidersPage() {
           issuer: p.issuer,
           clientId: p.clientId,
           scopes: p.scopes,
+          allowSignUp: p.allowSignUp,
           config: (p.config as AuthProviderDefaults["config"]) ?? null,
         };
         const typeKey = TYPE_KEY[p.type as keyof typeof TYPE_KEY];

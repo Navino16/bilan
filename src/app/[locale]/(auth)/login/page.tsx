@@ -10,6 +10,13 @@ export const dynamic = "force-dynamic";
 
 export const generateMetadata = pageTitle("login");
 
+// Failed OAuth/OIDC callbacks land here through onAPIError.errorURL, with an `error` code.
+const SSO_ERRORS = new Map<string, SsoError>([
+  ["banned", "disabled"],
+  ["signup_disabled", "ssoSignUpDisabled"],
+  ["account_not_linked", "ssoNotLinked"],
+]);
+
 export default async function LoginPage({
   params,
   searchParams,
@@ -32,11 +39,8 @@ export default async function LoginPage({
   if (await getCurrentUser()) redirect(redirectTo);
   const notice: LoginNotice | undefined =
     deleted === "1" ? "accountDeleted" : reset === "1" ? "passwordReset" : undefined;
-  // Better Auth's onAPIError.errorURL lands failed OAuth/OIDC callbacks here.
   const ssoError: SsoError | undefined = error
-    ? error === "banned"
-      ? "disabled"
-      : "ssoFailed"
+    ? (SSO_ERRORS.get(String(error)) ?? "ssoFailed")
     : undefined;
 
   return (

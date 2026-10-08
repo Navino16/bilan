@@ -1,9 +1,10 @@
-import { betterAuth, type BetterAuthOptions } from "better-auth";
+import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { genericOAuth } from "better-auth/plugins";
 import { nextCookies } from "better-auth/next-js";
 import { db } from "@/server/db";
 import { env } from "@/env";
+import { CLIENT_IP_HEADER } from "@/server/http/client-ip";
 import { dataKey } from "@/server/crypto/keys";
 import { decrypt } from "@/server/crypto/encryption";
 import {
@@ -30,7 +31,7 @@ const CACHE_TTL_MS = 60_000;
 // Map a resolved OIDC row to a generic-oauth config entry. discoveryUrl is the
 // default; explicit endpoints (when set) override it. A claim mapping builds a
 // mapProfileToUser so the admin can pick which userinfo claims feed name/email.
-function toOAuthConfig(o: ResolvedOidc) {
+export function toOAuthConfig(o: ResolvedOidc) {
   const mapProfileToUser =
     o.mapName || o.mapEmail
       ? (profile: Record<string, unknown>) => ({
@@ -45,6 +46,8 @@ function toOAuthConfig(o: ResolvedOidc) {
     clientId: o.clientId,
     clientSecret: o.clientSecret,
     scopes: o.scopes,
+    // Not disableImplicitSignUp: a client lifts that one with `requestSignUp: true` (#200).
+    disableSignUp: !o.allowSignUp,
     ...(o.pkce ? { pkce: true } : {}),
     ...(o.authorizationUrl ? { authorizationUrl: o.authorizationUrl } : {}),
     ...(o.tokenUrl ? { tokenUrl: o.tokenUrl } : {}),
@@ -53,7 +56,18 @@ function toOAuthConfig(o: ResolvedOidc) {
   };
 }
 
-async function buildOptions(): Promise<BetterAuthOptions> {
+function pluginEndpointPaths(pluginId: string): string[] {
+  const plugin: BetterAuthPlugin | undefined = authPlugins.find((p) => p.id === pluginId);
+  const paths: unknown[] = Object.values(plugin?.endpoints ?? {}).map((e) => e.path);
+  if (paths.length === 0 || !paths.every((p): p is string => typeof p === "string")) {
+    throw new Error(`[bilan] cannot list the ${pluginId} plugin endpoints to disable`);
+  }
+  return paths;
+}
+
+const ADMIN_PLUGIN_PATHS = pluginEndpointPaths("admin");
+
+export async function buildOptions(): Promise<BetterAuthOptions> {
   const credentialsEnabled = (await appSettings.get<boolean>("credentials_enabled")) ?? true;
   const minPasswordLength = await getMinPasswordLength();
   const appName = await getAppName();
@@ -62,13 +76,19 @@ async function buildOptions(): Promise<BetterAuthOptions> {
   // Compose enabled providers out of the DB: Google as a built-in social
   // provider, every "oidc" row as a generic-oauth config (one plugin, many
   // configs). Adding/enabling a row + invalidateAuthCache() hot-reloads them.
-  const socialProviders: Record<string, { clientId: string; clientSecret: string }> = {};
+  const socialProviders: Record<
+    string,
+    { clientId: string; clientSecret: string; disableSignUp: boolean; disableIdTokenSignIn: true }
+  > = {};
   const oidcProviders: ResolvedOidc[] = [];
   for (const p of providers) {
     if (p.type === "google" && p.clientId && p.clientSecretEnc) {
       socialProviders.google = {
         clientId: p.clientId,
         clientSecret: decrypt(p.clientSecretEnc, dataKey),
+        disableSignUp: !p.allowSignUp,
+        // POST /sign-in/social with an idToken ignores disableSignUp (#200); only the redirect flow is used.
+        disableIdTokenSignIn: true,
       };
     }
     const oidc = resolveOidcProvider(p);
@@ -86,21 +106,41 @@ async function buildOptions(): Promise<BetterAuthOptions> {
     // Failed OAuth/OIDC callbacks (incl. a disabled account) land on the localized login
     // page — the proxy adds the locale — instead of Better Auth's English error page.
     onAPIError: { errorURL: `${env.APP_URL.replace(/\/$/, "")}/login` },
-    // HTTP-only block (checked in the router, not by auth.api.*): these flows go through
-    // Server Actions that enforce the registration mode, rate limits and audit (#197).
+    // HTTP-only block: the router 404s these exact paths (no wildcards); auth.api.* still works.
     disabledPaths: [
+      // Wrapped by Server Actions that add the registration mode, rate limits and audit (#197, #200).
       "/sign-up/email",
       "/verify-password",
       "/change-password",
       "/request-password-reset",
       "/reset-password",
+      "/two-factor/enable",
+      "/two-factor/disable",
+      // Unused: arbitrary profile image/name, self-set impersonatedBy, credential removal,
+      // password-gated 2FA secret/backup-code reads, email OTP (not configured) (#200).
+      "/update-user",
+      "/update-session",
+      "/unlink-account",
+      "/two-factor/get-totp-uri",
+      "/two-factor/generate-backup-codes",
+      "/two-factor/send-otp",
+      "/two-factor/verify-otp",
+      // Linking is explicit only; the Settings flow will go through Server Actions (#200, #204).
+      "/link-social",
+      "/oauth2/link",
+      // The admin plugin is kept for its ban check; its endpoints would bypass app permissions,
+      // the last-super-admin lock and audit (#200).
+      ...ADMIN_PLUGIN_PATHS,
     ],
+    // Rate limits and session IPs use the proxy-resolved IP, never a raw client header.
+    advanced: { ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] } },
     database: prismaAdapter(db, { provider: "mysql" }),
     // Map Better Auth's "account" model onto our renamed Prisma model
     // `AuthAccount` (delegate `authAccount`) — we keep BankAccount free of the
     // auth namespace. In better-auth >= 1.6 model renaming moved from the
     // adapter `schema` config to the top-level model options.
-    account: { modelName: "authAccount" },
+    // No implicit linking by email: an SSO identity signs in only once linked or SSO-created (#200).
+    account: { modelName: "authAccount", accountLinking: { disableImplicitLinking: true } },
     databaseHooks: {
       user: {
         update: {

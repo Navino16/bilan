@@ -19,7 +19,9 @@
         "passkeyNotFound": "Cette clé d'accès n'est plus reconnue. Connectez-vous avec votre mot de passe.",
         "passkeyFailed": "La connexion par clé d'accès a été annulée ou n'a pas abouti.",
         "disabled": "Ce compte est désactivé. Contactez l'administrateur de l'instance.",
-        "ssoFailed": "La connexion via le fournisseur d'identité a échoué. Réessayez."
+        "ssoFailed": "La connexion via le fournisseur d'identité a échoué. Réessayez.",
+        "ssoSignUpDisabled": "Aucun compte Bilan ne correspond à cette identité et ce fournisseur n'autorise pas l'inscription. Demandez un compte à l'administrateur de l'instance.",
+        "ssoNotLinked": "Aucun compte n'est lié à cette identité. Connectez-vous puis liez-la depuis Paramètres > Sécurité."
       },
       "or": "ou",
       "passkey": "Se connecter avec une clé d'accès",
@@ -1013,7 +1015,10 @@
       "working": "En cours…",
       "error": {
         "BAD_PASSWORD": "Mot de passe incorrect.",
-        "BAD_CODE": "Code invalide. Réessayez."
+        "BAD_CODE": "Code invalide. Réessayez.",
+        "RATE_LIMITED": "Trop de tentatives. Réessayez plus tard.",
+        "rateLimitedFor": "Trop de tentatives. Réessayez dans {minutes, plural, one {# minute} other {# minutes}}.",
+        "FAILED": "Une erreur est survenue. Réessayez."
       },
       "passwordCard": {
         "overline": "Mot de passe",
@@ -1311,6 +1316,8 @@
       "enabled": "État",
       "on": "Activé",
       "off": "Désactivé",
+      "allowSignUp": "Autoriser l'inscription",
+      "allowSignUpHint": "Crée un compte Bilan à la première connexion d'une identité liée à aucun compte. Décoché, ce fournisseur ne connecte que les identités déjà liées à un compte. Une adresse e-mail identique ne suffit pas : un utilisateur existant lie l'identité depuis Paramètres > Sécurité.",
       "oidcSection": "Options OIDC",
       "issuer": "Issuer",
       "clientId": "Client ID",
@@ -1410,7 +1417,9 @@
           },
           "2fa": {
             "enabled": "Double authentification activée",
-            "disabled": "Double authentification désactivée"
+            "disabled": "Double authentification désactivée",
+            "enable_failed": "Échec d'activation de la double authentification",
+            "disable_failed": "Échec de désactivation de la double authentification"
           },
           "signup": "Compte créé (installation)",
           "register": {
@@ -1575,6 +1584,7 @@
       "description": "Optionnel — connexion via un fournisseur externe (Google, OIDC). Laissez vide pour en ajouter plus tard dans l'administration.",
       "redirectUri": "URL de redirection",
       "redirectUriHint": "À enregistrer comme URI de redirection autorisée chez votre fournisseur d'identité.",
+      "signUpHint": "Ce fournisseur ne connecte que les identités liées à un compte Bilan, et une adresse e-mail identique ne les lie pas. Pour qu'il crée un compte à la première connexion, autorisez l'inscription dans Administration > Fournisseurs d'authentification.",
       "displayName": "Nom affiché",
       "issuer": "Issuer (URL)",
       "clientId": "Client ID",

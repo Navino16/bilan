@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { AuthProvider } from "@prisma/client";
 import { resolveOidcProvider } from "@/server/auth/providers";
+import { toOAuthConfig } from "@/server/auth";
 import { encrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
 
@@ -16,6 +17,7 @@ function row(overrides: Partial<AuthProvider>): AuthProvider {
     clientSecretEnc: encrypt("the-secret", dataKey),
     scopes: "openid,email",
     config: null,
+    allowSignUp: false,
     updatedAt: new Date(0),
     updatedById: null,
     ...overrides,
@@ -55,5 +57,13 @@ describe("resolveOidcProvider", () => {
   it("returns null for non-oidc or incomplete rows", () => {
     expect(resolveOidcProvider(row({ type: "credentials" }))).toBeNull();
     expect(resolveOidcProvider(row({ clientSecretEnc: null }))).toBeNull();
+  });
+
+  it("refuses unknown IdP users unless the row allows sign-up (#200)", () => {
+    const closed = toOAuthConfig(resolveOidcProvider(row({}))!);
+    expect(closed.disableSignUp).toBe(true);
+    expect(closed).not.toHaveProperty("disableImplicitSignUp");
+    const open = toOAuthConfig(resolveOidcProvider(row({ allowSignUp: true }))!);
+    expect(open.disableSignUp).toBe(false);
   });
 });

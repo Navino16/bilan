@@ -38,6 +38,7 @@ export type ResolvedOidc = {
   userInfoUrl?: string;
   mapName?: string;
   mapEmail?: string;
+  allowSignUp: boolean;
 };
 
 type AdvancedConfig = {
@@ -68,5 +69,6 @@ export function resolveOidcProvider(row: AuthProvider): ResolvedOidc | null {
     userInfoUrl: cfg.userInfoUrl,
     mapName: cfg.mapName,
     mapEmail: cfg.mapEmail,
+    allowSignUp: row.allowSignUp,
   };
 }

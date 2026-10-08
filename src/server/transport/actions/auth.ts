@@ -1,6 +1,6 @@
 "use server";
 
-import { headers as nextHeaders } from "next/headers";
+import { authHeaders } from "@/server/http/auth-headers";
 import { env } from "@/env";
 import { isAPIError } from "better-auth/api";
 import { getAuth } from "@/server/auth";
@@ -47,7 +47,7 @@ export async function loginAction(
   // (login-guard.ts, auth-audit.ts) so direct API sign-ins get them too.
   try {
     const auth = await getAuth();
-    const res = await auth.api.signInEmail({ body: parsed.data, headers: await nextHeaders() });
+    const res = await auth.api.signInEmail({ body: parsed.data, headers: await authHeaders() });
     if ("twoFactorRedirect" in res && res.twoFactorRedirect) return { ok: true, twoFactor: true };
     return { ok: true };
   } catch (e) {
@@ -101,7 +101,7 @@ export async function registerAction(
     const auth = await getAuth();
     await auth.api.signUpEmail({
       body: { email: parsed.data.email, password: parsed.data.password, name: parsed.data.name },
-      headers: await nextHeaders(),
+      headers: await authHeaders(),
     });
     await logEvent({ action: "auth.register.success", metadata: { email: parsed.data.email } });
     return { ok: true };
@@ -188,19 +188,19 @@ export async function changePasswordAction(
   }
 
   const { currentPassword, newPassword, revokeOtherSessions } = parsed.data;
-  return changePassword(await nextHeaders(), { currentPassword, newPassword, revokeOtherSessions });
+  return changePassword(await authHeaders(), { currentPassword, newPassword, revokeOtherSessions });
 }
 
 export async function revokeSessionAction(sessionId: string): Promise<AuthActionState> {
   await requireSession();
   const parsed = revokeSessionSchema.safeParse(sessionId);
   if (!parsed.success) return { ok: false, error: "INVALID" };
-  const res = await revokeSession(await nextHeaders(), parsed.data);
+  const res = await revokeSession(await authHeaders(), parsed.data);
   return res.ok ? { ok: true } : res;
 }
 
 export async function revokeOtherSessionsAction(): Promise<AuthActionState> {
   await requireSession();
-  const res = await revokeOtherSessions(await nextHeaders());
+  const res = await revokeOtherSessions(await authHeaders());
   return res.ok ? { ok: true } : res;
 }

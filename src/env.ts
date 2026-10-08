@@ -6,6 +6,11 @@ const base64Key32 = makeValidator((v) => {
   return v;
 });
 
+const headerName = makeValidator((v) => {
+  if (!/^[A-Za-z0-9-]+$/.test(v)) throw new Error("must be an HTTP header name");
+  return v.toLowerCase();
+});
+
 const throwingReporter = <T>({ errors }: { errors: Partial<Record<keyof T, Error>> }) => {
   const keys = Object.keys(errors);
   if (keys.length > 0) {
@@ -22,6 +27,8 @@ const spec = {
   SEARCH_TOKEN_KEY: base64Key32(),
   // Optional: enables the token-guarded cron routes. Unset → they 404 (inert).
   CRON_SECRET: str({ default: "" }),
+  // Request header carrying the client IP, as set by the reverse proxy (README "Self-hosting").
+  TRUSTED_IP_HEADER: headerName({ default: "x-forwarded-for" }),
 } satisfies Record<string, ValidatorSpec<unknown>>;
 
 export function parseEnv(source: Record<string, string | undefined>) {

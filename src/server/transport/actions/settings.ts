@@ -59,6 +59,7 @@ export async function saveAuthProviderAction(
     userInfoUrl: optional(str(formData, "userInfoUrl")),
     mapName: optional(str(formData, "mapName")),
     mapEmail: optional(str(formData, "mapEmail")),
+    allowSignUp: bool(formData, "allowSignUp"),
   });
   if (!parsed.success) return { ok: false, error: "INVALID" };
   try {
