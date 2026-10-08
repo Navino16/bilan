@@ -1,6 +1,5 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -9,32 +8,36 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { adminCreateUserAction } from "@/server/transport/actions/admin";
 import { NativeSelect } from "@/components/ui/native-select";
+import { NAME_MAX } from "@/lib/validation/name";
+import { useActionForm } from "@/components/forms/use-action-form";
+import { FieldError } from "@/components/forms/field-error";
 
 export function CreateUserForm() {
   const t = useTranslations("admin.users");
   const locale = useLocale();
   const router = useRouter();
-  const formRef = useRef<HTMLFormElement>(null);
-  const [state, action, pending] = useActionState(adminCreateUserAction, null);
-
-  useEffect(() => {
-    if (state?.ok) {
-      formRef.current?.reset();
-      router.refresh();
-    }
-  }, [state, router]);
+  const form = useActionForm(adminCreateUserAction, { onSuccess: () => router.refresh() });
+  const { state, pending } = form;
 
   return (
-    <form ref={formRef} action={action} className="space-y-4">
+    <form {...form.formProps} className="space-y-4">
       <input type="hidden" name="locale" value={locale} />
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="cu-name">{t("name")}</Label>
-          <Input id="cu-name" name="name" required />
+          <Input
+            id="cu-name"
+            name="name"
+            required
+            maxLength={NAME_MAX}
+            {...form.fieldProps("name")}
+          />
+          <FieldError form={form} name="name" />
         </div>
         <div className="space-y-2">
           <Label htmlFor="cu-email">{t("email")}</Label>
-          <Input id="cu-email" name="email" type="email" required />
+          <Input id="cu-email" name="email" type="email" required {...form.fieldProps("email")} />
+          <FieldError form={form} name="email" />
         </div>
       </div>
       <div className="space-y-2">

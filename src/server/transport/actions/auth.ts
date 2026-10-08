@@ -20,10 +20,11 @@ import {
   changePasswordSchema,
   revokeSessionSchema,
 } from "./auth-schemas";
+import { invalidInput, type FieldErrors } from "@/lib/validation/field-errors";
 
 export type AuthActionState =
   | { ok: true; twoFactor?: true }
-  | { ok: false; error: string; retryAfter?: number }
+  | { ok: false; error: string; retryAfter?: number; fieldErrors?: FieldErrors }
   | null;
 
 // Rate-limit key: the target account's email. X-Forwarded-For is client-
@@ -40,8 +41,9 @@ export async function loginAction(
   _prev: AuthActionState,
   formData: FormData,
 ): Promise<AuthActionState> {
-  const parsed = loginSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { ok: false, error: "INVALID" };
+  const input = Object.fromEntries(formData);
+  const parsed = loginSchema.safeParse(input);
+  if (!parsed.success) return invalidInput(parsed.error, input);
 
   // Rate limiting, audit and the new-login alert run in the Better Auth hooks
   // (login-guard.ts, auth-audit.ts) so direct API sign-ins get them too.
@@ -65,10 +67,11 @@ export async function registerAction(
   _prev: AuthActionState,
   formData: FormData,
 ): Promise<AuthActionState> {
-  const parsed = registerSchema.safeParse(Object.fromEntries(formData));
+  const input = Object.fromEntries(formData);
+  const parsed = registerSchema.safeParse(input);
   if (!parsed.success) {
     const mismatch = parsed.error.issues.some((i) => i.message === "MISMATCH");
-    return { ok: false, error: mismatch ? "MISMATCH" : "INVALID" };
+    return invalidInput(parsed.error, input, mismatch ? "MISMATCH" : "INVALID");
   }
 
   const bucket = registerLimiter.consume(rlKey(parsed.data.email));
@@ -124,8 +127,9 @@ export async function resetRequestAction(
   _prev: AuthActionState,
   formData: FormData,
 ): Promise<AuthActionState> {
-  const parsed = resetRequestSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { ok: false, error: "INVALID" };
+  const input = Object.fromEntries(formData);
+  const parsed = resetRequestSchema.safeParse(input);
+  if (!parsed.success) return invalidInput(parsed.error, input);
 
   const bucket = resetLimiter.consume(rlKey(parsed.data.email));
   if (!bucket.allowed)
@@ -149,8 +153,9 @@ export async function resetConfirmAction(
   _prev: AuthActionState,
   formData: FormData,
 ): Promise<AuthActionState> {
-  const parsed = resetConfirmSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { ok: false, error: "INVALID" };
+  const input = Object.fromEntries(formData);
+  const parsed = resetConfirmSchema.safeParse(input);
+  if (!parsed.success) return invalidInput(parsed.error, input);
 
   try {
     const auth = await getAuth();
@@ -171,10 +176,11 @@ export async function changePasswordAction(
   formData: FormData,
 ): Promise<AuthActionState> {
   const user = await requireSession();
-  const parsed = changePasswordSchema.safeParse(Object.fromEntries(formData));
+  const input = Object.fromEntries(formData);
+  const parsed = changePasswordSchema.safeParse(input);
   if (!parsed.success) {
     const mismatch = parsed.error.issues.some((i) => i.message === "MISMATCH");
-    return { ok: false, error: mismatch ? "MISMATCH" : "INVALID" };
+    return invalidInput(parsed.error, input, mismatch ? "MISMATCH" : "INVALID");
   }
 
   const bucket = changePasswordLimiter.consume(user.id);

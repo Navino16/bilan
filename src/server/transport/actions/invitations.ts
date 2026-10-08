@@ -3,7 +3,8 @@
 import { requireSession } from "@/server/auth/permissions";
 import { invitationAcceptLimiter } from "@/server/auth/rate-limit";
 import { GroupAccessError } from "@/server/services/groups";
-import { GROUP_ROLES, type GroupRole } from "@/lib/validation/group";
+import { invitationInputSchema } from "@/lib/validation/group";
+import { invalidInput, type FormFailure } from "@/lib/validation/field-errors";
 import {
   createInvitation,
   revokeInvitation,
@@ -11,7 +12,7 @@ import {
   InvitationError,
 } from "@/server/services/groups/invitations";
 
-export type InvitationActionState = { ok: true } | { ok: false; error: string } | null;
+export type InvitationActionState = { ok: true } | FormFailure | null;
 export type AcceptActionState =
   | { ok: true; groupId: string }
   | { ok: false; error: string; hint?: string }
@@ -30,11 +31,14 @@ export async function createInvitationAction(
 ): Promise<InvitationActionState> {
   const user = await requireSession();
   const groupId = String(formData.get("groupId") ?? "");
-  const email = String(formData.get("email") ?? "");
-  const role = String(formData.get("role") ?? "MEMBER") as GroupRole;
-  if (!groupId || !email || !GROUP_ROLES.includes(role)) return { ok: false, error: "INVALID" };
+  if (!groupId) return { ok: false, error: "INVALID" };
+  const parsed = invitationInputSchema.safeParse({
+    email: String(formData.get("email") ?? ""),
+    role: String(formData.get("role") ?? "MEMBER"),
+  });
+  if (!parsed.success) return invalidInput(parsed.error);
   try {
-    await createInvitation({ groupId, email, role }, { id: user.id });
+    await createInvitation({ groupId, ...parsed.data }, { id: user.id });
   } catch (e) {
     return fail(e);
   }

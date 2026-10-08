@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Check, Info, Lock, Plus } from "lucide-react";
@@ -20,8 +20,16 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { MOBILE_QUERY, useIsMobile } from "@/hooks/use-is-mobile";
 import { cn } from "@/lib/utils";
-import { ACCOUNT_TYPES, type AccountType } from "@/lib/validation/account";
+import {
+  ACCOUNT_BANK_NAME_MAX,
+  ACCOUNT_IBAN_MAX,
+  ACCOUNT_NAME_MAX,
+  ACCOUNT_TYPES,
+  type AccountType,
+} from "@/lib/validation/account";
 import { createAccountAction, updateAccountAction } from "@/server/transport/actions/accounts";
+import { useActionForm } from "@/components/forms/use-action-form";
+import { FieldError } from "@/components/forms/field-error";
 
 // Light-mode hex values of the design's `--cat-*` palette. Stored as plain hex
 // (schema validates `#rrggbb`) so the chosen accent is theme-independent.
@@ -69,8 +77,6 @@ export function AccountForm({
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = controlledOpen ?? uncontrolledOpen;
   const setOpenRaw = onOpenChange ?? setUncontrolledOpen;
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
   const liveMobile = useIsMobile();
   // Freeze the mobile/desktop choice while the form is open: swapping the root
   // element (Sheet↔Dialog) mid-edit would remount the subtree and wipe typed
@@ -98,32 +104,30 @@ export function AccountForm({
       setType((account?.type as AccountType) ?? "CHECKING");
       setColor(account?.color ?? DEFAULT_COLOR);
       setRemoveIban(false);
-      setError(null);
+      form.reset();
     }
     setOpenRaw(next);
   }
   const colorPickerRef = useRef<HTMLInputElement>(null);
   const isCustomColor = !COLOR_PALETTE.includes(color as (typeof COLOR_PALETTE)[number]);
 
-  // Drive the action manually so the dialog closes on success without a
-  // setState-in-effect (banned by react-hooks/set-state-in-effect).
-  function handleAction(formData: FormData) {
-    formData.set("type", type);
-    formData.set("color", color);
-    if (removeIban) formData.set("removeIban", "1");
-    startTransition(async () => {
-      const act = mode === "create" ? createAccountAction : updateAccountAction;
-      const result = await act(null, formData);
-      if (result?.ok) {
-        setError(null);
-        setRemoveIban(false);
-        setOpen(false);
+  const form = useActionForm(
+    (prev: Awaited<ReturnType<typeof createAccountAction>>, formData: FormData) => {
+      formData.set("type", type);
+      formData.set("color", color);
+      if (removeIban) formData.set("removeIban", "1");
+      return (mode === "create" ? createAccountAction : updateAccountAction)(prev, formData);
+    },
+    {
+      onSuccess: (_, { stale }) => {
+        if (!stale) {
+          setRemoveIban(false);
+          setOpen(false);
+        }
         router.refresh();
-      } else {
-        setError(result?.error ?? "FAILED");
-      }
-    });
-  }
+      },
+    },
+  );
 
   const body = (
     <>
@@ -139,7 +143,7 @@ export function AccountForm({
         </DialogDescription>
       </DialogHeader>
 
-      <form action={handleAction} className="flex min-h-0 flex-1 flex-col">
+      <form {...form.formProps} className="flex min-h-0 flex-1 flex-col">
         <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-5">
           {mode === "edit" && account && <input type="hidden" name="id" value={account.id} />}
 
@@ -174,7 +178,10 @@ export function AccountForm({
                 defaultValue={account?.name}
                 placeholder={t("namePlaceholder")}
                 required
+                maxLength={ACCOUNT_NAME_MAX}
+                {...form.fieldProps("name")}
               />
+              <FieldError form={form} name="name" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="acc-bankName">{t("bankName")}</Label>
@@ -183,7 +190,10 @@ export function AccountForm({
                 name="bankName"
                 defaultValue={account?.bankName ?? ""}
                 placeholder={t("bankPlaceholder")}
+                maxLength={ACCOUNT_BANK_NAME_MAX}
+                {...form.fieldProps("bankName")}
               />
+              <FieldError form={form} name="bankName" />
             </div>
           </div>
 
@@ -204,9 +214,11 @@ export function AccountForm({
                 }
                 placeholder="0,00"
                 className="font-display text-foreground placeholder:text-muted-foreground w-full border-0 bg-transparent text-lg outline-none"
+                {...form.fieldProps("initialBalance")}
               />
               <span className="text-muted-foreground text-sm">€</span>
             </div>
+            <FieldError form={form} name="initialBalance" />
           </div>
 
           <div className="space-y-2">
@@ -224,8 +236,11 @@ export function AccountForm({
                     : t("ibanPlaceholder")
                 }
                 className="pl-8"
+                maxLength={ACCOUNT_IBAN_MAX}
+                {...form.fieldProps("iban")}
               />
             </div>
+            <FieldError form={form} name="iban" />
             {account?.ibanMasked && (
               <label className="text-muted-foreground flex items-center gap-2 text-xs">
                 <input
@@ -287,9 +302,9 @@ export function AccountForm({
             </div>
           )}
 
-          {error && (
+          {form.error && (
             <Alert variant="destructive">
-              <AlertDescription>{t(`error.${error}`)}</AlertDescription>
+              <AlertDescription>{t(`error.${form.error}`)}</AlertDescription>
             </Alert>
           )}
         </div>
@@ -298,9 +313,9 @@ export function AccountForm({
           <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
             {t("cancel")}
           </Button>
-          <Button type="submit" disabled={pending}>
+          <Button type="submit" disabled={form.pending}>
             <Check />
-            {pending ? t("saving") : mode === "create" ? t("createCta") : t("save")}
+            {form.pending ? t("saving") : mode === "create" ? t("createCta") : t("save")}
           </Button>
         </DialogFooter>
       </form>
@@ -310,7 +325,7 @@ export function AccountForm({
   const handleOpenChange = (next: boolean) => {
     if (next) setOpenMobile(liveMobile); // freeze the layout for this open session
     setOpen(next);
-    if (!next) setError(null);
+    if (!next) form.reset();
   };
 
   // Swap the whole root: a centered Dialog on desktop, a bottom Sheet on mobile.

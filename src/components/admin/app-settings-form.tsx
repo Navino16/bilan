@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, type ReactNode } from "react";
+import { createContext, use, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -8,11 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SectionCard } from "@/components/shell/section-card";
-import {
-  setAppSettingsAction,
-  type SettingsActionState,
-} from "@/server/transport/actions/settings";
+import { setAppSettingsAction } from "@/server/transport/actions/settings";
 import { NativeSelect } from "@/components/ui/native-select";
+import { useActionForm, type ActionForm } from "@/components/forms/use-action-form";
+import { FieldError } from "@/components/forms/field-error";
+
+const CardForm = createContext<ActionForm | null>(null);
 
 function SettingsCard({
   section,
@@ -23,13 +24,11 @@ function SettingsCard({
 }) {
   const t = useTranslations("admin.settings");
   const router = useRouter();
-  const [state, action, pending] = useActionState<SettingsActionState, FormData>(
-    setAppSettingsAction,
-    null,
-  );
-  useEffect(() => {
-    if (state?.ok) router.refresh();
-  }, [state, router]);
+  const form = useActionForm(setAppSettingsAction, {
+    resetOnSuccess: false,
+    onSuccess: () => router.refresh(),
+  });
+  const { state, pending } = form;
 
   return (
     <SectionCard
@@ -37,8 +36,8 @@ function SettingsCard({
       title={t(`${section}.title`)}
       hint={t(`${section}.hint`)}
     >
-      <form action={action} className="space-y-4">
-        {children}
+      <form {...form.formProps} className="space-y-4">
+        <CardForm value={form}>{children}</CardForm>
         <div className="flex items-center gap-3">
           <Button type="submit" disabled={pending}>
             {pending ? t("saving") : t("save")}
@@ -62,13 +61,18 @@ function Field({
 }: {
   settingKey: string;
   label: string;
-  children: (props: { id: string; name: string }) => ReactNode;
+  children: (
+    props: { id: string; name: string } & Partial<ReturnType<ActionForm["fieldProps"]>>,
+  ) => ReactNode;
 }) {
+  const form = use(CardForm);
   const id = `set-${settingKey}`;
+  const name = `s:${settingKey}`;
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
-      {children({ id, name: `s:${settingKey}` })}
+      {children({ id, name, ...form?.fieldProps(name) })}
+      {form && <FieldError form={form} name={name} />}
     </div>
   );
 }

@@ -3,22 +3,25 @@ import { amountSchema } from "./amount";
 
 export const ACCOUNT_TYPES = ["CHECKING", "SAVINGS", "CREDIT", "OTHER"] as const;
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
+export const ACCOUNT_NAME_MAX = 100;
+export const ACCOUNT_BANK_NAME_MAX = 100;
+export const ACCOUNT_IBAN_MAX = 40;
 
 // `iban` is validated for *format* here; mod-97 validity is enforced in the
 // service (which can return a typed error). Empty string === "no IBAN".
 export const accountInputSchema = z.object({
-  name: z.string().trim().min(1).max(100),
+  name: z.string().trim().min(1).max(ACCOUNT_NAME_MAX),
   type: z.enum(ACCOUNT_TYPES),
   iban: z
     .string()
     .trim()
-    .max(40)
+    .max(ACCOUNT_IBAN_MAX)
     .optional()
     .transform((v) => (v ? v : undefined)),
   bankName: z
     .string()
     .trim()
-    .max(100)
+    .max(ACCOUNT_BANK_NAME_MAX)
     .optional()
     .transform((v) => (v ? v : undefined)),
   color: z

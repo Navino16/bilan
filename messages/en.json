@@ -1700,5 +1700,22 @@
       "body": "A budget sets an envelope per category or account over a period and tracks your spending.",
       "cta": "Create my first budget"
     }
+  },
+  "forms": {
+    "fieldError": {
+      "REQUIRED": "This field is required.",
+      "TOO_LONG": "This text is too long.",
+      "TOO_SHORT": "This text is too short.",
+      "TOO_BIG": "This value is too large.",
+      "TOO_SMALL": "This value is too small.",
+      "INVALID_EMAIL": "Invalid email address.",
+      "INVALID_URL": "Invalid URL (https://…).",
+      "INVALID_FORMAT": "Invalid format.",
+      "INVALID": "Invalid value.",
+      "MISMATCH": "The two passwords don’t match.",
+      "AMOUNT_INVALID": "Invalid amount. Examples: -12.34 or 1,234.56.",
+      "AMOUNT_AMBIGUOUS": "Ambiguous amount: write 1234 or 1.23 (no lone thousands separator).",
+      "AMOUNT_PRECISION": "The amount can’t have more than 2 decimals."
+    }
   }
 }

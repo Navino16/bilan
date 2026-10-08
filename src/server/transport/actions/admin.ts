@@ -11,6 +11,7 @@ import {
 } from "@/server/services/signup-tokens";
 import { createSignupTokenSchema, signupTokenExpiry } from "@/lib/validation/signup-token";
 import { logEvent } from "@/server/services/audit";
+import { invalidInput, type FormFailure } from "@/lib/validation/field-errors";
 import {
   adminDeleteUser,
   setUserDisabled,
@@ -19,7 +20,7 @@ import {
   type UserDeletionImpact,
 } from "@/server/services/users/lifecycle";
 
-export type AdminActionState = { ok: true } | { ok: false; error: string } | null;
+export type AdminActionState = { ok: true } | FormFailure | null;
 export type UserLifecycleState = { ok: true } | { ok: false; error: string } | null;
 
 async function requirePerm(key: string): Promise<{ id: string } | null> {
@@ -35,8 +36,9 @@ export async function adminCreateUserAction(
   const actor = await requirePerm("admin.users.create");
   if (!actor) return { ok: false, error: "UNAUTHORIZED" };
 
-  const parsed = adminCreateUserSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { ok: false, error: "INVALID" };
+  const input = Object.fromEntries(formData);
+  const parsed = adminCreateUserSchema.safeParse(input);
+  if (!parsed.success) return invalidInput(parsed.error, input);
 
   try {
     await adminCreateUser(parsed.data, { id: actor.id });
@@ -78,7 +80,7 @@ export async function createSignupTokenAction(
     maxUses: String(formData.get("maxUses") ?? ""),
     expiresInDays: String(formData.get("expiresInDays") ?? ""),
   });
-  if (!parsed.success) return { ok: false, error: "INVALID" };
+  if (!parsed.success) return invalidInput(parsed.error);
   const { description, maxUses, expiresInDays } = parsed.data;
 
   let id: string;

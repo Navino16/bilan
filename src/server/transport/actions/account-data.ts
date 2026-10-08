@@ -6,8 +6,9 @@ import { getAuth } from "@/server/auth";
 import { db } from "@/server/db";
 import { loginLimiter } from "@/server/auth/rate-limit";
 import { deleteOwnAccount, UserAdminError } from "@/server/services/users/lifecycle";
+import type { FormFailure } from "@/lib/validation/field-errors";
 
-export type AccountDataState = { ok: true } | { ok: false; error: string } | null;
+export type AccountDataState = { ok: true } | FormFailure | null;
 
 export async function deleteAccountAction(
   _prev: AccountDataState,
@@ -25,7 +26,7 @@ export async function deleteAccountAction(
 
   if (credential) {
     const password = String(formData.get("password") ?? "");
-    if (!password) return { ok: false, error: "INVALID" };
+    if (!password) return { ok: false, error: "INVALID", fieldErrors: { password: "REQUIRED" } };
     // Rate-limits the password re-auth (own key in the login limiter).
     const bucket = loginLimiter.consume(`delete:${user.id}`);
     if (!bucket.allowed) return { ok: false, error: "RATE_LIMITED" };

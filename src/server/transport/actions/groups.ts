@@ -11,8 +11,17 @@ import {
   GroupAccessError,
 } from "@/server/services/groups";
 import { GROUP_ROLES, type GroupRole } from "@/server/services/groups/roles";
+import { groupInputSchema } from "@/lib/validation/group";
+import { invalidInput, type FormFailure } from "@/lib/validation/field-errors";
 
-export type GroupActionState = { ok: true } | { ok: false; error: string } | null;
+export type GroupActionState = { ok: true } | FormFailure | null;
+
+function groupInput(formData: FormData) {
+  return groupInputSchema.safeParse({
+    name: String(formData.get("name") ?? ""),
+    description: String(formData.get("description") ?? ""),
+  });
+}
 
 // Maps any thrown GroupAccessError (FORBIDDEN/INVALID/LAST_OWNER/NOT_MEMBER) to a
 // single user-facing error code; anything else becomes FAILED.
@@ -25,11 +34,10 @@ export async function createGroupAction(
   formData: FormData,
 ): Promise<GroupActionState> {
   const user = await requireSession();
-  const name = String(formData.get("name") ?? "").trim();
-  const description = String(formData.get("description") ?? "");
-  if (!name) return { ok: false, error: "INVALID" };
+  const parsed = groupInput(formData);
+  if (!parsed.success) return invalidInput(parsed.error);
   try {
-    await createGroup({ name, description }, user.id);
+    await createGroup(parsed.data, user.id);
   } catch (e) {
     return fail(e);
   }
@@ -43,15 +51,10 @@ export async function updateGroupAction(
   const user = await requireSession();
   const id = String(formData.get("id") ?? "");
   if (!id) return { ok: false, error: "INVALID" };
+  const parsed = groupInput(formData);
+  if (!parsed.success) return invalidInput(parsed.error);
   try {
-    await updateGroup(
-      id,
-      {
-        name: String(formData.get("name") ?? ""),
-        description: String(formData.get("description") ?? ""),
-      },
-      { id: user.id },
-    );
+    await updateGroup(id, parsed.data, { id: user.id });
   } catch (e) {
     return fail(e);
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useActionForm } from "@/components/forms/use-action-form";
+import { FieldError } from "@/components/forms/field-error";
 import { createGroupAction, updateGroupAction } from "@/server/transport/actions/groups";
 import { NAME_MAX } from "@/lib/validation/name";
 import { GROUP_DESCRIPTION_MAX } from "@/lib/validation/group";
@@ -43,26 +45,17 @@ export function GroupForm({
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = controlledOpen ?? uncontrolledOpen;
   const setOpen = onOpenChange ?? setUncontrolledOpen;
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
   const liveMobile = useIsMobile();
   // Freeze the mobile/desktop root choice while the form is open (see account-form).
   const [openMobile, setOpenMobile] = useState(liveMobile);
   const isMobile = open ? openMobile : liveMobile;
 
-  function handleAction(formData: FormData) {
-    startTransition(async () => {
-      const act = mode === "create" ? createGroupAction : updateGroupAction;
-      const result = await act(null, formData);
-      if (result?.ok) {
-        setError(null);
-        setOpen(false);
-        router.refresh();
-      } else {
-        setError(result?.error ?? "FAILED");
-      }
-    });
-  }
+  const form = useActionForm(mode === "create" ? createGroupAction : updateGroupAction, {
+    onSuccess: (_, { stale }) => {
+      if (!stale) setOpen(false);
+      router.refresh();
+    },
+  });
 
   const body = (
     <>
@@ -76,7 +69,7 @@ export function GroupForm({
         {mode === "create" && <DialogDescription>{t("createSubtitle")}</DialogDescription>}
       </DialogHeader>
 
-      <form action={handleAction} className="flex min-h-0 flex-1 flex-col">
+      <form {...form.formProps} className="flex min-h-0 flex-1 flex-col">
         <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-5">
           {mode === "edit" && group && <input type="hidden" name="id" value={group.id} />}
           <div className="space-y-2">
@@ -88,7 +81,9 @@ export function GroupForm({
               placeholder={t("namePlaceholder")}
               maxLength={NAME_MAX}
               required
+              {...form.fieldProps("name")}
             />
+            <FieldError form={form} name="name" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="grp-description">{t("description")}</Label>
@@ -99,12 +94,14 @@ export function GroupForm({
               placeholder={t("descriptionPlaceholder")}
               maxLength={GROUP_DESCRIPTION_MAX}
               rows={3}
-              className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 w-full rounded-lg border bg-transparent px-2.5 py-1.5 text-sm outline-none focus-visible:ring-3"
+              {...form.fieldProps("description")}
+              className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive w-full rounded-lg border bg-transparent px-2.5 py-1.5 text-sm outline-none focus-visible:ring-3"
             />
+            <FieldError form={form} name="description" />
           </div>
-          {error && (
+          {form.error && (
             <Alert variant="destructive">
-              <AlertDescription>{t(`error.${error}`)}</AlertDescription>
+              <AlertDescription>{t(`error.${form.error}`)}</AlertDescription>
             </Alert>
           )}
         </div>
@@ -113,9 +110,9 @@ export function GroupForm({
           <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
             {t("cancel")}
           </Button>
-          <Button type="submit" disabled={pending}>
+          <Button type="submit" disabled={form.pending}>
             <Check />
-            {pending ? t("saving") : mode === "create" ? t("createCta") : t("save")}
+            {form.pending ? t("saving") : mode === "create" ? t("createCta") : t("save")}
           </Button>
         </DialogFooter>
       </form>
@@ -125,7 +122,7 @@ export function GroupForm({
   const handleOpenChange = (next: boolean) => {
     if (next) setOpenMobile(liveMobile); // freeze the layout for this open session
     setOpen(next);
-    if (!next) setError(null);
+    if (!next) form.reset();
   };
 
   // Swap the whole root: a centered Dialog on desktop, a bottom Sheet on mobile.
