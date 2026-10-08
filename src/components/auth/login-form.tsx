@@ -138,7 +138,7 @@ function PasswordStep({
       </div>
       <p className="text-muted-foreground text-center text-sm">
         {t("noAccount")}{" "}
-        <Link href={`/${locale}/register`} className="text-foreground hover:underline">
+        <Link href={`/${locale}/register`} className="text-foreground underline underline-offset-4">
           {t("registerLink")}
         </Link>
       </p>

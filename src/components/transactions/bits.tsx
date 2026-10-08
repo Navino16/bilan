@@ -38,7 +38,7 @@ export function CategoryAvatar({
       style={{
         width: size,
         height: size,
-        background: color ?? "var(--ink-3)",
+        background: color ?? "var(--cat-other)",
         fontSize: Math.round(size * 0.46),
         opacity: 0.92,
       }}
@@ -54,7 +54,7 @@ export function CategoryChip({ name, color }: { name: string; color?: string | n
       <span
         aria-hidden
         className="size-2 shrink-0 rounded-full"
-        style={{ background: color ?? "var(--ink-3)" }}
+        style={{ background: color ?? "var(--cat-other)" }}
       />
       <span className="truncate">{name}</span>
     </span>

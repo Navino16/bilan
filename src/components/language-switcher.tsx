@@ -1,13 +1,14 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 
 export function LanguageSwitcher() {
   const router = useRouter();
   const pathname = usePathname();
   const locale = useLocale();
+  const t = useTranslations("shell");
   const other = locale === "fr" ? "en" : "fr";
 
   function switchTo() {
@@ -18,7 +19,7 @@ export function LanguageSwitcher() {
   }
 
   return (
-    <Button variant="ghost" size="sm" onClick={switchTo} aria-label={`Switch language to ${other}`}>
+    <Button variant="ghost" size="sm" onClick={switchTo} aria-label={t("switchLanguage")}>
       {other.toUpperCase()}
     </Button>
   );

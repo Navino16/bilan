@@ -110,7 +110,7 @@ export function TransactionEditForm({
               id="tx-edit-linked"
               data-slot="linked-amount-warning"
               className="-mt-2 rounded-lg px-3 py-2 text-xs"
-              style={{ color: "var(--warning)", background: "var(--warning-bg)" }}
+              style={{ color: "var(--warning-text)", background: "var(--warning-bg)" }}
             >
               {t("editLinkedWarning")}
             </p>

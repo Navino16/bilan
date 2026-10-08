@@ -17,7 +17,7 @@ import type { VisibleAccount } from "@/server/services/accounts";
 import { balanceLegend } from "@/lib/balance-legend";
 import { revealAccountIbanAction } from "@/server/transport/actions/accounts";
 
-const OTHERS_COLOR = "var(--ink-3)";
+const OTHERS_COLOR = "var(--cat-other)";
 
 function useMoney() {
   const locale = useLocale();

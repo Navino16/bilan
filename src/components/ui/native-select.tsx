@@ -18,7 +18,7 @@ function NativeSelect({
       <select
         data-slot="native-select"
         data-size={size}
-        className="border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&>option]:bg-popover [&>option]:text-popover-foreground h-8 w-full min-w-0 appearance-none truncate rounded-lg border bg-transparent py-1 pr-8 pl-2.5 text-base transition-colors outline-none focus-visible:ring-3 disabled:cursor-not-allowed aria-invalid:ring-3 data-[size=sm]:h-7 data-[size=sm]:pr-7 data-[size=sm]:pl-2 data-[size=sm]:text-xs md:text-sm md:data-[size=sm]:text-xs"
+        className="border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&>option]:bg-popover [&>option]:text-popover-foreground h-8 w-full min-w-0 appearance-none truncate rounded-lg border bg-transparent py-1 pr-8 pl-2.5 text-base transition-colors outline-none focus-visible:ring-3 disabled:cursor-not-allowed aria-invalid:ring-3 data-[size=sm]:h-7 data-[size=sm]:pr-7 data-[size=sm]:pl-2 data-[size=sm]:text-xs max-md:data-[size=sm]:h-10 md:text-sm md:data-[size=sm]:text-xs"
         {...props}
       />
       <ChevronDownIcon

@@ -23,7 +23,7 @@ export default async function ResetConfirmPage({
   ]);
 
   return (
-    <main className="space-y-6">
+    <div className="space-y-6">
       <header className="space-y-1 text-center">
         <h1 className="font-display text-3xl">{t("title")}</h1>
         {valid && <p className="text-muted-foreground text-sm">{t("subtitle")}</p>}
@@ -36,12 +36,15 @@ export default async function ResetConfirmPage({
             <AlertDescription>{t("error.invalidToken")}</AlertDescription>
           </Alert>
           <p className="text-center text-sm">
-            <Link href={`/${locale}/reset`} className="text-foreground hover:underline">
+            <Link
+              href={`/${locale}/reset`}
+              className="text-foreground underline underline-offset-4"
+            >
               {t("requestAgain")}
             </Link>
           </p>
         </div>
       )}
-    </main>
+    </div>
   );
 }

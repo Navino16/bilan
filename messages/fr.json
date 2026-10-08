@@ -180,6 +180,15 @@
     },
     "copyLink": {
       "manual": "La copie automatique n'est pas disponible sur cette connexion. Sélectionnez le lien puis copiez-le."
+    },
+    "skipToContent": "Aller au contenu principal",
+    "mainNav": "Navigation principale",
+    "tabsNav": "Navigation rapide",
+    "close": "Fermer",
+    "switchLanguage": "Passer en anglais (EN)",
+    "period": {
+      "previous": "Période précédente",
+      "next": "Période suivante"
     }
   },
   "accounts": {
@@ -768,7 +777,8 @@
       "range": "Lignes {from} à {to} sur {total}",
       "previous": "Précédentes",
       "next": "Suivantes"
-    }
+    },
+    "rowCategory": "Catégorie pour {label}"
   },
   "groups": {
     "overline": "Partage",

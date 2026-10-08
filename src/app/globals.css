@@ -72,7 +72,6 @@
   --hairline-2: #d2caba;
   --ink: #15130f;
   --ink-2: #4a463e;
-  --ink-3: #807a6f;
   --ink-4: #ada89b;
 
   /* Brand */
@@ -153,7 +152,6 @@
     --hairline-2: #333941;
     --ink: #f3efe6;
     --ink-2: #bdb8ac;
-    --ink-3: #8b867b;
     --ink-4: #5c5950;
 
     --bilan-primary: #6fbf95;
@@ -214,6 +212,21 @@
     --sidebar-accent-foreground: var(--ink);
     --sidebar-border: var(--hairline);
     --sidebar-ring: var(--bilan-primary);
+  }
+}
+
+/* ─── Text-contrast tokens (#168) ─────────────────────────────────────────────
+   Adjusted from the design's ink-3 / warning / expense so text reaches WCAG AA
+   (4.5:1) on every surface it sits on. --warning / --expense stay for fills. */
+:root {
+  --ink-3: #635e56;
+  --warning-text: #7e5b15;
+  --expense-text: #9b4134;
+
+  @variant dark {
+    --ink-3: #9d998f;
+    --warning-text: var(--warning);
+    --expense-text: var(--expense);
   }
 }
 

@@ -48,15 +48,13 @@ export default async function LoginPage({
     deleted === "1" ? "accountDeleted" : reset === "1" ? "passwordReset" : undefined;
 
   return (
-    <main>
-      <LoginForm
-        locale={locale}
-        redirectTo={redirectTo}
-        notice={notice}
-        ssoError={error ? loginSsoError(String(error)) : undefined}
-        credentialsEnabled={credentialsEnabled ?? true}
-        ssoProviders={ssoProviders}
-      />
-    </main>
+    <LoginForm
+      locale={locale}
+      redirectTo={redirectTo}
+      notice={notice}
+      ssoError={error ? loginSsoError(String(error)) : undefined}
+      credentialsEnabled={credentialsEnabled ?? true}
+      ssoProviders={ssoProviders}
+    />
   );
 }

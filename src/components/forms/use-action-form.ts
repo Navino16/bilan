@@ -2,6 +2,7 @@
 
 import { startTransition, useActionState, useEffect, useId, useRef, useState } from "react";
 import type { FieldErrors } from "@/lib/validation/field-errors";
+import { MAIN_ID } from "@/lib/landmarks";
 
 type ActionResult = { ok: boolean } | null;
 
@@ -33,7 +34,8 @@ function focusAfterError(
     return;
   }
   const active = document.activeElement;
-  if (active && active !== document.body) return;
+  // WebKit focuses the focusable <main> (skip-link target) on a submit click instead of the button.
+  if (active && active !== document.body && active.id !== MAIN_ID) return;
   if (submitter?.isConnected) submitter.focus();
 }
 

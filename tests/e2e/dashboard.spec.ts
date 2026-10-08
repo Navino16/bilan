@@ -29,13 +29,13 @@ test.describe("dashboard", () => {
     await expect(page.locator('[data-slot="kpi-note"]').nth(2)).not.toContainText("%");
 
     // The default view is the current month — there's no future to browse into.
-    await expect(page.getByRole("button", { name: "next", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Période suivante" })).toBeDisabled();
 
     const heading = page.getByRole("heading", { level: 1 });
     // Absorb the initial hydration race (a click before PeriodNav hydrates is a
-    // no-op): retry "prev" until it actually navigates. Lands on a past month.
+    // no-op): retry "previous" until it actually navigates. Lands on a past month.
     await expect(async () => {
-      await page.getByRole("button", { name: "prev", exact: true }).click();
+      await page.getByRole("button", { name: "Période précédente" }).click();
       await expect(page).toHaveURL(/\?from=.*&to=/);
     }).toPass();
 
@@ -43,9 +43,9 @@ test.describe("dashboard", () => {
     // month — the whole-month ?from/?to range round-trips to a month period, so
     // nav stays exactly one month apart (regression: next used to overshoot).
     const base = await heading.textContent();
-    await page.getByRole("button", { name: "next", exact: true }).click();
+    await page.getByRole("button", { name: "Période suivante" }).click();
     await expect(heading).not.toHaveText(base ?? "");
-    await page.getByRole("button", { name: "prev", exact: true }).click();
+    await page.getByRole("button", { name: "Période précédente" }).click();
     await expect(heading).toHaveText(base ?? "");
   });
 
@@ -56,7 +56,7 @@ test.describe("dashboard", () => {
     // A hand-crafted future range must not render an empty future month.
     await page.goto("/fr/dashboard?from=2099-01-01&to=2099-01-31");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(current ?? "");
-    await expect(page.getByRole("button", { name: "next", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Période suivante" })).toBeDisabled();
   });
 
   test("switching to the quarter preset shows a date-range heading and steps by quarter", async ({
@@ -77,7 +77,7 @@ test.describe("dashboard", () => {
     const quarterLabel = await heading.textContent();
 
     // The arrows step by the selected granularity → a different quarter range.
-    await page.getByRole("button", { name: "prev", exact: true }).click();
+    await page.getByRole("button", { name: "Période précédente" }).click();
     await expect(heading).not.toHaveText(quarterLabel ?? "");
     await expect(heading).toHaveText(/[–—-]/);
     await expect(page.getByText("Revenus", { exact: true })).toBeVisible();
@@ -124,7 +124,7 @@ test.describe("dashboard", () => {
     await expect(page.getByText("Dépenses par mois")).toBeVisible();
 
     // Previous arrow steps a full calendar year back (still "YYYY").
-    await page.getByRole("button", { name: "prev", exact: true }).click();
+    await page.getByRole("button", { name: "Période précédente" }).click();
     await expect(heading).toHaveText(String(thisYear - 1));
   });
   test("KPIs compare with an N-month average when picked", async ({ page }) => {

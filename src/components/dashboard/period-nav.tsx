@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigationTransition } from "@/components/shell/navigation-pending";
@@ -11,6 +12,7 @@ export function PeriodNav({ period }: { period: Period }) {
   const pathname = usePathname();
   const params = useSearchParams();
   const [, startNavigation] = useNavigationTransition();
+  const t = useTranslations("shell.period");
 
   // Keeps the other params (e.g. the insights comparison baseline).
   function go(dir: 1 | -1) {
@@ -29,13 +31,13 @@ export function PeriodNav({ period }: { period: Period }) {
 
   return (
     <div className="flex shrink-0 items-center gap-1">
-      <Button variant="ghost" size="icon-sm" aria-label="prev" onClick={() => go(-1)}>
+      <Button variant="ghost" size="icon-sm" aria-label={t("previous")} onClick={() => go(-1)}>
         <ChevronLeft />
       </Button>
       <Button
         variant="ghost"
         size="icon-sm"
-        aria-label="next"
+        aria-label={t("next")}
         onClick={() => go(1)}
         disabled={nextDisabled}
       >

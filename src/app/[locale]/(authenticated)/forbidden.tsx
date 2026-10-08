@@ -5,6 +5,7 @@ export default async function Forbidden() {
   const [t, locale] = await Promise.all([getTranslations("errors"), getLocale()]);
   return (
     <ErrorShell
+      landmark={false}
       code="403"
       title={t("forbidden.title")}
       message={t("forbidden.message")}

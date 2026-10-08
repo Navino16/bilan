@@ -12,7 +12,7 @@ test("unauthenticated access to /dashboard redirects to login", async ({ page })
 // bottom tab bar on mobile (iPhone 14 / mobile project).
 test.skip("sidebar visible on desktop", async ({ page }) => {
   await page.goto("/fr/dashboard");
-  await expect(page.getByRole("navigation", { name: /sidebar/i })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Navigation principale" })).toBeVisible();
 });
 
 test.describe("mobile chrome", () => {
@@ -22,7 +22,7 @@ test.describe("mobile chrome", () => {
     // The bottom tab bar is `md:hidden` — only the mobile project renders it.
     test.skip(!isMobile, "bottom nav is mobile-only (md:hidden)");
     await page.goto("/fr/dashboard");
-    await expect(page.getByRole("navigation", { name: /bottom/i })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Navigation rapide" })).toBeVisible();
   });
 });
 
@@ -39,7 +39,7 @@ test.describe("primary navigation", () => {
     // route can add up, so allow more than the default 30s.
     test.setTimeout(120_000);
     await page.goto("/fr/dashboard");
-    const nav = page.getByRole("navigation", { name: /sidebar/i });
+    const nav = page.getByRole("navigation", { name: "Navigation principale" });
     await expect(nav).toBeVisible();
     const hrefs = await nav
       .locator("a[href]")
@@ -149,7 +149,7 @@ test.describe("shell chrome", () => {
 
   test("switching language keeps the query string", async ({ page }) => {
     await page.goto("/fr/transactions?month=2026-09");
-    await page.getByRole("button", { name: "Switch language to en" }).click();
+    await page.getByRole("button", { name: "Passer en anglais (EN)" }).click();
     await expect(page).toHaveURL(/\/en\/transactions\?month=2026-09$/);
     await expect(page).toHaveTitle("Transactions · Bilan");
   });
@@ -172,7 +172,7 @@ test.describe("shell chrome", () => {
   test("the mobile drawer scrolls and exposes sign-out at 320x640", async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 640 });
     await page.goto("/fr/insights");
-    const tabs = page.getByRole("navigation", { name: /bottom/i });
+    const tabs = page.getByRole("navigation", { name: "Navigation rapide" });
     await expect(tabs.locator('[aria-current="page"]')).toHaveText("Accueil");
     await page.getByRole("button", { name: "Ouvrir le menu" }).click();
     await expect(page.getByRole("button", { name: "Se déconnecter" })).toBeInViewport();
