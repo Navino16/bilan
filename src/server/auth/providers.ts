@@ -2,29 +2,44 @@ import type { PrismaClient, AuthProvider } from "@prisma/client";
 import { db } from "@/server/db";
 import { dataKey } from "@/server/crypto/keys";
 import { decrypt } from "@/server/crypto/encryption";
+import { processState } from "@/server/process-state";
+
+type ProviderCacheStore = {
+  entry: { providers: AuthProvider[]; expiresAt: number } | null;
+  generation: number;
+};
 
 export class DynamicProviderCache {
-  private cache: { providers: AuthProvider[]; expiresAt: number } | null = null;
-
   constructor(
     private db: PrismaClient,
     private opts: { ttlMs: number } = { ttlMs: 60_000 },
+    private store: ProviderCacheStore = { entry: null, generation: 0 },
   ) {}
 
   async get(): Promise<AuthProvider[]> {
     const now = Date.now();
-    if (this.cache && this.cache.expiresAt > now) return this.cache.providers;
+    const cached = this.store.entry;
+    if (cached && cached.expiresAt > now) return cached.providers;
+    const generation = this.store.generation;
     const providers = await this.db.authProvider.findMany({ where: { enabled: true } });
-    this.cache = { providers, expiresAt: now + this.opts.ttlMs };
+    // A read that raced an invalidate() may be stale: serve it, but don't cache it.
+    if (this.store.generation === generation) {
+      this.store.entry = { providers, expiresAt: now + this.opts.ttlMs };
+    }
     return providers;
   }
 
   invalidate(): void {
-    this.cache = null;
+    this.store.entry = null;
+    this.store.generation += 1;
   }
 }
 
-export const providerCache = new DynamicProviderCache(db);
+export const providerCache = new DynamicProviderCache(
+  db,
+  undefined,
+  processState<ProviderCacheStore>("auth.providers", () => ({ entry: null, generation: 0 })),
+);
 
 export type ResolvedOidc = {
   providerId: string;

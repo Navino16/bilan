@@ -109,6 +109,9 @@ test.describe("admin settings", () => {
       await editForm.locator(`#ap-${key}-displayName`).fill("E2E select renamed");
       await editForm.getByRole("button", { name: "Enregistrer" }).click();
       await expect(editForm.locator(`#ap-${key}-displayName`)).toHaveValue("E2E select renamed");
+      // The success message is still shown from the first save; the refreshed card title is not.
+      const card = page.locator('[data-slot="card"]', { has: editForm });
+      await expect(card.getByRole("heading", { name: "E2E select renamed" })).toBeVisible();
       await page.reload({ waitUntil: "domcontentloaded" });
       await expect(editForm.locator(`#ap-${key}-enabled`)).toHaveValue("false");
       await expect(editForm.locator(`#ap-${key}-displayName`)).toHaveValue("E2E select renamed");

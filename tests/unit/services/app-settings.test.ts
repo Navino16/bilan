@@ -35,6 +35,19 @@ describe("AppSettingsService", () => {
     expect(findUnique).toHaveBeenCalledTimes(2);
   });
 
+  it("doesn't cache a read that raced a write", async () => {
+    let resolveStale!: (row: unknown) => void;
+    findUnique
+      .mockReturnValueOnce(new Promise((resolve) => (resolveStale = resolve)))
+      .mockResolvedValueOnce({ key: "k", value: 2 });
+    const stale = svc.get("k");
+    upsert.mockResolvedValueOnce({});
+    await svc.set("k", 2, "user_1");
+    resolveStale({ key: "k", value: 1 });
+    expect(await stale).toBe(1);
+    expect(await svc.get("k")).toBe(2);
+  });
+
   it("hot-reloads auth when app_name changes (it feeds Better Auth's appName)", async () => {
     const onAuthKeyChange = vi.fn();
     const withHook = new AppSettingsService(db, { onAuthKeyChange });

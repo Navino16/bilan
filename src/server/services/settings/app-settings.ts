@@ -1,8 +1,10 @@
 import type { PrismaClient } from "@prisma/client";
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
+import { processState } from "@/server/process-state";
 
 type Entry = { value: unknown; expiresAt: number };
+type CacheStore = { entries: Map<string, Entry>; generation: number };
 
 type AuditFn = (input: {
   userId?: string | null;
@@ -29,7 +31,6 @@ export function normalizeAppName(raw: unknown): string {
 }
 
 export class AppSettingsService {
-  private cache = new Map<string, Entry>();
   private ttlMs: number;
 
   constructor(
@@ -40,23 +41,29 @@ export class AppSettingsService {
       audit?: AuditFn;
       onAuthKeyChange?: () => void | Promise<void>;
     } = {},
+    private store: CacheStore = { entries: new Map(), generation: 0 },
   ) {
     this.ttlMs = opts.ttlMs ?? 60_000;
   }
 
   /** Drops a cached value written behind the service's back. */
   forget(key: string): void {
-    this.cache.delete(key);
+    this.store.entries.delete(key);
+    this.store.generation += 1;
   }
 
   async get<T = unknown>(key: string): Promise<T | null> {
-    const cached = this.cache.get(key);
+    const cached = this.store.entries.get(key);
     const now = Date.now();
     if (cached && cached.expiresAt > now) return cached.value as T;
 
+    const generation = this.store.generation;
     const row = await this.db.appSetting.findUnique({ where: { key } });
     if (!row) return null;
-    this.cache.set(key, { value: row.value, expiresAt: now + this.ttlMs });
+    // A read that raced a write may be stale: serve it, but don't cache it.
+    if (this.store.generation === generation) {
+      this.store.entries.set(key, { value: row.value, expiresAt: now + this.ttlMs });
+    }
     return row.value as T;
   }
 
@@ -86,7 +93,7 @@ export class AppSettingsService {
       create: { key, value: value as never, updatedById },
       update: { value: value as never, updatedById },
     });
-    this.cache.delete(key);
+    this.forget(key);
     await this.opts.audit?.({
       userId: updatedById,
       action: `settings.${key}.update`,
@@ -97,15 +104,19 @@ export class AppSettingsService {
   }
 }
 
-export const appSettings = new AppSettingsService(db, {
-  audit: logEvent,
-  // Lazy import breaks the app-settings ↔ auth import cycle (auth imports this
-  // module); the handler is only invalidated at call time, never at module load.
-  onAuthKeyChange: async () => {
-    const { invalidateAuthCache } = await import("@/server/auth");
-    invalidateAuthCache();
+export const appSettings = new AppSettingsService(
+  db,
+  {
+    audit: logEvent,
+    // Lazy import breaks the app-settings ↔ auth import cycle (auth imports this
+    // module); the handler is only invalidated at call time, never at module load.
+    onAuthKeyChange: async () => {
+      const { invalidateAuthCache } = await import("@/server/auth");
+      invalidateAuthCache();
+    },
   },
-});
+  processState<CacheStore>("app-settings", () => ({ entries: new Map(), generation: 0 })),
+);
 
 export async function getAppName(): Promise<string> {
   return normalizeAppName(await appSettings.get("app_name"));

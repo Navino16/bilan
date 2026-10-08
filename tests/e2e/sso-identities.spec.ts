@@ -87,7 +87,7 @@ test.describe("SSO identities (#204)", () => {
   test("links an OIDC identity from Settings, signs in with it, then unlinks it", async ({
     browser,
   }) => {
-    test.setTimeout(300_000);
+    test.setTimeout(120_000);
     const key = `e2e-idp-${Date.now()}`;
     const name = `E2E IdP ${Date.now()}`;
     const admin = await browser.newContext({ storageState: "tests/e2e/.auth/admin.json" });
@@ -96,28 +96,25 @@ test.describe("SSO identities (#204)", () => {
       storageState: "tests/e2e/.auth/member.json",
     });
     const adminPage = await admin.newPage();
+    const anon = await anonContext.newPage();
+    const member = await memberContext.newPage();
+    // Warm every route's provider and handler caches: the admin change must still apply at once (#208).
+    await anon.goto("/fr/login", { waitUntil: "networkidle", timeout: 30_000 });
+    expect((await anon.request.get("/api/auth/ok")).ok()).toBe(true);
+    await member.goto("/fr/settings/security", { waitUntil: "networkidle" });
     await addProvider(adminPage, key, name);
-    // Route bundles keep their own provider/handler caches for up to 60 s (#208).
-    const settle = { timeout: 100_000, intervals: [2000] };
-
     try {
-      const anon = await anonContext.newPage();
       const continueWith = anon.getByRole("button", { name: `Continuer avec ${name}` });
+      await anon.goto("/fr/login", { waitUntil: "networkidle", timeout: 30_000 });
       // Same email as the member, but nothing is linked yet: no implicit linking (#200).
-      await expect(async () => {
-        await anon.goto("/fr/login", { waitUntil: "networkidle", timeout: 30_000 });
-        await continueWith.click({ timeout: 2000 });
-        await expect(anon).toHaveURL(/\/fr\/login\?error=account_not_linked/, { timeout: 5000 });
-      }).toPass(settle);
+      await continueWith.click({ timeout: 2000 });
+      await expect(anon).toHaveURL(/\/fr\/login\?error=account_not_linked/, { timeout: 10_000 });
       await expect(anon.getByText(/autre moyen de connexion, puis liez-la/)).toBeVisible();
 
-      const member = await memberContext.newPage();
       const row = member.locator(`[data-identity="${key}"]`);
       const linkButton = member.getByRole("button", { name: `Lier ${name}` });
-      await expect(async () => {
-        await member.goto("/fr/settings/security", { waitUntil: "networkidle" });
-        await expect(linkButton).toBeVisible({ timeout: 2000 });
-      }).toPass(settle);
+      await member.goto("/fr/settings/security", { waitUntil: "networkidle" });
+      await expect(linkButton).toBeVisible({ timeout: 2000 });
       // The Server Action returns the IdP URL; the state cookie it sets must survive the round trip.
       await linkButton.click();
       await expect(member).toHaveURL(/\/fr\/settings\/security\?linked=/, { timeout: 30_000 });
