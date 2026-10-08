@@ -85,6 +85,15 @@ async function buildOptions(): Promise<BetterAuthOptions> {
     // Failed OAuth/OIDC callbacks (incl. a disabled account) land on the localized login
     // page — the proxy adds the locale — instead of Better Auth's English error page.
     onAPIError: { errorURL: `${env.APP_URL.replace(/\/$/, "")}/login` },
+    // HTTP-only block (checked in the router, not by auth.api.*): these flows go through
+    // Server Actions that enforce the registration mode, rate limits and audit (#197).
+    disabledPaths: [
+      "/sign-up/email",
+      "/verify-password",
+      "/change-password",
+      "/request-password-reset",
+      "/reset-password",
+    ],
     database: prismaAdapter(db, { provider: "mysql" }),
     // Map Better Auth's "account" model onto our renamed Prisma model
     // `AuthAccount` (delegate `authAccount`) — we keep BankAccount free of the
