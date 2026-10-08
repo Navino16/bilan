@@ -4,6 +4,7 @@ import { defaultLocale, locales } from "@/i18n/config";
 import { authedPathLocale } from "@/lib/authed-paths";
 import { loginRedirectPath, REQUEST_PATH_HEADER } from "@/lib/callback-url";
 import { isSetupNeededCached } from "@/server/services/setup-status";
+import { withClientIp } from "@/server/http/client-ip";
 
 const intlMiddleware = createIntlMiddleware({
   locales: [...locales],
@@ -95,9 +96,9 @@ export default async function middleware(req: NextRequest) {
     return Response.redirect(new URL(loginRedirectPath(authedLocale, target), req.nextUrl), 307);
   }
 
-  // next-intl forwards the incoming request headers to the app, so this reaches
-  // requireSession() (stale-cookie deep links); set() discards any client value.
-  const headers = new Headers(req.headers);
+  // next-intl forwards the incoming request headers to the app, so these reach
+  // requireSession() (stale-cookie deep links) and Server Actions; both discard any client value.
+  const headers = withClientIp(req.headers);
   headers.set(REQUEST_PATH_HEADER, target);
   const response = intlMiddleware(new NextRequest(req, { headers }));
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) {

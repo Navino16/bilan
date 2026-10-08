@@ -116,6 +116,7 @@ export function StepOidc({
           placeholder="openid,email,profile"
         />
       </div>
+      <p className="text-muted-foreground text-xs">{t("signUpHint")}</p>
 
       <div className="flex items-center gap-3">
         <Button type="button" variant="outline" onClick={handleTest} disabled={!filled || testing}>

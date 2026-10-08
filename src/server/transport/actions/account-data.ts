@@ -1,6 +1,6 @@
 "use server";
 
-import { headers as nextHeaders } from "next/headers";
+import { authHeaders } from "@/server/http/auth-headers";
 import { requireSession } from "@/server/auth/permissions";
 import { getAuth } from "@/server/auth";
 import { db } from "@/server/db";
@@ -31,7 +31,7 @@ export async function deleteAccountAction(
     if (!bucket.allowed) return { ok: false, error: "RATE_LIMITED" };
     const auth = await getAuth();
     try {
-      await auth.api.verifyPassword({ body: { password }, headers: await nextHeaders() });
+      await auth.api.verifyPassword({ body: { password }, headers: await authHeaders() });
     } catch {
       return { ok: false, error: "BAD_PASSWORD" };
     }

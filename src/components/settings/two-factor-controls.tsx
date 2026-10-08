@@ -8,6 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { authClient } from "@/lib/auth-client";
+import {
+  disableTwoFactorAction,
+  enableTwoFactorAction,
+} from "@/server/transport/actions/two-factor";
 import { TotpQr } from "./totp-qr";
 
 function secretFromUri(uri: string): string {
@@ -25,43 +29,60 @@ export function TwoFactorControls({ enabled }: { enabled: boolean }) {
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [retryAfter, setRetryAfter] = useState<number | undefined>();
   const [pending, setPending] = useState(false);
   // After enable(): the TOTP URI + backup codes to show before verification.
   const [enrol, setEnrol] = useState<{ uri: string; backupCodes: string[] } | null>(null);
 
-  async function beginEnable(e: React.FormEvent) {
+  // Shared submit wrapper: a thrown action or fetch still clears the pending state.
+  async function submit(e: React.FormEvent, run: () => Promise<void>) {
     e.preventDefault();
     setError(null);
+    setRetryAfter(undefined);
     setPending(true);
-    const res = await authClient.twoFactor.enable({ password });
-    setPending(false);
-    if (res.error || !res.data) return setError("BAD_PASSWORD");
-    setEnrol({ uri: res.data.totpURI, backupCodes: res.data.backupCodes });
-    setPassword("");
+    try {
+      await run();
+    } catch {
+      setError("FAILED");
+    } finally {
+      setPending(false);
+    }
   }
 
-  async function verify(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setPending(true);
-    const res = await authClient.twoFactor.verifyTotp({ code: code.replace(/\s/g, "") });
-    setPending(false);
-    if (res.error) return setError("BAD_CODE");
-    setEnrol(null);
-    setCode("");
-    router.refresh();
+  function fail(res: { error: string; retryAfter?: number }) {
+    setError(res.error);
+    setRetryAfter(res.retryAfter);
   }
 
-  async function disable(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setPending(true);
-    const res = await authClient.twoFactor.disable({ password });
-    setPending(false);
-    if (res.error) return setError("BAD_PASSWORD");
-    setPassword("");
-    router.refresh();
-  }
+  const beginEnable = (e: React.FormEvent) =>
+    submit(e, async () => {
+      const res = await enableTwoFactorAction(password);
+      if (!res.ok) return fail(res);
+      setEnrol({ uri: res.data.totpURI, backupCodes: res.data.backupCodes });
+      setPassword("");
+    });
+
+  const verify = (e: React.FormEvent) =>
+    submit(e, async () => {
+      const res = await authClient.twoFactor.verifyTotp({ code: code.replace(/\s/g, "") });
+      if (res.error) return setError("BAD_CODE");
+      setEnrol(null);
+      setCode("");
+      router.refresh();
+    });
+
+  const disable = (e: React.FormEvent) =>
+    submit(e, async () => {
+      const res = await disableTwoFactorAction(password);
+      if (!res.ok) return fail(res);
+      setPassword("");
+      router.refresh();
+    });
+
+  const errorText =
+    error === "RATE_LIMITED" && retryAfter
+      ? t("error.rateLimitedFor", { minutes: Math.ceil(retryAfter / 60) })
+      : error && t(`error.${error}`);
 
   // Enabled → offer disable.
   if (enabled) {
@@ -80,7 +101,7 @@ export function TwoFactorControls({ enabled }: { enabled: boolean }) {
         </div>
         {error && (
           <Alert variant="destructive">
-            <AlertDescription>{t(`error.${error}`)}</AlertDescription>
+            <AlertDescription>{errorText}</AlertDescription>
           </Alert>
         )}
         <Button type="submit" variant="destructive" disabled={pending || !password}>
@@ -134,7 +155,7 @@ export function TwoFactorControls({ enabled }: { enabled: boolean }) {
         </div>
         {error && (
           <Alert variant="destructive">
-            <AlertDescription>{t(`error.${error}`)}</AlertDescription>
+            <AlertDescription>{errorText}</AlertDescription>
           </Alert>
         )}
       </form>
@@ -157,7 +178,7 @@ export function TwoFactorControls({ enabled }: { enabled: boolean }) {
       </div>
       {error && (
         <Alert variant="destructive">
-          <AlertDescription>{t(`error.${error}`)}</AlertDescription>
+          <AlertDescription>{errorText}</AlertDescription>
         </Alert>
       )}
       <Button type="submit" disabled={pending || !password}>

@@ -1,6 +1,7 @@
 import { cache } from "react";
 import type { PrismaClient } from "@prisma/client";
 import { headers as nextHeaders } from "next/headers";
+import { authHeaders } from "@/server/http/auth-headers";
 import { redirect, forbidden } from "next/navigation";
 import { db } from "@/server/db";
 import { getAuth } from "@/server/auth";
@@ -42,7 +43,7 @@ export function activeSession<S extends { user: object }>(session: S | null): S 
 // Per-request memo: with the cookie cache off, every lookup is a DB round-trip.
 export const getCurrentSession = cache(async () => {
   const auth = await getAuth();
-  return activeSession(await auth.api.getSession({ headers: await nextHeaders() }));
+  return activeSession(await auth.api.getSession({ headers: await authHeaders() }));
 });
 
 export async function getCurrentUser() {

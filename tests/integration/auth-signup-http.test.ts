@@ -110,6 +110,40 @@ describe("HTTP sign-up endpoint (#197)", () => {
     },
   );
 
+  it.each([
+    "/two-factor/enable",
+    "/two-factor/disable",
+    "/update-user",
+    "/update-session",
+    "/unlink-account",
+    "/two-factor/get-totp-uri",
+    "/two-factor/generate-backup-codes",
+    "/two-factor/send-otp",
+    "/two-factor/verify-otp",
+    "/link-social",
+    "/oauth2/link",
+    ...[
+      "ban-user",
+      "create-user",
+      "get-user",
+      "has-permission",
+      "impersonate-user",
+      "list-user-sessions",
+      "list-users",
+      "remove-user",
+      "revoke-user-session",
+      "revoke-user-sessions",
+      "set-role",
+      "set-user-password",
+      "stop-impersonating",
+      "unban-user",
+      "update-user",
+    ].map((p) => `/admin/${p}`),
+  ])("blocks %s, unused or wrapped by Server Actions (#200)", async (path) => {
+    const res = await post(`/api/auth${path}`, { password, name: "X", userId: actorId });
+    expect(res.status).toBe(404);
+  });
+
   it("keeps the other HTTP endpoints reachable", async () => {
     const res = await post("/api/auth/sign-in/email", { email: email("signin"), password });
     expect(res.status).toBe(401);

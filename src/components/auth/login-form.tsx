@@ -14,7 +14,7 @@ import { PasskeySignIn } from "./passkey-sign-in";
 import { TwoFactorStep } from "./two-factor-step";
 
 export type LoginNotice = "passwordReset" | "accountDeleted";
-export type SsoError = "disabled" | "ssoFailed";
+export type SsoError = "disabled" | "ssoFailed" | "ssoSignUpDisabled" | "ssoNotLinked";
 
 // "Back" from the code step remounts the password step to clear its action state.
 export function LoginForm({

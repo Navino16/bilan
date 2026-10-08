@@ -19,7 +19,9 @@
         "passkeyNotFound": "This passkey is no longer recognised. Sign in with your password.",
         "passkeyFailed": "Passkey sign-in was cancelled or didn't complete.",
         "disabled": "This account is disabled. Contact the instance administrator.",
-        "ssoFailed": "Signing in through the identity provider failed. Try again."
+        "ssoFailed": "Signing in through the identity provider failed. Try again.",
+        "ssoSignUpDisabled": "No Bilan account matches this identity, and this provider does not allow sign-up. Ask the instance administrator for an account.",
+        "ssoNotLinked": "No account is linked to this identity. Sign in, then link it from Settings > Security."
       },
       "or": "or",
       "passkey": "Sign in with a passkey",
@@ -1013,7 +1015,10 @@
       "working": "Working…",
       "error": {
         "BAD_PASSWORD": "Incorrect password.",
-        "BAD_CODE": "Invalid code. Please try again."
+        "BAD_CODE": "Invalid code. Please try again.",
+        "RATE_LIMITED": "Too many attempts. Try again later.",
+        "rateLimitedFor": "Too many attempts. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
+        "FAILED": "Something went wrong. Please try again."
       },
       "passwordCard": {
         "overline": "Password",
@@ -1311,6 +1316,8 @@
       "enabled": "State",
       "on": "On",
       "off": "Off",
+      "allowSignUp": "Allow sign-up",
+      "allowSignUpHint": "Creates a Bilan account on the first sign-in of an identity no account is linked to. When unchecked, this provider only signs in identities already linked to an account. Same email is not enough: an existing user links the identity from Settings > Security.",
       "oidcSection": "OIDC options",
       "issuer": "Issuer",
       "clientId": "Client ID",
@@ -1410,7 +1417,9 @@
           },
           "2fa": {
             "enabled": "Two-factor enabled",
-            "disabled": "Two-factor disabled"
+            "disabled": "Two-factor disabled",
+            "enable_failed": "Two-factor enable failed",
+            "disable_failed": "Two-factor disable failed"
           },
           "signup": "Account created (setup)",
           "register": {
@@ -1575,6 +1584,7 @@
       "description": "Optional — log in via an external provider (Google, OIDC). Leave blank to add one later in admin settings.",
       "redirectUri": "Redirect URL",
       "redirectUriHint": "Register this as an allowed redirect URI in your identity provider.",
+      "signUpHint": "This provider only signs in identities linked to a Bilan account, and a matching email does not link them. To let it create accounts on first sign-in, allow sign-up in Administration > Auth providers.",
       "displayName": "Display name",
       "issuer": "Issuer (URL)",
       "clientId": "Client ID",

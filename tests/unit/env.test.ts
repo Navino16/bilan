@@ -22,4 +22,16 @@ describe("parseEnv", () => {
   it("rejects a DATA_ENCRYPTION_KEY that is not 32 bytes", () => {
     expect(() => parseEnv({ ...valid, DATA_ENCRYPTION_KEY: "dG9vc2hvcnQ=" })).toThrow();
   });
+  it("defaults TRUSTED_IP_HEADER to x-forwarded-for and lowercases it", () => {
+    expect(parseEnv(valid).TRUSTED_IP_HEADER).toBe("x-forwarded-for");
+    expect(parseEnv({ ...valid, TRUSTED_IP_HEADER: "X-Real-IP" }).TRUSTED_IP_HEADER).toBe(
+      "x-real-ip",
+    );
+  });
+  it.each(["", " ", "x real ip", "x-real-ip,x-forwarded-for"])(
+    "rejects the TRUSTED_IP_HEADER %j at boot",
+    (value) => {
+      expect(() => parseEnv({ ...valid, TRUSTED_IP_HEADER: value })).toThrow();
+    },
+  );
 });
