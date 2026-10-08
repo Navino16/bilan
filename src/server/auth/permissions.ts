@@ -5,6 +5,12 @@ import { redirect, forbidden } from "next/navigation";
 import { db } from "@/server/db";
 import { getAuth } from "@/server/auth";
 import { appSettings } from "@/server/services/settings/app-settings";
+import {
+  loginRedirectPath,
+  pathLocale,
+  REQUEST_PATH_HEADER,
+  safeCallbackPath,
+} from "@/lib/callback-url";
 
 export function buildPermissionsChecker(database: PrismaClient) {
   return async function hasPermission(userId: string, permissionKey: string): Promise<boolean> {
@@ -43,7 +49,10 @@ export async function getCurrentUser() {
 
 export async function requireSession() {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  if (!user) {
+    const target = safeCallbackPath((await nextHeaders()).get(REQUEST_PATH_HEADER));
+    redirect(target ? loginRedirectPath(pathLocale(target), target) : "/login");
+  }
   return user;
 }
 

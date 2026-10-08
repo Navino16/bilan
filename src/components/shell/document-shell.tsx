@@ -1,6 +1,5 @@
-import { cookies } from "next/headers";
 import { mono, sans, serif } from "@/lib/fonts";
-import { THEME_COOKIE } from "@/lib/theme";
+import { currentTheme } from "@/server/theme";
 
 export async function DocumentShell({
   lang,
@@ -9,13 +8,13 @@ export async function DocumentShell({
   lang: string;
   children: React.ReactNode;
 }) {
-  const isDark = (await cookies()).get(THEME_COOKIE)?.value === "dark";
+  const theme = await currentTheme();
   return (
     <html
       lang={lang}
       suppressHydrationWarning
       className={`${sans.variable} ${serif.variable} ${mono.variable} h-full antialiased ${
-        isDark ? "dark" : ""
+        theme === "system" ? "" : theme
       }`}
     >
       <body className="bg-background text-foreground flex min-h-full flex-col font-sans">

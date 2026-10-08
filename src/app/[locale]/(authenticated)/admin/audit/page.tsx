@@ -14,6 +14,7 @@ import { AUDIT_ENTITIES, AUDIT_FAMILIES } from "@/lib/audit";
 import { parsePage } from "@/lib/pagination";
 import { parseDayBounds } from "@/lib/period";
 import { isValidTimeZone, nextIsoDay, zonedDayStart } from "@/lib/time-zone";
+import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,8 @@ type Search = {
   tz?: string;
   page?: string;
 };
+
+export const generateMetadata = pageTitle("adminAudit");
 
 export default async function AdminAuditPage({
   params,

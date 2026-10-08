@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { signIn } from "@/lib/auth-client";
 
-export function PasskeySignIn({ locale }: { locale: string }) {
+export function PasskeySignIn({ redirectTo }: { redirectTo: string }) {
   const t = useTranslations("auth.login");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -23,7 +23,7 @@ export function PasskeySignIn({ locale }: { locale: string }) {
         if (code === "BANNED_USER") return setError("disabled");
         return setError(code === "PASSKEY_NOT_FOUND" ? "passkeyNotFound" : "passkeyFailed");
       }
-      router.push(`/${locale}/dashboard`);
+      router.push(redirectTo);
     });
   }
 

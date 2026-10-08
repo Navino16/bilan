@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
 import { BOTTOM_NAV } from "./nav-items";
 
 export function BottomNav({ className }: { className?: string }) {
-  const t = useTranslations("shell.nav");
+  const t = useTranslations("shell.tabs");
+  const tFull = useTranslations("shell.nav");
   const locale = useLocale();
   const pathname = usePathname();
 
@@ -21,15 +22,19 @@ export function BottomNav({ className }: { className?: string }) {
     >
       {BOTTOM_NAV.map((item) => {
         const href = `/${locale}${item.href}`;
-        const active = pathname === href || pathname.startsWith(`${href}/`);
+        const active = [item.href, ...(item.alsoActiveOn ?? [])].some((base) => {
+          const prefix = `/${locale}${base}`;
+          return pathname === prefix || pathname.startsWith(`${prefix}/`);
+        });
         const Icon = item.icon;
         return (
           <Link
             key={item.key}
             href={href}
             aria-current={active ? "page" : undefined}
+            aria-label={tFull(item.key)}
             className={cn(
-              "flex min-w-0 flex-col items-center gap-1 px-1 py-2.5 text-[11px] transition-colors",
+              "flex min-w-0 flex-col items-center gap-1 px-1 py-2.5 text-[10px] transition-colors",
               active ? "text-primary font-medium" : "text-muted-foreground",
             )}
           >

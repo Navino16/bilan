@@ -15,10 +15,13 @@ import { InvitationsList } from "@/components/groups/invitations-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shell/page-header";
+import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
 
 const RANK: Record<GroupRole, number> = { OWNER: 3, ADMIN: 2, MEMBER: 1 };
+
+export const generateMetadata = pageTitle("group");
 
 export default async function GroupDetailPage({
   params,

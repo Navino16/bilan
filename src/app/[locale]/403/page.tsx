@@ -1,5 +1,8 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ErrorShell } from "@/components/shell/error-shell";
+import { pageTitle } from "@/i18n/metadata";
+
+export const generateMetadata = pageTitle("forbidden");
 
 // Kept as a real, bookmarkable route (requirePermission now uses forbidden()
 // instead of redirecting here). Reuses the shared shell + `errors` copy.

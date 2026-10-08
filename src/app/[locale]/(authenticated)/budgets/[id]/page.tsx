@@ -12,8 +12,11 @@ import { listGroupsForUser } from "@/server/services/groups";
 import { flattenCategories } from "@/components/transactions/category-tree";
 import { categoryOptions } from "@/components/categories/category-options";
 import { BudgetDetail } from "@/components/budgets/budget-detail";
+import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
+
+export const generateMetadata = pageTitle("budget");
 
 export default async function BudgetDetailPage({
   params,

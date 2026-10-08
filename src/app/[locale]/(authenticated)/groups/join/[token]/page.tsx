@@ -5,8 +5,11 @@ import { requireSession } from "@/server/auth/permissions";
 import { db } from "@/server/db";
 import { getInvitationByToken, maskEmail } from "@/server/services/groups/invitations";
 import { JoinConfirm } from "@/components/groups/join-confirm";
+import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
+
+export const generateMetadata = pageTitle("joinGroup");
 
 export default async function JoinPage({
   params,

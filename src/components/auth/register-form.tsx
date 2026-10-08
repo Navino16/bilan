@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "./password-input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { registerAction } from "@/server/transport/actions/auth";
 
@@ -66,10 +67,9 @@ export function RegisterForm({ locale, mode }: { locale: string; mode: string })
       </div>
       <div className="space-y-2">
         <Label htmlFor="password">{t("password")}</Label>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           required
           minLength={12}
           autoComplete="new-password"
@@ -79,10 +79,9 @@ export function RegisterForm({ locale, mode }: { locale: string; mode: string })
       </div>
       <div className="space-y-2">
         <Label htmlFor="confirmPassword">{t("confirmPassword")}</Label>
-        <Input
+        <PasswordInput
           id="confirmPassword"
           name="confirmPassword"
-          type="password"
           required
           minLength={12}
           autoComplete="new-password"

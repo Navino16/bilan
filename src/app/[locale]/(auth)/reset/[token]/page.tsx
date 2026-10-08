@@ -3,9 +3,12 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ResetConfirmForm } from "@/components/auth/reset-confirm-form";
 import { isResetTokenValid } from "@/server/services/users/password-reset";
+import { pageTitle } from "@/i18n/metadata";
 
 // Checks the token against the DB on every visit.
 export const dynamic = "force-dynamic";
+
+export const generateMetadata = pageTitle("resetConfirm");
 
 export default async function ResetConfirmPage({
   params,

@@ -21,6 +21,8 @@ export type NavItem = {
   icon: LucideIcon;
   /** When set, the item only renders if the user holds this permission. */
   permission?: string;
+  /** Extra locale-less paths that also mark the item active. */
+  alsoActiveOn?: string[];
 };
 
 /** Primary destinations — the "Espace" group in the design. */
@@ -52,7 +54,7 @@ export const ACCOUNT_NAV: NavItem[] = [
  * the bottom bar and live only in the left drawer / sidebar.
  */
 export const BOTTOM_NAV: NavItem[] = [
-  { key: "dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { key: "dashboard", href: "/dashboard", icon: LayoutDashboard, alsoActiveOn: ["/insights"] },
   { key: "transactions", href: "/transactions", icon: ArrowRightLeft },
   { key: "budgets", href: "/budgets", icon: Target },
   { key: "accounts", href: "/accounts", icon: Landmark },

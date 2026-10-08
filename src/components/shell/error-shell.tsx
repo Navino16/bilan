@@ -8,16 +8,20 @@ export function ErrorShell({
   title,
   message,
   action,
+  documentTitle,
   children,
 }: {
   code: string;
   title: string;
   message: string;
   action?: { href: string; label: string };
+  /** For boundaries that get no route metadata (React 19 hoists <title> into <head>). */
+  documentTitle?: string;
   children?: React.ReactNode;
 }) {
   return (
     <main className="bg-background text-foreground flex min-h-screen flex-col items-center justify-center gap-3 px-6 text-center">
+      {documentTitle && <title>{documentTitle}</title>}
       <p className="text-muted-foreground font-mono text-sm">{code}</p>
       <h1 className="font-display text-4xl">{title}</h1>
       <p className="text-muted-foreground max-w-md">{message}</p>

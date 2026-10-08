@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ResetRequestForm } from "@/components/auth/reset-request-form";
+import { pageTitle } from "@/i18n/metadata";
+
+export const generateMetadata = pageTitle("reset");
 
 export default async function ResetPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;

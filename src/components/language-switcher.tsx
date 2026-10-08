@@ -11,9 +11,10 @@ export function LanguageSwitcher() {
   const other = locale === "fr" ? "en" : "fr";
 
   function switchTo() {
-    // Swap only the leading locale segment, preserving the rest of the path.
+    // Swap only the leading locale segment; read the query at click time so no
+    // useSearchParams() Suspense boundary is needed on static pages.
     const next = pathname.replace(new RegExp(`^/${locale}(?=/|$)`), `/${other}`);
-    router.push(next);
+    router.push(`${next}${window.location.search}${window.location.hash}`);
   }
 
   return (

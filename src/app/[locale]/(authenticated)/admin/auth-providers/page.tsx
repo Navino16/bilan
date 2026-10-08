@@ -4,6 +4,7 @@ import { listAuthProviders } from "@/server/services/settings/auth-providers";
 import { AuthProviderForm, type AuthProviderDefaults } from "@/components/admin/auth-provider-form";
 import { SectionCard } from "@/components/shell/section-card";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,8 @@ const TYPE_KEY = {
   oidc: "typeOidc",
   google: "typeGoogle",
 } as const;
+
+export const generateMetadata = pageTitle("adminAuthProviders");
 
 export default async function AdminAuthProvidersPage() {
   await requirePermission("admin.settings.write");

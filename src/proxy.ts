@@ -1,6 +1,8 @@
 import createIntlMiddleware from "next-intl/middleware";
-import type { NextRequest } from "next/server";
+import { NextRequest } from "next/server";
 import { defaultLocale, locales } from "@/i18n/config";
+import { authedPathLocale } from "@/lib/authed-paths";
+import { loginRedirectPath, REQUEST_PATH_HEADER } from "@/lib/callback-url";
 import { isSetupNeededCached } from "@/server/services/setup-status";
 
 const intlMiddleware = createIntlMiddleware({
@@ -66,8 +68,6 @@ const setupPath = /^\/(fr|en)\/setup(\/|$)/;
 // to /login without a DB round-trip). The authoritative check is the
 // (authenticated) layout's requireSession(). The __Secure- prefix lands once the
 // deployment is on HTTPS (Better Auth toggles it from the request protocol).
-const authedPath =
-  /^\/(fr|en)\/(dashboard|transactions|accounts|budgets|categories|groups|import|settings|admin)(\/|$)/;
 
 function hasSessionCookie(req: NextRequest): boolean {
   return (
@@ -89,14 +89,17 @@ export default async function middleware(req: NextRequest) {
     return notFoundHtml();
   }
 
-  const authedMatch = authedPath.exec(pathname);
-  if (authedMatch && !hasSessionCookie(req)) {
-    const url = req.nextUrl.clone();
-    url.pathname = `/${authedMatch[1]}/login`;
-    return Response.redirect(url, 307);
+  const target = `${pathname}${req.nextUrl.search}`;
+  const authedLocale = authedPathLocale(pathname);
+  if (authedLocale && !hasSessionCookie(req)) {
+    return Response.redirect(new URL(loginRedirectPath(authedLocale, target), req.nextUrl), 307);
   }
 
-  const response = intlMiddleware(req);
+  // next-intl forwards the incoming request headers to the app, so this reaches
+  // requireSession() (stale-cookie deep links); set() discards any client value.
+  const headers = new Headers(req.headers);
+  headers.set(REQUEST_PATH_HEADER, target);
+  const response = intlMiddleware(new NextRequest(req, { headers }));
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
     response.headers.set(name, value);
   }

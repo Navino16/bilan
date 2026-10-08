@@ -2,8 +2,11 @@ import { setRequestLocale } from "next-intl/server";
 import { requireSession } from "@/server/auth/permissions";
 import { db } from "@/server/db";
 import { DataControls } from "@/components/settings/data-controls";
+import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
+
+export const generateMetadata = pageTitle("data");
 
 export default async function DataSettingsPage({
   params,

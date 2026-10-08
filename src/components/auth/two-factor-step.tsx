@@ -11,7 +11,7 @@ import { authClient } from "@/lib/auth-client";
 
 type Mode = "totp" | "backup";
 
-export function TwoFactorStep({ locale, onBack }: { locale: string; onBack: () => void }) {
+export function TwoFactorStep({ redirectTo, onBack }: { redirectTo: string; onBack: () => void }) {
   const t = useTranslations("auth.twoFactor");
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("totp");
@@ -39,7 +39,7 @@ export function TwoFactorStep({ locale, onBack }: { locale: string; onBack: () =
       if (res.error.status === 429) return setError("slowDown");
       return setError(errCode === "INVALID_TWO_FACTOR_COOKIE" ? "expired" : "badCode");
     }
-    router.push(`/${locale}/dashboard`);
+    router.push(redirectTo);
   }
 
   function switchMode() {

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "./password-input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { loginAction } from "@/server/transport/actions/auth";
 import { PasskeySignIn } from "./passkey-sign-in";
@@ -18,10 +19,12 @@ export type SsoError = "disabled" | "ssoFailed";
 // "Back" from the code step remounts the password step to clear its action state.
 export function LoginForm({
   locale,
+  redirectTo,
   notice,
   ssoError,
 }: {
   locale: string;
+  redirectTo: string;
   notice?: LoginNotice;
   ssoError?: SsoError;
 }) {
@@ -30,6 +33,7 @@ export function LoginForm({
     <PasswordStep
       key={attempt}
       locale={locale}
+      redirectTo={redirectTo}
       notice={notice}
       ssoError={ssoError}
       onRestart={() => setAttempt((n) => n + 1)}
@@ -39,11 +43,13 @@ export function LoginForm({
 
 function PasswordStep({
   locale,
+  redirectTo,
   notice,
   ssoError,
   onRestart,
 }: {
   locale: string;
+  redirectTo: string;
   notice?: LoginNotice;
   ssoError?: SsoError;
   onRestart: () => void;
@@ -53,10 +59,11 @@ function PasswordStep({
   const [state, action, pending] = useActionState(loginAction, null);
 
   useEffect(() => {
-    if (state?.ok && !state.twoFactor) router.push(`/${locale}/dashboard`);
-  }, [state, router, locale]);
+    if (state?.ok && !state.twoFactor) router.push(redirectTo);
+  }, [state, router, redirectTo]);
 
-  if (state?.ok && state.twoFactor) return <TwoFactorStep locale={locale} onBack={onRestart} />;
+  if (state?.ok && state.twoFactor)
+    return <TwoFactorStep redirectTo={redirectTo} onBack={onRestart} />;
 
   return (
     <div className="space-y-6">
@@ -89,13 +96,7 @@ function PasswordStep({
                 {t("forgot")}
               </Link>
             </div>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              required
-              autoComplete="current-password"
-            />
+            <PasswordInput id="password" name="password" required autoComplete="current-password" />
           </div>
           {state && !state.ok && (
             <Alert variant="destructive">
@@ -114,7 +115,7 @@ function PasswordStep({
             {pending ? t("submitting") : t("submit")}
           </Button>
         </form>
-        <PasskeySignIn locale={locale} />
+        <PasskeySignIn redirectTo={redirectTo} />
       </div>
       <p className="text-muted-foreground text-center text-sm">
         {t("noAccount")}{" "}

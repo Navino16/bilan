@@ -98,5 +98,5 @@ test.describe("groups", () => {
 
 test("unauthenticated /groups redirects to login", async ({ page }) => {
   await page.goto("/fr/groups");
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/login\?callbackUrl=%2Ffr%2Fgroups$/);
 });
