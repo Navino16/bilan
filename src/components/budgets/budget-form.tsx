@@ -290,7 +290,7 @@ function BudgetFormBody({
           <div className="flex items-center justify-between">
             <Label>{t("lines")}</Label>
             <span className="text-muted-foreground text-sm tabular-nums">
-              {t("plannedTotal")} : {nf.format(plannedTotal)}
+              {t("plannedTotalValue", { amount: nf.format(plannedTotal) })}
             </span>
           </div>
 

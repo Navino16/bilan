@@ -22,6 +22,7 @@ import {
   type Period,
 } from "@/lib/period";
 import { transactionsHref, type TransactionsLinkFilter } from "@/lib/transaction-filters";
+import { formatPercent } from "@/lib/format";
 import type { CategoryChange, CategoryHistory, InsightsData } from "@/lib/insights";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 
@@ -55,13 +56,8 @@ export async function InsightsView({
     maximumFractionDigits: 0,
     signDisplay: "exceptZero",
   });
-  const pctFmt = new Intl.NumberFormat(locale, {
-    style: "percent",
-    maximumFractionDigits: 0,
-    signDisplay: "exceptZero",
-  });
   const pctLabel = (current: number, prev: number) =>
-    prev ? pctFmt.format((current - prev) / prev) : t("new");
+    prev ? formatPercent((current - prev) / prev, locale, { signed: true }) : t("new");
   const catById = new Map(categories.map((c) => [c.id, c]));
   const catName = (id: string | null) =>
     (id ? catById.get(id)?.name : undefined) ?? t("noCategory");

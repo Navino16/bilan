@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { useLocale } from "next-intl";
+import { formatDate, formatDateTime } from "@/lib/format";
 
 const noop = () => () => {};
 
@@ -9,12 +10,10 @@ const noop = () => () => {};
 // then the browser renders the date and time in its own zone.
 export function LocalDateTime({
   value,
-  dateStyle = "medium",
-  timeStyle = "short",
+  seconds = false,
 }: {
   value: Date | string;
-  dateStyle?: "short" | "medium";
-  timeStyle?: "short" | "medium";
+  seconds?: boolean;
 }) {
   const locale = useLocale();
   const inBrowser = useSyncExternalStore(
@@ -23,8 +22,9 @@ export function LocalDateTime({
     () => false,
   );
   const date = new Date(value);
-  const format = inBrowser
-    ? new Intl.DateTimeFormat(locale, { dateStyle, timeStyle })
-    : new Intl.DateTimeFormat(locale, { dateStyle, timeZone: "UTC" });
-  return <time dateTime={date.toISOString()}>{format.format(date)}</time>;
+  return (
+    <time dateTime={date.toISOString()}>
+      {inBrowser ? formatDateTime(date, locale, { seconds }) : formatDate(date, locale)}
+    </time>
+  );
 }

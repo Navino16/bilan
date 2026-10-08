@@ -12,10 +12,12 @@ export function StepAccount({
   data,
   onChange,
   onNext,
+  minPasswordLength,
 }: {
   data: SetupData;
   onChange: (p: Partial<SetupData>) => void;
   onNext: () => void;
+  minPasswordLength: number;
 }) {
   const t = useTranslations("setup.account");
   const [showError, setShowError] = useState(false);
@@ -23,7 +25,7 @@ export function StepAccount({
   const valid =
     data.name.trim().length > 0 &&
     /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(data.email) &&
-    data.password.length >= 12;
+    data.password.length >= minPasswordLength;
 
   function handleNext() {
     if (!valid) {
@@ -63,11 +65,13 @@ export function StepAccount({
           onChange={(e) => onChange({ password: e.target.value })}
           autoComplete="new-password"
         />
-        <p className="text-muted-foreground text-xs">{t("passwordHint")}</p>
+        <p className="text-muted-foreground text-xs">
+          {t("passwordHint", { count: minPasswordLength })}
+        </p>
       </div>
       {showError && !valid && (
         <Alert variant="destructive">
-          <AlertDescription>{t("error")}</AlertDescription>
+          <AlertDescription>{t("error", { count: minPasswordLength })}</AlertDescription>
         </Alert>
       )}
       <Button type="button" className="w-full" onClick={handleNext}>

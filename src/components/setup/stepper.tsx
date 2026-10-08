@@ -67,7 +67,15 @@ const EMPTY_OIDC: OidcData = {
   mapEmail: "",
 };
 
-export function Stepper({ locale, oidcCallbackUrl }: { locale: string; oidcCallbackUrl: string }) {
+export function Stepper({
+  locale,
+  oidcCallbackUrl,
+  minPasswordLength,
+}: {
+  locale: string;
+  oidcCallbackUrl: string;
+  minPasswordLength: number;
+}) {
   const t = useTranslations("setup.steps");
   const [current, setCurrent] = useState<Step>("account");
   const [data, setData] = useState<SetupData>({
@@ -100,7 +108,14 @@ export function Stepper({ locale, oidcCallbackUrl }: { locale: string; oidcCallb
           </li>
         ))}
       </ol>
-      {current === "account" && <StepAccount data={data} onChange={patch} onNext={next} />}
+      {current === "account" && (
+        <StepAccount
+          data={data}
+          onChange={patch}
+          onNext={next}
+          minPasswordLength={minPasswordLength}
+        />
+      )}
       {current === "smtp" && (
         <StepSmtp
           data={data.smtp}
@@ -117,7 +132,12 @@ export function Stepper({ locale, oidcCallbackUrl }: { locale: string; oidcCallb
         />
       )}
       {current === "registration" && (
-        <StepRegistrationMode data={data} onChange={patch} locale={locale} />
+        <StepRegistrationMode
+          data={data}
+          onChange={patch}
+          locale={locale}
+          minPasswordLength={minPasswordLength}
+        />
       )}
     </div>
   );

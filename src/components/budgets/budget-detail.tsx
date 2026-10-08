@@ -14,6 +14,7 @@ import { transactionsHref } from "@/lib/transaction-filters";
 import { BudgetBar, statusStyle } from "./budget-status";
 import { BudgetActions, toEditableBudget, type BudgetFormOptions } from "./budget-actions";
 import { PageHeader } from "@/components/shell/page-header";
+import { formatDateRange, formatDayMonth } from "@/lib/format";
 
 export function BudgetDetail({
   detail,
@@ -30,19 +31,6 @@ export function BudgetDetail({
   const locale = useLocale();
   const router = useRouter();
   const nf = new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" });
-  // periodStart/periodEnd are UTC-bounded semantic dates — format in UTC so
-  // server and client agree (periodEnd sits at 23:59:59.999Z).
-  const df = new Intl.DateTimeFormat(locale, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-  const txDate = new Intl.DateTimeFormat(locale, {
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  });
   const period = { from: detail.periodStart, to: detail.periodEnd };
 
   function lineLabel(line: BudgetDetailData["lines"][number]): string {
@@ -89,7 +77,7 @@ export function BudgetDetail({
             {detail.recurring && <Badge variant="outline">{t("recurring")}</Badge>}
           </>
         }
-        subtitle={`${df.format(detail.periodStart)} – ${df.format(detail.periodEnd)}`}
+        subtitle={formatDateRange(detail.periodStart, detail.periodEnd, locale)}
         actions={
           <div className="flex items-center gap-2">
             {(detail.previousId || detail.nextId) && (
@@ -188,7 +176,7 @@ export function BudgetDetail({
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm">{tx.label ?? t("detail.hiddenTx")}</div>
                     <div className="text-muted-foreground truncate text-[11.5px]">
-                      {txDate.format(tx.date)}
+                      {formatDayMonth(tx.date, locale)}
                       {meta ? ` · ${meta.name}` : ""}
                       {tx.accountName ? ` · ${tx.accountName}` : ""}
                     </div>

@@ -1,3 +1,5 @@
+import { formatDateRange } from "./format";
+
 // A reporting window. `year`/`month` (1-12) are set only when the window is a
 // whole calendar month (enables month navigation + a "vs previous month" delta);
 // for custom ranges they are null. All bounds are UTC and inclusive.
@@ -254,12 +256,7 @@ export function formatPeriodLabel(p: Period, locale: string): string {
   }
 
   // Arbitrary range — Intl collapses the shared parts ("10–30 avr. 2026").
-  return new Intl.DateTimeFormat(locale, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  }).formatRange(p.from, p.to);
+  return formatDateRange(p.from, p.to, locale);
 }
 
 export const PERIOD_PRESETS = ["this-month", "last-month", "this-quarter", "this-year"] as const;

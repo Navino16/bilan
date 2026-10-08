@@ -9,6 +9,7 @@ import type { DashboardData } from "@/server/services/dashboard";
 import type { Comparison, Period } from "@/lib/period";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import { formatPeriodLabel, toIsoDay } from "@/lib/period";
+import { formatDayMonth, formatPercent } from "@/lib/format";
 import { PageHeader } from "@/components/shell/page-header";
 import { categorySliceColors } from "@/lib/chart-colors";
 import { BaselineSelect } from "./baseline-select";
@@ -67,12 +68,6 @@ export async function DashboardView({
       ? { month: "short", year: "numeric", timeZone: "UTC" }
       : { day: "numeric", month: "short", timeZone: "UTC" },
   );
-  const pctFmt = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
-  const recentDateFmt = new Intl.DateTimeFormat(locale, {
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  });
   const peak = data.trace.peak;
   const peakCatName =
     (peak?.categoryId ? catById.get(peak.categoryId)?.name : undefined) ?? t("noCategory");
@@ -85,7 +80,7 @@ export async function DashboardView({
       : t("noPrev");
   const pctNote = (d: ReturnType<typeof delta>) => {
     if (!d) return noReference;
-    const args = { arrow: d.arrow, pct: pctFmt.format(Math.abs(d.pct)) };
+    const args = { arrow: d.arrow, pct: formatPercent(Math.abs(d.pct) / 100, locale) };
     return months ? t("vsAvg", { ...args, months }) : t("vsPrev", args);
   };
   // The net can change sign between periods, which makes a % meaningless (issue #112 §7):
@@ -222,7 +217,7 @@ export async function DashboardView({
                     <span className="flex-1 truncate">{s.name}</span>
                     <span className="tabular-nums">{money.format(s.amount)}</span>
                     <span className="text-muted-foreground w-10 text-right text-[11.5px] tabular-nums">
-                      {Math.round((s.amount / data.totals.expense) * 100)} %
+                      {formatPercent(s.amount / data.totals.expense, locale)}
                     </span>
                   </div>
                 ))}
@@ -298,7 +293,7 @@ export async function DashboardView({
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm">{r.label}</div>
                       <div className="text-muted-foreground truncate text-[11.5px]">
-                        {recentDateFmt.format(r.date)} · {meta?.name ?? t("noCategory")}
+                        {formatDayMonth(r.date, locale)} · {meta?.name ?? t("noCategory")}
                       </div>
                     </div>
                     <span className="text-muted-foreground hidden max-w-40 truncate text-[11.5px] sm:block">

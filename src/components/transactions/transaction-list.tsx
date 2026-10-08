@@ -21,6 +21,7 @@ import { SelectionBar } from "./selection-bar";
 import { DeleteTransactionsDialog } from "./delete-transactions-dialog";
 import { MIN_SEARCH_WORD } from "@/lib/text";
 import { proposeRule } from "@/lib/propose-rule";
+import { formatDate } from "@/lib/format";
 import { useLinkErrorMessage } from "./link-error";
 
 export type ListItem = {
@@ -165,13 +166,7 @@ export function TransactionList({
   const dayLabel = (day: string) =>
     (day.startsWith(String(currentYear)) ? dfDay : dfDayYear).format(new Date(day));
   const signed = (n: number) => (n > 0 ? `+${nf.format(n)}` : nf.format(n));
-  const dfRow = new Intl.DateTimeFormat(locale, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-  const rowDate = (it: ListItem) => (groupByDay ? null : dfRow.format(new Date(it.date)));
+  const rowDate = (it: ListItem) => (groupByDay ? null : formatDate(it.date, locale));
 
   // Group by ISO day, in list order; a flat list is one header-less group.
   const groups: { day: string; rows: ListItem[]; total: number }[] = [];

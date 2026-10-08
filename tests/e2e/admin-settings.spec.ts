@@ -129,7 +129,7 @@ test.describe("admin settings", () => {
     const nav = page.getByRole("link", { name: "Utilisateurs", exact: true });
     await expect(nav).toHaveAttribute("aria-current", "page");
     // ADMIN lacks admin.signup_tokens.manage (SUPER_ADMIN only) → no dead-end tab.
-    await expect(page.getByRole("link", { name: /jetons d'invitation/i })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /jetons d’invitation/i })).toHaveCount(0);
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );

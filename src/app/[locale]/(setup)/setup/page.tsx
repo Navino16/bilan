@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { db } from "@/server/db";
+import { getMinPasswordLength } from "@/server/services/settings/app-settings";
 import { env } from "@/env";
 import { Stepper } from "@/components/setup/stepper";
 import { pageTitle } from "@/i18n/metadata";
@@ -28,7 +29,11 @@ export default async function SetupPage({ params }: { params: Promise<{ locale: 
         <h1 className="font-display text-4xl">{t("title")}</h1>
         <p className="text-muted-foreground">{t("subtitle")}</p>
       </header>
-      <Stepper locale={locale} oidcCallbackUrl={oidcCallbackUrl} />
+      <Stepper
+        locale={locale}
+        oidcCallbackUrl={oidcCallbackUrl}
+        minPasswordLength={await getMinPasswordLength()}
+      />
     </main>
   );
 }

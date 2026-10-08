@@ -10,6 +10,7 @@ import { LocalDateTime } from "@/components/shell/local-date-time";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { pageTitle } from "@/i18n/metadata";
+import { formatCount } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -39,8 +40,7 @@ export default async function AdminSignupTokensPage({
   // Mirrors registerAction's default when the setting is unset.
   const registrationMode = mode ?? "INVITE_ONLY";
 
-  const expiry = (at: Date | null) =>
-    at ? <LocalDateTime value={at} dateStyle="short" /> : t("never");
+  const expiry = (at: Date | null) => (at ? <LocalDateTime value={at} /> : t("never"));
 
   return (
     <div className="space-y-6">
@@ -73,6 +73,8 @@ export default async function AdminSignupTokensPage({
         {tokens.map((tk) => {
           const label = t(STATUS_KEY[tk.status]);
           const active = tk.status === "active";
+          const used = formatCount(tk.usedCount, locale);
+          const max = tk.maxUses === null ? "∞" : formatCount(tk.maxUses, locale);
           return (
             <div
               key={tk.id}
@@ -83,7 +85,7 @@ export default async function AdminSignupTokensPage({
                 <code className="text-xs break-all">{tk.token}</code>
                 <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs md:hidden">
                   {tk.description && <span>{tk.description}</span>}
-                  <span>{t("uses", { used: tk.usedCount, max: tk.maxUses ?? "∞" })}</span>
+                  <span>{t("uses", { used, max })}</span>
                   <span>
                     {t("expires")} {expiry(tk.expiresAt)}
                   </span>
@@ -94,7 +96,7 @@ export default async function AdminSignupTokensPage({
                 {tk.description ?? "—"}
               </span>
               <span className="text-muted-foreground hidden tabular-nums md:block">
-                {tk.usedCount} / {tk.maxUses ?? "∞"}
+                {used} / {max}
               </span>
               <span className="text-muted-foreground hidden md:block">{expiry(tk.expiresAt)}</span>
               <span className="hidden md:block">

@@ -21,6 +21,7 @@ import { useLinkErrorMessage } from "./link-error";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Pencil, Trash2, Unlink } from "lucide-react";
 import { formatPeriodLabel } from "@/lib/period";
+import { formatDate } from "@/lib/format";
 import { editScope } from "@/lib/transaction-edit";
 import type { AssignableBudget } from "@/server/services/budgets";
 import type { LinkSummary } from "@/server/services/links";
@@ -205,12 +206,6 @@ export function TransactionDetail({
         : "archived"
       : null;
   const linkSummary = item?.linked && link?.txId === item.id ? link.summary : null;
-  const shortDate = new Intl.DateTimeFormat(locale, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  });
 
   return (
     <Sheet
@@ -348,7 +343,7 @@ export function TransactionDetail({
                             <span className="min-w-0 flex-1">
                               <span className="block truncate">{o.label}</span>
                               <span className="text-muted-foreground block truncate text-xs">
-                                {o.accountName} · {shortDate.format(new Date(o.date))}
+                                {o.accountName} · {formatDate(o.date, locale)}
                               </span>
                             </span>
                             <span
