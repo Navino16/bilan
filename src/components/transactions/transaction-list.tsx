@@ -48,8 +48,10 @@ export type AccountOption = {
   archived: boolean;
 };
 
-// No date column: rows are grouped under a day header.
-const COLS = "md:grid-cols-[1fr_minmax(0,180px)_minmax(0,140px)_92px_110px]";
+// No date column: rows are grouped under a day header. Beside the sidebar below xl the
+// account folds under the label and the type column drops, so the label stays readable.
+const COLS =
+  "lg:grid-cols-[minmax(0,1fr)_minmax(0,160px)_110px] xl:grid-cols-[minmax(0,1fr)_minmax(0,180px)_minmax(0,140px)_92px_110px]";
 
 export function TransactionList({
   items,
@@ -228,7 +230,7 @@ export function TransactionList({
     <div className={`space-y-5 ${selecting ? "pb-20" : ""}`}>
       {/* On mobile, selection mode is entered from the filter sheet. */}
       {!selecting && (
-        <div className="hidden md:flex">
+        <div className="hidden lg:flex">
           <button
             type="button"
             onClick={() => setSelecting(true)}
@@ -242,12 +244,12 @@ export function TransactionList({
       {/* Desktop column header */}
       <div className="overflow-hidden rounded-xl border">
         <div
-          className={`text-muted-foreground bg-muted/60 hidden gap-3 border-b px-4 py-2.5 text-[0.65rem] tracking-[0.08em] uppercase md:grid ${COLS}`}
+          className={`text-muted-foreground bg-muted/60 hidden gap-3 border-b px-4 py-2.5 text-[0.65rem] tracking-[0.08em] uppercase lg:grid ${COLS}`}
         >
           <span>{t("label")}</span>
           <span>{t("category")}</span>
-          <span>{t("account")}</span>
-          <span>{t("type")}</span>
+          <span className="hidden xl:block">{t("account")}</span>
+          <span className="hidden xl:block">{t("type")}</span>
           <span className="text-right">{t("amount")}</span>
         </div>
 
@@ -280,14 +282,17 @@ export function TransactionList({
                   className={`w-full border-b text-left transition-colors last:border-b-0 ${isSel ? "bg-accent" : "hover:bg-muted/50"} ${selecting && picked.has(it.id) ? "ring-primary ring-2 ring-inset" : ""} ${locked ? "opacity-50" : ""}`}
                 >
                   {/* Desktop grid */}
-                  <span className={`hidden items-center gap-3 px-4 py-2.5 md:grid ${COLS}`}>
-                    <span className="flex min-w-0 items-center gap-2.5">
+                  <span className={`hidden items-center gap-3 px-4 py-2.5 lg:grid ${COLS}`}>
+                    <span data-slot="row-label" className="flex min-w-0 items-center gap-2.5">
                       <CategoryAvatar color={meta?.color} icon={meta?.icon} size={26} />
                       <span className="min-w-0">
                         <span className="block truncate text-sm">{it.label}</span>
                         {rowDate(it) && (
                           <span className="text-muted-foreground block text-xs">{rowDate(it)}</span>
                         )}
+                        <span className="text-muted-foreground block truncate text-xs xl:hidden">
+                          {it.accountName}
+                        </span>
                       </span>
                       {it.linked && <Pill>{tLink("linked")}</Pill>}
                     </span>
@@ -298,8 +303,10 @@ export function TransactionList({
                         <span className="text-muted-foreground text-xs">{t("noCategory")}</span>
                       )}
                     </span>
-                    <span className="text-muted-foreground truncate text-xs">{it.accountName}</span>
-                    <span>
+                    <span className="text-muted-foreground hidden truncate text-xs xl:block">
+                      {it.accountName}
+                    </span>
+                    <span className="hidden xl:block">
                       <Pill>{t(`types.${it.type}`)}</Pill>
                     </span>
                     <span
@@ -311,7 +318,7 @@ export function TransactionList({
                   </span>
 
                   {/* Mobile compact */}
-                  <span className="flex items-center gap-3 px-4 py-3 md:hidden">
+                  <span className="flex items-center gap-3 px-4 py-3 lg:hidden">
                     <CategoryAvatar color={meta?.color} icon={meta?.icon} size={32} />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center gap-1.5">

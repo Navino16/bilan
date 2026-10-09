@@ -208,7 +208,7 @@
     "archiveTitle": "Archiver « {name} » ?",
     "archiveBody": "Le compte disparaît des listes et des saisies. Son historique reste dans les transactions, les budgets et le tableau de bord, et vous pourrez le désarchiver.",
     "unarchive": "Désarchiver",
-    "archivedTitle": "Comptes archivés · {count, number}",
+    "archivedTitle": "Comptes archivés · {count, number}",
     "archivedHint": "Masqués des saisies et du solde global ; leurs transactions restent dans l’historique.",
     "archivedBadge": "Archivé",
     "delete": "Supprimer",
@@ -279,7 +279,7 @@
       "AMOUNT_AMBIGUOUS": "Montant ambigu : écrivez 1234 ou 1,23 (sans séparateur de milliers seul).",
       "AMOUNT_PRECISION": "Le montant ne peut pas avoir plus de 2 décimales."
     },
-    "legendOthers": "Autres · {count, number}"
+    "legendOthers": "Autres · {count, number}"
   },
   "rules": {
     "pageTitle": "Catégories & règles",
@@ -1075,7 +1075,7 @@
         "unknownBrowser": "Navigateur inconnu",
         "activeNow": "Actif maintenant",
         "active": "{days, plural, =0 {Actif aujourd’hui} =1 {Actif hier} other {Actif il y a # jours}}",
-        "others": "Autres appareils · {count, number}",
+        "others": "Autres appareils · {count, number}",
         "none": "Aucun autre appareil connecté.",
         "revoke": "Déconnecter",
         "revokeAll": "Tout déconnecter",
@@ -1093,7 +1093,7 @@
         "overline": "Clés d’accès",
         "title": "Connexion sans mot de passe",
         "hint": "Connectez-vous avec votre empreinte digitale, votre visage ou le code de votre appareil.",
-        "count": "Vos clés d’accès · {count}",
+        "count": "Vos clés d’accès · {count}",
         "add": "Ajouter",
         "none": "Aucune clé d’accès pour le moment.",
         "defaultName": "Clé d’accès",
@@ -1121,7 +1121,7 @@
         "overline": "Identités connectées",
         "title": "Connexion via un fournisseur d’identité",
         "hint": "Liez une identité Google ou celle de votre organisation pour vous connecter avec elle.",
-        "count": "Vos identités · {count}",
+        "count": "Vos identités · {count}",
         "none": "Aucune identité liée pour le moment.",
         "linkedAt": "Liée le <date></date>",
         "providerDisabled": "Fournisseur désactivé par l’administrateur",

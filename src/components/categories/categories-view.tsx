@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SegmentedTabs } from "@/components/transactions/bits";
+import { ScrollFade } from "@/components/ui/scroll-fade";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import { CategoryForm } from "./category-form";
 import { CategoryList } from "./category-list";
@@ -62,18 +63,24 @@ export function CategoriesView({
         }
       />
 
-      <SegmentedTabs
-        items={[
-          { id: "cats", label: `${t("tabCategories")} (${flatCategories.length})` },
-          { id: "rules", label: `${t("tabRules")} (${rules.length})` },
-          {
-            id: "merchants",
-            label: `${tm("tab")} (${merchants.renamed.length + merchants.others.length})`,
-          },
-        ]}
-        value={tab}
-        onChange={setTab}
-      />
+      {/* The wrapper keeps space-y's margins: -m-1 on the scroller itself would override them. */}
+      <div>
+        <ScrollFade className="-m-1 max-w-full p-1">
+          <SegmentedTabs
+            className="w-max"
+            items={[
+              { id: "cats", label: `${t("tabCategories")} (${flatCategories.length})` },
+              { id: "rules", label: `${t("tabRules")} (${rules.length})` },
+              {
+                id: "merchants",
+                label: `${tm("tab")} (${merchants.renamed.length + merchants.others.length})`,
+              },
+            ]}
+            value={tab}
+            onChange={setTab}
+          />
+        </ScrollFade>
+      </div>
 
       {tab === "cats" ? (
         <CategoryList tree={tree} />

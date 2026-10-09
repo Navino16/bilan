@@ -170,7 +170,7 @@ export async function DashboardView({
       </div>
 
       {/* KPI row */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         {kpis.map((k) => (
           <Card key={k.key} className="gap-2 p-5">
             <div className={overline}>{t(`kpi.${k.key}`)}</div>
@@ -188,7 +188,7 @@ export async function DashboardView({
       </div>
 
       {/* Donut + breakdown */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.4fr_1fr]">
         <Card className="gap-4 p-6">
           <div>
             <div className={overline}>{t("breakdown")}</div>
@@ -203,7 +203,7 @@ export async function DashboardView({
                 centerLabel={money.format(data.totals.expense)}
                 centerSub={t("spentThisPeriod")}
               />
-              <div className="flex w-full flex-1 flex-col gap-2">
+              <div className="flex w-full min-w-0 flex-1 flex-col gap-2">
                 {slices.map((s) => (
                   <div
                     key={s.key}
@@ -263,7 +263,7 @@ export async function DashboardView({
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_1.2fr]">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1.2fr]">
         <BudgetSnapshot budget={budget} categories={catById} locale={locale} />
 
         {/* Recent transactions */}

@@ -19,8 +19,8 @@ test.describe("mobile chrome", () => {
   test.use({ storageState: "tests/e2e/.auth/owner.json" });
 
   test("bottom nav visible on mobile", async ({ page, isMobile }) => {
-    // The bottom tab bar is `md:hidden` — only the mobile project renders it.
-    test.skip(!isMobile, "bottom nav is mobile-only (md:hidden)");
+    // The bottom tab bar is `lg:hidden` — only the mobile project renders it.
+    test.skip(!isMobile, "bottom nav is mobile-only (lg:hidden)");
     await page.goto("/fr/dashboard");
     await expect(page.getByRole("navigation", { name: "Navigation rapide" })).toBeVisible();
   });
@@ -33,7 +33,7 @@ test.describe("primary navigation", () => {
   test.use({ storageState: "tests/e2e/.auth/owner.json" });
 
   test("every sidebar link resolves without an error status", async ({ page, isMobile }) => {
-    // The sidebar is desktop-only (`hidden md:flex`); on mobile it never renders.
+    // The sidebar is desktop-only (`hidden lg:flex`); on mobile it never renders.
     test.skip(!!isMobile, "sidebar is desktop-only");
     // Crawls every sidebar route sequentially; a cold dev-server compile per new
     // route can add up, so allow more than the default 30s.

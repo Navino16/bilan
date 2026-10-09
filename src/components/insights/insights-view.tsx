@@ -192,7 +192,7 @@ export async function InsightsView({
 
       <CategoryHistoryCard history={history} categories={categories} locale={locale} />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <Card className="gap-4 p-6" data-slot="insights-merchants">
           <CardTitle over={t("merchantsOverline")} title={t("merchantsTitle")} />
           {data.merchants.length === 0 ? (

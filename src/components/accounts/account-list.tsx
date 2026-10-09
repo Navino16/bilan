@@ -76,15 +76,15 @@ function AccountCard({
   return (
     <Card className="gap-0 p-4">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-2.5">
+        <div className="flex min-w-0 flex-1 items-start gap-2.5">
           <span
             aria-hidden
             className="mt-1 size-3 shrink-0 rounded-full"
             style={{ backgroundColor: a.color ?? "#2563eb" }}
           />
           <div className="min-w-0 space-y-0.5">
-            <div className="flex items-center gap-2">
-              <span className="truncate font-medium">{a.name}</span>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="min-w-0 truncate font-medium">{a.name}</span>
               {a.archived ? (
                 <Badge variant="outline">{t("archivedBadge")}</Badge>
               ) : a.access !== "OWNER" ? (

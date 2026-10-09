@@ -43,18 +43,18 @@ export default async function AuthenticatedLayout({
         appName={appName}
         year={year}
         theme={theme}
-        className="hidden md:flex"
+        className="hidden lg:flex"
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <Header user={identity} canAdmin={canAdmin} appName={appName} year={year} theme={theme} />
         <main
           id={MAIN_ID}
           tabIndex={-1}
-          className="flex-1 px-4 pt-6 pb-24 outline-none md:px-8 md:pb-8"
+          className="flex-1 px-4 pt-6 pb-24 outline-none md:px-8 lg:pb-8"
         >
           <NavigationPending className="mx-auto w-full max-w-5xl">{children}</NavigationPending>
         </main>
-        <BottomNav className="md:hidden" />
+        <BottomNav className="lg:hidden" />
       </div>
       <RegisterSw />
     </div>

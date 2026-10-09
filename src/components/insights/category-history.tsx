@@ -57,7 +57,7 @@ export function CategoryHistoryCard({
 
   return (
     <Card className="gap-4 p-6" data-slot="insights-history">
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-3">
         <CardTitle over={t("historyOverline")} title={t("historyTitle")} sub={t("historySub")} />
         <SegmentedTabs
           items={(["6", "12"] as const).map((id) => ({

@@ -235,7 +235,7 @@ export function TransactionFilters({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="hidden md:contents">
+      <div className="hidden lg:contents">
         <PeriodPicker from={from ?? ""} to={to ?? ""} />
       </div>
 
@@ -246,10 +246,10 @@ export function TransactionFilters({
         onChange={(e) => onSearchChange(e.target.value)}
         aria-label={t("search")}
         aria-describedby={shortWord ? "search-hint" : undefined}
-        className="h-8 min-w-0 flex-1 md:w-56 md:flex-none"
+        className="h-8 min-w-0 flex-1 lg:w-56 lg:flex-none"
       />
 
-      <div className="hidden md:contents">
+      <div className="hidden lg:contents">
         {directionTabs}
         <DropdownMenu>
           <DropdownMenuTrigger render={<button type="button" className={trigger} />}>
@@ -324,7 +324,7 @@ export function TransactionFilters({
       <Button
         type="button"
         variant="outline"
-        className="md:hidden"
+        className="lg:hidden"
         onClick={() => setSheetOpen(true)}
         data-slot="filters-open"
       >
