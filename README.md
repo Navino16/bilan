@@ -157,7 +157,17 @@ unset in the app.
 | `npm run test:e2e`                   | E2E (Playwright)                |
 | `npm run ci`                         | lint + typecheck + test         |
 | `npm run db:seed-dev`                | Seed the demo user (above)      |
+| `npm run db:reindex-search`          | Rebuild the search index        |
 | `bash scripts/prod-smoke.sh`         | Boot and check the prod compose |
+
+`npm run db:reindex-search` decrypts every transaction label and rewrites its search tokens
+(batches of 500, `-- --batch=N` to change). Run it once after an upgrade that changes the
+search tokenization (e.g. #192, word-prefix search); it is safe to re-run. It first checks
+each stored `labelHash` against `SEARCH_TOKEN_KEY` and stops on a mismatch (wrong key); after a
+change to the text normalization, add `-- --rehash` to rewrite `labelHash`/`rawLabelHash` too.
+It runs from a source checkout (`npm ci`) whose `.env` points at the target database with the
+same `DATA_ENCRYPTION_KEY`/`SEARCH_TOKEN_KEY`: the Docker runtime image ships neither the
+scripts nor `tsx`.
 
 `npm run test:e2e` reuses (or starts) the server on `http://localhost:3000`. To target a
 server already running elsewhere, set `PLAYWRIGHT_BASE_URL` (no server is started then):
