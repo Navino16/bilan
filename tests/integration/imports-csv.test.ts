@@ -299,11 +299,76 @@ pas une date;X;-1,00;Carte`;
       previewCsvBatch(batch.id, owner, { date: "Quand", label: "Texte" }),
     ).rejects.toMatchObject({ message: "INVALID_MAPPING" });
 
-    const summary = await commitCsvBatch(batch.id, mapping, { id: owner });
+    expect(p.mapping).toEqual({ ...mapping, decimal: "," });
+    const summary = await commitCsvBatch(batch.id, p.mapping, { id: owner });
     expect(summary).toMatchObject({ importedRows: 2, skippedRows: 0, rejectedRows: 2 });
     await expect(previewCsvBatch(batch.id, owner, mapping)).rejects.toMatchObject({
       message: "NOT_COMMITTABLE",
     });
+  });
+
+  it("guesses an ambiguous decimal mark, and commits the one the user previewed (#187)", async () => {
+    const tag = `DEC${Date.now()}`;
+    const csv = `Date;Libellé;Montant
+01/06/2026;CB ${tag} A;-1.234
+02/06/2026;CB ${tag} B;45,500`;
+    const batch = await createCsvBatch(
+      { accountId, filename: "decimal.csv", text: csv },
+      { id: owner },
+    );
+    const guessed = await previewCsvBatch(batch.id, owner);
+    expect(guessed.mapping.decimal).toBe(",");
+    expect(guessed.decimalGuessed).toBe(true);
+    expect(guessed.preview.map((r) => r.amount)).toEqual([-1234, 45.5]);
+
+    const confirmed = await previewCsvBatch(batch.id, owner, guessed.mapping);
+    expect(confirmed.decimalGuessed).toBe(false);
+    expect(confirmed.preview.map((r) => r.amount)).toEqual([-1234, 45.5]);
+
+    const dot = await previewCsvBatch(batch.id, owner, { ...guessed.mapping, decimal: "." });
+    expect(dot.decimalGuessed).toBe(false);
+    expect(dot.mapping.decimal).toBe(".");
+    expect(dot.preview.map((r) => r.amount)).toEqual([-1.23, 45500]);
+
+    const summary = await commitCsvBatch(batch.id, dot.mapping, { id: owner });
+    expect(summary.importedRows).toBe(2);
+    const rows = await db.transaction.findMany({
+      where: { importBatchId: batch.id },
+      orderBy: { date: "asc" },
+    });
+    expect(rows.map((r) => Number(r.amount))).toEqual([-1.23, 45500]);
+  });
+
+  it("doesn't flag a decimal mark that an amount settles", async () => {
+    const batch = await createCsvBatch(
+      { accountId, filename: "settled.csv", text: freshCsv("SETTLED") },
+      { id: owner },
+    );
+    const p = await previewCsvBatch(batch.id, owner);
+    expect(p.mapping.decimal).toBe(",");
+    expect(p.decimalGuessed).toBe(false);
+  });
+
+  it("rejects an invalid or missing decimal mark", async () => {
+    const batch = await createCsvBatch(
+      { accountId, filename: "badmark.csv", text: freshCsv("BADMARK") },
+      { id: owner },
+    );
+    const { mapping } = await previewCsvBatch(batch.id, owner);
+    const bad = { ...mapping, decimal: ";" } as unknown as typeof mapping;
+    await expect(previewCsvBatch(batch.id, owner, bad)).rejects.toMatchObject({
+      message: "INVALID_MAPPING",
+    });
+    await expect(commitCsvBatch(batch.id, bad, { id: owner })).rejects.toMatchObject({
+      message: "INVALID_MAPPING",
+    });
+    const unset = { ...mapping, decimal: undefined };
+    await expect(commitCsvBatch(batch.id, unset, { id: owner })).rejects.toMatchObject({
+      message: "INVALID_MAPPING",
+    });
+    expect((await db.importBatch.findUniqueOrThrow({ where: { id: batch.id } })).status).toBe(
+      "REVIEW",
+    );
   });
 
   it("trims the raw CSV text from metadata once committed", async () => {

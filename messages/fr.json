@@ -735,6 +735,14 @@
     "chooseFile": "Choisir un fichier",
     "drop": "Déposez un fichier CSV ou PDF ici, ou cliquez pour parcourir.",
     "mapping": "Correspondance des colonnes",
+    "decimal": {
+      "label": "Décimales",
+      "comma": "Virgule",
+      "dot": "Point",
+      "guessed": "Séparateur décimal deviné ({mark, select, comma {virgule} other {point}}) : vérifiez les montants (réglage « Décimales »).",
+      "confirm": "C’est correct",
+      "useOther": "Utiliser {mark, select, comma {la virgule} other {le point}}"
+    },
     "colDate": "Date",
     "colLabel": "Libellé",
     "colAmount": "Montant",

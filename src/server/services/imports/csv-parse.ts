@@ -1,11 +1,14 @@
 import Papa from "papaparse";
-import type { CsvMapping, NormalizedRow } from "./types";
+import type { DecimalMark } from "@/lib/validation/import";
+import type { CsvMapping, NormalizedRow, ResolvedCsvMapping } from "./types";
+
+export type { DecimalMark };
 
 export type RawRow = Record<string, string>;
 
-// Parses a CSV string. Auto-detects the delimiter (`,` or `;`), trims headers,
+// Parses a CSV string. Auto-detects the delimiter (`,`, `;`, tab…), trims headers,
 // and returns string cells keyed by header.
-export function parseCsv(text: string): { headers: string[]; rows: RawRow[] } {
+export function parseCsv(text: string): { headers: string[]; rows: RawRow[]; delimiter: string } {
   // Empty lines are kept (and skipped by mapRows) so a row's index maps to its file line.
   const result = Papa.parse<RawRow>(text.trimEnd(), {
     header: true,
@@ -13,7 +16,7 @@ export function parseCsv(text: string): { headers: string[]; rows: RawRow[] } {
     transformHeader: (h) => h.trim(),
   });
   const headers = result.meta.fields?.map((f) => f.trim()) ?? [];
-  return { headers, rows: result.data };
+  return { headers, rows: result.data, delimiter: result.meta.delimiter };
 }
 
 const DATE_HINTS = ["date", "date opération", "date operation", "date valeur"];
@@ -85,32 +88,70 @@ export function decodeCsv(bytes: ArrayBuffer | Uint8Array): string {
 // The DB stores amounts as Decimal(12,2).
 export const MAX_ABS_AMOUNT = 9_999_999_999.99;
 
-export type DecimalMark = "." | ",";
+const THOUSANDS = /^\d{1,3}([.,]\d{3})+$/;
+const otherMark = (m: DecimalMark): DecimalMark => (m === "." ? "," : ".");
 
-// The decimal mark of a whole amount column, when some value settles it: one
-// holding both separators (the last is decimal), or a lone separator not
-// followed by exactly 3 digits. Null when every value is ambiguous ("1.234").
-export function inferDecimalMark(values: string[]): DecimalMark | null {
-  for (const raw of values) {
-    const s = raw.replace(/[^\d.,]/g, "");
-    const last = Math.max(s.lastIndexOf("."), s.lastIndexOf(","));
-    if (last < 0) continue;
-    if (s.includes(".") && s.includes(",")) return s[last] as DecimalMark;
-    const count = s.split(s[last]).length - 1;
-    if (count === 1 && s.length - last - 1 !== 3) return s[last] as DecimalMark;
-  }
-  return null;
+const isAmount = (raw: string) =>
+  normalizeAmount(raw, ",") !== null || normalizeAmount(raw, ".") !== null;
+
+// The decimal mark one amount settles: both separators (the last is decimal),
+// a separator repeated as thousands grouping ("1.234.567"), or a lone one that
+// can't be thousands ("12,5", "0,125", "1234,567"). Null for an ambiguous
+// "1.234", a separator-less amount or a non-amount ("Réf. 12").
+export function decimalVote(raw: string): DecimalMark | null {
+  if (!isAmount(raw)) return null;
+  const s = raw.replace(/[^\d.,]/g, "");
+  const last = Math.max(s.lastIndexOf("."), s.lastIndexOf(","));
+  if (last < 0) return null;
+  const sep = s[last] as DecimalMark;
+  if (s.includes(".") && s.includes(",")) return sep;
+  if (s.split(sep).length > 2) return THOUSANDS.test(s) ? otherMark(sep) : null;
+  return !THOUSANDS.test(s) || /^0[.,]/.test(s) ? sep : null;
 }
 
-const THOUSANDS = /^\d{1,3}([.,]\d{3})+$/;
+export type DecimalDetection = { mark: DecimalMark; guessed: boolean };
 
-// "1 234,56" / "-12,34 €" / "(12,34)" / "12,34-" / "+15" → number; "" /
+const DELIMITER_MARK: Record<string, DecimalMark> = { ";": ",", ",": "." };
+
+// #187: the majority of the amounts' votes decides; else (no vote, or a tie)
+// the delimiter (`;` → comma, `,` → dot); else the mark the ambiguous amounts
+// don't use, so they keep reading as thousands. `guessed` unless the votes
+// were unanimous, or no amount had a separator at all.
+export function detectDecimalMark(values: string[], delimiter: string): DecimalDetection {
+  const amounts = values.filter(isAmount);
+  const votes = { ",": 0, ".": 0 };
+  for (const v of amounts) {
+    const vote = decimalVote(v);
+    if (vote) votes[vote]++;
+  }
+  if (votes[","] !== votes["."]) {
+    const mark: DecimalMark = votes[","] > votes["."] ? "," : ".";
+    return { mark, guessed: votes[otherMark(mark)] > 0 };
+  }
+  const seps = new Set(amounts.flatMap((v) => v.match(/[.,]/g) ?? []));
+  const fallback: DecimalMark = seps.size === 1 && seps.has(",") ? "." : ",";
+  return { mark: DELIMITER_MARK[delimiter] ?? fallback, guessed: seps.size > 0 };
+}
+
+const cell = (row: RawRow, col: string | undefined) =>
+  col && Object.hasOwn(row, col) ? (row[col] ?? "") : "";
+
+export function amountCells(rows: RawRow[], mapping: CsvMapping): string[] {
+  return mapping.amount
+    ? rows.map((r) => cell(r, mapping.amount))
+    : rows.flatMap((r) => [cell(r, mapping.debit), cell(r, mapping.credit)]);
+}
+
+// "1 234,56" / "1'234.56" / "-12,34 €" / "(12,34)" / "12,34-" / "+15" → number; "" /
 // garbage / several minus signs → null. `decimal` is the column's mark (see
-// inferDecimalMark); without it, a lone separator before exactly 3 digits
-// after a non-zero integer part ("1.234") is read as thousands.
+// detectDecimalMark); without it, a lone separator before exactly 3 digits
+// after a non-zero integer part ("1.234") is read as thousands. Apostrophes
+// count only as thousands grouping, or as Excel's leading text marker.
 export function normalizeAmount(raw: string, decimal: DecimalMark | null = null): number | null {
   let s = raw
     .replace(/\s/g, "")
+    .replace(/^'/, "")
+    .replace(/(?<=\d)['’](?=\d{3}(?!\d))/g, "")
     .replace(/€|EUR/gi, "")
     .replace(/\u2212/g, "-");
   if (s === "") return null;
@@ -198,17 +239,13 @@ export type RejectedRow = { row: number; reason: RejectReason; value: string };
 // `rejected` with their line in the file; blank lines are skipped.
 export function mapRows(
   rows: RawRow[],
-  mapping: CsvMapping,
+  mapping: ResolvedCsvMapping,
 ): { rows: NormalizedRow[]; rejected: RejectedRow[] } {
   const out: NormalizedRow[] = [];
   const rejected: RejectedRow[] = [];
-  const cell = (row: RawRow, col: string | undefined) =>
-    col && Object.hasOwn(row, col) ? (row[col] ?? "") : "";
   const reject = (row: number, reason: RejectReason, value: string) =>
     void rejected.push({ row, reason, value: value.slice(0, 60) });
-  const amountMark = mapping.amount
-    ? inferDecimalMark(rows.map((r) => cell(r, mapping.amount)))
-    : inferDecimalMark(rows.flatMap((r) => [cell(r, mapping.debit), cell(r, mapping.credit)]));
+  const amountMark = mapping.decimal;
 
   rows.forEach((row, i) => {
     if (Object.values(row).every((v) => !String(v ?? "").trim())) return;

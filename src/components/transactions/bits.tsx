@@ -69,22 +69,31 @@ export function SegmentedTabs<T extends string>({
   value,
   onChange,
   className,
+  disabled,
+  "aria-label": ariaLabel,
 }: {
   items: SegItem<T>[];
   value: T;
   onChange: (id: T) => void;
   className?: string;
+  disabled?: boolean;
+  "aria-label"?: string;
 }) {
   return (
-    <div className={cn("bg-muted inline-flex items-center gap-0.5 rounded-lg p-0.5", className)}>
+    <div
+      role={ariaLabel ? "group" : undefined}
+      aria-label={ariaLabel}
+      className={cn("bg-muted inline-flex items-center gap-0.5 rounded-lg p-0.5", className)}
+    >
       {items.map((it) => (
         <button
           key={it.id}
           type="button"
           aria-pressed={value === it.id}
+          disabled={disabled}
           onClick={() => onChange(it.id)}
           className={cn(
-            "h-7 shrink-0 rounded-md px-3 text-[0.8rem] font-medium whitespace-nowrap transition-colors",
+            "h-7 shrink-0 rounded-md px-3 text-[0.8rem] font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-60",
             value === it.id
               ? "bg-card text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground",
