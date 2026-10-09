@@ -32,7 +32,7 @@ test.describe("accounts", () => {
     await card.getByRole("button", { name: /^actions pour/i }).click();
     await page.getByRole("menuitem", { name: /modifier/i }).click();
     const dialog = page.getByRole("dialog");
-    await expect(dialog.locator('input[name="initialBalance"]')).toHaveValue("1500,00");
+    await expect(dialog.locator('input[name="initialBalance"]')).toHaveValue("1\u202f500,00");
     await expect(dialog.locator('input[name="iban"]')).toHaveAttribute("placeholder", /•••• 0189/);
     await dialog.locator('input[name="name"]').fill(`${name} bis`);
     await dialog.getByRole("button", { name: /enregistrer/i }).click();

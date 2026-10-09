@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { getCurrentUser } from "@/server/auth/permissions";
-import { appSettings } from "@/server/services/settings/app-settings";
+import { appSettings, getAppName } from "@/server/services/settings/app-settings";
 import { listSsoProviders } from "@/server/services/users/identities";
 import { postLoginPath } from "@/lib/callback-url";
 import { loginSsoError } from "@/lib/sso-errors";
@@ -40,9 +40,10 @@ export default async function LoginPage({
         : redirectTo,
     );
   }
-  const [credentialsEnabled, ssoProviders] = await Promise.all([
+  const [credentialsEnabled, ssoProviders, appName] = await Promise.all([
     appSettings.get<boolean>("credentials_enabled"),
     listSsoProviders(),
+    getAppName(),
   ]);
   const notice: LoginNotice | undefined =
     deleted === "1" ? "accountDeleted" : reset === "1" ? "passwordReset" : undefined;
@@ -55,6 +56,7 @@ export default async function LoginPage({
       ssoError={error ? loginSsoError(String(error)) : undefined}
       credentialsEnabled={credentialsEnabled ?? true}
       ssoProviders={ssoProviders}
+      appName={appName}
     />
   );
 }

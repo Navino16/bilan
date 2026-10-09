@@ -37,9 +37,11 @@ export type AuthProviderDefaults = {
 export function AuthProviderForm({
   provider,
   impact = { linkedAccounts: 0, lockedOut: 0 },
+  appName,
 }: {
   provider?: AuthProviderDefaults;
   impact?: AuthProviderImpact;
+  appName: string;
 }) {
   const t = useTranslations("admin.authProviders");
   const router = useRouter();
@@ -125,7 +127,7 @@ export function AuthProviderForm({
         <div className="space-y-1">
           <Label htmlFor={`${prefix}-allowSignUp`}>{t("allowSignUp")}</Label>
           <p id={`${prefix}-allowSignUp-hint`} className="text-muted-foreground text-xs">
-            {t("allowSignUpHint")}
+            {t("allowSignUpHint", { appName })}
           </p>
         </div>
       </div>

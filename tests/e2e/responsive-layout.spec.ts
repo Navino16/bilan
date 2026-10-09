@@ -68,6 +68,55 @@ test.describe("responsive layout (#167)", () => {
     });
   }
 
+  // Full role names and full amounts are longer than the old « Admin » / « 2,9 € » (#226).
+  for (const width of [320, 375]) {
+    test.describe(`long labels at ${width}px`, () => {
+      test.use({ viewport: { width, height: 900 } });
+
+      const fitsInside = (selector: string) =>
+        `[...document.querySelectorAll('${selector}')].every((el) => {
+          const box = el.getBoundingClientRect();
+          return el.scrollWidth <= el.clientWidth && box.right <= document.documentElement.clientWidth;
+        })`;
+
+      test.describe("as an admin", () => {
+        test.use({ storageState: "tests/e2e/.auth/superadmin.json" });
+
+        test("role badges and selects fit the user rows", async ({ page }) => {
+          await page.goto("/fr/admin/users", { waitUntil: "domcontentloaded", timeout: 90_000 });
+          const rows = page.locator('[data-slot="admin-user-row"]');
+          await expect(rows.first()).toBeVisible();
+          await expect(
+            rows.locator('[data-slot="badge"]', { hasText: "Super-administrateur" }),
+          ).toBeVisible();
+          expect(await page.evaluate(fitsInside('[data-slot="admin-user-row"]'))).toBe(true);
+          for (const role of await rows.getByRole("combobox").all()) {
+            const box = (await role.boundingBox())!;
+            expect(box.x + box.width).toBeLessThanOrEqual(width);
+          }
+        });
+      });
+
+      test.describe("as a user", () => {
+        test.use({ storageState: "tests/e2e/.auth/owner.json" });
+
+        test("the budget snapshot's full amounts fit the card", async ({ page }) => {
+          await page.goto("/fr/dashboard", { waitUntil: "domcontentloaded", timeout: 90_000 });
+          const snapshot = page.locator('[data-slot="budget-snapshot"]');
+          await expect(snapshot).toBeVisible();
+          expect(await page.evaluate(fitsInside('[data-slot="budget-snapshot"]'))).toBe(true);
+          await expect
+            .poll(() =>
+              page.evaluate(
+                () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+              ),
+            )
+            .toBeLessThanOrEqual(0);
+        });
+      });
+    });
+  }
+
   test.describe("transactions list and filters", () => {
     test.use({ storageState: "tests/e2e/.auth/owner.json" });
 

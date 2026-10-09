@@ -5,6 +5,7 @@ import { flattenCategories } from "@/components/transactions/category-tree";
 import { getDashboard } from "@/server/services/dashboard";
 import { getCurrentBudget } from "@/server/services/budgets";
 import { getOnboardingState } from "@/server/services/onboarding";
+import { getAppName } from "@/server/services/settings/app-settings";
 import { parsePeriodParams, clampPeriodToNow, parseBaseline, comparisonFor } from "@/lib/period";
 import { DashboardView } from "@/components/dashboard/dashboard-view";
 import { WelcomeCard } from "@/components/onboarding/welcome-card";
@@ -29,11 +30,14 @@ export default async function DashboardPage({
 
   const onboarding = await getOnboardingState(user.id);
   if (!onboarding.hasTransaction) {
-    const t = await getTranslations("dashboard");
-    const tWelcome = await getTranslations("onboarding.welcome");
+    const [t, tWelcome, appName] = await Promise.all([
+      getTranslations("dashboard"),
+      getTranslations("onboarding.welcome"),
+      getAppName(),
+    ]);
     return (
       <div className="space-y-6">
-        <PageHeader overline={t("overline")} title={tWelcome("title")} />
+        <PageHeader overline={t("overline")} title={tWelcome("title", { appName })} />
         <WelcomeCard state={onboarding} />
       </div>
     );

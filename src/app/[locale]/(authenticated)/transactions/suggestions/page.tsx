@@ -7,6 +7,7 @@ import { SuggestionsList } from "@/components/transactions/suggestions-list";
 import { PageHeader } from "@/components/shell/page-header";
 import { Badge } from "@/components/ui/badge";
 import { pageTitle } from "@/i18n/metadata";
+import { getAppName } from "@/server/services/settings/app-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -18,9 +19,10 @@ export default async function SuggestionsPage({ params }: { params: Promise<{ lo
   const user = await requireSession();
   const t = await getTranslations("transactions.suggestions");
   const tTx = await getTranslations("transactions");
-  const [pairs, ignored] = await Promise.all([
+  const [pairs, ignored, appName] = await Promise.all([
     suggestPairs(user.id),
     listIgnoredSuggestions(user.id),
+    getAppName(),
   ]);
 
   return (
@@ -36,7 +38,7 @@ export default async function SuggestionsPage({ params }: { params: Promise<{ lo
         overline={tTx("title")}
         title={t("title")}
         badges={<Badge variant="secondary">{t("subtitle", { count: pairs.length })}</Badge>}
-        subtitle={t("hint")}
+        subtitle={t("hint", { appName })}
       />
       <SuggestionsList items={pairs} ignored={ignored} />
     </div>

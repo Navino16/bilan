@@ -21,7 +21,7 @@ import { useLinkErrorMessage } from "./link-error";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Pencil, Trash2, Unlink } from "lucide-react";
 import { formatPeriodLabel } from "@/lib/period";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatLongDay } from "@/lib/format";
 import { editScope } from "@/lib/transaction-edit";
 import type { AssignableBudget } from "@/server/services/budgets";
 import type { LinkSummary } from "@/server/services/links";
@@ -180,13 +180,6 @@ export function TransactionDetail({
   }
 
   const nf = new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" });
-  const df = new Intl.DateTimeFormat(locale, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
   // Same-named budgets differ by owner and period (#161).
   const budgetLabel = (b: AssignableBudget) =>
     `${b.name} · ${formatPeriodLabel({ from: b.periodStart, to: b.periodEnd, year: null, month: null }, locale)}`;
@@ -232,7 +225,7 @@ export function TransactionDetail({
               </div>
               <SheetTitle className="font-sans text-sm font-normal">{item.label}</SheetTitle>
               <div className="text-muted-foreground text-xs first-letter:uppercase">
-                {df.format(new Date(item.date))}
+                {formatLongDay(item.date, locale)}
               </div>
               {acc?.writable && !editing && (
                 <Button

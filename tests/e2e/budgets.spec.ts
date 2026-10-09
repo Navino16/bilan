@@ -167,6 +167,49 @@ test.describe("budgets", () => {
     await expect(card.locator('[data-slot="budget-history"]')).toHaveCount(0);
   });
 
+  test("amounts read back in the locale format and hydrate cleanly in English (#226)", async ({
+    page,
+  }) => {
+    const name = `Format ${Date.now()}`;
+    await page.goto("/fr/budgets");
+    await expect(async () => {
+      await page.getByRole("button", { name: /nouveau budget/i }).click();
+      await expect(page.locator('input[name="name"]')).toBeVisible();
+    }).toPass();
+    await page.fill('input[name="name"]', name);
+    await page.fill('input[name="periodStart"]', "2032-05-01");
+    const planned = page.locator('input[name="plannedAmount"]');
+    await planned.fill("1 234,5");
+    await planned.blur();
+    await expect(planned).toHaveValue("1\u202f234,50");
+    await page.getByRole("button", { name: /créer le budget/i }).click();
+
+    const card = page.locator('[data-slot="budget-card"]').filter({ hasText: name });
+    await card.getByRole("link").first().click({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name })).toBeVisible({ timeout: 15_000 });
+    const detailUrl = page.url();
+
+    await page.getByRole("button", { name: `Actions pour ${name}` }).click();
+    await page.getByRole("menuitem", { name: /modifier/i }).click();
+    await expect(planned).toHaveValue("1\u202f234,50");
+    // Too many decimals: the app's message, not just the browser's pattern tooltip.
+    await planned.fill("12,3456");
+    await page.getByRole("button", { name: /enregistrer/i }).click();
+    await expect(page.getByText("Le montant ne peut pas avoir plus de 2 décimales.")).toBeVisible();
+    await expect(planned).toHaveAttribute("aria-invalid", "true");
+
+    const errors: string[] = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    page.on("console", (m) => {
+      if (m.type() === "error") errors.push(m.text());
+    });
+    for (const url of ["/en/budgets", detailUrl.replace("/fr/", "/en/")]) {
+      await page.goto(url, { waitUntil: "load" });
+      await expect(page.locator("main h1")).toBeVisible();
+    }
+    expect(errors).toEqual([]);
+  });
+
   test("the dashboard shows a budget snapshot", async ({ page }) => {
     await page.goto("/fr/dashboard");
     await expect(page.locator('[data-slot="budget-snapshot"]')).toBeVisible();

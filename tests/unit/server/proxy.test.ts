@@ -5,6 +5,7 @@ const setup = vi.hoisted(() => ({ needed: false }));
 vi.mock("@/server/services/setup-status", () => ({
   isSetupNeededCached: async () => setup.needed,
 }));
+vi.mock("@/server/services/settings/app-settings", () => ({ getAppName: async () => "Maison" }));
 // next-intl's ESM build imports "next/server" extensionless, which Node can't resolve here;
 // these cases return before the locale middleware runs.
 vi.mock("next-intl/middleware", () => ({ default: () => () => new Response(null) }));
@@ -33,6 +34,7 @@ describe("proxy setup gate (#214)", () => {
     const res = await middleware(request("/en/setup"));
     expect(res.status).toBe(404);
     expect(res.headers.get("content-language")).toBe("en");
+    expect(await res.text()).toContain("<h1>Maison</h1>");
     expect(res.headers.get("content-security-policy")).toContain("frame-ancestors 'none'");
     expect(res.headers.get("x-frame-options")).toBe("DENY");
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");

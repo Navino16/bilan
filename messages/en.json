@@ -20,7 +20,7 @@
         "passkeyFailed": "Passkey sign-in was canceled or didn’t complete.",
         "disabled": "This account is disabled. Contact the instance administrator.",
         "ssoFailed": "Signing in through the identity provider failed. Try again.",
-        "ssoSignUpDisabled": "No Bilan account matches this identity, and account creation isn’t allowed, either by this provider or because registration is closed. Ask the instance administrator for an account.",
+        "ssoSignUpDisabled": "No {appName} account matches this identity, and account creation isn’t allowed, either by this provider or because registration is closed. Ask the instance administrator for an account.",
         "ssoNotLinked": "No account is linked to this identity. Sign in with another sign-in method, then link it from Settings > Security.",
         "ssoDenied": "Sign-in was canceled or refused at the identity provider.",
         "ssoProvider": "The identity provider returned an error. Try again later or use another sign-in method.",
@@ -652,7 +652,7 @@
       "ignore": "Ignore",
       "empty": "No pairs to suggest right now.",
       "back": "Back to transactions",
-      "hint": "Bilan spots pairs with the same amount and opposite signs (a transfer between your accounts, a refund) so you can link them and not count them twice.",
+      "hint": "{appName} spots pairs with the same amount and opposite signs (a transfer between your accounts, a refund) so you can link them and not count them twice.",
       "ignoreFailed": "Couldn’t ignore this pair. Try again.",
       "ignored": "{count, plural, one {# ignored pair} other {# ignored pairs}}",
       "ignoredHint": "A restored pair can be suggested again.",
@@ -915,7 +915,7 @@
     "send": "Send invitation",
     "sending": "Sending…",
     "pending": "Pending invitations",
-    "code": "Code",
+    "code": "Code: <mono>{code}</mono>",
     "expiresAt": "Expires <date></date>",
     "revoke": "Revoke",
     "revokeConfirm": "Revoke this invitation?",
@@ -1094,7 +1094,7 @@
         "BAD_CONFIRM": "The email you entered doesn’t match.",
         "RATE_LIMITED": "Too many attempts. Try again later.",
         "FAILED": "Deletion failed. Please try again.",
-        "LAST_SUPER_ADMIN": "You are the last active super admin: appoint another one before deleting your account."
+        "LAST_SUPER_ADMIN": "You are the last active super administrator: appoint another one before deleting your account."
       }
     },
     "security": {
@@ -1255,8 +1255,6 @@
       "name": "Name",
       "email": "Email address",
       "role": "Role",
-      "roleUser": "User",
-      "roleAdmin": "Administrator",
       "create": "Create",
       "creating": "Creating…",
       "created": "User created. A password-setup link has been sent to them.",
@@ -1276,8 +1274,8 @@
         "UNAUTHORIZED": "You don’t have permission to change roles.",
         "INVALID": "Invalid role.",
         "SELF": "You can’t change your own role.",
-        "FORBIDDEN": "Only a super admin can grant or revoke an admin role.",
-        "LAST_SUPER_ADMIN": "The last super admin can’t be removed.",
+        "FORBIDDEN": "Only a super administrator can grant or revoke an admin role.",
+        "LAST_SUPER_ADMIN": "The last super administrator can’t be removed.",
         "NOT_FOUND": "User not found.",
         "FAILED": "Role change failed."
       },
@@ -1302,8 +1300,8 @@
         "UNAUTHORIZED": "You are not allowed to do this.",
         "INVALID": "Invalid request.",
         "SELF": "You can’t act on your own account.",
-        "FORBIDDEN": "Only a super admin can act on an administrator or delete an account.",
-        "LAST_SUPER_ADMIN": "Not possible: this is the last active super admin.",
+        "FORBIDDEN": "Only a super administrator can act on an administrator or delete an account.",
+        "LAST_SUPER_ADMIN": "Not possible: this is the last active super administrator.",
         "NOT_FOUND": "User not found.",
         "CONFIRMATION": "The address typed doesn’t match.",
         "FAILED": "Failed. Try again."
@@ -1316,7 +1314,7 @@
       "roleConfirmTitle": "Change {user}’s role?",
       "roleConfirmBody": "{from} → {to}. The change takes effect immediately.",
       "roleConfirm": "Change role",
-      "roleSuperAdminWarning": "A super admin has every right, including over other administrators and account deletion."
+      "roleSuperAdminWarning": "A super administrator has every right, including over other administrators and account deletion."
     },
     "signupTokens": {
       "createTitle": "Create a token",
@@ -1362,7 +1360,7 @@
       "modeLink": "Change the registration mode"
     },
     "settings": {
-      "appName": "Application name",
+      "appName": "Instance name",
       "registrationMode": "Registration mode",
       "credentialsEnabled": "Password sign-in",
       "minPasswordLength": "Minimum password length",
@@ -1459,7 +1457,7 @@
       "on": "On",
       "off": "Off",
       "allowSignUp": "Allow sign-up",
-      "allowSignUpHint": "Creates a Bilan account on the first sign-in of an identity no account is linked to, only while the registration mode is “Open”. Otherwise this provider only signs in identities already linked to an account. Same email is not enough: an existing user links the identity from Settings > Security.",
+      "allowSignUpHint": "Creates a {appName} account on the first sign-in of an identity no account is linked to, only while the registration mode is “Open”. Otherwise this provider only signs in identities already linked to an account. Same email is not enough: an existing user links the identity from Settings > Security.",
       "oidcSection": "OIDC options",
       "issuer": "Issuer",
       "clientId": "Client ID",
@@ -1695,8 +1693,8 @@
     },
     "roles": {
       "USER": "User",
-      "ADMIN": "Admin",
-      "SUPER_ADMIN": "Super admin"
+      "ADMIN": "Administrator",
+      "SUPER_ADMIN": "Super administrator"
     }
   },
   "setup": {
@@ -1826,7 +1824,7 @@
     },
     "welcome": {
       "overline": "Getting started",
-      "title": "Welcome to Bilan",
+      "title": "Welcome to {appName}",
       "heading": "Two steps to see your finances here",
       "step1": "Create a bank account",
       "step1Hint": "Checking, savings, card… Your transactions will belong to it.",

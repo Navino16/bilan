@@ -45,7 +45,7 @@ describe("securityMail", () => {
   it("formats the date with the shared formatter, in UTC", () => {
     const fr = securityMail("new_login", "fr", { appName: "Maison", at, origin });
     const en = securityMail("new_login", "en", { appName: "Maison", at, origin });
-    expect(fr.text).toContain("Date : 1 mars 2026, 10:05 (UTC)");
+    expect(fr.text).toContain("Date : 1er mars 2026, 10:05 (UTC)");
     expect(en.text).toMatch(/^Date: Mar 1, 2026, 10:05\sAM \(UTC\)$/m);
     expect(en.subject).toBe("Maison — new sign-in to your account");
     expect(en.text).toContain("IP address: 203.0.113.7");
@@ -103,6 +103,7 @@ describe("notifySecurityEvent", () => {
 describe("origin formatting", () => {
   it("formats the IP and device readably, per locale", () => {
     expect(formatIp("::ffff:10.0.1.1", "fr")).toBe("10.0.1.1");
+    expect(formatIp("2001:0db8:0000:0000:0000:0000:0000:0001", "en")).toBe("2001:db8::1");
     expect(formatIp(null, "fr")).toBe("inconnue");
     expect(formatIp(null, "en")).toBe("unknown");
     expect(

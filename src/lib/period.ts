@@ -1,4 +1,4 @@
-import { formatDateRange } from "./format";
+import { formatDateRange, formatMonthRange, formatMonthYear } from "./format";
 
 // A reporting window. `year`/`month` (1-12) are set only when the window is a
 // whole calendar month (enables month navigation + a "vs previous month" delta);
@@ -220,11 +220,7 @@ export function toIsoDay(d: Date): string {
 // "Mai 2026" — localized month + year label for a month period.
 export function formatMonthLabel(p: Period, locale: string): string {
   const d = p.year && p.month ? new Date(Date.UTC(p.year, p.month - 1, 1)) : p.from;
-  return new Intl.DateTimeFormat(locale, {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(d);
+  return formatMonthYear(d, locale);
 }
 
 const capitalize = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
@@ -248,11 +244,7 @@ export function formatPeriodLabel(p: Period, locale: string): string {
   // A range spanning whole months (1st → last day), e.g. a quarter → a month
   // range so it's clear from when to when, without redundant day numbers.
   if (fd === 1 && td === daysInMonth(ty, tm + 1)) {
-    return new Intl.DateTimeFormat(locale, {
-      month: "short",
-      year: "numeric",
-      timeZone: "UTC",
-    }).formatRange(p.from, p.to);
+    return formatMonthRange(p.from, p.to, locale);
   }
 
   // Arbitrary range — Intl collapses the shared parts ("10–30 avr. 2026").

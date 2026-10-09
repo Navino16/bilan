@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AUDIT_ENTITIES, AUDIT_FAMILIES, auditActionMessage } from "@/lib/audit";
+import { AUDIT_ENTITIES, AUDIT_FAMILIES, SETTING_LABELS, auditActionMessage } from "@/lib/audit";
 import fr from "../../../messages/fr.json";
 import en from "../../../messages/en.json";
 
@@ -31,11 +31,11 @@ describe("auditActionMessage", () => {
   it("shares one label across app-setting updates", () => {
     expect(auditActionMessage("settings.app_name.update")).toEqual({
       key: "settingUpdated",
-      values: { key: "app_name" },
+      setting: "app_name",
     });
     expect(auditActionMessage("settings.security.admin_2fa_required.update")).toEqual({
       key: "settingUpdated",
-      values: { key: "security.admin_2fa_required" },
+      setting: "security.admin_2fa_required",
     });
   });
 
@@ -56,6 +56,19 @@ describe.each([
     for (const code of loggedActions) {
       const { key } = auditActionMessage(code);
       expect(typeof lookup(messages, `admin.audit.actions.${key}`), code).toBe("string");
+    }
+  });
+
+  it("name every app setting the admin UI saves (#226)", () => {
+    const actions = readFileSync(
+      join(__dirname, "../../../src/server/transport/actions/settings.ts"),
+      "utf8",
+    );
+    const saved = [...actions.matchAll(/case "([a-z0-9_.]+)":/g)].map((m) => m[1]);
+    expect(saved).toContain("app_name");
+    for (const key of saved) {
+      expect(SETTING_LABELS, key).toHaveProperty([key]);
+      expect(typeof lookup(messages, `admin.settings.${SETTING_LABELS[key]}`), key).toBe("string");
     }
   });
 

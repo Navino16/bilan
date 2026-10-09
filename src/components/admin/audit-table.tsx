@@ -2,21 +2,28 @@ import { getTranslations } from "next-intl/server";
 import type { AuditEntry } from "@/server/services/audit";
 import { listHeader } from "@/components/shell/section-card";
 import { LocalDateTime } from "@/components/shell/local-date-time";
-import { auditActionMessage } from "@/lib/audit";
+import { auditActionMessage, SETTING_LABELS } from "@/lib/audit";
 import { displayName } from "@/lib/validation/name";
 
 // Translated labels with the raw code as fallback. `t.has` is also true for a branch
 // of the message tree (`group.member`), hence the string check.
 export async function auditLabels() {
-  const t = await getTranslations("admin.audit");
+  const [t, tSettings] = await Promise.all([
+    getTranslations("admin.audit"),
+    getTranslations("admin.settings"),
+  ]);
   const label = (key: string, fallback: string, values?: Record<string, string>) =>
     t.has(key) && typeof t.raw(key) === "string" ? t(key, values) : fallback;
+  const settingName = (key: string) =>
+    Object.hasOwn(SETTING_LABELS, key) ? tSettings(SETTING_LABELS[key]) : key;
   return {
     action: (code: string) => {
       const msg = auditActionMessage(code);
-      return label(`actions.${msg.key}`, code, msg.values);
+      const values = msg.setting ? { key: settingName(msg.setting) } : undefined;
+      return label(`actions.${msg.key}`, code, values);
     },
     entity: (entity: string) => label(`entities.${entity}`, entity),
+    setting: settingName,
   };
 }
 
@@ -30,7 +37,12 @@ export async function AuditTable({ items }: { items: AuditEntry[] }) {
   const labels = await auditLabels();
   const action = labels.action;
   const entityType = labels.entity;
-  const entityDetail = (row: AuditEntry) => (row.subject ? displayName(row.subject) : row.entityId);
+  const entityDetail = (row: AuditEntry) =>
+    row.subject
+      ? displayName(row.subject)
+      : row.entity === "AppSetting" && row.entityId
+        ? labels.setting(row.entityId)
+        : row.entityId;
   const user = (row: AuditEntry) =>
     row.user ? displayName(row.user) : (row.userId ?? t("system"));
   const date = (row: AuditEntry) => <LocalDateTime value={row.createdAt} seconds />;

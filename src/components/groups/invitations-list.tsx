@@ -86,8 +86,11 @@ export function InvitationsList({ invitations }: { invitations: PendingInvitatio
               <Badge variant="outline">{tg(`roles.${inv.role}`)}</Badge>
             </div>
             <div className="text-muted-foreground text-xs">
-              {t("code")}: <span className="font-mono">{inv.code}</span> ·{" "}
-              {t.rich("expiresAt", { date: () => <LocalDateTime value={inv.expiresAt} /> })}
+              {t.rich("code", {
+                code: inv.code,
+                mono: (chunks) => <span className="font-mono">{chunks}</span>,
+              })}{" "}
+              · {t.rich("expiresAt", { date: () => <LocalDateTime value={inv.expiresAt} /> })}
             </div>
           </div>
           <CopyLinkButton

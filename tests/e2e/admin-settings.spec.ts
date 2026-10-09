@@ -30,6 +30,11 @@ test.describe("admin settings", () => {
         timeout: 90_000,
       });
       await expect(page.locator('[data-slot="audit-row"]').first()).toBeVisible();
+      // The setting is named, not shown as its raw key (#226).
+      await expect(page.locator('[data-slot="audit-row"]').first()).toContainText(
+        "Nom de l’instance",
+      );
+      await expect(page.locator('[data-slot="audit-row"]').first()).not.toContainText("app_name");
     } finally {
       await saveName("Bilan");
     }
@@ -52,6 +57,9 @@ test.describe("admin settings", () => {
       await page.goto("/fr/dashboard");
       await expect(page).toHaveTitle("Tableau de bord · Maison E2E");
       await expect(page.locator("aside").getByRole("link", { name: "Maison E2E" })).toBeVisible();
+      // Copy naming the instance follows too (#226).
+      await page.goto("/fr/transactions/suggestions");
+      await expect(page.getByText(/^Maison E2E repère les paires/)).toBeVisible();
     } finally {
       await saveName("Bilan");
     }

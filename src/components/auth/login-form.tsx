@@ -29,6 +29,7 @@ type LoginProps = {
   ssoError?: SsoError;
   credentialsEnabled: boolean;
   ssoProviders: SsoProviderView[];
+  appName: string;
 };
 
 // "Back" from the code step remounts the password step to clear its action state.
@@ -44,6 +45,7 @@ function PasswordStep({
   ssoError,
   credentialsEnabled,
   ssoProviders,
+  appName,
   onRestart,
 }: LoginProps & { onRestart: () => void }) {
   const t = useTranslations("auth.login");
@@ -70,7 +72,7 @@ function PasswordStep({
       )}
       {ssoError && !state && (
         <Alert variant="destructive">
-          <AlertDescription>{t(`error.${ssoError}`)}</AlertDescription>
+          <AlertDescription>{t(`error.${ssoError}`, { appName })}</AlertDescription>
         </Alert>
       )}
       <div className="space-y-4">

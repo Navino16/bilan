@@ -10,7 +10,7 @@ import type { DashboardData } from "@/server/services/dashboard";
 import type { Comparison, Period } from "@/lib/period";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import { formatPeriodLabel, toIsoDay } from "@/lib/period";
-import { formatDayMonth, formatPercent } from "@/lib/format";
+import { formatDayMonth, formatMoney, formatMonthYear, formatPercent } from "@/lib/format";
 import { PageHeader } from "@/components/shell/page-header";
 import { categorySliceColors } from "@/lib/chart-colors";
 import { DEFAULT_CATEGORY_COLOR } from "@/lib/category-appearance";
@@ -63,12 +63,10 @@ export async function DashboardView({
         : p.date.slice(8, 10);
   const tracePoints = data.trace.points;
 
-  const peakDateFmt = new Intl.DateTimeFormat(
-    locale,
+  const peakDate = (day: string) =>
     isMonthlyTrace
-      ? { month: "short", year: "numeric", timeZone: "UTC" }
-      : { day: "numeric", month: "short", timeZone: "UTC" },
-  );
+      ? formatMonthYear(`${day}T00:00:00.000Z`, locale, { month: "short" })
+      : formatDayMonth(`${day}T00:00:00.000Z`, locale);
   const peak = data.trace.peak;
   const peakCatName =
     (peak?.categoryId ? catById.get(peak.categoryId)?.name : undefined) ?? t("noCategory");
@@ -263,7 +261,7 @@ export async function DashboardView({
                 <div className={overline}>{t(isMonthlyTrace ? "peakMonth" : "peakDay")}</div>
                 <div className="font-display text-xl tabular-nums">{money.format(peak.amount)}</div>
                 <div className="text-muted-foreground truncate text-[11.5px]">
-                  {peakDateFmt.format(new Date(`${peak.date}T00:00:00.000Z`))}
+                  {peakDate(peak.date)}
                   {` · ${peakCatName}`}
                 </div>
               </div>
@@ -312,9 +310,7 @@ export async function DashboardView({
                       className="text-sm font-medium tabular-nums"
                       style={r.amount > 0 ? { color: "var(--income)" } : undefined}
                     >
-                      {new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" }).format(
-                        r.amount,
-                      )}
+                      {formatMoney(r.amount, locale)}
                     </span>
                   </div>
                 );

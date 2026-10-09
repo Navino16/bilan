@@ -59,6 +59,24 @@ describe("client IP behind the reverse proxy (#200)", () => {
     expect(sessions).toEqual([{ ipAddress: "203.0.113.50" }]);
   });
 
+  it("keeps the full IPv6 address, not Better Auth's /64 (#226)", async () => {
+    await db.session.deleteMany({ where: { userId } });
+    const res = await POST(
+      asRouteRequest(`${appUrl}/api/auth/sign-in/email`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: appUrl,
+          "x-forwarded-for": "2001:db8:1:2::abcd",
+        },
+        body: JSON.stringify({ email, password }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const sessions = await db.session.findMany({ where: { userId }, select: { ipAddress: true } });
+    expect(sessions).toEqual([{ ipAddress: "2001:db8:1:2::abcd" }]);
+  });
+
   it("serves a GET from Next's proxied request", async () => {
     const res = await GET(asRouteRequest(`${appUrl}/api/auth/get-session`, { method: "GET" }));
     expect(res.status).toBe(200);

@@ -22,6 +22,7 @@ import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useOpenFromQuery } from "@/hooks/use-open-from-query";
 import { cn } from "@/lib/utils";
 import type { CategoryPaletteKey } from "@/lib/category-appearance";
+import { formatAmountInput } from "@/lib/format";
 import {
   ACCOUNT_BANK_NAME_MAX,
   ACCOUNT_IBAN_MAX,
@@ -202,15 +203,8 @@ export function AccountForm({
                 id="acc-balance"
                 name="initialBalance"
                 inputMode="decimal"
-                defaultValue={
-                  account
-                    ? account.initialBalance.toLocaleString(locale, {
-                        minimumFractionDigits: 2,
-                        useGrouping: false,
-                      })
-                    : ""
-                }
-                placeholder="0,00"
+                defaultValue={account ? formatAmountInput(account.initialBalance, locale) : ""}
+                placeholder={formatAmountInput(0, locale)}
                 className="font-display text-foreground placeholder:text-muted-foreground w-full border-0 bg-transparent text-lg outline-none"
                 {...form.fieldProps("initialBalance")}
               />

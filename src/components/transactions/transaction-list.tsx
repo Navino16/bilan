@@ -21,7 +21,7 @@ import { SelectionBar } from "./selection-bar";
 import { DeleteTransactionsDialog } from "./delete-transactions-dialog";
 import { MIN_SEARCH_WORD } from "@/lib/text";
 import { proposeRule } from "@/lib/propose-rule";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatLongDay } from "@/lib/format";
 import { useLinkErrorMessage } from "./link-error";
 
 export type ListItem = {
@@ -161,12 +161,8 @@ export function TransactionList({
     );
 
   const nf = new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" });
-  // Rows carry UTC days: format in UTC so every zone (and the SSR pass) shows the same day.
-  const dayOpts = { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" } as const;
-  const dfDay = new Intl.DateTimeFormat(locale, dayOpts);
-  const dfDayYear = new Intl.DateTimeFormat(locale, { ...dayOpts, year: "numeric" });
   const dayLabel = (day: string) =>
-    (day.startsWith(String(currentYear)) ? dfDay : dfDayYear).format(new Date(day));
+    formatLongDay(day, locale, { year: !day.startsWith(String(currentYear)) });
   const signed = (n: number) => (n > 0 ? `+${nf.format(n)}` : nf.format(n));
   const rowDate = (it: ListItem) => (groupByDay ? null : formatDate(it.date, locale));
 

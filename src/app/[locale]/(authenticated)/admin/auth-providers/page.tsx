@@ -5,6 +5,7 @@ import { AuthProviderForm, type AuthProviderDefaults } from "@/components/admin/
 import { SectionCard } from "@/components/shell/section-card";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { pageTitle } from "@/i18n/metadata";
+import { getAppName } from "@/server/services/settings/app-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +19,11 @@ export const generateMetadata = pageTitle("adminAuthProviders");
 
 export default async function AdminAuthProvidersPage() {
   await requirePermission("admin.security.write");
-  const t = await getTranslations("admin.authProviders");
-  const providers = await listAuthProviders();
+  const [t, providers, appName] = await Promise.all([
+    getTranslations("admin.authProviders"),
+    listAuthProviders(),
+    getAppName(),
+  ]);
   const impacts = await Promise.all(providers.map((p) => authProviderImpact(p)));
 
   return (
@@ -47,13 +51,13 @@ export default async function AdminAuthProvidersPage() {
             title={p.displayName}
             action={<StatusBadge active={p.enabled}>{p.enabled ? t("on") : t("off")}</StatusBadge>}
           >
-            <AuthProviderForm provider={defaults} impact={impacts[i]} />
+            <AuthProviderForm provider={defaults} impact={impacts[i]} appName={appName} />
           </SectionCard>
         );
       })}
 
       <SectionCard overline={t("addOverline")} title={t("addTitle")} hint={t("addHint")}>
-        <AuthProviderForm />
+        <AuthProviderForm appName={appName} />
       </SectionCard>
     </div>
   );
