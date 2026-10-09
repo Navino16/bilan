@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { SegmentedTabs } from "@/components/transactions/bits";
 import { ScrollFade } from "@/components/ui/scroll-fade";
 import type { FlatCategory } from "@/components/transactions/category-tree";
-import { CategoryForm } from "./category-form";
+import { CategoryForm, type ScopeGroup } from "./category-form";
 import { CategoryList } from "./category-list";
-import { categoryOptions, pickableCategories } from "./category-options";
+import { categoryOptions } from "./category-options";
 import { RulesList, type RuleRow } from "./rules-list";
 import { RuleDialog } from "./rule-dialog";
 import { MerchantDirectory } from "@/components/merchants/merchant-directory";
@@ -27,7 +27,7 @@ export function CategoriesView({
   tree: CategoryNode[];
   flatCategories: FlatCategory[];
   rules: RuleRow[];
-  groups: { id: string; name: string }[];
+  groups: ScopeGroup[];
   merchants: Directory;
 }) {
   const t = useTranslations("rules");
@@ -35,7 +35,7 @@ export function CategoriesView({
   const tm = useTranslations("merchants");
   const [tab, setTab] = useState<"cats" | "rules" | "merchants">("cats");
   const [ruleOpen, setRuleOpen] = useState(false);
-  const parents = pickableCategories(categoryOptions(tree), null);
+  const options = categoryOptions(tree);
 
   return (
     <div className="space-y-5">
@@ -46,7 +46,8 @@ export function CategoriesView({
           tab === "cats" ? (
             <CategoryForm
               mode="create"
-              parents={parents}
+              options={options}
+              groups={groups}
               trigger={
                 <Button>
                   <Plus />
@@ -83,7 +84,7 @@ export function CategoriesView({
       </div>
 
       {tab === "cats" ? (
-        <CategoryList tree={tree} />
+        <CategoryList tree={tree} groups={groups} />
       ) : tab === "rules" ? (
         <RulesList rules={rules} categories={flatCategories} groups={groups} />
       ) : (

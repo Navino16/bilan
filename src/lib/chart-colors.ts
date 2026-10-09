@@ -1,11 +1,18 @@
-export const UNCATEGORIZED_COLOR = "var(--cat-other)";
+import { paletteKeyOf } from "@/lib/category-appearance";
+
+export const UNCATEGORIZED_COLOR = "var(--cat-uncategorized)";
 
 // 1st slice of a family keeps the root color, the next ones alternate lighter/darker.
 const SHADES = [0, 0.4, -0.3, 0.65, -0.5];
 
-// Mixes a #rrggbb color towards white (amount > 0) or black (amount < 0).
+// Mixes a #rrggbb color towards white (amount > 0) or black (amount < 0). Theme palette
+// variables (`var(--cat-*)`) can't be resolved here, so they are mixed by the browser instead.
 export function shade(color: string, amount: number): string {
-  if (!/^#[0-9a-f]{6}$/i.test(color) || amount === 0) return color;
+  if (amount === 0) return color;
+  if (paletteKeyOf(color)) {
+    return `color-mix(in srgb, ${color}, ${amount > 0 ? "white" : "black"} ${Math.round(Math.abs(amount) * 100)}%)`;
+  }
+  if (!/^#[0-9a-f]{6}$/i.test(color)) return color;
   const target = amount > 0 ? 255 : 0;
   const a = Math.abs(amount);
   const channels = [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16));
@@ -19,7 +26,7 @@ export function shade(color: string, amount: number): string {
 }
 
 // Chart slice colors (issue #112 §8): sub-categories share their root's hue, so siblings
-// get distinct shades of it; uncategorized spending is neutral grey.
+// get distinct shades of it; uncategorized spending gets its own neutral.
 export function categorySliceColors(
   slices: { categoryId: string | null }[],
   categories: Map<string, { color: string | null; rootId: string }>,

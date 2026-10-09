@@ -103,6 +103,8 @@
   --cat-shopping: #8c5a3e;
   --cat-bills: #4a6675;
   --cat-other: #807a6f;
+  /* Uncategorized spending in charts: cool neutral, distinct from --cat-other, ≥ 3:1 on --card. */
+  --cat-uncategorized: #8e959b;
 
   /* Shadcn bridge */
   --background: var(--paper);
@@ -180,6 +182,7 @@
     --cat-shopping: #c58e70;
     --cat-bills: #82a0ae;
     --cat-other: #8b867b;
+    --cat-uncategorized: #6c737a;
 
     --background: var(--paper);
     --foreground: var(--ink);

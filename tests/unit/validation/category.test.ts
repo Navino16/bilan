@@ -37,4 +37,12 @@ describe("categoryInputSchema", () => {
     expect(categoryInputSchema.safeParse({ name: "X", color: "red" }).success).toBe(false);
     expect(categoryInputSchema.safeParse({ name: "X", color: "#abcdef" }).success).toBe(true);
   });
+
+  it("accepts a theme palette colour but no other CSS variable", () => {
+    const r = categoryInputSchema.safeParse({ name: "X", color: "var(--cat-transport)" });
+    expect(r.success && r.data.color).toBe("var(--cat-transport)");
+    expect(categoryInputSchema.safeParse({ name: "X", color: "var(--primary)" }).success).toBe(
+      false,
+    );
+  });
 });

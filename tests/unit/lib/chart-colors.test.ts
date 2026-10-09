@@ -16,7 +16,13 @@ describe("shade", () => {
     expect(shade("#2563eb", 0)).toBe("#2563eb");
   });
 
-  it("leaves non-hex colors untouched", () => {
+  it("lets the browser mix theme palette colors", () => {
+    expect(shade("var(--cat-food)", 0.4)).toBe("color-mix(in srgb, var(--cat-food), white 40%)");
+    expect(shade("var(--cat-food)", -0.3)).toBe("color-mix(in srgb, var(--cat-food), black 30%)");
+    expect(shade("var(--cat-food)", 0)).toBe("var(--cat-food)");
+  });
+
+  it("leaves other non-hex colors untouched", () => {
     expect(shade("var(--x)", 0.4)).toBe("var(--x)");
   });
 });
@@ -32,6 +38,10 @@ describe("categorySliceColors", () => {
     expect(colors[1]).toBe("#f59e0b");
     expect(colors[2]).not.toBe("#2563eb");
     expect(colors[2]).toBe(shade("#2563eb", 0.4));
+  });
+
+  it("keeps uncategorized spending apart from the palette's grey", () => {
+    expect(UNCATEGORIZED_COLOR).not.toBe("var(--cat-other)");
   });
 
   it("paints uncategorized spending neutral grey", () => {

@@ -2,44 +2,44 @@
   {
     "name": "Income",
     "icon": "💰",
-    "color": "#16a34a",
+    "color": "var(--cat-income)",
     "children": ["Salary", "Reimbursements", "Other income"]
   },
   {
     "name": "Food",
     "icon": "🛒",
-    "color": "#f59e0b",
+    "color": "var(--cat-groceries)",
     "children": ["Groceries", "Restaurants", "Coffee & snacks"]
   },
   {
     "name": "Housing",
     "icon": "🏠",
-    "color": "#2563eb",
+    "color": "var(--cat-housing)",
     "children": ["Rent & mortgage", "Fees", "Electricity & gas", "Internet & phone"]
   },
   {
     "name": "Transport",
     "icon": "🚗",
-    "color": "#0891b2",
+    "color": "var(--cat-transport)",
     "children": ["Fuel", "Public transport", "Vehicle maintenance"]
   },
   {
     "name": "Leisure",
     "icon": "🎉",
-    "color": "#9333ea",
+    "color": "var(--cat-leisure)",
     "children": ["Outings", "Subscriptions", "Travel"]
   },
   {
     "name": "Health",
     "icon": "🩺",
-    "color": "#dc2626",
+    "color": "var(--cat-health)",
     "children": ["Doctor", "Pharmacy", "Insurance"]
   },
   {
     "name": "Shopping",
     "icon": "🛍️",
-    "color": "#db2777",
+    "color": "var(--cat-shopping)",
     "children": ["Clothing", "Home", "Electronics"]
   },
-  { "name": "Other", "icon": "📦", "color": "#64748b", "children": [] }
+  { "name": "Other", "icon": "📦", "color": "var(--cat-other)", "children": [] }
 ]

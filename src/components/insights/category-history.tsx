@@ -10,7 +10,8 @@ import { historyRows, type CategoryHistory, type HistoryMonth } from "@/lib/insi
 import { monthPeriod } from "@/lib/period";
 import { transactionsHref } from "@/lib/transaction-filters";
 import type { FlatCategory } from "@/components/transactions/category-tree";
-import { CardTitle, DEFAULT_COLOR, Dot, ROW_LINK } from "./bits";
+import { CardTitle, Dot, ROW_LINK } from "./bits";
+import { DEFAULT_CATEGORY_COLOR } from "@/lib/category-appearance";
 
 const TOP_CATEGORIES = 6;
 const BAR_HEIGHT = 28;
@@ -36,7 +37,7 @@ export function CategoryHistoryCard({
     (id ? catById.get(id)?.name : undefined) ?? t("noCategory");
   // Colored on the 12-month ranking so a category keeps its shade when the span changes.
   const ranked = historyRows(history, history.months.length, Infinity).rows;
-  const rankedColors = categorySliceColors(ranked, catById, DEFAULT_COLOR);
+  const rankedColors = categorySliceColors(ranked, catById, DEFAULT_CATEGORY_COLOR);
   const colorOf = (id: string | null) => rankedColors[ranked.findIndex((r) => r.categoryId === id)];
   const money = new Intl.NumberFormat(locale, {
     style: "currency",

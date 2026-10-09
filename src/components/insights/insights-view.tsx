@@ -7,7 +7,8 @@ import { PeriodPicker } from "@/components/dashboard/period-picker";
 import { ComparisonNote } from "@/components/dashboard/comparison-note";
 import { PageHeader } from "@/components/shell/page-header";
 import { DivergingBar } from "./diverging-bar";
-import { CardTitle, DEFAULT_COLOR, Dot, ROW_LINK } from "./bits";
+import { CardTitle, Dot, ROW_LINK } from "./bits";
+import { DEFAULT_CATEGORY_COLOR } from "@/lib/category-appearance";
 import { CategoryHistoryCard } from "./category-history";
 import { MerchantNameDialog } from "@/components/merchants/merchant-name-dialog";
 import { Pencil } from "lucide-react";
@@ -81,20 +82,20 @@ export async function InsightsView({
     txHref({ categoryId: c.categoryId, dir: "out" }, c.current ? period : reference);
 
   const changes = data.changes.slice(0, TOP_CHANGES);
-  const changeColors = categorySliceColors(changes, catById, DEFAULT_COLOR);
+  const changeColors = categorySliceColors(changes, catById, DEFAULT_CATEGORY_COLOR);
   const maxDiff = Math.max(0, ...changes.map((c) => Math.abs(c.diff)));
   // One color per category (not per row): several merchants often share one.
   const merchantCats = [...new Set(data.merchants.map((m) => m.categoryId))];
   const merchantCatColors = categorySliceColors(
     merchantCats.map((categoryId) => ({ categoryId })),
     catById,
-    DEFAULT_COLOR,
+    DEFAULT_CATEGORY_COLOR,
   );
   const merchantColor = (id: string | null) => merchantCatColors[merchantCats.indexOf(id)];
   const maxMerchant = data.merchants[0]?.total ?? 0;
   const aliasNames = data.aliasGroups.map((g) => g.name);
   const aliasKeys = new Map(data.aliasGroups.map((g) => [g.name, g.keys]));
-  const incomeColors = categorySliceColors(data.income, catById, DEFAULT_COLOR);
+  const incomeColors = categorySliceColors(data.income, catById, DEFAULT_CATEGORY_COLOR);
 
   const tile = (key: "biggestIncrease" | "biggestDecrease", c: CategoryChange | undefined) => {
     const card = (
