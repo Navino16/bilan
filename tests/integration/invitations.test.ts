@@ -1,4 +1,14 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+
+type Mail = { to: string; subject: string; text: string; sensitive?: boolean };
+const sent = vi.hoisted(() => [] as Mail[]);
+vi.mock("@/server/services/mail/mailer", () => ({
+  sendMail: async (mail: Mail) => {
+    sent.push(mail);
+    return { delivered: false };
+  },
+}));
+
 import { db } from "@/server/db";
 import { createGroup } from "@/server/services/groups";
 import {
@@ -149,5 +159,34 @@ describe("invitations service", () => {
     expect(
       (await db.groupInvitation.findUniqueOrThrow({ where: { id: inv.id } })).acceptedAt,
     ).toBeNull();
+  });
+
+  it("mails a newcomer in the inviter's locale and a user in their preferred one (#214)", async () => {
+    const g = await createGroup({ name: "Locale group" }, owner);
+    sent.length = 0;
+    await createInvitation(
+      { groupId: g.id, email: "newcomer@bilan.local", role: "MEMBER", locale: "en" },
+      { id: owner },
+    );
+    await db.userPreference.upsert({
+      where: { userId: invitee },
+      create: { userId: invitee, locale: "fr" },
+      update: { locale: "fr" },
+    });
+    await createInvitation(
+      { groupId: g.id, email: "invitee@bilan.local", role: "MEMBER", locale: "en" },
+      { id: owner },
+    );
+    const [newcomer, user] = sent;
+    expect(newcomer.to).toBe("newcomer@bilan.local");
+    expect(newcomer.subject).toMatch(/invitation to join the household “Locale group”$/);
+    expect(newcomer.text).toContain(
+      "inv-owner@bilan.local invited you to join the household “Locale group”",
+    );
+    expect(newcomer.text).toMatch(/\/en\/groups\/join\//);
+    expect(newcomer.sensitive).toBe(true);
+    expect(user.to).toBe("invitee@bilan.local");
+    expect(user.subject).toMatch(/invitation à rejoindre le foyer « Locale group »$/);
+    expect(user.text).toMatch(/\/fr\/groups\/join\//);
   });
 });

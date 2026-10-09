@@ -4,6 +4,7 @@ import { db } from "@/server/db";
 import { getAuth } from "@/server/auth";
 import { grantRole } from "@/server/services/users/roles";
 import { seedDefaultCategories } from "@/server/services/categories/seed-defaults";
+import { storeSignupLocale } from "@/server/services/users/preferences";
 import { logEvent } from "@/server/services/audit";
 import { env } from "@/env";
 import { defaultLocale, locales } from "@/i18n/config";
@@ -43,7 +44,10 @@ export async function adminCreateUser(
     password: await ctx.password.hash(randomBytes(32).toString("base64url")),
   });
   // Best-effort, like the signup hook (which skips admin-created users).
-  await seedDefaultCategories(user.id, parsed.locale).catch(() => {});
+  await Promise.allSettled([
+    storeSignupLocale(user.id, parsed.locale),
+    seedDefaultCategories(user.id, parsed.locale),
+  ]);
 
   await grantRole(db, user.id, parsed.role, actor.id);
   const appUrl = env.APP_URL.replace(/\/$/, "");

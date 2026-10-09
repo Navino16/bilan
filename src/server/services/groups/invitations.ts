@@ -2,13 +2,17 @@ import { randomBytes, randomInt } from "node:crypto";
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import { sendMail } from "@/server/services/mail/mailer";
+import { invitationMail } from "@/server/services/mail/invitation";
+import { toLocale } from "@/server/services/users/preferences";
 import { getAppName } from "@/server/services/settings/app-settings";
 import { env } from "@/env";
+import { defaultLocale, type Locale } from "@/i18n/config";
 import {
   INVITABLE_GROUP_ROLES,
   type GroupRole,
   type InvitableGroupRole,
 } from "@/lib/validation/group";
+import { displayName } from "@/lib/validation/name";
 import { requireGroupRole } from "./roles";
 
 export class InvitationError extends Error {
@@ -27,7 +31,8 @@ export function maskEmail(email: string): string {
 }
 
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous chars
-const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const INVITE_TTL_DAYS = 7;
+const INVITE_TTL_MS = INVITE_TTL_DAYS * 24 * 60 * 60 * 1000;
 
 function makeCode(): string {
   let s = "";
@@ -35,8 +40,10 @@ function makeCode(): string {
   return s;
 }
 
+// The mail goes out in the invitee's preferred locale when they already have an account,
+// else in `locale` (the inviter's page).
 export async function createInvitation(
-  input: { groupId: string; email: string; role: GroupRole },
+  input: { groupId: string; email: string; role: GroupRole; locale?: Locale },
   actor: { id: string },
 ): Promise<{ id: string; token: string; code: string }> {
   if (!INVITABLE_GROUP_ROLES.includes(input.role as InvitableGroupRole)) {
@@ -48,7 +55,10 @@ export async function createInvitation(
 
   // Don't invite someone who already belongs to the group (this also covers
   // inviting yourself, since the inviter is necessarily a member).
-  const existingUser = await db.user.findUnique({ where: { email } });
+  const existingUser = await db.user.findUnique({
+    where: { email },
+    select: { id: true, preference: { select: { locale: true } } },
+  });
   if (existingUser) {
     const membership = await db.groupMember.findUnique({
       where: { groupId_userId: { groupId: input.groupId, userId: existingUser.id } },
@@ -70,13 +80,24 @@ export async function createInvitation(
     },
   });
 
-  const acceptUrl = `${env.APP_URL.replace(/\/$/, "")}/fr/groups/join/${token}`;
-  const appName = await getAppName();
-  const result = await sendMail({
-    to: email,
-    subject: `Invitation ${appName}`,
-    text: `Vous êtes invité à rejoindre un groupe ${appName}.\nLien : ${acceptUrl}\nCode : ${code}`,
+  const locale = existingUser?.preference
+    ? toLocale(existingUser.preference.locale)
+    : (input.locale ?? defaultLocale);
+  const acceptUrl = `${env.APP_URL.replace(/\/$/, "")}/${locale}/groups/join/${token}`;
+  const [group, inviter, appName] = await Promise.all([
+    db.group.findUniqueOrThrow({ where: { id: input.groupId }, select: { name: true } }),
+    db.user.findUniqueOrThrow({ where: { id: actor.id }, select: { name: true, email: true } }),
+    getAppName(),
+  ]);
+  const mail = invitationMail(locale, {
+    appName,
+    inviter: displayName(inviter),
+    group: group.name,
+    acceptUrl,
+    code,
+    ttlDays: INVITE_TTL_DAYS,
   });
+  const result = await sendMail({ to: email, ...mail, sensitive: true });
   await logEvent({
     userId: actor.id,
     action: "group.invitation.create",

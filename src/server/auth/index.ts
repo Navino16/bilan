@@ -16,7 +16,8 @@ import {
   getMinPasswordLength,
 } from "@/server/services/settings/app-settings";
 import { logEvent } from "@/server/services/audit";
-import { notifyPasswordChanged } from "@/server/services/mail/security-notifications";
+import { notifySecurityEvent } from "@/server/services/mail/security-notifications";
+import { storeSignupLocale } from "@/server/services/users/preferences";
 import { seedDefaultCategories } from "@/server/services/categories/seed-defaults";
 import {
   isServedProvider,
@@ -171,15 +172,15 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
         },
         create: {
           before: async (user) => ({ data: { ...user, ...nameOnCreate(user) } }),
-          // Seeds the default categories in the signup page's locale; failures must never block signup.
-          // No request context = adminCreateUser, which seeds with the locale the admin picked.
+          // Stores the signup page's locale and seeds the default categories in it; failures must
+          // never block signup. No request context = adminCreateUser, which uses the admin's pick.
           after: async (user, ctx) => {
             if (!ctx) return;
-            try {
-              await seedDefaultCategories(user.id, requestLocale(ctx.headers));
-            } catch {
-              // best-effort
-            }
+            const locale = requestLocale(ctx.headers);
+            await Promise.allSettled([
+              storeSignupLocale(user.id, locale),
+              seedDefaultCategories(user.id, locale),
+            ]);
           },
         },
       },
@@ -212,13 +213,11 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
           after: async (account) => {
             if (account.providerId !== "credential") return;
             try {
-              const u = await db.user.findUnique({
-                where: { id: account.userId },
-                select: { email: true },
-              });
-              if (!u) return;
               await logEvent({ userId: account.userId, action: "auth.password.changed" });
-              void notifyPasswordChanged({ email: u.email, at: new Date() });
+              void notifySecurityEvent("password_changed", {
+                userId: account.userId,
+                at: new Date(),
+              });
             } catch {
               // best-effort
             }

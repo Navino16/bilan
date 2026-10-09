@@ -16,6 +16,20 @@ test.describe("error pages", () => {
     await expect(page).toHaveTitle("Page introuvable · Bilan");
   });
 
+  for (const [locale, message] of [
+    ["fr", "Cette page n’existe pas ou a été déplacée."],
+    ["en", "This page doesn’t exist or has moved."],
+  ] as const) {
+    test(`the proxy's /${locale}/setup 404 speaks ${locale} once setup is done (#214)`, async ({
+      page,
+    }) => {
+      const res = await page.goto(`/${locale}/setup`, { waitUntil: "domcontentloaded" });
+      expect(res?.status()).toBe(404);
+      await expect(page.locator("html")).toHaveAttribute("lang", locale);
+      await expect(page.getByText(message)).toBeVisible();
+    });
+  }
+
   test("a top-level path bypassing the locale proxy renders the themed root 404", async ({
     page,
     context,

@@ -23,7 +23,7 @@ export function Header({
       <span className="font-display truncate text-lg lg:hidden">{appName}</span>
       <div className="ml-auto flex items-center gap-2">
         <div className="hidden lg:block">
-          <LanguageSwitcher />
+          <LanguageSwitcher syncPreference />
         </div>
         <UserMenu user={user} />
       </div>

@@ -4,13 +4,16 @@ import { env } from "@/env";
 const isLocale = (v: string | undefined): v is Locale =>
   !!v && (locales as readonly string[]).includes(v);
 
+function fromPath(pathname: string): Locale | undefined {
+  const segment = pathname.split("/")[1];
+  return isLocale(segment) ? segment : undefined;
+}
+
 function fromReferer(referer: string | null, appUrl: string): Locale | undefined {
   if (!referer) return undefined;
   try {
     const url = new URL(referer);
-    if (url.origin !== new URL(appUrl).origin) return undefined;
-    const segment = url.pathname.split("/")[1];
-    return isLocale(segment) ? segment : undefined;
+    return url.origin === new URL(appUrl).origin ? fromPath(url.pathname) : undefined;
   } catch {
     return undefined;
   }
@@ -34,14 +37,22 @@ function fromAcceptLanguage(header: string | null): Locale | undefined {
   return ranked.map((l) => l.lang).find(isLocale);
 }
 
-// Locale of the page a request comes from: the /fr|/en path of a same-origin Referer,
-// then the next-intl cookie, then Accept-Language — the order the locale middleware uses.
-export function requestLocale(headers: Headers | undefined, appUrl: string = env.APP_URL): Locale {
-  if (!headers) return defaultLocale;
+function negotiated(headers: Headers): Locale {
   return (
-    fromReferer(headers.get("referer"), appUrl) ??
     fromCookie(headers.get("cookie")) ??
     fromAcceptLanguage(headers.get("accept-language")) ??
     defaultLocale
   );
+}
+
+// Locale of the page a request comes from: the /fr|/en path of a same-origin Referer,
+// then the next-intl cookie, then Accept-Language — the order the locale middleware uses.
+export function requestLocale(headers: Headers | undefined, appUrl: string = env.APP_URL): Locale {
+  if (!headers) return defaultLocale;
+  return fromReferer(headers.get("referer"), appUrl) ?? negotiated(headers);
+}
+
+// Locale of the requested page itself (responses the proxy renders on its own).
+export function pageLocale(pathname: string, headers: Headers): Locale {
+  return fromPath(pathname) ?? negotiated(headers);
 }
