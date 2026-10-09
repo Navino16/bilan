@@ -2,12 +2,19 @@ import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 
 type Mail = { to: string; subject: string; text: string; sensitive?: boolean };
 const sent = vi.hoisted(() => [] as Mail[]);
+const smtp = vi.hoisted(() => ({ delivered: false }));
 vi.mock("@/server/services/mail/mailer", () => ({
   sendMail: async (mail: Mail) => {
     sent.push(mail);
-    return { delivered: false };
+    return { delivered: smtp.delivered };
   },
 }));
+const session = vi.hoisted(() => ({ user: { id: "inv_owner", email: "inv-owner@bilan.local" } }));
+vi.mock("@/server/auth/permissions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/server/auth/permissions")>()),
+  requireSession: async () => session.user,
+}));
+vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 
 import { db } from "@/server/db";
 import { createGroup } from "@/server/services/groups";
@@ -15,8 +22,10 @@ import {
   createInvitation,
   acceptInvitation,
   revokeInvitation,
+  declineInvitation,
   InvitationError,
 } from "@/server/services/groups/invitations";
+import { createInvitationAction } from "@/server/transport/actions/invitations";
 
 const owner = "inv_owner";
 const invitee = "inv_invitee";
@@ -159,6 +168,172 @@ describe("invitations service", () => {
     expect(
       (await db.groupInvitation.findUniqueOrThrow({ where: { id: inv.id } })).acceptedAt,
     ).toBeNull();
+  });
+
+  it("renews a pending invitation instead of duplicating it (#228)", async () => {
+    const g = await createGroup({ name: "Renew group" }, owner);
+    const first = await createInvitation(
+      { groupId: g.id, email: "renew@bilan.local", role: "MEMBER" },
+      { id: owner },
+    );
+    expect(first).toMatchObject({ renewed: false, delivered: false });
+    expect(first.acceptUrl).toMatch(new RegExp(`/groups/join/${first.token}$`));
+    const soon = new Date(Date.now() + 60_000);
+    await db.groupInvitation.update({ where: { id: first.id }, data: { expiresAt: soon } });
+    sent.length = 0;
+
+    // Still valid: the link already sent keeps working.
+    const again = await createInvitation(
+      { groupId: g.id, email: " Renew@Bilan.local ", role: "ADMIN" },
+      { id: owner },
+    );
+    expect(again).toMatchObject({
+      id: first.id,
+      token: first.token,
+      code: first.code,
+      renewed: true,
+    });
+    const rows = await db.groupInvitation.findMany({ where: { groupId: g.id } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].role).toBe("ADMIN");
+    expect(rows[0].expiresAt.getTime()).toBeGreaterThan(soon.getTime());
+    expect(sent.map((m) => m.to)).toEqual(["renew@bilan.local"]);
+    expect(
+      await db.auditLog.findFirst({
+        where: { action: "group.invitation.resend", entityId: first.id },
+      }),
+    ).not.toBeNull();
+
+    // Expired: link and code rotate.
+    await db.groupInvitation.update({
+      where: { id: first.id },
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
+    const rotated = await createInvitation(
+      { groupId: g.id, email: "renew@bilan.local", role: "MEMBER" },
+      { id: owner },
+    );
+    expect(rotated).toMatchObject({ id: first.id, renewed: true });
+    expect(rotated.token).not.toBe(first.token);
+    expect(rotated.code).not.toBe(first.code);
+    expect(rotated.acceptUrl).toMatch(new RegExp(`/groups/join/${rotated.token}$`));
+    const [row] = await db.groupInvitation.findMany({ where: { groupId: g.id } });
+    expect(row).toMatchObject({ token: rotated.token, code: rotated.code, role: "MEMBER" });
+    expect(row.expiresAt.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it("keeps the link and code out of the audit log when the mail is delivered (#228)", async () => {
+    const g = await createGroup({ name: "Delivered group" }, owner);
+    smtp.delivered = true;
+    try {
+      const inv = await createInvitation(
+        { groupId: g.id, email: "delivered@bilan.local", role: "MEMBER" },
+        { id: owner },
+      );
+      expect(inv).toMatchObject({ delivered: true, renewed: false });
+      const log = await db.auditLog.findFirstOrThrow({
+        where: { action: "group.invitation.create", entityId: inv.id },
+      });
+      expect(log.metadata).toEqual({ email: "delivered@bilan.local" });
+    } finally {
+      smtp.delivered = false;
+    }
+  });
+
+  it("returns the link to share only when the mail wasn't delivered (#228)", async () => {
+    const g = await createGroup({ name: "Share link group" }, owner);
+    const submit = (email: string) => {
+      const fd = new FormData();
+      fd.set("groupId", g.id);
+      fd.set("email", email);
+      fd.set("role", "MEMBER");
+      return createInvitationAction(null, fd);
+    };
+    const off = await submit("share@bilan.local");
+    const inv = await db.groupInvitation.findFirstOrThrow({ where: { groupId: g.id } });
+    expect(off).toEqual({
+      ok: true,
+      renewed: false,
+      shareUrl: expect.stringMatching(new RegExp(`/groups/join/${inv.token}$`)),
+    });
+
+    smtp.delivered = true;
+    try {
+      expect(await submit("share@bilan.local")).toEqual({ ok: true, renewed: true });
+    } finally {
+      smtp.delivered = false;
+    }
+  });
+
+  it("forbids a MEMBER from renewing a pending invitation (#228)", async () => {
+    const g = await createGroup({ name: "Member renew group" }, owner);
+    const inv = await createInvitation(
+      { groupId: g.id, email: "pending@bilan.local", role: "MEMBER" },
+      { id: owner },
+    );
+    await db.groupMember.create({ data: { groupId: g.id, userId: invitee, role: "MEMBER" } });
+    await expect(
+      createInvitation(
+        { groupId: g.id, email: "pending@bilan.local", role: "ADMIN" },
+        { id: invitee },
+      ),
+    ).rejects.toMatchObject({ message: "FORBIDDEN" });
+    const row = await db.groupInvitation.findUniqueOrThrow({ where: { id: inv.id } });
+    expect(row.role).toBe("MEMBER");
+  });
+
+  it("accepting clears the other pending invitations for the same foyer and address (#228)", async () => {
+    const g = await createGroup({ name: "Cleanup group" }, owner);
+    const other = await createGroup({ name: "Cleanup other group" }, owner);
+    const inv = await createInvitation(
+      { groupId: g.id, email: "invitee@bilan.local", role: "MEMBER" },
+      { id: owner },
+    );
+    const stale = await db.groupInvitation.create({
+      data: {
+        groupId: g.id,
+        email: "invitee@bilan.local",
+        invitedById: owner,
+        token: "stale-token-228",
+        code: "STL228",
+        expiresAt: new Date(Date.now() + 60_000),
+      },
+    });
+    const elsewhere = await createInvitation(
+      { groupId: other.id, email: "invitee@bilan.local", role: "MEMBER" },
+      { id: owner },
+    );
+
+    await acceptInvitation(inv.token, { id: invitee, email: "invitee@bilan.local" });
+    expect(await db.groupInvitation.findUnique({ where: { id: stale.id } })).toBeNull();
+    expect(await db.groupInvitation.findUnique({ where: { id: elsewhere.id } })).not.toBeNull();
+    expect(
+      (await db.groupInvitation.findUniqueOrThrow({ where: { id: inv.id } })).acceptedAt,
+    ).not.toBeNull();
+  });
+
+  it("lets only the invited address decline, including a stale invitation (#228)", async () => {
+    const g = await createGroup({ name: "Decline group" }, owner);
+    const inv = await createInvitation(
+      { groupId: g.id, email: "invitee@bilan.local", role: "MEMBER" },
+      { id: owner },
+    );
+    await expect(
+      declineInvitation(inv.token, { id: owner, email: "inv-owner@bilan.local" }),
+    ).rejects.toMatchObject({ message: "WRONG_ACCOUNT" });
+
+    // Stale: the invitee already joined by another route.
+    await db.groupMember.create({ data: { groupId: g.id, userId: invitee, role: "MEMBER" } });
+    await declineInvitation(inv.token, { id: invitee, email: "Invitee@bilan.local" });
+    expect(await db.groupInvitation.findUnique({ where: { id: inv.id } })).toBeNull();
+    expect(
+      await db.auditLog.findFirst({
+        where: { action: "group.invitation.decline", entityId: inv.id },
+      }),
+    ).not.toBeNull();
+    await expect(
+      declineInvitation(inv.token, { id: invitee, email: "invitee@bilan.local" }),
+    ).rejects.toMatchObject({ message: "NOT_FOUND" });
   });
 
   it("mails a newcomer in the inviter's locale and a user in their preferred one (#214)", async () => {

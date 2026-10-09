@@ -6,10 +6,11 @@ import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { INVITABLE_GROUP_ROLES } from "@/lib/validation/group";
 import { createInvitationAction } from "@/server/transport/actions/invitations";
 import { NativeSelect } from "@/components/ui/native-select";
+import { CopyLinkButton } from "@/components/shell/copy-link-button";
 import { useActionForm } from "@/components/forms/use-action-form";
 import { FieldError } from "@/components/forms/field-error";
 
@@ -18,6 +19,7 @@ export function InviteForm({ groupId }: { groupId: string }) {
   const tg = useTranslations("groups");
   const router = useRouter();
   const form = useActionForm(createInvitationAction, { onSuccess: () => router.refresh() });
+  const sent = form.state?.ok ? form.state : null;
 
   return (
     <form {...form.formProps} className="space-y-3">
@@ -53,6 +55,33 @@ export function InviteForm({ groupId }: { groupId: string }) {
       {form.error && (
         <Alert variant="destructive">
           <AlertDescription>{t(`error.${form.error}`)}</AlertDescription>
+        </Alert>
+      )}
+      {sent && !sent.shareUrl && (
+        <Alert role="status" data-slot="invitation-sent">
+          <AlertDescription>{sent.renewed ? t("resent") : t("sent")}</AlertDescription>
+        </Alert>
+      )}
+      {sent?.shareUrl && (
+        <Alert role="status" data-slot="invitation-share">
+          <AlertTitle>{sent.renewed ? t("renewed") : t("created")}</AlertTitle>
+          <AlertDescription className="space-y-2">
+            <div>{t("mailDisabled")}</div>
+            <div className="flex items-center gap-1">
+              <Input
+                readOnly
+                value={sent.shareUrl}
+                aria-label={t("shareLink")}
+                className="font-mono text-xs"
+                onFocus={(e) => e.currentTarget.select()}
+              />
+              <CopyLinkButton
+                url={sent.shareUrl}
+                label={t("copyLink")}
+                copiedLabel={t("linkCopied")}
+              />
+            </div>
+          </AlertDescription>
         </Alert>
       )}
     </form>
