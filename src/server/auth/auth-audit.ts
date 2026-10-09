@@ -8,9 +8,8 @@ import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import { resolveClientIp } from "@/server/http/client-ip";
 import {
-  notifyNewLogin,
-  notifyPasskeyAdded,
-  notifyTwoFactorDisabled,
+  notifySecurityEvent,
+  type SecurityEvent,
 } from "@/server/services/mail/security-notifications";
 
 type AuditInput = Parameters<typeof logEvent>[0];
@@ -142,6 +141,12 @@ export async function auditLinkFailure(ctx: HookContext): Promise<void> {
   }
 }
 
+const NOTIFIED_EVENTS = new Map<string, SecurityEvent>([
+  ["auth.login.success", "new_login"],
+  ["auth.passkey.added", "passkey_added"],
+  ["auth.2fa.disabled", "two_factor_disabled"],
+]);
+
 // Sign-ins and passkey / two-factor endpoints can be reached without our Server
 // Actions (browser or direct API calls), so they are audited from the after-hook.
 export async function auditAuthRequest(ctx: HookContext): Promise<void> {
@@ -161,26 +166,14 @@ export async function auditAuthRequest(ctx: HookContext): Promise<void> {
         where: { value: event.userId, identifier: { startsWith: "trust-device-" } },
       });
     }
-    const h = ctx.headers;
-    const origin = {
-      ip: resolveClientIp(h),
-      userAgent: h?.get("user-agent") ?? null,
-      at: new Date(),
-    };
-    if (event.action === "auth.login.success") {
-      void notifyNewLogin({ email: (event.metadata as { email: string }).email, ...origin });
-    } else if (event.action === "auth.passkey.added" && event.userId) {
-      const user = await db.user.findUnique({
-        where: { id: event.userId },
-        select: { email: true },
+    const notified = NOTIFIED_EVENTS.get(event.action);
+    if (notified && event.userId) {
+      const h = ctx.headers;
+      void notifySecurityEvent(notified, {
+        userId: event.userId,
+        at: new Date(),
+        origin: { ip: resolveClientIp(h), userAgent: h?.get("user-agent") ?? null },
       });
-      if (user) void notifyPasskeyAdded({ email: user.email, ...origin });
-    } else if (event.action === "auth.2fa.disabled" && event.userId) {
-      const user = await db.user.findUnique({
-        where: { id: event.userId },
-        select: { email: true },
-      });
-      if (user) void notifyTwoFactorDisabled({ email: user.email, ...origin });
     }
   } catch {
     // best-effort: an audit failure must not fail the auth request

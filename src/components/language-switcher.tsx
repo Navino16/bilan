@@ -3,19 +3,23 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { syncLocaleAction } from "@/server/transport/actions/preferences";
 
-export function LanguageSwitcher() {
+// `syncPreference`: signed-in shells also save the choice, so emails follow it (#214).
+export function LanguageSwitcher({ syncPreference = false }: { syncPreference?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const locale = useLocale();
   const t = useTranslations("shell");
   const other = locale === "fr" ? "en" : "fr";
 
-  function switchTo() {
+  async function switchTo() {
     // Swap only the leading locale segment; read the query at click time so no
     // useSearchParams() Suspense boundary is needed on static pages.
     const next = pathname.replace(new RegExp(`^/${locale}(?=/|$)`), `/${other}`);
-    router.push(`${next}${window.location.search}${window.location.hash}`);
+    const target = `${next}${window.location.search}${window.location.hash}`;
+    if (syncPreference) await syncLocaleAction(other).catch(() => {});
+    router.push(target);
   }
 
   return (

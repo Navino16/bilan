@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import type { AppSetting } from "@prisma/client";
 
+const requestHeaders = vi.hoisted(() => ({ init: {} as Record<string, string> }));
 vi.mock("next/headers", () => ({
-  headers: async () => new Headers(),
+  headers: async () => new Headers(requestHeaders.init),
   cookies: async () => ({ get: () => undefined, set: () => {} }),
 }));
 
@@ -11,6 +12,7 @@ import { env } from "@/env";
 import { getAuth, invalidateAuthCache } from "@/server/auth";
 import { appSettings } from "@/server/services/settings/app-settings";
 import { createSignupToken } from "@/server/services/signup-tokens";
+import { storeSignupLocale } from "@/server/services/users/preferences";
 import { registerAction, resetConfirmAction } from "@/server/transport/actions/auth";
 
 const actorId = "signup_http_actor";
@@ -218,6 +220,68 @@ describe("HTTP sign-up endpoint (#197)", () => {
       body: { email: email("locale-default"), password, name: "Fr" },
     });
     expect(await roots(fallback.user.id)).toContain("Revenus");
+  });
+
+  it("stores the signup page's locale as the user's preference (#214)", async () => {
+    const auth = await getAuth();
+    const prefLocale = async (userId: string) =>
+      (await db.userPreference.findUnique({ where: { userId } }))?.locale;
+
+    const en = await auth.api.signUpEmail({
+      body: { email: email("pref-en"), password, name: "En" },
+      headers: new Headers({ referer: `${appUrl}/en/register` }),
+    });
+    expect(await prefLocale(en.user.id)).toBe("en");
+
+    const fr = await auth.api.signUpEmail({
+      body: { email: email("pref-fr"), password, name: "Fr" },
+      headers: new Headers({ referer: `${appUrl}/fr/register`, "accept-language": "en" }),
+    });
+    expect(await prefLocale(fr.user.id)).toBe("fr");
+
+    await appSettings.set("registration_mode", "OPEN", actorId);
+    await appSettings.set("min_password_length", 8, actorId);
+    const viaAction = email("pref-action");
+    requestHeaders.init = { referer: `${appUrl}/en/register` };
+    try {
+      expect(
+        await registerAction(
+          null,
+          registerForm({ email: viaAction, password, confirmPassword: password, name: "A" }),
+        ),
+      ).toEqual({ ok: true });
+    } finally {
+      requestHeaders.init = {};
+    }
+    const user = await db.user.findUniqueOrThrow({ where: { email: viaAction } });
+    expect(await prefLocale(user.id)).toBe("en");
+  });
+
+  it("falls back to the NEXT_LOCALE cookie without a same-origin Referer, as on SSO callbacks (#214)", async () => {
+    const auth = await getAuth();
+    const res = await auth.api.signUpEmail({
+      body: { email: email("pref-cookie"), password, name: "Sso" },
+      headers: new Headers({
+        referer: "https://idp.example/en/authorize",
+        cookie: "a=1; NEXT_LOCALE=en",
+        "accept-language": "fr-FR,fr;q=0.9",
+      }),
+    });
+    expect((await db.userPreference.findUnique({ where: { userId: res.user.id } }))?.locale).toBe(
+      "en",
+    );
+  });
+
+  it("never overwrites an existing locale preference (#214)", async () => {
+    const auth = await getAuth();
+    const res = await auth.api.signUpEmail({
+      body: { email: email("pref-keep"), password, name: "Keep" },
+      headers: new Headers({ referer: `${appUrl}/en/register` }),
+    });
+    await storeSignupLocale(res.user.id, "fr");
+    expect((await db.userPreference.findUnique({ where: { userId: res.user.id } }))?.locale).toBe(
+      "en",
+    );
   });
 
   it("registerAction enforces the configured minimum password length (#169)", async () => {

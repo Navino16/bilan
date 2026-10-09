@@ -41,7 +41,7 @@ describe("adminCreateUser", () => {
     expect(audit).not.toBeNull();
   });
 
-  it("seeds the default categories in the locale picked by the admin (#169)", async () => {
+  it("seeds the default categories and stores the locale picked by the admin (#169, #214)", async () => {
     const email = `locale+${Date.now()}@bilan.local`;
     const { id } = await adminCreateUser(
       { email, name: "English User", role: "USER", locale: "en" },
@@ -49,6 +49,7 @@ describe("adminCreateUser", () => {
     );
     const roots = await db.category.findMany({ where: { userId: id, parentId: null } });
     expect(roots.map((c) => c.name)).toContain("Income");
+    expect((await db.userPreference.findUnique({ where: { userId: id } }))?.locale).toBe("en");
     await db.user.delete({ where: { id } });
   });
 
