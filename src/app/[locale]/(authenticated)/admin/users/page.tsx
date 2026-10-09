@@ -66,7 +66,7 @@ export default async function AdminUsersPage({
         <form
           method="get"
           role="search"
-          className="flex flex-wrap items-center gap-2 border-b px-6 py-3"
+          className="flex flex-wrap items-center gap-2 border-b px-4 py-3 sm:px-6"
         >
           <Input
             name="q"
@@ -97,7 +97,7 @@ export default async function AdminUsersPage({
           <div
             key={u.id}
             data-slot="admin-user-row"
-            className={`flex items-center justify-between gap-3 border-b px-6 py-3 text-sm last:border-b-0 md:grid ${cols}`}
+            className={`flex items-center justify-between gap-3 border-b px-4 py-3 text-sm last:border-b-0 sm:px-6 md:grid ${cols}`}
           >
             <div className="min-w-0">
               <div className="flex items-center gap-2">
@@ -135,7 +135,9 @@ export default async function AdminUsersPage({
           </div>
         ))}
         {users.length === 0 && (
-          <p className="text-muted-foreground px-6 py-5 text-sm">{q ? t("noMatch") : t("empty")}</p>
+          <p className="text-muted-foreground px-4 py-5 text-sm sm:px-6">
+            {q ? t("noMatch") : t("empty")}
+          </p>
         )}
         <Pager page={page} pageCount={pageCount} pathname={pathname} query={{ q }} />
       </SectionCard>

@@ -64,13 +64,13 @@ export function MemberList({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="border-border divide-border divide-y rounded-lg border">
+    <div>
+      <div className="divide-border divide-y">
         {members.map((m) => {
           const isSelf = m.userId === viewerId;
           const display = displayName(m);
           return (
-            <div key={m.userId} className="flex items-center gap-3 px-4 py-3">
+            <div key={m.userId} className="flex items-center gap-3 px-4 py-3 sm:px-6">
               <Avatar className="size-8">
                 <AvatarFallback className="bg-accent text-accent-foreground text-xs">
                   {display.slice(0, 2).toUpperCase()}
@@ -120,7 +120,9 @@ export function MemberList({
         })}
       </div>
 
-      {error && !confirmOpen && <p className="text-destructive text-sm">{t(`error.${error}`)}</p>}
+      {error && !confirmOpen && (
+        <p className="text-destructive border-t px-4 py-3 text-sm sm:px-6">{t(`error.${error}`)}</p>
+      )}
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}

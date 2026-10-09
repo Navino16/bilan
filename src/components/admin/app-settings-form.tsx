@@ -37,7 +37,9 @@ function SettingsCard({
       hint={t(`${section}.hint`)}
     >
       <form {...form.formProps} className="space-y-4">
-        <CardForm value={form}>{children}</CardForm>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <CardForm value={form}>{children}</CardForm>
+        </div>
         <div className="flex items-center gap-3">
           <Button type="submit" disabled={pending}>
             {pending ? t("saving") : t("save")}

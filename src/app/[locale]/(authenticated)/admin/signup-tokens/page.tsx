@@ -79,7 +79,7 @@ export default async function AdminSignupTokensPage({
             <div
               key={tk.id}
               data-slot="signup-token-row"
-              className={`flex items-center justify-between gap-3 border-b px-6 py-3 text-sm last:border-b-0 md:grid ${cols}`}
+              className={`flex items-center justify-between gap-3 border-b px-4 py-3 text-sm last:border-b-0 sm:px-6 md:grid ${cols}`}
             >
               <div className="min-w-0">
                 <code className="text-xs break-all">{tk.token}</code>
@@ -107,7 +107,7 @@ export default async function AdminSignupTokensPage({
           );
         })}
         {tokens.length === 0 && (
-          <p className="text-muted-foreground px-6 py-5 text-sm">{t("empty")}</p>
+          <p className="text-muted-foreground px-4 py-5 text-sm sm:px-6">{t("empty")}</p>
         )}
       </SectionCard>
     </div>

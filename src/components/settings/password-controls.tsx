@@ -27,46 +27,48 @@ function PasswordForm({
 
   return (
     <form {...form.formProps} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="pw-current">{t("current")}</Label>
-        <Input
-          id="pw-current"
-          name="currentPassword"
-          type="password"
-          required
-          autoComplete="current-password"
-          {...form.fieldProps("currentPassword")}
-        />
-        <FieldError form={form} name="currentPassword" />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="pw-new">{t("new")}</Label>
-        <Input
-          id="pw-new"
-          name="newPassword"
-          type="password"
-          required
-          minLength={minLength}
-          autoComplete="new-password"
-          {...form.fieldProps("newPassword", "pw-new-hint")}
-        />
-        <FieldError form={form} name="newPassword" />
-        <p id="pw-new-hint" className="text-muted-foreground text-xs">
-          {t("minLength", { count: minLength })}
-        </p>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="pw-confirm">{t("confirm")}</Label>
-        <Input
-          id="pw-confirm"
-          name="confirmPassword"
-          type="password"
-          required
-          minLength={minLength}
-          autoComplete="new-password"
-          {...form.fieldProps("confirmPassword")}
-        />
-        <FieldError form={form} name="confirmPassword" />
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="space-y-2">
+          <Label htmlFor="pw-current">{t("current")}</Label>
+          <Input
+            id="pw-current"
+            name="currentPassword"
+            type="password"
+            required
+            autoComplete="current-password"
+            {...form.fieldProps("currentPassword")}
+          />
+          <FieldError form={form} name="currentPassword" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="pw-new">{t("new")}</Label>
+          <Input
+            id="pw-new"
+            name="newPassword"
+            type="password"
+            required
+            minLength={minLength}
+            autoComplete="new-password"
+            {...form.fieldProps("newPassword", "pw-new-hint")}
+          />
+          <FieldError form={form} name="newPassword" />
+          <p id="pw-new-hint" className="text-muted-foreground text-xs">
+            {t("minLength", { count: minLength })}
+          </p>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="pw-confirm">{t("confirm")}</Label>
+          <Input
+            id="pw-confirm"
+            name="confirmPassword"
+            type="password"
+            required
+            minLength={minLength}
+            autoComplete="new-password"
+            {...form.fieldProps("confirmPassword")}
+          />
+          <FieldError form={form} name="confirmPassword" />
+        </div>
       </div>
       <div className="flex items-center gap-3">
         <Switch id="pw-revoke" checked={revoke} onCheckedChange={setRevoke} />
