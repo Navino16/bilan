@@ -6,6 +6,7 @@ import { listGroupsForUser } from "@/server/services/groups";
 import { categoryOptions } from "@/components/categories/category-options";
 import { BudgetsView } from "@/components/budgets/budgets-view";
 import { pageTitle } from "@/i18n/metadata";
+import { canManageInGroup } from "@/lib/validation/group";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,7 @@ export default async function BudgetsPage({ params }: { params: Promise<{ locale
 
   const categories = categoryOptions(tree);
   const groups = groupRows
-    .filter((g) => g.role === "OWNER" || g.role === "ADMIN")
+    .filter((g) => canManageInGroup(g.role))
     .map((g) => ({ id: g.id, name: g.name }));
 
   return (

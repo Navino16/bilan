@@ -3,7 +3,7 @@ import { db } from "@/server/db";
 import { LONG_TX_TIMEOUT } from "@/server/db/timeouts";
 import { logEvent } from "@/server/services/audit";
 import { eraseUser, groupSuccessions, logUserDeleted } from "@/server/services/rgpd";
-import { topRole, type InstanceRole } from "@/lib/instance-roles";
+import { mayHandleRole, topRole, type InstanceRole } from "@/lib/instance-roles";
 import { lockActiveSuperAdmins } from "@/server/services/users/roles";
 import { displayName } from "@/lib/validation/name";
 
@@ -35,7 +35,7 @@ export function checkUserAdminAction(input: {
 }): UserAdminRefusal | null {
   if (input.actorId === input.targetId) return "SELF";
   if (input.action === "delete" && !input.actorIsActiveSuperAdmin) return "FORBIDDEN";
-  if (input.targetRole !== "USER" && !input.actorIsActiveSuperAdmin) return "FORBIDDEN";
+  if (!mayHandleRole(input.actorIsActiveSuperAdmin, input.targetRole)) return "FORBIDDEN";
   return null;
 }
 

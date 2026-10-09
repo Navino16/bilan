@@ -107,7 +107,7 @@ function getPinned(
 export async function testOidcConnectionAction(issuerInput: string): Promise<OidcTestResult> {
   if (!(await isSetupNeeded())) {
     const user = await getCurrentUser();
-    if (!user || !(await hasPermission(user.id, "admin.settings.write"))) {
+    if (!user || !(await hasPermission(user.id, "admin.security.write"))) {
       return { ok: false, error: "UNAUTHORIZED" };
     }
   }

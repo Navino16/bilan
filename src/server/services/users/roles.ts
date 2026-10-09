@@ -1,7 +1,7 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
-import { INSTANCE_ROLES, topRole, type InstanceRole } from "@/lib/instance-roles";
+import { INSTANCE_ROLES, mayHandleRole, topRole, type InstanceRole } from "@/lib/instance-roles";
 
 export async function grantRole(
   db: PrismaClient,
@@ -43,8 +43,9 @@ export function checkRoleChange(input: {
   otherActiveSuperAdmins: number;
 }): RoleChangeRefusal | null {
   if (input.actorId === input.targetId) return "SELF";
-  const touchesAdmin = [input.from, input.to].some((r) => r !== "USER");
-  if (touchesAdmin && !input.actorIsSuperAdmin) return "FORBIDDEN";
+  if (![input.from, input.to].every((r) => mayHandleRole(input.actorIsSuperAdmin, r))) {
+    return "FORBIDDEN";
+  }
   if (
     input.from === "SUPER_ADMIN" &&
     input.to !== "SUPER_ADMIN" &&
@@ -53,6 +54,16 @@ export function checkRoleChange(input: {
     return "LAST_SUPER_ADMIN";
   }
   return null;
+}
+
+export async function isActiveSuperAdmin(
+  userId: string,
+  database: Prisma.TransactionClient | PrismaClient = db,
+): Promise<boolean> {
+  const count = await database.user.count({
+    where: { id: userId, banned: false, roles: { some: { role: { key: "SUPER_ADMIN" } } } },
+  });
+  return count > 0;
 }
 
 // Locks the SUPER_ADMIN role rows so concurrent actions between super admins are

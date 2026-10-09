@@ -91,6 +91,27 @@ describe("listAuditLog", () => {
     expect(none.total).toBe(0);
   });
 
+  it("treats LIKE wildcards in the user and action filters literally (#223)", async () => {
+    expect((await listAuditLog({ action: prefix, user: "auditl_st@" })).total).toBe(0);
+    expect((await listAuditLog({ action: prefix, user: "audit%@" })).total).toBe(0);
+    expect((await listAuditLog({ action: "test%auditlist" })).total).toBe(0);
+
+    const escId = "auditlist_esc";
+    await db.user.deleteMany({ where: { id: escId } });
+    await db.user.create({ data: { id: escId, email: "audit_esc%1@bilan.local" } });
+    await db.auditLog.create({ data: { action: `${prefix}.esc`, userId: escId } });
+    try {
+      for (const user of ["it_esc", "esc%1"]) {
+        const { items } = await listAuditLog({ action: prefix, user });
+        expect(items.map((i) => i.userId)).toEqual([escId]);
+      }
+      expect((await listAuditLog({ action: prefix, user: "it-esc" })).total).toBe(0);
+    } finally {
+      await db.auditLog.deleteMany({ where: { userId: escId } });
+      await db.user.deleteMany({ where: { id: escId } });
+    }
+  });
+
   it("filters by a half-open date range", async () => {
     const { items } = await listAuditLog({
       action: prefix,

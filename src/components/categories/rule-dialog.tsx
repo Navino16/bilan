@@ -24,6 +24,8 @@ import {
   type RuleActionState,
 } from "@/server/transport/actions/rules";
 import { NativeSelect } from "@/components/ui/native-select";
+import { canManageInGroup } from "@/lib/validation/group";
+import type { ScopeGroup } from "./category-form";
 
 export type EditableRule = {
   id: string;
@@ -39,7 +41,7 @@ type RuleFormProps = {
   mode: "create" | "edit";
   rule?: EditableRule;
   categories: FlatCategory[];
-  groups: { id: string; name: string }[];
+  groups: ScopeGroup[];
 };
 
 export function RuleDialog({
@@ -86,6 +88,7 @@ function RuleForm({
   const [categoryId, setCategoryId] = useState(rule?.categoryId ?? "");
   const [groupId, setGroupId] = useState(rule?.groupId ?? "");
   const [error, setError] = useState<string | null>(null);
+  const scopeGroups = groups.filter((g) => canManageInGroup(g.role));
 
   function submit() {
     const fd = new FormData();
@@ -155,7 +158,7 @@ function RuleForm({
               onChange={(e) => setPriority(e.target.value)}
             />
           </div>
-          {mode === "create" && groups.length > 0 && (
+          {mode === "create" && scopeGroups.length > 0 && (
             <div className="space-y-1.5">
               <Label htmlFor="rule-scope">{t("scope")}</Label>
               <NativeSelect
@@ -164,7 +167,7 @@ function RuleForm({
                 onChange={(e) => setGroupId(e.target.value)}
               >
                 <option value="">{t("scopePersonal")}</option>
-                {groups.map((g) => (
+                {scopeGroups.map((g) => (
                   <option key={g.id} value={g.id}>
                     {g.name}
                   </option>

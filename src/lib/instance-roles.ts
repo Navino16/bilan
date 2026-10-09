@@ -11,3 +11,14 @@ export function topRole(keys: string[]): InstanceRole {
   if (keys.includes("ADMIN")) return "ADMIN";
   return "USER";
 }
+
+export function mayHandleRole(actorIsActiveSuperAdmin: boolean, role: InstanceRole): boolean {
+  return role === "USER" || actorIsActiveSuperAdmin;
+}
+
+export const CREATABLE_ROLES = ["USER", "ADMIN"] as const satisfies readonly InstanceRole[];
+export type CreatableRole = (typeof CREATABLE_ROLES)[number];
+
+export function creatableRoles(actorIsActiveSuperAdmin: boolean): CreatableRole[] {
+  return CREATABLE_ROLES.filter((r) => mayHandleRole(actorIsActiveSuperAdmin, r));
+}

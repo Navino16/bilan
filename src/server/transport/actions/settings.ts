@@ -2,9 +2,13 @@
 
 import { getTranslations } from "next-intl/server";
 import { hasLocale } from "next-intl";
-import { requirePermission } from "@/server/auth/permissions";
+import { hasPermission, requirePermission } from "@/server/auth/permissions";
 import { smtpTestLimiter } from "@/server/auth/rate-limit";
-import { appSettings, getAppName } from "@/server/services/settings/app-settings";
+import {
+  appSettings,
+  getAppName,
+  SECURITY_SETTING_KEYS,
+} from "@/server/services/settings/app-settings";
 import {
   deleteSmtpConfig,
   sendSmtpTest,
@@ -43,7 +47,7 @@ export async function saveAuthProviderAction(
   _prev: SettingsActionState,
   formData: FormData,
 ): Promise<SettingsActionState> {
-  const user = await requirePermission("admin.settings.write");
+  const user = await requirePermission("admin.security.write");
   const mode = str(formData, "mode");
   if (mode !== "create" && mode !== "update") return { ok: false, error: "INVALID" };
   const parsed = providerSchema.safeParse({
@@ -76,7 +80,7 @@ export async function saveAuthProviderAction(
 export type DeleteProviderState = { ok: true } | { ok: false; error: string; count?: number };
 
 export async function deleteAuthProviderAction(key: unknown): Promise<DeleteProviderState> {
-  const user = await requirePermission("admin.settings.write");
+  const user = await requirePermission("admin.security.write");
   if (typeof key !== "string" || !key.trim()) return { ok: false, error: "INVALID" };
   try {
     await deleteAuthProvider(key.trim(), { id: user.id });
@@ -91,7 +95,7 @@ export async function upsertSmtpAction(
   _prev: SettingsActionState,
   formData: FormData,
 ): Promise<SettingsActionState> {
-  const user = await requirePermission("admin.settings.write");
+  const user = await requirePermission("admin.security.write");
   const parsed = smtpSchema.safeParse({
     host: str(formData, "host"),
     port: str(formData, "port"),
@@ -124,7 +128,7 @@ export async function sendSmtpTestAction(
   _prev: SmtpTestState,
   formData: FormData,
 ): Promise<SmtpTestState> {
-  const user = await requirePermission("admin.settings.write");
+  const user = await requirePermission("admin.security.write");
   if (!smtpTestLimiter.consume(user.id).allowed) return { ok: false, error: "RATE_LIMITED" };
   const raw = str(formData, "locale");
   const locale = hasLocale(locales, raw) ? raw : defaultLocale;
@@ -140,7 +144,7 @@ export async function sendSmtpTestAction(
 }
 
 export async function deleteSmtpConfigAction(): Promise<SettingsActionState> {
-  const user = await requirePermission("admin.settings.write");
+  const user = await requirePermission("admin.security.write");
   try {
     await deleteSmtpConfig({ id: user.id });
   } catch {
@@ -191,6 +195,12 @@ export async function setAppSettingsAction(
     else values.push([key, value]);
   }
   if (Object.keys(fieldErrors).length) return { ok: false, error: "INVALID", fieldErrors };
+  if (
+    values.some(([key]) => SECURITY_SETTING_KEYS.has(key)) &&
+    !(await hasPermission(user.id, "admin.security.write"))
+  ) {
+    return { ok: false, error: "FORBIDDEN" };
+  }
   try {
     await appSettings.setMany(values, user.id);
   } catch {

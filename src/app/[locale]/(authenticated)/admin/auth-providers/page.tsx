@@ -17,7 +17,7 @@ const TYPE_KEY = {
 export const generateMetadata = pageTitle("adminAuthProviders");
 
 export default async function AdminAuthProvidersPage() {
-  await requirePermission("admin.settings.write");
+  await requirePermission("admin.security.write");
   const t = await getTranslations("admin.authProviders");
   const providers = await listAuthProviders();
   const impacts = await Promise.all(providers.map((p) => authProviderImpact(p)));

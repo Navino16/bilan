@@ -7,7 +7,8 @@ import { RoleBadge } from "@/components/admin/role-badge";
 import { RoleSelect } from "@/components/admin/role-select";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { UserActions } from "@/components/admin/user-actions";
-import { topRole } from "@/lib/instance-roles";
+import { creatableRoles, topRole } from "@/lib/instance-roles";
+import { isActiveSuperAdmin } from "@/server/services/users/roles";
 import { displayName } from "@/lib/validation/name";
 import { parsePage } from "@/lib/pagination";
 import { SectionCard, listHeader } from "@/components/shell/section-card";
@@ -31,11 +32,12 @@ export default async function AdminUsersPage({
 }) {
   const { locale } = await params;
   const viewer = await requirePermission("admin.users.read");
-  const [canUpdate, canDisable, canDelete] = await Promise.all([
+  const [canUpdate, canDisable, canDelete, viewerIsSuperAdmin] = await Promise.all([
     hasPermission(viewer.id, "admin.users.update"),
     hasPermission(viewer.id, "admin.users.disable"),
     // Super admins only; doubles as "may act on admins" (enforced in users/lifecycle.ts).
     hasPermission(viewer.id, "admin.users.delete"),
+    isActiveSuperAdmin(viewer.id),
   ]);
   const t = await getTranslations("admin.users");
   const sp = await searchParams;
@@ -54,7 +56,7 @@ export default async function AdminUsersPage({
   return (
     <div className="space-y-6">
       <SectionCard overline={t("createOverline")} title={t("createTitle")} hint={t("createHint")}>
-        <CreateUserForm />
+        <CreateUserForm roles={creatableRoles(viewerIsSuperAdmin)} />
       </SectionCard>
 
       <SectionCard

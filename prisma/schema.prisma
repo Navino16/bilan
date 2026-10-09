@@ -95,6 +95,8 @@ model TwoFactor {
   secret      String  @db.Text
   backupCodes String  @db.Text
   verified    Boolean @default(true)
+  // Last accepted TOTP time-step, so a code can't be replayed within its window (#223).
+  lastUsedStep Int?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

@@ -1261,7 +1261,8 @@
       "error": {
         "UNAUTHORIZED": "Vous n’avez pas la permission de créer des utilisateurs.",
         "INVALID": "Vérifiez les champs saisis.",
-        "FAILED": "Échec de la création. Réessayez."
+        "FAILED": "Échec de la création. Réessayez.",
+        "FORBIDDEN": "Vous ne pouvez pas créer un utilisateur avec ce rôle."
       },
       "createOverline": "Invitation",
       "createHint": "La personne reçoit par e-mail un lien pour définir son mot de passe.",
@@ -1375,7 +1376,8 @@
       "saved": "Enregistré.",
       "error": {
         "INVALID": "Valeur invalide.",
-        "FAILED": "Échec de l’enregistrement."
+        "FAILED": "Échec de l’enregistrement.",
+        "FORBIDDEN": "Seul un super admin peut modifier ces paramètres."
       },
       "general": {
         "overline": "Général",

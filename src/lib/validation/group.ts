@@ -15,6 +15,11 @@ export type InvitableGroupRole = (typeof INVITABLE_GROUP_ROLES)[number];
 
 export const GROUP_ROLE_RANK: Record<GroupRole, number> = { OWNER: 3, ADMIN: 2, MEMBER: 1 };
 
+// Who may create shared categories, budgets and rules in a foyer.
+export function canManageInGroup(role: GroupRole): boolean {
+  return GROUP_ROLE_RANK[role] >= GROUP_ROLE_RANK.ADMIN;
+}
+
 export const GROUP_DESCRIPTION_MAX = 191;
 
 export const groupInputSchema = z.object({
