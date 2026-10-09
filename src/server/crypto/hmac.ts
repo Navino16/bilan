@@ -1,10 +1,11 @@
 import { createHmac } from "node:crypto";
-import { normalizeText, tokenize } from "@/lib/text";
+import { normalizeText, searchPrefixes } from "@/lib/text";
 
 export function hmacForSearch(input: string, key: Buffer): string {
   return createHmac("sha256", key).update(normalizeText(input)).digest("hex");
 }
 
+// Search-index tokens: one HMAC per word prefix (spec §2.3, #192).
 export function hmacTokens(input: string, key: Buffer): string[] {
-  return tokenize(input).map((t) => hmacForSearch(t, key));
+  return searchPrefixes(input).map((t) => hmacForSearch(t, key));
 }

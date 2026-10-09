@@ -25,7 +25,8 @@
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio",
-    "db:seed-dev": "tsx --env-file=.env scripts/seed-dev-user.ts"
+    "db:seed-dev": "tsx --env-file=.env scripts/seed-dev-user.ts",
+    "db:reindex-search": "tsx --env-file=.env scripts/reindex-search-tokens.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

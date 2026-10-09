@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomInt } from "node:crypto";
 import { encrypt } from "@/server/crypto/encryption";
 import { hmacForSearch, hmacTokens } from "@/server/crypto/hmac";
 import { dataKey, searchKey } from "@/server/crypto/keys";
@@ -9,22 +9,32 @@ export type SecureFields = {
   rawLabelEnc: string;
   rawLabelHash: string;
   noteEnc: string | null;
-  tokens: string[]; // HMAC of each normalized word ≥ 3 chars (label + rawLabel)
+  tokens: string[]; // HMAC of each word prefix ≥ 3 chars (label + rawLabel), see searchPrefixes
 };
 
+// Tokens come from BOTH labels so a search matches whichever the user typed. Shuffled so
+// token row order doesn't spell out each word's prefix chain (spec §6.2).
+export function buildSearchTokens(label: string, rawLabel: string): string[] {
+  const tokens = Array.from(
+    new Set([...hmacTokens(label, searchKey), ...hmacTokens(rawLabel, searchKey)]),
+  );
+  for (let i = tokens.length - 1; i > 0; i--) {
+    const j = randomInt(i + 1);
+    [tokens[i], tokens[j]] = [tokens[j], tokens[i]];
+  }
+  return tokens;
+}
+
 // Encrypts the human + raw labels and the optional note, derives equality
-// HMAC hashes for both labels, and builds the per-word search-token set used by
-// TransactionSearchToken rows. Tokens come from BOTH labels so a search matches
-// whichever the user typed.
+// HMAC hashes for both labels, and builds the search-token set used by
+// TransactionSearchToken rows.
 export function buildSecureFields(input: {
   label: string;
   rawLabel: string;
   note?: string | null;
 }): SecureFields {
   const note = input.note?.trim() ? input.note : null;
-  const tokens = Array.from(
-    new Set([...hmacTokens(input.label, searchKey), ...hmacTokens(input.rawLabel, searchKey)]),
-  );
+  const tokens = buildSearchTokens(input.label, input.rawLabel);
   return {
     labelEnc: encrypt(input.label, dataKey),
     labelHash: hmacForSearch(input.label, searchKey),

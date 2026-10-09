@@ -1,7 +1,7 @@
 import { db } from "@/server/db";
 import { decrypt } from "@/server/crypto/encryption";
 import { hmacForSearch } from "@/server/crypto/hmac";
-import { tokenize } from "@/lib/text";
+import { searchQueryTerms } from "@/lib/text";
 import { dataKey, searchKey } from "@/server/crypto/keys";
 import { DEFAULT_SORT, UNCATEGORIZED, type TransactionSort } from "@/lib/transaction-filters";
 import { editScope } from "@/lib/transaction-edit";
@@ -186,10 +186,10 @@ export async function listTransactions(
   }
   const query = filters.search?.trim();
   if (query) {
-    // Multi-word AND: the row must carry a token for every normalized word in
-    // the query (words < 3 chars are dropped — same rule as indexing). A query
-    // made only of too-short words matches nothing rather than everything.
-    const words = tokenize(query);
+    // Multi-word AND: the row must carry a prefix token for every query word
+    // (words < 3 chars are dropped, as at indexing). A query made only of
+    // too-short words matches nothing rather than everything.
+    const words = searchQueryTerms(query);
     if (words.length === 0) {
       where.id = "__no_searchable_word__";
     } else {

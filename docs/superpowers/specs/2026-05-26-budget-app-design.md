@@ -93,7 +93,7 @@ Decisions consolidated from the clarifying-questions phase.
 
 - **Encryption at rest at MariaDB level** (innodb_encrypt_tables) — protects against disk theft.
 - **Application-level encryption** AES-256-GCM on sensitive fields: transaction labels, raw labels, notes, account IBAN, OIDC client secrets, SMTP password, secret settings.
-- **Search on encrypted labels**: HMAC-SHA256 of the normalized full label (exact match) + a `TransactionSearchToken` table with one HMAC per normalized word (per-word search). No partial-substring search within a word. Threshold of 3 chars per token; accents stripped, lowercase.
+- **Search on encrypted labels**: HMAC-SHA256 of the normalized full label (exact match) + a `TransactionSearchToken` table with one HMAC per normalized word prefix of 3 to 12 chars (word-beginning search, #192; a query word is cut to 12 chars). No substring search inside a word. Accents stripped, lowercase. Changing the tokenization requires `npm run db:reindex-search`.
 - **Keys**: `DATA_ENCRYPTION_KEY` (AES) and `SEARCH_TOKEN_KEY` (HMAC) are **separate** — defense in depth.
 - **Password hashing**: argon2id with OWASP 2025 recommended parameters (handled by Better Auth).
 - **Sessions**: DB-backed, httpOnly + secure + sameSite=strict cookies, immediate revocation supported.
@@ -523,7 +523,7 @@ model Transaction {
 model TransactionSearchToken {
   id            String @id @default(cuid())
   transactionId String
-  tokenHash     String                                // HMAC-SHA256 of one normalized word
+  tokenHash     String                                // HMAC-SHA256 of one normalized word prefix
   transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
   @@index([tokenHash])
   @@index([transactionId])
@@ -719,7 +719,7 @@ model UserPreference {
 |---|---|
 | Owner XOR | For `Category`, `Budget`, `CategorizationRule`: exactly one of `userId` or `groupId`. Service-level Zod + DB check trigger. |
 | Application encryption | `Transaction.labelEnc/rawLabelEnc/noteEnc`, `BankAccount.ibanEnc`, `AuthProvider.clientSecretEnc`, `SmtpConfig.passwordEnc`, `AppSetting.value` when `isSecret=true`. |
-| Scalable search | HMAC on full label (equality) + `TransactionSearchToken` (per-word). 3-char minimum per token. |
+| Scalable search | HMAC on full label (equality) + `TransactionSearchToken` (per word prefix, 3–12 chars). |
 | Transaction dedup | Unique `(accountId, externalId)` when externalId is set (bank ref or content hash for CSV/PDF). Manual entries: no externalId, no auto-dedup. |
 | Cascade deletes | User → ownedAccounts → transactions → tokens/links. Group → members/categories/budgets/shares. BankAccount → tx/shares. Budget → lines/assignments. |
 | Indexes | All hashes (`labelHash`, `tokenHash`), `(accountId, date)`, `(categoryId, date)`, `(userId/groupId, periodStart)`. |
@@ -877,11 +877,15 @@ Key rotation (post-MVP): CLI script reads all rows, decrypts with old key, re-en
 
 Normalization: strip accents (NFD), lowercase, collapse whitespace.
 
-Tokenization: split on non-alphanumeric, keep words ≥ 3 chars.
+Tokenization: split on non-alphanumeric, keep words ≥ 3 chars, index every prefix of 3 to 12 chars of each word (#192): "lidl" → `lid`, `lidl`.
 
-On transaction creation/import: store `labelHash`, `rawLabelHash`, and one `TransactionSearchToken` per token.
+On transaction creation/import: store `labelHash`, `rawLabelHash`, and one `TransactionSearchToken` per distinct prefix of the label and raw label, inserted in shuffled order.
 
-Search by word: hash the query → indexed lookup on `TransactionSearchToken.tokenHash`. No substring search within a word (acceptable trade-off for the security gain).
+Search by word beginning: each query word ≥ 3 chars is cut to 12 chars, hashed → indexed lookup on `TransactionSearchToken.tokenHash`; all query words must match (AND). No substring search inside a word.
+
+Leakage trade-off: the token count per transaction reveals word lengths, tokens shared by the same transactions reveal prefix chains, and the frequent 3-letter tokens are open to frequency analysis. Accepted for usable search; the labels themselves stay AES-encrypted.
+
+A tokenization or normalization change makes stored tokens stale: rebuild them with `npm run db:reindex-search` (add `--rehash` when `normalizeText` changes, so `labelHash`/`rawLabelHash` are rewritten too).
 
 ### 6.3 Password hashing — argon2id
 

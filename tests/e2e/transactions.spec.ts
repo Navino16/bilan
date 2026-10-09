@@ -21,14 +21,27 @@ test.describe("transactions", () => {
     await expect(page.locator('input[name="label"]')).toBeHidden();
 
     // Token search on the per-run word (the unfiltered list only shows the newest page).
+    const row = page.locator('[data-slot="transaction-row"]').filter({ hasText: label });
     await page.getByRole("searchbox").fill(String(stamp));
+    await expect(row.first()).toBeVisible();
+
+    // Word beginnings match (#192), word middles don't.
+    await page.getByRole("searchbox").fill(`boul ${stamp}`);
+    await expect(page).toHaveURL(/search=boul/);
+    await expect(row.first()).toBeVisible();
+    await page.getByRole("searchbox").fill(`oulangerie ${stamp}`);
+    await expect(page).toHaveURL(/search=oulangerie/);
     await expect(
-      page.locator('[data-slot="transaction-row"]').filter({ hasText: label }).first(),
+      page.getByText(
+        "Aucune transaction ne correspond. La recherche porte sur les débuts de mots d’au moins 3 lettres.",
+      ),
     ).toBeVisible();
+    await expect(row).toHaveCount(0);
   });
 
   test("a truncated list shows a count and loads more on demand", async ({ page }) => {
-    const word = `pagin${Date.now()}`;
+    // Within MAX_SEARCH_PREFIX (12) chars, so the search matches this run's rows only.
+    const word = `pg${Date.now().toString(36)}`;
     await page.goto("/fr/transactions");
     for (const day of ["10", "11", "12"]) {
       await expect(async () => {
@@ -190,7 +203,7 @@ test.describe("transactions", () => {
     await page.goto("/fr/transactions");
     const box = page.getByRole("searchbox");
     await box.pressSequentially("cb", { delay: 50 });
-    await expect(page.getByText(/mots entiers d’au moins 3 lettres/i).first()).toBeVisible();
+    await expect(page.getByText(/débuts de mots d’au moins 3 lettres/i).first()).toBeVisible();
     await expect(page).toHaveURL(/search=cb/);
     await box.fill("");
     await expect(page).not.toHaveURL(/search=/);
