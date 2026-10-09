@@ -17,7 +17,7 @@ export function budgetPlannedTotal(lines: { plannedAmount: number }[]): number {
 
 export const _EPSILON = EPSILON; // exported for later tasks that need the tolerance
 
-export type BudgetStatus = "OK" | "WARN" | "OVER";
+export type BudgetStatus = "OK" | "WARN" | "REACHED" | "OVER";
 export type LineStatus = {
   plannedAmount: number;
   spent: number;
@@ -26,14 +26,19 @@ export type LineStatus = {
   status: BudgetStatus;
 };
 
-// Given a line's planned amount and its computed spend, derive the display
-// figures. OVER when spent exceeds planned (epsilon); WARN from 80% up; else OK.
+// OVER and REACHED compare amounts within epsilon, not the rounded percent (99.6 % is WARN).
 export function lineStatus(plannedAmount: number, spent: number): LineStatus {
   const remaining = round2(plannedAmount - spent);
   const percent =
     plannedAmount > 0 ? Math.round((spent / plannedAmount) * 100) : spent > EPSILON ? 100 : 0;
   const status: BudgetStatus =
-    spent > plannedAmount + EPSILON ? "OVER" : percent >= 80 ? "WARN" : "OK";
+    spent > plannedAmount + EPSILON
+      ? "OVER"
+      : plannedAmount > EPSILON && plannedAmount - spent <= EPSILON
+        ? "REACHED"
+        : percent >= 80
+          ? "WARN"
+          : "OK";
   return { plannedAmount: round2(plannedAmount), spent: round2(spent), remaining, percent, status };
 }
 

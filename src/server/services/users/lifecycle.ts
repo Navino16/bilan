@@ -95,6 +95,9 @@ export type UserDeletionImpact = {
   sharedAccounts: number;
   transfers: { group: string; to: string }[];
   deletedGroups: string[];
+  // Surviving budget lines restricted to one of the user's accounts: they lose that restriction
+  // (BudgetLine.account onDelete SetNull).
+  budgetLines: number;
 };
 
 // Shown in the admin's confirmation before deleting: same succession rule as eraseUser.
@@ -109,6 +112,18 @@ export async function userDeletionImpact(
     database.bankAccount.count({ where: { ownerId: targetId, shares: { some: {} } } }),
     groupSuccessions(database, targetId),
   ]);
+  const deleted = successions.filter((s) => !s.successor);
+  const budgetLines = await database.budgetLine.count({
+    where: {
+      account: { ownerId: targetId },
+      budget: {
+        AND: [
+          { OR: [{ userId: null }, { userId: { not: targetId } }] },
+          { OR: [{ groupId: null }, { groupId: { notIn: deleted.map((s) => s.groupId) } }] },
+        ],
+      },
+    },
+  });
   return {
     email: user.email,
     accounts,
@@ -116,7 +131,8 @@ export async function userDeletionImpact(
     transfers: successions
       .filter((s) => s.successor && !s.successorIsOwner)
       .map((s) => ({ group: s.groupName, to: displayName(s.successor!) })),
-    deletedGroups: successions.filter((s) => !s.successor).map((s) => s.groupName),
+    deletedGroups: deleted.map((s) => s.groupName),
+    budgetLines,
   };
 }
 

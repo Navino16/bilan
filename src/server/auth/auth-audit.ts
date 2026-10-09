@@ -6,7 +6,7 @@ import {
 } from "better-auth/api";
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
-import { resolveClientIp } from "@/server/http/client-ip";
+import { requestOrigin } from "@/server/http/client-ip";
 import {
   notifySecurityEvent,
   type SecurityEvent,
@@ -168,11 +168,10 @@ export async function auditAuthRequest(ctx: HookContext): Promise<void> {
     }
     const notified = NOTIFIED_EVENTS.get(event.action);
     if (notified && event.userId) {
-      const h = ctx.headers;
       void notifySecurityEvent(notified, {
         userId: event.userId,
         at: new Date(),
-        origin: { ip: resolveClientIp(h), userAgent: h?.get("user-agent") ?? null },
+        origin: requestOrigin(ctx.headers),
       });
     }
   } catch {

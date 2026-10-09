@@ -3,9 +3,10 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { genericOAuth } from "better-auth/plugins";
 import { nextCookies } from "better-auth/next-js";
 import { getOAuthState } from "better-auth/api";
+import { headers as nextHeaders } from "next/headers";
 import { db } from "@/server/db";
 import { env } from "@/env";
-import { CLIENT_IP_HEADER } from "@/server/http/client-ip";
+import { CLIENT_IP_HEADER, requestOrigin } from "@/server/http/client-ip";
 import { processState } from "@/server/process-state";
 import { requestLocale } from "@/server/http/request-locale";
 import { dataKey } from "@/server/crypto/keys";
@@ -207,16 +208,17 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
           },
         },
         update: {
-          // A credential account's row updates when the password is reset or
-          // changed → audit + security alert. Skipped for OIDC token refreshes
-          // (providerId !== "credential"). The mail is not awaited: SMTP can be slow.
-          after: async (account) => {
+          // A password change updates the credential row → audit + security alert. Resets go
+          // through updateMany (the hook gets a row count, skipped here): see onPasswordReset.
+          // Skipped for OIDC token refreshes. The mail is not awaited: SMTP can be slow.
+          after: async (account, ctx) => {
             if (account.providerId !== "credential") return;
             try {
               await logEvent({ userId: account.userId, action: "auth.password.changed" });
               void notifySecurityEvent("password_changed", {
                 userId: account.userId,
                 at: new Date(),
+                origin: ctx?.headers ? requestOrigin(ctx.headers) : undefined,
               });
             } catch {
               // best-effort
@@ -242,6 +244,19 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
             metadata: { kind: "password_reset", error: e instanceof Error ? e.message : "unknown" },
           }),
         );
+      },
+      // Called once the reset password is stored. `request` is unset for Server Action calls.
+      onPasswordReset: async ({ user }, request) => {
+        try {
+          await logEvent({ userId: user.id, action: "auth.password.changed" });
+          void notifySecurityEvent("password_changed", {
+            userId: user.id,
+            at: new Date(),
+            origin: requestOrigin(request?.headers ?? (await nextHeaders())),
+          });
+        } catch {
+          // best-effort
+        }
       },
     },
     // Reset tokens are credentials: keep only their hash in the verification table.

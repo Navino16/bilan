@@ -1,4 +1,10 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+
+const notify = vi.hoisted(() => vi.fn());
+vi.mock("@/server/services/mail/security-notifications", () => ({
+  notifySecurityEvent: notify,
+}));
+
 import { db } from "@/server/db";
 import { getAuth } from "@/server/auth";
 import { changePassword, hasPasswordCredential } from "@/server/services/users/password";
@@ -16,7 +22,11 @@ async function signIn(pw: string): Promise<Headers> {
     .getSetCookie()
     .map((c) => c.split(";")[0])
     .join("; ");
-  return new Headers({ cookie });
+  return new Headers({
+    cookie,
+    "user-agent": "Mozilla/5.0 (X11; Linux x86_64) Firefox/131.0",
+    "x-forwarded-for": "203.0.113.9",
+  });
 }
 
 beforeAll(async () => {
@@ -102,6 +112,11 @@ describe("change password", () => {
     expect(await db.session.count({ where: { userId } })).toBe(1);
     const audit = await db.auditLog.count({ where: { userId, action: "auth.password.changed" } });
     expect(audit).toBe(1);
+    expect(notify).toHaveBeenCalledWith("password_changed", {
+      userId,
+      at: expect.any(Date),
+      origin: { ip: "203.0.113.9", userAgent: "Mozilla/5.0 (X11; Linux x86_64) Firefox/131.0" },
+    });
     await expect(signIn(password)).rejects.toThrow();
     await expect(signIn(newPassword)).resolves.toBeInstanceOf(Headers);
   });

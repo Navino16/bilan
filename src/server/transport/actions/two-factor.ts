@@ -2,8 +2,9 @@
 
 import { authHeaders } from "@/server/http/auth-headers";
 import { requireSession } from "@/server/auth/permissions";
-import { changePasswordLimiter } from "@/server/auth/rate-limit";
+import { changePasswordLimiter, withRefund } from "@/server/auth/rate-limit";
 import { logEvent } from "@/server/services/audit";
+import { isBadPassword } from "@/server/services/users/password";
 import {
   disableTwoFactor,
   enableTwoFactor,
@@ -16,15 +17,16 @@ export type TwoFactorActionState<T> =
   | { ok: true; data: T }
   | { ok: false; error: TwoFactorError | "RATE_LIMITED"; retryAfter?: number };
 
-// Shares the change-password bucket: every current-password check draws on one per-user budget.
-async function rateLimited(
+// Shares the change-password bucket; only wrong passwords consume it.
+async function withPasswordLimit<T>(
   userId: string,
   action: FailedAction,
-): Promise<{ ok: false; error: "RATE_LIMITED"; retryAfter: number } | null> {
-  const bucket = changePasswordLimiter.consume(userId);
-  if (bucket.allowed) return null;
+  run: () => Promise<TwoFactorActionState<T>>,
+): Promise<TwoFactorActionState<T>> {
+  const res = await withRefund(changePasswordLimiter, userId, run, isBadPassword);
+  if (res.allowed) return res.result;
   await logEvent({ userId, action, metadata: { reason: "rate_limit" } });
-  return { ok: false, error: "RATE_LIMITED", retryAfter: bucket.retryAfterSec };
+  return { ok: false, error: "RATE_LIMITED", retryAfter: res.retryAfterSec };
 }
 
 export async function enableTwoFactorAction(
@@ -32,9 +34,10 @@ export async function enableTwoFactorAction(
 ): Promise<TwoFactorActionState<TwoFactorEnrolment>> {
   const user = await requireSession();
   if (typeof password !== "string" || !password) return { ok: false, error: "BAD_PASSWORD" };
-  const limited = await rateLimited(user.id, "auth.2fa.enable_failed");
-  if (limited) return limited;
-  return enableTwoFactor(await authHeaders(), user.id, password);
+  const headers = await authHeaders();
+  return withPasswordLimit(user.id, "auth.2fa.enable_failed", () =>
+    enableTwoFactor(headers, user.id, password),
+  );
 }
 
 export async function disableTwoFactorAction(
@@ -42,7 +45,8 @@ export async function disableTwoFactorAction(
 ): Promise<TwoFactorActionState<null>> {
   const user = await requireSession();
   if (typeof password !== "string" || !password) return { ok: false, error: "BAD_PASSWORD" };
-  const limited = await rateLimited(user.id, "auth.2fa.disable_failed");
-  if (limited) return limited;
-  return disableTwoFactor(await authHeaders(), user.id, password);
+  const headers = await authHeaders();
+  return withPasswordLimit(user.id, "auth.2fa.disable_failed", () =>
+    disableTwoFactor(headers, user.id, password),
+  );
 }

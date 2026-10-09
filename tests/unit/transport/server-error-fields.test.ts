@@ -7,16 +7,20 @@ vi.mock("@/server/auth/permissions", () => ({
   requireSession: async () => ({ id: "u1", email: "u1@bilan.local" }),
 }));
 vi.mock("@/server/http/auth-headers", () => ({ authHeaders: async () => new Headers() }));
-vi.mock("@/server/auth/rate-limit", () => {
-  const open = { consume: () => ({ allowed: true }) };
+vi.mock("@/server/auth/rate-limit", async (importOriginal) => {
+  const open = { consume: () => ({ allowed: true, resetAt: 0 }), refund: () => {} };
   return {
+    withRefund: (await importOriginal<typeof import("@/server/auth/rate-limit")>()).withRefund,
     changePasswordLimiter: open,
     registerLimiter: open,
     resetLimiter: open,
     loginLimiter: open,
   };
 });
-vi.mock("@/server/services/users/password", () => ({ changePassword }));
+vi.mock("@/server/services/users/password", () => ({
+  changePassword,
+  isBadPassword: (r: { ok: boolean; error?: string }) => !r.ok && r.error === "BAD_PASSWORD",
+}));
 vi.mock("@/server/services/settings/app-settings", () => ({
   appSettings: { get: async () => null },
   getMinPasswordLength: async () => 12,

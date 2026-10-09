@@ -90,4 +90,33 @@ test.describe("categorization rules", () => {
       }
     }
   });
+
+  test.describe("on mobile", () => {
+    test.use({ viewport: { width: 320, height: 800 } });
+
+    test("the info line shows the priority, without a leading separator (#230)", async ({
+      page,
+    }) => {
+      const pattern = `MOB${Date.now()}`;
+      await page.goto("/fr/categories");
+      await page.getByRole("button", { name: /^Règles/ }).click();
+      await page.getByRole("button", { name: /nouvelle règle/i }).click();
+      await page.getByLabel(/motif/i).fill(pattern);
+      await page.locator('[data-slot="category-combobox"]').click();
+      await page.getByRole("menuitem").nth(1).click();
+      await page.getByRole("button", { name: /enregistrer/i }).click();
+
+      const row = page.locator('[data-slot="rule-row"]').filter({ hasText: pattern });
+      await expect(row.locator('[data-slot="rule-meta"]')).toHaveText(
+        /^Priorité \d+\s·\s\S.*\s·\s0 utilisation$/,
+      );
+
+      await row.getByRole("button", { name: /supprimer/i }).click();
+      await page
+        .locator('[data-slot="confirm-dialog"]')
+        .getByRole("button", { name: /^supprimer$/i })
+        .click();
+      await expect(row).toHaveCount(0);
+    });
+  });
 });

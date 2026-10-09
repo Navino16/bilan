@@ -10,6 +10,10 @@ export type ChangePasswordError =
   | "SAME_PASSWORD"
   | "FAILED";
 
+export function isBadPassword(res: { ok: boolean; error?: string }): boolean {
+  return !res.ok && res.error === "BAD_PASSWORD";
+}
+
 // SSO-only accounts have no credential row, so there is no password to change.
 export async function hasPasswordCredential(userId: string): Promise<boolean> {
   const row = await db.authAccount.findFirst({
