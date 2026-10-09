@@ -24,7 +24,7 @@ export async function AuditTable({ items }: { items: AuditEntry[] }) {
   const t = await getTranslations("admin.audit");
 
   if (items.length === 0) {
-    return <p className="text-muted-foreground px-6 py-5 text-sm">{t("empty")}</p>;
+    return <p className="text-muted-foreground px-4 py-5 text-sm sm:px-6">{t("empty")}</p>;
   }
 
   const labels = await auditLabels();
@@ -55,7 +55,7 @@ export async function AuditTable({ items }: { items: AuditEntry[] }) {
     <>
       <ul className="divide-border divide-y md:hidden">
         {items.map((row) => (
-          <li key={row.id} data-slot="audit-item" className="space-y-0.5 px-6 py-3 text-sm">
+          <li key={row.id} data-slot="audit-item" className="space-y-0.5 px-4 py-3 text-sm sm:px-6">
             <div className="flex items-baseline justify-between gap-3">
               <span className="min-w-0 font-medium break-words" title={row.action}>
                 {action(row.action)}

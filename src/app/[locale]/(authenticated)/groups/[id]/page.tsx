@@ -15,6 +15,7 @@ import { InvitationsList } from "@/components/groups/invitations-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shell/page-header";
+import { SectionCard, listHeader } from "@/components/shell/section-card";
 import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
@@ -91,54 +92,62 @@ export default async function GroupDetailPage({
         }
       />
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-medium">{t("members")}</h2>
-        <MemberList
-          groupId={group.id}
-          members={group.members}
-          viewerId={user.id}
-          viewerRole={viewerRole}
-        />
-      </section>
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <SectionCard
+          flush
+          overline={t("membersOverline")}
+          title={t("members")}
+          action={
+            <Badge variant="secondary">{t("memberCount", { count: group.members.length })}</Badge>
+          }
+        >
+          <MemberList
+            groupId={group.id}
+            members={group.members}
+            viewerId={user.id}
+            viewerRole={viewerRole}
+          />
+        </SectionCard>
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-medium">{ta("sharedAccounts")}</h2>
-        {sharedAccounts.length === 0 ? (
-          <p className="text-muted-foreground text-sm">{ta("noSharedAccounts")}</p>
-        ) : (
-          <div className="border-border divide-border divide-y rounded-lg border">
-            {sharedAccounts.map((a) => (
-              <div key={a.id} className="flex items-center gap-3 px-4 py-3">
-                <span
-                  aria-hidden
-                  className="size-3 shrink-0 rounded-full"
-                  style={{ backgroundColor: a.color ?? "#2563eb" }}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium">{a.name}</span>
-                    <Badge variant="secondary">{ta(`access.${a.permission}`)}</Badge>
+        <SectionCard flush overline={t("overline")} title={ta("sharedAccounts")}>
+          {sharedAccounts.length === 0 ? (
+            <p className="text-muted-foreground px-4 py-5 text-sm sm:px-6">
+              {ta("noSharedAccounts")}
+            </p>
+          ) : (
+            <div className="divide-border divide-y">
+              {sharedAccounts.map((a) => (
+                <div key={a.id} className="flex items-center gap-3 px-4 py-3 sm:px-6">
+                  <span
+                    aria-hidden
+                    className="size-3 shrink-0 rounded-full"
+                    style={{ backgroundColor: a.color ?? "#2563eb" }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm font-medium">{a.name}</span>
+                      <Badge variant="secondary">{ta(`access.${a.permission}`)}</Badge>
+                    </div>
+                    <div className="text-muted-foreground truncate text-xs">
+                      {ta("sharedBy", { name: a.ownerName })}
+                    </div>
                   </div>
-                  <div className="text-muted-foreground truncate text-xs">
-                    {ta("sharedBy", { name: a.ownerName })}
-                  </div>
+                  <span className="font-display text-sm">{money(a.balance)}</span>
                 </div>
-                <span className="font-display text-sm">{money(a.balance)}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+              ))}
+            </div>
+          )}
+        </SectionCard>
+      </div>
 
       {canEdit && (
-        <section className="space-y-3">
-          <h2 className="text-lg font-medium">{ti("invite")}</h2>
-          <InviteForm groupId={group.id} />
-          <div className="space-y-2 pt-2">
-            <h3 className="text-muted-foreground text-sm font-medium">{ti("pending")}</h3>
-            <InvitationsList invitations={pending} />
+        <SectionCard flush overline={ti("overline")} title={ti("invite")}>
+          <div className="border-b px-4 py-4 sm:px-6">
+            <InviteForm groupId={group.id} />
           </div>
-        </section>
+          <h3 className={listHeader}>{ti("pending")}</h3>
+          <InvitationsList invitations={pending} />
+        </SectionCard>
       )}
 
       <GroupDangerZone groupId={group.id} viewerRole={viewerRole} isLastOwner={isLastOwner} />

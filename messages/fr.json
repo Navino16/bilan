@@ -784,6 +784,7 @@
   "groups": {
     "overline": "Partage",
     "detailOverline": "Foyer",
+    "membersOverline": "Accès",
     "title": "Foyers",
     "subtitle": "Partagez des comptes et des budgets avec votre foyer.",
     "empty": "Aucun foyer. Créez-en un pour partager vos comptes.",
@@ -832,6 +833,9 @@
     "removeTitle": "Retirer {name} ?"
   },
   "invitations": {
+    "overline": "Invitations",
+    "forYouOverline": "Pour vous",
+    "joinOverline": "Code d’invitation",
     "invite": "Inviter",
     "inviteTitle": "Inviter un membre",
     "email": "Adresse e-mail",

@@ -9,6 +9,7 @@ import { JoinByCode } from "@/components/groups/join-by-code";
 import { PendingInvitations } from "@/components/groups/pending-invitations";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shell/page-header";
+import { SectionCard } from "@/components/shell/section-card";
 import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
@@ -48,10 +49,9 @@ export default async function GroupsPage({ params }: { params: Promise<{ locale:
       />
       <PendingInvitations invitations={pending} />
       <GroupList groups={groups} />
-      <section className="border-border space-y-2 rounded-lg border border-dashed p-4">
-        <h2 className="text-sm font-medium">{ti("joinByCode")}</h2>
+      <SectionCard overline={ti("joinOverline")} title={ti("joinByCode")}>
         <JoinByCode />
-      </section>
+      </SectionCard>
     </div>
   );
 }

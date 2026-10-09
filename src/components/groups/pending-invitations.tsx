@@ -3,10 +3,11 @@
 import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Check, MailOpen } from "lucide-react";
+import { Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { SectionCard } from "@/components/shell/section-card";
 import { acceptInvitationAction } from "@/server/transport/actions/invitations";
 
 export type PendingForUser = { token: string; groupName: string; role: string };
@@ -39,21 +40,19 @@ export function PendingInvitations({ invitations }: { invitations: PendingForUse
   if (invitations.length === 0) return null;
 
   return (
-    <section className="border-border space-y-3 rounded-lg border p-4">
-      <h2 className="flex items-center gap-2 text-sm font-medium">
-        <MailOpen className="size-4" />
-        {t("pendingForYou")}
-      </h2>
+    <SectionCard flush overline={t("forYouOverline")} title={t("pendingForYou")}>
       {error && (
-        <Alert variant="destructive">
-          <AlertDescription>
-            {t(`error.${error.code}`, { email: error.hint ?? "" })}
-          </AlertDescription>
-        </Alert>
+        <div className="border-b px-4 py-3 sm:px-6">
+          <Alert variant="destructive">
+            <AlertDescription>
+              {t(`error.${error.code}`, { email: error.hint ?? "" })}
+            </AlertDescription>
+          </Alert>
+        </div>
       )}
       <div className="divide-border divide-y">
         {invitations.map((inv) => (
-          <div key={inv.token} className="flex items-center gap-3 py-2">
+          <div key={inv.token} className="flex items-center gap-3 px-4 py-3 sm:px-6">
             <div className="min-w-0 flex-1">
               <span className="text-sm">{t("fromGroup", { group: inv.groupName })}</span>{" "}
               <Badge variant="outline">{tg(`roles.${inv.role}`)}</Badge>
@@ -65,6 +64,6 @@ export function PendingInvitations({ invitations }: { invitations: PendingForUse
           </div>
         ))}
       </div>
-    </section>
+    </SectionCard>
   );
 }

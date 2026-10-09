@@ -73,13 +73,13 @@ export function InvitationsList({ invitations }: { invitations: PendingInvitatio
   const locale = useLocale();
 
   if (invitations.length === 0) {
-    return <p className="text-muted-foreground text-sm">{t("noPending")}</p>;
+    return <p className="text-muted-foreground px-4 py-5 text-sm sm:px-6">{t("noPending")}</p>;
   }
 
   return (
-    <div className="border-border divide-border divide-y rounded-lg border">
+    <div className="divide-border divide-y">
       {invitations.map((inv) => (
-        <div key={inv.id} className="flex items-center gap-3 px-4 py-3">
+        <div key={inv.id} className="flex items-center gap-3 px-4 py-3 sm:px-6">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className="truncate text-sm font-medium">{inv.email}</span>

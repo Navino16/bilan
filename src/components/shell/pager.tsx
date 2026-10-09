@@ -45,7 +45,7 @@ export async function Pager({
     <nav
       aria-label={t("label")}
       data-slot="pager"
-      className="flex items-center justify-between gap-3 border-t px-6 py-3 text-sm"
+      className="flex items-center justify-between gap-3 border-t px-4 py-3 text-sm sm:px-6"
     >
       {link(page - 1, t("previous"), <ChevronLeft />, page <= 1)}
       <span className="text-muted-foreground tabular-nums">{t("status", { page, pageCount })}</span>

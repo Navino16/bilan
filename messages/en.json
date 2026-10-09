@@ -784,6 +784,7 @@
   "groups": {
     "overline": "Sharing",
     "detailOverline": "Household",
+    "membersOverline": "Access",
     "title": "Households",
     "subtitle": "Share accounts and budgets with your household.",
     "empty": "No households yet. Create one to share your accounts.",
@@ -832,6 +833,9 @@
     "removeTitle": "Remove {name}?"
   },
   "invitations": {
+    "overline": "Invitations",
+    "forYouOverline": "For you",
+    "joinOverline": "Invitation code",
     "invite": "Invite",
     "inviteTitle": "Invite a member",
     "email": "Email address",

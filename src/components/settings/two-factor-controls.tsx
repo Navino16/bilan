@@ -89,7 +89,7 @@ export function TwoFactorControls({ enabled }: { enabled: boolean }) {
     return (
       <form onSubmit={disable} className="space-y-4" data-slot="two-factor-controls">
         <p className="text-sm">{t("statusEnabled")}</p>
-        <div className="space-y-2">
+        <div className="space-y-2 sm:w-1/2">
           <Label htmlFor="tfa-pw-disable">{t("password")}</Label>
           <Input
             id="tfa-pw-disable"
@@ -128,7 +128,7 @@ export function TwoFactorControls({ enabled }: { enabled: boolean }) {
         <p className="text-sm">{t("enrolBackup")}</p>
         <ul
           aria-label={t("backupCodes")}
-          className="bg-muted grid grid-cols-2 gap-1 rounded-md p-3 font-mono text-xs"
+          className="bg-muted grid grid-cols-2 gap-1 rounded-md p-3 font-mono text-xs sm:grid-cols-4"
         >
           {enrol.backupCodes.map((c) => (
             <li key={c}>{c}</li>
@@ -166,7 +166,7 @@ export function TwoFactorControls({ enabled }: { enabled: boolean }) {
   return (
     <form onSubmit={beginEnable} className="space-y-4" data-slot="two-factor-controls">
       <p className="text-sm">{t("statusDisabled")}</p>
-      <div className="space-y-2">
+      <div className="space-y-2 sm:w-1/2">
         <Label htmlFor="tfa-pw-enable">{t("password")}</Label>
         <Input
           id="tfa-pw-enable"

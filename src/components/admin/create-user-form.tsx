@@ -22,7 +22,7 @@ export function CreateUserForm() {
   return (
     <form {...form.formProps} className="space-y-4">
       <input type="hidden" name="locale" value={locale} />
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className="space-y-2">
           <Label htmlFor="cu-name">{t("name")}</Label>
           <Input
@@ -39,13 +39,13 @@ export function CreateUserForm() {
           <Input id="cu-email" name="email" type="email" required {...form.fieldProps("email")} />
           <FieldError form={form} name="email" />
         </div>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="cu-role">{t("role")}</Label>
-        <NativeSelect id="cu-role" name="role" defaultValue="USER">
-          <option value="USER">{t("roleUser")}</option>
-          <option value="ADMIN">{t("roleAdmin")}</option>
-        </NativeSelect>
+        <div className="space-y-2">
+          <Label htmlFor="cu-role">{t("role")}</Label>
+          <NativeSelect id="cu-role" name="role" defaultValue="USER">
+            <option value="USER">{t("roleUser")}</option>
+            <option value="ADMIN">{t("roleAdmin")}</option>
+          </NativeSelect>
+        </div>
       </div>
       {state?.ok && (
         <Alert>
