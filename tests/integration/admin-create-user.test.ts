@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "@/server/db";
 import { seedRolesAndPermissions } from "@/../prisma/seed";
-import { adminCreateUser } from "@/server/services/users/create";
+import { adminCreateUser, UserExistsError } from "@/server/services/users/create";
 
 const actorId = "admin_create_actor";
 const newEmail = `created+${Date.now()}@bilan.local`;
@@ -73,7 +73,7 @@ describe("adminCreateUser", () => {
     expect(account?.password).toBeTruthy();
     await expect(
       adminCreateUser({ email, name: "Twice", role: "USER" }, { id: actorId }),
-    ).rejects.toThrow();
+    ).rejects.toBeInstanceOf(UserExistsError);
     await db.user.delete({ where: { id } });
   });
 });

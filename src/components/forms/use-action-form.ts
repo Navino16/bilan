@@ -18,6 +18,31 @@ function fieldKey(el: Element): string | undefined {
   return (el as HTMLElement).dataset.field ?? (el as HTMLInputElement).name;
 }
 
+type FormLike = { elements: ArrayLike<Element> } | null;
+
+// Error codes of the fields that have a visible control in the form (so a FieldError can show them).
+export function codesShownOnFields(form: FormLike, fieldErrors: FieldErrors | undefined): string[] {
+  if (!form || !fieldErrors) return [];
+  return Array.from(form.elements).flatMap((el) => {
+    const key = fieldKey(el);
+    const code = key ? fieldErrors[key] : undefined;
+    return code && (el as HTMLInputElement).type !== "hidden" ? [code] : [];
+  });
+}
+
+// The summary alert, unless a field already shows (or showed) the same code.
+export function formAlert(
+  error: string | undefined,
+  shownCodes: string[],
+  summarizeFieldErrors: boolean,
+): string | null {
+  if (!error || shownCodes.includes(error)) return null;
+  return summarizeFieldErrors || shownCodes.length === 0 ? error : null;
+}
+
+// Per result, computed in the action callback where the form ref may be read.
+const shownCodesByResult = new WeakMap<object, string[]>();
+
 function focusAfterError(
   form: HTMLFormElement | null,
   fieldErrors: FieldErrors | undefined,
@@ -47,10 +72,13 @@ export function useActionForm<S extends ActionResult>(
   {
     onSuccess,
     resetOnSuccess = true,
+    summarizeFieldErrors = true,
   }: {
     // `stale`: reset() ran while the submit was in flight; the mutation still happened.
     onSuccess?: (state: Extract<S, { ok: true }>, meta: { stale: boolean }) => void;
     resetOnSuccess?: boolean;
+    // false: no alert when the failure has field errors (short forms where they speak for themselves).
+    summarizeFieldErrors?: boolean;
   } = {},
 ) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -67,6 +95,8 @@ export function useActionForm<S extends ActionResult>(
       if (resetOnSuccess && !stale) formRef.current?.reset();
       onSuccess?.(next as Extract<S, { ok: true }>, { stale });
     }
+    const f = failureOf(next);
+    if (next && f) shownCodesByResult.set(next, codesShownOnFields(formRef.current, f.fieldErrors));
     return stale ? prev : next;
   }, null as Awaited<S>);
   const [dismissed, setDismissed] = useState<Awaited<S> | null>(null);
@@ -83,9 +113,11 @@ export function useActionForm<S extends ActionResult>(
           Object.entries(allFieldErrors).filter(([k]) => !cleared.keys.includes(k)),
         )
       : allFieldErrors;
-  // A field already shows (or showed) this exact error: the summary alert would only repeat it.
-  const error =
-    failure?.error && !Object.values(allFieldErrors).includes(failure.error) ? failure.error : null;
+  const error = formAlert(
+    failure?.error,
+    (current && shownCodesByResult.get(current)) || [],
+    summarizeFieldErrors,
+  );
 
   useEffect(() => {
     const f = failureOf(state);

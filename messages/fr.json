@@ -614,6 +614,7 @@
       "AMOUNT_INVALID": "Montant invalide. Exemples : -12,34 ou 1 234,56.",
       "AMOUNT_PRECISION": "Le montant ne peut pas avoir plus de 2 décimales.",
       "AMOUNT_ZERO": "Le montant ne peut pas être nul.",
+      "LABEL_REQUIRED": "Le libellé est requis.",
       "LABEL_TOO_LONG": "Le libellé ne peut pas dépasser 200 caractères.",
       "AMOUNT_AMBIGUOUS": "Montant ambigu : écrivez 1234 ou 1,23 (sans séparateur de milliers seul).",
       "DATE_INVALID": "Date invalide.",
@@ -1083,7 +1084,7 @@
       "deleting": "Suppression…",
       "confirmDelete": "Supprimer définitivement",
       "error": {
-        "INVALID": "Veuillez saisir votre mot de passe.",
+        "REQUIRED": "Veuillez saisir votre mot de passe.",
         "BAD_PASSWORD": "Mot de passe incorrect.",
         "BAD_CONFIRM": "L’e-mail saisi ne correspond pas.",
         "RATE_LIMITED": "Trop de tentatives. Réessayez plus tard.",
@@ -1134,14 +1135,14 @@
         "changed": "Votre mot de passe a été modifié.",
         "error": {
           "BAD_PASSWORD": "Mot de passe actuel incorrect.",
+          "SAME_PASSWORD": "Le nouveau mot de passe doit être différent de l’actuel.",
           "TOO_SHORT": "Le nouveau mot de passe est trop court.",
           "TOO_LONG": "Le nouveau mot de passe est trop long.",
           "MISMATCH": "Les deux mots de passe ne correspondent pas.",
           "RATE_LIMITED": "Trop de tentatives. Réessayez plus tard.",
           "INVALID": "Remplissez tous les champs.",
           "FAILED": "Impossible de changer le mot de passe. Réessayez.",
-          "REVOKE_FAILED": "Votre mot de passe a été modifié, mais vos autres appareils n’ont pas pu être déconnectés.",
-          "SAME_PASSWORD": "Le nouveau mot de passe doit être différent de l’actuel."
+          "REVOKE_FAILED": "Votre mot de passe a été modifié, mais vos autres appareils n’ont pas pu être déconnectés."
         }
       },
       "sessionsCard": {
@@ -1257,7 +1258,7 @@
       "error": {
         "UNAUTHORIZED": "Vous n’avez pas la permission de créer des utilisateurs.",
         "INVALID": "Vérifiez les champs saisis.",
-        "FAILED": "Échec de la création (l’e-mail existe peut-être déjà)."
+        "FAILED": "Échec de la création. Réessayez."
       },
       "createOverline": "Invitation",
       "createHint": "La personne reçoit par e-mail un lien pour définir son mot de passe.",
@@ -1327,7 +1328,7 @@
       "statusUsedUp": "Épuisé",
       "error": {
         "UNAUTHORIZED": "Vous n’avez pas la permission de gérer les jetons.",
-        "INVALID": "Valeur invalide (utilisations max : 1 à 10 000).",
+        "INVALID": "Vérifiez les champs saisis.",
         "STILL_ACTIVE": "Révoquez ce jeton avant de le supprimer.",
         "FAILED": "Échec. Réessayez."
       },
@@ -1856,7 +1857,13 @@
       "AMOUNT_INVALID": "Montant invalide. Exemples : -12,34 ou 1 234,56.",
       "AMOUNT_AMBIGUOUS": "Montant ambigu : écrivez 1234 ou 1,23 (sans séparateur de milliers seul).",
       "AMOUNT_PRECISION": "Le montant ne peut pas avoir plus de 2 décimales.",
-      "PASSWORD_TOO_SHORT": "Au moins {count} caractères."
+      "PASSWORD_TOO_SHORT": "Au moins {count} caractères.",
+      "PASSWORD_TOO_LONG": "Au plus {max, number} caractères.",
+      "BAD_PASSWORD": "Mot de passe incorrect.",
+      "SAME_PASSWORD": "Doit être différent du mot de passe actuel.",
+      "BAD_CONFIRM": "L’e-mail saisi ne correspond pas.",
+      "USER_EXISTS": "Un compte existe déjà avec cet e-mail.",
+      "OUT_OF_RANGE": "Nombre entier entre {min, number} et {max, number}."
     }
   }
 }

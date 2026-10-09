@@ -78,6 +78,11 @@ describe("transactionInputSchema amount and label", () => {
     expect(check({ amount: "douze" })).toBe("AMOUNT_INVALID");
   });
 
+  it("flags a blank or whitespace-only label on the label (#227)", () => {
+    expect(check({ amount: "-1", label: "   " })).toBe("LABEL_REQUIRED");
+    expect(check({ amount: "-1", label: "" })).toBe("LABEL_REQUIRED");
+  });
+
   it("rejects a label over 200 characters", () => {
     expect(check({ amount: "-1", label: "x".repeat(201) })).toBe("LABEL_TOO_LONG");
     expect(check({ amount: "-1", label: "x".repeat(200) })).toBeNull();

@@ -46,4 +46,48 @@ test.describe("categorization rules", () => {
       0,
     );
   });
+
+  test("« Nouvelle règle » opens blank after a cancel or a save (#227)", async ({ page }) => {
+    const pattern = `BLANK${Date.now()}`;
+    await page.goto("/fr/categories");
+    await page.getByRole("button", { name: /^Règles/ }).click();
+    const dialog = page.getByRole("dialog");
+    const patternInput = dialog.getByLabel(/motif/i);
+    const priority = dialog.getByLabel(/priorité/i);
+    const row = page.locator('[data-slot="rule-row"]').filter({ hasText: pattern });
+
+    try {
+      await page.getByRole("button", { name: /nouvelle règle/i }).click();
+      await patternInput.fill("draft");
+      await priority.fill("7");
+      await dialog.getByRole("button", { name: /annuler/i }).click();
+      await expect(dialog).toBeHidden();
+
+      await page.getByRole("button", { name: /nouvelle règle/i }).click();
+      await expect(patternInput).toHaveValue("");
+      await expect(priority).toHaveValue("100");
+      await patternInput.fill(pattern);
+      await dialog.locator('[data-slot="category-combobox"]').click();
+      await page.getByRole("menuitem").nth(1).click();
+      await dialog.getByRole("button", { name: /enregistrer/i }).click();
+      await expect(dialog).toBeHidden();
+      await expect(row).toHaveCount(1);
+
+      await page.getByRole("button", { name: /nouvelle règle/i }).click();
+      await expect(patternInput).toHaveValue("");
+      await expect(dialog.getByRole("button", { name: /enregistrer/i })).toBeDisabled();
+      await dialog.getByRole("button", { name: /annuler/i }).click();
+      await expect(dialog).toBeHidden();
+    } finally {
+      await page.keyboard.press("Escape");
+      if (await row.count()) {
+        await row.getByRole("button", { name: /supprimer/i }).click();
+        await page
+          .locator('[data-slot="confirm-dialog"]')
+          .getByRole("button", { name: /^supprimer$/i })
+          .click();
+        await expect(row).toHaveCount(0);
+      }
+    }
+  });
 });

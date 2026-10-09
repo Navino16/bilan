@@ -52,9 +52,9 @@ export function CreateUserForm() {
           <AlertDescription>{t("created")}</AlertDescription>
         </Alert>
       )}
-      {state && !state.ok && (
+      {form.error && (
         <Alert variant="destructive">
-          <AlertDescription>{t(`error.${state.error}`)}</AlertDescription>
+          <AlertDescription>{t(`error.${form.error}`)}</AlertDescription>
         </Alert>
       )}
       <Button type="submit" disabled={pending}>

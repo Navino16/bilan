@@ -20,8 +20,16 @@ describe("setAppSettingsAction field errors (#165)", () => {
     expect(await setAppSettingsAction(null, fd)).toEqual({
       ok: false,
       error: "INVALID",
-      fieldErrors: { "s:app_name": "REQUIRED", "s:min_password_length": "INVALID" },
+      fieldErrors: { "s:app_name": "REQUIRED", "s:min_password_length": "OUT_OF_RANGE" },
     });
     expect(setMany).not.toHaveBeenCalled();
+  });
+
+  it("reports a non-integer min password length as out of range (#227)", async () => {
+    const fd = new FormData();
+    fd.set("s:min_password_length", "12.5");
+    expect(await setAppSettingsAction(null, fd)).toMatchObject({
+      fieldErrors: { "s:min_password_length": "OUT_OF_RANGE" },
+    });
   });
 });

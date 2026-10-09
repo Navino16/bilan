@@ -135,6 +135,8 @@ export function TransactionForm({
               placeholder={t("labelPlaceholder")}
               maxLength={TRANSACTION_LABEL_MAX}
               required
+              aria-invalid={error?.startsWith("LABEL_") || undefined}
+              aria-describedby={error?.startsWith("LABEL_") ? "tx-error" : undefined}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">

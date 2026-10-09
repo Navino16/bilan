@@ -40,15 +40,25 @@ test.describe("change password", () => {
       await card.getByRole("button", { name: "Modifier" }).click();
       await expect(card.getByLabel("Mot de passe actuel")).toBeVisible({ timeout: 1_000 });
     }).toPass({ timeout: 20_000 });
-    await card.getByLabel("Mot de passe actuel").fill(oldPassword);
-    await card.getByLabel("Nouveau mot de passe", { exact: true }).fill(oldPassword);
+    const current = card.getByLabel("Mot de passe actuel");
+    const next = card.getByLabel("Nouveau mot de passe", { exact: true });
+    // Server errors land on the field they concern (#227), without a duplicate alert.
+    await current.fill("not-the-password-123");
+    await next.fill(newPassword);
+    await card.getByLabel("Confirmer le nouveau mot de passe").fill(newPassword);
+    await card.getByRole("button", { name: "Changer le mot de passe" }).click();
+    await expect(current).toHaveAttribute("aria-invalid", "true");
+    await expect(current).toHaveAccessibleDescription("Mot de passe incorrect.");
+    await expect(card.getByRole("alert")).toHaveCount(0);
+
+    await current.fill(oldPassword);
+    await next.fill(oldPassword);
     await card.getByLabel("Confirmer le nouveau mot de passe").fill(oldPassword);
     await card.getByRole("button", { name: "Changer le mot de passe" }).click();
-    await expect(
-      card.getByText("Le nouveau mot de passe doit être différent de l’actuel."),
-    ).toBeVisible();
+    await expect(next).toHaveAttribute("aria-invalid", "true");
+    await expect(card.getByText("Doit être différent du mot de passe actuel.")).toBeVisible();
 
-    await card.getByLabel("Nouveau mot de passe", { exact: true }).fill(newPassword);
+    await next.fill(newPassword);
     await card.getByLabel("Confirmer le nouveau mot de passe").fill(newPassword);
     await card.getByRole("button", { name: "Changer le mot de passe" }).click();
     await expect(card.getByText("Votre mot de passe a été modifié.")).toBeVisible();

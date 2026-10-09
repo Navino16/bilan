@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createSignupTokenSchema, signupTokenExpiry } from "@/lib/validation/signup-token";
+import { fieldErrorsFromZod } from "@/lib/validation/field-errors";
 
 describe("signupTokenExpiry", () => {
   it("adds whole days, or never expires", () => {
@@ -29,7 +30,10 @@ describe("createSignupTokenSchema", () => {
 
   it("rejects out-of-range or non-integer max-uses (#164: 99999999999 used to 500)", () => {
     for (const maxUses of ["0", "1.5", "abc", "99999999999", "10001"]) {
-      expect(parse({ maxUses }).success, maxUses).toBe(false);
+      const r = parse({ maxUses });
+      expect(r.success, maxUses).toBe(false);
+      // One range message on the field (#227), not TOO_SMALL / INVALID depending on the input.
+      if (!r.success) expect(fieldErrorsFromZod(r.error)).toEqual({ maxUses: "OUT_OF_RANGE" });
     }
   });
 

@@ -20,7 +20,8 @@ import {
   changePasswordSchema,
   revokeSessionSchema,
 } from "./auth-schemas";
-import { invalidInput, type FieldErrors } from "@/lib/validation/field-errors";
+import { failureOnField, invalidInput, type FieldErrors } from "@/lib/validation/field-errors";
+import { PASSWORD_MAX_LENGTH } from "@/lib/validation/app-settings";
 
 export type AuthActionState =
   | { ok: true; twoFactor?: true }
@@ -183,6 +184,13 @@ export async function resetConfirmAction(
   }
 }
 
+const PASSWORD_ERROR_FIELDS = {
+  BAD_PASSWORD: "currentPassword",
+  SAME_PASSWORD: "newPassword",
+  PASSWORD_TOO_SHORT: "newPassword",
+  PASSWORD_TOO_LONG: "newPassword",
+};
+
 export async function changePasswordAction(
   _prev: AuthActionState,
   formData: FormData,
@@ -194,6 +202,11 @@ export async function changePasswordAction(
     const mismatch = parsed.error.issues.some((i) => i.message === "MISMATCH");
     return invalidInput(parsed.error, input, mismatch ? "MISMATCH" : "INVALID");
   }
+  const { currentPassword, newPassword, revokeOtherSessions } = parsed.data;
+  if (await passwordTooShort(newPassword))
+    return failureOnField({ ok: false, error: "PASSWORD_TOO_SHORT" }, PASSWORD_ERROR_FIELDS);
+  if (newPassword.length > PASSWORD_MAX_LENGTH)
+    return failureOnField({ ok: false, error: "PASSWORD_TOO_LONG" }, PASSWORD_ERROR_FIELDS);
 
   const bucket = changePasswordLimiter.consume(user.id);
   if (!bucket.allowed) {
@@ -205,8 +218,12 @@ export async function changePasswordAction(
     return { ok: false, error: "RATE_LIMITED", retryAfter: bucket.retryAfterSec };
   }
 
-  const { currentPassword, newPassword, revokeOtherSessions } = parsed.data;
-  return changePassword(await authHeaders(), { currentPassword, newPassword, revokeOtherSessions });
+  const res = await changePassword(await authHeaders(), {
+    currentPassword,
+    newPassword,
+    revokeOtherSessions,
+  });
+  return res.ok ? res : failureOnField(res, PASSWORD_ERROR_FIELDS);
 }
 
 export async function revokeSessionAction(sessionId: string): Promise<AuthActionState> {

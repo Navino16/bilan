@@ -17,6 +17,12 @@ export const adminCreateUserSchema = z.object({
   locale: z.enum(locales).default(defaultLocale).catch(defaultLocale),
 });
 
+export class UserExistsError extends Error {
+  constructor() {
+    super("USER_EXISTS");
+  }
+}
+
 export type AdminCreateUserInput = z.input<typeof adminCreateUserSchema>;
 
 // Admin-provisions a user with a throwaway password, then sends the reset flow as a
@@ -31,7 +37,7 @@ export async function adminCreateUser(
   // Not signUpEmail: with autoSignIn + nextCookies it would sign the admin in as the new user.
   const ctx = await auth.$context;
   const email = parsed.email.toLowerCase();
-  if (await ctx.internalAdapter.findUserByEmail(email)) throw new Error("USER_EXISTS");
+  if (await ctx.internalAdapter.findUserByEmail(email)) throw new UserExistsError();
   const user = await ctx.internalAdapter.createUser({
     email,
     name: parsed.name,
