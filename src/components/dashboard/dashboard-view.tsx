@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { overline, CategoryAvatar } from "@/components/transactions/bits";
 import { Donut, MiniBars } from "./charts";
 import { PeriodNav } from "./period-nav";
@@ -87,7 +88,7 @@ export async function DashboardView({
   // it shows the difference in euros instead.
   const netDiff = data.totals.net - data.previous.net;
   const hasPrevious = data.previous.income !== 0 || data.previous.expense !== 0;
-  const diffFmt = new Intl.NumberFormat(locale, {
+  const signedMoney = new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "EUR",
     maximumFractionDigits: 0,
@@ -97,23 +98,23 @@ export async function DashboardView({
   const kpis = [
     {
       key: "income",
-      value: data.totals.income,
+      amount: money.format(data.totals.income),
       note: pctNote(delta(data.totals.income, data.previous.income)),
       tone: "var(--income)",
     },
     {
       key: "expense",
-      value: data.totals.expense,
+      amount: money.format(data.totals.expense),
       note: pctNote(delta(data.totals.expense, data.previous.expense)),
       tone: "var(--expense)",
     },
     {
       key: "net",
-      value: data.totals.net,
+      amount: signedMoney.format(data.totals.net),
       note: hasPrevious
         ? t(months ? "vsAvgAmount" : "vsPrevAmount", {
             arrow: netDiff > 0 ? "↗" : netDiff < 0 ? "↘" : "=",
-            amount: diffFmt.format(netDiff),
+            amount: signedMoney.format(netDiff),
             months,
           })
         : noReference,
@@ -170,15 +171,23 @@ export async function DashboardView({
       </div>
 
       {/* KPI row */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-3">
         {kpis.map((k) => (
-          <Card key={k.key} className="gap-2 p-5">
+          <Card
+            key={k.key}
+            data-slot="kpi-card"
+            className={cn(
+              "gap-1 p-3.5 md:gap-2 md:p-5",
+              k.key === "net" && "col-span-2 md:col-span-1",
+            )}
+          >
             <div className={overline}>{t(`kpi.${k.key}`)}</div>
             <div
-              className="font-display text-3xl leading-none tabular-nums"
+              className="font-display text-[1.375rem] leading-none tabular-nums md:text-3xl"
               style={{ color: k.tone }}
+              data-slot="kpi-amount"
             >
-              {money.format(k.value)}
+              {k.amount}
             </div>
             <div className="text-muted-foreground text-[11.5px]" data-slot="kpi-note">
               {k.note}
@@ -188,8 +197,8 @@ export async function DashboardView({
       </div>
 
       {/* Donut + breakdown */}
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.4fr_1fr]">
-        <Card className="gap-4 p-6">
+      <div className="grid grid-cols-1 gap-4 md:gap-5 xl:grid-cols-[1.4fr_1fr]">
+        <Card className="gap-4 p-4.5 md:p-6">
           <div>
             <div className={overline}>{t("breakdown")}</div>
             <div className="font-display text-xl">{t("byCategory")}</div>
@@ -227,7 +236,7 @@ export async function DashboardView({
         </Card>
 
         {/* Expense trace (day-by-day or month-by-month) */}
-        <Card className="gap-4 p-6">
+        <Card className="gap-4 p-4.5 md:p-6">
           <div>
             <div className={overline}>{t(isMonthlyTrace ? "monthly" : "daily")}</div>
             <div className="font-display text-xl">
@@ -263,7 +272,7 @@ export async function DashboardView({
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1.2fr]">
+      <div className="grid grid-cols-1 gap-4 md:gap-5 xl:grid-cols-[1fr_1.2fr]">
         <BudgetSnapshot budget={budget} categories={catById} locale={locale} />
 
         {/* Recent transactions */}
