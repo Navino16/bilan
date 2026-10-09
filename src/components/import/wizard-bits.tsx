@@ -43,13 +43,24 @@ export function Stepper({ steps, current }: { steps: string[]; current: number }
   );
 }
 
-// Sidebar column-mapping row: fixed label + a control + a check tick.
-export function FieldMap({ label, children }: { label: string; children: ReactNode }) {
+export function FieldMap({
+  label,
+  mapped = true,
+  children,
+}: {
+  label: string;
+  mapped?: boolean;
+  children: ReactNode;
+}) {
   return (
     <div className="border-border flex items-center gap-2 border-b py-2 last:border-b-0">
       <span className="text-muted-foreground w-16 shrink-0 text-xs">{label}</span>
       <span className="min-w-0 flex-1">{children}</span>
-      <Check className="text-muted-foreground size-3.5 shrink-0" />
+      {mapped ? (
+        <Check data-slot="field-mapped" className="text-muted-foreground size-3.5 shrink-0" />
+      ) : (
+        <span aria-hidden className="size-3.5 shrink-0" />
+      )}
     </div>
   );
 }

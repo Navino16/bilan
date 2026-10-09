@@ -721,6 +721,7 @@
     "optCategorize": "Catégoriser automatiquement",
     "previewTitle": "Aperçu — {count, plural, one {# transaction} other {# transactions}}",
     "previewMeta": "{dup, plural, one {# doublon potentiel} other {# doublons potentiels}} · {cat, plural, one {# catégorisée automatiquement} other {# catégorisées automatiquement}}",
+    "previewMetaNoCat": "{dup, plural, one {# doublon potentiel} other {# doublons potentiels}}",
     "validate": "Valider l’import",
     "cancel": "Annuler",
     "include": "Inclure cette ligne",

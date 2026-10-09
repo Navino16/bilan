@@ -322,4 +322,140 @@ bad;LIGNE ${stamp};1,00;;B`;
     ).toHaveAttribute("aria-pressed", "true");
     await page.getByRole("button", { name: "Annuler", exact: true }).click();
   });
+
+  test("a refused remap keeps the mapping and explains why beside it; dates show the year (#225)", async ({
+    page,
+  }) => {
+    const stamp = Date.now();
+    const lines = Array.from(
+      { length: 60 },
+      (_, i) => `${String(1 + (i % 28)).padStart(2, "0")}/05/2019;CB MAP ${stamp} N${i};-1,00`,
+    );
+    await page.goto("/fr/import");
+    const uploaded = page.waitForResponse((r) => r.url().endsWith("/api/import/csv"), {
+      timeout: 30_000,
+    });
+    await page.locator('input[type="file"]').setInputFiles({
+      name: `map-${stamp}.csv`,
+      mimeType: "text/csv",
+      buffer: Buffer.from(`Date;Libellé;Montant\n${lines.join("\n")}`, "utf8"),
+    });
+    await uploaded;
+
+    const rows = page.locator('[data-slot="import-preview-row"]');
+    await expect(rows).toHaveCount(50, { timeout: 15_000 });
+    await expect(rows.first()).toContainText("1 mai 2019");
+    // Date, Libellé, Montant and Décimales are ticked; Débit, Crédit and Type are not.
+    const ticks = page.locator('#import-settings [data-slot="field-mapped"]');
+    await expect(ticks).toHaveCount(4);
+
+    const date = page.getByLabel("Date", { exact: true });
+    const refused = page.waitForResponse((r) => r.url().endsWith("/preview"), {
+      timeout: 30_000,
+    });
+    await date.selectOption("");
+    expect((await refused).status()).toBe(400);
+    const error = page.locator('[data-slot="import-mapping-error"]');
+    await expect(error).toContainText("Choisissez au moins la date");
+    await expect(error).toBeInViewport();
+    await expect(date).toHaveValue("Date");
+    await expect(ticks).toHaveCount(4);
+    await expect(rows).toHaveCount(50);
+    await page.getByRole("button", { name: "Annuler", exact: true }).click();
+  });
+
+  test("unticking auto-categorize drops rule categories from the preview (#225)", async ({
+    page,
+  }) => {
+    const pattern = `AUTOCAT${Date.now()}`;
+    await page.goto("/fr/categories");
+    await page.getByRole("button", { name: /^Règles/ }).click();
+    await page.getByRole("button", { name: /nouvelle règle/i }).click();
+    await page.getByLabel(/motif/i).fill(pattern);
+    await page.locator('[data-slot="category-combobox"]').click();
+    await page.getByRole("menuitem").nth(1).click();
+    await page.getByRole("button", { name: /enregistrer/i }).click();
+    const rule = page.locator('[data-slot="rule-row"]').filter({ hasText: pattern });
+    await expect(rule).toHaveCount(1);
+
+    await page.goto("/fr/import");
+    const uploaded = page.waitForResponse((r) => r.url().endsWith("/api/import/csv"), {
+      timeout: 30_000,
+    });
+    await page.locator('input[type="file"]').setInputFiles({
+      name: `${pattern}.csv`,
+      mimeType: "text/csv",
+      buffer: Buffer.from(`Date;Libellé;Montant\n14/03/2026;CB ${pattern};-9,00`, "utf8"),
+    });
+    await uploaded;
+
+    const meta = page.locator('[data-slot="import-preview-meta"]');
+    const combobox = page
+      .locator('[data-slot="import-preview-row"]')
+      .first()
+      .locator('[data-slot="category-combobox"]:visible');
+    await expect(meta).toContainText("1 catégorisée automatiquement", { timeout: 15_000 });
+    await expect(combobox).not.toContainText("Sans catégorie");
+
+    await page.getByRole("button", { name: "Catégoriser automatiquement" }).click();
+    await expect(meta).not.toContainText("catégorisée");
+    await expect(combobox).toContainText("Sans catégorie");
+    await page.getByRole("button", { name: "Annuler", exact: true }).click();
+
+    await page.goto("/fr/categories");
+    await page.getByRole("button", { name: /^Règles/ }).click();
+    await rule.getByRole("button", { name: /supprimer/i }).click();
+    await page
+      .locator('[data-slot="confirm-dialog"]')
+      .getByRole("button", { name: /^supprimer$/i })
+      .click();
+    await expect(rule).toHaveCount(0);
+  });
+
+  test("preview rows stay readable from 320 to 1440 px (#224)", async ({ page }) => {
+    const stamp = Date.now();
+    await page.goto("/fr/import");
+    const uploaded = page.waitForResponse((r) => r.url().endsWith("/api/import/csv"), {
+      timeout: 30_000,
+    });
+    await page.locator('input[type="file"]').setInputFiles({
+      name: `layout-${stamp}.csv`,
+      mimeType: "text/csv",
+      buffer: Buffer.from(
+        `Date;Libellé;Montant\n18/09/2026;CB MAGASIN AU LIBELLE TRES LONG ${stamp} PARIS;-12345,67`,
+        "utf8",
+      ),
+    });
+    await uploaded;
+
+    const card = page.locator('[data-slot="import-preview"]');
+    const row = page.locator('[data-slot="import-preview-row"]').first();
+    const header = card.getByText("Libellé brut", { exact: true });
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    for (const width of [320, 768, 1024, 1180, 1280, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      if (width === 768) await expect(header, "column header at 768px").toBeHidden();
+      if (width === 1440) await expect(header, "column header at 1440px").toBeVisible();
+      const label = row.locator('[data-slot="import-row-label"]:visible');
+      const amount = row.locator('[data-slot="import-row-amount"]:visible');
+      await expect(label).toHaveCount(1);
+      const [c, l, a] = await Promise.all([
+        card.boundingBox(),
+        label.boundingBox(),
+        amount.boundingBox(),
+      ]);
+      expect(l!.width, `label width at ${width}px`).toBeGreaterThan(100);
+      expect(l!.x + l!.width, `label vs amount at ${width}px`).toBeLessThanOrEqual(a!.x);
+      expect(a!.x + a!.width, `amount inside the card at ${width}px`).toBeLessThanOrEqual(
+        c!.x + c!.width,
+      );
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        ),
+        `horizontal overflow at ${width}px`,
+      ).toBeLessThanOrEqual(0);
+    }
+    await page.getByRole("button", { name: "Annuler", exact: true }).click();
+  });
 });
