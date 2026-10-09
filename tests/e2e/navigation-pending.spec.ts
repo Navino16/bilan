@@ -37,4 +37,38 @@ test.describe("navigation pending state", () => {
     await expect(busy).toHaveCount(0);
     await expect(heading).not.toHaveText(before ?? "");
   });
+
+  test("dims the page and marks the target active while a sidebar navigation waits", async ({
+    page,
+  }) => {
+    await page.goto("/fr/dashboard");
+    // Hydrated (and initial prefetches done) before the gate goes up.
+    await page.waitForLoadState("networkidle");
+
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    await page.route(
+      (url) => url.pathname === "/fr/transactions",
+      async (route) => {
+        if (route.request().headers()["rsc"]) await gate;
+        await route.continue();
+      },
+    );
+
+    const link = page
+      .getByRole("navigation", { name: "Navigation principale" })
+      .getByRole("link", { name: "Transactions" });
+    await link.click();
+    await expect(page.locator('[aria-busy="true"][data-pending]')).toBeVisible();
+    await expect(page.locator('[data-slot="navigation-progress"]')).toBeAttached();
+    await expect(link).toHaveAttribute("data-pending", "");
+    await expect(link).not.toHaveAttribute("aria-current", "page");
+    await expect(page).toHaveURL(/\/fr\/dashboard$/);
+
+    release();
+    await expect(page).toHaveURL(/\/fr\/transactions$/);
+    await expect(page.locator('[aria-busy="true"][data-pending]')).toHaveCount(0);
+    await expect(link).toHaveAttribute("aria-current", "page");
+    await expect(link).not.toHaveAttribute("data-pending");
+  });
 });

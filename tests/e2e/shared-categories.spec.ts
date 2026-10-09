@@ -36,7 +36,7 @@ test.describe("categories on a shared account", () => {
     await page.getByRole("button", { name: /créer le compte/i }).click();
     const card = page.locator('[data-slot="card"]').filter({ hasText: account }).last();
     await expect(card).toBeVisible();
-    await card.getByRole("button", { name: /modifier/i }).click();
+    await card.getByRole("button", { name: /^actions pour/i }).click();
     await page.getByRole("menuitem", { name: /partager/i }).click();
     await page.getByLabel("E2E Shared").selectOption("READ");
     await expect(page.getByLabel("E2E Shared")).toHaveValue("READ");

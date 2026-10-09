@@ -77,7 +77,12 @@ export function AccountRowActions({
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button variant="ghost" size="icon-sm" aria-label={t("edit")} disabled={pending} />
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("actionsFor", { name: account.name })}
+              disabled={pending}
+            />
           }
         >
           <MoreVertical />

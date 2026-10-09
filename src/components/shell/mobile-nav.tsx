@@ -64,7 +64,7 @@ export function MobileNav({
               {t("groups.workspace")}
             </p>
             {WORKSPACE_NAV.map((item) => (
-              <NavLink key={item.key} item={item} onNavigate={close} />
+              <NavLink key={item.key} item={item} onSelect={close} />
             ))}
           </div>
           <div className="space-y-1">
@@ -72,7 +72,7 @@ export function MobileNav({
               {t("groups.account")}
             </p>
             {accountItems.map((item) => (
-              <NavLink key={item.key} item={item} onNavigate={close} />
+              <NavLink key={item.key} item={item} onSelect={close} />
             ))}
           </div>
         </nav>

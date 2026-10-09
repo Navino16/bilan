@@ -50,6 +50,7 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-category-glyph: var(--category-glyph);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -105,6 +106,7 @@
   --cat-other: #807a6f;
   /* Uncategorized spending in charts: cool neutral, distinct from --cat-other, ≥ 3:1 on --card. */
   --cat-uncategorized: #8e959b;
+  --category-glyph: #ffffff;
 
   /* Shadcn bridge */
   --background: var(--paper);
@@ -121,7 +123,8 @@
   --muted-foreground: var(--ink-3);
   --accent: var(--bilan-primary-soft);
   --accent-foreground: var(--bilan-primary-d);
-  --destructive: var(--expense);
+  /* Text on destructive tints, see #168. */
+  --destructive: var(--expense-text);
   --border: var(--hairline);
   --input: var(--hairline);
   --ring: var(--bilan-primary);
@@ -183,6 +186,8 @@
     --cat-bills: #82a0ae;
     --cat-other: #8b867b;
     --cat-uncategorized: #6c737a;
+    /* The dark palette is pastel: white glyphs fall under 3:1 on it (#229 DATA-08). */
+    --category-glyph: var(--paper);
 
     --background: var(--paper);
     --foreground: var(--ink);
@@ -198,7 +203,7 @@
     --muted-foreground: var(--ink-3);
     --accent: var(--bilan-primary-soft);
     --accent-foreground: var(--bilan-primary);
-    --destructive: var(--expense);
+    --destructive: var(--expense-text);
     --border: var(--hairline);
     --input: var(--hairline);
     --ring: var(--bilan-primary);

@@ -905,7 +905,7 @@ Handled natively by Better Auth + Next.js Server Actions (origin check + token).
 
 Added to every response: `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (deny geolocation/microphone/camera).
 
-CSP strict with per-request nonce on inline scripts/styles. `frame-ancestors 'none'`, `form-action 'self'`, `upgrade-insecure-requests`.
+CSP strict with per-request nonce on inline scripts/styles. `frame-ancestors 'none'`, `form-action 'self'`, `upgrade-insecure-requests` (only when `APP_URL` is HTTPS: on plain HTTP Safari would upgrade even localhost assets and load no CSS).
 
 ### 6.7 Rate limiting
 

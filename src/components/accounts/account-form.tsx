@@ -21,6 +21,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useOpenFromQuery } from "@/hooks/use-open-from-query";
 import { cn } from "@/lib/utils";
+import type { CategoryPaletteKey } from "@/lib/category-appearance";
 import {
   ACCOUNT_BANK_NAME_MAX,
   ACCOUNT_IBAN_MAX,
@@ -35,16 +36,16 @@ import { FieldError } from "@/components/forms/field-error";
 // Light-mode hex values of the design's `--cat-*` palette. Stored as plain hex
 // (schema validates `#rrggbb`) so the chosen accent is theme-independent.
 const COLOR_PALETTE = [
-  "#2f6b8f",
-  "#6e5b8c",
-  "#5e8c5a",
-  "#c9763e",
-  "#a86b9c",
-  "#b68f36",
-  "#8c5a3e",
-  "#4a6675",
-] as const;
-const DEFAULT_COLOR = COLOR_PALETTE[0];
+  { key: "transport", hex: "#2f6b8f" },
+  { key: "housing", hex: "#6e5b8c" },
+  { key: "groceries", hex: "#5e8c5a" },
+  { key: "food", hex: "#c9763e" },
+  { key: "leisure", hex: "#a86b9c" },
+  { key: "savings", hex: "#b68f36" },
+  { key: "shopping", hex: "#8c5a3e" },
+  { key: "bills", hex: "#4a6675" },
+] as const satisfies readonly { key: CategoryPaletteKey; hex: string }[];
+const DEFAULT_COLOR: string = COLOR_PALETTE[0].hex;
 
 type EditableAccount = {
   id: string;
@@ -73,6 +74,7 @@ export function AccountForm({
   defaultOpen?: boolean;
 }) {
   const t = useTranslations("accounts");
+  const tColors = useTranslations("categories.colors");
   const locale = useLocale();
   const router = useRouter();
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
@@ -105,7 +107,7 @@ export function AccountForm({
     setOpenRaw(next);
   }
   const colorPickerRef = useRef<HTMLInputElement>(null);
-  const isCustomColor = !COLOR_PALETTE.includes(color as (typeof COLOR_PALETTE)[number]);
+  const isCustomColor = !COLOR_PALETTE.some((c) => c.hex === color);
 
   const form = useActionForm(
     (prev: Awaited<ReturnType<typeof createAccountAction>>, formData: FormData) => {
@@ -253,17 +255,18 @@ export function AccountForm({
           <div className="space-y-2">
             <Label>{t("color")}</Label>
             <div className="flex flex-wrap items-center gap-2">
-              {COLOR_PALETTE.map((c) => (
+              {COLOR_PALETTE.map(({ key, hex }) => (
                 <button
-                  key={c}
+                  key={hex}
                   type="button"
-                  aria-label={c}
-                  aria-pressed={color === c}
-                  onClick={() => setColor(c)}
-                  style={{ backgroundColor: c }}
+                  aria-label={tColors(key)}
+                  title={tColors(key)}
+                  aria-pressed={color === hex}
+                  onClick={() => setColor(hex)}
+                  style={{ backgroundColor: hex }}
                   className={cn(
                     "size-7 rounded-md border-2 transition-transform",
-                    color === c ? "border-foreground" : "border-transparent hover:scale-105",
+                    color === hex ? "border-foreground" : "border-transparent hover:scale-105",
                   )}
                 />
               ))}

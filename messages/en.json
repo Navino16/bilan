@@ -203,6 +203,7 @@
     "createCta": "Create account",
     "cancel": "Cancel",
     "edit": "Edit",
+    "actionsFor": "Actions for {name}",
     "addTransaction": "Add a transaction",
     "archive": "Archive",
     "archiveTitle": "Archive “{name}”?",
@@ -318,7 +319,9 @@
     "save": "Save",
     "cancel": "Cancel",
     "edit": "Edit",
+    "editRule": "Edit rule “{pattern}”",
     "delete": "Delete",
+    "deleteRule": "Delete rule “{pattern}”",
     "deleteConfirm": "Delete this rule?",
     "disabled": "disabled",
     "error": {

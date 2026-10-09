@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Tag } from "lucide-react";
+import { categoryGlyphColor, categoryTileColor } from "@/lib/category-appearance";
 import { cn } from "@/lib/utils";
 
 // Editorial label used across the design (uppercase, wide tracking, meta tone).
@@ -23,27 +24,27 @@ export function Pill({ children, className }: { children: ReactNode; className?:
 
 // Colored, rounded category badge with the seeded emoji icon.
 export function CategoryAvatar({
-  color,
-  icon,
+  category,
   size = 26,
 }: {
-  color?: string | null;
-  icon?: string | null;
+  category?: { color?: string | null; icon?: string | null } | null;
   size?: number;
 }) {
+  const color = categoryTileColor(category);
   return (
     <span
       aria-hidden
-      className="inline-flex shrink-0 items-center justify-center rounded-md text-white"
+      className="text-category-glyph inline-flex shrink-0 items-center justify-center rounded-md"
       style={{
         width: size,
         height: size,
-        background: color ?? "var(--cat-other)",
+        background: color,
+        color: categoryGlyphColor(color),
         fontSize: Math.round(size * 0.46),
         opacity: 0.92,
       }}
     >
-      {icon ?? <Tag style={{ width: size * 0.5, height: size * 0.5 }} />}
+      {category?.icon ?? <Tag style={{ width: size * 0.5, height: size * 0.5 }} />}
     </span>
   );
 }

@@ -26,6 +26,7 @@ import { canManageInGroup, type GroupRole } from "@/lib/validation/group";
 import {
   CATEGORY_PALETTE,
   CATEGORY_SYMBOLS,
+  categoryGlyphColor,
   DEFAULT_CATEGORY_COLOR,
   isHexColor,
   paletteColor,
@@ -247,8 +248,8 @@ function CategoryFields({
         className="bg-muted border-border flex items-center gap-3 rounded-[10px] border border-dashed p-[18px]"
       >
         <span
-          className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[10px] text-lg text-white"
-          style={{ background: shownColor }}
+          className="text-category-glyph flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[10px] text-lg"
+          style={{ background: shownColor, color: categoryGlyphColor(shownColor) }}
         >
           {icon ? <span className="truncate px-0.5">{icon}</span> : <Tag className="size-5" />}
         </span>

@@ -114,7 +114,7 @@ export function RulesList({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                aria-label={t("edit")}
+                aria-label={t("editRule", { pattern: r.pattern })}
                 disabled={pending}
                 onClick={() =>
                   setEditing({
@@ -133,7 +133,7 @@ export function RulesList({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                aria-label={t("delete")}
+                aria-label={t("deleteRule", { pattern: r.pattern })}
                 disabled={pending}
                 onClick={() => {
                   setDeleteError(false);
