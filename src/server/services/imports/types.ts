@@ -1,5 +1,5 @@
 import type { TransactionInput } from "@/lib/validation/transaction";
-import type { RejectedRow } from "./csv-parse";
+import type { DecimalMark, RejectedRow } from "./csv-parse";
 
 type TxType = TransactionInput["type"];
 
@@ -17,7 +17,8 @@ export type NormalizedRow = {
 export type ParsedProduct = { key: string; rows: NormalizedRow[] };
 
 // CSV column mapping: either a single signed `amount` column, or a
-// `debit`/`credit` pair (French bank exports). `type` is optional.
+// `debit`/`credit` pair (French bank exports). `type` is optional. `decimal` is
+// the amounts' decimal mark: always set on a previewed mapping (#187).
 export type CsvMapping = {
   date: string;
   label: string;
@@ -25,7 +26,10 @@ export type CsvMapping = {
   debit?: string;
   credit?: string;
   type?: string;
+  decimal?: DecimalMark;
 };
+
+export type ResolvedCsvMapping = CsvMapping & { decimal: DecimalMark };
 
 // Enriched row shown in the import preview (date serialized to ISO over the wire).
 // `externalId` is the stable dedup key; the client uses it to key per-row edits
@@ -52,6 +56,7 @@ export type ImportPreview = {
   autoCategorizedCount: number;
   rejectedCount: number; // rows of the file that couldn't be read with this mapping
   rejected: RejectedRow[]; // a few examples
+  decimalGuessed: boolean; // no amount settled mapping.decimal: it came from a fallback
   preview: PreviewRow[]; // one page of enriched rows
   page: number;
   pageSize: number;

@@ -222,4 +222,104 @@ bad;LIGNE ${stamp};1,00;;B`;
     await expect(page.getByText(/rien à importer/i)).toBeVisible();
     await page.getByRole("button", { name: "Annuler", exact: true }).click();
   });
+
+  test("a guessed decimal mark is flagged, switchable, and committed as previewed (#187)", async ({
+    page,
+  }) => {
+    const stamp = Date.now();
+    const csv = `Date;Libellé;Montant
+11/03/2026;CB DECIMAL ${stamp};-1.234
+12/03/2026;VIR DECIMAL ${stamp};45,500`;
+    await page.goto("/fr/import");
+    const uploaded = page.waitForResponse((r) => r.url().endsWith("/api/import/csv"), {
+      timeout: 30_000,
+    });
+    await page.locator('input[type="file"]').setInputFiles({
+      name: `decimal-${stamp}.csv`,
+      mimeType: "text/csv",
+      buffer: Buffer.from(csv, "utf8"),
+    });
+    await uploaded;
+
+    const rows = page.locator('[data-slot="import-preview-row"]');
+    const card = rows
+      .filter({ hasText: `CB DECIMAL ${stamp}` })
+      .locator(":visible")
+      .first();
+    const vir = rows
+      .filter({ hasText: `VIR DECIMAL ${stamp}` })
+      .locator(":visible")
+      .first();
+    const warning = page.locator('[data-slot="import-decimal-guessed"]');
+    await expect(warning).toContainText("Séparateur décimal deviné (virgule)", { timeout: 15_000 });
+    await expect(card).toContainText(/-1\s234,00\s€/);
+    await expect(vir).toContainText(/45,50\s€/);
+
+    const dot = page
+      .getByRole("group", { name: "Décimales" })
+      .getByRole("button", { name: "Point" });
+    await expect(async () => {
+      await page.getByRole("button", { name: "Utiliser le point" }).click({ timeout: 2_000 });
+      await expect(dot).toHaveAttribute("aria-pressed", "true", { timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
+    await expect(card).toContainText(/-1,23\s€/, { timeout: 15_000 });
+    await expect(vir).toContainText(/45\s500,00\s€/);
+    await expect(warning).toHaveCount(0);
+
+    const committed = page.waitForResponse((r) => r.url().includes("/commit"), {
+      timeout: 30_000,
+    });
+    await page.getByRole("button", { name: /valider l’import/i }).click();
+    const sent = (await committed).request().postDataJSON();
+    expect(sent.mapping.decimal).toBe(".");
+    await expect(page.getByRole("link", { name: /voir les transactions/i })).toBeVisible();
+
+    await page.goto(`/fr/transactions?search=${stamp}`);
+    const txRows = page.locator('[data-slot="transaction-row"]');
+    await expect(txRows.filter({ hasText: `CB DECIMAL ${stamp}` }).first()).toContainText(
+      /1,23\s€/,
+    );
+    await expect(txRows.filter({ hasText: `VIR DECIMAL ${stamp}` }).first()).toContainText(
+      /45\s500,00\s€/,
+    );
+  });
+
+  test("confirming a guessed decimal mark keeps the amounts and hides the warning (#187)", async ({
+    page,
+  }) => {
+    const stamp = Date.now();
+    await page.goto("/fr/import");
+    const uploaded = page.waitForResponse((r) => r.url().endsWith("/api/import/csv"), {
+      timeout: 30_000,
+    });
+    await page.locator('input[type="file"]').setInputFiles({
+      name: `confirm-${stamp}.csv`,
+      mimeType: "text/csv",
+      buffer: Buffer.from(`Date;Libellé;Montant\n13/03/2026;CB CONFIRM ${stamp};-2.500`, "utf8"),
+    });
+    await uploaded;
+
+    const row = page
+      .locator('[data-slot="import-preview-row"]')
+      .filter({ hasText: `CB CONFIRM ${stamp}` })
+      .locator(":visible")
+      .first();
+    const warning = page.locator('[data-slot="import-decimal-guessed"]');
+    await expect(warning).toBeVisible({ timeout: 15_000 });
+    await expect(row).toContainText(/-2\s500,00\s€/);
+
+    const confirmed = page.waitForResponse((r) => r.url().endsWith("/preview"), {
+      timeout: 30_000,
+    });
+    await expect(async () => {
+      await page.getByRole("button", { name: "C’est correct" }).click({ timeout: 2_000 });
+      await expect(warning).toHaveCount(0, { timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
+    expect((await confirmed).request().postDataJSON().mapping.decimal).toBe(",");
+    await expect(row).toContainText(/-2\s500,00\s€/);
+    await expect(
+      page.getByRole("group", { name: "Décimales" }).getByRole("button", { name: "Virgule" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await page.getByRole("button", { name: "Annuler", exact: true }).click();
+  });
 });

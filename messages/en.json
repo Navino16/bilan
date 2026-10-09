@@ -735,6 +735,14 @@
     "chooseFile": "Choose a file",
     "drop": "Drop a CSV or PDF file here, or click to browse.",
     "mapping": "Column mapping",
+    "decimal": {
+      "label": "Decimal mark",
+      "comma": "Comma",
+      "dot": "Dot",
+      "guessed": "Decimal mark guessed ({mark, select, comma {comma} other {dot}}): check the amounts (“Decimal mark” setting).",
+      "confirm": "Looks right",
+      "useOther": "Use {mark, select, comma {comma} other {dot}}"
+    },
     "colDate": "Date",
     "colLabel": "Label",
     "colAmount": "Amount",

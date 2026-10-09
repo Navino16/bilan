@@ -7,10 +7,16 @@ import Link from "next/link";
 import { Upload, ChevronRight, ChevronLeft, ChevronDown, PenLine } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { overline } from "@/components/transactions/bits";
+import { SegmentedTabs, overline } from "@/components/transactions/bits";
 import { CategoryCombobox } from "@/components/transactions/category-combobox";
 import { Stepper, FieldMap, CheckRow } from "./wizard-bits";
-import { CSV_FIELDS, CSV_MAX_BYTES, PDF_MAX_BYTES } from "@/lib/validation/import";
+import {
+  CSV_FIELDS,
+  CSV_MAX_BYTES,
+  DECIMAL_MARKS,
+  PDF_MAX_BYTES,
+  type DecimalMark,
+} from "@/lib/validation/import";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import { PageHeader } from "@/components/shell/page-header";
@@ -54,6 +60,7 @@ type Preview = {
   autoCategorizedCount?: number;
   rejectedCount?: number;
   rejected?: { row: number; reason: string; value: string }[];
+  decimalGuessed?: boolean;
   preview?: PreviewRow[];
   page?: number;
   pageSize?: number;
@@ -67,6 +74,21 @@ const CSV_PRODUCT = "default";
 
 function isPdfFile(f: File): boolean {
   return f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf";
+}
+
+const MARK_KEY: Record<DecimalMark, "comma" | "dot"> = { ",": "comma", ".": "dot" };
+const otherMark = (m: DecimalMark): DecimalMark => (m === "," ? "." : ",");
+
+function columnsOf(mapping: Record<string, string | undefined> | undefined) {
+  return Object.fromEntries(
+    Object.entries(mapping ?? {}).filter(([k, v]) => v && k !== "decimal"),
+  ) as Record<string, string>;
+}
+
+// Until the user picks a decimal mark, it's left out so the server re-detects it
+// (and keeps flagging a guess, #187) on every page and remap.
+function csvMappingBody(columns: Record<string, string>, decimal: DecimalMark | null) {
+  return { ...columnsOf(columns), ...(decimal ? { decimal } : {}) };
 }
 
 export function ImportWizard({
@@ -90,6 +112,7 @@ export function ImportWizard({
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
   const [preview, setPreview] = useState<Preview | null>(null);
   const [columns, setColumns] = useState<Record<string, string>>({});
+  const [decimalChoice, setDecimalChoice] = useState<DecimalMark | null>(null);
   const [productAccount, setProductAccount] = useState<Record<string, string>>({});
   // Per-row edits keyed by externalId: category override, and exclusion (the
   // value is the row's product, so ignored products don't count their exclusions).
@@ -109,6 +132,8 @@ export function ImportWizard({
   const previewTop = useRef<HTMLDivElement>(null);
   const [pending, startTransition] = useTransition();
 
+  const guessedMark = preview?.mapping?.decimal as DecimalMark | undefined;
+  const shownDecimal = decimalChoice ?? guessedMark ?? ",";
   const step = summary ? 3 : preview ? 2 : loading ? 1 : 0;
   // An upload replaces (and discards) the previewed batch: nothing may commit or re-upload meanwhile.
   const busy = loading || pending || refreshing;
@@ -145,12 +170,8 @@ export function ImportWizard({
       setOverrides({});
       setExcluded({});
       setSettingsOpen(false);
-      setColumns(
-        Object.fromEntries(Object.entries(data.mapping ?? {}).filter(([, v]) => v)) as Record<
-          string,
-          string
-        >,
-      );
+      setColumns(columnsOf(data.mapping));
+      setDecimalChoice(null);
       const prods = data.products ?? [{ key: CSV_PRODUCT }];
       setProductAccount(Object.fromEntries(prods.map((p, i) => [p.key, i === 0 ? account : ""])));
     } catch {
@@ -199,14 +220,25 @@ export function ImportWizard({
   function remap(field: string, header: string) {
     if (!preview || preview.source !== "CSV") return;
     const next = { ...columns, [field]: header };
-    const shown = Object.fromEntries(
-      Object.entries(preview.mapping ?? {}).filter(([, v]) => v),
-    ) as Record<string, string>;
+    const shown = columnsOf(preview.mapping);
     setColumns(next);
     void refresh(
-      { mapping: Object.fromEntries(Object.entries(next).filter(([, v]) => v)), page: 0 },
+      { mapping: csvMappingBody(next, decimalChoice), page: 0 },
       // The preview didn't change, so neither does the mapping a commit will use.
       { resetEdits: true, onFail: () => setColumns(shown) },
+    );
+  }
+
+  // Picking the guessed mark again confirms it: same amounts, so per-row edits stay.
+  function chooseDecimal(mark: DecimalMark) {
+    if (!preview || preview.source !== "CSV") return;
+    const confirming = mark === shownDecimal;
+    if (confirming && !preview.decimalGuessed) return;
+    const previous = decimalChoice;
+    setDecimalChoice(mark);
+    void refresh(
+      { mapping: csvMappingBody(columns, mark), page: confirming ? (preview.page ?? 0) : 0 },
+      { resetEdits: !confirming, onFail: () => setDecimalChoice(previous) },
     );
   }
 
@@ -219,7 +251,7 @@ export function ImportWizard({
     const pages = Object.fromEntries(products.map((p) => [p.key, p.page]));
     await refresh(
       preview.source === "CSV"
-        ? { mapping: preview.mapping, page }
+        ? { mapping: csvMappingBody(columns, decimalChoice), page }
         : pdfBody({ ...pages, [productKey]: page }, productAccount),
     );
     previewTop.current?.scrollIntoView({ block: "start" });
@@ -247,6 +279,7 @@ export function ImportWizard({
     setFile(null);
     setPreview(null);
     setColumns({});
+    setDecimalChoice(null);
     setProductAccount({});
     setOverrides({});
     setExcluded({});
@@ -649,24 +682,39 @@ export function ImportWizard({
               <div>
                 <div className={`${overline} mb-2`}>{t("mapping")}</div>
                 {preview.source === "CSV" && preview.headers ? (
-                  CSV_FIELDS.map((field) => (
-                    <FieldMap key={field} label={fieldLabel(field)}>
-                      <NativeSelect
-                        value={columns[field] ?? ""}
-                        aria-label={fieldLabel(field)}
-                        onChange={(e) => remap(field, e.target.value)}
+                  <>
+                    {CSV_FIELDS.map((field) => (
+                      <FieldMap key={field} label={fieldLabel(field)}>
+                        <NativeSelect
+                          value={columns[field] ?? ""}
+                          aria-label={fieldLabel(field)}
+                          onChange={(e) => remap(field, e.target.value)}
+                          disabled={busy}
+                          size="sm"
+                        >
+                          <option value="">{t("none")}</option>
+                          {preview.headers!.map((h) => (
+                            <option key={h} value={h}>
+                              {h}
+                            </option>
+                          ))}
+                        </NativeSelect>
+                      </FieldMap>
+                    ))}
+                    <FieldMap label={t("decimal.label")}>
+                      <SegmentedTabs<DecimalMark>
+                        aria-label={t("decimal.label")}
+                        items={DECIMAL_MARKS.map((m) => ({
+                          id: m,
+                          label: t(`decimal.${MARK_KEY[m]}`),
+                        }))}
+                        value={shownDecimal}
+                        onChange={chooseDecimal}
                         disabled={busy}
-                        size="sm"
-                      >
-                        <option value="">{t("none")}</option>
-                        {preview.headers!.map((h) => (
-                          <option key={h} value={h}>
-                            {h}
-                          </option>
-                        ))}
-                      </NativeSelect>
+                        className="grid w-full grid-cols-2"
+                      />
                     </FieldMap>
-                  ))
+                  </>
                 ) : (
                   <>
                     <FieldMap label={t("colDate")}>
@@ -707,6 +755,37 @@ export function ImportWizard({
                 <div className="text-muted-foreground text-xs">
                   {t("previewMeta", { dup: dupCount, cat: catCount })}
                 </div>
+                {preview.source === "CSV" && preview.decimalGuessed && guessedMark && (
+                  <div className="mt-2 space-y-2" data-slot="import-decimal-guessed">
+                    <p
+                      role="status"
+                      className="text-xs font-medium"
+                      style={{ color: "var(--warning-text)" }}
+                    >
+                      {t("decimal.guessed", { mark: MARK_KEY[guessedMark] })}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="max-md:h-10"
+                        disabled={busy}
+                        onClick={() => chooseDecimal(guessedMark)}
+                      >
+                        {t("decimal.confirm")}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="max-md:h-10"
+                        disabled={busy}
+                        onClick={() => chooseDecimal(otherMark(guessedMark))}
+                      >
+                        {t("decimal.useOther", { mark: MARK_KEY[otherMark(guessedMark)] })}
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 {!!preview.rejectedCount && (
                   <div
                     className="mt-2 text-xs"

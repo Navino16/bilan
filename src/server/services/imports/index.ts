@@ -3,12 +3,16 @@ import { db } from "@/server/db";
 import { canWriteAccount } from "@/server/services/accounts/sharing";
 import { isAccountArchived } from "@/server/services/accounts";
 import { logEvent } from "@/server/services/audit";
-import { csvMappingSchema, type CsvMappingInput } from "@/lib/validation/import";
-import { parseCsv, detectMapping, mapRows } from "./csv-parse";
+import {
+  csvCommitMappingSchema,
+  csvMappingSchema,
+  type CsvMappingInput,
+} from "@/lib/validation/import";
+import { parseCsv, detectMapping, mapRows, detectDecimalMark, amountCells } from "./csv-parse";
 import { commitRows, type CommitOptions } from "./commit";
 import { buildPreview, PREVIEW_PAGE_SIZE } from "./preview";
 import { ImportAccessError } from "./errors";
-import type { CsvMapping, ImportPreview, CommitSummary } from "./types";
+import type { CsvMapping, ImportPreview, CommitSummary, ResolvedCsvMapping } from "./types";
 
 // NOTE: the PDF service lives in `./pdf-service` (not here) so the CSV path never
 // statically pulls in pdfjs/pdf-parse. pdfjs must stay an externalized server
@@ -77,14 +81,18 @@ export async function previewCsvBatch(
     throw new ImportAccessError("NOT_COMMITTABLE");
   }
   const meta = batch.metadata as { text?: string; fileSizeBytes?: number } | null;
-  const { headers, rows } = parseCsv(meta?.text ?? "");
+  const { headers, rows, delimiter } = parseCsv(meta?.text ?? "");
   let effective: CsvMapping = detectMapping(headers);
   if (mapping) {
     const parsed = csvMappingSchema.safeParse(mapping);
     if (!parsed.success) throw new ImportAccessError("INVALID_MAPPING");
     effective = parsed.data as CsvMapping;
   }
-  const { rows: normalized, rejected } = mapRows(rows, effective);
+  const detected = effective.decimal
+    ? { mark: effective.decimal, guessed: false }
+    : detectDecimalMark(amountCells(rows, effective), delimiter);
+  const resolved: ResolvedCsvMapping = { ...effective, decimal: detected.mark };
+  const { rows: normalized, rejected } = mapRows(rows, resolved);
   // Conditional, so a commit that started meanwhile is never pushed back to REVIEW.
   const { count } = await db.importBatch.updateMany({
     where: { id: batchId, status: { in: ["PARSING", "REVIEW"] } },
@@ -99,12 +107,13 @@ export async function previewCsvBatch(
     filename: batch.filename,
     fileSizeBytes: meta?.fileSizeBytes ?? null,
     headers,
-    mapping: effective,
+    mapping: resolved,
     totalRows: p.totalRows,
     duplicateCount: p.duplicateCount,
     autoCategorizedCount: p.autoCategorizedCount,
     rejectedCount: rejected.length,
     rejected: rejected.slice(0, REJECTED_SHOWN),
+    decimalGuessed: detected.guessed,
     preview: p.rows,
     page: p.page,
     pageSize: PREVIEW_PAGE_SIZE,
@@ -119,10 +128,11 @@ export async function commitCsvBatch(
 ): Promise<CommitSummary> {
   const batch = await loadBatch(batchId, actor.id);
   await assertImportTarget(actor.id, batch.accountId);
-  const parsedMapping = csvMappingSchema.parse(mapping) as CsvMapping;
+  const parsed = csvCommitMappingSchema.safeParse(mapping);
+  if (!parsed.success) throw new ImportAccessError("INVALID_MAPPING");
   const text = (batch.metadata as { text?: string } | null)?.text ?? "";
   const { rows } = parseCsv(text);
-  const { rows: normalized, rejected } = mapRows(rows, parsedMapping);
+  const { rows: normalized, rejected } = mapRows(rows, parsed.data as ResolvedCsvMapping);
   const summary = await withCommitClaim(batch.id, () =>
     commitRows({ id: batch.id, accountId: batch.accountId }, normalized, actor, opts),
   );

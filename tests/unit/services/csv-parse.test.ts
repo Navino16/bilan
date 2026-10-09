@@ -7,11 +7,15 @@ import {
   normalizeAmount,
   normalizeDate,
   normalizeType,
-  inferDecimalMark,
+  decimalVote,
+  detectDecimalMark,
+  amountCells,
   mapRows,
   looksBinary,
   hasDataRows,
+  type RawRow,
 } from "@/server/services/imports/csv-parse";
+import type { CsvMapping } from "@/server/services/imports/types";
 import {
   computeExternalId,
   computeExternalIds,
@@ -19,6 +23,12 @@ import {
 
 const fixture = (name: string) =>
   decodeCsv(readFileSync(new URL(`../../fixtures/import/${name}`, import.meta.url)));
+
+// The mapping a preview resolves: its decimal mark detected from the amounts.
+const resolve = (rows: RawRow[], mapping: CsvMapping, delimiter = ";") => ({
+  ...mapping,
+  decimal: detectDecimalMark(amountCells(rows, mapping), delimiter).mark,
+});
 
 const SAMPLE = `Date;Libellé;Débit;Crédit
 01/02/2026;CB CARREFOUR CITY;42,90;
@@ -78,7 +88,7 @@ describe("mapRows", () => {
   it("turns raw rows into normalized rows (debit negative, credit positive)", () => {
     const { headers, rows } = parseCsv(SAMPLE);
     const mapping = detectMapping(headers);
-    const { rows: normalized } = mapRows(rows, mapping);
+    const { rows: normalized } = mapRows(rows, resolve(rows, mapping));
     expect(normalized).toEqual([
       { date: new Date("2026-02-01T00:00:00.000Z"), amount: -42.9, rawLabel: "CB CARREFOUR CITY" },
       { date: new Date("2026-02-03T00:00:00.000Z"), amount: 2450, rawLabel: "VIR SEPA SALAIRE" },
@@ -88,7 +98,7 @@ describe("mapRows", () => {
   it("reports rows with an unparseable date or amount instead of importing them", () => {
     const rows = [{ Date: "xx", Libellé: "X", Débit: "1", Crédit: "" }];
     const mapping = { date: "Date", label: "Libellé", debit: "Débit", credit: "Crédit" } as const;
-    expect(mapRows(rows, mapping)).toEqual({
+    expect(mapRows(rows, { ...mapping, decimal: "," })).toEqual({
       rows: [],
       rejected: [{ row: 2, reason: "DATE", value: "xx" }],
     });
@@ -98,7 +108,7 @@ describe("mapRows", () => {
     // Many bank CSVs print "0,00" in the empty column instead of leaving it blank.
     const rows = [{ Date: "03/02/2026", Libellé: "VIR SALAIRE", Débit: "0,00", Crédit: "2450,00" }];
     const mapping = { date: "Date", label: "Libellé", debit: "Débit", credit: "Crédit" } as const;
-    expect(mapRows(rows, mapping).rows).toEqual([
+    expect(mapRows(rows, resolve(rows, mapping)).rows).toEqual([
       { date: new Date("2026-02-03T00:00:00.000Z"), amount: 2450, rawLabel: "VIR SALAIRE" },
     ]);
   });
@@ -131,17 +141,125 @@ describe("normalizeAmount — bank formats (#157)", () => {
     expect(normalizeAmount("\u221212,34")).toBe(-12.34);
   });
 
-  it("infers a column's decimal mark from its unambiguous values", () => {
-    expect(inferDecimalMark(["1.234", "45,50"])).toBe(",");
-    expect(inferDecimalMark(["1,234.56"])).toBe(".");
-    expect(inferDecimalMark(["1.234", "2.000", ""])).toBeNull();
+  it("reads a column with the mark its unambiguous values settle", () => {
     const rows = [
       { D: "01/02/2026", L: "A", M: "45,500" },
       { D: "01/02/2026", L: "B", M: "12,5" },
     ];
-    expect(mapRows(rows, { date: "D", label: "L", amount: "M" }).rows.map((r) => r.amount)).toEqual(
-      [45.5, 12.5],
-    );
+    const mapping = { date: "D", label: "L", amount: "M" };
+    expect(mapRows(rows, resolve(rows, mapping, "\t")).rows.map((r) => r.amount)).toEqual([
+      45.5, 12.5,
+    ]);
+  });
+});
+
+describe("decimal mark (#187)", () => {
+  it("lets an unambiguous amount vote for its mark", () => {
+    expect(decimalVote("1 234,56")).toBe(",");
+    expect(decimalVote("12.5")).toBe(".");
+    expect(decimalVote("1,234.56")).toBe(".");
+    expect(decimalVote("0,125")).toBe(",");
+    expect(decimalVote("1234,567")).toBe(",");
+    expect(decimalVote("1.234.567")).toBe(",");
+    expect(decimalVote("-1,234,567")).toBe(".");
+    expect(decimalVote("(12,34)")).toBe(",");
+    expect(decimalVote("12,34-")).toBe(",");
+    expect(decimalVote("-7.50 €")).toBe(".");
+  });
+
+  it("gives no vote for ambiguous, separator-less or non-amount values", () => {
+    for (const raw of ["1.234", "-45,500", "12", "", "Réf. 12", "1.234,", "12.34.56"]) {
+      expect(decimalVote(raw), raw).toBeNull();
+    }
+  });
+
+  it("ignores cells that aren't amounts", () => {
+    expect(detectDecimalMark(["Réf. 12", "1.234"], ";")).toEqual({ mark: ",", guessed: true });
+    expect(detectDecimalMark(["Réf. 12", "N/A"], ";")).toEqual({ mark: ",", guessed: false });
+    expect(detectDecimalMark(["1.234,", "45,500"], ",")).toEqual({ mark: ".", guessed: true });
+  });
+
+  it("takes the majority of conflicting votes, flagging a guess", () => {
+    expect(detectDecimalMark(["0.5", "12,50", "1.234,56"], ";")).toEqual({
+      mark: ",",
+      guessed: true,
+    });
+    expect(detectDecimalMark(["0.5", "2.5", "12,50"], ";")).toEqual({ mark: ".", guessed: true });
+  });
+
+  it("falls back to the delimiter on a tie, flagging a guess", () => {
+    expect(detectDecimalMark(["0.5", "12,50"], ",")).toEqual({ mark: ".", guessed: true });
+    expect(detectDecimalMark(["0.5", "12,50"], ";")).toEqual({ mark: ",", guessed: true });
+  });
+
+  it("detects from the amounts first, without flagging a guess", () => {
+    expect(detectDecimalMark(["1.234", "12,5"], ",")).toEqual({ mark: ",", guessed: false });
+    expect(detectDecimalMark(["45,500", "1,234.56"], ";")).toEqual({ mark: ".", guessed: false });
+  });
+
+  it("falls back to the delimiter when only ambiguous amounts exist, flagging a guess", () => {
+    expect(detectDecimalMark(["1.234", "45,500"], ";")).toEqual({ mark: ",", guessed: true });
+    expect(detectDecimalMark(["1.234", "45,500"], ",")).toEqual({ mark: ".", guessed: true });
+  });
+
+  it("else keeps ambiguous amounts reading as thousands", () => {
+    expect(detectDecimalMark(["1.234", "2.000"], "\t")).toEqual({ mark: ",", guessed: true });
+    expect(detectDecimalMark(["45,500"], "\t")).toEqual({ mark: ".", guessed: true });
+  });
+
+  it("doesn't flag a guess when no amount carries a separator", () => {
+    expect(detectDecimalMark(["12", "-5", ""], ";")).toEqual({ mark: ",", guessed: false });
+    expect(detectDecimalMark([], "|")).toEqual({ mark: ",", guessed: false });
+  });
+
+  it("reads thousands separators: spaces, NBSP, narrow NBSP, apostrophes", () => {
+    expect(normalizeAmount("1 234,56", ",")).toBe(1234.56);
+    expect(normalizeAmount("1 234,56", ",")).toBe(1234.56);
+    expect(normalizeAmount("-1 234,56", ",")).toBe(-1234.56);
+    expect(normalizeAmount("1'234.56", ".")).toBe(1234.56);
+    expect(normalizeAmount("1’234’567.89")).toBe(1234567.89);
+    expect(normalizeAmount("'-12,50", ",")).toBe(-12.5);
+    expect(normalizeAmount("(1 234,50)", ",")).toBe(-1234.5);
+  });
+
+  it("rejects apostrophes that don't group thousands", () => {
+    for (const raw of ["12'5", "1'2345", "1''234", "'", "12'"]) {
+      expect(normalizeAmount(raw, "."), raw).toBeNull();
+    }
+  });
+
+  it("parses ambiguous amounts with the explicit mark", () => {
+    expect(normalizeAmount("1.234", ".")).toBe(1.234);
+    expect(normalizeAmount("1.234", ",")).toBe(1234);
+    expect(normalizeAmount("45,500", ",")).toBe(45.5);
+    expect(normalizeAmount("45,500", ".")).toBe(45500);
+    expect(normalizeAmount("-1.234,56", ".")).toBe(-1234.56);
+    expect(normalizeAmount("12,5", ".")).toBeNull();
+  });
+
+  it("maps rows with the mapping's mark", () => {
+    const rows = [
+      { D: "01/02/2026", L: "A", M: "45,500" },
+      { D: "01/02/2026", L: "B", M: "-1.234" },
+    ];
+    const read = (decimal: "," | ".") =>
+      mapRows(rows, { date: "D", label: "L", amount: "M", decimal }).rows.map((r) => r.amount);
+    expect(read(",")).toEqual([45.5, -1234]);
+    expect(read(".")).toEqual([45500, -1.23]);
+  });
+
+  it("collects amount cells from the signed column or debit + credit", () => {
+    const rows = [{ M: "1", Db: "2", Cr: "" }];
+    expect(amountCells(rows, { date: "x", label: "y", amount: "M" })).toEqual(["1"]);
+    expect(amountCells(rows, { date: "x", label: "y", debit: "Db", credit: "Cr" })).toEqual([
+      "2",
+      "",
+    ]);
+  });
+
+  it("returns the delimiter Papa detected", () => {
+    expect(parseCsv("a;b\n1;2").delimiter).toBe(";");
+    expect(parseCsv(fixture("p-tab.csv")).delimiter).toBe("\t");
   });
 });
 
@@ -170,9 +288,10 @@ describe("normalizeType", () => {
 
   it("is used when a type column is mapped", () => {
     const rows = [{ Date: "01/02/2026", L: "PAIEMENT", M: "-3", T: "Carte" }];
-    expect(mapRows(rows, { date: "Date", label: "L", amount: "M", type: "T" }).rows[0].type).toBe(
-      "CARD",
-    );
+    expect(
+      mapRows(rows, { date: "Date", label: "L", amount: "M", type: "T", decimal: "," }).rows[0]
+        .type,
+    ).toBe("CARD");
   });
 });
 
@@ -182,7 +301,7 @@ describe("fixtures (#157)", () => {
     expect(headers).toContain("Libellé");
     const mapping = detectMapping(headers);
     expect(mapping).toMatchObject({ debit: "Débit", credit: "Crédit" });
-    const out = mapRows(rows, mapping);
+    const out = mapRows(rows, resolve(rows, mapping));
     expect(out.rejected).toEqual([]);
     expect(out.rows.map((r) => [r.rawLabel, r.amount])).toEqual([
       ["QA LATIN1 PRÉLÈVEMENT ÉDF", -55],
@@ -202,12 +321,12 @@ describe("fixtures (#157)", () => {
 
   it("reads tab-separated files", () => {
     const { headers, rows } = parseCsv(fixture("p-tab.csv"));
-    expect(mapRows(rows, detectMapping(headers)).rows).toHaveLength(1);
+    expect(mapRows(rows, resolve(rows, detectMapping(headers), "\t")).rows).toHaveLength(1);
   });
 
   it("reads the tricky rows and reports every rejected one", () => {
     const { headers, rows } = parseCsv(fixture("e-tricky.csv"));
-    const out = mapRows(rows, detectMapping(headers));
+    const out = mapRows(rows, resolve(rows, detectMapping(headers)));
     expect(out.rows.map((r) => r.amount)).toEqual([
       -12.34, -12.34, -12.34, -5, -5, -5, -5, -7, 15, -1234.56,
     ]);
