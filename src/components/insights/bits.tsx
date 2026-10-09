@@ -1,6 +1,5 @@
 import { overline } from "@/components/transactions/bits";
 
-export const DEFAULT_COLOR = "#2563eb";
 export const ROW_LINK =
   "-mx-2 rounded-lg px-2 py-1 transition-colors hover:bg-muted/50 focus-visible:ring-ring/50 focus-visible:ring-3 focus-visible:outline-none";
 

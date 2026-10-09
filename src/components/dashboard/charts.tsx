@@ -46,7 +46,7 @@ export function Donut({
             cy={size / 2}
             r={r}
             fill="none"
-            stroke={s.color}
+            style={{ stroke: s.color }}
             strokeWidth={thickness}
             strokeDasharray={`${s.len} ${C - s.len}`}
             strokeDashoffset={-s.offset}

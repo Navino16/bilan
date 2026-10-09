@@ -19,9 +19,12 @@ test.describe("categories on a shared account", () => {
     const label = `TX159 ${stamp}`;
 
     await page.goto("/fr/categories");
-    await page.getByRole("button", { name: /nouvelle catégorie/i }).click();
+    await expect(async () => {
+      await page.getByRole("button", { name: /nouvelle catégorie/i }).click();
+      await expect(page.locator('input[name="name"]')).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
     await page.fill('input[name="name"]', category);
-    await page.getByRole("button", { name: /^créer$/i }).click();
+    await page.getByRole("button", { name: /créer la catégorie/i }).click();
     await expect(
       page.locator('[data-slot="category-row"]').filter({ hasText: category }).first(),
     ).toBeVisible();

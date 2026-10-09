@@ -89,6 +89,16 @@ for (const colorScheme of ["light", "dark"] as const) {
         await openImportReview(page);
         expect(await seriousViolations(page)).toEqual([]);
       });
+
+      test("the category dialog has no serious violations", async ({ page, browserName }) => {
+        test.skip(browserName === "webkit", "Playwright WebKit doesn't deliver taps in this env");
+        await page.goto("/fr/categories");
+        await expect(async () => {
+          await page.getByRole("button", { name: /nouvelle catégorie/i }).click();
+          await expect(page.locator('input[name="name"]')).toBeVisible({ timeout: 2_000 });
+        }).toPass({ timeout: 20_000 });
+        expect(await seriousViolations(page)).toEqual([]);
+      });
     });
   });
 }

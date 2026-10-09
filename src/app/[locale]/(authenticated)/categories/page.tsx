@@ -21,7 +21,11 @@ export default async function CategoriesPage({ params }: { params: Promise<{ loc
   const flatCategories = flattenCategories(tree);
   const colorById = new Map(flatCategories.map((c) => [c.id, c.color]));
   const ruleRows = await listRulesForUser(user.id);
-  const groups = (await listGroupsForUser(user.id)).map((g) => ({ id: g.id, name: g.name }));
+  const groups = (await listGroupsForUser(user.id)).map((g) => ({
+    id: g.id,
+    name: g.name,
+    role: g.role,
+  }));
   const merchants = await getMerchantDirectory(user.id);
 
   const rules = ruleRows.map((r) => ({

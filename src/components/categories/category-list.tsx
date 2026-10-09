@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { CategoryForm, type EditableCategory } from "./category-form";
+import { CategoryForm, type EditableCategory, type ScopeGroup } from "./category-form";
 import { CategoryDeleteDialog } from "./category-delete-dialog";
 import { categoryOptions, pickableCategories, type CategoryOption } from "./category-options";
 
@@ -30,11 +30,13 @@ type Node = {
 function Row({
   node,
   all,
+  groups,
   inheritedColor = null,
   depth = 0,
 }: {
   node: Node;
   all: CategoryOption[];
+  groups: ScopeGroup[];
   inheritedColor?: string | null;
   depth?: number;
 }) {
@@ -99,8 +101,8 @@ function Row({
         <CategoryForm
           mode="edit"
           category={editable}
-          parents={pickable}
-          groupId={node.groupId}
+          options={all}
+          groups={groups}
           open={editing}
           onOpenChange={setEditing}
         />
@@ -117,6 +119,7 @@ function Row({
           key={c.id}
           node={c}
           all={all}
+          groups={groups}
           inheritedColor={node.color ?? inheritedColor}
           depth={depth + 1}
         />
@@ -125,14 +128,14 @@ function Row({
   );
 }
 
-export function CategoryList({ tree }: { tree: Node[] }) {
+export function CategoryList({ tree, groups }: { tree: Node[]; groups: ScopeGroup[] }) {
   const t = useTranslations("categories");
   const all = categoryOptions(tree);
   if (tree.length === 0) return <p className="text-muted-foreground text-sm">{t("empty")}</p>;
   return (
     <div className="border-border bg-card overflow-hidden rounded-xl border">
       {tree.map((node) => (
-        <Row key={node.id} node={node} all={all} />
+        <Row key={node.id} node={node} all={all} groups={groups} />
       ))}
     </div>
   );

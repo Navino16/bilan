@@ -34,6 +34,7 @@ describe("seedDefaultCategories", () => {
     expect(all.every((c) => c.isDefault && c.userId === userId && c.groupId === null)).toBe(true);
     const revenus = all.find((c) => c.name === "Revenus")!;
     expect(revenus.parentId).toBeNull();
+    expect(revenus.color).toBe("var(--cat-income)");
     const salaire = all.find((c) => c.name === "Salaire")!;
     expect(salaire.parentId).toBe(revenus.id);
   });
@@ -74,6 +75,19 @@ describe("categories service", () => {
     const row = await db.category.findUniqueOrThrow({ where: { id } });
     expect(row.userId).toBe(owner);
     expect(row.groupId).toBeNull();
+  });
+
+  it("stores a palette pick as its theme variable and keeps a legacy hex", async () => {
+    const { id } = await createCategory(
+      { name: "Palette", color: "var(--cat-leisure)", icon: "🎁" },
+      { id: owner },
+    );
+    expect(await db.category.findUniqueOrThrow({ where: { id } })).toMatchObject({
+      color: "var(--cat-leisure)",
+      icon: "🎁",
+    });
+    await updateCategory(id, { name: "Palette", color: "#2563eb" }, { id: owner });
+    expect((await db.category.findUniqueOrThrow({ where: { id } })).color).toBe("#2563eb");
   });
 
   it("creates a group category when the actor is a group ADMIN/OWNER", async () => {

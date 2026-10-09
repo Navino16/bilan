@@ -33,6 +33,33 @@ test.describe("mobile bottom-sheets", () => {
     await expect(page.locator('input[name="name"]')).toBeVisible();
   });
 
+  test("category create opens a bottom sheet with wrapping swatches", async ({ page }) => {
+    await page.goto("/fr/categories", { waitUntil: "domcontentloaded", timeout: 90_000 });
+    await openViaTrigger(page, /nouvelle catégorie/i);
+    const sheet = page.locator('[data-slot="sheet-content"]');
+    await expect(sheet.getByRole("radio", { name: "Vert sauge" })).toBeChecked();
+    const swatches = sheet.locator('[data-slot="category-color-swatches"]');
+    const box = await swatches.boundingBox();
+    expect(box!.width).toBeLessThanOrEqual(390);
+  });
+
+  test("category edit from the row menu opens a bottom sheet", async ({ page }) => {
+    await page.goto("/fr/categories", { waitUntil: "domcontentloaded", timeout: 90_000 });
+    const menu = page
+      .locator('[data-slot="category-row"]')
+      .first()
+      .getByRole("button", { name: /actions pour/i });
+    await expect(async () => {
+      await menu.click();
+      await expect(page.getByRole("menuitem", { name: /modifier/i })).toBeVisible({
+        timeout: 2000,
+      });
+    }).toPass({ timeout: 20_000 });
+    await page.getByRole("menuitem", { name: /modifier/i }).click();
+    await expect(page.locator('[data-slot="sheet-content"][data-side="bottom"]')).toBeVisible();
+    await expect(page.locator('input[name="name"]')).toBeVisible();
+  });
+
   test("transaction filters live in a bottom sheet and combine", async ({ page }) => {
     await page.goto("/fr/transactions", { waitUntil: "domcontentloaded", timeout: 90_000 });
     // Only search + the « Filtres » button stay inline on mobile.

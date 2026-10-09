@@ -13,11 +13,11 @@ import { formatPeriodLabel, toIsoDay } from "@/lib/period";
 import { formatDayMonth, formatPercent } from "@/lib/format";
 import { PageHeader } from "@/components/shell/page-header";
 import { categorySliceColors } from "@/lib/chart-colors";
+import { DEFAULT_CATEGORY_COLOR } from "@/lib/category-appearance";
 import { BaselineSelect } from "./baseline-select";
 import { ComparisonNote } from "./comparison-note";
 import { BudgetSnapshot, type CurrentBudget } from "./budget-snapshot";
 
-const DEFAULT_COLOR = "#2563eb";
 const OTHERS_COLOR = "var(--ink-4)";
 const DONUT_SLICES = 6;
 
@@ -131,7 +131,7 @@ export async function DashboardView({
   // total like the legend's percentages do.
   const overflow = data.byCategory.length > DONUT_SLICES;
   const named = data.byCategory.slice(0, overflow ? DONUT_SLICES - 1 : DONUT_SLICES);
-  const namedColors = categorySliceColors(named, catById, DEFAULT_COLOR);
+  const namedColors = categorySliceColors(named, catById, DEFAULT_CATEGORY_COLOR);
   const slices = [
     ...named.map((c, i) => ({
       key: c.categoryId ?? "none",
