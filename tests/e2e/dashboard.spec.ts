@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 test.describe("dashboard", () => {
   test.use({ storageState: "tests/e2e/.auth/owner.json" });
@@ -7,17 +7,50 @@ test.describe("dashboard", () => {
     "Mobile click-driven nav refinement deferred to Phase 8.3",
   );
 
-  test("the period selector fits a narrow viewport without horizontal overflow", async ({
+  for (const width of [320, 390]) {
+    test(`the period selector fits a ${width}px viewport without horizontal overflow`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto("/fr/dashboard");
+      await expect(page.getByText("Revenus", { exact: true })).toBeVisible();
+      // The preset bar scrolls internally; the page itself must not overflow.
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(overflow).toBeLessThanOrEqual(0);
+    });
+  }
+
+  const kpiRects = async (page: Page) => {
+    const cards = page.locator('[data-slot="kpi-card"]');
+    await expect(cards).toHaveCount(3);
+    return cards.evaluateAll((els) =>
+      els.map((el) => el.getBoundingClientRect().toJSON() as DOMRect),
+    );
+  };
+
+  test("below md the KPIs form a 2-column grid with the net card spanning both", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/fr/dashboard");
-    await expect(page.getByText("Revenus", { exact: true })).toBeVisible();
-    // The preset bar scrolls internally; the page itself must not overflow.
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    );
-    expect(overflow).toBeLessThanOrEqual(0);
+    const [income, expense, net] = await kpiRects(page);
+    expect(Math.abs(income.y - expense.y)).toBeLessThan(1);
+    expect(expense.x).toBeGreaterThan(income.right);
+    expect(net.y).toBeGreaterThan(income.bottom);
+    expect(Math.abs(net.x - income.x)).toBeLessThan(1);
+    expect(Math.abs(net.right - expense.right)).toBeLessThan(1);
+  });
+
+  test("from md up the KPIs sit in a single row", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/fr/dashboard");
+    const [income, expense, net] = await kpiRects(page);
+    expect(Math.abs(income.y - expense.y)).toBeLessThan(1);
+    expect(Math.abs(expense.y - net.y)).toBeLessThan(1);
+    expect(expense.x).toBeGreaterThan(income.right);
+    expect(net.x).toBeGreaterThan(expense.right);
   });
 
   test("renders the KPI row and month label, and navigates months", async ({ page }) => {
@@ -27,6 +60,8 @@ test.describe("dashboard", () => {
     await expect(page.getByText("Solde net", { exact: true })).toBeVisible();
     // The net can change sign, so its comparison is an amount, never a percentage.
     await expect(page.locator('[data-slot="kpi-note"]').nth(2)).not.toContainText("%");
+    // The net amount is always signed (or exactly 0).
+    await expect(page.locator('[data-slot="kpi-amount"]').nth(2)).toHaveText(/^([+\-−]|0\s)/);
 
     // The default view is the current month — there's no future to browse into.
     await expect(page.getByRole("button", { name: "Période suivante" })).toBeDisabled();

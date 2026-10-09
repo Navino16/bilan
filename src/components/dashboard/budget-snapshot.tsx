@@ -33,7 +33,7 @@ export async function BudgetSnapshot({
 
   if (!budget) {
     return (
-      <Card className="gap-3 p-6" data-slot="budget-snapshot">
+      <Card className="gap-3 p-4.5 md:p-6" data-slot="budget-snapshot">
         <div className={overline}>{t("snapshot.overline")}</div>
         <p className="text-muted-foreground text-sm">{t("snapshot.none")}</p>
         <Link href={`/${locale}/budgets`} className="text-primary w-fit text-sm hover:underline">
@@ -45,7 +45,7 @@ export async function BudgetSnapshot({
 
   const { detail, others, accountNames } = budget;
   return (
-    <Card className="gap-4 p-6" data-slot="budget-snapshot">
+    <Card className="gap-4 p-4.5 md:p-6" data-slot="budget-snapshot">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className={overline}>
