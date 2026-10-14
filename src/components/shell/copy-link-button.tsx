@@ -13,14 +13,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-// Copies `${origin}${path}`. navigator.clipboard only exists in secure contexts, so a
-// self-hosted instance on plain HTTP falls back to a selectable field.
+// Copies `url`, or `${origin}${path}`. navigator.clipboard only exists in secure contexts,
+// so a self-hosted instance on plain HTTP falls back to a selectable field.
 export function CopyLinkButton({
-  path,
   label,
   copiedLabel,
-}: {
-  path: string;
+  ...target
+}: ({ path: string; url?: never } | { url: string; path?: never }) & {
   label: string;
   copiedLabel: string;
 }) {
@@ -29,7 +28,7 @@ export function CopyLinkButton({
   const [fallbackUrl, setFallbackUrl] = useState<string | null>(null);
 
   async function copy() {
-    const url = `${window.location.origin}${path}`;
+    const url = target.url ?? `${window.location.origin}${target.path}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);

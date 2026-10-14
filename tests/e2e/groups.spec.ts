@@ -105,10 +105,24 @@ test.describe("groups", () => {
 
     await page.fill('input[name="email"]', "someone-else@e2e.local");
     await page.getByRole("button", { name: /envoyer l’invitation/i }).click();
-    await page.getByRole("button", { name: "Copier le lien d’invitation" }).click();
-    await expect(page.getByRole("button", { name: "Lien copié" })).toBeVisible();
+    // E2E runs without SMTP: the inviter gets the link to share by hand (#228).
+    const share = page.locator('[data-slot="invitation-share"]');
+    await expect(share.getByText("Invitation créée")).toBeVisible();
+    await expect(
+      share.getByText(/^L’e-mail est désactivé\s: transmettez ce lien\.$/),
+    ).toBeVisible();
+    const shown = await share.getByRole("textbox", { name: "Lien d’invitation" }).inputValue();
+    await share.getByRole("button", { name: "Copier le lien d’invitation" }).click();
+    await expect(share.getByRole("button", { name: "Lien copié" })).toBeVisible();
     const link = await page.evaluate(() => navigator.clipboard.readText());
     expect(link).toMatch(/\/fr\/groups\/join\/[\w-]+$/);
+    expect(link).toBe(shown);
+
+    await page.fill('input[name="email"]', "someone-else@e2e.local");
+    await page.getByRole("button", { name: /envoyer l’invitation/i }).click();
+    await expect(share.getByText("Invitation renouvelée")).toBeVisible();
+    await expect(page.getByRole("main").getByText("someone-else@e2e.local")).toHaveCount(1);
+    expect(await share.getByRole("textbox").inputValue()).toBe(shown);
 
     const memberCtx = await browser.newContext({
       storageState: "tests/e2e/.auth/member.json",
@@ -118,6 +132,39 @@ test.describe("groups", () => {
     await mp.goto(new URL(link).pathname);
     await expect(mp.getByText("Cette invitation a été envoyée à s***@e2e.local.")).toBeVisible();
     await expect(mp.getByRole("button", { name: /accepter/i })).toHaveCount(0);
+    await memberCtx.close();
+  });
+
+  test("the invitee can decline a pending invitation (#228)", async ({
+    page,
+    browser,
+    baseURL,
+  }) => {
+    const name = `Foyer refus ${Date.now()}`;
+    await page.goto("/fr/groups");
+    await page.getByRole("button", { name: /nouveau foyer/i }).click();
+    await page.fill('input[name="name"]', name);
+    await page.getByRole("button", { name: /créer le foyer/i }).click();
+    await page.getByRole("link", { name: new RegExp(name) }).click();
+    await page.waitForURL(/\/groups\/[a-z0-9]+$/i);
+    await page.fill('input[name="email"]', "member@e2e.local");
+    await page.getByRole("button", { name: /envoyer l’invitation/i }).click();
+    await expect(page.locator('[data-slot="invitation-share"]')).toBeVisible();
+
+    const memberCtx = await browser.newContext({
+      storageState: "tests/e2e/.auth/member.json",
+      baseURL,
+    });
+    const mp = await memberCtx.newPage();
+    await mp.goto("/fr/groups");
+    const row = mp.locator('[data-slot="pending-invitation"]', { hasText: name });
+    await row.getByRole("button", { name: "Refuser" }).click();
+    const dialog = mp.getByRole("alertdialog");
+    await expect(dialog.getByText("Refuser cette invitation ?")).toBeVisible();
+    await dialog.getByRole("button", { name: "Refuser" }).click();
+    await expect(row).toHaveCount(0);
+    await mp.reload();
+    await expect(mp.locator('[data-slot="pending-invitation"]', { hasText: name })).toHaveCount(0);
     await memberCtx.close();
   });
 });

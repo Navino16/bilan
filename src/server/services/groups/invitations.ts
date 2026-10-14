@@ -41,11 +41,19 @@ function makeCode(): string {
 }
 
 // The mail goes out in the invitee's preferred locale when they already have an account,
-// else in `locale` (the inviter's page).
+// else in `locale` (the inviter's page). Re-inviting an address with a pending invitation
+// renews it instead of creating a second one (link and code rotate only if it had expired).
 export async function createInvitation(
   input: { groupId: string; email: string; role: GroupRole; locale?: Locale },
   actor: { id: string },
-): Promise<{ id: string; token: string; code: string }> {
+): Promise<{
+  id: string;
+  token: string;
+  code: string;
+  renewed: boolean;
+  delivered: boolean;
+  acceptUrl: string;
+}> {
   if (!INVITABLE_GROUP_ROLES.includes(input.role as InvitableGroupRole)) {
     throw new InvitationError("INVALID");
   }
@@ -59,26 +67,50 @@ export async function createInvitation(
     where: { email },
     select: { id: true, preference: { select: { locale: true } } },
   });
-  if (existingUser) {
+  const assertNotMember = async () => {
+    if (!existingUser) return;
     const membership = await db.groupMember.findUnique({
       where: { groupId_userId: { groupId: input.groupId, userId: existingUser.id } },
     });
     if (membership) throw new InvitationError("ALREADY_MEMBER");
-  }
+  };
+  await assertNotMember();
 
-  const token = randomBytes(32).toString("base64url");
-  const code = makeCode();
-  const inv = await db.groupInvitation.create({
-    data: {
-      groupId: input.groupId,
-      email,
-      invitedById: actor.id,
-      role: input.role,
-      token,
-      code,
-      expiresAt: new Date(Date.now() + INVITE_TTL_MS),
-    },
+  const expiresAt = new Date(Date.now() + INVITE_TTL_MS);
+  const pending = await db.groupInvitation.findFirst({
+    where: { groupId: input.groupId, email, acceptedAt: null },
+    orderBy: { createdAt: "desc" },
   });
+  let renewedId: string | null = null;
+  if (pending) {
+    const expired = pending.expiresAt.getTime() < Date.now();
+    // Guarded on acceptedAt: an accept racing this renewal must not be overwritten.
+    const { count } = await db.groupInvitation.updateMany({
+      where: { id: pending.id, acceptedAt: null },
+      data: {
+        role: input.role,
+        invitedById: actor.id,
+        expiresAt,
+        ...(expired && { token: randomBytes(32).toString("base64url"), code: makeCode() }),
+      },
+    });
+    if (count === 1) renewedId = pending.id;
+    else await assertNotMember();
+  }
+  const inv = renewedId
+    ? await db.groupInvitation.findUniqueOrThrow({ where: { id: renewedId } })
+    : await db.groupInvitation.create({
+        data: {
+          groupId: input.groupId,
+          email,
+          invitedById: actor.id,
+          role: input.role,
+          token: randomBytes(32).toString("base64url"),
+          code: makeCode(),
+          expiresAt,
+        },
+      });
+  const { token, code } = inv;
 
   const locale = existingUser?.preference
     ? toLocale(existingUser.preference.locale)
@@ -100,14 +132,21 @@ export async function createInvitation(
   const result = await sendMail({ to: email, ...mail, sensitive: true });
   await logEvent({
     userId: actor.id,
-    action: "group.invitation.create",
+    action: renewedId ? "group.invitation.resend" : "group.invitation.create",
     entity: "GroupInvitation",
     entityId: inv.id,
     // Dev fallback: when SMTP is off, surface the link/code via the audit log
     // (read in /admin/audit-log, Phase 8.4). Never logged when actually emailed.
     metadata: result.delivered ? { email } : { email, acceptUrl, code },
   });
-  return { id: inv.id, token, code };
+  return {
+    id: inv.id,
+    token,
+    code,
+    renewed: renewedId !== null,
+    delivered: result.delivered,
+    acceptUrl,
+  };
 }
 
 export async function acceptInvitation(
@@ -138,6 +177,9 @@ export async function acceptInvitation(
       where: { id: inv.id },
       data: { acceptedAt: new Date(), acceptedById: user.id },
     }),
+    db.groupInvitation.deleteMany({
+      where: { groupId: inv.groupId, email: inv.email, acceptedAt: null, id: { not: inv.id } },
+    }),
   ]);
   await logEvent({
     userId: user.id,
@@ -159,6 +201,28 @@ export async function revokeInvitation(id: string, actor: { id: string }): Promi
     action: "group.invitation.revoke",
     entity: "GroupInvitation",
     entityId: id,
+  });
+}
+
+// The invitee turns an invitation down; also how a stale one for a foyer they already
+// belong to gets cleared.
+export async function declineInvitation(
+  token: string,
+  user: { id: string; email: string },
+): Promise<void> {
+  const inv = await db.groupInvitation.findUnique({ where: { token } });
+  if (!inv) throw new InvitationError("NOT_FOUND");
+  if (inv.acceptedAt) throw new InvitationError("ALREADY_USED");
+  if (inv.email !== user.email.trim().toLowerCase()) {
+    throw new InvitationError("WRONG_ACCOUNT", maskEmail(inv.email));
+  }
+  await db.groupInvitation.delete({ where: { id: inv.id } });
+  await logEvent({
+    userId: user.id,
+    action: "group.invitation.decline",
+    entity: "GroupInvitation",
+    entityId: inv.id,
+    metadata: { groupId: inv.groupId },
   });
 }
 

@@ -941,7 +941,15 @@
       "ALREADY_IN_GROUP": "You’re already in this household.",
       "RATE_LIMITED": "Too many attempts. Please try again later."
     },
-    "revokeFailed": "Revoking failed. Try again."
+    "revokeFailed": "Revoking failed. Try again.",
+    "sent": "Invitation sent.",
+    "resent": "Invitation resent.",
+    "created": "Invitation created",
+    "renewed": "Invitation renewed",
+    "mailDisabled": "E-mail is disabled: share this link.",
+    "shareLink": "Invitation link",
+    "decline": "Decline",
+    "declineConfirm": "Decline this invitation?"
   },
   "dashboard": {
     "overline": "Overview",
@@ -1609,7 +1617,9 @@
           "invitation": {
             "create": "Invitation sent",
             "revoke": "Invitation revoked",
-            "accept": "Invitation accepted"
+            "accept": "Invitation accepted",
+            "resend": "Invitation resent",
+            "decline": "Invitation declined"
           }
         },
         "account": {

@@ -941,7 +941,15 @@
       "ALREADY_IN_GROUP": "Vous faites déjà partie de ce foyer.",
       "RATE_LIMITED": "Trop de tentatives. Réessayez plus tard."
     },
-    "revokeFailed": "Échec de la révocation. Réessayez."
+    "revokeFailed": "Échec de la révocation. Réessayez.",
+    "sent": "Invitation envoyée.",
+    "resent": "Invitation renvoyée.",
+    "created": "Invitation créée",
+    "renewed": "Invitation renouvelée",
+    "mailDisabled": "L’e-mail est désactivé : transmettez ce lien.",
+    "shareLink": "Lien d’invitation",
+    "decline": "Refuser",
+    "declineConfirm": "Refuser cette invitation ?"
   },
   "dashboard": {
     "overline": "Vue d’ensemble",
@@ -1609,7 +1617,9 @@
           "invitation": {
             "create": "Invitation envoyée",
             "revoke": "Invitation révoquée",
-            "accept": "Invitation acceptée"
+            "accept": "Invitation acceptée",
+            "resend": "Invitation renvoyée",
+            "decline": "Invitation refusée"
           }
         },
         "account": {
