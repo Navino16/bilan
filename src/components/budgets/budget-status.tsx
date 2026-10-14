@@ -5,15 +5,21 @@ export function statusStyle(status: BudgetStatus): { color: string; background: 
     case "OVER":
       return { color: "var(--expense-text)", background: "var(--expense-bg)" };
     case "WARN":
+    case "REACHED":
       return { color: "var(--warning-text)", background: "var(--warning-bg)" };
-    default:
+    case "OK":
       return { color: "var(--income)", background: "var(--income-bg)" };
+    default: {
+      const unknown: never = status;
+      throw new Error(`Unknown budget status: ${String(unknown)}`);
+    }
   }
 }
 
 const BAR_FILL: Record<BudgetStatus, string> = {
   OVER: "var(--expense)",
   WARN: "var(--warning)",
+  REACHED: "var(--warning)",
   OK: "var(--income)",
 };
 

@@ -312,6 +312,7 @@
     "matchType": "Correspondance",
     "category": "Catégorie",
     "priority": "Priorité",
+    "priorityValue": "Priorité {priority}",
     "caseSensitive": "Sensible à la casse",
     "scope": "Portée",
     "save": "Enregistrer",
@@ -387,6 +388,7 @@
     "status": {
       "OK": "Dans le budget",
       "WARN": "Bientôt atteint",
+      "REACHED": "Atteint",
       "OVER": "Dépassé"
     },
     "detail": {
@@ -1140,6 +1142,7 @@
           "TOO_LONG": "Le nouveau mot de passe est trop long.",
           "MISMATCH": "Les deux mots de passe ne correspondent pas.",
           "RATE_LIMITED": "Trop de tentatives. Réessayez plus tard.",
+          "rateLimitedFor": "Trop de tentatives. Réessayez dans {minutes, plural, one {# minute} other {# minutes}}.",
           "INVALID": "Remplissez tous les champs.",
           "FAILED": "Impossible de changer le mot de passe. Réessayez.",
           "REVOKE_FAILED": "Votre mot de passe a été modifié, mais vos autres appareils n’ont pas pu être déconnectés."
@@ -1305,7 +1308,7 @@
       "deleteAccounts": "{count, plural, one {# compte bancaire} other {# comptes bancaires}} et leur historique disparaissent{shared, plural, =0 {} one {, dont # partagé : les membres du foyer ne le verront plus} other {, dont # partagés : les membres des foyers ne les verront plus}}.",
       "deleteTransfer": "Le foyer « {group} » sera transmis à {to}.",
       "deleteGroup": "Le foyer « {group} », dont la personne est seule membre, sera supprimé.",
-      "deleteBudgetLines": "Les lignes de budget de foyer qui visaient ses comptes ne seront plus limitées à un compte.",
+      "deleteBudgetLines": "Les lignes des budgets de foyer ou d’autres membres qui visaient ses comptes ne seront plus limitées à un compte.",
       "roleConfirmTitle": "Changer le rôle de {user} ?",
       "roleConfirmBody": "{from} → {to}. Le changement prend effet immédiatement.",
       "roleConfirm": "Changer le rôle",

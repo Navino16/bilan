@@ -88,7 +88,7 @@ export function UserActions({
           : []),
         ...impact.transfers.map((tr) => t("deleteTransfer", tr)),
         ...impact.deletedGroups.map((group) => t("deleteGroup", { group })),
-        t("deleteBudgetLines"),
+        ...(impact.budgetLines > 0 ? [t("deleteBudgetLines")] : []),
       ]
     : [];
 
@@ -146,18 +146,18 @@ export function UserActions({
         pending={pending}
         error={dialog === "delete" ? errorText : undefined}
       >
-        {impact ? (
-          <ul data-slot="user-deletion-impact" className="space-y-1.5 text-sm">
-            {warnings.map((w) => (
-              <li key={w} className="flex items-start gap-2">
-                <TriangleAlert className="text-destructive mt-0.5 size-3.5 shrink-0" />
-                {w}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          !error && <p className="text-muted-foreground text-sm">{t("deleteLoading")}</p>
-        )}
+        {impact
+          ? warnings.length > 0 && (
+              <ul data-slot="user-deletion-impact" className="space-y-1.5 text-sm">
+                {warnings.map((w) => (
+                  <li key={w} className="flex items-start gap-2">
+                    <TriangleAlert className="text-destructive mt-0.5 size-3.5 shrink-0" />
+                    {w}
+                  </li>
+                ))}
+              </ul>
+            )
+          : !error && <p className="text-muted-foreground text-sm">{t("deleteLoading")}</p>}
         <div className="space-y-2">
           <Label htmlFor={`delete-confirm-${userId}`}>{t("deleteType", { email })}</Label>
           <Input

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Check, Info, Lock, Plus } from "lucide-react";
@@ -18,7 +18,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { MOBILE_QUERY, useIsMobile } from "@/hooks/use-is-mobile";
+import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useOpenFromQuery } from "@/hooks/use-open-from-query";
 import { cn } from "@/lib/utils";
 import {
   ACCOUNT_BANK_NAME_MAX,
@@ -84,15 +85,10 @@ export function AccountForm({
   const [openMobile, setOpenMobile] = useState(liveMobile);
   const isMobile = open ? openMobile : liveMobile;
 
-  // Opened after mount: useIsMobile only resolves post-hydration, so read the viewport here.
-  useEffect(() => {
-    if (!defaultOpen) return;
-    const frame = requestAnimationFrame(() => {
-      setOpenMobile(window.matchMedia(MOBILE_QUERY).matches);
-      setUncontrolledOpen(true);
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [defaultOpen]);
+  useOpenFromQuery(defaultOpen, (mobile) => {
+    setOpenMobile(mobile);
+    setUncontrolledOpen(true);
+  });
 
   const [type, setType] = useState<AccountType>((account?.type as AccountType) ?? "CHECKING");
   const [color, setColor] = useState<string>(account?.color ?? DEFAULT_COLOR);

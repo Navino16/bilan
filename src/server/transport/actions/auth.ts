@@ -4,12 +4,17 @@ import { authHeaders } from "@/server/http/auth-headers";
 import { env } from "@/env";
 import { isAPIError } from "better-auth/api";
 import { getAuth } from "@/server/auth";
-import { changePasswordLimiter, registerLimiter, resetLimiter } from "@/server/auth/rate-limit";
+import {
+  changePasswordLimiter,
+  registerLimiter,
+  resetLimiter,
+  withRefund,
+} from "@/server/auth/rate-limit";
 import { requireSession } from "@/server/auth/permissions";
 import { appSettings, getMinPasswordLength } from "@/server/services/settings/app-settings";
 import { consumeSignupToken, refundSignupToken } from "@/server/services/signup-tokens";
 import { userExistsByEmail } from "@/server/services/users/lookup";
-import { changePassword } from "@/server/services/users/password";
+import { changePassword, isBadPassword } from "@/server/services/users/password";
 import { revokeOtherSessions, revokeSession } from "@/server/services/users/sessions";
 import { logEvent } from "@/server/services/audit";
 import {
@@ -174,10 +179,10 @@ export async function resetConfirmAction(
     const auth = await getAuth();
     await auth.api.resetPassword({
       body: { token: parsed.data.token, newPassword: parsed.data.password },
+      headers: await authHeaders(),
     });
     await logEvent({ action: "auth.password.reset_completed" });
-    // `auth.password.changed` + the security email are emitted by the
-    // account.update databaseHook (fires for every credential password change).
+    // `auth.password.changed` + the security email come from emailAndPassword.onPasswordReset.
     return { ok: true };
   } catch {
     return { ok: false, error: "INVALID_TOKEN" };
@@ -208,22 +213,22 @@ export async function changePasswordAction(
   if (newPassword.length > PASSWORD_MAX_LENGTH)
     return failureOnField({ ok: false, error: "PASSWORD_TOO_LONG" }, PASSWORD_ERROR_FIELDS);
 
-  const bucket = changePasswordLimiter.consume(user.id);
-  if (!bucket.allowed) {
-    await logEvent({
-      userId: user.id,
-      action: "auth.password.change_failed",
-      metadata: { reason: "rate_limit" },
-    });
-    return { ok: false, error: "RATE_LIMITED", retryAfter: bucket.retryAfterSec };
+  const headers = await authHeaders();
+  const res = await withRefund(
+    changePasswordLimiter,
+    user.id,
+    () => changePassword(headers, { currentPassword, newPassword, revokeOtherSessions }),
+    isBadPassword,
+  );
+  if (res.allowed) {
+    return res.result.ok ? res.result : failureOnField(res.result, PASSWORD_ERROR_FIELDS);
   }
-
-  const res = await changePassword(await authHeaders(), {
-    currentPassword,
-    newPassword,
-    revokeOtherSessions,
+  await logEvent({
+    userId: user.id,
+    action: "auth.password.change_failed",
+    metadata: { reason: "rate_limit" },
   });
-  return res.ok ? res : failureOnField(res, PASSWORD_ERROR_FIELDS);
+  return { ok: false, error: "RATE_LIMITED", retryAfter: res.retryAfterSec };
 }
 
 export async function revokeSessionAction(sessionId: string): Promise<AuthActionState> {

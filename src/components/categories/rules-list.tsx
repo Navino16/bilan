@@ -186,10 +186,14 @@ export function RulesList({
                   <div className="flex flex-wrap items-center gap-2 text-[11px]">
                     <Pill>{t(`match.${r.matchType}`)}</Pill>
                     {target}
-                    <span className="text-muted-foreground">· {scope}</span>
-                    <span className="text-muted-foreground">
-                      · {t("hitCount", { count: r.hits })}
-                    </span>
+                  </div>
+                  {/* NBSP keeps each « · » on its preceding item's line when the text wraps. */}
+                  <div data-slot="rule-meta" className="text-muted-foreground text-[11px]">
+                    {[
+                      t("priorityValue", { priority: r.priority }),
+                      scope,
+                      t("hitCount", { count: r.hits }),
+                    ].join("\u00a0· ")}
                   </div>
                 </div>
                 {actions}

@@ -312,6 +312,7 @@
     "matchType": "Match",
     "category": "Category",
     "priority": "Priority",
+    "priorityValue": "Priority {priority}",
     "caseSensitive": "Case-sensitive",
     "scope": "Scope",
     "save": "Save",
@@ -387,6 +388,7 @@
     "status": {
       "OK": "On track",
       "WARN": "Near limit",
+      "REACHED": "Reached",
       "OVER": "Over budget"
     },
     "detail": {
@@ -1140,6 +1142,7 @@
           "TOO_LONG": "The new password is too long.",
           "MISMATCH": "The two passwords don’t match.",
           "RATE_LIMITED": "Too many attempts. Try again later.",
+          "rateLimitedFor": "Too many attempts. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
           "INVALID": "Fill in all the fields.",
           "FAILED": "Couldn’t change the password. Please try again.",
           "REVOKE_FAILED": "Your password was changed, but your other devices couldn’t be signed out."
@@ -1305,7 +1308,7 @@
       "deleteAccounts": "{count, plural, one {# bank account} other {# bank accounts}} and their history disappear{shared, plural, =0 {} one {, # of them shared: household members will no longer see it} other {, # of them shared: household members will no longer see them}}.",
       "deleteTransfer": "Household “{group}” will be handed over to {to}.",
       "deleteGroup": "Household “{group}”, of which they are the only member, will be deleted.",
-      "deleteBudgetLines": "Household budget lines that targeted their accounts will no longer be limited to an account.",
+      "deleteBudgetLines": "Lines in household or other members’ budgets that targeted their accounts will no longer be limited to an account.",
       "roleConfirmTitle": "Change {user}’s role?",
       "roleConfirmBody": "{from} → {to}. The change takes effect immediately.",
       "roleConfirm": "Change role",

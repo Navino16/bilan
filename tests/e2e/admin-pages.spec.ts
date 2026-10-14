@@ -93,7 +93,10 @@ test.describe("admin pages (#164)", () => {
         await page.getByRole("menuitem", { name: /supprimer définitivement/i }).click();
         await expect(dialog).toBeVisible({ timeout: 2000 });
       }).toPass({ timeout: 20_000 });
-      await expect(dialog.locator('[data-slot="user-deletion-impact"]')).toBeVisible();
+      await expect(dialog.getByText(/calcul de l’impact/i)).toBeHidden();
+      await expect(dialog.getByRole("alert")).toHaveCount(0);
+      // A fresh user owns nothing: no impact warning, in particular none about budget lines (#230).
+      await expect(dialog.locator('[data-slot="user-deletion-impact"]')).toHaveCount(0);
       const confirm = dialog.getByRole("button", { name: /supprimer définitivement/i });
       await expect(confirm).toBeDisabled();
       await dialog.getByRole("textbox").fill(email);

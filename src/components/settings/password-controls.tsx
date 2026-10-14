@@ -25,6 +25,7 @@ function PasswordForm({
   const [revoke, setRevoke] = useState(true);
   const form = useActionForm(changePasswordAction, { onSuccess: onDone });
   const { pending } = form;
+  const retryAfter = form.state && !form.state.ok ? form.state.retryAfter : undefined;
 
   return (
     <form {...form.formProps} className="space-y-4">
@@ -82,7 +83,11 @@ function PasswordForm({
       </div>
       {form.error && (
         <Alert variant="destructive">
-          <AlertDescription>{t(`error.${form.error}`)}</AlertDescription>
+          <AlertDescription>
+            {form.error === "RATE_LIMITED" && retryAfter
+              ? t("error.rateLimitedFor", { minutes: Math.ceil(retryAfter / 60) })
+              : t(`error.${form.error}`)}
+          </AlertDescription>
         </Alert>
       )}
       <div className="flex flex-wrap gap-2">

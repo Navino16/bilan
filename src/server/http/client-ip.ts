@@ -20,6 +20,13 @@ export function resolveClientIp(
   return hop ? parseHop(hop) : null;
 }
 
+export function requestOrigin(headers: Headers | undefined): {
+  ip: string | null;
+  userAgent: string | null;
+} {
+  return { ip: resolveClientIp(headers), userAgent: headers?.get("user-agent") ?? null };
+}
+
 // Accepts "a.b.c.d", "a.b.c.d:port", "v6", "[v6]" and "[v6]:port"; anything else is null.
 function parseHop(hop: string): string | null {
   const bracketed = /^\[([^\]]+)\](?::\d+)?$/.exec(hop);

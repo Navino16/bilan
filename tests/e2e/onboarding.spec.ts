@@ -56,9 +56,21 @@ test.describe("first run of a brand-new user (#170)", () => {
     // Step 1 from the dashboard CTA: lands on /accounts with the create form open.
     await page.goto("/fr/dashboard");
     await welcome.getByRole("link", { name: "Créer un compte" }).click();
-    await expect(page).toHaveURL(/\/fr\/accounts\?new=1$/, { timeout: 15_000 });
-    // The open dialog makes the page inert, so the empty-state CTA is checked by text.
+    // Once open, the form drops `?new=1`: neither back navigation nor a reload reopens it (#230).
+    await expect(page.locator('input[name="name"]')).toBeVisible({ timeout: 15_000 });
+    await expect(page).toHaveURL(/\/fr\/accounts$/, { timeout: 15_000 });
+    await page.keyboard.press("Escape");
+    await expect(page.locator('input[name="name"]')).toBeHidden();
+    await page.locator("aside").getByRole("link", { name: "Tableau de bord" }).click();
+    await expect(page).toHaveURL(/\/fr\/dashboard$/);
+    await page.goBack();
+    await expect(page).toHaveURL(/\/fr\/accounts$/);
     await expect(emptyState(page)).toContainText("Créer mon premier compte");
+    await expect(page.locator('input[name="name"]')).toBeHidden();
+    await page.reload();
+    await expect(emptyState(page)).toContainText("Créer mon premier compte");
+    await expect(page.locator('input[name="name"]')).toBeHidden();
+    await page.goto("/fr/accounts?new=1");
     const accountName = `Premier ${Date.now()}`;
     await expect(page.locator('input[name="name"]')).toBeVisible({ timeout: 15_000 });
     await page.fill('input[name="name"]', accountName);
@@ -79,9 +91,9 @@ test.describe("first run of a brand-new user (#170)", () => {
     // The checklist's manual-entry CTA opens the form directly.
     await page.goto("/fr/dashboard");
     await welcome.getByRole("link", { name: "Saisir une transaction" }).click();
-    await expect(page).toHaveURL(/\/fr\/transactions\?new=1$/, { timeout: 15_000 });
     const label = `Premiere ${Date.now()}`;
     await expect(page.locator('input[name="label"]')).toBeVisible({ timeout: 15_000 });
+    await expect(page).toHaveURL(/\/fr\/transactions$/, { timeout: 15_000 });
     await page.fill('input[name="date"]', "2026-01-15");
     await page.fill('input[name="amount"]', "-12");
     await page.fill('input[name="label"]', label);

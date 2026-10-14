@@ -191,6 +191,40 @@ describe("adminDeleteUser", () => {
     expect(await db.user.count({ where: { id: ids.victim } })).toBe(1);
   });
 
+  it("counts the surviving budget lines restricted to the user's accounts (#230)", async () => {
+    const impact = async (key: string) => (await userDeletionImpact(ids[key]))?.budgetLines;
+    expect(await impact("owner")).toBe(0);
+
+    async function budgetLineOn(key: string, owner: { userId: string } | { groupId: string }) {
+      const account = await db.bankAccount.create({
+        data: { ownerId: ids[key], name: `LC ${key}`, type: "CHECKING" },
+      });
+      await db.budget.create({
+        data: {
+          ...owner,
+          name: `LC budget ${stamp}`,
+          periodType: "MONTH",
+          periodStart: new Date("2026-01-01T00:00:00Z"),
+          periodEnd: new Date("2026-01-31T00:00:00Z"),
+          createdById: ids[key],
+          lines: { create: { accountId: account.id, plannedAmount: 100 } },
+        },
+      });
+    }
+    const groupId = async (name: string) =>
+      (await db.group.findFirstOrThrow({ where: { name: `${name} ${stamp}` } })).id;
+
+    await budgetLineOn("owner", { userId: ids.owner });
+    expect(await impact("owner")).toBe(0);
+    await budgetLineOn("owner", { groupId: await groupId("LC shared") });
+    expect(await impact("owner")).toBe(1);
+    // Another member's personal budget restricted to the user's (shared) account.
+    await budgetLineOn("owner", { userId: ids.member });
+    expect(await impact("owner")).toBe(2);
+    await budgetLineOn("loner", { groupId: await groupId("LC solo") });
+    expect(await impact("loner")).toBe(0);
+  });
+
   it("previews then hands a household over to its earliest other member", async () => {
     const impact = await userDeletionImpact(ids.owner);
     expect(impact?.transfers).toEqual([{ group: `LC shared ${stamp}`, to: "LC member" }]);
