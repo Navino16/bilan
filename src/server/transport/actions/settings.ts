@@ -9,6 +9,7 @@ import {
   getAppName,
   SECURITY_SETTING_KEYS,
 } from "@/server/services/settings/app-settings";
+import { appNameSchema } from "@/lib/validation/app-name";
 import {
   deleteSmtpConfig,
   sendSmtpTest,
@@ -25,7 +26,7 @@ import {
   providerSchema,
   updateAuthProvider,
 } from "@/server/services/settings/auth-providers";
-import { invalidInput, type FormFailure } from "@/lib/validation/field-errors";
+import { invalidInput, zodIssueCode, type FormFailure } from "@/lib/validation/field-errors";
 import { MIN_PASSWORD_LENGTH_RANGE } from "@/lib/validation/app-settings";
 
 export type SettingsActionState = { ok: true } | FormFailure | null;
@@ -153,29 +154,35 @@ export async function deleteSmtpConfigAction(): Promise<SettingsActionState> {
   return { ok: true };
 }
 
-// Coerce a known app-setting key's raw form value to its stored type.
-function coerceAppSetting(key: string, raw: string): unknown | undefined {
+type Coerced = { value: unknown } | { error: string };
+
+// Coerce a known app-setting key's raw form value to its stored type, or a field error code.
+function coerceAppSetting(key: string, raw: string): Coerced {
   switch (key) {
     case "registration_mode":
-      return ["OPEN", "INVITE_ONLY", "DISABLED"].includes(raw) ? raw : undefined;
+      return ["OPEN", "INVITE_ONLY", "DISABLED"].includes(raw)
+        ? { value: raw }
+        : { error: "INVALID" };
     case "credentials_enabled":
     case "security.admin_2fa_required":
-      return raw.toLowerCase() === "true" || raw.toLowerCase() === "on" || raw === "1";
+      return { value: raw.toLowerCase() === "true" || raw.toLowerCase() === "on" || raw === "1" };
     case "min_password_length": {
       const n = Number(raw);
       const { min, max } = MIN_PASSWORD_LENGTH_RANGE;
-      return Number.isInteger(n) && n >= min && n <= max ? n : undefined;
+      return Number.isInteger(n) && n >= min && n <= max ? { value: n } : { error: "OUT_OF_RANGE" };
     }
-    case "app_name":
-      return raw.length > 0 ? raw : undefined;
+    case "app_name": {
+      const parsed = appNameSchema.safeParse(raw);
+      return parsed.success
+        ? { value: parsed.data }
+        : { error: zodIssueCode(parsed.error.issues[0]) };
+    }
     default:
-      return undefined;
+      return { error: "INVALID" };
   }
 }
 
 const SETTING_FIELD = "s:";
-
-const INVALID_CODE: Record<string, string> = { min_password_length: "OUT_OF_RANGE" };
 
 // Saves every `s:<key>` field of one settings card; nothing is written if one is invalid.
 export async function setAppSettingsAction(
@@ -189,10 +196,9 @@ export async function setAppSettingsAction(
     if (!field.startsWith(SETTING_FIELD)) continue;
     if (typeof raw !== "string") return { ok: false, error: "INVALID" };
     const key = field.slice(SETTING_FIELD.length);
-    const value = coerceAppSetting(key, raw.trim());
-    if (value === undefined)
-      fieldErrors[field] = raw.trim() ? (INVALID_CODE[key] ?? "INVALID") : "REQUIRED";
-    else values.push([key, value]);
+    const coerced = coerceAppSetting(key, raw.trim());
+    if ("error" in coerced) fieldErrors[field] = raw.trim() ? coerced.error : "REQUIRED";
+    else values.push([key, coerced.value]);
   }
   if (Object.keys(fieldErrors).length) return { ok: false, error: "INVALID", fieldErrors };
   if (

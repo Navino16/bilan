@@ -33,9 +33,14 @@ function Legs({ negative, positive }: { negative: PairLeg; positive: PairLeg }) 
       <span aria-hidden className="text-muted-foreground w-3 shrink-0 tabular-nums">
         {sign}
       </span>
-      <span className="truncate">{l.label}</span>
-      <span className="text-muted-foreground shrink-0">
-        {l.accountName} · {day(l.date)}
+      {/* Narrow cards: the account · date drop below the label instead of squeezing it. */}
+      <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2">
+        <span data-slot="leg-label" className="max-w-full min-w-0 truncate">
+          {l.label}
+        </span>
+        <span className="text-muted-foreground min-w-0 wrap-anywhere">
+          {l.accountName} · {day(l.date)}
+        </span>
       </span>
     </li>
   );
@@ -71,7 +76,7 @@ function Row({ item }: { item: SuggestedPairView }) {
     // own element, which would otherwise stack the amount + buttons vertically.
     <Card data-slot="suggestion-row" className="p-4">
       <div className="flex flex-wrap items-center gap-3">
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-[1_1_16rem]">
           <div className="truncate text-sm font-medium">
             {money.format(item.amount)}
             <span className="text-muted-foreground text-[12px] font-normal">
@@ -120,7 +125,7 @@ function IgnoredRow({ item }: { item: IgnoredPairView }) {
   return (
     <Card data-slot="ignored-row" className="p-4">
       <div className="flex flex-wrap items-center gap-3">
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-[1_1_16rem]">
           <div className="truncate text-sm font-medium">{money.format(item.amount)}</div>
           <Legs negative={item.negative} positive={item.positive} />
         </div>

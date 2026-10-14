@@ -125,6 +125,23 @@ test.describe("transaction links", () => {
     await expect(row).toBeVisible({ timeout: 20_000 });
     // Each leg shows its day.
     await expect(row).toContainText("2 avr. 2026");
+
+    // #224: at 320px the labels keep their width and « Lier » doesn't cover the legs.
+    const viewport = page.viewportSize();
+    await page.setViewportSize({ width: 320, height: 800 });
+    for (const label of await row.locator('[data-slot="leg-label"]').all()) {
+      await expect
+        .poll(() => label.evaluate((el) => el.clientWidth > 0 && el.scrollWidth <= el.clientWidth))
+        .toBe(true);
+    }
+    const legs = (await row.locator("ul").boundingBox())!;
+    const linkButton = (await row.getByRole("button", { name: /^lier$/i }).boundingBox())!;
+    expect(
+      linkButton.y >= legs.y + legs.height || linkButton.x >= legs.x + legs.width,
+      "« Lier » overlaps the legs",
+    ).toBe(true);
+    if (viewport) await page.setViewportSize(viewport);
+
     await row.getByRole("button", { name: /ignorer/i }).click();
     // After ignoring, that pair no longer appears on reload.
     await expect(async () => {

@@ -66,7 +66,7 @@ export function CategoriesView({
 
       {/* The wrapper keeps space-y's margins: -m-1 on the scroller itself would override them. */}
       <div>
-        <ScrollFade className="-m-1 max-w-full p-1">
+        <ScrollFade className="-m-1 max-w-[calc(100%+0.5rem)] p-1">
           <SegmentedTabs
             className="w-max"
             items={[

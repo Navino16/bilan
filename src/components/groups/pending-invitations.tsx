@@ -84,7 +84,9 @@ export function PendingInvitations({ invitations }: { invitations: PendingForUse
             className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-6"
           >
             <div className="min-w-40 flex-1">
-              <span className="text-sm">{t("fromGroup", { group: inv.groupName })}</span>{" "}
+              <span className="text-sm wrap-anywhere">
+                {t("fromGroup", { group: inv.groupName })}
+              </span>{" "}
               <Badge variant="outline">{tg(`roles.${inv.role}`)}</Badge>
             </div>
             <div className="flex shrink-0 gap-2">

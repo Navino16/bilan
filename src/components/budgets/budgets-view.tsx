@@ -147,7 +147,9 @@ export function BudgetsView({
                   >
                     <div className="space-y-1">
                       <div className="flex items-start justify-between gap-3">
-                        <p className="min-w-0 truncate font-medium">{b.name}</p>
+                        <p className="min-w-0 truncate font-medium" title={b.name}>
+                          {b.name}
+                        </p>
                         <Badge
                           style={statusStyle(b.status)}
                           className="shrink-0 border-transparent"

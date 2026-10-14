@@ -19,7 +19,7 @@ import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
 
-const cols = "md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_140px_32px]";
+const cols = "md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_170px_32px]";
 
 export const generateMetadata = pageTitle("adminUsers");
 
@@ -99,9 +99,9 @@ export default async function AdminUsersPage({
           <div
             key={u.id}
             data-slot="admin-user-row"
-            className={`flex items-center justify-between gap-3 border-b px-4 py-3 text-sm last:border-b-0 sm:px-6 md:grid ${cols}`}
+            className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-4 py-3 text-sm last:border-b-0 sm:px-6 md:grid md:gap-3 ${cols}`}
           >
-            <div className="min-w-0">
+            <div className="min-w-0 flex-auto">
               <div className="flex items-center gap-2">
                 <span className="truncate font-medium">{displayName(u)}</span>
                 {u.disabled && <StatusBadge active={false}>{t("disabledBadge")}</StatusBadge>}
@@ -109,7 +109,7 @@ export default async function AdminUsersPage({
               <div className="text-muted-foreground truncate text-xs md:hidden">{u.email}</div>
             </div>
             <div className="text-muted-foreground hidden truncate md:block">{u.email}</div>
-            <div className="flex items-center justify-end gap-1 md:contents">
+            <div className="ml-auto flex shrink-0 items-center justify-end gap-1 md:contents">
               {canUpdate && u.id !== viewer.id ? (
                 <RoleSelect userId={u.id} role={topRole(u.roleKeys)} userLabel={displayName(u)} />
               ) : (

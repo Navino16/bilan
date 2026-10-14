@@ -48,8 +48,10 @@ export function MobileNav({
         <Menu className="h-5 w-5" />
       </SheetTrigger>
       <SheetContent side="left" className="bg-sidebar flex w-72 flex-col gap-0 p-0">
-        <SheetHeader className="shrink-0 px-5 py-6 text-left">
-          <SheetTitle className="font-display text-2xl tracking-tight">{appName}</SheetTitle>
+        <SheetHeader className="shrink-0 py-6 pr-14 pl-5 text-left">
+          <SheetTitle className="font-display line-clamp-2 text-2xl tracking-tight wrap-anywhere">
+            {appName}
+          </SheetTitle>
           <SheetDescription className="text-[10px] tracking-[0.12em] uppercase">
             {t("tagline", { year: String(year) })}
           </SheetDescription>
