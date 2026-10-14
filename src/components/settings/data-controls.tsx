@@ -130,7 +130,7 @@ export function DataControls({
               )}
               {form.error && (
                 <Alert variant="destructive">
-                  <AlertDescription>{t(`error.${form.error}` as "error.INVALID")}</AlertDescription>
+                  <AlertDescription>{t(`error.${form.error}` as "error.FAILED")}</AlertDescription>
                 </Alert>
               )}
               <DialogFooter>

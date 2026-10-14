@@ -9,12 +9,16 @@ export function signupTokenExpiry(days: number | null, now: Date): Date | undefi
   return days === null ? undefined : new Date(now.getTime() + days * 86_400_000);
 }
 
-const optionalInt = (max: number) =>
+export const SIGNUP_TOKEN_MAX_USES_RANGE = { min: 1, max: SIGNUP_TOKEN_MAX_USES };
+
+const optionalInt = ({ min, max }: { min: number; max: number }) =>
   z
     .string()
     .trim()
     .transform((v) => (v === "" ? null : Number(v)))
-    .pipe(z.number().int().min(1).max(max).nullable());
+    .refine((n) => n === null || (Number.isInteger(n) && n >= min && n <= max), {
+      error: "OUT_OF_RANGE",
+    });
 
 export const createSignupTokenSchema = z.object({
   description: z
@@ -22,7 +26,7 @@ export const createSignupTokenSchema = z.object({
     .trim()
     .max(SIGNUP_TOKEN_DESCRIPTION_MAX)
     .transform((v) => v || undefined),
-  maxUses: optionalInt(SIGNUP_TOKEN_MAX_USES),
+  maxUses: optionalInt(SIGNUP_TOKEN_MAX_USES_RANGE),
   expiresInDays: z
     .string()
     .trim()

@@ -48,6 +48,15 @@ export function fieldErrorsFromZod(
   return out;
 }
 
+// Puts a server error code on its field (code → field name) instead of the form alert.
+export function failureOnField<F extends { ok: false; error: string }>(
+  failure: F,
+  fieldsByCode: Partial<Record<string, string>>,
+): F & { fieldErrors?: FieldErrors } {
+  const field = fieldsByCode[failure.error];
+  return field ? { ...failure, fieldErrors: { [field]: failure.error } } : failure;
+}
+
 export function invalidInput(
   error: z.ZodError,
   input?: Record<string, unknown>,

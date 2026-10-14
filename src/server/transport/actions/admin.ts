@@ -1,7 +1,11 @@
 "use server";
 
 import { getCurrentUser, hasPermission } from "@/server/auth/permissions";
-import { adminCreateUser, adminCreateUserSchema } from "@/server/services/users/create";
+import {
+  adminCreateUser,
+  adminCreateUserSchema,
+  UserExistsError,
+} from "@/server/services/users/create";
 import { RoleChangeError, setUserRole } from "@/server/services/users/roles";
 import { isInstanceRole } from "@/lib/instance-roles";
 import {
@@ -11,7 +15,7 @@ import {
 } from "@/server/services/signup-tokens";
 import { createSignupTokenSchema, signupTokenExpiry } from "@/lib/validation/signup-token";
 import { logEvent } from "@/server/services/audit";
-import { invalidInput, type FormFailure } from "@/lib/validation/field-errors";
+import { failureOnField, invalidInput, type FormFailure } from "@/lib/validation/field-errors";
 import {
   adminDeleteUser,
   setUserDisabled,
@@ -43,7 +47,9 @@ export async function adminCreateUserAction(
   try {
     await adminCreateUser(parsed.data, { id: actor.id });
     return { ok: true };
-  } catch {
+  } catch (e) {
+    if (e instanceof UserExistsError)
+      return failureOnField({ ok: false, error: "USER_EXISTS" }, { USER_EXISTS: "email" });
     return { ok: false, error: "FAILED" };
   }
 }

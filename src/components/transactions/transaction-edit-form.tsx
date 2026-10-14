@@ -135,6 +135,8 @@ export function TransactionEditForm({
           required
           maxLength={TRANSACTION_LABEL_MAX}
           defaultValue={item.label}
+          aria-invalid={error?.startsWith("LABEL_") || undefined}
+          aria-describedby={error?.startsWith("LABEL_") ? "tx-edit-error" : undefined}
         />
       </div>
       <div className="space-y-2">

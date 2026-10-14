@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { fieldErrorsFromZod, invalidInput } from "@/lib/validation/field-errors";
+import { failureOnField, fieldErrorsFromZod, invalidInput } from "@/lib/validation/field-errors";
 import { groupInputSchema, invitationInputSchema } from "@/lib/validation/group";
 import { accountInputSchema } from "@/lib/validation/account";
 import { budgetInputSchema } from "@/lib/validation/budget";
@@ -77,6 +77,25 @@ describe("fieldErrorsFromZod", () => {
     const r = schema.safeParse({ a: "abc" });
     expect(r.success).toBe(false);
     if (!r.success) expect(fieldErrorsFromZod(r.error)).toEqual({ a: "TOO_LONG" });
+  });
+});
+
+describe("failureOnField", () => {
+  const fields = { BAD_PASSWORD: "currentPassword" };
+
+  it("attaches a mapped server code to its field", () => {
+    expect(failureOnField({ ok: false, error: "BAD_PASSWORD" }, fields)).toEqual({
+      ok: false,
+      error: "BAD_PASSWORD",
+      fieldErrors: { currentPassword: "BAD_PASSWORD" },
+    });
+  });
+
+  it("leaves an unmapped code as a form-level failure", () => {
+    expect(failureOnField({ ok: false, error: "FAILED" }, fields)).toEqual({
+      ok: false,
+      error: "FAILED",
+    });
   });
 });
 

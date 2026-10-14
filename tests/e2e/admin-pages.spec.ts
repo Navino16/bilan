@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Locator } from "@playwright/test";
 
 test.describe("admin pages (#164)", () => {
   test.skip(
@@ -44,6 +44,32 @@ test.describe("admin pages (#164)", () => {
       await expect(
         page.locator('[data-slot="audit-row"]', { hasText: "Jeton d’invitation supprimé" }).first(),
       ).toBeVisible();
+    });
+
+    test("an invalid max uses shows its range once, without shifting the row (#227)", async ({
+      page,
+    }) => {
+      test.setTimeout(120_000);
+      await page.goto("/fr/admin/signup-tokens", {
+        waitUntil: "domcontentloaded",
+        timeout: 90_000,
+      });
+      const form = page.locator("form:has(#st-max)");
+      const maxUses = page.locator("#st-max");
+      // Skip native min/max validation to reach the server check.
+      await form.evaluate((f: HTMLFormElement) => (f.noValidate = true));
+      await expect(async () => {
+        await maxUses.fill("0");
+        await page.getByRole("button", { name: /^créer$/i }).click();
+        await expect(maxUses).toHaveAttribute("aria-invalid", "true", { timeout: 2000 });
+      }).toPass({ timeout: 20_000 });
+      await expect(maxUses).toHaveAccessibleDescription(/^Nombre entier entre 1 et 10\s000\.$/);
+      await expect(form.getByRole("alert")).toHaveCount(0);
+      const top = async (el: Locator) => (await el.boundingBox())!.y;
+      const descTop = await top(page.locator("#st-desc"));
+      expect(await top(maxUses)).toBeCloseTo(descTop, 0);
+      expect(await top(page.locator("#st-expiry"))).toBeCloseTo(descTop, 0);
+      expect(await top(form.getByRole("button", { name: /^créer$/i }))).toBeCloseTo(descTop, 0);
     });
 
     test("permanently deletes a user after typing their email", async ({ page }) => {

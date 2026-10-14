@@ -6,9 +6,15 @@ import { getAuth } from "@/server/auth";
 import { db } from "@/server/db";
 import { loginLimiter } from "@/server/auth/rate-limit";
 import { deleteOwnAccount, UserAdminError } from "@/server/services/users/lifecycle";
-import type { FormFailure } from "@/lib/validation/field-errors";
+import { failureOnField, type FormFailure } from "@/lib/validation/field-errors";
 
 export type AccountDataState = { ok: true } | FormFailure | null;
+
+const ERROR_FIELDS = {
+  REQUIRED: "password",
+  BAD_PASSWORD: "password",
+  BAD_CONFIRM: "confirmEmail",
+};
 
 export async function deleteAccountAction(
   _prev: AccountDataState,
@@ -26,7 +32,7 @@ export async function deleteAccountAction(
 
   if (credential) {
     const password = String(formData.get("password") ?? "");
-    if (!password) return { ok: false, error: "INVALID", fieldErrors: { password: "REQUIRED" } };
+    if (!password) return failureOnField({ ok: false, error: "REQUIRED" }, ERROR_FIELDS);
     // Rate-limits the password re-auth (own key in the login limiter).
     const bucket = loginLimiter.consume(`delete:${user.id}`);
     if (!bucket.allowed) return { ok: false, error: "RATE_LIMITED" };
@@ -34,13 +40,14 @@ export async function deleteAccountAction(
     try {
       await auth.api.verifyPassword({ body: { password }, headers: await authHeaders() });
     } catch {
-      return { ok: false, error: "BAD_PASSWORD" };
+      return failureOnField({ ok: false, error: "BAD_PASSWORD" }, ERROR_FIELDS);
     }
   } else {
     const confirmEmail = String(formData.get("confirmEmail") ?? "")
       .trim()
       .toLowerCase();
-    if (confirmEmail !== user.email.toLowerCase()) return { ok: false, error: "BAD_CONFIRM" };
+    if (confirmEmail !== user.email.toLowerCase())
+      return failureOnField({ ok: false, error: "BAD_CONFIRM" }, ERROR_FIELDS);
   }
 
   try {

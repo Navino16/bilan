@@ -614,6 +614,7 @@
       "AMOUNT_INVALID": "Invalid amount. Examples: -12.34 or 1,234.56.",
       "AMOUNT_PRECISION": "The amount can’t have more than 2 decimals.",
       "AMOUNT_ZERO": "The amount can’t be zero.",
+      "LABEL_REQUIRED": "The label is required.",
       "LABEL_TOO_LONG": "The label can’t exceed 200 characters.",
       "AMOUNT_AMBIGUOUS": "Ambiguous amount: write 1234 or 1.23 (no lone thousands separator).",
       "DATE_INVALID": "Invalid date.",
@@ -1083,7 +1084,7 @@
       "deleting": "Deleting…",
       "confirmDelete": "Delete permanently",
       "error": {
-        "INVALID": "Please enter your password.",
+        "REQUIRED": "Please enter your password.",
         "BAD_PASSWORD": "Incorrect password.",
         "BAD_CONFIRM": "The email you entered doesn’t match.",
         "RATE_LIMITED": "Too many attempts. Try again later.",
@@ -1134,14 +1135,14 @@
         "changed": "Your password has been changed.",
         "error": {
           "BAD_PASSWORD": "Incorrect current password.",
+          "SAME_PASSWORD": "The new password must be different from the current one.",
           "TOO_SHORT": "The new password is too short.",
           "TOO_LONG": "The new password is too long.",
           "MISMATCH": "The two passwords don’t match.",
           "RATE_LIMITED": "Too many attempts. Try again later.",
           "INVALID": "Fill in all the fields.",
           "FAILED": "Couldn’t change the password. Please try again.",
-          "REVOKE_FAILED": "Your password was changed, but your other devices couldn’t be signed out.",
-          "SAME_PASSWORD": "The new password must be different from the current one."
+          "REVOKE_FAILED": "Your password was changed, but your other devices couldn’t be signed out."
         }
       },
       "sessionsCard": {
@@ -1257,7 +1258,7 @@
       "error": {
         "UNAUTHORIZED": "You don’t have permission to create users.",
         "INVALID": "Check the fields you entered.",
-        "FAILED": "Creation failed (the email may already exist)."
+        "FAILED": "Creation failed. Please try again."
       },
       "createOverline": "Invitation",
       "createHint": "They receive an email with a link to set their password.",
@@ -1327,7 +1328,7 @@
       "statusUsedUp": "Used up",
       "error": {
         "UNAUTHORIZED": "You don’t have permission to manage tokens.",
-        "INVALID": "Invalid value (max uses: 1 to 10,000).",
+        "INVALID": "Check the fields you entered.",
         "STILL_ACTIVE": "Revoke this token before deleting it.",
         "FAILED": "Failed. Try again."
       },
@@ -1856,7 +1857,13 @@
       "AMOUNT_INVALID": "Invalid amount. Examples: -12.34 or 1,234.56.",
       "AMOUNT_AMBIGUOUS": "Ambiguous amount: write 1234 or 1.23 (no lone thousands separator).",
       "AMOUNT_PRECISION": "The amount can’t have more than 2 decimals.",
-      "PASSWORD_TOO_SHORT": "At least {count} characters."
+      "PASSWORD_TOO_SHORT": "At least {count} characters.",
+      "PASSWORD_TOO_LONG": "At most {max, number} characters.",
+      "BAD_PASSWORD": "Incorrect password.",
+      "SAME_PASSWORD": "Must be different from the current password.",
+      "BAD_CONFIRM": "The email you entered doesn’t match.",
+      "USER_EXISTS": "An account already exists with this email.",
+      "OUT_OF_RANGE": "Whole number from {min, number} to {max, number}."
     }
   }
 }

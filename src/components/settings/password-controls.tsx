@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { changePasswordAction } from "@/server/transport/actions/auth";
 import { useActionForm } from "@/components/forms/use-action-form";
 import { FieldError } from "@/components/forms/field-error";
+import { PASSWORD_MAX_LENGTH } from "@/lib/validation/app-settings";
 
 function PasswordForm({
   minLength,
@@ -51,7 +52,11 @@ function PasswordForm({
             autoComplete="new-password"
             {...form.fieldProps("newPassword", "pw-new-hint")}
           />
-          <FieldError form={form} name="newPassword" />
+          <FieldError
+            form={form}
+            name="newPassword"
+            values={{ count: minLength, max: PASSWORD_MAX_LENGTH }}
+          />
           <p id="pw-new-hint" className="text-muted-foreground text-xs">
             {t("minLength", { count: minLength })}
           </p>

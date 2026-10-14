@@ -57,6 +57,24 @@ test.describe("admin settings", () => {
     }
   });
 
+  test("an out-of-range min password length shows its range once, on the field (#227)", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await page.goto("/fr/admin/app-settings", { waitUntil: "domcontentloaded", timeout: 90_000 });
+    const form = page.locator("form:has(#set-min_password_length)");
+    const input = form.locator("#set-min_password_length");
+    // Skip native min/max validation to reach the server check.
+    await form.evaluate((f: HTMLFormElement) => (f.noValidate = true));
+    await expect(async () => {
+      await input.fill("3");
+      await form.getByRole("button", { name: /enregistrer/i }).click();
+      await expect(input).toHaveAttribute("aria-invalid", "true", { timeout: 2000 });
+    }).toPass({ timeout: 20_000 });
+    await expect(input).toHaveAccessibleDescription("Nombre entier entre 8 et 128.");
+    await expect(form.getByRole("alert")).toHaveCount(0);
+  });
+
   test("adds a provider, refuses a duplicate key, then deletes it (#163)", async ({ page }) => {
     test.setTimeout(120_000);
     const key = `e2e-${Date.now()}`;

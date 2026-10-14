@@ -12,6 +12,7 @@ import { setAppSettingsAction } from "@/server/transport/actions/settings";
 import { NativeSelect } from "@/components/ui/native-select";
 import { useActionForm, type ActionForm } from "@/components/forms/use-action-form";
 import { FieldError } from "@/components/forms/field-error";
+import { MIN_PASSWORD_LENGTH_RANGE } from "@/lib/validation/app-settings";
 
 const CardForm = createContext<ActionForm | null>(null);
 
@@ -26,6 +27,7 @@ function SettingsCard({
   const router = useRouter();
   const form = useActionForm(setAppSettingsAction, {
     resetOnSuccess: false,
+    summarizeFieldErrors: false,
     onSuccess: () => router.refresh(),
   });
   const { state, pending } = form;
@@ -46,9 +48,9 @@ function SettingsCard({
           </Button>
           {state?.ok && <p className="text-muted-foreground text-xs">{t("saved")}</p>}
         </div>
-        {state && !state.ok && (
+        {form.error && (
           <Alert variant="destructive">
-            <AlertDescription>{t(`error.${state.error}`)}</AlertDescription>
+            <AlertDescription>{t(`error.${form.error}`)}</AlertDescription>
           </Alert>
         )}
       </form>
@@ -59,10 +61,12 @@ function SettingsCard({
 function Field({
   settingKey,
   label,
+  errorValues,
   children,
 }: {
   settingKey: string;
   label: string;
+  errorValues?: Record<string, number>;
   children: (
     props: { id: string; name: string } & Partial<ReturnType<ActionForm["fieldProps"]>>,
   ) => ReactNode;
@@ -74,7 +78,7 @@ function Field({
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
       {children({ id, name, ...form?.fieldProps(name) })}
-      {form && <FieldError form={form} name={name} />}
+      {form && <FieldError form={form} name={name} values={errorValues} />}
     </div>
   );
 }
@@ -122,14 +126,18 @@ export function AppSettingsForm({
       </SettingsCard>
 
       <SettingsCard section="security">
-        <Field settingKey="min_password_length" label={t("minPasswordLength")}>
+        <Field
+          settingKey="min_password_length"
+          label={t("minPasswordLength")}
+          errorValues={MIN_PASSWORD_LENGTH_RANGE}
+        >
           {(p) => (
             <Input
               {...p}
               key={minPasswordLength}
               type="number"
-              min={8}
-              max={128}
+              min={MIN_PASSWORD_LENGTH_RANGE.min}
+              max={MIN_PASSWORD_LENGTH_RANGE.max}
               defaultValue={minPasswordLength}
             />
           )}

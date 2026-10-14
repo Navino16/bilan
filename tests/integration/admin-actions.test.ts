@@ -27,6 +27,7 @@ vi.mock("nodemailer", () => ({
 }));
 
 const {
+  adminCreateUserAction,
   createSignupTokenAction,
   deleteSignupTokenAction,
   setUserDisabledAction,
@@ -95,6 +96,18 @@ describe("signup token actions", () => {
         form({ description: "", maxUses: "", expiresInDays: "" }),
       ),
     ).toEqual({ ok: false, error: "UNAUTHORIZED" });
+  });
+});
+
+describe("adminCreateUserAction", () => {
+  it("puts a duplicate e-mail on the e-mail field (#227)", async () => {
+    current.user = users.super;
+    expect(
+      await adminCreateUserAction(
+        null,
+        form({ name: "Twin", email: users.user.email.toUpperCase(), role: "USER" }),
+      ),
+    ).toEqual({ ok: false, error: "USER_EXISTS", fieldErrors: { email: "USER_EXISTS" } });
   });
 });
 
