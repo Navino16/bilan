@@ -23,7 +23,8 @@ import { PageHeader } from "@/components/shell/page-header";
 import { NativeSelect } from "@/components/ui/native-select";
 import { discardImportAction } from "@/server/transport/actions/imports";
 import { cn } from "@/lib/utils";
-import { formatBytes, formatCount, formatDayMonth } from "@/lib/format";
+import { formatBytes, formatCount, formatDate } from "@/lib/format";
+import { previewCategoryId } from "@/lib/import-preview";
 import { RevertImportDialog } from "./revert-import-dialog";
 import { AddBlockedState, ADD_BLOCKED_ID } from "@/components/onboarding/add-blocked";
 import type { AddTransactionBlocker } from "@/lib/onboarding";
@@ -118,11 +119,14 @@ export function ImportWizard({
   // value is the row's product, so ignored products don't count their exclusions).
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [excluded, setExcluded] = useState<Record<string, string>>({});
+  // Bumped when per-row edits reset, to remount the (uncontrolled) row category pickers.
+  const [editsEpoch, setEditsEpoch] = useState(0);
   const [autoCategorize, setAutoCategorize] = useState(true);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [reverting, setReverting] = useState(false);
   const [reverted, setReverted] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mappingError, setMappingError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -149,6 +153,7 @@ export function ImportWizard({
   async function upload(f: File, account: string) {
     discard(preview?.batchId);
     setError(null);
+    setMappingError(null);
     const isPdf = isPdfFile(f);
     if (f.size === 0) return setError("EMPTY");
     if (f.size > (isPdf ? PDF_MAX_BYTES : CSV_MAX_BYTES)) return setError("TOO_LARGE");
@@ -183,7 +188,10 @@ export function ImportWizard({
 
   // Re-fetches the preview (another page, or a CSV mapping edit). Only the latest
   // request may land, so quick successive clicks can't show a stale page.
-  async function refresh(body: object, opts: { resetEdits?: boolean; onFail?: () => void } = {}) {
+  async function refresh(
+    body: object,
+    opts: { resetEdits?: boolean; mapping?: boolean; onFail?: () => void } = {},
+  ) {
     if (!preview) return;
     const url =
       preview.source === "PDF"
@@ -201,15 +209,20 @@ export function ImportWizard({
       if (seq !== refreshSeq.current) return;
       if (!res.ok) throw new Error(data.error ?? "PARSE_FAILED");
       setError(null);
+      setMappingError(null);
       setPreview(data);
       if (opts.resetEdits) {
         setOverrides({});
         setExcluded({});
+        setEditsEpoch((n) => n + 1);
       }
     } catch (e) {
       if (seq !== refreshSeq.current) return;
       opts.onFail?.();
-      setError(e instanceof Error ? e.message : "PARSE_FAILED");
+      const code = e instanceof Error ? e.message : "PARSE_FAILED";
+      // Shown by the mapping controls the user just changed (the sidebar).
+      if (opts.mapping) setMappingError(code);
+      else setError(code);
     } finally {
       if (seq === refreshSeq.current) setRefreshing(false);
     }
@@ -225,12 +238,13 @@ export function ImportWizard({
     void refresh(
       { mapping: csvMappingBody(next, decimalChoice), page: 0 },
       // The preview didn't change, so neither does the mapping a commit will use.
-      { resetEdits: true, onFail: () => setColumns(shown) },
+      { resetEdits: true, mapping: true, onFail: () => setColumns(shown) },
     );
   }
 
   // Picking the guessed mark again confirms it: same amounts, so per-row edits stay.
-  function chooseDecimal(mark: DecimalMark) {
+  // The banner sits in the preview card, so its errors show there, not in the sidebar.
+  function chooseDecimal(mark: DecimalMark, fromBanner = false) {
     if (!preview || preview.source !== "CSV") return;
     const confirming = mark === shownDecimal;
     if (confirming && !preview.decimalGuessed) return;
@@ -238,7 +252,11 @@ export function ImportWizard({
     setDecimalChoice(mark);
     void refresh(
       { mapping: csvMappingBody(columns, mark), page: confirming ? (preview.page ?? 0) : 0 },
-      { resetEdits: !confirming, onFail: () => setDecimalChoice(previous) },
+      {
+        resetEdits: !confirming,
+        mapping: !fromBanner,
+        onFail: () => setDecimalChoice(previous),
+      },
     );
   }
 
@@ -284,6 +302,7 @@ export function ImportWizard({
     setOverrides({});
     setExcluded({});
     setError(null);
+    setMappingError(null);
     setSummary(null);
     setReverted(null);
     setProgress(null);
@@ -383,13 +402,14 @@ export function ImportWizard({
   const steps = [t("steps.file"), t("steps.read"), t("steps.match"), t("steps.validate")];
 
   // Editable category per row (overrides the suggestion), using the same combobox
-  // as the transactions screen. Defaults to the suggestion; "" = Sans catégorie.
+  // as the transactions screen.
   function categorySelect(r: PreviewRow) {
     return (
       <CategoryCombobox
+        key={`${autoCategorize}-${editsEpoch}`}
         aria-label={t("rowCategory", { label: r.rawLabel })}
         categories={categories}
-        defaultValue={overrides[r.externalId] ?? r.suggestedCategoryId ?? ""}
+        defaultValue={previewCategoryId(r, overrides, autoCategorize)}
         onChange={(id) => setOverrides((o) => ({ ...o, [r.externalId]: id }))}
       />
     );
@@ -683,8 +703,17 @@ export function ImportWizard({
                 <div className={`${overline} mb-2`}>{t("mapping")}</div>
                 {preview.source === "CSV" && preview.headers ? (
                   <>
+                    {mappingError && (
+                      <p
+                        role="alert"
+                        data-slot="import-mapping-error"
+                        className="text-destructive pb-1 text-xs leading-snug"
+                      >
+                        {errorText(mappingError)}
+                      </p>
+                    )}
                     {CSV_FIELDS.map((field) => (
-                      <FieldMap key={field} label={fieldLabel(field)}>
+                      <FieldMap key={field} label={fieldLabel(field)} mapped={!!columns[field]}>
                         <NativeSelect
                           value={columns[field] ?? ""}
                           aria-label={fieldLabel(field)}
@@ -709,7 +738,7 @@ export function ImportWizard({
                           label: t(`decimal.${MARK_KEY[m]}`),
                         }))}
                         value={shownDecimal}
-                        onChange={chooseDecimal}
+                        onChange={(mark) => chooseDecimal(mark)}
                         disabled={busy}
                         className="grid w-full grid-cols-2"
                       />
@@ -745,15 +774,18 @@ export function ImportWizard({
           </Card>
 
           {/* Preview */}
-          <Card className="gap-0 overflow-hidden p-0">
+          {/* Rows switch layout on the card's own width: it sits beside the sidebar. */}
+          <Card data-slot="import-preview" className="@container/preview gap-0 overflow-hidden p-0">
             <div
               ref={previewTop}
               className="flex scroll-mt-20 flex-wrap items-center justify-between gap-3 p-4 md:p-5"
             >
               <div>
                 <div className="font-display text-lg">{t("previewTitle", { count: total })}</div>
-                <div className="text-muted-foreground text-xs">
-                  {t("previewMeta", { dup: dupCount, cat: catCount })}
+                <div data-slot="import-preview-meta" className="text-muted-foreground text-xs">
+                  {autoCategorize
+                    ? t("previewMeta", { dup: dupCount, cat: catCount })
+                    : t("previewMetaNoCat", { dup: dupCount })}
                 </div>
                 {preview.source === "CSV" && preview.decimalGuessed && guessedMark && (
                   <div className="mt-2 space-y-2" data-slot="import-decimal-guessed">
@@ -770,7 +802,7 @@ export function ImportWizard({
                         size="sm"
                         className="max-md:h-10"
                         disabled={busy}
-                        onClick={() => chooseDecimal(guessedMark)}
+                        onClick={() => chooseDecimal(guessedMark, true)}
                       >
                         {t("decimal.confirm")}
                       </Button>
@@ -779,7 +811,7 @@ export function ImportWizard({
                         size="sm"
                         className="max-md:h-10"
                         disabled={busy}
-                        onClick={() => chooseDecimal(otherMark(guessedMark))}
+                        onClick={() => chooseDecimal(otherMark(guessedMark), true)}
                       >
                         {t("decimal.useOther", { mark: MARK_KEY[otherMark(guessedMark)] })}
                       </Button>
@@ -851,6 +883,11 @@ export function ImportWizard({
               {importable === 0 && !pending && (
                 <p className="text-muted-foreground w-full text-xs">{t("nothingToImport")}</p>
               )}
+              {error && (
+                <p role="alert" className="text-destructive w-full text-sm">
+                  {errorText(error)}
+                </p>
+              )}
             </div>
 
             {products.map((product) => (
@@ -877,7 +914,7 @@ export function ImportWizard({
                     </NativeSelect>
                   </div>
                 )}
-                <div className="text-muted-foreground bg-muted/60 hidden grid-cols-[28px_60px_minmax(0,1fr)_172px_96px] items-center gap-3 border-y px-5 py-2.5 text-[11px] tracking-[0.08em] uppercase md:grid">
+                <div className="text-muted-foreground bg-muted/60 hidden grid-cols-[28px_92px_minmax(0,1fr)_172px_104px] items-center gap-3 border-y px-5 py-2.5 text-[11px] tracking-[0.08em] uppercase @2xl/preview:grid">
                   <span aria-hidden />
                   <span>{t("colDate")}</span>
                   <span>{t("colRawLabel")}</span>
@@ -906,19 +943,19 @@ export function ImportWizard({
                       className="border-b last:border-b-0"
                       style={r.isDuplicate ? { background: "var(--warning-bg)" } : undefined}
                     >
-                      {/* Desktop grid */}
                       <div
                         className={cn(
-                          "hidden grid-cols-[28px_60px_minmax(0,1fr)_172px_96px] items-center gap-3 px-5 py-2 md:grid",
+                          "hidden grid-cols-[28px_92px_minmax(0,1fr)_172px_104px] items-center gap-3 px-5 py-2 @2xl/preview:grid",
                           dimmed && "text-muted-foreground",
                         )}
                       >
                         {includeCheckbox(r, product.key)}
-                        <span className="text-muted-foreground text-xs">
-                          {formatDayMonth(r.date, locale)}
+                        <span className="text-muted-foreground text-xs whitespace-nowrap">
+                          {formatDate(r.date, locale)}
                         </span>
                         <span className="flex min-w-0 flex-col gap-0.5">
                           <span
+                            data-slot="import-row-label"
                             className="text-muted-foreground truncate font-mono text-[12.5px]"
                             title={r.rawLabel}
                           >
@@ -931,25 +968,32 @@ export function ImportWizard({
                         </span>
                         <span className="min-w-0">{categorySelect(r)}</span>
                         <span
-                          className="text-right text-sm font-medium tabular-nums"
+                          data-slot="import-row-amount"
+                          className="text-right text-sm font-medium whitespace-nowrap tabular-nums"
                           style={r.amount > 0 && !dimmed ? { color: "var(--income)" } : undefined}
                         >
                           {money.format(r.amount)}
                         </span>
                       </div>
 
-                      {/* Mobile compact */}
                       <div
                         className={cn(
-                          "flex gap-3 px-4 py-3 md:hidden",
+                          "flex gap-3 px-4 py-3 @2xl/preview:hidden",
                           dimmed && "text-muted-foreground",
                         )}
                       >
                         <div className="pt-0.5">{includeCheckbox(r, product.key)}</div>
                         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                           <div className="flex items-start justify-between gap-3">
-                            <span className="truncate font-mono text-[12.5px]">{r.rawLabel}</span>
                             <span
+                              data-slot="import-row-label"
+                              className="truncate font-mono text-[12.5px]"
+                              title={r.rawLabel}
+                            >
+                              {r.rawLabel}
+                            </span>
+                            <span
+                              data-slot="import-row-amount"
                               className="shrink-0 text-sm font-medium tabular-nums"
                               style={
                                 r.amount > 0 && !dimmed ? { color: "var(--income)" } : undefined
@@ -959,7 +1003,7 @@ export function ImportWizard({
                             </span>
                           </div>
                           <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
-                            <span className="tabular-nums">{formatDayMonth(r.date, locale)}</span>
+                            <span className="tabular-nums">{formatDate(r.date, locale)}</span>
                             <span aria-hidden>·</span>
                             <span>{tType(`types.${r.type}`)}</span>
                             {dupBadge}
@@ -973,11 +1017,6 @@ export function ImportWizard({
                 {pager(product)}
               </div>
             ))}
-            {error && (
-              <p role="alert" className="text-destructive p-5 text-sm">
-                {errorText(error)}
-              </p>
-            )}
           </Card>
         </div>
       )}

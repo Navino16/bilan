@@ -721,6 +721,7 @@
     "optCategorize": "Categorize automatically",
     "previewTitle": "Preview — {count, plural, one {# transaction} other {# transactions}}",
     "previewMeta": "{dup, plural, one {# potential duplicate} other {# potential duplicates}} · {cat, number} auto-categorized",
+    "previewMetaNoCat": "{dup, plural, one {# potential duplicate} other {# potential duplicates}}",
     "validate": "Validate import",
     "cancel": "Cancel",
     "include": "Include this row",
