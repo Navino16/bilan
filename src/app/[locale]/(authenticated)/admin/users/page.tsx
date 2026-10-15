@@ -101,17 +101,23 @@ export default async function AdminUsersPage({
             data-slot="admin-user-row"
             className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-4 py-3 text-sm last:border-b-0 sm:px-6 md:grid md:gap-3 ${cols}`}
           >
-            <div className="min-w-0 flex-auto">
+            <div className="min-w-0 basis-full">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span className="max-w-full truncate font-medium">{displayName(u)}</span>
+                <span className="max-w-full truncate font-medium" title={displayName(u)}>
+                  {displayName(u)}
+                </span>
                 {u.disabled && <StatusBadge active={false}>{t("disabledBadge")}</StatusBadge>}
                 {!u.emailVerified && (
                   <StatusBadge active={false}>{t("unverifiedBadge")}</StatusBadge>
                 )}
               </div>
-              <div className="text-muted-foreground truncate text-xs md:hidden">{u.email}</div>
+              <div className="text-muted-foreground truncate text-xs md:hidden" title={u.email}>
+                {u.email}
+              </div>
             </div>
-            <div className="text-muted-foreground hidden truncate md:block">{u.email}</div>
+            <div className="text-muted-foreground hidden truncate md:block" title={u.email}>
+              {u.email}
+            </div>
             <div className="ml-auto flex shrink-0 items-center justify-end gap-1 md:contents">
               {canUpdate && u.id !== viewer.id ? (
                 <RoleSelect userId={u.id} role={topRole(u.roleKeys)} userLabel={displayName(u)} />

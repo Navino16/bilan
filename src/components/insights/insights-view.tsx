@@ -105,7 +105,11 @@ export async function InsightsView({
         <div className={overline}>{t(key)}</div>
         {c ? (
           <>
-            <div className="font-display text-2xl tabular-nums" style={{ color: tone(c.diff) }}>
+            <div
+              data-slot="insights-tile-amount"
+              className="font-display text-xl wrap-anywhere tabular-nums sm:text-2xl"
+              style={{ color: tone(c.diff) }}
+            >
               {signed.format(c.diff)}
             </div>
             <div className="text-muted-foreground line-clamp-2 text-[11.5px]">
@@ -113,7 +117,9 @@ export async function InsightsView({
             </div>
           </>
         ) : (
-          <div className="text-muted-foreground font-display text-2xl">{t("noChange")}</div>
+          <div className="text-muted-foreground font-display text-xl sm:text-2xl">
+            {t("noChange")}
+          </div>
         )}
       </Card>
     );
@@ -172,7 +178,9 @@ export async function InsightsView({
               >
                 <div className="flex items-center gap-2 text-sm">
                   <Dot color={changeColors[i]} />
-                  <span className="min-w-0 flex-1 truncate">{catName(c.categoryId)}</span>
+                  <span className="min-w-0 flex-1 truncate" title={catName(c.categoryId)}>
+                    {catName(c.categoryId)}
+                  </span>
                   <span className="font-semibold tabular-nums" style={{ color: tone(c.diff) }}>
                     {signed.format(c.diff)}
                   </span>
@@ -213,7 +221,10 @@ export async function InsightsView({
                       <span className="text-muted-foreground w-4 text-[11.5px] tabular-nums">
                         {i + 1}
                       </span>
-                      <span className="min-w-0 flex-1 truncate">
+                      <span
+                        className="min-w-0 flex-1 truncate"
+                        title={`${m.label} · ${catName(m.categoryId)} · ${t("merchantsCount", { count: m.count })}`}
+                      >
                         {m.label}
                         <span className="text-muted-foreground text-[11.5px]">
                           {" "}
@@ -290,7 +301,9 @@ export async function InsightsView({
                     className={`flex items-center gap-2 text-sm ${ROW_LINK}`}
                   >
                     <Dot color={incomeColors[i]} />
-                    <span className="min-w-0 flex-1 truncate">{catName(inc.categoryId)}</span>
+                    <span className="min-w-0 flex-1 truncate" title={catName(inc.categoryId)}>
+                      {catName(inc.categoryId)}
+                    </span>
                     <span className="tabular-nums">{money.format(inc.current)}</span>
                     <span className="text-muted-foreground w-16 text-right text-[11.5px] tabular-nums">
                       {inc.current === inc.previous ? "=" : pctLabel(inc.current, inc.previous)}

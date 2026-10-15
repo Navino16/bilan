@@ -42,26 +42,34 @@ export async function AuditTable({ items }: { items: AuditEntry[] }) {
       ? displayName(row.subject)
       : row.entity === "AppSetting" && row.entityId
         ? labels.setting(row.entityId)
-        : row.entityId;
+        : row.entityName;
   const user = (row: AuditEntry) =>
     row.user ? displayName(row.user) : (row.userId ?? t("system"));
   const date = (row: AuditEntry) => <LocalDateTime value={row.createdAt} seconds />;
-  const entity = (row: AuditEntry) =>
-    row.entity ? (
+  const entity = (row: AuditEntry) => {
+    if (!row.entity) return "—";
+    const detail = entityDetail(row);
+    return (
       <>
         <span>{entityType(row.entity)}</span>
-        {entityDetail(row) && (
+        {detail ? (
           <span
-            className="block truncate font-mono text-[0.7rem]"
-            title={row.entityId ?? undefined}
+            data-slot="audit-entity-name"
+            className="block truncate text-xs"
+            title={`${detail} (${row.entityId})`}
           >
-            {entityDetail(row)}
+            {detail}
           </span>
+        ) : (
+          row.entityId && (
+            <span className="block truncate font-mono text-[0.7rem]" title={row.entityId}>
+              {row.entityId}
+            </span>
+          )
         )}
       </>
-    ) : (
-      "—"
     );
+  };
 
   return (
     <>

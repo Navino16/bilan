@@ -120,9 +120,9 @@ describe("categoryGlyphColor", () => {
     }
   });
 
-  it("switches to the paper tone on light custom colours", () => {
-    for (const hex of ["#87bc83", "#dcba6b", "#ffffff"]) {
-      expect(categoryGlyphColor(hex)).toBe("var(--paper)");
+  it("switches to a fixed dark glyph on light custom colours, whatever the theme", () => {
+    for (const hex of ["#87bc83", "#dcba6b", "#f5e663", "#ffffff"]) {
+      expect(categoryGlyphColor(hex)).toBe("#0f1114");
     }
   });
 });

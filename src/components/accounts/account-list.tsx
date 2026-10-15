@@ -14,10 +14,17 @@ import type { ShareGroup } from "@/components/accounts/share-dialog";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import type { VisibleAccount } from "@/server/services/accounts";
-import { balanceLegend } from "@/lib/balance-legend";
+import { balanceLegend, balanceSegments } from "@/lib/balance-legend";
 import { revealAccountIbanAction } from "@/server/transport/actions/accounts";
 
 const OTHERS_COLOR = "var(--cat-other)";
+
+// Negative balances are hatched in their account colour.
+function swatch(color: string, negative: boolean): string {
+  return negative
+    ? `repeating-linear-gradient(135deg, ${color} 0 2px, transparent 2px 4px)`
+    : color;
+}
 
 function useMoney() {
   const locale = useLocale();
@@ -84,7 +91,9 @@ function AccountCard({
           />
           <div className="min-w-0 space-y-0.5">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span className="min-w-0 truncate font-medium">{a.name}</span>
+              <span className="min-w-0 truncate font-medium" title={a.name}>
+                {a.name}
+              </span>
               {a.archived ? (
                 <Badge variant="outline">{t("archivedBadge")}</Badge>
               ) : a.access !== "OWNER" ? (
@@ -96,7 +105,9 @@ function AccountCard({
               )}
             </div>
             {a.bankName && (
-              <div className="text-muted-foreground truncate text-xs">{a.bankName}</div>
+              <div className="text-muted-foreground truncate text-xs" title={a.bankName}>
+                {a.bankName}
+              </div>
             )}
             {a.access !== "OWNER" && a.ownerName && (
               <div className="text-muted-foreground text-xs">
@@ -110,7 +121,13 @@ function AccountCard({
 
       <div className="mt-auto flex flex-wrap items-end justify-between gap-2 pt-3">
         <div className="min-w-0">
-          <div className="font-display text-xl">{money(a.balance)}</div>
+          <div
+            data-slot="account-balance"
+            className="font-display text-xl"
+            style={a.balance < 0 ? { color: "var(--expense)" } : undefined}
+          >
+            {money(a.balance)}
+          </div>
           {/* Reserved-height slot so the balance stays aligned across cards
               whether or not an IBAN is present. */}
           <div className="mt-0.5 flex h-5 items-center">
@@ -173,22 +190,23 @@ export function AccountList({
   const cardProps = { groups, categories, writableAccounts };
   const total = accounts.reduce((sum, a) => sum + a.balance, 0);
   const legend = balanceLegend(accounts);
-  const segments = [
-    ...legend.items
-      .filter((a) => a.balance > 0)
-      .map((a) => ({ key: a.id, value: a.balance, color: a.color ?? "#2563eb" })),
-    ...(legend.others?.positive
-      ? [{ key: "others", value: legend.others.positive, color: OTHERS_COLOR }]
-      : []),
-  ];
+  const colorOf = new Map(legend.items.map((a) => [a.id, a.color ?? "#2563eb"]));
+  colorOf.set("others", OTHERS_COLOR);
+  const segments = balanceSegments(legend);
   const legendEntries = [
-    ...legend.items.map((a) => ({ key: a.id, label: a.name, color: a.color ?? "#2563eb" })),
+    ...legend.items.map((a) => ({
+      key: a.id,
+      label: a.name,
+      color: colorOf.get(a.id)!,
+      negative: a.balance < 0,
+    })),
     ...(legend.others
       ? [
           {
             key: "others",
             label: t("legendOthers", { count: legend.others.count }),
             color: OTHERS_COLOR,
+            negative: legend.others.positive === 0 && legend.others.negative > 0,
           },
         ]
       : []),
@@ -201,16 +219,26 @@ export function AccountList({
           <div className="text-muted-foreground text-[0.7rem] font-medium tracking-[0.14em] uppercase">
             {t("globalBalance")}
           </div>
-          <div className="font-display text-4xl leading-none">{money(total)}</div>
-          {legend.positiveTotal > 0 && (
+          <div
+            data-slot="global-balance"
+            className="font-display text-4xl leading-none"
+            style={total < 0 ? { color: "var(--expense)" } : undefined}
+          >
+            {money(total)}
+          </div>
+          {segments.length > 0 && (
             <>
-              <div className="bg-muted flex h-2 w-full gap-0.5 overflow-hidden rounded-full">
+              <div
+                data-slot="balance-bar"
+                className="bg-muted flex h-2 w-full gap-0.5 overflow-hidden rounded-full"
+              >
                 {segments.map((seg) => (
                   <div
-                    key={seg.key}
+                    key={`${seg.id}${seg.negative ? "-" : "+"}`}
+                    data-negative={seg.negative || undefined}
                     style={{
-                      width: `${(seg.value / legend.positiveTotal) * 100}%`,
-                      backgroundColor: seg.color,
+                      width: `${seg.share * 100}%`,
+                      background: swatch(colorOf.get(seg.id)!, seg.negative),
                     }}
                   />
                 ))}
@@ -223,12 +251,22 @@ export function AccountList({
                   >
                     <span
                       aria-hidden
-                      className="size-2 shrink-0 rounded-full"
-                      style={{ backgroundColor: e.color }}
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ background: swatch(e.color, e.negative) }}
                     />
                     {e.label}
                   </span>
                 ))}
+                {legend.negativeTotal > 0 && (
+                  <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                    <span
+                      aria-hidden
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ background: swatch(OTHERS_COLOR, true) }}
+                    />
+                    {t("legendNegative")}
+                  </span>
+                )}
               </div>
             </>
           )}

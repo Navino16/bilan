@@ -81,8 +81,13 @@ export function InvitationsList({ invitations }: { invitations: PendingInvitatio
       {invitations.map((inv) => (
         <div key={inv.id} className="flex items-center gap-3 px-4 py-3 sm:px-6">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span className="truncate text-sm font-medium">{inv.email}</span>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span
+                data-slot="invitation-email"
+                className="min-w-0 text-sm font-medium wrap-anywhere"
+              >
+                {inv.email}
+              </span>
               <Badge variant="outline">{tg(`roles.${inv.role}`)}</Badge>
             </div>
             <div className="text-muted-foreground text-xs">

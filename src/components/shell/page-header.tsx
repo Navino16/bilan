@@ -9,6 +9,7 @@ export function PageHeader({
   badges,
   subtitle,
   actions,
+  inlineActions = false,
   className,
 }: {
   overline: React.ReactNode;
@@ -16,11 +17,19 @@ export function PageHeader({
   badges?: React.ReactNode;
   subtitle?: React.ReactNode;
   actions?: React.ReactNode;
+  /** A compact control (e.g. a lone kebab) that stays beside the title on mobile instead of wrapping. */
+  inlineActions?: boolean;
   className?: string;
 }) {
   return (
-    <header className={cn("flex flex-wrap items-end justify-between gap-x-4 gap-y-3", className)}>
-      <div className="min-w-0 space-y-1.5">
+    <header
+      className={cn(
+        "flex items-end justify-between gap-x-4 gap-y-3",
+        inlineActions ? "max-sm:items-start" : "flex-wrap",
+        className,
+      )}
+    >
+      <div className={cn("min-w-0 space-y-1.5", inlineActions && "flex-1")}>
         <div className={overlineClass}>{overline}</div>
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <h1
@@ -34,7 +43,14 @@ export function PageHeader({
         {subtitle && <div className="text-muted-foreground text-sm">{subtitle}</div>}
       </div>
       {actions && (
-        <div className="flex min-w-0 flex-wrap items-center gap-3 max-sm:w-full">{actions}</div>
+        <div
+          className={cn(
+            "flex min-w-0 flex-wrap items-center gap-3",
+            inlineActions ? "shrink-0" : "max-sm:w-full",
+          )}
+        >
+          {actions}
+        </div>
       )}
     </header>
   );

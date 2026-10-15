@@ -124,15 +124,23 @@ export default async function GroupDetailPage({
                     style={{ backgroundColor: a.color ?? "#2563eb" }}
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-medium">{a.name}</span>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span
+                        data-slot="shared-account-name"
+                        className="min-w-0 text-sm font-medium wrap-anywhere"
+                      >
+                        {a.name}
+                      </span>
                       <Badge variant="secondary">{ta(`access.${a.permission}`)}</Badge>
                     </div>
-                    <div className="text-muted-foreground truncate text-xs">
+                    <div
+                      className="text-muted-foreground truncate text-xs"
+                      title={ta("sharedBy", { name: a.ownerName })}
+                    >
                       {ta("sharedBy", { name: a.ownerName })}
                     </div>
                   </div>
-                  <span className="font-display text-sm">{money(a.balance)}</span>
+                  <span className="font-display shrink-0 text-sm">{money(a.balance)}</span>
                 </div>
               ))}
             </div>

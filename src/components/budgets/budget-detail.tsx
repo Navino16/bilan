@@ -78,6 +78,7 @@ export function BudgetDetail({
           </>
         }
         subtitle={formatDateRange(detail.periodStart, detail.periodEnd, locale)}
+        inlineActions={!detail.previousId && !detail.nextId}
         actions={
           <div className="flex items-center gap-2">
             {(detail.previousId || detail.nextId) && (
@@ -115,7 +116,9 @@ export function BudgetDetail({
             <li key={line.id}>
               <Card className="gap-3 p-4">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="truncate font-medium">{lineLabel(line)}</span>
+                  <span className="truncate font-medium" title={lineLabel(line)}>
+                    {lineLabel(line)}
+                  </span>
                   <Badge style={style} className="border-transparent">
                     {t(`status.${line.status}`)}
                   </Badge>

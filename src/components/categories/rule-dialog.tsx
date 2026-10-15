@@ -14,6 +14,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useFrozenWhileOpen } from "@/hooks/use-frozen-while-open";
 import { SegmentedTabs, overline } from "@/components/transactions/bits";
 import { CategoryCombobox } from "@/components/transactions/category-combobox";
 import type { FlatCategory } from "@/components/transactions/category-tree";
@@ -51,17 +54,29 @@ export function RuleDialog({
 }: RuleFormProps & { open: boolean; onOpenChange: (open: boolean) => void }) {
   // Lifted so the dialog can't close (then reopen) under an in-flight save.
   const [pending, startTransition] = useTransition();
+  const isMobile = useFrozenWhileOpen(open, useIsMobile());
+  const handleOpenChange = (o: boolean) => !pending && onOpenChange(o);
   // The form lives inside the popup, which unmounts on close: each opening starts from `rule`.
-  return (
-    <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
-      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
-        <RuleForm
-          {...props}
-          pending={pending}
-          startTransition={startTransition}
-          onClose={() => onOpenChange(false)}
-        />
-      </DialogContent>
+  const form = (
+    <RuleForm
+      {...props}
+      pending={pending}
+      startTransition={startTransition}
+      onClose={() => onOpenChange(false)}
+    />
+  );
+  return isMobile ? (
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent
+        side="bottom"
+        className="flex max-h-[92dvh] flex-col gap-0 overflow-y-auto rounded-t-2xl p-0"
+      >
+        {form}
+      </SheetContent>
+    </Sheet>
+  ) : (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">{form}</DialogContent>
     </Dialog>
   );
 }
@@ -113,13 +128,13 @@ function RuleForm({
 
   return (
     <>
-      <DialogHeader className="px-6 pt-5 pb-3 text-left">
+      <DialogHeader className="px-6 pt-5 pb-3 text-left max-md:px-5">
         <DialogTitle className="font-display text-2xl">
           {mode === "edit" ? t("editTitle") : t("createTitle")}
         </DialogTitle>
       </DialogHeader>
 
-      <div className="flex flex-col gap-4 px-6 pb-4">
+      <div className="flex flex-col gap-4 px-6 pb-4 max-md:px-5">
         <div className="space-y-1.5">
           <Label htmlFor="rule-pattern">{t("pattern")}</Label>
           <Input
@@ -136,7 +151,7 @@ function RuleForm({
             items={RULE_MATCH_TYPES.map((m) => ({ id: m, label: t(`match.${m}`) }))}
             value={matchType}
             onChange={setMatchType}
-            className="flex-wrap"
+            fullWidth
           />
         </div>
         <div className="space-y-1.5">
@@ -148,7 +163,7 @@ function RuleForm({
             onChange={setCategoryId}
           />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="rule-priority">{t("priority")}</Label>
             <Input
@@ -189,7 +204,7 @@ function RuleForm({
         {error && <p className="text-destructive text-sm">{t(`error.${error}`)}</p>}
       </div>
 
-      <DialogFooter className="bg-muted/40 border-border border-t px-6 py-3">
+      <DialogFooter className="bg-muted/40 border-border border-t px-6 py-3 max-md:px-5">
         <Button type="button" variant="ghost" onClick={onClose} disabled={pending}>
           {t("cancel")}
         </Button>

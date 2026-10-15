@@ -135,7 +135,7 @@ export function TwoFactorControls({ enabled }: { enabled: boolean }) {
           <TotpQr uri={enrol.uri} label={t("qrLabel")} />
           <div className="min-w-44 flex-1 space-y-1">
             <p className="text-muted-foreground text-xs">{t("enrolManual")}</p>
-            <code className="bg-muted block rounded-md px-3 py-2 text-xs break-all">
+            <code className="bg-muted block rounded-md px-3 py-2 text-xs">
               {secretFromUri(enrol.uri)}
             </code>
           </div>
