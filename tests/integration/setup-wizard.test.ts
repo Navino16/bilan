@@ -36,6 +36,12 @@ describe("setup wizard", () => {
     firstUserId = userId;
     const roles = await db.userRole.findMany({ where: { userId }, include: { role: true } });
     expect(roles.map((r) => r.role.key)).toEqual(["SUPER_ADMIN"]);
+    // Nobody else could verify the first super admin's address (#243).
+    expect((await db.user.findUniqueOrThrow({ where: { id: userId } })).emailVerified).toBe(true);
+    const verified = await db.auditLog.findFirst({
+      where: { userId, action: "auth.email.verified" },
+    });
+    expect(verified?.metadata).toEqual({ via: "setup" });
     const roots = await db.category.findMany({ where: { userId, parentId: null } });
     expect(roots.map((c) => c.name)).toContain("Income");
     expect(await isSetupNeeded()).toBe(false);

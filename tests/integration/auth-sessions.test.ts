@@ -150,8 +150,24 @@ describe("revokeOtherSessions", () => {
     const foreign = await signIn(other.email);
     const active = { userId: owner.id, expiresAt: { gt: new Date() } };
     const before = await db.session.count({ where: active });
+    const expiresAt = new Date(Date.now() + 86_400_000);
+    await db.verification.createMany({
+      data: [owner, other].map((u) => ({
+        id: `trust_${u.id}`,
+        identifier: `trust-device-${u.id}`,
+        value: u.id,
+        expiresAt,
+      })),
+    });
 
     expect(await revokeOtherSessions(current.headers)).toEqual({ ok: true, count: before - 1 });
+    // A trusted browser would skip 2FA on its next sign-in (#243).
+    const trusted = await db.verification.findMany({
+      where: { identifier: { startsWith: "trust-device-" }, value: { in: [owner.id, other.id] } },
+      select: { value: true },
+    });
+    expect(trusted).toEqual([{ value: other.id }]);
+    await db.verification.deleteMany({ where: { value: other.id } });
 
     const left = await db.session.findMany({ where: active, select: { id: true } });
     expect(left).toEqual([{ id: current.sessionId }]);

@@ -1,10 +1,10 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { hasPermission, requirePermission, requireAdmin2fa } from "@/server/auth/permissions";
+import { hasPermission, requirePermission } from "@/server/auth/permissions";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { PageHeader } from "@/components/shell/page-header";
 
-// RBAC gate for the whole admin section: non-admins are redirected to /403.
-// Each page additionally requirePermission's its narrower scope.
+// RBAC gate for the whole admin section: non-admins get a 403. Each page additionally
+// requirePermission's its narrower scope: a soft navigation doesn't re-render this layout.
 export const dynamic = "force-dynamic";
 
 export default async function AdminLayout({
@@ -17,7 +17,6 @@ export default async function AdminLayout({
   const { locale } = await params;
   setRequestLocale(locale);
   const user = await requirePermission("admin.settings.write");
-  await requireAdmin2fa(locale);
   const t = await getTranslations("admin");
 
   // Mirrors each page's own requirePermission, so no tab leads to a 403.

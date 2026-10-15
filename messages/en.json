@@ -977,6 +977,7 @@
     "created": "Invitation created",
     "renewed": "Invitation renewed",
     "mailDisabled": "E-mail is disabled: share this link.",
+    "mailFailed": "The email couldn’t be sent: share this link.",
     "shareLink": "Invitation link",
     "decline": "Decline",
     "declineConfirm": "Decline this invitation?",
@@ -1140,11 +1141,15 @@
       "backupCodes": "Backup codes",
       "enable": "Enable",
       "disable": "Disable",
+      "disableCode": "Authentication code",
+      "disableCodeHint": "The 6-digit code from your authenticator app, or one of your backup codes.",
       "verify": "Verify and enable",
       "working": "Working…",
       "error": {
         "BAD_PASSWORD": "Incorrect password.",
         "BAD_CODE": "Invalid code. Please try again.",
+        "ALREADY_ENABLED": "Two-factor authentication is already enabled.",
+        "NOT_ENABLED": "Two-factor authentication isn’t enabled.",
         "RATE_LIMITED": "Too many attempts. Try again later.",
         "rateLimitedFor": "Too many attempts. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
         "FAILED": "Something went wrong. Please try again."

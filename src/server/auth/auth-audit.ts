@@ -4,7 +4,7 @@ import {
   getSessionFromCtx,
   isAPIError,
 } from "better-auth/api";
-import { db } from "@/server/db";
+import { purgeTrustedDevices } from "@/server/services/users/trusted-devices";
 import { logEvent } from "@/server/services/audit";
 import { requestOrigin } from "@/server/http/client-ip";
 import {
@@ -162,9 +162,7 @@ export async function auditAuthRequest(ctx: HookContext): Promise<void> {
       event.userId &&
       (event.action === "auth.2fa.enabled" || event.action === "auth.2fa.disabled")
     ) {
-      await db.verification.deleteMany({
-        where: { value: event.userId, identifier: { startsWith: "trust-device-" } },
-      });
+      await purgeTrustedDevices(event.userId);
     }
     const notified = NOTIFIED_EVENTS.get(event.action);
     if (notified && event.userId) {

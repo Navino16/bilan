@@ -27,6 +27,7 @@ import {
   type ResolvedOidc,
 } from "./providers";
 import { authPlugins } from "./plugins";
+import { onAuthError } from "./auth-errors";
 import { nameOnCreate, nameOnUpdate } from "./user-name";
 import {
   RESET_TOKEN_TTL_SEC,
@@ -38,6 +39,7 @@ import {
   VERIFY_TOKEN_TTL_SEC,
 } from "@/server/services/mail/email-verification";
 import { markEmailVerified } from "@/server/services/users/email-verification";
+import { purgeTrustedDevices } from "@/server/services/users/trusted-devices";
 
 type Handler = ReturnType<typeof betterAuth>;
 // Only the generation is process-wide: a shared handler would keep closures from a module
@@ -166,7 +168,7 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
     trustedOrigins: [env.APP_URL],
     // Failed OAuth/OIDC callbacks (incl. a disabled account) land on the localized login
     // page — the proxy adds the locale — instead of Better Auth's English error page.
-    onAPIError: { errorURL: `${env.APP_URL.replace(/\/$/, "")}/login` },
+    onAPIError: { errorURL: `${env.APP_URL.replace(/\/$/, "")}/login`, onError: onAuthError },
     // HTTP-only block: the router 404s these exact paths (no wildcards); auth.api.* still works.
     disabledPaths: [
       // Wrapped by Server Actions that add the registration mode, rate limits and audit (#197, #200).
@@ -198,6 +200,12 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
       "/get-access-token",
       "/refresh-token",
       "/account-info",
+      // Unused: Settings > Security lists sessions server-side, without their tokens, and
+      // revokes them through Server Actions that also purge trusted devices (#243).
+      "/list-sessions",
+      "/revoke-session",
+      "/revoke-sessions",
+      "/revoke-other-sessions",
       // The admin plugin is kept for its ban check; its endpoints would bypass app permissions,
       // the last-super-admin lock and audit (#200).
       ...ADMIN_PLUGIN_PATHS,
@@ -312,6 +320,9 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
       // The mailed reset link proves the address too (spec §6.12).
       onPasswordReset: async ({ user }, request) => {
         await markEmailVerified(user.id, "password_reset").catch(() => {});
+        await purgeTrustedDevices(user.id).catch((e) =>
+          console.error("[bilan] trusted-device purge failed", e),
+        );
         try {
           await logEvent({ userId: user.id, action: "auth.password.changed" });
           void notifySecurityEvent("password_changed", {

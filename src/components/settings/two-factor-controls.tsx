@@ -73,9 +73,10 @@ export function TwoFactorControls({ enabled }: { enabled: boolean }) {
 
   const disable = (e: React.FormEvent) =>
     submit(e, async () => {
-      const res = await disableTwoFactorAction(password);
+      const res = await disableTwoFactorAction(password, code);
       if (!res.ok) return fail(res);
       setPassword("");
+      setCode("");
       router.refresh();
     });
 
@@ -99,12 +100,26 @@ export function TwoFactorControls({ enabled }: { enabled: boolean }) {
             autoComplete="current-password"
           />
         </div>
+        <div className="space-y-2 sm:w-1/2">
+          <Label htmlFor="tfa-code-disable">{t("disableCode")}</Label>
+          <Input
+            id="tfa-code-disable"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            autoComplete="one-time-code"
+            aria-describedby="tfa-code-disable-hint"
+            className="font-mono"
+          />
+          <p id="tfa-code-disable-hint" className="text-muted-foreground text-xs">
+            {t("disableCodeHint")}
+          </p>
+        </div>
         {error && (
           <Alert variant="destructive">
             <AlertDescription>{errorText}</AlertDescription>
           </Alert>
         )}
-        <Button type="submit" variant="destructive" disabled={pending || !password}>
+        <Button type="submit" variant="destructive" disabled={pending || !password || !code.trim()}>
           {pending ? t("working") : t("disable")}
         </Button>
       </form>

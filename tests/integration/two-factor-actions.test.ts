@@ -6,9 +6,11 @@ vi.mock("next/headers", () => ({
   cookies: async () => ({ get: () => undefined, set: () => {} }),
 }));
 
+import { symmetricDecrypt } from "better-auth/crypto";
 import { db } from "@/server/db";
 import { getAuth } from "@/server/auth";
 import { changePasswordLimiter } from "@/server/auth/rate-limit";
+import { claimTotpStep, hotp, totpStep } from "@/server/auth/totp-replay";
 import { changePasswordAction } from "@/server/transport/actions/auth";
 import {
   disableTwoFactorAction,
@@ -30,6 +32,22 @@ async function signIn(): Promise<void> {
   request.headers = new Headers({ cookie });
 }
 
+// Enrols through the action, then marks the enrolment confirmed as the first TOTP would.
+async function enrolled(): Promise<{ secret: string; backupCodes: string[] }> {
+  const res = await enableTwoFactorAction(password);
+  if (!res.ok) throw new Error(`enable failed: ${res.error}`);
+  const row = await db.twoFactor.findFirstOrThrow({ where: { userId } });
+  const { secretConfig } = await (await getAuth()).$context;
+  const secret = await symmetricDecrypt({ key: secretConfig, data: row.secret });
+  await db.twoFactor.update({ where: { id: row.id }, data: { verified: true } });
+  await db.user.update({ where: { id: userId }, data: { twoFactorEnabled: true } });
+  return { secret, backupCodes: res.data.backupCodes };
+}
+
+const totpNow = (secret: string, offset = 0) => hotp(secret, totpStep(Date.now()) + offset);
+const twoFactorOn = async () =>
+  (await db.user.findUniqueOrThrow({ where: { id: userId } })).twoFactorEnabled;
+
 const audits = (action: string, reason: string) =>
   db.auditLog.count({ where: { userId, action, metadata: { equals: { reason } } } });
 
@@ -40,6 +58,8 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   changePasswordLimiter.reset(userId);
+  await db.user.update({ where: { id: userId }, data: { twoFactorEnabled: false } });
+  await db.twoFactor.deleteMany({ where: { userId } });
   await signIn();
 });
 
@@ -56,7 +76,7 @@ describe("two-factor Server Actions (#200)", () => {
       ok: false,
       error: "BAD_PASSWORD",
     });
-    expect(await disableTwoFactorAction("wrong-password")).toEqual({
+    expect(await disableTwoFactorAction("wrong-password", "123456")).toEqual({
       ok: false,
       error: "BAD_PASSWORD",
     });
@@ -73,19 +93,79 @@ describe("two-factor Server Actions (#200)", () => {
     expect(await db.twoFactor.count({ where: { userId } })).toBe(1);
   });
 
-  it("disables two-factor with the right password and audits it", async () => {
-    await db.user.update({ where: { id: userId }, data: { twoFactorEnabled: true } });
-    expect(await disableTwoFactorAction(password)).toEqual({ ok: true, data: null });
-    const user = await db.user.findUniqueOrThrow({ where: { id: userId } });
-    expect(user.twoFactorEnabled).toBe(false);
+  it("refuses to re-enrol over an enabled 2FA, keeping its secret (#243)", async () => {
+    await enrolled();
+    const before = await db.twoFactor.findFirstOrThrow({ where: { userId } });
+    expect(await enableTwoFactorAction(password)).toEqual({ ok: false, error: "ALREADY_ENABLED" });
+    const after = await db.twoFactor.findFirstOrThrow({ where: { userId } });
+    expect(after).toMatchObject({ id: before.id, secret: before.secret, verified: true });
+  });
+
+  it("disables two-factor with the password and a TOTP code, and audits it (#243)", async () => {
+    const { secret } = await enrolled();
+    expect(await disableTwoFactorAction(password, " ")).toEqual({ ok: false, error: "BAD_CODE" });
+    expect(await disableTwoFactorAction(password, totpNow(secret, 100))).toEqual({
+      ok: false,
+      error: "BAD_CODE",
+    });
+    expect(await disableTwoFactorAction(password, "abcde-fghij")).toEqual({
+      ok: false,
+      error: "BAD_CODE",
+    });
+    expect(await audits("auth.2fa.disable_failed", "bad_code")).toBe(2);
+    expect(await twoFactorOn()).toBe(true);
+
+    expect(await disableTwoFactorAction(password, totpNow(secret))).toEqual({
+      ok: true,
+      data: null,
+    });
+    expect(await twoFactorOn()).toBe(false);
     expect(await db.twoFactor.count({ where: { userId } })).toBe(0);
     expect(await db.auditLog.count({ where: { userId, action: "auth.2fa.disabled" } })).toBe(1);
+  });
+
+  it("refuses a TOTP code already used, e.g. at sign-in (#243)", async () => {
+    const { secret } = await enrolled();
+    const row = await db.twoFactor.findFirstOrThrow({ where: { userId } });
+    // Claims the next step too, so a step boundary mid-test can't make the code fresh.
+    expect(await claimTotpStep(row.id, totpStep(Date.now()) + 1)).toBe(true);
+    expect(await disableTwoFactorAction(password, totpNow(secret))).toEqual({
+      ok: false,
+      error: "BAD_CODE",
+    });
+    expect(await twoFactorOn()).toBe(true);
+  });
+
+  it("disables two-factor with a backup code (#243)", async () => {
+    const { backupCodes } = await enrolled();
+    expect(await disableTwoFactorAction(password, backupCodes[0])).toEqual({
+      ok: true,
+      data: null,
+    });
+    expect(await twoFactorOn()).toBe(false);
+  });
+
+  it("checks the password before spending the code (#243)", async () => {
+    const { secret } = await enrolled();
+    const code = totpNow(secret);
+    expect(await disableTwoFactorAction("wrong-password", code)).toEqual({
+      ok: false,
+      error: "BAD_PASSWORD",
+    });
+    expect(await disableTwoFactorAction(password, code)).toEqual({ ok: true, data: null });
+  });
+
+  it("has nothing to disable without an enabled 2FA", async () => {
+    expect(await disableTwoFactorAction(password, "123456")).toEqual({
+      ok: false,
+      error: "NOT_ENABLED",
+    });
   });
 
   it("redirects to the login page without a session, without checking the password", async () => {
     request.headers = new Headers();
     await expect(enableTwoFactorAction(password)).rejects.toThrow("NEXT_REDIRECT");
-    await expect(disableTwoFactorAction(password)).rejects.toThrow("NEXT_REDIRECT");
+    await expect(disableTwoFactorAction(password, "123456")).rejects.toThrow("NEXT_REDIRECT");
     expect(changePasswordLimiter.consume(userId)).toMatchObject({ allowed: true });
   });
 
@@ -94,7 +174,9 @@ describe("two-factor Server Actions (#200)", () => {
     const res = await enableTwoFactorAction(password);
     expect(res).toMatchObject({ ok: false, error: "RATE_LIMITED" });
     if (!res.ok) expect(res.retryAfter).toBeGreaterThan(0);
-    expect(await disableTwoFactorAction(password)).toMatchObject({ error: "RATE_LIMITED" });
+    expect(await disableTwoFactorAction(password, "123456")).toMatchObject({
+      error: "RATE_LIMITED",
+    });
     expect(await audits("auth.2fa.enable_failed", "rate_limit")).toBe(1);
     expect(await audits("auth.2fa.disable_failed", "rate_limit")).toBe(1);
   });
@@ -112,7 +194,7 @@ function changePasswordForm(currentPassword: string, newPassword = "unused-new-p
 describe("password re-auth rate limits (#230)", () => {
   it("shares one budget between 2FA settings and password change", async () => {
     for (let i = 0; i < 4; i++) {
-      expect(await disableTwoFactorAction("wrong-password")).toMatchObject({
+      expect(await disableTwoFactorAction("wrong-password", "123456")).toMatchObject({
         error: "BAD_PASSWORD",
       });
     }
@@ -125,16 +207,23 @@ describe("password re-auth rate limits (#230)", () => {
     expect(await enableTwoFactorAction(password)).toMatchObject({ error: "RATE_LIMITED" });
   });
 
-  it("only counts wrong passwords from the 2FA settings", async () => {
-    for (let i = 0; i < 4; i++) changePasswordLimiter.consume(userId);
-    await db.user.update({ where: { id: userId }, data: { twoFactorEnabled: true } });
-    expect(await disableTwoFactorAction(password)).toEqual({ ok: true, data: null });
+  it("only counts wrong passwords and codes from the 2FA settings", async () => {
+    const { secret } = await enrolled();
+    for (let i = 0; i < 3; i++) changePasswordLimiter.consume(userId);
+    expect(await disableTwoFactorAction(password, totpNow(secret, 100))).toEqual({
+      ok: false,
+      error: "BAD_CODE",
+    });
+    expect(await disableTwoFactorAction(password, totpNow(secret))).toEqual({
+      ok: true,
+      data: null,
+    });
     await signIn();
-    expect(await disableTwoFactorAction("wrong-password")).toEqual({
+    expect(await disableTwoFactorAction("wrong-password", "123456")).toEqual({
       ok: false,
       error: "BAD_PASSWORD",
     });
-    expect(await disableTwoFactorAction("wrong-password")).toMatchObject({
+    expect(await disableTwoFactorAction("wrong-password", "123456")).toMatchObject({
       error: "RATE_LIMITED",
     });
   });

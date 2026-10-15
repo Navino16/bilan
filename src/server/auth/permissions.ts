@@ -6,6 +6,7 @@ import { redirect, forbidden } from "next/navigation";
 import { db } from "@/server/db";
 import { getAuth } from "@/server/auth";
 import { appSettings } from "@/server/services/settings/app-settings";
+import { defaultLocale } from "@/i18n/config";
 import {
   loginRedirectPath,
   pathLocale,
@@ -59,11 +60,42 @@ export async function requireSession() {
   return user;
 }
 
+// Spec §6.11: once the instance requires it, admin permissions are void until their holder
+// enrols 2FA. Every admin gate (pages, RSC requests, Server Actions) goes through here.
+const adminTwoFactorMissing = cache(async (userId: string): Promise<boolean> => {
+  const [settingOn, row] = await Promise.all([
+    appSettings.get<boolean>("security.admin_2fa_required").then((v) => v ?? false),
+    db.user.findUnique({ where: { id: userId }, select: { twoFactorEnabled: true } }),
+  ]);
+  return requiresTwoFactorSetup({
+    isAdmin: true,
+    twoFactorEnabled: Boolean(row?.twoFactorEnabled),
+    settingOn,
+  });
+});
+
+function isAdminPermission(permissionKey: string): boolean {
+  return permissionKey.startsWith("admin.");
+}
+
+// For Server Actions that report a refusal instead of redirecting.
+export async function hasEnforcedPermission(
+  userId: string,
+  permissionKey: string,
+): Promise<boolean> {
+  if (!(await hasPermission(userId, permissionKey))) return false;
+  return !isAdminPermission(permissionKey) || !(await adminTwoFactorMissing(userId));
+}
+
 export async function requirePermission(permissionKey: string) {
   const user = await requireSession();
   const ok = await hasPermission(user.id, permissionKey);
   // Real 403 via the auth-interrupt → nearest forbidden.tsx (not a redirect).
   if (!ok) forbidden();
+  if (isAdminPermission(permissionKey) && (await adminTwoFactorMissing(user.id))) {
+    const target = safeCallbackPath((await nextHeaders()).get(REQUEST_PATH_HEADER));
+    redirect(`/${target ? pathLocale(target) : defaultLocale}/settings/security`);
+  }
   return user;
 }
 
@@ -75,25 +107,4 @@ export function requiresTwoFactorSetup(input: {
   settingOn: boolean;
 }): boolean {
   return input.isAdmin && input.settingOn && !input.twoFactorEnabled;
-}
-
-// Server gate: if admin-mandatory 2FA is on and this admin hasn't enrolled,
-// redirect them to the security settings to set it up. Called after
-// requirePermission in the admin layout. `admin.settings.write` proxies "is admin".
-export async function requireAdmin2fa(locale: string): Promise<void> {
-  const user = await requireSession();
-  const [isAdmin, settingOn, row] = await Promise.all([
-    hasPermission(user.id, "admin.settings.write"),
-    appSettings.get<boolean>("security.admin_2fa_required").then((v) => v ?? false),
-    db.user.findUnique({ where: { id: user.id }, select: { twoFactorEnabled: true } }),
-  ]);
-  if (
-    requiresTwoFactorSetup({
-      isAdmin,
-      twoFactorEnabled: Boolean(row?.twoFactorEnabled),
-      settingOn,
-    })
-  ) {
-    redirect(`/${locale}/settings/security`);
-  }
 }

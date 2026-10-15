@@ -8,6 +8,7 @@ import { withClientIp } from "@/server/http/client-ip";
 import { notFoundResponse } from "@/server/http/not-found";
 import { getAppName } from "@/server/services/settings/app-settings";
 import { pageLocale } from "@/server/http/request-locale";
+import { BASE_SECURITY_HEADERS } from "@/lib/security-headers";
 
 const intlMiddleware = createIntlMiddleware({
   locales: [...locales],
@@ -15,7 +16,8 @@ const intlMiddleware = createIntlMiddleware({
   localePrefix: "always",
 });
 
-// Spec §6.6 — security headers attached to every (non-static) response.
+// Spec §6.6 — security headers attached to every (non-static) page response; /api gets
+// its own from next.config.ts.
 //
 // CSP note (scope 8.5): a per-request nonce was evaluated but not shipped. The
 // app authors no inline <script> (the theme is server-rendered, no pre-paint
@@ -32,11 +34,7 @@ const scriptSrc = isProd
   : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
 
 const SECURITY_HEADERS: Record<string, string> = {
-  "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
-  "X-Content-Type-Options": "nosniff",
-  "X-Frame-Options": "DENY",
-  "Referrer-Policy": "strict-origin-when-cross-origin",
-  "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
+  ...BASE_SECURITY_HEADERS,
   "Content-Security-Policy": [
     "default-src 'self'",
     scriptSrc,

@@ -71,8 +71,18 @@ describe("password reset", () => {
     const verified = async () =>
       (await db.user.findUniqueOrThrow({ where: { id: userId } })).emailVerified;
     expect(await verified()).toBe(false);
+    const trusted = { value: userId, identifier: { startsWith: "trust-device-" } };
+    await db.verification.create({
+      data: {
+        id: `trust_${userId}`,
+        identifier: `trust-device-${userId}`,
+        value: userId,
+        expiresAt: new Date(Date.now() + 86_400_000),
+      },
+    });
     await auth.api.resetPassword({ body: { token, newPassword: "brand-new-strong-password-2" } });
     expect(await db.session.count({ where: { userId } })).toBe(0);
+    expect(await db.verification.count({ where: trusted })).toBe(0);
     expect(await isResetTokenValid(token)).toBe(false);
     // The mailed link proves the address (#240).
     expect(await verified()).toBe(true);

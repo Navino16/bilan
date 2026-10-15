@@ -11,15 +11,16 @@ export type Outcome =
 
 export class RateLimiter {
   constructor(
-    private opts: { max: number; windowMs: number },
+    private opts: { max: number; windowMs: number; maxBuckets?: number },
     private buckets = new Map<string, Bucket>(),
   ) {}
 
   consume(key: string): Outcome {
     const now = Date.now();
-    if (this.buckets.size >= MAX_BUCKETS) this.sweep(now);
     const bucket = this.buckets.get(key);
     if (!bucket || bucket.resetAt <= now) {
+      this.buckets.delete(key);
+      this.makeRoom(now);
       const resetAt = now + this.opts.windowMs;
       this.buckets.set(key, { count: 1, resetAt });
       return { allowed: true, resetAt };
@@ -37,12 +38,24 @@ export class RateLimiter {
     if (bucket?.resetAt === resetAt && bucket.count > 0) bucket.count -= 1;
   }
 
+  // For callers that can't carry `resetAt` from consume() (the login hooks).
+  refundCurrent(key: string): void {
+    const bucket = this.buckets.get(key);
+    if (bucket) this.refund(key, bucket.resetAt);
+  }
+
   reset(key: string): void {
     this.buckets.delete(key);
   }
 
-  private sweep(now: number): void {
-    for (const [key, bucket] of this.buckets) if (bucket.resetAt <= now) this.buckets.delete(key);
+  // Buckets are (re)created at the end of the map with a fixed window, so insertion order is
+  // expiry order: drop from the front while expired, or while the hard cap is reached.
+  private makeRoom(now: number): void {
+    const cap = this.opts.maxBuckets ?? MAX_BUCKETS;
+    for (const [key, bucket] of this.buckets) {
+      if (this.buckets.size < cap && bucket.resetAt > now) return;
+      this.buckets.delete(key);
+    }
   }
 }
 
@@ -70,8 +83,12 @@ function sharedLimiter(name: string, opts: { max: number; windowMs: number }): R
 }
 
 // Singletons per spec §6.7.
-// Per email, see login-guard.ts.
+// Per client IP + email, then per email alone, see login-guard.ts.
 export const loginLimiter = sharedLimiter("login", { max: 5, windowMs: 15 * 60_000 });
+export const loginAccountLimiter = sharedLimiter("loginAccount", {
+  max: 30,
+  windowMs: 60 * 60_000,
+});
 export const registerLimiter = sharedLimiter("register", { max: 3, windowMs: 60 * 60_000 });
 export const resetLimiter = sharedLimiter("reset", { max: 3, windowMs: 60 * 60_000 });
 // Keyed by user id: caps current-password guessing from a hijacked session (password change

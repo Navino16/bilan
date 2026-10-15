@@ -60,6 +60,15 @@ describe("RateLimiter", () => {
     expect(rl.consume("k").allowed).toBe(false);
   });
 
+  it("refundCurrent gives back one slot of the current window", () => {
+    const rl = new RateLimiter({ max: 1, windowMs: 60_000 });
+    rl.consume("k");
+    rl.refundCurrent("k");
+    expect(rl.consume("k").allowed).toBe(true);
+    expect(rl.consume("k").allowed).toBe(false);
+    rl.refundCurrent("missing");
+  });
+
   it("withRefund keeps only the results that should count", async () => {
     const rl = new RateLimiter({ max: 1, windowMs: 60_000 });
     const isBad = (r: string) => r === "bad";
@@ -73,6 +82,39 @@ describe("RateLimiter", () => {
     });
     const blocked = await withRefund(rl, "k", async () => "ok", isBad);
     expect(blocked).toMatchObject({ allowed: false });
+  });
+
+  it("never holds more than maxBuckets: expired buckets go first, then the oldest (#243)", () => {
+    const buckets = new Map();
+    const rl = new RateLimiter({ max: 1, windowMs: 60_000, maxBuckets: 3 }, buckets);
+    rl.consume("a");
+    now += 30_000;
+    rl.consume("b");
+    rl.consume("c");
+    now += 30_001;
+    // "a" expired: renewing it moves it behind "b" and "c".
+    expect(rl.consume("a").allowed).toBe(true);
+    expect([...buckets.keys()]).toEqual(["b", "c", "a"]);
+
+    expect(rl.consume("d").allowed).toBe(true);
+    expect(buckets.size).toBe(3);
+    expect([...buckets.keys()]).toEqual(["c", "a", "d"]);
+    // The evicted live bucket starts over.
+    expect(rl.consume("b").allowed).toBe(true);
+    expect([...buckets.keys()]).toEqual(["a", "d", "b"]);
+    expect(rl.consume("d").allowed).toBe(false);
+  });
+
+  it("drops every expired bucket it meets before evicting a live one", () => {
+    const buckets = new Map();
+    const rl = new RateLimiter({ max: 1, windowMs: 60_000, maxBuckets: 3 }, buckets);
+    rl.consume("a");
+    rl.consume("b");
+    now += 30_000;
+    rl.consume("c");
+    now += 30_001;
+    expect(rl.consume("d").allowed).toBe(true);
+    expect([...buckets.keys()]).toEqual(["c", "d"]);
   });
 
   it("limiters given the same buckets share their counters", () => {

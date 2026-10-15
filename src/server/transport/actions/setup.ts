@@ -8,7 +8,7 @@ import { isSetupNeeded } from "@/server/services/setup-status";
 import { appSettings, getMinPasswordLength } from "@/server/services/settings/app-settings";
 import { upsertSmtp, smtpSchema } from "@/server/services/settings/smtp";
 import { createAuthProvider, providerSchema } from "@/server/services/settings/auth-providers";
-import { getCurrentUser, hasPermission } from "@/server/auth/permissions";
+import { getCurrentUser, hasEnforcedPermission } from "@/server/auth/permissions";
 import { nameSchema } from "@/lib/validation/name";
 
 export type ActionState = { ok: true } | { ok: false; error: string } | null;
@@ -107,7 +107,7 @@ function getPinned(
 export async function testOidcConnectionAction(issuerInput: string): Promise<OidcTestResult> {
   if (!(await isSetupNeeded())) {
     const user = await getCurrentUser();
-    if (!user || !(await hasPermission(user.id, "admin.security.write"))) {
+    if (!user || !(await hasEnforcedPermission(user.id, "admin.security.write"))) {
       return { ok: false, error: "UNAUTHORIZED" };
     }
   }
