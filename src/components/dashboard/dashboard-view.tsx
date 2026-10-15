@@ -298,7 +298,7 @@ export async function DashboardView({
                     data-slot="dashboard-recent-row"
                     className="flex items-center gap-3 border-b px-5 py-2.5 last:border-b-0"
                   >
-                    <CategoryAvatar color={meta?.color} icon={meta?.icon} size={28} />
+                    <CategoryAvatar category={meta} size={28} />
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm">{r.label}</div>
                       <div className="text-muted-foreground truncate text-[11.5px]">

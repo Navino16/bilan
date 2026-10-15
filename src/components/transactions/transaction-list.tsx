@@ -284,7 +284,7 @@ export function TransactionList({
                   {/* Desktop grid */}
                   <span className={`hidden items-center gap-3 px-4 py-2.5 lg:grid ${COLS}`}>
                     <span data-slot="row-label" className="flex min-w-0 items-center gap-2.5">
-                      <CategoryAvatar color={meta?.color} icon={meta?.icon} size={26} />
+                      <CategoryAvatar category={meta} size={26} />
                       <span className="min-w-0">
                         <span className="block truncate text-sm">{it.label}</span>
                         {rowDate(it) && (
@@ -319,7 +319,7 @@ export function TransactionList({
 
                   {/* Mobile compact */}
                   <span className="flex items-center gap-3 px-4 py-3 lg:hidden">
-                    <CategoryAvatar color={meta?.color} icon={meta?.icon} size={32} />
+                    <CategoryAvatar category={meta} size={32} />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center gap-1.5">
                         <span className="truncate text-sm">{it.label}</span>

@@ -29,7 +29,7 @@ test.describe("accounts", () => {
     // Renaming leaves the IBAN untouched (the field stays blank on edit).
     const card = page.locator('[data-slot="card"]', { hasText: name });
     await expect(card.getByText("•••• 0189")).toBeVisible();
-    await card.getByRole("button", { name: "Modifier" }).click();
+    await card.getByRole("button", { name: /^actions pour/i }).click();
     await page.getByRole("menuitem", { name: /modifier/i }).click();
     const dialog = page.getByRole("dialog");
     await expect(dialog.locator('input[name="initialBalance"]')).toHaveValue("1500,00");
@@ -49,7 +49,9 @@ test.describe("accounts", () => {
     const card = () => page.locator('[data-slot="card"]').filter({ hasText: name }).last();
     await expect(card()).toBeVisible();
 
-    await card().getByRole("button", { name: "Modifier" }).click();
+    await card()
+      .getByRole("button", { name: /^actions pour/i })
+      .click();
     await page.getByRole("menuitem", { name: /^archiver$/i }).click();
     await page
       .getByRole("dialog")
@@ -58,11 +60,15 @@ test.describe("accounts", () => {
     const archived = page.locator('[data-slot="archived-accounts"]');
     await expect(archived.getByText(name)).toBeVisible();
 
-    await card().getByRole("button", { name: "Modifier" }).click();
+    await card()
+      .getByRole("button", { name: /^actions pour/i })
+      .click();
     await page.getByRole("menuitem", { name: /désarchiver/i }).click();
     await expect(archived.getByText(name)).toHaveCount(0);
 
-    await card().getByRole("button", { name: "Modifier" }).click();
+    await card()
+      .getByRole("button", { name: /^actions pour/i })
+      .click();
     await page.getByRole("menuitem", { name: /supprimer/i }).click();
     const dialog = page.getByRole("dialog");
     const confirm = dialog.getByRole("button", { name: /supprimer définitivement/i });
@@ -91,7 +97,7 @@ test.describe("accounts", () => {
     await expect(card).toBeVisible();
 
     // Open the card's kebab → Share, then grant READ to the seeded "E2E Shared".
-    await card.getByRole("button", { name: /modifier/i }).click();
+    await card.getByRole("button", { name: /^actions pour/i }).click();
     await page.getByRole("menuitem", { name: /partager/i }).click();
     await page.getByLabel("E2E Shared").selectOption("READ");
     await expect(page.getByLabel("E2E Shared")).toHaveValue("READ");
@@ -106,7 +112,7 @@ test.describe("accounts", () => {
     const mcard = mp.locator('[data-slot="card"]').filter({ hasText: name }).last();
     await expect(mcard).toBeVisible();
     await expect(mcard.getByText(/lecture/i)).toBeVisible();
-    await expect(mcard.getByRole("button", { name: /modifier/i })).toHaveCount(0);
+    await expect(mcard.getByRole("button", { name: /^actions pour/i })).toHaveCount(0);
     await memberCtx.close();
   });
 });

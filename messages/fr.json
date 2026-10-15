@@ -203,6 +203,7 @@
     "createCta": "Créer le compte",
     "cancel": "Annuler",
     "edit": "Modifier",
+    "actionsFor": "Actions pour {name}",
     "addTransaction": "Saisir une transaction",
     "archive": "Archiver",
     "archiveTitle": "Archiver « {name} » ?",
@@ -318,7 +319,9 @@
     "save": "Enregistrer",
     "cancel": "Annuler",
     "edit": "Modifier",
+    "editRule": "Modifier la règle « {pattern} »",
     "delete": "Supprimer",
+    "deleteRule": "Supprimer la règle « {pattern} »",
     "deleteConfirm": "Supprimer cette règle ?",
     "disabled": "désactivée",
     "error": {

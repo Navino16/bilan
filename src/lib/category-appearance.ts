@@ -78,6 +78,36 @@ export function isHexColor(color: string | null | undefined): color is string {
   return !!color && HEX.test(color);
 }
 
+// Tile background of a category badge; no category at all is the uncategorized tile (as in charts).
+export function categoryTileColor(category: { color?: string | null } | null | undefined): string {
+  if (!category) return "var(--cat-uncategorized)";
+  return category.color ?? "var(--cat-other)";
+}
+
+// Dark-theme --paper (globals.css); the darkest glyph a tile can get.
+const DARK_GLYPH = "#0f1114";
+
+function luminance(hex: string): number {
+  const [r, g, b] = [1, 3, 5].map((i) => {
+    const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/**
+ * Glyph colour for a tile. Palette variables follow the theme, so they use the
+ * `text-category-glyph` token (undefined here). A fixed hex gets white or --paper, whichever
+ * contrasts more in dark mode; --paper is near-white in light mode, which stays as before.
+ */
+export function categoryGlyphColor(background: string): string | undefined {
+  if (!isHexColor(background)) return undefined;
+  const bg = luminance(background);
+  const onWhite = 1.05 / (bg + 0.05);
+  const onDark = (bg + 0.05) / (luminance(DARK_GLYPH) + 0.05);
+  return onWhite >= onDark ? "#ffffff" : "var(--paper)";
+}
+
 // The trimmed input if it is exactly one user-perceived character (an emoji with its
 // modifiers/ZWJ sequence counts as one), else null.
 export function singleGrapheme(input: string): string | null {

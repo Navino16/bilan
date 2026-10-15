@@ -172,7 +172,7 @@ export function BudgetDetail({
                   data-slot="budget-transaction-row"
                   className="flex items-center gap-3 border-b px-5 py-2.5 last:border-b-0"
                 >
-                  <CategoryAvatar color={meta?.color} icon={meta?.icon} size={28} />
+                  <CategoryAvatar category={meta} size={28} />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm">{tx.label ?? t("detail.hiddenTx")}</div>
                     <div className="text-muted-foreground truncate text-[11.5px]">

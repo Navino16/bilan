@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -230,7 +230,7 @@ export function TransactionDetail({
               >
                 {nf.format(item.amount)}
               </div>
-              <div className="text-sm">{item.label}</div>
+              <SheetTitle className="font-sans text-sm font-normal">{item.label}</SheetTitle>
               <div className="text-muted-foreground text-xs first-letter:uppercase">
                 {df.format(new Date(item.date))}
               </div>

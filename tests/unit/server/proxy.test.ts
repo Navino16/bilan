@@ -38,3 +38,21 @@ describe("proxy setup gate (#214)", () => {
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
   });
 });
+
+describe("proxy CSP upgrade-insecure-requests", () => {
+  const cspFor = async (appUrl: string) => {
+    vi.resetModules();
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("APP_URL", appUrl);
+    const { default: proxy } = await import("@/proxy");
+    setup.needed = false;
+    const res = await proxy(request("/en/setup"));
+    vi.unstubAllEnvs();
+    return res.headers.get("content-security-policy") ?? "";
+  };
+
+  it("upgrades subresources only when the app is served over HTTPS", async () => {
+    expect(await cspFor("https://bilan.example")).toContain("upgrade-insecure-requests");
+    expect(await cspFor("http://192.168.1.10:3000")).not.toContain("upgrade-insecure-requests");
+  });
+});

@@ -6,6 +6,8 @@ import en from "../../../messages/en.json";
 import {
   CATEGORY_PALETTE,
   CATEGORY_SYMBOLS,
+  categoryGlyphColor,
+  categoryTileColor,
   DEFAULT_CATEGORY_COLOR,
   isCategoryColor,
   isHexColor,
@@ -85,6 +87,42 @@ describe("category symbols", () => {
       };
       for (const key of CATEGORY_PALETTE) expect(c.colors[key]).toBeTruthy();
       for (const s of CATEGORY_SYMBOLS) expect(c.symbols[s.key]).toBeTruthy();
+    }
+  });
+});
+
+describe("categoryTileColor", () => {
+  it("uses the uncategorized neutral when there is no category, as charts do", () => {
+    expect(categoryTileColor(undefined)).toBe("var(--cat-uncategorized)");
+    expect(categoryTileColor(null)).toBe("var(--cat-uncategorized)");
+  });
+
+  it("falls back to the grey palette colour for a category without colour", () => {
+    expect(categoryTileColor({ color: null })).toBe("var(--cat-other)");
+    expect(categoryTileColor({})).toBe("var(--cat-other)");
+  });
+
+  it("keeps the category colour", () => {
+    expect(categoryTileColor({ color: "#2f6b8f" })).toBe("#2f6b8f");
+    expect(categoryTileColor({ color: paletteColor("food") })).toBe("var(--cat-food)");
+  });
+});
+
+describe("categoryGlyphColor", () => {
+  it("leaves theme palette variables to the glyph token", () => {
+    expect(categoryGlyphColor(paletteColor("groceries"))).toBeUndefined();
+    expect(categoryGlyphColor("var(--cat-uncategorized)")).toBeUndefined();
+  });
+
+  it("keeps white on deep custom colours", () => {
+    for (const hex of ["#2f6b8f", "#4a6675", "#6e5b8c", "#15130f"]) {
+      expect(categoryGlyphColor(hex)).toBe("#ffffff");
+    }
+  });
+
+  it("switches to the paper tone on light custom colours", () => {
+    for (const hex of ["#87bc83", "#dcba6b", "#ffffff"]) {
+      expect(categoryGlyphColor(hex)).toBe("var(--paper)");
     }
   });
 });

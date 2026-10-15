@@ -47,8 +47,9 @@ const SECURITY_HEADERS: Record<string, string> = {
     "frame-ancestors 'none'",
     "form-action 'self'",
     "base-uri 'self'",
-    // Dev is plain HTTP: upgrading would break any non-localhost access (LAN, WSL IP).
-    ...(isProd ? ["upgrade-insecure-requests"] : []),
+    // Only behind HTTPS: on plain HTTP (dev, LAN, CI) Safari upgrades even localhost
+    // subresources and the page loads without CSS.
+    ...(isProd && process.env.APP_URL?.startsWith("https://") ? ["upgrade-insecure-requests"] : []),
   ].join("; "),
 };
 
