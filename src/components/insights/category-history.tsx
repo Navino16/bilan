@@ -89,7 +89,9 @@ export function CategoryHistoryCard({
                     className={`flex items-center gap-2 text-sm ${ROW_LINK}`}
                   >
                     <Dot color={colorOf(r.categoryId)} />
-                    <span className="min-w-0 flex-1 truncate">{catName(r.categoryId)}</span>
+                    <span className="min-w-0 flex-1 truncate" title={catName(r.categoryId)}>
+                      {catName(r.categoryId)}
+                    </span>
                     <span className="text-muted-foreground text-[11.5px]">
                       {t("historyAverage")}
                     </span>

@@ -1,21 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
-// Resolves a mobile viewport after mount (SSR-safe: starts `false`, so it never
-// causes a hydration mismatch — mobile-only UI switches on a post-hydration
-// media-query match). Shared by the transaction detail sheet and the responsive
-// account/group dialogs.
+// Mobile viewport match, SSR-safe: hydration renders `false` (the server snapshot) and then
+// switches, while a component mounted later (e.g. a dialog opened on demand) gets the real
+// value on its first render. Shared by the responsive sheets/dialogs.
 export const MOBILE_QUERY = "(max-width: 767px)";
 
+let mql: MediaQueryList | undefined;
+const mediaQuery = () => (mql ??= window.matchMedia(MOBILE_QUERY));
+
+function subscribe(onChange: () => void) {
+  const mq = mediaQuery();
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
+}
+
 export function useIsMobile(): boolean {
-  const [mobile, setMobile] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia(MOBILE_QUERY);
-    const sync = () => setMobile(mq.matches);
-    sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
-  }, []);
-  return mobile;
+  return useSyncExternalStore(
+    subscribe,
+    () => mediaQuery().matches,
+    () => false,
+  );
 }

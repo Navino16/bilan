@@ -16,6 +16,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useFrozenWhileOpen } from "@/hooks/use-frozen-while-open";
 import { budgetPlannedTotal, periodEndFor } from "@/lib/budgets";
 import { parseAmount, readAmount } from "@/lib/amount";
 import { formatAmountInput, formatMoney } from "@/lib/format";
@@ -84,18 +87,36 @@ export function BudgetForm({
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = controlledOpen ?? uncontrolledOpen;
   const setOpen = onOpenChange ?? setUncontrolledOpen;
+  // Swapping Sheet↔Dialog mid-edit would remount the fields and lose the user's input.
+  const isMobile = useFrozenWhileOpen(open, useIsMobile());
 
-  return (
+  const body = (
+    <>
+      <DialogHeader className="border-border shrink-0 border-b px-6 pt-5 pb-4 text-left max-md:px-5">
+        <DialogTitle className="font-display text-2xl">
+          {props.mode === "create" ? t("createTitle") : t("editTitle")}
+        </DialogTitle>
+        <DialogDescription>{t("subtitle")}</DialogDescription>
+      </DialogHeader>
+      <BudgetFormBody {...props} onDone={() => setOpen(false)} />
+    </>
+  );
+
+  return isMobile ? (
+    <Sheet open={open} onOpenChange={setOpen}>
+      {trigger && <SheetTrigger render={trigger as React.ReactElement} />}
+      <SheetContent
+        side="bottom"
+        className="flex max-h-[92dvh] flex-col gap-0 overflow-hidden rounded-t-2xl p-0"
+      >
+        {body}
+      </SheetContent>
+    </Sheet>
+  ) : (
     <Dialog open={open} onOpenChange={setOpen}>
       {trigger && <DialogTrigger render={trigger as React.ReactElement} />}
-      <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0">
-        <DialogHeader className="border-border shrink-0 border-b px-6 pt-5 pb-4 text-left">
-          <DialogTitle className="font-display text-2xl">
-            {props.mode === "create" ? t("createTitle") : t("editTitle")}
-          </DialogTitle>
-          <DialogDescription>{t("subtitle")}</DialogDescription>
-        </DialogHeader>
-        <BudgetFormBody {...props} onDone={() => setOpen(false)} />
+      <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+        {body}
       </DialogContent>
     </Dialog>
   );
@@ -196,7 +217,7 @@ function BudgetFormBody({
 
   return (
     <form {...form.formProps} className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-5">
+      <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-5 max-md:px-5">
         {mode === "edit" && <input type="hidden" name="id" value={budget!.id} />}
         <input type="hidden" name="lines" value={linesPayload} />
 
@@ -377,7 +398,7 @@ function BudgetFormBody({
         )}
       </div>
 
-      <DialogFooter className="bg-muted/40 border-border shrink-0 border-t px-6 py-3">
+      <DialogFooter className="bg-muted/40 border-border shrink-0 border-t px-6 py-3 max-md:px-5">
         <Button type="button" variant="ghost" onClick={onDone}>
           {t("cancel")}
         </Button>

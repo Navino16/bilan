@@ -24,7 +24,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { discardImportAction } from "@/server/transport/actions/imports";
 import { cn } from "@/lib/utils";
 import { formatBytes, formatCount, formatDate } from "@/lib/format";
-import { previewCategoryId } from "@/lib/import-preview";
+import { previewCategoryId, rejectedFields } from "@/lib/import-preview";
 import { RevertImportDialog } from "./revert-import-dialog";
 import { AddBlockedState, ADD_BLOCKED_ID } from "@/components/onboarding/add-blocked";
 import type { AddTransactionBlocker } from "@/lib/onboarding";
@@ -376,6 +376,7 @@ export function ImportWizard({
         ]
     : [];
   const total = products.reduce((n, p) => n + p.totalRows, 0);
+  const invalidFields = rejectedFields(preview?.rejected);
   const dupCount = products.reduce((n, p) => n + p.duplicateCount, 0);
   const catCount = products.reduce((n, p) => n + p.autoCategorizedCount, 0);
   const excludedIn = (key: string) => Object.values(excluded).filter((k) => k === key).length;
@@ -628,7 +629,10 @@ export function ImportWizard({
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium">{t("settings")}</span>
-                <span className="text-muted-foreground block truncate text-[11.5px]">
+                <span
+                  className="text-muted-foreground block truncate text-[11.5px]"
+                  title={settingsSummary}
+                >
                   {settingsSummary}
                 </span>
               </span>
@@ -649,14 +653,16 @@ export function ImportWizard({
               <div>
                 <div className={`${overline} mb-2`}>{t("fileSection")}</div>
                 <div className="bg-muted/60 flex items-center gap-2.5 rounded-lg p-2.5">
-                  <span className="bg-foreground text-background flex size-8 items-center justify-center rounded-md font-mono text-[10px]">
+                  <span className="bg-foreground text-background flex size-8 shrink-0 items-center justify-center rounded-md font-mono text-[10px]">
                     {sourceBadge}
                   </span>
                   <div className="min-w-0">
-                    <div className="truncate text-[13px]">{preview.filename ?? sourceBadge}</div>
+                    <div className="truncate text-[13px]" title={preview.filename ?? undefined}>
+                      {preview.filename ?? sourceBadge}
+                    </div>
                     <div className="text-muted-foreground text-[11px]">
                       {t("fileMeta", {
-                        count: total,
+                        count: total + (preview.rejectedCount ?? 0),
                         size: preview.fileSizeBytes
                           ? formatBytes(preview.fileSizeBytes, locale)
                           : "",
@@ -686,9 +692,14 @@ export function ImportWizard({
                       >
                         <span className="bg-primary size-2 shrink-0 rounded-full" />
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-[13px]">{a.name}</div>
+                          <div className="truncate text-[13px]" title={a.name}>
+                            {a.name}
+                          </div>
                           {a.bankName && (
-                            <div className="text-muted-foreground truncate text-[10.5px]">
+                            <div
+                              className="text-muted-foreground truncate text-[10.5px]"
+                              title={a.bankName}
+                            >
                               {a.bankName}
                             </div>
                           )}
@@ -713,7 +724,12 @@ export function ImportWizard({
                       </p>
                     )}
                     {CSV_FIELDS.map((field) => (
-                      <FieldMap key={field} label={fieldLabel(field)} mapped={!!columns[field]}>
+                      <FieldMap
+                        key={field}
+                        label={fieldLabel(field)}
+                        mapped={!!columns[field]}
+                        invalid={invalidFields.has(field) ? t("fieldRejected") : undefined}
+                      >
                         <NativeSelect
                           value={columns[field] ?? ""}
                           aria-label={fieldLabel(field)}

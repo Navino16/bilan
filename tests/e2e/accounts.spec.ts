@@ -40,6 +40,34 @@ test.describe("accounts", () => {
     await expect(renamed.getByText("•••• 0189")).toBeVisible();
   });
 
+  test("a negative balance shows in the expense colour", async ({ page }) => {
+    const name = `Découvert ${Date.now()}`;
+    await page.goto("/fr/accounts");
+    await expect(async () => {
+      await page.getByRole("button", { name: /nouveau compte/i }).click();
+      await expect(page.locator('input[name="name"]')).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 20_000 });
+    await page.fill('input[name="name"]', name);
+    await page.fill('input[name="initialBalance"]', "-250");
+    await page.getByRole("button", { name: /créer le compte/i }).click();
+
+    const balance = page
+      .locator('[data-slot="card"]')
+      .filter({ hasText: name })
+      .last()
+      .locator('[data-slot="account-balance"]');
+    await expect(balance).toContainText("250,00");
+    const [color, expense] = await balance.evaluate((el) => {
+      const probe = document.createElement("span");
+      probe.style.color = "var(--expense)";
+      document.body.append(probe);
+      const resolved = getComputedStyle(probe).color;
+      probe.remove();
+      return [getComputedStyle(el).color, resolved];
+    });
+    expect(color).toBe(expense);
+  });
+
   test("archive, unarchive, then delete an account with a typed confirmation", async ({ page }) => {
     const name = `Jetable ${Date.now()}`;
     await page.goto("/fr/accounts");

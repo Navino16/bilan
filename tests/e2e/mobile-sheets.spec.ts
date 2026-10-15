@@ -60,6 +60,71 @@ test.describe("mobile bottom-sheets", () => {
     await expect(page.locator('input[name="name"]')).toBeVisible();
   });
 
+  test("budget create opens a bottom sheet", async ({ page }) => {
+    await page.goto("/fr/budgets", { waitUntil: "domcontentloaded", timeout: 90_000 });
+    await openViaTrigger(page, /nouveau budget/i);
+    const sheet = page.locator('[data-slot="sheet-content"]');
+    await expect(sheet.locator('input[name="name"]')).toBeVisible();
+    await expect(sheet.getByRole("button", { name: /créer le budget/i })).toBeVisible();
+  });
+
+  test("rule create opens a bottom sheet that fits 320px", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.goto("/fr/categories", { waitUntil: "domcontentloaded", timeout: 90_000 });
+    const newRule = page.getByRole("button", { name: /nouvelle règle/i });
+    await expect(async () => {
+      await page.getByRole("button", { name: /^Règles/ }).click();
+      await expect(newRule).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 20_000 });
+    await openViaTrigger(page, /nouvelle règle/i);
+    const sheet = page.locator('[data-slot="sheet-content"]');
+    await expect(sheet.getByLabel(/motif/i)).toBeVisible();
+
+    const tops = await Promise.all(
+      (await sheet.locator("button[aria-pressed]").all()).map(
+        async (b) => (await b.boundingBox())!.y,
+      ),
+    );
+    expect(tops).toHaveLength(4);
+    expect(new Set(tops).size).toBe(1);
+    const scope = sheet.locator("#rule-scope");
+    if ((await scope.count()) > 0) {
+      expect((await scope.boundingBox())!.width).toBeGreaterThan(200);
+    }
+  });
+
+  test("the rule learning prompt opens as a bottom sheet", async ({ page }) => {
+    test.setTimeout(120_000);
+    const stamp = Date.now();
+    const label = `Sheetprompt ${stamp}`;
+    await page.goto(`/fr/transactions?search=${stamp}`, {
+      waitUntil: "domcontentloaded",
+      timeout: 90_000,
+    });
+    await openViaTrigger(page, /nouvelle transaction/i);
+    await page.fill('input[name="date"]', "2026-02-16");
+    await page.fill('input[name="amount"]', "-30");
+    await page.fill('input[name="label"]', label);
+    await page.getByRole("button", { name: /^ajouter$/i }).click();
+
+    const row = page.locator('[data-slot="transaction-row"]').filter({ hasText: label }).first();
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    const combobox = page.locator('[data-slot="sheet-content"] [data-slot="category-combobox"]');
+    await expect(async () => {
+      await row.click();
+      await expect(combobox).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 20_000 });
+    await combobox.click();
+    await page.getByRole("menuitem", { name: "Restaurants", exact: true }).click();
+
+    const prompt = page.locator('[data-slot="sheet-content"][data-side="bottom"]', {
+      hasText: /créer une règle pour les transactions/i,
+    });
+    await expect(prompt).toBeVisible({ timeout: 15_000 });
+    await prompt.getByRole("button", { name: "Non merci" }).click();
+    await expect(prompt).toHaveCount(0);
+  });
+
   test("transaction filters live in a bottom sheet and combine", async ({ page }) => {
     await page.goto("/fr/transactions", { waitUntil: "domcontentloaded", timeout: 90_000 });
     // Only search + the « Filtres » button stay inline on mobile.

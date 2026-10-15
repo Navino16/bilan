@@ -303,7 +303,8 @@
       "AMOUNT_AMBIGUOUS": "Montant ambigu : écrivez 1234 ou 1,23 (sans séparateur de milliers seul).",
       "AMOUNT_PRECISION": "Le montant ne peut pas avoir plus de 2 décimales."
     },
-    "legendOthers": "Autres · {count, number}"
+    "legendOthers": "Autres · {count, number}",
+    "legendNegative": "Hachuré : solde négatif"
   },
   "rules": {
     "pageTitle": "Catégories & règles",
@@ -670,7 +671,7 @@
       "title": "Suggestions de liens",
       "subtitle": "{count, plural, =0 {Aucune suggestion} one {# paire suggérée} other {# paires suggérées}}",
       "open": "Suggestions",
-      "pairWithin": "à {days, plural, one {# jour} other {# jours}} d’écart",
+      "pairWithin": "{days, plural, =0 {le même jour} one {à # jour d’écart} other {à # jours d’écart}}",
       "link": "Lier",
       "ignore": "Ignorer",
       "empty": "Aucune paire à suggérer pour le moment.",
@@ -862,6 +863,7 @@
     },
     "settings": "Paramètres de l’import",
     "duplicatesNote": "Les transactions déjà présentes sur ce compte sont ignorées (doublons).",
+    "fieldRejected": "Des lignes n’ont pas pu être lues avec cette colonne.",
     "duplicateSkipped": "Doublon : déjà présent sur ce compte, ne sera pas importé",
     "nothingToImport": "Rien à importer : aucune ligne n’est retenue (doublons, lignes décochées, illisibles ou produits ignorés).",
     "progress": "{done, number} sur {total, plural, one {# transaction importée} other {# transactions importées}}…",

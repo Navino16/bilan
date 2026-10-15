@@ -58,7 +58,7 @@ export function CategoryCombobox({
             <button
               type="button"
               data-slot="category-combobox"
-              className="border-input hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 flex h-8 w-full min-w-0 items-center gap-2 rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
+              className="border-input hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 flex h-8 w-full min-w-0 items-center gap-2 rounded-lg border bg-transparent px-2.5 text-base outline-none focus-visible:ring-3 md:text-sm"
             />
           }
         >

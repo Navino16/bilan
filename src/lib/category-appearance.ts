@@ -84,7 +84,7 @@ export function categoryTileColor(category: { color?: string | null } | null | u
   return category.color ?? "var(--cat-other)";
 }
 
-// Dark-theme --paper (globals.css); the darkest glyph a tile can get.
+// Dark-theme --paper (globals.css), used as the glyph on light custom colours.
 const DARK_GLYPH = "#0f1114";
 
 function luminance(hex: string): number {
@@ -97,15 +97,15 @@ function luminance(hex: string): number {
 
 /**
  * Glyph colour for a tile. Palette variables follow the theme, so they use the
- * `text-category-glyph` token (undefined here). A fixed hex gets white or --paper, whichever
- * contrasts more in dark mode; --paper is near-white in light mode, which stays as before.
+ * `text-category-glyph` token (undefined here). A fixed hex gets white or the dark glyph,
+ * whichever contrasts more, in both themes (DATA-08).
  */
 export function categoryGlyphColor(background: string): string | undefined {
   if (!isHexColor(background)) return undefined;
   const bg = luminance(background);
   const onWhite = 1.05 / (bg + 0.05);
   const onDark = (bg + 0.05) / (luminance(DARK_GLYPH) + 0.05);
-  return onWhite >= onDark ? "#ffffff" : "var(--paper)";
+  return onWhite >= onDark ? "#ffffff" : DARK_GLYPH;
 }
 
 // The trimmed input if it is exactly one user-perceived character (an emoji with its

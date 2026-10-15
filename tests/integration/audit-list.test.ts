@@ -80,6 +80,129 @@ describe("listAuditLog", () => {
     expect(items[0].user?.email).toBe("someone-else@bilan.local");
   });
 
+  describe("entity names", () => {
+    const named = `${prefix}.named`;
+    const ids = {
+      group: "auditlist_group",
+      group2: "auditlist_group2",
+      account: "auditlist_account",
+      passkey: "auditlist_passkey",
+      provider: "auditlist_provider",
+      invitation: "auditlist_invitation",
+      token: "auditlist_token",
+    };
+    const NAMED_MODELS = [
+      "group",
+      "passkey",
+      "authProvider",
+      "groupInvitation",
+      "adminSignupToken",
+    ];
+
+    async function cleanup() {
+      await db.auditLog.deleteMany({ where: { action: named } });
+      await db.groupInvitation.deleteMany({ where: { id: ids.invitation } });
+      await db.group.deleteMany({ where: { id: { in: [ids.group, ids.group2] } } });
+      await db.bankAccount.deleteMany({ where: { id: ids.account } });
+      await db.passkey.deleteMany({ where: { id: ids.passkey } });
+      await db.authProvider.deleteMany({ where: { id: ids.provider } });
+      await db.adminSignupToken.deleteMany({ where: { id: ids.token } });
+    }
+
+    beforeAll(async () => {
+      await cleanup();
+      await db.group.createMany({
+        data: [
+          { id: ids.group, name: "Foyer audit", createdById: userId },
+          { id: ids.group2, name: "Foyer bis", createdById: userId },
+        ],
+      });
+      await db.bankAccount.create({
+        data: { id: ids.account, ownerId: userId, name: "Compte secret", type: "CHECKING" },
+      });
+      await db.passkey.create({
+        data: {
+          id: ids.passkey,
+          name: "Clé du portable",
+          publicKey: "pk",
+          userId,
+          credentialID: "auditlist_cred",
+          deviceType: "singleDevice",
+        },
+      });
+      await db.authProvider.create({
+        data: { id: ids.provider, type: "oidc", key: "auditlist_oidc", displayName: "SSO maison" },
+      });
+      await db.groupInvitation.create({
+        data: {
+          id: ids.invitation,
+          groupId: ids.group,
+          email: "invite-audit@bilan.local",
+          invitedById: userId,
+          token: "auditlist_invite_token",
+          code: "AUDITLST",
+          expiresAt: new Date("2099-01-01T00:00:00Z"),
+        },
+      });
+      await db.adminSignupToken.create({
+        data: {
+          id: ids.token,
+          token: "auditlist_signup_token",
+          description: "Jeton famille",
+          createdById: userId,
+        },
+      });
+      await db.auditLog.createMany({
+        data: [
+          { action: named, entity: "Group", entityId: ids.group },
+          { action: named, entity: "Group", entityId: ids.group2 },
+          { action: named, entity: "Group", entityId: "auditlist_group_gone" },
+          { action: named, entity: "Passkey", entityId: ids.passkey },
+          { action: named, entity: "AuthProvider", entityId: ids.provider },
+          { action: named, entity: "GroupInvitation", entityId: ids.invitation },
+          { action: named, entity: "AdminSignupToken", entityId: ids.token },
+          { action: named, entity: "BankAccount", entityId: ids.account },
+          { action: named, entity: "Transaction", entityId: "auditlist_tx" },
+        ],
+      });
+    });
+
+    afterAll(cleanup);
+
+    it("names admin-domain entities only, never users' financial data", async () => {
+      const { items } = await listAuditLog({ action: named });
+      expect(Object.fromEntries(items.map((i) => [i.entityId, i.entityName]))).toEqual({
+        [ids.group]: "Foyer audit",
+        [ids.group2]: "Foyer bis",
+        auditlist_group_gone: null,
+        [ids.passkey]: "Clé du portable",
+        [ids.provider]: "SSO maison",
+        [ids.invitation]: "invite-audit@bilan.local",
+        [ids.token]: "Jeton famille",
+        [ids.account]: null,
+        auditlist_tx: null,
+      });
+    });
+
+    it("looks names up with one query per entity type, not per row", async () => {
+      const calls: string[] = [];
+      const counting = new Proxy(db, {
+        get(target, prop, receiver) {
+          const value = Reflect.get(target, prop, receiver);
+          if (typeof prop !== "string" || !NAMED_MODELS.includes(prop)) return value;
+          return {
+            findMany: (args: unknown) => {
+              calls.push(prop);
+              return value.findMany(args);
+            },
+          };
+        },
+      });
+      await listAuditLog({ action: named }, counting);
+      expect(calls.sort()).toEqual([...NAMED_MODELS].sort());
+    });
+  });
+
   it("filters by a fragment of the user's email or name, or an exact id", async () => {
     const byEmail = await listAuditLog({ action: prefix, user: "AUDITLIST@" });
     expect(byEmail.items.map((i) => i.userId)).toEqual([userId, userId]);

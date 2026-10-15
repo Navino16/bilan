@@ -35,7 +35,7 @@ function Legs({ negative, positive }: { negative: PairLeg; positive: PairLeg }) 
       </span>
       {/* Narrow cards: the account · date drop below the label instead of squeezing it. */}
       <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2">
-        <span data-slot="leg-label" className="max-w-full min-w-0 truncate">
+        <span data-slot="leg-label" className="max-w-full min-w-0 truncate" title={l.label}>
           {l.label}
         </span>
         <span className="text-muted-foreground min-w-0 wrap-anywhere">

@@ -44,7 +44,51 @@ type UserRef = { name: string | null; email: string };
 
 // `user` is null for system events and for users deleted since (userId has no FK).
 // `subject` is the user an entity="User" row is about, resolved the same way.
-export type AuditEntry = AuditLog & { user: UserRef | null; subject: UserRef | null };
+// `entityName` is the current name of an admin-domain entity (ENTITY_NAMES), null otherwise.
+export type AuditEntry = AuditLog & {
+  user: UserRef | null;
+  subject: UserRef | null;
+  entityName: string | null;
+};
+
+type Named = { id: string; name: string | null };
+const byIds = (ids: string[]) => ({ where: { id: { in: ids } } });
+
+// Admin-domain entities only: users' financial labels (accounts, categories, budgets, rules,
+// imports, transactions) stay as ids so admins can't read them (#244 decision).
+const ENTITY_NAMES: Record<string, (database: PrismaClient, ids: string[]) => Promise<Named[]>> = {
+  Group: (d, ids) => d.group.findMany({ ...byIds(ids), select: { id: true, name: true } }),
+  Passkey: (d, ids) => d.passkey.findMany({ ...byIds(ids), select: { id: true, name: true } }),
+  AuthProvider: async (d, ids) =>
+    (await d.authProvider.findMany({ ...byIds(ids), select: { id: true, displayName: true } })).map(
+      (p) => ({ id: p.id, name: p.displayName }),
+    ),
+  GroupInvitation: async (d, ids) =>
+    (await d.groupInvitation.findMany({ ...byIds(ids), select: { id: true, email: true } })).map(
+      (i) => ({ id: i.id, name: i.email }),
+    ),
+  AdminSignupToken: async (d, ids) =>
+    (
+      await d.adminSignupToken.findMany({ ...byIds(ids), select: { id: true, description: true } })
+    ).map((s) => ({ id: s.id, name: s.description })),
+};
+
+async function entityNames(
+  items: AuditLog[],
+  database: PrismaClient,
+): Promise<Map<string, string>> {
+  const idsByEntity = new Map<string, Set<string>>();
+  for (const i of items) {
+    if (!i.entity || !i.entityId || !Object.hasOwn(ENTITY_NAMES, i.entity)) continue;
+    idsByEntity.set(i.entity, (idsByEntity.get(i.entity) ?? new Set()).add(i.entityId));
+  }
+  const rows = await Promise.all(
+    [...idsByEntity].map(async ([entity, ids]) =>
+      (await ENTITY_NAMES[entity](database, [...ids])).map((r) => [`${entity}:${r.id}`, r.name]),
+    ),
+  );
+  return new Map(rows.flat().filter((r): r is [string, string] => !!r[1]));
+}
 
 export type AuditPage = { items: AuditEntry[]; total: number; page: number; pageCount: number };
 
@@ -92,18 +136,22 @@ export async function listAuditLog(
     if (i.userId) ids.add(i.userId);
     if (i.entity === "User" && i.entityId) ids.add(i.entityId);
   }
-  const users = ids.size
-    ? await database.user.findMany({
-        where: { id: { in: [...ids] } },
-        select: { id: true, name: true, email: true },
-      })
-    : [];
+  const [users, names] = await Promise.all([
+    ids.size
+      ? database.user.findMany({
+          where: { id: { in: [...ids] } },
+          select: { id: true, name: true, email: true },
+        })
+      : [],
+    entityNames(items, database),
+  ]);
   const byId = new Map(users.map((u) => [u.id, { name: u.name, email: u.email }]));
   return {
     items: items.map((i) => ({
       ...i,
       user: i.userId ? (byId.get(i.userId) ?? null) : null,
       subject: i.entity === "User" && i.entityId ? (byId.get(i.entityId) ?? null) : null,
+      entityName: names.get(`${i.entity}:${i.entityId}`) ?? null,
     })),
     total,
     page,

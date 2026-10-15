@@ -280,6 +280,69 @@ test.describe("responsive layout (#167)", () => {
         await expectNoPageOverflow(page, "group detail at 320px");
       });
 
+      test("at 320px insights tiles, group rows and the transaction list are not clipped", async ({
+        page,
+      }) => {
+        test.setTimeout(120_000);
+        await page.setViewportSize({ width: 320, height: 800 });
+
+        await page.goto("/fr/insights", { waitUntil: "domcontentloaded", timeout: 90_000 });
+        await expect(page.locator("main h1")).toBeVisible();
+        const tiles = page
+          .locator('[data-slot="card"]')
+          .filter({ has: page.locator('[data-slot="insights-tile-amount"]') });
+        for (const tile of await tiles.all()) await expectFits(tile, "insights tile amount");
+        await expectNoPageOverflow(page, "/fr/insights at 320px");
+
+        await page.goto("/fr/groups/e2e-shared-group", {
+          waitUntil: "domcontentloaded",
+          timeout: 90_000,
+        });
+        await expect(page.locator("main h1")).toBeVisible();
+        // Names wrap instead of being cut: the whole text is laid out inside the box.
+        const names = page.locator(
+          '[data-slot="shared-account-name"], [data-slot="invitation-email"]',
+        );
+        for (const name of await names.all()) {
+          await expect
+            .poll(() =>
+              name.evaluate(
+                (el) =>
+                  el.scrollWidth <= el.clientWidth &&
+                  el.scrollHeight <= el.clientHeight &&
+                  getComputedStyle(el).textOverflow !== "ellipsis",
+              ),
+            )
+            .toBe(true);
+        }
+        await expectNoPageOverflow(page, "group detail at 320px");
+
+        await page.goto("/fr/transactions", { waitUntil: "domcontentloaded", timeout: 90_000 });
+        const search = page.getByRole("searchbox", { name: "Rechercher", exact: true });
+        await expect(search).toBeVisible();
+        // The placeholder is measured, not the (empty) value.
+        expect(
+          await search.evaluate((el: HTMLInputElement) => {
+            const style = getComputedStyle(el, "::placeholder");
+            const ctx = document.createElement("canvas").getContext("2d")!;
+            ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+            const box = getComputedStyle(el);
+            const room =
+              el.clientWidth - parseFloat(box.paddingLeft) - parseFloat(box.paddingRight);
+            return ctx.measureText(el.placeholder).width <= room;
+          }),
+        ).toBe(true);
+        // A long amount may still truncate the label; only the "Liée" pill must not squeeze it.
+        for (const label of await page.locator('[data-slot="row-label-mobile"]').all()) {
+          expect(
+            await label.evaluate((el: HTMLElement) => {
+              const pill = el.nextElementSibling as HTMLElement | null;
+              return !pill || el.scrollWidth <= el.clientWidth || pill.offsetTop > el.offsetTop;
+            }),
+          ).toBe(true);
+        }
+      });
+
       test("at 390px a long foyer name wraps in the title and the share dialog", async ({
         page,
       }) => {
@@ -334,6 +397,18 @@ test.describe("responsive layout (#167)", () => {
 
     test.describe("as a super admin", () => {
       test.use({ storageState: "tests/e2e/.auth/superadmin.json" });
+
+      test("at 375px every user row puts its role control on its own line", async ({ page }) => {
+        await page.setViewportSize({ width: 375, height: 800 });
+        await page.goto("/fr/admin/users", { waitUntil: "domcontentloaded", timeout: 90_000 });
+        const rows = page.locator('[data-slot="admin-user-row"]');
+        await expect(rows.first()).toBeVisible();
+        for (const row of await rows.all()) {
+          const text = (await row.locator(":scope > div").first().boundingBox())!;
+          const control = (await row.locator(":scope > div").last().boundingBox())!;
+          expect(control.y).toBeGreaterThanOrEqual(text.y + text.height - 1);
+        }
+      });
 
       test("at 390px the user role select stays readable", async ({ page }) => {
         await page.setViewportSize({ width: 390, height: 844 });

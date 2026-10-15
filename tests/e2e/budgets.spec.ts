@@ -51,6 +51,17 @@ test.describe("budgets", () => {
     // Planned total and a status pill render (spend is 0 → "Dans le budget").
     await expect(page.getByText("250,00", { exact: false }).first()).toBeVisible();
     await expect(page.getByText(/dans le budget/i).first()).toBeVisible();
+
+    // Without period links, the menu stays beside the title on mobile.
+    await page.setViewportSize({ width: 320, height: 800 });
+    const title = page.getByRole("heading", { name });
+    const menu = page.getByRole("button", { name: `Actions pour ${name}` });
+    await expect
+      .poll(async () => {
+        const [m, h] = [await menu.boundingBox(), await title.boundingBox()];
+        return m && h ? m.y < h.y + h.height : false;
+      })
+      .toBe(true);
   });
 
   test("assigns a non-matching transaction to a budget (INCLUDE) and it counts", async ({
@@ -145,7 +156,11 @@ test.describe("budgets", () => {
     const currentUrl = page.url();
     await page.getByRole("link", { name: /période précédente/i }).click();
     await expect(page).not.toHaveURL(currentUrl);
-    await expect(page.getByRole("link", { name: /période suivante/i })).toBeVisible();
+    const next = page.getByRole("link", { name: /période suivante/i });
+    await expect(next).toBeVisible();
+    expect(await next.evaluate((el) => getComputedStyle(el).borderTopColor)).not.toBe(
+      "rgba(0, 0, 0, 0)",
+    );
 
     await page.getByRole("button", { name: `Actions pour ${name}` }).click();
     await page.getByRole("menuitem", { name: /modifier/i }).click();

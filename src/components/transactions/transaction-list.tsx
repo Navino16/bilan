@@ -282,7 +282,9 @@ export function TransactionList({
                     <span data-slot="row-label" className="flex min-w-0 items-center gap-2.5">
                       <CategoryAvatar category={meta} size={26} />
                       <span className="min-w-0">
-                        <span className="block truncate text-sm">{it.label}</span>
+                        <span className="block truncate text-sm" title={it.label}>
+                          {it.label}
+                        </span>
                         {rowDate(it) && (
                           <span className="text-muted-foreground block text-xs">{rowDate(it)}</span>
                         )}
@@ -317,8 +319,14 @@ export function TransactionList({
                   <span className="flex items-center gap-3 px-4 py-3 lg:hidden">
                     <CategoryAvatar category={meta} size={32} />
                     <span className="min-w-0 flex-1">
-                      <span className="flex items-center gap-1.5">
-                        <span className="truncate text-sm">{it.label}</span>
+                      <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                        <span
+                          data-slot="row-label-mobile"
+                          className="min-w-0 truncate text-sm"
+                          title={it.label}
+                        >
+                          {it.label}
+                        </span>
                         {it.linked && <Pill>{tLink("linked")}</Pill>}
                       </span>
                       <span className="text-muted-foreground block truncate text-xs">
@@ -328,7 +336,7 @@ export function TransactionList({
                       </span>
                     </span>
                     <span
-                      className="text-sm font-medium tabular-nums"
+                      className="shrink-0 text-sm font-medium tabular-nums"
                       style={it.amount > 0 ? { color: "var(--income)" } : undefined}
                     >
                       {nf.format(it.amount)}

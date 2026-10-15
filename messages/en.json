@@ -303,7 +303,8 @@
       "AMOUNT_AMBIGUOUS": "Ambiguous amount: write 1234 or 1.23 (no lone thousands separator).",
       "AMOUNT_PRECISION": "The amount can’t have more than 2 decimals."
     },
-    "legendOthers": "Others · {count, number}"
+    "legendOthers": "Others · {count, number}",
+    "legendNegative": "Hatched: negative balance"
   },
   "rules": {
     "pageTitle": "Categories & rules",
@@ -670,7 +671,7 @@
       "title": "Link suggestions",
       "subtitle": "{count, plural, =0 {No suggestions} one {# suggested pair} other {# suggested pairs}}",
       "open": "Suggestions",
-      "pairWithin": "{days, plural, one {# day} other {# days}} apart",
+      "pairWithin": "{days, plural, =0 {same day} one {# day apart} other {# days apart}}",
       "link": "Link",
       "ignore": "Ignore",
       "empty": "No pairs to suggest right now.",
@@ -862,6 +863,7 @@
     },
     "settings": "Import settings",
     "duplicatesNote": "Transactions already on this account are skipped (duplicates).",
+    "fieldRejected": "Some rows could not be read with this column.",
     "duplicateSkipped": "Duplicate: already on this account, won’t be imported",
     "nothingToImport": "Nothing to import: no row is left (duplicates, unchecked or unreadable rows, or ignored products).",
     "progress": "{done, number} of {total, plural, one {# transaction imported} other {# transactions imported}}…",

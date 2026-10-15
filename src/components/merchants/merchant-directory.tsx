@@ -179,7 +179,6 @@ export function MerchantDirectory({
         <p className="text-muted-foreground py-6 text-center text-sm">{t("noMatch")}</p>
       )}
 
-      {/* Mounted up front: useIsMobile only resolves after mount. */}
       <MerchantNameDialog
         target={editing}
         names={names}

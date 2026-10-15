@@ -25,19 +25,17 @@ export async function Pager({
     const qs = sp.toString();
     return qs ? `${pathname}?${qs}` : pathname;
   };
-  const link = (p: number, label: string, icon: React.ReactNode, disabled: boolean) =>
+  const link = (p: number, content: React.ReactNode, disabled: boolean) =>
     disabled ? (
       <span
         aria-disabled="true"
         className={cn(buttonVariants({ variant: "outline", size: "sm" }), "opacity-50")}
       >
-        {icon}
-        {label}
+        {content}
       </span>
     ) : (
       <Link href={href(p)} className={buttonVariants({ variant: "outline", size: "sm" })}>
-        {icon}
-        {label}
+        {content}
       </Link>
     );
 
@@ -47,9 +45,23 @@ export async function Pager({
       data-slot="pager"
       className="flex items-center justify-between gap-3 border-t px-4 py-3 text-sm sm:px-6"
     >
-      {link(page - 1, t("previous"), <ChevronLeft />, page <= 1)}
+      {link(
+        page - 1,
+        <>
+          <ChevronLeft />
+          {t("previous")}
+        </>,
+        page <= 1,
+      )}
       <span className="text-muted-foreground tabular-nums">{t("status", { page, pageCount })}</span>
-      {link(page + 1, t("next"), <ChevronRight />, page >= pageCount)}
+      {link(
+        page + 1,
+        <>
+          {t("next")}
+          <ChevronRight />
+        </>,
+        page >= pageCount,
+      )}
     </nav>
   );
 }
