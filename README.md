@@ -182,4 +182,9 @@ seeded with `scripts/seed-e2e.ts`, and its `APP_URL` must use the same host.
 
 ## License
 
-Private project.
+[GNU Affero General Public License v3.0](LICENSE). If you run a modified version as a
+network service, you must offer its source code to its users.
+
+## Security
+
+Please report vulnerabilities privately, see [SECURITY.md](SECURITY.md).
