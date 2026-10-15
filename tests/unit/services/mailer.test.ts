@@ -3,13 +3,22 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const env = vi.hoisted(() => ({ NODE_ENV: "production" }));
 vi.mock("@/env", () => ({ env }));
 vi.mock("@/server/crypto/keys", () => ({ dataKey: Buffer.alloc(32) }));
+vi.mock("@/server/crypto/encryption", () => ({ decrypt: () => "smtp-password" }));
+const smtp = vi.hoisted(() => ({ config: null as Record<string, unknown> | null }));
 vi.mock("@/server/db", () => ({
-  db: { smtpConfig: { findFirst: async () => null } },
+  db: { smtpConfig: { findFirst: async () => smtp.config } },
 }));
+const transport = vi.hoisted(() => ({ sendMail: vi.fn(async () => ({})) }));
+vi.mock("nodemailer", () => ({ default: { createTransport: () => transport } }));
 
 import { sendMail } from "@/server/services/mail/mailer";
 
-const mail = { to: "user@bilan.local", subject: "Invitation", text: "Link: https://x/join/SECRET" };
+const mail = {
+  to: "user@bilan.local",
+  subject: "Invitation",
+  text: "Link: https://x/join/SECRET",
+  locale: "en" as const,
+};
 
 describe("sendMail without SMTP", () => {
   const info = vi.spyOn(console, "info").mockImplementation(() => {});
@@ -33,5 +42,24 @@ describe("sendMail without SMTP", () => {
       expect.stringContaining("SECRET"),
       expect.stringContaining("SECRET"),
     ]);
+  });
+});
+
+describe("sendMail through SMTP", () => {
+  afterEach(() => {
+    smtp.config = null;
+    transport.sendMail.mockClear();
+  });
+
+  it("states the mail's language in a Content-Language header (#245)", async () => {
+    smtp.config = { fromName: "Bilan", fromAddress: "bilan@example.com", passwordEnc: "x" };
+    expect(await sendMail({ ...mail, locale: "fr" })).toEqual({ delivered: true });
+    expect(transport.sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "user@bilan.local",
+        from: "Bilan <bilan@example.com>",
+        headers: { "Content-Language": "fr" },
+      }),
+    );
   });
 });

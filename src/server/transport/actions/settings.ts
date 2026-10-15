@@ -19,6 +19,7 @@ import {
   type SmtpFailure,
 } from "@/server/services/settings/smtp";
 import { defaultLocale, locales } from "@/i18n/config";
+import { mailLocale } from "@/server/services/mail/locale";
 import {
   AuthProviderError,
   createAuthProvider,
@@ -132,11 +133,11 @@ export async function sendSmtpTestAction(
   const user = await requirePermission("admin.security.write");
   if (!smtpTestLimiter.consume(user.id).allowed) return { ok: false, error: "RATE_LIMITED" };
   const raw = str(formData, "locale");
-  const locale = hasLocale(locales, raw) ? raw : defaultLocale;
+  const locale = await mailLocale(user.id, hasLocale(locales, raw) ? raw : defaultLocale);
   const t = await getTranslations({ locale, namespace: "admin.smtp.testMail" });
   const appName = await getAppName();
   const res = await sendSmtpTest(
-    { to: user.email, subject: t("subject", { appName }), text: t("body", { appName }) },
+    { to: user.email, subject: t("subject", { appName }), text: t("body", { appName }), locale },
     { id: user.id },
   );
   if (res.ok) return { ok: true, to: user.email };

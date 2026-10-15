@@ -1,9 +1,9 @@
-import type { Locale } from "@/i18n/config";
+import { defaultLocale, type Locale } from "@/i18n/config";
 import { db } from "@/server/db";
 import { sendMail } from "@/server/services/mail/mailer";
 import { logEvent } from "@/server/services/audit";
 import { getAppName } from "@/server/services/settings/app-settings";
-import { toLocale } from "@/server/services/users/preferences";
+import { pickMailLocale } from "@/server/services/mail/locale";
 import { describeUserAgent } from "@/lib/user-agent";
 import { normalizeIp } from "@/lib/ip";
 import { formatDateTime } from "@/lib/format";
@@ -146,7 +146,8 @@ export function securityMail(
 
 export async function notifySecurityEvent(
   event: SecurityEvent,
-  input: { userId: string; at: Date; origin?: Origin },
+  // `pageLocale`: the triggering request's, for a user without a stored preference.
+  input: { userId: string; at: Date; origin?: Origin; pageLocale?: Locale },
 ): Promise<void> {
   try {
     const user = await db.user.findUnique({
@@ -154,12 +155,13 @@ export async function notifySecurityEvent(
       select: { email: true, preference: { select: { locale: true } } },
     });
     if (!user) return;
-    const mail = securityMail(event, toLocale(user.preference?.locale), {
+    const locale = pickMailLocale(user.preference?.locale, input.pageLocale ?? defaultLocale);
+    const mail = securityMail(event, locale, {
       appName: await getAppName(),
       at: input.at,
       origin: input.origin,
     });
-    await sendMail({ to: user.email, ...mail });
+    await sendMail({ to: user.email, ...mail, locale });
   } catch (e) {
     await logEvent({
       action: "mail.security.failed",

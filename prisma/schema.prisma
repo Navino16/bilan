@@ -173,7 +173,6 @@ model UserPreference {
   userId          String  @id
   user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   locale          String  @default("fr")
-  theme           String  @default("system")
   linkWindowDays  Int     @default(30)
   linkMinAmount   Decimal @default(0) @db.Decimal(12, 2)
   dashboardLayout Json?

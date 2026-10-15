@@ -43,8 +43,13 @@ function formatAmount(amount: number, decimal: string): string {
 }
 
 // Pure: rows → RFC-4180 CSV in the locale's dialect. No DB, no decryption (callers
-// pass already-decrypted, display-ready rows).
-export function transactionsToCsv(rows: CsvRow[], locale: Locale): string {
+// pass already-decrypted, display-ready rows). `typeLabels` localizes the type codes;
+// the CSV import reads them back (normalizeType).
+export function transactionsToCsv(
+  rows: CsvRow[],
+  locale: Locale,
+  typeLabels: Partial<Record<string, string>> = {},
+): string {
   const { delimiter, decimal, headers } = DIALECTS[locale];
   const body = Papa.unparse(
     {
@@ -52,7 +57,7 @@ export function transactionsToCsv(rows: CsvRow[], locale: Locale): string {
       data: rows.map((r) => [
         r.date,
         formatAmount(r.amount, decimal),
-        r.type,
+        typeLabels[r.type] ?? r.type,
         sanitizeCell(r.label),
         sanitizeCell(r.accountName),
         sanitizeCell(r.categoryName ?? ""),

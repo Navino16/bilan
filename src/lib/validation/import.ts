@@ -8,6 +8,11 @@ export const CSV_FIELDS = ["date", "label", "amount", "debit", "credit", "type"]
 export const DECIMAL_MARKS = [",", "."] as const;
 export type DecimalMark = (typeof DECIMAL_MARKS)[number];
 
+// Day/month order of slashed or dotted dates; ISO dates are never reordered.
+export const DATE_ORDERS = ["DMY", "MDY"] as const;
+export type DateOrder = (typeof DATE_ORDERS)[number];
+export const DEFAULT_DATE_ORDER: DateOrder = "DMY";
+
 const hasAmount = (m: { amount?: string; debit?: string; credit?: string }) =>
   Boolean(m.amount || m.debit || m.credit);
 const amountMessage = { message: "An amount, debit, or credit column is required" };
@@ -22,13 +27,14 @@ const mappingObject = z.object({
   credit: z.string().trim().optional(),
   type: z.string().trim().optional(),
   decimal: z.enum(DECIMAL_MARKS).optional(),
+  dateOrder: z.enum(DATE_ORDERS).optional(),
 });
 
 export const csvMappingSchema = mappingObject.refine(hasAmount, amountMessage);
 
-// A commit imports with the previewed decimal mark, never a fresh guess (#187).
+// A commit imports with the previewed decimal mark and date order, never a fresh guess (#187).
 export const csvCommitMappingSchema = mappingObject
-  .extend({ decimal: z.enum(DECIMAL_MARKS) })
+  .extend({ decimal: z.enum(DECIMAL_MARKS), dateOrder: z.enum(DATE_ORDERS) })
   .refine(hasAmount, amountMessage);
 
 export type CsvMappingInput = z.input<typeof csvMappingSchema>;

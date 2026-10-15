@@ -19,11 +19,7 @@ export default async function JoinPage({
   const { locale, token } = await params;
   setRequestLocale(locale);
   const user = await requireSession();
-  const [t, tg, inv] = await Promise.all([
-    getTranslations("invitations"),
-    getTranslations("groups"),
-    getInvitationByToken(token),
-  ]);
+  const [t, inv] = await Promise.all([getTranslations("invitations"), getInvitationByToken(token)]);
   const valid = inv && !inv.accepted && !inv.expired;
   const wrongAccount = valid && inv.email !== user.email.toLowerCase();
   const alreadyMember =
@@ -59,7 +55,7 @@ export default async function JoinPage({
         ) : (
           <>
             <p className="text-muted-foreground text-sm">
-              {t("joinPromptRole", { group: inv.groupName, role: tg(`roles.${inv.role}`) })}
+              {t("joinPromptRole", { group: inv.groupName, role: inv.role })}
             </p>
             <JoinConfirm token={token} />
           </>

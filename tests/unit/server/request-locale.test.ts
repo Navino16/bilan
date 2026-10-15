@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { requestLocale } from "@/server/http/request-locale";
+import { requestLocale, requestLocaleHint } from "@/server/http/request-locale";
+import { negotiateLocale } from "@/lib/locale-negotiation";
 
 const APP = "https://bilan.example";
 const h = (init: Record<string, string>) => new Headers(init);
@@ -26,6 +27,18 @@ describe("requestLocale", () => {
     const noSegment = h({ referer: `${APP}/`, cookie: "a=1; NEXT_LOCALE=en" });
     expect(requestLocale(noSegment, APP)).toBe("en");
     expect(requestLocale(h({ referer: "not a url", "accept-language": "en" }), APP)).toBe("en");
+  });
+
+  it("has no hint when the request carries no locale (#245)", () => {
+    expect(requestLocaleHint(undefined, APP)).toBeUndefined();
+    expect(requestLocaleHint(h({ "accept-language": "de" }), APP)).toBeUndefined();
+    expect(requestLocaleHint(h({ referer: `${APP}/en/login` }), APP)).toBe("en");
+  });
+
+  it("negotiates from the cookie, then the browser languages (#245)", () => {
+    expect(negotiateLocale("a=1; NEXT_LOCALE=en", "fr-FR")).toBe("en");
+    expect(negotiateLocale("NEXT_LOCALE=de", "en-US,en")).toBe("en");
+    expect(negotiateLocale("", "de")).toBe("fr");
   });
 
   it("ranks Accept-Language by quality", () => {

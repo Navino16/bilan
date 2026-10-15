@@ -14,7 +14,6 @@ ALTER TABLE `User` ADD COLUMN `role` VARCHAR(191) NULL;
 CREATE TABLE `UserPreference` (
     `userId` VARCHAR(191) NOT NULL,
     `locale` VARCHAR(191) NOT NULL DEFAULT 'fr',
-    `theme` VARCHAR(191) NOT NULL DEFAULT 'system',
     `linkWindowDays` INTEGER NOT NULL DEFAULT 30,
     `linkMinAmount` DECIMAL(12, 2) NOT NULL DEFAULT 0,
     `dashboardLayout` JSON NULL,

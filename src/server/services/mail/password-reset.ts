@@ -1,5 +1,7 @@
 import { defaultLocale, locales, type Locale } from "@/i18n/config";
+import { env } from "@/env";
 import { sendMail } from "@/server/services/mail/mailer";
+import { mailLocale } from "@/server/services/mail/locale";
 import { getAppName } from "@/server/services/settings/app-settings";
 
 // Wired into Better Auth's resetPasswordTokenExpiresIn; the templates say "1 hour".
@@ -10,13 +12,9 @@ export type ResetKind = "reset" | "setup";
 const RESET_PATH = new RegExp(`^/(${locales.join("|")})/reset/?$`);
 
 // Better Auth hands us `<api>/reset-password/<token>?callbackURL=<redirectTo>`. The
-// public endpoint accepts any same-origin redirectTo, so only the locale and the
-// setup flag are read from it; the link always targets our reset page.
-export function resetLink(
-  url: string,
-  token: string,
-  appUrl: string,
-): { link: string; locale: Locale; kind: ResetKind } {
+// public endpoint accepts any same-origin redirectTo, so only the requesting page's
+// locale and the setup flag are read from it.
+export function resetRequest(url: string, appUrl: string): { locale: Locale; kind: ResetKind } {
   const origin = new URL(appUrl).origin;
   let locale: Locale = defaultLocale;
   let kind: ResetKind = "reset";
@@ -31,7 +29,12 @@ export function resetLink(
   } catch {
     // malformed URL → defaults
   }
-  return { link: `${origin}/${locale}/reset/${encodeURIComponent(token)}`, locale, kind };
+  return { locale, kind };
+}
+
+// Always our reset page, never the requested redirect.
+export function resetLink(token: string, locale: Locale, appUrl: string): string {
+  return `${new URL(appUrl).origin}/${locale}/reset/${encodeURIComponent(token)}`;
 }
 
 type Template = (appName: string, link: string) => { subject: string; text: string };
@@ -87,12 +90,14 @@ const TEMPLATES: Record<ResetKind, Record<Locale, Template>> = {
   },
 };
 
-export async function sendPasswordResetMail(input: {
-  email: string;
-  link: string;
-  locale: Locale;
-  kind: ResetKind;
-}): Promise<void> {
-  const { subject, text } = TEMPLATES[input.kind][input.locale](await getAppName(), input.link);
-  await sendMail({ to: input.email, subject, text, sensitive: true });
+// The mail and its link follow the account's language, not the requesting page's.
+export async function sendPasswordResetMail(
+  input: { userId: string; email: string; url: string; token: string },
+  appUrl: string = env.APP_URL,
+): Promise<void> {
+  const request = resetRequest(input.url, appUrl);
+  const locale = await mailLocale(input.userId, request.locale);
+  const link = resetLink(input.token, locale, appUrl);
+  const { subject, text } = TEMPLATES[request.kind][locale](await getAppName(), link);
+  await sendMail({ to: input.email, subject, text, locale, sensitive: true });
 }

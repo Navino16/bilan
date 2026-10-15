@@ -299,7 +299,7 @@ pas une date;X;-1,00;Carte`;
       previewCsvBatch(batch.id, owner, { date: "Quand", label: "Texte" }),
     ).rejects.toMatchObject({ message: "INVALID_MAPPING" });
 
-    expect(p.mapping).toEqual({ ...mapping, decimal: "," });
+    expect(p.mapping).toEqual({ ...mapping, decimal: ",", dateOrder: "DMY" });
     const summary = await commitCsvBatch(batch.id, p.mapping, { id: owner });
     expect(summary).toMatchObject({ importedRows: 2, skippedRows: 0, rejectedRows: 2 });
     await expect(previewCsvBatch(batch.id, owner, mapping)).rejects.toMatchObject({
@@ -339,6 +339,46 @@ pas une date;X;-1,00;Carte`;
     expect(rows.map((r) => Number(r.amount))).toEqual([-1.23, 45500]);
   });
 
+  it("detects month-first dates, lets the mapping override it, and commits them (#245)", async () => {
+    const tag = `MDY${Date.now()}`;
+    const csv = `Date;Libellé;Montant
+10/03/2026;CB ${tag} A;-1,00
+12/25/2026;CB ${tag} B;-2,00`;
+    const batch = await createCsvBatch(
+      { accountId, filename: "mdy.csv", text: csv },
+      { id: owner },
+    );
+    const monthFirst = await previewCsvBatch(batch.id, owner);
+    expect(monthFirst.mapping.dateOrder).toBe("MDY");
+    expect(monthFirst.rejectedCount).toBe(0);
+    expect(monthFirst.preview.map((r) => r.date.slice(0, 10)).sort()).toEqual([
+      "2026-10-03",
+      "2026-12-25",
+    ]);
+
+    const dayFirst = await previewCsvBatch(batch.id, owner, {
+      ...monthFirst.mapping,
+      dateOrder: "DMY",
+    });
+    expect(dayFirst.mapping.dateOrder).toBe("DMY");
+    expect(dayFirst.preview.map((r) => r.date.slice(0, 10))).toEqual(["2026-03-10"]);
+    expect(dayFirst.rejected.map((r) => r.reason)).toEqual(["DATE"]);
+    const bad = { ...dayFirst.mapping, dateOrder: "YMD" } as unknown as typeof dayFirst.mapping;
+    await expect(previewCsvBatch(batch.id, owner, bad)).rejects.toMatchObject({
+      message: "INVALID_MAPPING",
+    });
+
+    await commitCsvBatch(batch.id, monthFirst.mapping, { id: owner });
+    const rows = await db.transaction.findMany({
+      where: { importBatchId: batch.id },
+      orderBy: { date: "asc" },
+    });
+    expect(rows.map((r) => r.date.toISOString().slice(0, 10))).toEqual([
+      "2026-10-03",
+      "2026-12-25",
+    ]);
+  });
+
   it("doesn't flag a decimal mark that an amount settles", async () => {
     const batch = await createCsvBatch(
       { accountId, filename: "settled.csv", text: freshCsv("SETTLED") },
@@ -349,7 +389,7 @@ pas une date;X;-1,00;Carte`;
     expect(p.decimalGuessed).toBe(false);
   });
 
-  it("rejects an invalid or missing decimal mark", async () => {
+  it("rejects an invalid or missing decimal mark, or a missing date order", async () => {
     const batch = await createCsvBatch(
       { accountId, filename: "badmark.csv", text: freshCsv("BADMARK") },
       { id: owner },
@@ -364,6 +404,10 @@ pas une date;X;-1,00;Carte`;
     });
     const unset = { ...mapping, decimal: undefined };
     await expect(commitCsvBatch(batch.id, unset, { id: owner })).rejects.toMatchObject({
+      message: "INVALID_MAPPING",
+    });
+    const noOrder = { ...mapping, dateOrder: undefined };
+    await expect(commitCsvBatch(batch.id, noOrder, { id: owner })).rejects.toMatchObject({
       message: "INVALID_MAPPING",
     });
     expect((await db.importBatch.findUniqueOrThrow({ where: { id: batch.id } })).status).toBe(

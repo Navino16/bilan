@@ -875,7 +875,12 @@
       "previous": "Précédentes",
       "next": "Suivantes"
     },
-    "rowCategory": "Catégorie pour {label}"
+    "rowCategory": "Catégorie pour {label}",
+    "dateOrder": {
+      "label": "Ordre des dates",
+      "DMY": "JJ/MM",
+      "MDY": "MM/JJ"
+    }
   },
   "groups": {
     "overline": "Partage",
@@ -955,7 +960,7 @@
     "accept": "Accepter l’invitation",
     "accepting": "…",
     "invalidLink": "Cette invitation est introuvable, expirée ou déjà utilisée.",
-    "joinPromptRole": "Vous avez été invité à rejoindre « {group} » en tant que {role}.",
+    "joinPromptRole": "Vous avez été invité à rejoindre « {group} » en tant {role, select, OWNER {que propriétaire} ADMIN {qu’administrateur} other {que membre}}.",
     "joinCodeHint": "Le code ne fonctionne qu’avec le compte dont l’adresse a été invitée.",
     "copyLink": "Copier le lien d’invitation",
     "linkCopied": "Lien copié",
@@ -1344,7 +1349,7 @@
         "FAILED": "Échec. Réessayez."
       },
       "deleteLoading": "Calcul de l’impact…",
-      "deleteAccounts": "{count, plural, one {# compte bancaire} other {# comptes bancaires}} et leur historique disparaissent{shared, plural, =0 {} one {, dont # partagé : les membres du foyer ne le verront plus} other {, dont # partagés : les membres des foyers ne les verront plus}}.",
+      "deleteAccounts": "{count, plural, one {# compte bancaire et son historique disparaissent{shared, plural, =0 {} other { ; il est partagé, les membres du foyer ne le verront plus}}} other {# comptes bancaires et leur historique disparaissent{shared, plural, =0 {} one {, dont # partagé : les membres du foyer ne le verront plus} other {, dont # partagés : les membres des foyers ne les verront plus}}}}.",
       "deleteTransfer": "Le foyer « {group} » sera transmis à {to}.",
       "deleteGroup": "Le foyer « {group} », dont la personne est seule membre, sera supprimé.",
       "deleteBudgetLines": "Les lignes des budgets de foyer ou d’autres membres qui visaient ses comptes ne seront plus limitées à un compte.",
@@ -1793,7 +1798,8 @@
       "mapEmail": "Claim pour l’e-mail",
       "error": "Champs OIDC incomplets : une URL d’issuer valide, le client ID et le client secret sont requis.",
       "save": "Enregistrer et continuer",
-      "skip": "Passer"
+      "skip": "Passer",
+      "displayNamePlaceholder": "Mon SSO"
     },
     "registration": {
       "submit": "Terminer",

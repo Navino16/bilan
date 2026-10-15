@@ -152,6 +152,10 @@ test.describe("shell chrome", () => {
     await page.getByRole("button", { name: "Passer en anglais (EN)" }).click();
     await expect(page).toHaveURL(/\/en\/transactions\?month=2026-09$/);
     await expect(page).toHaveTitle("Transactions · Bilan");
+    // The browsing locale outlives the browser session (#245).
+    const cookie = (await page.context().cookies()).find((c) => c.name === "NEXT_LOCALE");
+    expect(cookie?.value).toBe("en");
+    expect(cookie!.expires).toBeGreaterThan(Date.now() / 1000 + 300 * 24 * 60 * 60);
   });
 
   test("the desktop sidebar stays in view while the page scrolls", async ({ page }) => {

@@ -31,7 +31,7 @@ vi.mock("nodemailer", () => ({
 }));
 
 const actor = { id: "smtp_actor" };
-const mail = { to: "admin@bilan.local", subject: "Test", text: "Hello" };
+const mail = { to: "admin@bilan.local", subject: "Test", text: "Hello", locale: "en" as const };
 const base = {
   host: "smtp.example.com",
   port: 587,
@@ -116,7 +116,11 @@ describe("SMTP config service", () => {
       greetingTimeout: 10_000,
       socketTimeout: 20_000,
     });
-    expect(transport.sent[0]).toMatchObject({ to: mail.to, from: "Bilan <bilan@example.com>" });
+    expect(transport.sent[0]).toMatchObject({
+      to: mail.to,
+      from: "Bilan <bilan@example.com>",
+      headers: { "Content-Language": "en" },
+    });
     const audit = await db.auditLog.findFirst({
       where: { userId: actor.id, action: "settings.smtp.test" },
     });

@@ -1,6 +1,8 @@
 "use server";
 
+import { headers } from "next/headers";
 import { requireSession } from "@/server/auth/permissions";
+import { requestLocale } from "@/server/http/request-locale";
 import { verificationMailLimiter, withRefund } from "@/server/auth/rate-limit";
 import { resendVerificationEmail } from "@/server/services/users/email-verification";
 
@@ -14,7 +16,7 @@ export async function resendVerificationEmailAction(): Promise<ResendVerificatio
     const res = await withRefund(
       verificationMailLimiter,
       user.id,
-      () => resendVerificationEmail(user.id),
+      async () => resendVerificationEmail(user.id, requestLocale(await headers())),
       (status) => status === "SENT",
     );
     if (!res.allowed) return { ok: false, error: "RATE_LIMITED" };

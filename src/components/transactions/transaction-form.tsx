@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import {
   type TxActionState,
 } from "@/server/transport/actions/transactions";
 import { NativeSelect } from "@/components/ui/native-select";
+import { formatAmountInput } from "@/lib/format";
 
 export function TransactionForm({
   accounts,
@@ -42,6 +43,7 @@ export function TransactionForm({
   trigger: React.ReactNode;
 }) {
   const t = useTranslations("transactions");
+  const locale = useLocale();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -116,7 +118,7 @@ export function TransactionForm({
                 id="tx-amount"
                 name="amount"
                 inputMode="decimal"
-                placeholder="-12,34"
+                placeholder={formatAmountInput(-12.34, locale)}
                 required
                 aria-invalid={error?.startsWith("AMOUNT_") || undefined}
                 aria-describedby={error ? "tx-error" : undefined}

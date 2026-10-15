@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
+import type { Locale } from "@/i18n/config";
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import { createEmailVerificationToken } from "better-auth/api";
@@ -39,7 +40,10 @@ export type ResendVerificationResult = "SENT" | "ALREADY_VERIFIED" | "SMTP_DISAB
 
 // Mails the user's own stored address only; the public endpoint stays disabled (auth/index.ts).
 // Same JWT as Better Auth's own links, so its /verify-email accepts it.
-export async function resendVerificationEmail(userId: string): Promise<ResendVerificationResult> {
+export async function resendVerificationEmail(
+  userId: string,
+  pageLocale?: Locale,
+): Promise<ResendVerificationResult> {
   const user = await db.user.findUniqueOrThrow({
     where: { id: userId },
     select: { email: true, name: true, emailVerified: true },
@@ -53,7 +57,13 @@ export async function resendVerificationEmail(userId: string): Promise<ResendVer
     VERIFY_TOKEN_TTL_SEC,
   );
   try {
-    await deliverVerificationMail({ userId, email: user.email, name: user.name, token });
+    await deliverVerificationMail({
+      userId,
+      email: user.email,
+      name: user.name,
+      token,
+      pageLocale,
+    });
   } catch (e) {
     await auditVerificationMailFailure(userId, e);
     return "FAILED";

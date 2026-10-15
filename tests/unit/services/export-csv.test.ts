@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { transactionsToCsv, type CsvRow } from "@/server/services/export/csv";
+import { normalizeType } from "@/server/services/imports/csv-parse";
+import { TRANSACTION_TYPES } from "@/lib/validation/transaction";
+import fr from "../../../messages/fr.json";
+import en from "../../../messages/en.json";
 
 const rows: CsvRow[] = [
   {
@@ -38,6 +42,23 @@ describe("transactionsToCsv", () => {
     expect(header).toBe("date;montant;type;libellé;compte;catégorie");
     expect(first).toBe("2026-03-01;-12,50;CARD;Café;Courant;Food");
     expect(second).toBe("2026-03-02;1000,00;TRANSFER;Salaire;Courant;");
+  });
+
+  it("writes the localized type labels it is given, and the code otherwise (#245)", () => {
+    const frLines = lines(transactionsToCsv(rows, "fr", { CARD: "Carte", TRANSFER: "Virement" }));
+    expect(frLines[1]).toBe("2026-03-01;-12,50;Carte;Café;Courant;Food");
+    expect(frLines[2]).toBe("2026-03-02;1000,00;Virement;Salaire;Courant;");
+    const enLines = lines(transactionsToCsv(rows, "en", { CARD: "Card" }));
+    expect(enLines[1]).toBe("2026-03-01,-12.50,Card,Café,Courant,Food");
+    expect(enLines[2]).toBe("2026-03-02,1000.00,TRANSFER,Salaire,Courant,");
+  });
+
+  it("exports type labels the CSV import reads back (#245)", () => {
+    for (const messages of [fr, en]) {
+      for (const type of TRANSACTION_TYPES.filter((t) => t !== "OTHER")) {
+        expect(normalizeType(messages.transactions.types[type])).toBe(type);
+      }
+    }
   });
 
   it("uses `,` and decimal dots with English headers for the en locale", () => {

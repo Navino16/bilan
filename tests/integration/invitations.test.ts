@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 
-type Mail = { to: string; subject: string; text: string; sensitive?: boolean };
+type Mail = { to: string; subject: string; text: string; locale: string; sensitive?: boolean };
 const sent = vi.hoisted(() => [] as Mail[]);
 const smtp = vi.hoisted(() => ({ delivered: false, fail: false }));
 vi.mock("@/server/services/mail/mailer", () => ({
@@ -424,9 +424,11 @@ describe("invitations service", () => {
     );
     expect(newcomer.text).toMatch(/\/en\/groups\/join\//);
     expect(newcomer.sensitive).toBe(true);
+    expect(newcomer.locale).toBe("en");
     expect(user.to).toBe("invitee@bilan.local");
     expect(user.subject).toMatch(/invitation à rejoindre le foyer « Locale group »$/);
     expect(user.text).toMatch(/\/fr\/groups\/join\//);
+    expect(user.locale).toBe("fr");
   });
 });
 

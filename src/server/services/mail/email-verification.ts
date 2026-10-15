@@ -1,4 +1,3 @@
-import { db } from "@/server/db";
 import { env } from "@/env";
 import { defaultLocale, type Locale } from "@/i18n/config";
 import { sendMail } from "@/server/services/mail/mailer";
@@ -6,7 +5,7 @@ import { oneLine } from "@/server/services/mail/invitation";
 import { isSmtpEnabled } from "@/server/services/settings/smtp";
 import { logEvent } from "@/server/services/audit";
 import { getAppName } from "@/server/services/settings/app-settings";
-import { isLocale } from "@/server/services/users/preferences";
+import { mailLocale } from "@/server/services/mail/locale";
 
 // Wired into Better Auth's emailVerification.expiresIn; the templates say "24 hours".
 export const VERIFY_TOKEN_TTL_SEC = 24 * 60 * 60;
@@ -54,25 +53,19 @@ type Delivery = {
   email: string;
   name?: string | null;
   token: string;
-  // Covers a sign-up whose preference row isn't stored yet.
-  fallbackLocale?: Locale;
+  // The page that triggered the send; also covers a sign-up whose preference isn't stored yet.
+  pageLocale?: Locale;
 };
 
 // Throws on a failed send; the caller checks that SMTP is enabled.
 export async function deliverVerificationMail(input: Delivery): Promise<void> {
-  const stored = (
-    await db.userPreference.findUnique({
-      where: { userId: input.userId },
-      select: { locale: true },
-    })
-  )?.locale;
-  const locale = isLocale(stored) ? stored : (input.fallbackLocale ?? defaultLocale);
+  const locale = await mailLocale(input.userId, input.pageLocale ?? defaultLocale);
   const mail = verificationMail(locale, {
     appName: await getAppName(),
     account: input.name?.trim() || input.email,
     link: verificationLink(input.token, locale),
   });
-  await sendMail({ to: input.email, ...mail, sensitive: true });
+  await sendMail({ to: input.email, ...mail, locale, sensitive: true });
 }
 
 export async function auditVerificationMailFailure(userId: string, e: unknown): Promise<void> {

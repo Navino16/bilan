@@ -1,8 +1,6 @@
-import { defaultLocale, locales, type Locale } from "@/i18n/config";
+import { defaultLocale, type Locale } from "@/i18n/config";
 import { env } from "@/env";
-
-const isLocale = (v: string | undefined): v is Locale =>
-  !!v && (locales as readonly string[]).includes(v);
+import { acceptLanguageLocale, cookieLocale, isLocale } from "@/lib/locale-negotiation";
 
 function fromPath(pathname: string): Locale | undefined {
   const segment = pathname.split("/")[1];
@@ -19,40 +17,28 @@ function fromReferer(referer: string | null, appUrl: string): Locale | undefined
   }
 }
 
-function fromCookie(cookie: string | null): Locale | undefined {
-  const value = cookie?.match(/(?:^|;\s*)NEXT_LOCALE=([^;]+)/)?.[1];
-  return isLocale(value) ? value : undefined;
-}
-
-function fromAcceptLanguage(header: string | null): Locale | undefined {
-  const ranked = (header ?? "")
-    .split(",")
-    .map((part) => {
-      const [tag, ...params] = part.trim().split(";");
-      const q = params.map((p) => p.trim()).find((p) => p.startsWith("q="));
-      return { lang: tag.split("-")[0].toLowerCase(), q: q ? Number(q.slice(2)) : 1 };
-    })
-    .filter((l) => l.q > 0)
-    .sort((a, b) => b.q - a.q);
-  return ranked.map((l) => l.lang).find(isLocale);
-}
-
-function negotiated(headers: Headers): Locale {
+function negotiated(headers: Headers): Locale | undefined {
   return (
-    fromCookie(headers.get("cookie")) ??
-    fromAcceptLanguage(headers.get("accept-language")) ??
-    defaultLocale
+    cookieLocale(headers.get("cookie")) ?? acceptLanguageLocale(headers.get("accept-language"))
   );
 }
 
 // Locale of the page a request comes from: the /fr|/en path of a same-origin Referer,
 // then the next-intl cookie, then Accept-Language — the order the locale middleware uses.
-export function requestLocale(headers: Headers | undefined, appUrl: string = env.APP_URL): Locale {
-  if (!headers) return defaultLocale;
+// Undefined when the request carries none of them.
+export function requestLocaleHint(
+  headers: Headers | undefined,
+  appUrl: string = env.APP_URL,
+): Locale | undefined {
+  if (!headers) return undefined;
   return fromReferer(headers.get("referer"), appUrl) ?? negotiated(headers);
+}
+
+export function requestLocale(headers: Headers | undefined, appUrl: string = env.APP_URL): Locale {
+  return requestLocaleHint(headers, appUrl) ?? defaultLocale;
 }
 
 // Locale of the requested page itself (responses the proxy renders on its own).
 export function pageLocale(pathname: string, headers: Headers): Locale {
-  return fromPath(pathname) ?? negotiated(headers);
+  return fromPath(pathname) ?? negotiated(headers) ?? defaultLocale;
 }

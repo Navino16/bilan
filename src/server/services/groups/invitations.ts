@@ -4,7 +4,7 @@ import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import { sendMail } from "@/server/services/mail/mailer";
 import { invitationMail } from "@/server/services/mail/invitation";
-import { toLocale } from "@/server/services/users/preferences";
+import { pickMailLocale } from "@/server/services/mail/locale";
 import { getAppName } from "@/server/services/settings/app-settings";
 import { isEmailVerified } from "@/server/services/users/email-verification";
 import { env } from "@/env";
@@ -114,9 +114,7 @@ export async function createInvitation(
       });
   const { token, code } = inv;
 
-  const locale = existingUser?.preference
-    ? toLocale(existingUser.preference.locale)
-    : (input.locale ?? defaultLocale);
+  const locale = pickMailLocale(existingUser?.preference?.locale, input.locale ?? defaultLocale);
   const acceptUrl = `${env.APP_URL.replace(/\/$/, "")}/${locale}/groups/join/${token}`;
   const [group, inviter, appName] = await Promise.all([
     db.group.findUniqueOrThrow({ where: { id: input.groupId }, select: { name: true } }),
@@ -131,7 +129,7 @@ export async function createInvitation(
     code,
     ttlDays: INVITE_TTL_DAYS,
   });
-  const delivery = await deliver({ to: email, ...mail, sensitive: true });
+  const delivery = await deliver({ to: email, ...mail, locale, sensitive: true });
   await logEvent({
     userId: actor.id,
     action: renewedId ? "group.invitation.resend" : "group.invitation.create",

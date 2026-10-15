@@ -8,7 +8,13 @@ vi.mock("@/server/services/setup-status", () => ({
 vi.mock("@/server/services/settings/app-settings", () => ({ getAppName: async () => "Maison" }));
 // next-intl's ESM build imports "next/server" extensionless, which Node can't resolve here;
 // these cases return before the locale middleware runs.
-vi.mock("next-intl/middleware", () => ({ default: () => () => new Response(null) }));
+const intl = vi.hoisted(() => ({ config: null as Record<string, unknown> | null }));
+vi.mock("next-intl/middleware", () => ({
+  default: (config: Record<string, unknown>) => {
+    intl.config = config;
+    return () => new Response(null);
+  },
+}));
 
 import middleware from "@/proxy";
 
@@ -38,6 +44,12 @@ describe("proxy setup gate (#214)", () => {
     expect(res.headers.get("content-security-policy")).toContain("frame-ancestors 'none'");
     expect(res.headers.get("x-frame-options")).toBe("DENY");
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+  });
+});
+
+describe("proxy locale cookie (#245)", () => {
+  it("keeps the browsing locale for a year, like the theme cookie", () => {
+    expect(intl.config?.localeCookie).toEqual({ maxAge: 60 * 60 * 24 * 365 });
   });
 });
 

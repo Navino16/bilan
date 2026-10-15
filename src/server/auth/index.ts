@@ -8,7 +8,7 @@ import { db } from "@/server/db";
 import { env } from "@/env";
 import { CLIENT_IP_HEADER, requestOrigin } from "@/server/http/client-ip";
 import { processState } from "@/server/process-state";
-import { requestLocale } from "@/server/http/request-locale";
+import { requestLocale, requestLocaleHint } from "@/server/http/request-locale";
 import { dataKey } from "@/server/crypto/keys";
 import { decrypt } from "@/server/crypto/encryption";
 import {
@@ -29,11 +29,7 @@ import {
 import { authPlugins } from "./plugins";
 import { onAuthError } from "./auth-errors";
 import { nameOnCreate, nameOnUpdate } from "./user-name";
-import {
-  RESET_TOKEN_TTL_SEC,
-  resetLink,
-  sendPasswordResetMail,
-} from "@/server/services/mail/password-reset";
+import { RESET_TOKEN_TTL_SEC, sendPasswordResetMail } from "@/server/services/mail/password-reset";
 import {
   sendVerificationMail,
   VERIFY_TOKEN_TTL_SEC,
@@ -290,6 +286,7 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
                 userId: account.userId,
                 at: new Date(),
                 origin: ctx?.headers ? requestOrigin(ctx.headers) : undefined,
+                pageLocale: requestLocaleHint(ctx?.headers),
               });
             } catch {
               // best-effort
@@ -307,8 +304,7 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
       // Not awaited: waiting on SMTP only for existing accounts would reveal them by timing.
       sendResetPassword: async ({ user, url, token }) => {
         await logEvent({ action: "auth.password.reset_requested", userId: user.id });
-        const { link, locale, kind } = resetLink(url, token, env.APP_URL);
-        void sendPasswordResetMail({ email: user.email, link, locale, kind }).catch((e) =>
+        void sendPasswordResetMail({ userId: user.id, email: user.email, url, token }).catch((e) =>
           logEvent({
             action: "mail.security.failed",
             userId: user.id,
@@ -325,10 +321,12 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
         );
         try {
           await logEvent({ userId: user.id, action: "auth.password.changed" });
+          const headers = request?.headers ?? (await nextHeaders());
           void notifySecurityEvent("password_changed", {
             userId: user.id,
             at: new Date(),
-            origin: requestOrigin(request?.headers ?? (await nextHeaders())),
+            origin: requestOrigin(headers),
+            pageLocale: requestLocaleHint(headers),
           });
         } catch {
           // best-effort
@@ -345,7 +343,7 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
           email: user.email,
           name: user.name,
           token,
-          fallbackLocale: requestLocale(request?.headers ?? (await scopeHeaders())),
+          pageLocale: requestLocale(request?.headers ?? (await scopeHeaders())),
         });
       },
       afterEmailVerification: async (user) => {

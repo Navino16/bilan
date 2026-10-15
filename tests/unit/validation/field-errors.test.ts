@@ -14,7 +14,7 @@ function errorsOf<T extends z.ZodType>(schema: T, input: Record<string, unknown>
 }
 
 describe("fieldErrorsFromZod", () => {
-  it("maps string bounds to REQUIRED / TOO_LONG / TOO_SHORT", () => {
+  it("maps string bounds to REQUIRED / TOO_LONG, or the code a check names", () => {
     expect(errorsOf(groupInputSchema, { name: "   ", description: "" })).toEqual({
       name: "REQUIRED",
     });
@@ -28,7 +28,7 @@ describe("fieldErrorsFromZod", () => {
         password: "short",
         confirmPassword: "short",
       }),
-    ).toEqual({ password: "TOO_SHORT" });
+    ).toEqual({ password: "PASSWORD_TOO_SHORT" });
   });
 
   it("maps formats and keeps refinement codes on their field", () => {

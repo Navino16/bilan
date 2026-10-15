@@ -4,7 +4,7 @@ import { getAuth } from "@/server/auth";
 import { isResetTokenValid } from "@/server/services/users/password-reset";
 import { resetConfirmAction } from "@/server/transport/actions/auth";
 
-type Mail = { to: string; subject: string; text: string; sensitive?: boolean };
+type Mail = { to: string; subject: string; text: string; locale: string; sensitive?: boolean };
 const sent = vi.hoisted(() => [] as Mail[]);
 vi.mock("@/server/services/mail/mailer", () => ({
   sendMail: async (mail: Mail) => {
@@ -47,6 +47,11 @@ beforeAll(async () => {
   const auth = await getAuth();
   const res = await auth.api.signUpEmail({ body: { email, password, name: "Pw Reset" } });
   userId = res.user.id;
+  await db.userPreference.upsert({
+    where: { userId },
+    create: { userId, locale: "en" },
+    update: { locale: "en" },
+  });
 });
 
 afterAll(async () => {
@@ -90,6 +95,20 @@ describe("password reset", () => {
       where: { userId, action: "auth.email.verified" },
     });
     expect(audit?.metadata).toEqual({ via: "password_reset" });
+  });
+
+  it("mails the account's language, whatever page asked for the reset (#245)", async () => {
+    const auth = await getAuth();
+    sent.length = 0;
+    await auth.api.requestPasswordReset({ body: { email, redirectTo: `${appUrl()}/fr/reset` } });
+    const mail = await vi.waitFor(() => {
+      const m = sent.find((x) => x.to === email);
+      if (!m) throw new Error("reset mail not sent yet");
+      return m;
+    });
+    expect(mail.subject).toMatch(/reset your password$/);
+    expect(mail.locale).toBe("en");
+    expect(mail.text).toContain(`${appUrl()}/en/reset/`);
   });
 
   it("sends the password-changed alert with the request's IP and device (#230)", async () => {

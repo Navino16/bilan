@@ -22,6 +22,7 @@ import { DeleteTransactionsDialog } from "./delete-transactions-dialog";
 import { MIN_SEARCH_WORD } from "@/lib/text";
 import { proposeRule } from "@/lib/propose-rule";
 import { formatDate, formatLongDay } from "@/lib/format";
+import { OrdinalText } from "@/components/ordinal-text";
 import { useLinkErrorMessage } from "./link-error";
 
 export type ListItem = {
@@ -253,7 +254,9 @@ export function TransactionList({
           <div key={g.day}>
             {groupByDay && (
               <div className="text-muted-foreground bg-muted/60 flex items-center justify-between border-y px-4 py-2 text-[0.7rem] font-medium tracking-[0.08em] uppercase">
-                <span>{dayLabel(g.day)}</span>
+                <span>
+                  <OrdinalText text={dayLabel(g.day)} />
+                </span>
                 {/* The per-day total only adds signal when a day has several rows;
                     for single-transaction days it would just echo the amount. */}
                 {g.rows.length > 1 && !(partialLastDay && gi === groups.length - 1) && (

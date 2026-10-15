@@ -225,7 +225,9 @@ budget/
 ### 3.4 i18n routing
 
 - URL prefix: `/[locale]/...` (e.g., `/fr/dashboard`, `/en/dashboard`).
-- Initial locale: detected from `Accept-Language` header; persisted in `UserPreference.locale` after login.
+- Initial locale: detected from `Accept-Language` header. The browsing locale lives in the next-intl `NEXT_LOCALE` cookie (persistent, 1 year, per browser); a stored preference never forces a redirect.
+- `UserPreference.locale` drives e-mails only. It is written at sign-up, at every sign-in (locale of the sign-in page) and by the language switcher.
+- E-mail locale (one rule for every sender): the recipient's `UserPreference.locale` when the recipient is a known user, otherwise the locale of the page that triggered the send. Mails carry a `Content-Language` header.
 - Default categories: two fixture sets (`prisma/seed-data/categories-fr.json` and `categories-en.json`) are bundled. At user signup, the set matching the user's chosen locale is copied into `Category` rows owned by that user with `isDefault = true`. Users can rename, add, delete freely.
 - Language switcher in the header.
 - All dates/numbers formatted via `Intl.DateTimeFormat` / `Intl.NumberFormat` based on locale.
@@ -704,7 +706,6 @@ model UserPreference {
   userId            String  @id
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   locale            String  @default("fr")            // fr | en
-  theme             String  @default("system")        // light | dark | system
   defaultAccountId  String?
   defaultBudgetId   String?
   linkWindowDays    Int     @default(30)
@@ -1176,7 +1177,7 @@ A visual design was produced with Claude Design from this spec. The exported bun
 
 ### 11.3 Confirmed UX decisions (from the design chat)
 
-- **Native light/dark theme** (toggle), default per `UserPreference.theme`.
+- **Native light/dark theme** (toggle), stored per browser in the `bilan-theme` cookie (no cookie = system).
 - **Density locked to cozy** — removed from user/admin settings.
 - **Dashboard layout: editorial** (asymmetric grid, serif month title, KPI row, category donut with amounts + %).
 - **Budget visualization: horizontal bar** (over-budget aware: primary → warning at >85% → expense when over). Donut/gauge/sparkline exist as components but bar is the chosen default.

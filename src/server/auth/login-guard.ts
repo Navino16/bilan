@@ -6,6 +6,7 @@ import {
   auditAuthRequest,
   auditLinkFailure,
   pendingTwoFactor,
+  syncSsoSignInLocale,
   type HookContext,
 } from "./auth-audit";
 import { loginAccountLimiter, loginLimiter, twoFactorLimiter } from "./rate-limit";
@@ -144,6 +145,7 @@ export const authGuardPlugin = {
           clearOnCompletedSignIn(ctx);
           await auditAuthRequest(ctx);
           await auditLinkFailure(ctx);
+          await syncSsoSignInLocale(ctx);
         }),
       },
     ],

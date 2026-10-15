@@ -4,7 +4,7 @@ import { db } from "@/server/db";
 import { encrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
 import { logEvent } from "@/server/services/audit";
-import { sendWithConfig } from "@/server/services/mail/mailer";
+import { sendWithConfig, type Mail } from "@/server/services/mail/mailer";
 
 // A self-hosted instance has a single outgoing SMTP config, so it's stored as a
 // singleton row under a fixed id.
@@ -113,7 +113,7 @@ export type SmtpTestResult =
 // validate it before switching it on. Only a coarse failure code is returned: the raw
 // server reply would turn the test into a probe of arbitrary hosts (it is logged instead).
 export async function sendSmtpTest(
-  mail: { to: string; subject: string; text: string },
+  mail: Mail,
   actor: { id: string },
   database: PrismaClient = db,
 ): Promise<SmtpTestResult> {
