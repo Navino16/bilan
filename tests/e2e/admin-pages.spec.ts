@@ -1,4 +1,22 @@
-import { test, expect, type Locator } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
+
+// Cleanup through the admin UI; no-op when the user was never created.
+async function deleteUser(page: Page, email: string): Promise<void> {
+  await page.goto(`/fr/admin/users?q=${encodeURIComponent(email)}`, {
+    waitUntil: "domcontentloaded",
+  });
+  const row = page.locator('[data-slot="admin-user-row"]', { hasText: email });
+  if ((await row.count()) === 0) return;
+  const dialog = page.locator('[data-slot="confirm-dialog"]');
+  await expect(async () => {
+    await row.getByRole("button", { name: /actions pour/i }).click();
+    await page.getByRole("menuitem", { name: /supprimer définitivement/i }).click();
+    await expect(dialog).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 20_000 });
+  await dialog.getByRole("textbox").fill(email);
+  await dialog.getByRole("button", { name: /supprimer définitivement/i }).click();
+  await expect(dialog).toBeHidden();
+}
 
 test.describe("admin pages (#164)", () => {
   test.skip(
@@ -70,6 +88,58 @@ test.describe("admin pages (#164)", () => {
       expect(await top(maxUses)).toBeCloseTo(descTop, 0);
       expect(await top(page.locator("#st-expiry"))).toBeCloseTo(descTop, 0);
       expect(await top(form.getByRole("button", { name: /^créer$/i }))).toBeCloseTo(descTop, 0);
+    });
+
+    test("marks a created user's address as verified (#240)", async ({ page }) => {
+      test.setTimeout(120_000);
+      const email = `e2e-verify-${Date.now()}@e2e.local`;
+      try {
+        await page.goto("/fr/admin/users", { waitUntil: "domcontentloaded", timeout: 90_000 });
+        await expect(async () => {
+          await page.fill("#cu-name", "E2E À vérifier");
+          await page.fill("#cu-email", email);
+          await page.getByRole("button", { name: /^créer$/i }).click();
+          await expect(page.getByText(/utilisateur créé/i)).toBeVisible({ timeout: 3000 });
+        }).toPass({ timeout: 30_000 });
+
+        await page.goto(`/fr/admin/users?q=${encodeURIComponent(email)}`, {
+          waitUntil: "domcontentloaded",
+        });
+        const row = page.locator('[data-slot="admin-user-row"]', { hasText: email });
+        const badge = row.getByText("Adresse non vérifiée", { exact: true });
+        await expect(badge).toBeVisible();
+        const item = page.getByRole("menuitem", { name: "Marquer l’adresse comme vérifiée" });
+        const dialog = page.locator('[data-slot="confirm-dialog"]');
+        await expect(async () => {
+          await row.getByRole("button", { name: /actions pour/i }).click();
+          await item.click();
+          await expect(dialog).toBeVisible({ timeout: 2000 });
+        }).toPass({ timeout: 20_000 });
+        await dialog.getByRole("button", { name: "Marquer comme vérifiée" }).click();
+        await expect(dialog).toBeHidden();
+        await expect(badge).toHaveCount(0);
+
+        await row.getByRole("button", { name: /actions pour/i }).click();
+        await expect(
+          page.getByRole("menuitem", { name: /supprimer définitivement/i }),
+        ).toBeVisible();
+        await expect(item).toHaveCount(0);
+        await page.keyboard.press("Escape");
+
+        await page.goto("/fr/admin/audit?action=user", {
+          waitUntil: "domcontentloaded",
+          timeout: 90_000,
+        });
+        await expect(
+          page
+            .locator('[data-slot="audit-row"]', {
+              hasText: "Adresse e-mail marquée comme vérifiée",
+            })
+            .first(),
+        ).toBeVisible();
+      } finally {
+        await deleteUser(page, email).catch(() => {});
+      }
     });
 
     test("permanently deletes a user after typing their email", async ({ page }) => {

@@ -32,6 +32,7 @@ const {
   deleteSignupTokenAction,
   setUserDisabledAction,
   adminDeleteUserAction,
+  adminMarkEmailVerifiedAction,
 } = await import("@/server/transport/actions/admin");
 const {
   sendSmtpTestAction,
@@ -103,6 +104,39 @@ describe("signup token actions", () => {
         form({ description: "", maxUses: "", expiresInDays: "" }),
       ),
     ).toEqual({ ok: false, error: "UNAUTHORIZED" });
+  });
+});
+
+describe("adminMarkEmailVerifiedAction (#240)", () => {
+  it("needs admin.users.update, then marks the address verified once, audited", async () => {
+    const verified = async () =>
+      (await db.user.findUniqueOrThrow({ where: { id: users.user.id } })).emailVerified;
+    current.user = users.admin;
+    expect(await adminMarkEmailVerifiedAction(null, form({ userId: users.user.id }))).toEqual({
+      ok: false,
+      error: "UNAUTHORIZED",
+    });
+    expect(await verified()).toBe(false);
+
+    current.user = users.super;
+    expect(await adminMarkEmailVerifiedAction(null, form({ userId: "" }))).toEqual({
+      ok: false,
+      error: "INVALID",
+    });
+    expect(await adminMarkEmailVerifiedAction(null, form({ userId: users.super.id }))).toEqual({
+      ok: false,
+      error: "SELF",
+    });
+    for (let i = 0; i < 2; i++) {
+      expect(await adminMarkEmailVerifiedAction(null, form({ userId: users.user.id }))).toEqual({
+        ok: true,
+      });
+    }
+    expect(await verified()).toBe(true);
+    const audits = await db.auditLog.findMany({
+      where: { action: "user.email_verified", entityId: users.user.id },
+    });
+    expect(audits.map((a) => a.userId)).toEqual([users.super.id]);
   });
 });
 

@@ -43,7 +43,10 @@ const provider = (key: string, allowSignUp: boolean): ProviderInput => ({
 });
 
 // Minimal IdP: discovery, token exchange and userinfo for one profile.
-function stubIdp(profile: { sub: string; email: string; name: string }) {
+function stubIdp(
+  profile: { sub: string; email: string; name: string },
+  claims: Record<string, unknown> = { email_verified: true },
+) {
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input instanceof Request ? input.url : input);
     const json = (body: unknown) =>
@@ -59,7 +62,7 @@ function stubIdp(profile: { sub: string; email: string; name: string }) {
     if (url === `${issuer}/token`) {
       return json({ access_token: "at", token_type: "Bearer", expires_in: 3600 });
     }
-    if (url === `${issuer}/userinfo`) return json({ ...profile, email_verified: true });
+    if (url === `${issuer}/userinfo`) return json({ ...profile, ...claims });
     return realFetch(input, init);
   });
 }
@@ -95,6 +98,11 @@ async function cleanup() {
   const where = { user: { email: { contains: tag } } };
   await db.session.deleteMany({ where });
   await db.authAccount.deleteMany({ where });
+  const users = await db.user.findMany({
+    where: { email: { contains: tag } },
+    select: { id: true },
+  });
+  await db.auditLog.deleteMany({ where: { userId: { in: users.map((u) => u.id) } } });
   await db.user.deleteMany({ where: { email: { contains: tag } } });
   await db.auditLog.deleteMany({ where: { userId: actorId } });
   await db.authProvider.deleteMany({ where: { key: { in: [closedKey, openKey] } } });
@@ -280,6 +288,64 @@ describe("registration mode gates SSO sign-up (#204)", () => {
       expect(await db.session.count({ where: { userId: id } })).toBe(1);
     },
   );
+});
+
+describe("IdP-asserted e-mail verification (#240)", () => {
+  const ssoVerifiedAudits = async (userId: string) =>
+    (await db.auditLog.findMany({ where: { userId, action: "auth.email.verified" } })).filter(
+      (a) => (a.metadata as { via?: string } | null)?.via === "sso",
+    ).length;
+
+  it.each([
+    [true, true],
+    [false, false],
+    ["true", false],
+    [undefined, false],
+  ])("signs a user up with email_verified %j as verified: %s", async (claim, expected) => {
+    const email = emailFor(`claim-${JSON.stringify(claim)}`);
+    stubIdp(
+      { sub: `sub-claim-${JSON.stringify(claim)}`, email, name: "Claim" },
+      { email_verified: claim },
+    );
+    expect((await ssoLogin(openKey)).location).toBe("/fr/dashboard");
+    const user = await db.user.findUniqueOrThrow({ where: { email } });
+    expect(user.emailVerified).toBe(expected);
+    expect(await ssoVerifiedAudits(user.id)).toBe(expected ? 1 : 0);
+  });
+
+  it.each([
+    [true, true],
+    ["false", false],
+  ])("marks a linked user verified on sign-in only for %j", async (claim, expected) => {
+    const email = emailFor(`linked-claim-${JSON.stringify(claim)}`);
+    const id = `${tag}-linked-claim-${JSON.stringify(claim)}-${Date.now()}`;
+    await db.user.create({
+      data: {
+        id,
+        email,
+        name: "Linked claim",
+        authAccounts: {
+          create: {
+            id: `${id}-acc`,
+            accountId: `sub-lc-${JSON.stringify(claim)}`,
+            providerId: openKey,
+          },
+        },
+      },
+    });
+    stubIdp(
+      { sub: `sub-lc-${JSON.stringify(claim)}`, email, name: "Linked claim" },
+      {
+        email_verified: claim,
+      },
+    );
+    expect((await ssoLogin(openKey)).location).toBe("/fr/dashboard");
+    expect((await db.user.findUniqueOrThrow({ where: { id } })).emailVerified).toBe(expected);
+    expect(await ssoVerifiedAudits(id)).toBe(expected ? 1 : 0);
+    // Already verified: the next sign-in isn't audited again.
+    expect((await ssoLogin(openKey)).location).toBe("/fr/dashboard");
+    expect(await ssoVerifiedAudits(id)).toBe(expected ? 1 : 0);
+  });
 });
 
 describe("Google sign-up flag (#200)", () => {

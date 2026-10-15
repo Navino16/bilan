@@ -11,6 +11,7 @@ import {
   createInvitation,
   revokeInvitation,
   acceptInvitation,
+  acceptPendingInvitation,
   declineInvitation,
   InvitationError,
 } from "@/server/services/groups/invitations";
@@ -79,16 +80,17 @@ export async function declineInvitationAction(
   formData: FormData,
 ): Promise<DeclineActionState> {
   const user = await requireSession();
-  const token = String(formData.get("token") ?? "").trim();
-  if (!token) return { ok: false, error: "INVALID" };
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return { ok: false, error: "INVALID" };
   try {
-    await declineInvitation(token, { id: user.id, email: user.email });
+    await declineInvitation(id, { id: user.id, email: user.email });
   } catch (e) {
     return fail(e);
   }
   return { ok: true };
 }
 
+// Link and code holders; the pending list uses acceptPendingInvitationAction (spec §6.12).
 export async function acceptInvitationAction(
   _prev: AcceptActionState,
   formData: FormData,
@@ -100,6 +102,23 @@ export async function acceptInvitationAction(
     return { ok: false, error: "RATE_LIMITED" };
   try {
     const { groupId } = await acceptInvitation(key, { id: user.id, email: user.email });
+    return { ok: true, groupId };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function acceptPendingInvitationAction(
+  _prev: AcceptActionState,
+  formData: FormData,
+): Promise<AcceptActionState> {
+  const user = await requireSession();
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return { ok: false, error: "INVALID" };
+  if (!invitationAcceptLimiter.consume(user.id).allowed)
+    return { ok: false, error: "RATE_LIMITED" };
+  try {
+    const { groupId } = await acceptPendingInvitation(id, { id: user.id, email: user.email });
     return { ok: true, groupId };
   } catch (e) {
     return fail(e);

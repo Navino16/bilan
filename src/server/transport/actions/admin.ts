@@ -18,6 +18,7 @@ import { logEvent } from "@/server/services/audit";
 import { failureOnField, invalidInput, type FormFailure } from "@/lib/validation/field-errors";
 import {
   adminDeleteUser,
+  adminMarkEmailVerified,
   setUserDisabled,
   UserAdminError,
   userDeletionImpact,
@@ -162,6 +163,25 @@ export async function setUserDisabledAction(
 
   try {
     await setUserDisabled({ id: actor.id }, userId, disabled === "true");
+    return { ok: true };
+  } catch (e) {
+    if (e instanceof UserAdminError) return { ok: false, error: e.code };
+    return { ok: false, error: "FAILED" };
+  }
+}
+
+export async function adminMarkEmailVerifiedAction(
+  _prev: UserLifecycleState,
+  formData: FormData,
+): Promise<UserLifecycleState> {
+  const actor = await requirePerm("admin.users.update");
+  if (!actor) return { ok: false, error: "UNAUTHORIZED" };
+
+  const userId = String(formData.get("userId") ?? "");
+  if (!userId) return { ok: false, error: "INVALID" };
+
+  try {
+    await adminMarkEmailVerified({ id: actor.id }, userId);
     return { ok: true };
   } catch (e) {
     if (e instanceof UserAdminError) return { ok: false, error: e.code };

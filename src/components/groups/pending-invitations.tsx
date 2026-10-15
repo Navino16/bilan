@@ -10,11 +10,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ConfirmDialog } from "@/components/shell/confirm-dialog";
 import { SectionCard } from "@/components/shell/section-card";
 import {
-  acceptInvitationAction,
+  acceptPendingInvitationAction,
   declineInvitationAction,
 } from "@/server/transport/actions/invitations";
 
-export type PendingForUser = { token: string; groupName: string; role: string };
+export type PendingForUser = { id: string; groupName: string; role: string };
 
 export function PendingInvitations({ invitations }: { invitations: PendingForUser[] }) {
   const t = useTranslations("invitations");
@@ -27,12 +27,12 @@ export function PendingInvitations({ invitations }: { invitations: PendingForUse
   const [declining, setDeclining] = useState<PendingForUser | null>(null);
   const [declineError, setDeclineError] = useState<{ code: string; hint?: string } | null>(null);
 
-  function accept(token: string) {
-    setBusy(token);
+  function accept(id: string) {
+    setBusy(id);
     startTransition(async () => {
       const fd = new FormData();
-      fd.set("token", token);
-      const result = await acceptInvitationAction(null, fd);
+      fd.set("id", id);
+      const result = await acceptPendingInvitationAction(null, fd);
       if (result?.ok) {
         setError(null);
         router.push(`/${locale}/groups/${result.groupId}`);
@@ -46,7 +46,7 @@ export function PendingInvitations({ invitations }: { invitations: PendingForUse
   function decline() {
     if (!declining) return;
     const fd = new FormData();
-    fd.set("token", declining.token);
+    fd.set("id", declining.id);
     setDeclineError(null);
     startTransition(async () => {
       const result = await declineInvitationAction(null, fd);
@@ -79,7 +79,7 @@ export function PendingInvitations({ invitations }: { invitations: PendingForUse
       <div className="divide-border divide-y">
         {invitations.map((inv) => (
           <div
-            key={inv.token}
+            key={inv.id}
             data-slot="pending-invitation"
             className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-6"
           >
@@ -102,9 +102,9 @@ export function PendingInvitations({ invitations }: { invitations: PendingForUse
                 <X />
                 {t("decline")}
               </Button>
-              <Button size="sm" disabled={pending} onClick={() => accept(inv.token)}>
+              <Button size="sm" disabled={pending} onClick={() => accept(inv.id)}>
                 <Check />
-                {busy === inv.token ? t("accepting") : t("accept")}
+                {busy === inv.id ? t("accepting") : t("accept")}
               </Button>
             </div>
           </div>

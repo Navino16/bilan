@@ -9,7 +9,7 @@ import { displayName } from "@/lib/validation/name";
 
 type Client = Prisma.TransactionClient | PrismaClient;
 
-export type UserAdminAction = "disable" | "enable" | "delete";
+export type UserAdminAction = "disable" | "enable" | "delete" | "verify_email";
 export type UserAdminRefusal =
   | "SELF"
   | "FORBIDDEN"
@@ -83,6 +83,30 @@ export async function setUserDisabled(
     await logEvent({
       userId: actor.id,
       action: disabled ? "user.disabled" : "user.enabled",
+      entity: "User",
+      entityId: targetId,
+    });
+  }
+}
+
+// For instances without SMTP, where the user can't follow a verification link (spec §6.12).
+export async function adminMarkEmailVerified(
+  actor: { id: string },
+  targetId: string,
+  database: PrismaClient = db,
+): Promise<void> {
+  const changed = await database.$transaction(async (tx) => {
+    await authorize(tx, "verify_email", actor.id, targetId);
+    const { count } = await tx.user.updateMany({
+      where: { id: targetId, emailVerified: false },
+      data: { emailVerified: true },
+    });
+    return count > 0;
+  });
+  if (changed) {
+    await logEvent({
+      userId: actor.id,
+      action: "user.email_verified",
       entity: "User",
       entityId: targetId,
     });

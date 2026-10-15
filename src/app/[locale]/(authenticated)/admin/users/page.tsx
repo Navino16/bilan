@@ -7,7 +7,7 @@ import { RoleBadge } from "@/components/admin/role-badge";
 import { RoleSelect } from "@/components/admin/role-select";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { UserActions } from "@/components/admin/user-actions";
-import { creatableRoles, topRole } from "@/lib/instance-roles";
+import { creatableRoles, mayHandleRole, topRole } from "@/lib/instance-roles";
 import { isActiveSuperAdmin } from "@/server/services/users/roles";
 import { displayName } from "@/lib/validation/name";
 import { parsePage } from "@/lib/pagination";
@@ -102,9 +102,12 @@ export default async function AdminUsersPage({
             className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-4 py-3 text-sm last:border-b-0 sm:px-6 md:grid md:gap-3 ${cols}`}
           >
             <div className="min-w-0 flex-auto">
-              <div className="flex items-center gap-2">
-                <span className="truncate font-medium">{displayName(u)}</span>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="max-w-full truncate font-medium">{displayName(u)}</span>
                 {u.disabled && <StatusBadge active={false}>{t("disabledBadge")}</StatusBadge>}
+                {!u.emailVerified && (
+                  <StatusBadge active={false}>{t("unverifiedBadge")}</StatusBadge>
+                )}
               </div>
               <div className="text-muted-foreground truncate text-xs md:hidden">{u.email}</div>
             </div>
@@ -120,7 +123,12 @@ export default async function AdminUsersPage({
                 const outranked = topRole(u.roleKeys) !== "USER" && !canDelete;
                 const disable = canDisable && !self && !outranked;
                 const remove = canDelete && !self;
-                return disable || remove ? (
+                const verify =
+                  canUpdate &&
+                  !self &&
+                  !u.emailVerified &&
+                  mayHandleRole(viewerIsSuperAdmin, topRole(u.roleKeys));
+                return disable || remove || verify ? (
                   <UserActions
                     userId={u.id}
                     email={u.email}
@@ -128,6 +136,7 @@ export default async function AdminUsersPage({
                     disabled={u.disabled}
                     canDisable={disable}
                     canDelete={remove}
+                    canVerifyEmail={verify}
                   />
                 ) : (
                   <span />

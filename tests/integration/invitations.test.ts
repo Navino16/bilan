@@ -17,15 +17,21 @@ vi.mock("@/server/auth/permissions", async (importOriginal) => ({
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 
 import { db } from "@/server/db";
+import { invitationAcceptLimiter } from "@/server/auth/rate-limit";
 import { createGroup } from "@/server/services/groups";
 import {
   createInvitation,
   acceptInvitation,
+  acceptPendingInvitation,
   revokeInvitation,
   declineInvitation,
+  pendingInvitationsForUser,
   InvitationError,
 } from "@/server/services/groups/invitations";
-import { createInvitationAction } from "@/server/transport/actions/invitations";
+import {
+  acceptPendingInvitationAction,
+  createInvitationAction,
+} from "@/server/transport/actions/invitations";
 
 const owner = "inv_owner";
 const invitee = "inv_invitee";
@@ -313,18 +319,19 @@ describe("invitations service", () => {
   });
 
   it("lets only the invited address decline, including a stale invitation (#228)", async () => {
+    await db.user.updateMany({ where: { id: { in: ids } }, data: { emailVerified: true } });
     const g = await createGroup({ name: "Decline group" }, owner);
     const inv = await createInvitation(
       { groupId: g.id, email: "invitee@bilan.local", role: "MEMBER" },
       { id: owner },
     );
     await expect(
-      declineInvitation(inv.token, { id: owner, email: "inv-owner@bilan.local" }),
-    ).rejects.toMatchObject({ message: "WRONG_ACCOUNT" });
+      declineInvitation(inv.id, { id: owner, email: "inv-owner@bilan.local" }),
+    ).rejects.toMatchObject({ message: "NOT_FOUND" });
 
     // Stale: the invitee already joined by another route.
     await db.groupMember.create({ data: { groupId: g.id, userId: invitee, role: "MEMBER" } });
-    await declineInvitation(inv.token, { id: invitee, email: "Invitee@bilan.local" });
+    await declineInvitation(inv.id, { id: invitee, email: "Invitee@bilan.local" });
     expect(await db.groupInvitation.findUnique({ where: { id: inv.id } })).toBeNull();
     expect(
       await db.auditLog.findFirst({
@@ -332,7 +339,7 @@ describe("invitations service", () => {
       }),
     ).not.toBeNull();
     await expect(
-      declineInvitation(inv.token, { id: invitee, email: "invitee@bilan.local" }),
+      declineInvitation(inv.id, { id: invitee, email: "invitee@bilan.local" }),
     ).rejects.toMatchObject({ message: "NOT_FOUND" });
   });
 
@@ -363,5 +370,102 @@ describe("invitations service", () => {
     expect(user.to).toBe("invitee@bilan.local");
     expect(user.subject).toMatch(/invitation à rejoindre le foyer « Locale group »$/);
     expect(user.text).toMatch(/\/fr\/groups\/join\//);
+  });
+});
+
+describe("e-mail-matched invitations need a verified address (#240)", () => {
+  const user = { id: invitee, email: "invitee@bilan.local" };
+  const setVerified = (emailVerified: boolean) =>
+    db.user.update({ where: { id: invitee }, data: { emailVerified } });
+  const invite = async (name: string) => {
+    const g = await createGroup({ name }, owner);
+    const inv = await createInvitation(
+      { groupId: g.id, email: user.email, role: "MEMBER" },
+      { id: owner },
+    );
+    return { g, inv };
+  };
+  const isMember = async (groupId: string) =>
+    (await db.groupMember.count({ where: { groupId, userId: invitee } })) === 1;
+
+  it("neither lists nor accepts or declines from the list while unverified", async () => {
+    await setVerified(false);
+    const { g, inv } = await invite("Unverified list group");
+    expect(await pendingInvitationsForUser(user)).toEqual([]);
+    await expect(acceptPendingInvitation(inv.id, user)).rejects.toMatchObject({
+      message: "EMAIL_NOT_VERIFIED",
+    });
+    await expect(declineInvitation(inv.id, user)).rejects.toMatchObject({
+      message: "EMAIL_NOT_VERIFIED",
+    });
+    session.user = user;
+    const fd = new FormData();
+    fd.set("id", inv.id);
+    expect(await acceptPendingInvitationAction(null, fd)).toEqual({
+      ok: false,
+      error: "EMAIL_NOT_VERIFIED",
+    });
+    expect(await isMember(g.id)).toBe(false);
+    expect(await db.groupInvitation.findUnique({ where: { id: inv.id } })).not.toBeNull();
+  });
+
+  it("still accepts the link or the code from an unverified address", async () => {
+    await setVerified(false);
+    const byLink = await invite("Unverified link group");
+    const byCode = await invite("Unverified code group");
+    await acceptInvitation(byLink.inv.token, user);
+    await acceptInvitation(byCode.inv.code, user);
+    expect(await isMember(byLink.g.id)).toBe(true);
+    expect(await isMember(byCode.g.id)).toBe(true);
+  });
+
+  it("lists without token or code, and accepts from the list, once verified", async () => {
+    await setVerified(true);
+    const { g, inv } = await invite("Verified list group");
+    const listed = await pendingInvitationsForUser(user);
+    expect(listed).toContainEqual({ id: inv.id, role: "MEMBER", groupName: "Verified list group" });
+    expect(Object.keys(listed[0]).sort()).toEqual(["groupName", "id", "role"]);
+    // The id isn't a secret: another verified account still can't use it.
+    await db.user.update({ where: { id: owner }, data: { emailVerified: true } });
+    await expect(
+      acceptPendingInvitation(inv.id, { id: owner, email: "inv-owner@bilan.local" }),
+    ).rejects.toMatchObject({ message: "NOT_FOUND" });
+    expect(await acceptPendingInvitation(inv.id, user)).toEqual({ groupId: g.id });
+    expect(await isMember(g.id)).toBe(true);
+  });
+
+  it("reports someone else's invitation as missing whatever its state", async () => {
+    await setVerified(true);
+    const { inv } = await invite("Probe group");
+    await db.groupInvitation.update({
+      where: { id: inv.id },
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
+    await db.user.update({ where: { id: owner }, data: { emailVerified: false } });
+    const stranger = { id: owner, email: "inv-owner@bilan.local" };
+    await expect(acceptPendingInvitation(inv.id, stranger)).rejects.toMatchObject({
+      message: "NOT_FOUND",
+      hint: undefined,
+    });
+    await expect(declineInvitation(inv.id, stranger)).rejects.toMatchObject({
+      message: "NOT_FOUND",
+    });
+    await expect(acceptPendingInvitation(inv.id, user)).rejects.toMatchObject({
+      message: "EXPIRED",
+    });
+  });
+
+  it("rate-limits accepting from the list like the code", async () => {
+    const { inv } = await invite("Rate group");
+    session.user = user;
+    invitationAcceptLimiter.reset(invitee);
+    for (let i = 0; i < 10; i++) invitationAcceptLimiter.consume(invitee);
+    const fd = new FormData();
+    fd.set("id", inv.id);
+    expect(await acceptPendingInvitationAction(null, fd)).toEqual({
+      ok: false,
+      error: "RATE_LIMITED",
+    });
+    invitationAcceptLimiter.reset(invitee);
   });
 });

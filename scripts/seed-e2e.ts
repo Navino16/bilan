@@ -44,6 +44,11 @@ async function ensureUsers(): Promise<void> {
     });
     if (u.role) await grantRole(db, res.user.id, u.role, res.user.id);
   }
+  // Specs rely on the e-mail-matched pending invitations, listed only for verified addresses.
+  await db.user.updateMany({
+    where: { email: { in: E2E_USERS.map((u) => u.email) } },
+    data: { emailVerified: true },
+  });
 }
 
 // A deterministic household (owner = OWNER, member = MEMBER) so account-sharing
