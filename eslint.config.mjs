@@ -18,6 +18,7 @@ const eslintConfig = defineConfig([
     ".superpowers/**",
     ".reports/**",
     "docs/**",
+    ".claude/**",
   ]),
 ]);
 
