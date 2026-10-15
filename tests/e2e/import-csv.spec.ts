@@ -345,9 +345,9 @@ bad;LIGNE ${stamp};1,00;;B`;
     const rows = page.locator('[data-slot="import-preview-row"]');
     await expect(rows).toHaveCount(50, { timeout: 15_000 });
     await expect(rows.first()).toContainText("1er mai 2019");
-    // Date, Libellé, Montant and Décimales are ticked; Débit, Crédit and Type are not.
+    // Date, Libellé, Montant, Décimales and Ordre des dates are ticked; Débit, Crédit and Type are not.
     const ticks = page.locator('#import-settings [data-slot="field-mapped"]');
-    await expect(ticks).toHaveCount(4);
+    await expect(ticks).toHaveCount(5);
 
     const date = page.getByLabel("Date", { exact: true });
     const refused = page.waitForResponse((r) => r.url().endsWith("/preview"), {
@@ -359,7 +359,7 @@ bad;LIGNE ${stamp};1,00;;B`;
     await expect(error).toContainText("Choisissez au moins la date");
     await expect(error).toBeInViewport();
     await expect(date).toHaveValue("Date");
-    await expect(ticks).toHaveCount(4);
+    await expect(ticks).toHaveCount(5);
     await expect(rows).toHaveCount(50);
     await page.getByRole("button", { name: "Annuler", exact: true }).click();
   });

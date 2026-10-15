@@ -313,7 +313,7 @@
     "tabRules": "Rules",
     "new": "New rule",
     "empty": "No rules yet. Create one to auto-categorize your imports and entries.",
-    "colPriority": "Prio.",
+    "colPriority": "Priority",
     "colPattern": "Pattern",
     "colMatch": "Type",
     "colTarget": "Target",
@@ -702,7 +702,7 @@
       "deleted": "{count, plural, one {This transaction will be permanently deleted.} other {# transactions will be permanently deleted.}}",
       "dissolvedLinks": "{count, plural, one {# link will be dissolved (only one transaction would be left).} other {# links will be dissolved (only one transaction would be left).}}",
       "leavingLink": "{count, plural, one {# transaction will leave its link, which stays active.} other {# transactions will leave their link, which stays active.}}",
-      "budgeted": "{count, plural, one {# transaction is assigned to a budget and will be removed from it.} other {# transactions are assigned to a budget and will be removed from them.}}",
+      "budgeted": "{count, plural, one {# transaction is assigned to a budget and will be removed from it.} other {# transactions are assigned to a budget and will be removed from their budgets.}}",
       "irreversible": "This can’t be undone.",
       "keep": "Keep",
       "confirm": "Delete",
@@ -875,7 +875,12 @@
       "previous": "Previous",
       "next": "Next"
     },
-    "rowCategory": "Category for {label}"
+    "rowCategory": "Category for {label}",
+    "dateOrder": {
+      "label": "Date order",
+      "DMY": "DD/MM",
+      "MDY": "MM/DD"
+    }
   },
   "groups": {
     "overline": "Sharing",
@@ -955,7 +960,7 @@
     "accept": "Accept invitation",
     "accepting": "…",
     "invalidLink": "This invitation cannot be found, has expired, or was already used.",
-    "joinPromptRole": "You’ve been invited to join “{group}” as {role}.",
+    "joinPromptRole": "You’ve been invited to join “{group}” as {role, select, OWNER {an owner} ADMIN {an admin} other {a member}}.",
     "joinCodeHint": "The code only works with the account whose address was invited.",
     "copyLink": "Copy invitation link",
     "linkCopied": "Link copied",
@@ -1031,7 +1036,7 @@
     "inProgressAvg": "Period in progress: compared with the same days ({day, plural, =1 {the 1st} other {days 1–#}} of each month).",
     "vsAvg": "{arrow} {pct} vs {months}-month average",
     "vsAvgAmount": "{arrow} {amount} vs {months}-month average",
-    "noSameDate": "Nothing at the same date",
+    "noSameDate": "Nothing by this point last period",
     "noAvg": "Nothing over the previous {months} months",
     "rangeStart": "Period start",
     "rangeEnd": "Period end",
@@ -1344,7 +1349,7 @@
         "FAILED": "Failed. Try again."
       },
       "deleteLoading": "Working out the impact…",
-      "deleteAccounts": "{count, plural, one {# bank account} other {# bank accounts}} and their history disappear{shared, plural, =0 {} one {, # of them shared: household members will no longer see it} other {, # of them shared: household members will no longer see them}}.",
+      "deleteAccounts": "{count, plural, one {# bank account and its history disappear{shared, plural, =0 {} other {; it is shared, so household members will no longer see it}}} other {# bank accounts and their history disappear{shared, plural, =0 {} one {, # of them shared: household members will no longer see it} other {, # of them shared: household members will no longer see them}}}}.",
       "deleteTransfer": "Household “{group}” will be handed over to {to}.",
       "deleteGroup": "Household “{group}”, of which they are the only member, will be deleted.",
       "deleteBudgetLines": "Lines in household or other members’ budgets that targeted their accounts will no longer be limited to an account.",
@@ -1793,7 +1798,8 @@
       "mapEmail": "Email claim",
       "error": "Incomplete OIDC fields: a valid issuer URL, client ID and client secret are required.",
       "save": "Save and continue",
-      "skip": "Skip"
+      "skip": "Skip",
+      "displayNamePlaceholder": "My SSO"
     },
     "registration": {
       "submit": "Finish",

@@ -10,6 +10,7 @@ import {
   formatLongDay,
   formatMoney,
   formatMonthRange,
+  ordinalSegments,
   formatMonthYear,
   formatPercent,
 } from "@/lib/format";
@@ -104,6 +105,22 @@ describe("formatLongDay", () => {
     expect(formatLongDay("2026-10-01", "fr")).toBe("jeudi 1er octobre 2026");
     expect(formatLongDay("2026-10-01", "fr", { year: false })).toBe("jeudi 1er octobre");
     expect(formatLongDay("2026-10-01", "en")).toBe("Thursday, October 1, 2026");
+  });
+});
+
+describe("ordinalSegments", () => {
+  it("isolates the French ordinal suffix so CSS uppercase can spare it (#245)", () => {
+    expect(ordinalSegments("jeudi 1er octobre")).toEqual(["jeudi 1", "er", " octobre"]);
+    expect(ordinalSegments("1er–31 oct. 2026")).toEqual(["1", "er", "–31 oct. 2026"]);
+    expect(ordinalSegments("1er sept. – 1er oct.")).toEqual([
+      "1",
+      "er",
+      " sept. – 1",
+      "er",
+      " oct.",
+    ]);
+    expect(ordinalSegments("11 oct. 2026")).toEqual(["11 oct. 2026"]);
+    expect(ordinalSegments("Thursday, October 1, 2026")).toEqual(["Thursday, October 1, 2026"]);
   });
 });
 

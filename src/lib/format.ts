@@ -49,6 +49,12 @@ function joinParts(parts: Intl.DateTimeFormatPart[], locale: string): string {
     .replace(ICU_SPACES, " ");
 }
 
+// Splits « 1er » ordinals so their suffix can be rendered outside CSS uppercase
+// (« 1ER » otherwise): odd indexes hold the suffixes.
+export function ordinalSegments(text: string): string[] {
+  return text.split(/(?<=\b1)(er)\b/);
+}
+
 function formatWith(f: Intl.DateTimeFormat, value: DateInput, locale: string): string {
   return joinParts(f.formatToParts(toDate(value)), locale);
 }

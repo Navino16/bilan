@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { overline } from "@/components/transactions/bits";
+import { OrdinalText } from "@/components/ordinal-text";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import type { getCurrentBudget } from "@/server/services/budgets";
 import { BudgetBar, statusStyle } from "@/components/budgets/budget-status";
@@ -43,7 +44,7 @@ export async function BudgetSnapshot({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className={overline}>
-            {formatDateRange(detail.periodStart, detail.periodEnd, locale)}
+            <OrdinalText text={formatDateRange(detail.periodStart, detail.periodEnd, locale)} />
           </div>
           <div className="font-display truncate text-xl">{detail.name}</div>
         </div>

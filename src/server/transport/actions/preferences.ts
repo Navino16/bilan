@@ -1,7 +1,8 @@
 "use server";
 
 import { getCurrentUser } from "@/server/auth/permissions";
-import { isLocale, syncPreferredLocale } from "@/server/services/users/preferences";
+import { isLocale } from "@/lib/locale-negotiation";
+import { syncPreferredLocale } from "@/server/services/users/preferences";
 
 // Signed out: a no-op, the NEXT_LOCALE cookie alone carries the choice.
 export async function syncLocaleAction(locale: unknown): Promise<void> {

@@ -13,8 +13,11 @@ import { Stepper, FieldMap, CheckRow } from "./wizard-bits";
 import {
   CSV_FIELDS,
   CSV_MAX_BYTES,
+  DATE_ORDERS,
   DECIMAL_MARKS,
+  DEFAULT_DATE_ORDER,
   PDF_MAX_BYTES,
+  type DateOrder,
   type DecimalMark,
 } from "@/lib/validation/import";
 import type { FlatCategory } from "@/components/transactions/category-tree";
@@ -82,14 +85,24 @@ const otherMark = (m: DecimalMark): DecimalMark => (m === "," ? "." : ",");
 
 function columnsOf(mapping: Record<string, string | undefined> | undefined) {
   return Object.fromEntries(
-    Object.entries(mapping ?? {}).filter(([k, v]) => v && k !== "decimal"),
+    Object.entries(mapping ?? {}).filter(
+      ([k, v]) => v && (CSV_FIELDS as readonly string[]).includes(k),
+    ),
   ) as Record<string, string>;
 }
 
-// Until the user picks a decimal mark, it's left out so the server re-detects it
-// (and keeps flagging a guess, #187) on every page and remap.
-function csvMappingBody(columns: Record<string, string>, decimal: DecimalMark | null) {
-  return { ...columnsOf(columns), ...(decimal ? { decimal } : {}) };
+// Until the user picks a decimal mark or date order, it's left out so the server
+// re-detects it (and keeps flagging a guessed mark, #187) on every page and remap.
+function csvMappingBody(
+  columns: Record<string, string>,
+  decimal: DecimalMark | null,
+  dateOrder: DateOrder | null,
+) {
+  return {
+    ...columnsOf(columns),
+    ...(decimal ? { decimal } : {}),
+    ...(dateOrder ? { dateOrder } : {}),
+  };
 }
 
 export function ImportWizard({
@@ -114,6 +127,7 @@ export function ImportWizard({
   const [preview, setPreview] = useState<Preview | null>(null);
   const [columns, setColumns] = useState<Record<string, string>>({});
   const [decimalChoice, setDecimalChoice] = useState<DecimalMark | null>(null);
+  const [dateOrderChoice, setDateOrderChoice] = useState<DateOrder | null>(null);
   const [productAccount, setProductAccount] = useState<Record<string, string>>({});
   // Per-row edits keyed by externalId: category override, and exclusion (the
   // value is the row's product, so ignored products don't count their exclusions).
@@ -138,6 +152,8 @@ export function ImportWizard({
 
   const guessedMark = preview?.mapping?.decimal as DecimalMark | undefined;
   const shownDecimal = decimalChoice ?? guessedMark ?? ",";
+  const shownDateOrder =
+    dateOrderChoice ?? (preview?.mapping?.dateOrder as DateOrder | undefined) ?? DEFAULT_DATE_ORDER;
   const step = summary ? 3 : preview ? 2 : loading ? 1 : 0;
   // An upload replaces (and discards) the previewed batch: nothing may commit or re-upload meanwhile.
   const busy = loading || pending || refreshing;
@@ -177,6 +193,7 @@ export function ImportWizard({
       setSettingsOpen(false);
       setColumns(columnsOf(data.mapping));
       setDecimalChoice(null);
+      setDateOrderChoice(null);
       const prods = data.products ?? [{ key: CSV_PRODUCT }];
       setProductAccount(Object.fromEntries(prods.map((p, i) => [p.key, i === 0 ? account : ""])));
     } catch {
@@ -236,7 +253,7 @@ export function ImportWizard({
     const shown = columnsOf(preview.mapping);
     setColumns(next);
     void refresh(
-      { mapping: csvMappingBody(next, decimalChoice), page: 0 },
+      { mapping: csvMappingBody(next, decimalChoice, dateOrderChoice), page: 0 },
       // The preview didn't change, so neither does the mapping a commit will use.
       { resetEdits: true, mapping: true, onFail: () => setColumns(shown) },
     );
@@ -251,12 +268,25 @@ export function ImportWizard({
     const previous = decimalChoice;
     setDecimalChoice(mark);
     void refresh(
-      { mapping: csvMappingBody(columns, mark), page: confirming ? (preview.page ?? 0) : 0 },
+      {
+        mapping: csvMappingBody(columns, mark, dateOrderChoice),
+        page: confirming ? (preview.page ?? 0) : 0,
+      },
       {
         resetEdits: !confirming,
         mapping: !fromBanner,
         onFail: () => setDecimalChoice(previous),
       },
+    );
+  }
+
+  function chooseDateOrder(order: DateOrder) {
+    if (!preview || preview.source !== "CSV" || order === shownDateOrder) return;
+    const previous = dateOrderChoice;
+    setDateOrderChoice(order);
+    void refresh(
+      { mapping: csvMappingBody(columns, decimalChoice, order), page: 0 },
+      { resetEdits: true, mapping: true, onFail: () => setDateOrderChoice(previous) },
     );
   }
 
@@ -269,7 +299,7 @@ export function ImportWizard({
     const pages = Object.fromEntries(products.map((p) => [p.key, p.page]));
     await refresh(
       preview.source === "CSV"
-        ? { mapping: csvMappingBody(columns, decimalChoice), page }
+        ? { mapping: csvMappingBody(columns, decimalChoice, dateOrderChoice), page }
         : pdfBody({ ...pages, [productKey]: page }, productAccount),
     );
     previewTop.current?.scrollIntoView({ block: "start" });
@@ -298,6 +328,7 @@ export function ImportWizard({
     setPreview(null);
     setColumns({});
     setDecimalChoice(null);
+    setDateOrderChoice(null);
     setProductAccount({});
     setOverrides({});
     setExcluded({});
@@ -755,6 +786,16 @@ export function ImportWizard({
                         }))}
                         value={shownDecimal}
                         onChange={(mark) => chooseDecimal(mark)}
+                        disabled={busy}
+                        className="grid w-full grid-cols-2"
+                      />
+                    </FieldMap>
+                    <FieldMap label={t("dateOrder.label")}>
+                      <SegmentedTabs<DateOrder>
+                        aria-label={t("dateOrder.label")}
+                        items={DATE_ORDERS.map((o) => ({ id: o, label: t(`dateOrder.${o}`) }))}
+                        value={shownDateOrder}
+                        onChange={chooseDateOrder}
                         disabled={busy}
                         className="grid w-full grid-cols-2"
                       />

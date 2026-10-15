@@ -25,6 +25,7 @@ describe("notFoundResponse", () => {
     expect(enBody).toContain('<html lang="en">');
     expect(enBody).toContain("This page doesn’t exist or has moved.");
     expect(enBody).toContain('<a href="/en">Back</a>');
+    expect(enBody).toContain("<title>Page not found · Bilan</title>");
 
     const fr = await notFoundResponse("/fr/setup", h({ "accept-language": "en" }), "Bilan").text();
     expect(fr).toContain('<html lang="fr">');
@@ -34,7 +35,9 @@ describe("notFoundResponse", () => {
 
   it("names the instance, HTML-escaped (#226)", async () => {
     const body = await notFoundResponse("/fr/setup", h({}), `Tom & "Jerry" <b>`).text();
-    expect(body).toContain("<title>Tom &amp; &quot;Jerry&quot; &lt;b&gt; — 404</title>");
+    expect(body).toContain(
+      "<title>Page introuvable · Tom &amp; &quot;Jerry&quot; &lt;b&gt;</title>",
+    );
     expect(body).toContain("<h1>Tom &amp; &quot;Jerry&quot; &lt;b&gt;</h1>");
     expect(body).not.toContain("<b>");
   });

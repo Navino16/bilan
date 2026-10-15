@@ -10,10 +10,14 @@ import { getAppName } from "@/server/services/settings/app-settings";
 import { pageLocale } from "@/server/http/request-locale";
 import { BASE_SECURITY_HEADERS } from "@/lib/security-headers";
 
+// Persistent like the theme cookie: the browsing locale is per browser (spec §3.4).
+const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+
 const intlMiddleware = createIntlMiddleware({
   locales: [...locales],
   defaultLocale,
   localePrefix: "always",
+  localeCookie: { maxAge: LOCALE_COOKIE_MAX_AGE },
 });
 
 // Spec §6.6 — security headers attached to every (non-static) page response; /api gets

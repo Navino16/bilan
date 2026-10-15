@@ -4,10 +4,12 @@ import { db } from "@/server/db";
 import { decrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
 import { env } from "@/env";
+import type { Locale } from "@/i18n/config";
 
 export type MailResult = { delivered: boolean };
 
-type Mail = { to: string; subject: string; text: string };
+// `locale`: the language the mail is written in (spec §3.4), sent as Content-Language.
+export type Mail = { to: string; subject: string; text: string; locale: Locale };
 
 // Sends through `cfg` whether or not it is enabled (the admin SMTP test uses it directly).
 export async function sendWithConfig(cfg: SmtpConfig, mail: Mail): Promise<void> {
@@ -25,6 +27,7 @@ export async function sendWithConfig(cfg: SmtpConfig, mail: Mail): Promise<void>
     to: mail.to,
     subject: mail.subject,
     text: mail.text,
+    headers: { "Content-Language": mail.locale },
   });
 }
 

@@ -19,9 +19,13 @@ test.describe("account data", () => {
     const frBody = await fr.body();
     expect([...frBody.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
     expect(frBody.toString("utf8")).toContain("date;montant;type;libellé;compte;catégorie");
+    // Type codes are exported as localized labels (#245).
+    expect(frBody.toString("utf8")).not.toMatch(/;(CARD|TRANSFER|DIRECT_DEBIT|CHEQUE|ATM|OTHER);/);
 
     const en = await page.request.get("/api/export/transactions?locale=en");
-    expect(await en.text()).toContain("date,amount,type,label,account,category");
+    const enBody = await en.text();
+    expect(enBody).toContain("date,amount,type,label,account,category");
+    expect(enBody).not.toMatch(/,(CARD|TRANSFER|DIRECT_DEBIT|CHEQUE|OTHER),/);
   });
 
   test("the JSON export has a dated filename and no encrypted fields", async ({ page }) => {

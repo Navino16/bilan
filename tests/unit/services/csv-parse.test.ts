@@ -9,6 +9,7 @@ import {
   normalizeType,
   decimalVote,
   detectDecimalMark,
+  detectDateOrder,
   amountCells,
   mapRows,
   looksBinary,
@@ -273,6 +274,38 @@ describe("normalizeDate — more formats (#157)", () => {
     ["2026-09-23 10:15:00", "2026-09-23"],
   ])("%s → %s", (raw, iso) => {
     expect(normalizeDate(raw)?.toISOString().slice(0, 10)).toBe(iso);
+  });
+});
+
+describe("date order (#245)", () => {
+  it("reads slashed dates day-first by default and month-first on request", () => {
+    expect(normalizeDate("10/03/2026")?.toISOString().slice(0, 10)).toBe("2026-03-10");
+    expect(normalizeDate("10/03/2026", "MDY")?.toISOString().slice(0, 10)).toBe("2026-10-03");
+    expect(normalizeDate("3.10.26", "MDY")?.toISOString().slice(0, 10)).toBe("2026-03-10");
+    expect(normalizeDate("13/25/2026", "MDY")).toBeNull();
+    expect(normalizeDate("12/25/2026", "MDY")?.toISOString().slice(0, 10)).toBe("2026-12-25");
+  });
+
+  it("never reorders an ISO date", () => {
+    expect(normalizeDate("2026-03-10", "MDY")?.toISOString().slice(0, 10)).toBe("2026-03-10");
+  });
+
+  it("detects month-first only when a date can't be day-first and none can't be month-first", () => {
+    expect(detectDateOrder(["10/03/2026", "12/25/2026"])).toBe("MDY");
+    expect(detectDateOrder(["12/25/26 10:15", "garbage", ""])).toBe("MDY");
+    expect(detectDateOrder(["25/12/2026", "12/25/2026"])).toBe("DMY");
+    expect(detectDateOrder(["25/12/2026", "03/10/2026"])).toBe("DMY");
+    expect(detectDateOrder(["03/10/2026", "04/11/2026"])).toBe("DMY");
+    expect(detectDateOrder(["2026-12-25", "2026-03-10"])).toBe("DMY");
+    expect(detectDateOrder([])).toBe("DMY");
+  });
+
+  it("is applied by mapRows", () => {
+    const rows = [{ D: "12/25/2026", L: "GIFT", M: "-3" }];
+    const base = { date: "D", label: "L", amount: "M", decimal: "," } as const;
+    expect(mapRows(rows, base).rejected.map((r) => r.reason)).toEqual(["DATE"]);
+    const out = mapRows(rows, { ...base, dateOrder: "MDY" });
+    expect(out.rows[0].date.toISOString().slice(0, 10)).toBe("2026-12-25");
   });
 });
 

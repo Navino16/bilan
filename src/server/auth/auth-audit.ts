@@ -7,6 +7,8 @@ import {
 import { purgeTrustedDevices } from "@/server/services/users/trusted-devices";
 import { logEvent } from "@/server/services/audit";
 import { requestOrigin } from "@/server/http/client-ip";
+import { requestLocaleHint } from "@/server/http/request-locale";
+import { syncPreferredLocale } from "@/server/services/users/preferences";
 import {
   notifySecurityEvent,
   type SecurityEvent,
@@ -118,6 +120,7 @@ export async function authAuditEvent(
   }
 }
 
+// The Google and generic OIDC callbacks: account links and SSO sign-ins.
 const LINK_CALLBACKS = new Set(["/callback/:id", "/oauth2/callback/:providerId"]);
 
 // A Settings > Security link callback (#204) that redirects with `?error=`. Not audited: an OIDC
@@ -164,17 +167,34 @@ export async function auditAuthRequest(ctx: HookContext): Promise<void> {
     ) {
       await purgeTrustedDevices(event.userId);
     }
+    if (event.action === "auth.login.success" && event.userId) {
+      await syncSignInLocale(event.userId, ctx.headers);
+    }
     const notified = NOTIFIED_EVENTS.get(event.action);
     if (notified && event.userId) {
       void notifySecurityEvent(notified, {
         userId: event.userId,
         at: new Date(),
         origin: requestOrigin(ctx.headers),
+        pageLocale: requestLocaleHint(ctx.headers),
       });
     }
   } catch {
     // best-effort: an audit failure must not fail the auth request
   }
+}
+
+// Spec §3.4: a sign-in stores its page's locale, the language of the user's e-mails.
+// Runs before the new-sign-in mail is sent, so that mail follows it.
+async function syncSignInLocale(userId: string, headers: Headers | undefined): Promise<void> {
+  const locale = requestLocaleHint(headers);
+  if (locale) await syncPreferredLocale(userId, locale).catch(() => {});
+}
+
+// SSO sign-ins aren't audit events: their callback is the one that sets a new session.
+export async function syncSsoSignInLocale(ctx: HookContext): Promise<void> {
+  const session = ctx.context.newSession;
+  if (session && LINK_CALLBACKS.has(ctx.path)) await syncSignInLocale(session.user.id, ctx.headers);
 }
 
 export type HookContext = Parameters<Parameters<typeof createAuthMiddleware>[0]>[0];

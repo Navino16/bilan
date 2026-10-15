@@ -6,6 +6,8 @@ import { transactionsToCsv, type CsvRow } from "@/server/services/export/csv";
 import { dayEnd, dayStart, toIsoDay } from "@/lib/period";
 import { parseTransactionFilters } from "@/lib/transaction-filters";
 import { defaultLocale, locales, type Locale } from "@/i18n/config";
+import { getTranslations } from "next-intl/server";
+import { TRANSACTION_TYPES } from "@/lib/validation/transaction";
 
 export const runtime = "nodejs";
 
@@ -49,7 +51,9 @@ export async function GET(req: Request): Promise<Response> {
     categoryName: i.categoryId ? (catName.get(i.categoryId) ?? null) : null,
   }));
 
-  const csv = transactionsToCsv(rows, locale);
+  const tType = await getTranslations({ locale, namespace: "transactions.types" });
+  const typeLabels = Object.fromEntries(TRANSACTION_TYPES.map((type) => [type, tType(type)]));
+  const csv = transactionsToCsv(rows, locale, typeLabels);
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",

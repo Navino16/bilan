@@ -13,7 +13,7 @@ export const registerSchema = z
   .object({
     email: z.email(),
     // Floor of the admin min_password_length setting; actions check the configured value.
-    password: z.string().min(8),
+    password: z.string().min(8, { error: "PASSWORD_TOO_SHORT" }),
     confirmPassword: z.string(),
     name: nameSchema,
     invitationToken: z.string().optional(),
@@ -32,7 +32,7 @@ export const resetRequestSchema = z.object({
 export const resetConfirmSchema = z.object({
   // Better Auth reset tokens are opaque random strings, not UUIDs.
   token: z.string().min(1),
-  password: z.string().min(8),
+  password: z.string().min(8, { error: "PASSWORD_TOO_SHORT" }),
 });
 
 export const changePasswordSchema = z

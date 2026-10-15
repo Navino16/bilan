@@ -75,7 +75,7 @@ export function StepOidc({
           id="oidc-name"
           value={data.displayName}
           onChange={(e) => onChange({ displayName: e.target.value })}
-          placeholder="Mon SSO"
+          placeholder={t("displayNamePlaceholder")}
         />
       </div>
       <div className="space-y-2">

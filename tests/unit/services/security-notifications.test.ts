@@ -70,7 +70,8 @@ describe("notifySecurityEvent", () => {
     findUser.mockResolvedValue({ email: "user@bilan.local", preference: { locale: "en" } });
     await notifySecurityEvent("passkey_added", { userId: "u1", at, origin });
     expect(sendMail).toHaveBeenCalledTimes(1);
-    const arg = sendMail.mock.calls[0][0] as { to: string; subject: string };
+    const arg = sendMail.mock.calls[0][0] as { to: string; subject: string; locale: string };
+    expect(arg.locale).toBe("en");
     expect(arg.to).toBe("user@bilan.local");
     expect(arg.subject).toBe("Maison — a passkey was added to your account");
   });
@@ -85,6 +86,17 @@ describe("notifySecurityEvent", () => {
         "Maison — nouvelle connexion à votre compte",
       );
     }
+  });
+
+  it("falls back to the triggering request's locale, then the default (#245)", async () => {
+    findUser.mockResolvedValue({ email: "user@bilan.local", preference: null });
+    await notifySecurityEvent("new_login", { userId: "u1", at, origin, pageLocale: "en" });
+    findUser.mockResolvedValue({ email: "user@bilan.local", preference: { locale: "fr" } });
+    await notifySecurityEvent("new_login", { userId: "u1", at, origin, pageLocale: "en" });
+    expect(sendMail.mock.calls.map(([arg]) => (arg as { locale: string }).locale)).toEqual([
+      "en",
+      "fr",
+    ]);
   });
 
   it("audits a failed send instead of throwing", async () => {

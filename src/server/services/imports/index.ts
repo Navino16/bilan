@@ -8,7 +8,14 @@ import {
   csvMappingSchema,
   type CsvMappingInput,
 } from "@/lib/validation/import";
-import { parseCsv, detectMapping, mapRows, detectDecimalMark, amountCells } from "./csv-parse";
+import {
+  parseCsv,
+  detectMapping,
+  mapRows,
+  detectDecimalMark,
+  detectDateOrder,
+  amountCells,
+} from "./csv-parse";
 import { commitRows, type CommitOptions } from "./commit";
 import { buildPreview, PREVIEW_PAGE_SIZE } from "./preview";
 import { ImportAccessError } from "./errors";
@@ -91,7 +98,11 @@ export async function previewCsvBatch(
   const detected = effective.decimal
     ? { mark: effective.decimal, guessed: false }
     : detectDecimalMark(amountCells(rows, effective), delimiter);
-  const resolved: ResolvedCsvMapping = { ...effective, decimal: detected.mark };
+  const resolved: ResolvedCsvMapping = {
+    ...effective,
+    decimal: detected.mark,
+    dateOrder: effective.dateOrder ?? detectDateOrder(rows.map((r) => r[effective.date] ?? "")),
+  };
   const { rows: normalized, rejected } = mapRows(rows, resolved);
   // Conditional, so a commit that started meanwhile is never pushed back to REVIEW.
   const { count } = await db.importBatch.updateMany({

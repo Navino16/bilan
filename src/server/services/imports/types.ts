@@ -1,4 +1,5 @@
 import type { TransactionInput } from "@/lib/validation/transaction";
+import type { DateOrder } from "@/lib/validation/import";
 import type { DecimalMark, RejectedRow } from "./csv-parse";
 
 type TxType = TransactionInput["type"];
@@ -18,7 +19,8 @@ export type ParsedProduct = { key: string; rows: NormalizedRow[] };
 
 // CSV column mapping: either a single signed `amount` column, or a
 // `debit`/`credit` pair (French bank exports). `type` is optional. `decimal` is
-// the amounts' decimal mark: always set on a previewed mapping (#187).
+// the amounts' decimal mark: always set on a previewed mapping (#187), like
+// `dateOrder` (detected from the dates unless set, #245).
 export type CsvMapping = {
   date: string;
   label: string;
@@ -27,6 +29,7 @@ export type CsvMapping = {
   credit?: string;
   type?: string;
   decimal?: DecimalMark;
+  dateOrder?: DateOrder;
 };
 
 export type ResolvedCsvMapping = CsvMapping & { decimal: DecimalMark };

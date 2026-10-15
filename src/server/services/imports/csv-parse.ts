@@ -1,5 +1,5 @@
 import Papa from "papaparse";
-import type { DecimalMark } from "@/lib/validation/import";
+import { DEFAULT_DATE_ORDER, type DateOrder, type DecimalMark } from "@/lib/validation/import";
 import type { CsvMapping, NormalizedRow, ResolvedCsvMapping } from "./types";
 
 export type { DecimalMark };
@@ -201,15 +201,30 @@ export function utcDayFromParts(year: number, month: number, day: number): Date 
 // Two-digit years up to next year are 20yy, the rest 19yy.
 const TWO_DIGIT_PIVOT = (new Date().getUTCFullYear() % 100) + 1;
 
-// d/m/yyyy, dd/mm/yy (→ 20yy or 19yy), dd.mm.yyyy, dd-mm-yyyy, yyyy-mm-dd, yyyy/mm/dd
-// (an optional time after a space or "T" is ignored) → UTC midnight; else null.
-export function normalizeDate(raw: string): Date | null {
-  const s = raw.trim().replace(/[ T]\d{1,2}:\d{2}(:\d{2})?.*$/, "");
-  const dmy = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2}|\d{4})$/.exec(s);
+const DAY_MONTH = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2}|\d{4})$/;
+const withoutTime = (raw: string) => raw.trim().replace(/[ T]\d{1,2}:\d{2}(:\d{2})?.*$/, "");
+
+// Month-first only when some date can't be day-first ("12/25") and none can't be month-first ("25/12").
+export function detectDateOrder(values: string[]): DateOrder {
+  const parts = values.flatMap((v) => {
+    const m = DAY_MONTH.exec(withoutTime(v));
+    return m ? [[Number(m[1]), Number(m[2])]] : [];
+  });
+  const monthFirst = parts.some(([, b]) => b > 12) && !parts.some(([a]) => a > 12);
+  return monthFirst ? "MDY" : DEFAULT_DATE_ORDER;
+}
+
+// d/m/yyyy, dd/mm/yy (→ 20yy or 19yy), dd.mm.yyyy, dd-mm-yyyy (m/d first with "MDY"),
+// yyyy-mm-dd, yyyy/mm/dd (an optional time after a space or "T" is ignored) → UTC
+// midnight; else null.
+export function normalizeDate(raw: string, order: DateOrder = DEFAULT_DATE_ORDER): Date | null {
+  const s = withoutTime(raw);
+  const dmy = DAY_MONTH.exec(s);
   if (dmy) {
     const yy = Number(dmy[3]);
     const year = dmy[3].length === 4 ? yy : yy <= TWO_DIGIT_PIVOT ? 2000 + yy : 1900 + yy;
-    return utcDayFromParts(year, Number(dmy[2]), Number(dmy[1]));
+    const [day, month] = order === "MDY" ? [dmy[2], dmy[1]] : [dmy[1], dmy[2]];
+    return utcDayFromParts(year, Number(month), Number(day));
   }
   const ymd = /^(\d{4})[/.-](\d{1,2})[/.-](\d{1,2})$/.exec(s);
   if (ymd) return utcDayFromParts(Number(ymd[1]), Number(ymd[2]), Number(ymd[3]));
@@ -251,7 +266,7 @@ export function mapRows(
     if (Object.values(row).every((v) => !String(v ?? "").trim())) return;
     const position = i + 2; // file line: the header is line 1
     const rawDate = cell(row, mapping.date);
-    const date = normalizeDate(rawDate);
+    const date = normalizeDate(rawDate, mapping.dateOrder);
     if (!date) return reject(position, "DATE", rawDate);
 
     let amount: number | null = null;
