@@ -977,6 +977,7 @@
     "created": "Invitation créée",
     "renewed": "Invitation renouvelée",
     "mailDisabled": "L’e-mail est désactivé : transmettez ce lien.",
+    "mailFailed": "L’e-mail n’a pas pu être envoyé : transmettez ce lien.",
     "shareLink": "Lien d’invitation",
     "decline": "Refuser",
     "declineConfirm": "Refuser cette invitation ?",
@@ -1140,11 +1141,15 @@
       "backupCodes": "Codes de secours",
       "enable": "Activer",
       "disable": "Désactiver",
+      "disableCode": "Code d’authentification",
+      "disableCodeHint": "Le code à 6 chiffres de votre application d’authentification, ou l’un de vos codes de secours.",
       "verify": "Vérifier et activer",
       "working": "En cours…",
       "error": {
         "BAD_PASSWORD": "Mot de passe incorrect.",
         "BAD_CODE": "Code invalide. Réessayez.",
+        "ALREADY_ENABLED": "La double authentification est déjà activée.",
+        "NOT_ENABLED": "La double authentification n’est pas activée.",
         "RATE_LIMITED": "Trop de tentatives. Réessayez plus tard.",
         "rateLimitedFor": "Trop de tentatives. Réessayez dans {minutes, plural, one {# minute} other {# minutes}}.",
         "FAILED": "Une erreur est survenue. Réessayez."

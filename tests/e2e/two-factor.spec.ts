@@ -73,7 +73,9 @@ test.describe("two-factor sign-in", () => {
     await card.locator("#tfa-pw-enable").press("Enter");
     await expect(card.getByRole("img", { name: /QR code/ })).toBeVisible({ timeout: 15_000 });
     const secret = (await card.locator("code").textContent())!.replace(/\s/g, "");
-    const backupCode = (await card.getByRole("list").locator("li").first().textContent())!.trim();
+    const backupCodes = card.getByRole("list").locator("li");
+    const backupCode = (await backupCodes.nth(0).textContent())!.trim();
+    const disableCode = (await backupCodes.nth(1).textContent())!.trim();
 
     const enrolCode = totp(secret);
     await card.locator("#tfa-code").fill(enrolCode);
@@ -121,5 +123,21 @@ test.describe("two-factor sign-in", () => {
     await page.getByLabel("Code de secours").fill(backupCode);
     await submitCode(page);
     await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
+
+    // Disabling takes the password and a second factor (#243).
+    await page.goto("/fr/settings/security", { waitUntil: "domcontentloaded", timeout: 90_000 });
+    await card.locator("#tfa-pw-disable").fill(password);
+    const disable = card.getByRole("button", { name: "Désactiver" });
+    await expect(disable).toBeDisabled();
+    await card.getByLabel("Code d’authentification").fill("zzzzz-zzzzz");
+    await disable.click();
+    await expect(card.getByText("Code invalide. Réessayez.")).toBeVisible();
+    await card.getByLabel("Code d’authentification").fill(disableCode);
+    await disable.click();
+    await expect(page.getByText("La double authentification n’est pas encore activée")).toBeVisible(
+      {
+        timeout: 15_000,
+      },
+    );
   });
 });

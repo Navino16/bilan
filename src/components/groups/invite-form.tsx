@@ -66,7 +66,7 @@ export function InviteForm({ groupId }: { groupId: string }) {
         <Alert role="status" data-slot="invitation-share">
           <AlertTitle>{sent.renewed ? t("renewed") : t("created")}</AlertTitle>
           <AlertDescription className="space-y-2">
-            <div>{t("mailDisabled")}</div>
+            <div>{sent.mailFailed ? t("mailFailed") : t("mailDisabled")}</div>
             <div className="flex items-center gap-1">
               <Input
                 readOnly

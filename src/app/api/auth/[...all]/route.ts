@@ -6,13 +6,21 @@ import { withClientIp } from "@/server/http/client-ip";
 async function handle(req: Request): Promise<Response> {
   const auth = await getAuth();
   const hasBody = req.method !== "GET" && req.method !== "HEAD";
-  return auth.handler(
+  const res = await auth.handler(
     new Request(req.url, {
       method: req.method,
       headers: withClientIp(req.headers),
       body: hasBody ? await req.arrayBuffer() : undefined,
     }),
   );
+  // Session JSON carries the session token. Copied: a redirect's headers are immutable.
+  const out = new Response(res.body, {
+    status: res.status,
+    statusText: res.statusText,
+    headers: new Headers(res.headers),
+  });
+  out.headers.set("Cache-Control", "no-store");
+  return out;
 }
 
 export { handle as GET, handle as POST };

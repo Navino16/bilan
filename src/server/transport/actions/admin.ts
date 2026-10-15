@@ -1,6 +1,6 @@
 "use server";
 
-import { getCurrentUser, hasPermission } from "@/server/auth/permissions";
+import { getCurrentUser, hasEnforcedPermission } from "@/server/auth/permissions";
 import {
   adminCreateUser,
   adminCreateUserSchema,
@@ -30,7 +30,7 @@ export type UserLifecycleState = { ok: true } | { ok: false; error: string } | n
 
 async function requirePerm(key: string): Promise<{ id: string } | null> {
   const user = await getCurrentUser();
-  if (!user || !(await hasPermission(user.id, key))) return null;
+  if (!user || !(await hasEnforcedPermission(user.id, key))) return null;
   return user;
 }
 

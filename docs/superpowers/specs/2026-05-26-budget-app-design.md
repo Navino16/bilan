@@ -897,6 +897,10 @@ DB-backed, 7-day expiration, refresh after 1 day of activity. Cookie attributes:
 
 `/settings/sessions`: list active sessions, revoke one or all but current. New session created at each login (prevents session fixation).
 
+Sessions are listed server-side, without their tokens: Better Auth's `/list-sessions` is disabled, `/api/auth/*` answers `Cache-Control: no-store`. Revoking the other sessions, or a password reset, also drops the "trusted device" grants that skip the 2FA step (#243).
+
+2FA: enrolling again over an active 2FA is refused; disabling it takes the password and a current TOTP or backup code (#243).
+
 ### 6.5 CSRF
 
 Handled natively by Better Auth + Next.js Server Actions (origin check + token). No additional config required.
@@ -904,6 +908,8 @@ Handled natively by Better Auth + Next.js Server Actions (origin check + token).
 ### 6.6 Security headers (middleware)
 
 Added to every response: `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (deny geolocation/microphone/camera).
+
+Pages get them from the proxy; `/api/*` from `next.config.ts` `headers()` with `default-src 'none'` as CSP, since running the proxy there would cap request bodies (imports) at its 10 MB clone limit (#243).
 
 CSP strict with per-request nonce on inline scripts/styles. `frame-ancestors 'none'`, `form-action 'self'`, `upgrade-insecure-requests` (only when `APP_URL` is HTTPS: on plain HTTP Safari would upgrade even localhost assets and load no CSS).
 
@@ -913,12 +919,15 @@ MVP: in-memory store (`@upstash/ratelimit` with memory adapter or custom).
 
 | Endpoint | Limit | Scope |
 |---|---|---|
-| `/login` | 5 / 15min | IP |
+| `/login` | 5 / 15min | IP + account (#243); wrong passwords only, the 2FA step shares it |
+| `/login` | 30 / 1h | Account (#243): caps guessing from rotating IPs; wrong passwords only |
 | `/register` | 3 / 1h | IP |
 | `/reset` | 3 / 1h | IP |
 | `/api/import/csv` | 10 / 1h | User |
 | `/api/import/pdf` | 10 / 1h | User |
 | API generic | 100 / 1min | User |
+
+Each in-memory limiter holds at most 10 000 buckets: expired ones are dropped first, then the oldest (#243).
 
 Over the limit: HTTP 429 + `Retry-After` header. Logged to `AuditLog`. Post-MVP: switch to Redis when scaling to multiple instances.
 
@@ -969,7 +978,8 @@ Sign-in never requires a verified address. `User.emailVerified` turns true when:
 - the user follows the verification link (Better Auth `emailVerification`, 24 h JWT, localized mail sent on sign-up when SMTP is enabled, resent from the « Vérifiez votre adresse » banner through a Server Action — 3 / 1h / user; the public `/send-verification-email` endpoint is disabled);
 - a password reset succeeds (the mailed reset link proves the address — covers admin-created users' "choose your password" mail);
 - an SSO provider asserts it: only a literal `email_verified: true`, and only for the `email` claim (not a remapped one);
-- an admin marks it in Administration → Utilisateurs (`admin.users.update`, rank rule, audited `user.email_verified`) — the path for instances without SMTP.
+- an admin marks it in Administration → Utilisateurs (`admin.users.update`, rank rule, audited `user.email_verified`) — the path for instances without SMTP;
+- the first super admin is created verified by the setup wizard, as nobody else could verify them (#243, audited with `via` = `setup`).
 
 The first three are audited `auth.email.verified` with `via` = `link` / `password_reset` / `sso`. `/change-email` is disabled: addresses never change after sign-up.
 

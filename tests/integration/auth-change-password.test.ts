@@ -101,6 +101,15 @@ describe("change password", () => {
     await signIn(password);
     const headers = await signIn(password);
     expect(await db.session.count({ where: { userId } })).toBeGreaterThanOrEqual(2);
+    const trusted = { value: userId, identifier: { startsWith: "trust-device-" } };
+    await db.verification.create({
+      data: {
+        id: `trust_${userId}`,
+        identifier: `trust-device-${userId}`,
+        value: userId,
+        expiresAt: new Date(Date.now() + 86_400_000),
+      },
+    });
 
     const res = await changePassword(headers, {
       currentPassword: password,
@@ -110,6 +119,7 @@ describe("change password", () => {
     expect(res).toEqual({ ok: true });
 
     expect(await db.session.count({ where: { userId } })).toBe(1);
+    expect(await db.verification.count({ where: trusted })).toBe(0);
     const audit = await db.auditLog.count({ where: { userId, action: "auth.password.changed" } });
     expect(audit).toBe(1);
     expect(notify).toHaveBeenCalledWith("password_changed", {

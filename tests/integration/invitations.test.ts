@@ -2,10 +2,11 @@ import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 
 type Mail = { to: string; subject: string; text: string; sensitive?: boolean };
 const sent = vi.hoisted(() => [] as Mail[]);
-const smtp = vi.hoisted(() => ({ delivered: false }));
+const smtp = vi.hoisted(() => ({ delivered: false, fail: false }));
 vi.mock("@/server/services/mail/mailer", () => ({
   sendMail: async (mail: Mail) => {
     sent.push(mail);
+    if (smtp.fail) throw new Error("connect ECONNREFUSED 127.0.0.1:2525");
     return { delivered: smtp.delivered };
   },
 }));
@@ -182,7 +183,7 @@ describe("invitations service", () => {
       { groupId: g.id, email: "renew@bilan.local", role: "MEMBER" },
       { id: owner },
     );
-    expect(first).toMatchObject({ renewed: false, delivered: false });
+    expect(first).toMatchObject({ renewed: false, delivery: "disabled" });
     expect(first.acceptUrl).toMatch(new RegExp(`/groups/join/${first.token}$`));
     const soon = new Date(Date.now() + 60_000);
     await db.groupInvitation.update({ where: { id: first.id }, data: { expiresAt: soon } });
@@ -228,22 +229,78 @@ describe("invitations service", () => {
     expect(row.expiresAt.getTime()).toBeGreaterThan(Date.now());
   });
 
-  it("keeps the link and code out of the audit log when the mail is delivered (#228)", async () => {
+  it("keeps the link and code out of the audit log, mailed or not (#228, #243)", async () => {
     const g = await createGroup({ name: "Delivered group" }, owner);
+    const metadataOf = async (id: string) =>
+      (
+        await db.auditLog.findFirstOrThrow({
+          where: { action: "group.invitation.create", entityId: id },
+        })
+      ).metadata;
     smtp.delivered = true;
     try {
       const inv = await createInvitation(
         { groupId: g.id, email: "delivered@bilan.local", role: "MEMBER" },
         { id: owner },
       );
-      expect(inv).toMatchObject({ delivered: true, renewed: false });
-      const log = await db.auditLog.findFirstOrThrow({
-        where: { action: "group.invitation.create", entityId: inv.id },
+      expect(inv).toMatchObject({ delivery: "sent", renewed: false });
+      expect(await metadataOf(inv.id)).toEqual({
+        email: "delivered@bilan.local",
+        delivery: "sent",
       });
-      expect(log.metadata).toEqual({ email: "delivered@bilan.local" });
     } finally {
       smtp.delivered = false;
     }
+    const off = await createInvitation(
+      { groupId: g.id, email: "undelivered@bilan.local", role: "MEMBER" },
+      { id: owner },
+    );
+    expect(await metadataOf(off.id)).toEqual({
+      email: "undelivered@bilan.local",
+      delivery: "disabled",
+    });
+  });
+
+  it("hands the inviter the link when the mail fails, and audits it (#243)", async () => {
+    const g = await createGroup({ name: "Failing mail group" }, owner);
+    const submit = () => {
+      const fd = new FormData();
+      fd.set("groupId", g.id);
+      fd.set("email", "bounce@bilan.local");
+      fd.set("role", "MEMBER");
+      return createInvitationAction(null, fd);
+    };
+    smtp.fail = true;
+    let invitationId = "";
+    try {
+      const first = await submit();
+      const inv = await db.groupInvitation.findFirstOrThrow({ where: { groupId: g.id } });
+      invitationId = inv.id;
+      expect(first).toEqual({
+        ok: true,
+        renewed: false,
+        shareUrl: expect.stringMatching(new RegExp(`/groups/join/${inv.token}$`)),
+        mailFailed: true,
+      });
+      expect(await submit()).toMatchObject({ ok: true, renewed: true, mailFailed: true });
+    } finally {
+      smtp.fail = false;
+    }
+    const logs = await db.auditLog.findMany({
+      where: { entity: "GroupInvitation", entityId: invitationId },
+      orderBy: { createdAt: "asc" },
+      select: { action: true, metadata: true },
+    });
+    expect(logs).toEqual([
+      {
+        action: "group.invitation.create",
+        metadata: { email: "bounce@bilan.local", delivery: "failed" },
+      },
+      {
+        action: "group.invitation.resend",
+        metadata: { email: "bounce@bilan.local", delivery: "failed" },
+      },
+    ]);
   });
 
   it("returns the link to share only when the mail wasn't delivered (#228)", async () => {

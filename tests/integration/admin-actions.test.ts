@@ -3,6 +3,7 @@ import { db } from "@/server/db";
 import { seedRolesAndPermissions } from "@/../prisma/seed";
 import { grantRole } from "@/server/services/users/roles";
 import { buildPermissionsChecker } from "@/server/auth/permissions";
+import { appSettings } from "@/server/services/settings/app-settings";
 
 const current = vi.hoisted(() => ({ user: null as { id: string; email: string } | null }));
 vi.mock("@/server/auth/permissions", async (importOriginal) => {
@@ -210,6 +211,27 @@ describe("SMTP actions", () => {
       results.push(await sendSmtpTestAction(null, form({ locale: "fr" })));
     expect(results.slice(0, 5).every((r) => r && !r.ok && r.error === "NOT_CONFIGURED")).toBe(true);
     expect(results[5]).toEqual({ ok: false, error: "RATE_LIMITED" });
+  });
+});
+
+describe("admin 2FA enforcement (#243)", () => {
+  it("refuses admin Server Actions to an admin without 2FA once the instance requires it", async () => {
+    const saved = await db.appSetting.findUnique({ where: { key: "security.admin_2fa_required" } });
+    await appSettings.set("security.admin_2fa_required", true, users.super.id);
+    try {
+      current.user = users.admin;
+      expect(
+        await setUserDisabledAction(null, form({ userId: users.user.id, disabled: "false" })),
+      ).toEqual({ ok: false, error: "UNAUTHORIZED" });
+      current.user = users.super;
+      expect(await testOidcConnectionAction("")).toEqual({ ok: false, error: "UNAUTHORIZED" });
+
+      await db.user.update({ where: { id: users.super.id }, data: { twoFactorEnabled: true } });
+      expect(await testOidcConnectionAction("")).toEqual({ ok: false, error: "NO_ISSUER" });
+    } finally {
+      await db.user.update({ where: { id: users.super.id }, data: { twoFactorEnabled: false } });
+      await appSettings.set("security.admin_2fa_required", saved?.value ?? false, users.super.id);
+    }
   });
 });
 

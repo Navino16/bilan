@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 
 vi.mock("@/server/auth/permissions", () => ({
   getCurrentUser: async () => ({ id: "admin", email: "admin@bilan.local" }),
-  hasPermission: async () => true,
+  hasEnforcedPermission: async () => true,
 }));
 vi.mock("@/server/services/signup-tokens", () => ({
   createSignupToken: async () => {

@@ -2,6 +2,7 @@ import type { PrismaClient } from "@prisma/client";
 import { db as defaultDb } from "@/server/db";
 import { getAuth } from "@/server/auth";
 import { grantRole } from "@/server/services/users/roles";
+import { markEmailVerified } from "@/server/services/users/email-verification";
 import { logEvent } from "@/server/services/audit";
 import { isSetupNeeded } from "@/server/services/setup-status";
 import { seedDefaultCategories } from "@/server/services/categories/seed-defaults";
@@ -20,6 +21,7 @@ export async function completeSetup(
     headers: new Headers({ "accept-language": input.locale ?? "fr" }),
   });
   await grantRole(db, res.user.id, "SUPER_ADMIN", null);
+  await markEmailVerified(res.user.id, "setup", db);
   await db.userPreference.upsert({
     where: { userId: res.user.id },
     create: { userId: res.user.id, locale: input.locale ?? "fr" },

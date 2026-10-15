@@ -10,8 +10,9 @@ import {
   VERIFY_TOKEN_TTL_SEC,
 } from "@/server/services/mail/email-verification";
 
-// Spec §6.12: what proved the address, kept in the audit metadata.
-export type VerifiedVia = "link" | "password_reset" | "sso";
+// Spec §6.12: what proved the address, kept in the audit metadata. `setup`: the first super
+// admin, whom nobody else could verify.
+export type VerifiedVia = "link" | "password_reset" | "sso" | "setup";
 
 export async function markEmailVerified(
   userId: string,

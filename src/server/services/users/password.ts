@@ -1,6 +1,7 @@
 import { db } from "@/server/db";
 import { getAuth } from "@/server/auth";
 import { logEvent } from "@/server/services/audit";
+import { purgeTrustedDevices } from "./trusted-devices";
 
 export type ChangePasswordError =
   | "BAD_PASSWORD"
@@ -23,7 +24,7 @@ export async function hasPasswordCredential(userId: string): Promise<boolean> {
   return row !== null;
 }
 
-async function isCurrentPassword(userId: string, password: string): Promise<boolean> {
+export async function isCurrentPassword(userId: string, password: string): Promise<boolean> {
   const account = await db.authAccount.findFirst({
     where: { userId, providerId: "credential" },
     select: { password: true },
@@ -85,6 +86,7 @@ export async function changePassword(
       console.error("[bilan] revokeOtherSessions failed", err);
       return { ok: false, error: "REVOKE_FAILED" };
     }
+    await purgeTrustedDevices(userId);
   }
   return { ok: true };
 }

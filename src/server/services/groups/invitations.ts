@@ -53,7 +53,7 @@ export async function createInvitation(
   token: string;
   code: string;
   renewed: boolean;
-  delivered: boolean;
+  delivery: InvitationDelivery;
   acceptUrl: string;
 }> {
   if (!INVITABLE_GROUP_ROLES.includes(input.role as InvitableGroupRole)) {
@@ -131,24 +131,27 @@ export async function createInvitation(
     code,
     ttlDays: INVITE_TTL_DAYS,
   });
-  const result = await sendMail({ to: email, ...mail, sensitive: true });
+  const delivery = await deliver({ to: email, ...mail, sensitive: true });
   await logEvent({
     userId: actor.id,
     action: renewedId ? "group.invitation.resend" : "group.invitation.create",
     entity: "GroupInvitation",
     entityId: inv.id,
-    // Dev fallback: when SMTP is off, surface the link/code via the audit log
-    // (read in /admin/audit-log, Phase 8.4). Never logged when actually emailed.
-    metadata: result.delivered ? { email } : { email, acceptUrl, code },
+    metadata: { email, delivery },
   });
-  return {
-    id: inv.id,
-    token,
-    code,
-    renewed: renewedId !== null,
-    delivered: result.delivered,
-    acceptUrl,
-  };
+  return { id: inv.id, token, code, renewed: renewedId !== null, delivery, acceptUrl };
+}
+
+// Unless "sent", the inviter gets the link to share instead.
+export type InvitationDelivery = "sent" | "disabled" | "failed";
+
+async function deliver(mail: Parameters<typeof sendMail>[0]): Promise<InvitationDelivery> {
+  try {
+    return (await sendMail(mail)).delivered ? "sent" : "disabled";
+  } catch (e) {
+    console.error("[bilan] invitation mail failed", e);
+    return "failed";
+  }
 }
 
 type Invitee = { id: string; email: string };

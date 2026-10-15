@@ -4,6 +4,7 @@ import { isAPIError } from "better-auth/api";
 import { db } from "@/server/db";
 import { getAuth } from "@/server/auth";
 import { loginLimiter } from "@/server/auth/rate-limit";
+import { loginLimiterKey } from "@/server/auth/login-guard";
 import { hotp, totpStep } from "@/server/auth/totp-replay";
 
 const email = `totp-replay+${Date.now()}@bilan.local`;
@@ -30,7 +31,7 @@ function cookies(res: Response): Headers {
 }
 
 async function signIn(): Promise<Headers> {
-  loginLimiter.reset(email);
+  loginLimiter.reset(loginLimiterKey(null, email));
   const res = await (await api()).signInEmail({ body: { email, password }, asResponse: true });
   expect(res.ok).toBe(true);
   return cookies(res);

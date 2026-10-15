@@ -18,6 +18,19 @@ test.describe("security headers", () => {
     expect(h["x-content-type-options"]).toBe("nosniff");
   });
 
+  test("API responses carry them too, and the session JSON isn't cached (#243)", async ({
+    request,
+  }) => {
+    const res = await request.get("/api/auth/get-session");
+    const h = res.headers();
+    expect(h["content-security-policy"]).toContain("frame-ancestors 'none'");
+    expect(h["x-frame-options"]).toBe("DENY");
+    expect(h["x-content-type-options"]).toBe("nosniff");
+    expect(h["referrer-policy"]).toBe("strict-origin-when-cross-origin");
+    expect(h["cache-control"]).toBe("no-store");
+    expect((await request.get("/api/auth/list-sessions")).status()).toBe(404);
+  });
+
   test.describe("authenticated pages render without CSP violations", () => {
     test.use({ storageState: "tests/e2e/.auth/owner.json" });
 

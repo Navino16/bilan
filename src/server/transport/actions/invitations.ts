@@ -17,9 +17,9 @@ import {
 } from "@/server/services/groups/invitations";
 
 export type InvitationActionState = { ok: true } | FormFailure | null;
-// `shareUrl` only when the mail wasn't delivered (SMTP off): shown once to the inviter.
+// `shareUrl` only when the mail wasn't delivered (SMTP off or failing): shown once to the inviter.
 export type CreateInvitationActionState =
-  | { ok: true; renewed: boolean; shareUrl?: string }
+  | { ok: true; renewed: boolean; shareUrl?: string; mailFailed?: true }
   | FormFailure
   | null;
 export type DeclineActionState = { ok: true } | { ok: false; error: string; hint?: string } | null;
@@ -52,9 +52,13 @@ export async function createInvitationAction(
       { groupId, ...parsed.data, locale: requestLocale(await headers()) },
       { id: user.id },
     );
-    return inv.delivered
-      ? { ok: true, renewed: inv.renewed }
-      : { ok: true, renewed: inv.renewed, shareUrl: inv.acceptUrl };
+    if (inv.delivery === "sent") return { ok: true, renewed: inv.renewed };
+    return {
+      ok: true,
+      renewed: inv.renewed,
+      shareUrl: inv.acceptUrl,
+      ...(inv.delivery === "failed" && { mailFailed: true }),
+    };
   } catch (e) {
     return fail(e);
   }
