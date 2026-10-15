@@ -7,8 +7,8 @@ type Violation = { id: string; impact: string | null; nodes: { target: string[] 
 async function seriousViolations(page: Page, rules?: string[]): Promise<string[]> {
   await page.waitForLoadState("networkidle");
   await page.addScriptTag({ path: AXE });
-  // WebKit's axe sometimes samples a white backdrop under dark-theme text that isn't
-  // on screen; contrast stays covered by the Chromium runs (follow-up #239).
+  // Under mobile emulation WebKit's getComputedStyle drops inherited values on body/main
+  // in dark mode while the page renders correctly, so axe misreads contrast (#239).
   const skipContrast =
     page.context().browser()?.browserType().name() === "webkit" &&
     (await page.evaluate(
