@@ -24,6 +24,14 @@ const AUTH_KEYS = new Set([
   "app_name",
 ]);
 
+// Writable only with `admin.security.write` (super admins), unlike the rest of the settings.
+export const SECURITY_SETTING_KEYS: ReadonlySet<string> = new Set([
+  "registration_mode",
+  "credentials_enabled",
+  "min_password_length",
+  "security.admin_2fa_required",
+]);
+
 const DEFAULT_APP_NAME = "Bilan";
 
 export function normalizeAppName(raw: unknown): string {

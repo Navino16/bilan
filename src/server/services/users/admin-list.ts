@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { db } from "@/server/db";
+import { escapeLike } from "@/server/db/like";
 import { ADMIN_PAGE_SIZE, pageWindow } from "@/lib/pagination";
 
 export type AdminUserRow = {
@@ -17,8 +18,9 @@ export async function listUsersForAdmin(
 ): Promise<{ items: AdminUserRow[]; total: number; page: number; pageCount: number }> {
   const pageSize = opts.pageSize ?? ADMIN_PAGE_SIZE;
   const q = opts.q?.trim();
-  const where: Prisma.UserWhereInput = q
-    ? { OR: [{ email: { contains: q } }, { name: { contains: q } }] }
+  const like = q && escapeLike(q);
+  const where: Prisma.UserWhereInput = like
+    ? { OR: [{ email: { contains: like } }, { name: { contains: like } }] }
     : {};
   const total = await database.user.count({ where });
   const { page, pageCount, skip } = pageWindow(total, opts.page ?? 1, pageSize);

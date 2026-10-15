@@ -119,4 +119,30 @@ test.describe("categorization rules", () => {
       await expect(row).toHaveCount(0);
     });
   });
+
+  test("the scope list only offers foyers where the user may create rules (#223)", async ({
+    page,
+    browser,
+    baseURL,
+  }) => {
+    await page.goto("/fr/categories");
+    await page.getByRole("button", { name: /^Règles/ }).click();
+    await page.getByRole("button", { name: /nouvelle règle/i }).click();
+    await expect(page.locator("#rule-scope option", { hasText: "E2E Shared" })).toHaveCount(1);
+
+    const memberCtx = await browser.newContext({
+      storageState: "tests/e2e/.auth/member.json",
+      baseURL,
+    });
+    try {
+      const mp = await memberCtx.newPage();
+      await mp.goto("/fr/categories");
+      await mp.getByRole("button", { name: /^Règles/ }).click();
+      await mp.getByRole("button", { name: /nouvelle règle/i }).click();
+      await expect(mp.getByLabel(/motif/i)).toBeVisible();
+      await expect(mp.locator("#rule-scope option", { hasText: "E2E Shared" })).toHaveCount(0);
+    } finally {
+      await memberCtx.close();
+    }
+  });
 });

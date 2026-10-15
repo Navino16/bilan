@@ -36,6 +36,24 @@ describe("listUsersForAdmin", () => {
     expect(byName.items.map((u) => u.id)).toEqual(["adminlist_3"]);
   });
 
+  it("treats LIKE wildcards in the search as literal characters (#223)", async () => {
+    expect((await listUsersForAdmin({ q: "adminlist_0" })).total).toBe(0);
+    expect((await listUsersForAdmin({ q: "adminlist%0" })).total).toBe(0);
+    expect((await listUsersForAdmin({ q: "adminlist\\" })).total).toBe(0);
+    expect((await listUsersForAdmin({ q: "adminlist-0" })).total).toBe(1);
+
+    const id = "likeesc_223";
+    await db.user.deleteMany({ where: { id } });
+    await db.user.create({ data: { id, email: "likeesc_x%y@bilan.local" } });
+    try {
+      expect((await listUsersForAdmin({ q: "esc_x" })).items.map((u) => u.id)).toEqual([id]);
+      expect((await listUsersForAdmin({ q: "x%y" })).items.map((u) => u.id)).toEqual([id]);
+      expect((await listUsersForAdmin({ q: "esc-x" })).total).toBe(0);
+    } finally {
+      await db.user.deleteMany({ where: { id } });
+    }
+  });
+
   it("paginates and clamps", async () => {
     const res = await listUsersForAdmin({ q: "adminlist", page: 2, pageSize: 2 });
     expect(res).toMatchObject({ total: 3, page: 2, pageCount: 2 });

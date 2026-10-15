@@ -2,23 +2,28 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "@/server/db";
 import { seedRolesAndPermissions } from "@/../prisma/seed";
 import { adminCreateUser, UserExistsError } from "@/server/services/users/create";
+import { grantRole } from "@/server/services/users/roles";
 
 const actorId = "admin_create_actor";
+const plainAdminId = "admin_create_plain_admin";
 const newEmail = `created+${Date.now()}@bilan.local`;
 
 beforeAll(async () => {
   await seedRolesAndPermissions(db);
   await db.session.deleteMany();
   await db.authAccount.deleteMany();
-  await db.userRole.deleteMany({ where: { userId: actorId } });
+  await db.userRole.deleteMany({ where: { userId: { in: [actorId, plainAdminId] } } });
   await db.user.deleteMany({ where: { email: newEmail } });
-  await db.user.deleteMany({ where: { id: actorId } });
+  await db.user.deleteMany({ where: { id: { in: [actorId, plainAdminId] } } });
   await db.user.create({ data: { id: actorId, email: `admin-create-actor@bilan.local` } });
+  await db.user.create({ data: { id: plainAdminId, email: `admin-create-plain@bilan.local` } });
+  await grantRole(db, actorId, "SUPER_ADMIN");
+  await grantRole(db, plainAdminId, "ADMIN");
 });
 
 afterAll(async () => {
   await db.user.deleteMany({ where: { email: newEmail } });
-  await db.user.deleteMany({ where: { id: actorId } });
+  await db.user.deleteMany({ where: { id: { in: [actorId, plainAdminId] } } });
   await db.$disconnect();
 });
 
@@ -39,6 +44,37 @@ describe("adminCreateUser", () => {
       where: { action: "user.created_by_admin", entityId: id },
     });
     expect(audit).not.toBeNull();
+  });
+
+  it("refuses an ADMIN granting ADMIN, before creating anything (#223)", async () => {
+    const email = `escalate+${Date.now()}@bilan.local`;
+    await expect(
+      adminCreateUser({ email, name: "Escalated", role: "ADMIN" }, { id: plainAdminId }),
+    ).rejects.toThrow("FORBIDDEN");
+    expect(await db.user.findUnique({ where: { email } })).toBeNull();
+  });
+
+  it("refuses a disabled super admin granting ADMIN (#223)", async () => {
+    const email = `banned-escalate+${Date.now()}@bilan.local`;
+    await db.user.update({ where: { id: actorId }, data: { banned: true } });
+    try {
+      await expect(
+        adminCreateUser({ email, name: "Escalated", role: "ADMIN" }, { id: actorId }),
+      ).rejects.toThrow("FORBIDDEN");
+    } finally {
+      await db.user.update({ where: { id: actorId }, data: { banned: false } });
+    }
+  });
+
+  it("lets an ADMIN create a plain USER (#223)", async () => {
+    const email = `by-admin+${Date.now()}@bilan.local`;
+    const { id } = await adminCreateUser(
+      { email, name: "By Admin", role: "USER" },
+      { id: plainAdminId },
+    );
+    const roles = await db.userRole.findMany({ where: { userId: id }, include: { role: true } });
+    expect(roles.map((r) => r.role.key)).toEqual(["USER"]);
+    await db.user.delete({ where: { id } });
   });
 
   it("seeds the default categories and stores the locale picked by the admin (#169, #214)", async () => {

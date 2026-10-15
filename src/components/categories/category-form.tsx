@@ -22,7 +22,7 @@ import { useFrozenWhileOpen } from "@/hooks/use-frozen-while-open";
 import { cn } from "@/lib/utils";
 import { createCategoryAction, updateCategoryAction } from "@/server/transport/actions/categories";
 import { CATEGORY_ICON_MAX, CATEGORY_NAME_MAX } from "@/lib/validation/category";
-import { GROUP_ROLE_RANK, type GroupRole } from "@/lib/validation/group";
+import { canManageInGroup, type GroupRole } from "@/lib/validation/group";
 import {
   CATEGORY_PALETTE,
   CATEGORY_SYMBOLS,
@@ -211,9 +211,7 @@ function CategoryFields({
       ]
     : [
         { id: "", label: t("scopePersonal") },
-        ...groups
-          .filter((g) => GROUP_ROLE_RANK[g.role] >= GROUP_ROLE_RANK.ADMIN)
-          .map((g) => ({ id: g.id, label: g.name })),
+        ...groups.filter((g) => canManageInGroup(g.role)).map((g) => ({ id: g.id, label: g.name })),
       ];
   const showScope = locked ? scope !== "" || groups.length > 0 : scopes.length > 1;
 

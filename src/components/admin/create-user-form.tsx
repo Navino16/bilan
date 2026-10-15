@@ -11,8 +11,9 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { NAME_MAX } from "@/lib/validation/name";
 import { useActionForm } from "@/components/forms/use-action-form";
 import { FieldError } from "@/components/forms/field-error";
+import type { CreatableRole } from "@/lib/instance-roles";
 
-export function CreateUserForm() {
+export function CreateUserForm({ roles }: { roles: CreatableRole[] }) {
   const t = useTranslations("admin.users");
   const locale = useLocale();
   const router = useRouter();
@@ -39,13 +40,20 @@ export function CreateUserForm() {
           <Input id="cu-email" name="email" type="email" required {...form.fieldProps("email")} />
           <FieldError form={form} name="email" />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="cu-role">{t("role")}</Label>
-          <NativeSelect id="cu-role" name="role" defaultValue="USER">
-            <option value="USER">{t("roleUser")}</option>
-            <option value="ADMIN">{t("roleAdmin")}</option>
-          </NativeSelect>
-        </div>
+        {roles.length > 1 ? (
+          <div className="space-y-2">
+            <Label htmlFor="cu-role">{t("role")}</Label>
+            <NativeSelect id="cu-role" name="role" defaultValue="USER">
+              {roles.map((r) => (
+                <option key={r} value={r}>
+                  {t(r === "ADMIN" ? "roleAdmin" : "roleUser")}
+                </option>
+              ))}
+            </NativeSelect>
+          </div>
+        ) : (
+          <input type="hidden" name="role" value="USER" />
+        )}
       </div>
       {state?.ok && (
         <Alert>

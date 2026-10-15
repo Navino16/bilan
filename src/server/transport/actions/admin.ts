@@ -48,8 +48,8 @@ export async function adminCreateUserAction(
     await adminCreateUser(parsed.data, { id: actor.id });
     return { ok: true };
   } catch (e) {
-    if (e instanceof UserExistsError)
-      return failureOnField({ ok: false, error: "USER_EXISTS" }, { USER_EXISTS: "email" });
+    if (e instanceof UserExistsError || e instanceof RoleChangeError)
+      return failureOnField({ ok: false, error: e.message }, { USER_EXISTS: "email" });
     return { ok: false, error: "FAILED" };
   }
 }

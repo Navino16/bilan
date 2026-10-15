@@ -11,6 +11,7 @@ import type { RuleMatchType } from "@/lib/validation/rule";
 import { deleteRuleAction, toggleRuleAction } from "@/server/transport/actions/rules";
 import { ConfirmDialog } from "@/components/shell/confirm-dialog";
 import { RuleDialog, type EditableRule } from "./rule-dialog";
+import type { ScopeGroup } from "./category-form";
 
 export type RuleRow = {
   id: string;
@@ -36,7 +37,7 @@ export function RulesList({
 }: {
   rules: RuleRow[];
   categories: FlatCategory[];
-  groups: { id: string; name: string }[];
+  groups: ScopeGroup[];
 }) {
   const t = useTranslations("rules");
   const router = useRouter();

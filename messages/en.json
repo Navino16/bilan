@@ -1261,7 +1261,8 @@
       "error": {
         "UNAUTHORIZED": "You don’t have permission to create users.",
         "INVALID": "Check the fields you entered.",
-        "FAILED": "Creation failed. Please try again."
+        "FAILED": "Creation failed. Please try again.",
+        "FORBIDDEN": "You can’t create a user with this role."
       },
       "createOverline": "Invitation",
       "createHint": "They receive an email with a link to set their password.",
@@ -1375,7 +1376,8 @@
       "saved": "Saved.",
       "error": {
         "INVALID": "Invalid value.",
-        "FAILED": "Save failed."
+        "FAILED": "Save failed.",
+        "FORBIDDEN": "Only a super admin can change these settings."
       },
       "general": {
         "overline": "General",

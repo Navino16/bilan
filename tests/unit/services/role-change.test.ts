@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { checkRoleChange } from "@/server/services/users/roles";
-import { topRole } from "@/lib/instance-roles";
+import { creatableRoles, topRole } from "@/lib/instance-roles";
 
 const base = {
   actorId: "actor",
@@ -14,6 +14,13 @@ describe("topRole", () => {
     expect(topRole(["ADMIN", "SUPER_ADMIN"])).toBe("SUPER_ADMIN");
     expect(topRole(["USER", "ADMIN"])).toBe("ADMIN");
     expect(topRole([])).toBe("USER");
+  });
+});
+
+describe("creatableRoles", () => {
+  it("offers ADMIN only to an active super admin (#223)", () => {
+    expect(creatableRoles(true)).toEqual(["USER", "ADMIN"]);
+    expect(creatableRoles(false)).toEqual(["USER"]);
   });
 });
 

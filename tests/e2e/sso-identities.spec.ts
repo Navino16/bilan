@@ -90,7 +90,7 @@ test.describe("SSO identities (#204)", () => {
     test.setTimeout(120_000);
     const key = `e2e-idp-${Date.now()}`;
     const name = `E2E IdP ${Date.now()}`;
-    const admin = await browser.newContext({ storageState: "tests/e2e/.auth/admin.json" });
+    const admin = await browser.newContext({ storageState: "tests/e2e/.auth/superadmin.json" });
     const anonContext = await browser.newContext();
     const memberContext = await browser.newContext({
       storageState: "tests/e2e/.auth/member.json",

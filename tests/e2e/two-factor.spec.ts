@@ -16,6 +16,12 @@ function totp(base32: string, at = Date.now()): string {
   return String((hmac.readUInt32BE(offset) & 0x7fffffff) % 1_000_000).padStart(6, "0");
 }
 
+// A code is accepted once per 30 s step (#223): wait for the step after `used`.
+async function nextTotp(page: Page, base32: string, used: string): Promise<string> {
+  while (totp(base32) === used) await page.waitForTimeout(1_000);
+  return totp(base32);
+}
+
 // Under `next start` Better Auth throttles /two-factor/* to 3 requests per 10 s per
 // IP; wait it out so the test exercises our own attempt guard, not that throttle.
 async function submitCode(page: Page, button = "Vérifier") {
@@ -69,7 +75,8 @@ test.describe("two-factor sign-in", () => {
     const secret = (await card.locator("code").textContent())!.replace(/\s/g, "");
     const backupCode = (await card.getByRole("list").locator("li").first().textContent())!.trim();
 
-    await card.locator("#tfa-code").fill(totp(secret));
+    const enrolCode = totp(secret);
+    await card.locator("#tfa-code").fill(enrolCode);
     await submitCode(page, "Vérifier et activer");
     await expect(page.getByText("La double authentification est activée")).toBeVisible({
       timeout: 15_000,
@@ -88,7 +95,7 @@ test.describe("two-factor sign-in", () => {
     await page.getByLabel("Code de vérification").fill("000000");
     await submitCode(page);
     await expect(page.getByText("Code invalide. Réessayez.")).toBeVisible();
-    await page.getByLabel("Code de vérification").fill(totp(secret));
+    await page.getByLabel("Code de vérification").fill(await nextTotp(page, secret, enrolCode));
     await submitCode(page);
     await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
 

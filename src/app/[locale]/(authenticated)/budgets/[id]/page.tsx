@@ -13,6 +13,7 @@ import { flattenCategories } from "@/components/transactions/category-tree";
 import { categoryOptions } from "@/components/categories/category-options";
 import { BudgetDetail } from "@/components/budgets/budget-detail";
 import { pageTitle } from "@/i18n/metadata";
+import { canManageInGroup } from "@/lib/validation/group";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +51,7 @@ export default async function BudgetDetailPage({
     categories: categoryOptions(tree),
     accounts: accountOptions,
     groups: groupRows
-      .filter((g) => g.role === "OWNER" || g.role === "ADMIN")
+      .filter((g) => canManageInGroup(g.role))
       .map((g) => ({ id: g.id, name: g.name })),
   };
 

@@ -3,6 +3,11 @@ import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 
 const PERMISSIONS = [
   { key: "admin.settings.write", scope: "admin", description: "Edit app settings" },
+  {
+    key: "admin.security.write",
+    scope: "admin",
+    description: "Edit sign-up, credential, admin 2FA, SSO provider and SMTP settings",
+  },
   { key: "admin.users.read", scope: "admin", description: "View users" },
   { key: "admin.users.create", scope: "admin", description: "Create users" },
   { key: "admin.users.update", scope: "admin", description: "Change user roles" },

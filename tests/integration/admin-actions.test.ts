@@ -33,8 +33,15 @@ const {
   setUserDisabledAction,
   adminDeleteUserAction,
 } = await import("@/server/transport/actions/admin");
-const { sendSmtpTestAction, deleteSmtpConfigAction } =
-  await import("@/server/transport/actions/settings");
+const {
+  sendSmtpTestAction,
+  deleteSmtpConfigAction,
+  upsertSmtpAction,
+  setAppSettingsAction,
+  saveAuthProviderAction,
+  deleteAuthProviderAction,
+} = await import("@/server/transport/actions/settings");
+const { testOidcConnectionAction } = await import("@/server/transport/actions/setup");
 
 const stamp = Date.now();
 const users = {
@@ -150,18 +157,74 @@ describe("user lifecycle actions", () => {
 });
 
 describe("SMTP actions", () => {
-  it("are refused without admin.settings.write", async () => {
-    current.user = users.user;
-    await expect(sendSmtpTestAction(null, form({ locale: "fr" }))).rejects.toThrow("FORBIDDEN");
-    await expect(deleteSmtpConfigAction()).rejects.toThrow("FORBIDDEN");
+  it("are refused without admin.security.write, even to an ADMIN (#223)", async () => {
+    for (const user of [users.user, users.admin]) {
+      current.user = user;
+      await expect(sendSmtpTestAction(null, form({ locale: "fr" }))).rejects.toThrow("FORBIDDEN");
+      await expect(deleteSmtpConfigAction()).rejects.toThrow("FORBIDDEN");
+      await expect(
+        upsertSmtpAction(null, form({ host: "smtp.evil.test", port: "25", fromAddress: "a@b.c" })),
+      ).rejects.toThrow("FORBIDDEN");
+    }
+    expect(await db.smtpConfig.count({ where: { host: "smtp.evil.test" } })).toBe(0);
   });
 
-  it("rate-limits the SMTP test per admin", async () => {
-    current.user = users.admin;
+  it("rate-limits the SMTP test per super admin", async () => {
+    current.user = users.super;
     const results = [];
     for (let i = 0; i < 6; i++)
       results.push(await sendSmtpTestAction(null, form({ locale: "fr" })));
     expect(results.slice(0, 5).every((r) => r && !r.ok && r.error === "NOT_CONFIGURED")).toBe(true);
     expect(results[5]).toEqual({ ok: false, error: "RATE_LIMITED" });
+  });
+});
+
+describe("security settings (#223)", () => {
+  const admin2fa = async () =>
+    String(
+      (await db.appSetting.findUnique({ where: { key: "security.admin_2fa_required" } }))?.value ??
+        false,
+    );
+
+  it("are refused to an ADMIN, who keeps the general settings", async () => {
+    current.user = users.admin;
+    expect(
+      await setAppSettingsAction(null, form({ "s:security.admin_2fa_required": await admin2fa() })),
+    ).toEqual({ ok: false, error: "FORBIDDEN" });
+    expect(await setAppSettingsAction(null, form({ "s:registration_mode": "OPEN" }))).toEqual({
+      ok: false,
+      error: "FORBIDDEN",
+    });
+    await expect(
+      saveAuthProviderAction(null, form({ mode: "create", key: "x", type: "credentials" })),
+    ).rejects.toThrow("FORBIDDEN");
+    await expect(deleteAuthProviderAction("x")).rejects.toThrow("FORBIDDEN");
+    expect(await testOidcConnectionAction("")).toEqual({ ok: false, error: "UNAUTHORIZED" });
+
+    const appName = async () =>
+      (await db.appSetting.findUnique({ where: { key: "app_name" } }))?.value;
+    const name = await appName();
+    expect(
+      await setAppSettingsAction(
+        null,
+        form({ "s:app_name": `Mixed ${stamp}`, "s:registration_mode": "OPEN" }),
+      ),
+    ).toEqual({ ok: false, error: "FORBIDDEN" });
+    expect(await appName()).toEqual(name);
+    expect(
+      await setAppSettingsAction(null, form({ "s:app_name": String(name ?? "Bilan") })),
+    ).toEqual({ ok: true });
+  });
+
+  it("are allowed to a SUPER_ADMIN", async () => {
+    current.user = users.super;
+    expect(
+      await setAppSettingsAction(null, form({ "s:security.admin_2fa_required": await admin2fa() })),
+    ).toEqual({ ok: true });
+    expect(await testOidcConnectionAction("")).toEqual({ ok: false, error: "NO_ISSUER" });
+    expect(await deleteAuthProviderAction("missing-provider-223")).toMatchObject({
+      ok: false,
+      error: "NOT_FOUND",
+    });
   });
 });

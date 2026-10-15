@@ -2,18 +2,19 @@ import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { db } from "@/server/db";
 import { getAuth } from "@/server/auth";
-import { grantRole } from "@/server/services/users/roles";
+import { grantRole, isActiveSuperAdmin, RoleChangeError } from "@/server/services/users/roles";
 import { seedDefaultCategories } from "@/server/services/categories/seed-defaults";
 import { storeSignupLocale } from "@/server/services/users/preferences";
 import { logEvent } from "@/server/services/audit";
 import { env } from "@/env";
 import { defaultLocale, locales } from "@/i18n/config";
 import { nameSchema } from "@/lib/validation/name";
+import { CREATABLE_ROLES, mayHandleRole } from "@/lib/instance-roles";
 
 export const adminCreateUserSchema = z.object({
   email: z.email(),
   name: nameSchema,
-  role: z.enum(["USER", "ADMIN"]).default("USER"),
+  role: z.enum(CREATABLE_ROLES).default("USER"),
   locale: z.enum(locales).default(defaultLocale).catch(defaultLocale),
 });
 
@@ -32,6 +33,9 @@ export async function adminCreateUser(
   actor: { id: string },
 ): Promise<{ id: string }> {
   const parsed = adminCreateUserSchema.parse(input);
+  if (!mayHandleRole(await isActiveSuperAdmin(actor.id), parsed.role)) {
+    throw new RoleChangeError("FORBIDDEN");
+  }
   const auth = await getAuth();
 
   // Not signUpEmail: with autoSignIn + nextCookies it would sign the admin in as the new user.

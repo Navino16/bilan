@@ -9,6 +9,7 @@ import {
   type HookContext,
 } from "./auth-audit";
 import { loginLimiter, twoFactorLimiter } from "./rate-limit";
+import { totpReplayGuard } from "./totp-replay";
 
 const TWO_FACTOR_VERIFY = new Set(["/two-factor/verify-totp", "/two-factor/verify-backup-code"]);
 
@@ -51,9 +52,10 @@ function clearOnCompletedSignIn(ctx: HookContext): void {
 
 // Better Auth only rate-limits code attempts per IP in production; this caps
 // guesses per pending sign-in, then forces the (email-limited) password step again.
-async function twoFactorAttemptGuard(ctx: HookContext): Promise<void> {
-  if (!TWO_FACTOR_VERIFY.has(ctx.path)) return;
-  const pending = await pendingTwoFactor(ctx);
+async function twoFactorAttemptGuard(
+  ctx: HookContext,
+  pending: { id: string; userId: string } | null,
+): Promise<void> {
   if (!pending || twoFactorLimiter.consume(pending.id).allowed) return;
   await ctx.context.internalAdapter.deleteVerificationByIdentifier(pending.id);
   await logEvent({
@@ -92,7 +94,9 @@ export const authGuardPlugin = {
         handler: createAuthMiddleware(async (ctx) => {
           coreSocialRouteGuard(ctx);
           await passwordAttemptGuard(ctx);
-          await twoFactorAttemptGuard(ctx);
+          const pending = TWO_FACTOR_VERIFY.has(ctx.path) ? await pendingTwoFactor(ctx) : null;
+          await twoFactorAttemptGuard(ctx, pending);
+          await totpReplayGuard(ctx, pending);
         }),
       },
     ],

@@ -1,5 +1,6 @@
 import type { AuditLog, Prisma, PrismaClient } from "@prisma/client";
 import { db } from "@/server/db";
+import { escapeLike } from "@/server/db/like";
 import { ADMIN_PAGE_SIZE, pageWindow } from "@/lib/pagination";
 import { AUDIT_FAMILIES } from "@/lib/audit";
 
@@ -56,7 +57,7 @@ export async function listAuditLog(
   const where: Prisma.AuditLogWhereInput = {};
   if (filter.action) {
     const family = (AUDIT_FAMILIES as readonly string[]).includes(filter.action);
-    where.action = { startsWith: family ? `${filter.action}.` : filter.action };
+    where.action = { startsWith: escapeLike(family ? `${filter.action}.` : filter.action) };
   }
   if (filter.entity) where.entity = filter.entity;
   if (filter.from || filter.to) {
@@ -69,8 +70,9 @@ export async function listAuditLog(
   if (userQuery) {
     // AuditLog.userId has no FK (rows outlive their user), so no relation filter: the
     // matching ids are resolved first, uncapped.
+    const like = escapeLike(userQuery);
     const matches = await database.user.findMany({
-      where: { OR: [{ email: { contains: userQuery } }, { name: { contains: userQuery } }] },
+      where: { OR: [{ email: { contains: like } }, { name: { contains: like } }] },
       select: { id: true },
     });
     where.userId = { in: [userQuery, ...matches.map((u) => u.id)] };

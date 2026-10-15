@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const generateMetadata = pageTitle("adminSmtp");
 
 export default async function AdminSmtpPage() {
-  await requirePermission("admin.settings.write");
+  await requirePermission("admin.security.write");
   const t = await getTranslations("admin.smtp");
   const cfg = await getSmtpConfig();
 

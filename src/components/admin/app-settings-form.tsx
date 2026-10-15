@@ -89,12 +89,14 @@ export function AppSettingsForm({
   credentialsEnabled,
   minPasswordLength,
   admin2faRequired,
+  canEditSecurity,
 }: {
   appName: string;
   registrationMode: string;
   credentialsEnabled: boolean;
   minPasswordLength: number;
   admin2faRequired: boolean;
+  canEditSecurity: boolean;
 }) {
   const t = useTranslations("admin.settings");
   return (
@@ -105,6 +107,32 @@ export function AppSettingsForm({
         </Field>
       </SettingsCard>
 
+      {canEditSecurity && (
+        <SecurityCards
+          registrationMode={registrationMode}
+          credentialsEnabled={credentialsEnabled}
+          minPasswordLength={minPasswordLength}
+          admin2faRequired={admin2faRequired}
+        />
+      )}
+    </div>
+  );
+}
+
+function SecurityCards({
+  registrationMode,
+  credentialsEnabled,
+  minPasswordLength,
+  admin2faRequired,
+}: {
+  registrationMode: string;
+  credentialsEnabled: boolean;
+  minPasswordLength: number;
+  admin2faRequired: boolean;
+}) {
+  const t = useTranslations("admin.settings");
+  return (
+    <>
       <SettingsCard section="access">
         <Field settingKey="registration_mode" label={t("registrationMode")}>
           {(p) => (
@@ -151,6 +179,6 @@ export function AppSettingsForm({
           )}
         </Field>
       </SettingsCard>
-    </div>
+    </>
   );
 }
