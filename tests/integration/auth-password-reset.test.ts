@@ -68,9 +68,18 @@ describe("password reset", () => {
     expect(await isResetTokenValid(token)).toBe(true);
     expect(await isResetTokenValid("not-a-token")).toBe(false);
 
+    const verified = async () =>
+      (await db.user.findUniqueOrThrow({ where: { id: userId } })).emailVerified;
+    expect(await verified()).toBe(false);
     await auth.api.resetPassword({ body: { token, newPassword: "brand-new-strong-password-2" } });
     expect(await db.session.count({ where: { userId } })).toBe(0);
     expect(await isResetTokenValid(token)).toBe(false);
+    // The mailed link proves the address (#240).
+    expect(await verified()).toBe(true);
+    const audit = await db.auditLog.findFirst({
+      where: { userId, action: "auth.email.verified" },
+    });
+    expect(audit?.metadata).toEqual({ via: "password_reset" });
   });
 
   it("sends the password-changed alert with the request's IP and device (#230)", async () => {

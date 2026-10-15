@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { MoreVertical, Trash2, TriangleAlert, UserCheck, UserX } from "lucide-react";
+import { MailCheck, MoreVertical, Trash2, TriangleAlert, UserCheck, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ import {
 import { ConfirmDialog } from "@/components/shell/confirm-dialog";
 import {
   adminDeleteUserAction,
+  adminMarkEmailVerifiedAction,
   getUserDeletionImpactAction,
   setUserDisabledAction,
   type UserLifecycleState,
@@ -29,6 +30,7 @@ export function UserActions({
   disabled,
   canDisable,
   canDelete,
+  canVerifyEmail,
 }: {
   userId: string;
   email: string;
@@ -36,16 +38,17 @@ export function UserActions({
   disabled: boolean;
   canDisable: boolean;
   canDelete: boolean;
+  canVerifyEmail: boolean;
 }) {
   const t = useTranslations("admin.users");
   const router = useRouter();
-  const [dialog, setDialog] = useState<"toggle" | "delete" | null>(null);
+  const [dialog, setDialog] = useState<"toggle" | "verify" | "delete" | null>(null);
   const [typed, setTyped] = useState("");
   const [error, setError] = useState<Exclude<UserLifecycleState, { ok: true } | null> | null>(null);
   const [impact, setImpact] = useState<UserDeletionImpact | null>(null);
   const [pending, startTransition] = useTransition();
 
-  function open(kind: "toggle" | "delete") {
+  function open(kind: "toggle" | "verify" | "delete") {
     setError(null);
     setTyped("");
     setImpact(null);
@@ -71,6 +74,12 @@ export function UserActions({
     fd.set("userId", userId);
     fd.set("disabled", String(!disabled));
     run(() => setUserDisabledAction(null, fd));
+  }
+
+  function verifyEmail() {
+    const fd = new FormData();
+    fd.set("userId", userId);
+    run(() => adminMarkEmailVerifiedAction(null, fd));
   }
 
   function remove() {
@@ -114,6 +123,12 @@ export function UserActions({
               {disabled ? t("enable") : t("disable")}
             </DropdownMenuItem>
           )}
+          {canVerifyEmail && (
+            <DropdownMenuItem onClick={() => open("verify")}>
+              <MailCheck />
+              {t("verifyEmail")}
+            </DropdownMenuItem>
+          )}
           {canDelete && (
             <DropdownMenuItem variant="destructive" onClick={() => open("delete")}>
               <Trash2 />
@@ -133,6 +148,18 @@ export function UserActions({
         onConfirm={toggle}
         pending={pending}
         error={dialog === "toggle" ? errorText : undefined}
+      />
+
+      <ConfirmDialog
+        open={dialog === "verify"}
+        onOpenChange={(o) => !o && setDialog(null)}
+        title={t("verifyEmailTitle", { user: label })}
+        description={t("verifyEmailBody", { email })}
+        confirmLabel={t("verifyEmailConfirm")}
+        destructive={false}
+        onConfirm={verifyEmail}
+        pending={pending}
+        error={dialog === "verify" ? errorText : undefined}
       />
 
       <ConfirmDialog

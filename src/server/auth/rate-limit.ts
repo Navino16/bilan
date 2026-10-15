@@ -89,3 +89,8 @@ export const invitationAcceptLimiter = sharedLimiter("invitationAccept", {
 });
 // Keyed by user id: each SMTP test opens an outbound connection.
 export const smtpTestLimiter = sharedLimiter("smtpTest", { max: 5, windowMs: 60_000 });
+// Keyed by user id: each resend mails the user's address.
+export const verificationMailLimiter = sharedLimiter("verificationMail", {
+  max: 3,
+  windowMs: 60 * 60_000,
+});

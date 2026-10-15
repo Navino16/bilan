@@ -9,6 +9,7 @@ export type AdminUserRow = {
   email: string;
   roleKeys: string[];
   disabled: boolean;
+  emailVerified: boolean;
 };
 
 // Admin user list, newest first, searchable on name/email (case-insensitive collation).
@@ -34,6 +35,7 @@ export async function listUsersForAdmin(
       name: true,
       email: true,
       banned: true,
+      emailVerified: true,
       roles: { select: { role: { select: { key: true } } } },
     },
   });
@@ -44,6 +46,7 @@ export async function listUsersForAdmin(
       email: u.email,
       roleKeys: u.roles.map((r) => r.role.key),
       disabled: u.banned,
+      emailVerified: u.emailVerified,
     })),
     total,
     page,

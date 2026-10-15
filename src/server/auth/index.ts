@@ -33,6 +33,11 @@ import {
   resetLink,
   sendPasswordResetMail,
 } from "@/server/services/mail/password-reset";
+import {
+  sendVerificationMail,
+  VERIFY_TOKEN_TTL_SEC,
+} from "@/server/services/mail/email-verification";
+import { markEmailVerified } from "@/server/services/users/email-verification";
 
 type Handler = ReturnType<typeof betterAuth>;
 // Only the generation is process-wide: a shared handler would keep closures from a module
@@ -41,18 +46,40 @@ const handlerGeneration = processState("auth.handler", () => ({ value: 0 }));
 let cached: { handler: Handler; builtAt: number; generation: number } | null = null;
 const CACHE_TTL_MS = 60_000;
 const linkRequests = new WeakSet<object>();
+const ssoVerifications = new WeakSet<object>();
+
+// Better Auth's endpoint path patterns for the Google and generic OIDC callbacks.
+function isSsoCallback(ctx: { path?: string } | null | undefined): boolean {
+  return !!ctx?.path && /^\/(oauth2\/)?callback\//.test(ctx.path);
+}
+
+function auditSsoVerified(userId: string): Promise<unknown> {
+  return logEvent({ userId, action: "auth.email.verified", metadata: { via: "sso" } }).catch(
+    () => {},
+  );
+}
+
+function sameAddress(a: unknown, b: unknown): boolean {
+  return typeof a === "string" && typeof b === "string" && a.toLowerCase() === b.toLowerCase();
+}
+
+// Only a literal `email_verified: true` counts (spec §6.12): Better Auth would take any truthy
+// claim, "false" included.
+export function idpVerifiedEmail(profile: Record<string, unknown>): boolean {
+  return profile.email_verified === true;
+}
 
 // Map a resolved OIDC row to a generic-oauth config entry. discoveryUrl is the
-// default; explicit endpoints (when set) override it. A claim mapping builds a
-// mapProfileToUser so the admin can pick which userinfo claims feed name/email.
+// default; explicit endpoints (when set) override it. A claim mapping lets the
+// admin pick which userinfo claims feed name/email.
 export function toOAuthConfig(o: ResolvedOidc, registrationOpen: boolean) {
-  const mapProfileToUser =
-    o.mapName || o.mapEmail
-      ? (profile: Record<string, unknown>) => ({
-          ...(o.mapName ? { name: profile[o.mapName] as string } : {}),
-          ...(o.mapEmail ? { email: profile[o.mapEmail] as string } : {}),
-        })
-      : undefined;
+  // `email_verified` vouches for the `email` claim only, not for a remapped one.
+  const mapProfileToUser = (profile: Record<string, unknown>) => ({
+    ...(o.mapName ? { name: profile[o.mapName] as string } : {}),
+    ...(o.mapEmail ? { email: profile[o.mapEmail] as string } : {}),
+    emailVerified:
+      idpVerifiedEmail(profile) && (!o.mapEmail || sameAddress(profile[o.mapEmail], profile.email)),
+  });
 
   return {
     providerId: o.providerId,
@@ -66,8 +93,17 @@ export function toOAuthConfig(o: ResolvedOidc, registrationOpen: boolean) {
     ...(o.authorizationUrl ? { authorizationUrl: o.authorizationUrl } : {}),
     ...(o.tokenUrl ? { tokenUrl: o.tokenUrl } : {}),
     ...(o.userInfoUrl ? { userInfoUrl: o.userInfoUrl } : {}),
-    ...(mapProfileToUser ? { mapProfileToUser } : {}),
+    mapProfileToUser,
   };
+}
+
+// Seed scripts call auth.api outside any request, where next/headers throws.
+async function scopeHeaders(): Promise<Headers | undefined> {
+  try {
+    return await nextHeaders();
+  } catch {
+    return undefined;
+  }
 }
 
 function pluginEndpointPaths(pluginId: string): string[] {
@@ -94,7 +130,13 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
   // configs). Adding/enabling a row + invalidateAuthCache() hot-reloads them.
   const socialProviders: Record<
     string,
-    { clientId: string; clientSecret: string; disableSignUp: boolean; disableIdTokenSignIn: true }
+    {
+      clientId: string;
+      clientSecret: string;
+      disableSignUp: boolean;
+      disableIdTokenSignIn: true;
+      mapProfileToUser: (profile: Record<string, unknown>) => { emailVerified: boolean };
+    }
   > = {};
   const oidcProviders: ResolvedOidc[] = [];
   for (const p of providers) {
@@ -105,6 +147,7 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
         disableSignUp: !p.allowSignUp || !registrationOpen,
         // POST /sign-in/social with an idToken ignores disableSignUp (#200); only the redirect flow is used.
         disableIdTokenSignIn: true,
+        mapProfileToUser: (profile) => ({ emailVerified: idpVerifiedEmail(profile) }),
       };
     }
     const oidc = resolveOidcProvider(p);
@@ -132,6 +175,11 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
       "/change-password",
       "/request-password-reset",
       "/reset-password",
+      // Resends go through a Server Action for the signed-in user only; the public endpoint
+      // would mail any unverified address on request (#240).
+      "/send-verification-email",
+      // Unused: an address change would need its own verification flow.
+      "/change-email",
       "/two-factor/enable",
       "/two-factor/disable",
       // Unused: arbitrary profile image/name, self-set impersonatedBy, credential removal,
@@ -175,9 +223,14 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
       },
       user: {
         update: {
-          before: async (data) => {
+          // On a callback, Better Auth writes emailVerified: true only to an unverified user.
+          before: async (data, ctx) => {
+            if (ctx && data.emailVerified === true && isSsoCallback(ctx)) ssoVerifications.add(ctx);
             const name = nameOnUpdate(data);
             return name ? { data: name } : undefined;
+          },
+          after: async (user, ctx) => {
+            if (ctx && ssoVerifications.delete(ctx)) await auditSsoVerified(user.id);
           },
         },
         create: {
@@ -186,6 +239,7 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
           // never block signup. No request context = adminCreateUser, which uses the admin's pick.
           after: async (user, ctx) => {
             if (!ctx) return;
+            if (user.emailVerified === true && isSsoCallback(ctx)) await auditSsoVerified(user.id);
             const locale = requestLocale(ctx.headers);
             await Promise.allSettled([
               storeSignupLocale(user.id, locale),
@@ -255,7 +309,9 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
         );
       },
       // Called once the reset password is stored. `request` is unset for Server Action calls.
+      // The mailed reset link proves the address too (spec §6.12).
       onPasswordReset: async ({ user }, request) => {
+        await markEmailVerified(user.id, "password_reset").catch(() => {});
         try {
           await logEvent({ userId: user.id, action: "auth.password.changed" });
           void notifySecurityEvent("password_changed", {
@@ -266,6 +322,27 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
         } catch {
           // best-effort
         }
+      },
+    },
+    // Spec §6.12. sendVerificationMail is a no-op without SMTP; its failures never break sign-up.
+    emailVerification: {
+      sendOnSignUp: true,
+      expiresIn: VERIFY_TOKEN_TTL_SEC,
+      sendVerificationEmail: async ({ user, token }, request) => {
+        await sendVerificationMail({
+          userId: user.id,
+          email: user.email,
+          name: user.name,
+          token,
+          fallbackLocale: requestLocale(request?.headers ?? (await scopeHeaders())),
+        });
+      },
+      afterEmailVerification: async (user) => {
+        await logEvent({
+          userId: user.id,
+          action: "auth.email.verified",
+          metadata: { via: "link" },
+        }).catch(() => {});
       },
     },
     // Reset tokens are credentials: keep only their hash in the verification table.

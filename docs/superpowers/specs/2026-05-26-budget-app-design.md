@@ -963,6 +963,18 @@ Tracked here for the future. Will move to `PLAN.md` (Phase 8+ "Security hardenin
 
 Legend: **S** = a few hours · **M** = 1-3 days · **L** = 1+ week.
 
+### 6.12 E-mail verification (#240)
+
+Sign-in never requires a verified address. `User.emailVerified` turns true when:
+- the user follows the verification link (Better Auth `emailVerification`, 24 h JWT, localized mail sent on sign-up when SMTP is enabled, resent from the « Vérifiez votre adresse » banner through a Server Action — 3 / 1h / user; the public `/send-verification-email` endpoint is disabled);
+- a password reset succeeds (the mailed reset link proves the address — covers admin-created users' "choose your password" mail);
+- an SSO provider asserts it: only a literal `email_verified: true`, and only for the `email` claim (not a remapped one);
+- an admin marks it in Administration → Utilisateurs (`admin.users.update`, rank rule, audited `user.email_verified`) — the path for instances without SMTP.
+
+The first three are audited `auth.email.verified` with `via` = `link` / `password_reset` / `sso`. `/change-email` is disabled: addresses never change after sign-up.
+
+What it gates: invitations matched on the address alone. « Invitations en attente pour vous » on `/groups` is empty until the address is verified, and accepting/declining from that list (by invitation id) is refused. The invitation link (token) and the 6-char code keep working for unverified users: they are secrets delivered to the address or shared by the inviter.
+
 ---
 
 ## 7. Testing Strategy

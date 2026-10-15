@@ -1,10 +1,12 @@
 import { randomBytes, randomInt } from "node:crypto";
+import type { GroupInvitation } from "@prisma/client";
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import { sendMail } from "@/server/services/mail/mailer";
 import { invitationMail } from "@/server/services/mail/invitation";
 import { toLocale } from "@/server/services/users/preferences";
 import { getAppName } from "@/server/services/settings/app-settings";
+import { isEmailVerified } from "@/server/services/users/email-verification";
 import { env } from "@/env";
 import { defaultLocale, type Locale } from "@/i18n/config";
 import {
@@ -149,14 +151,40 @@ export async function createInvitation(
   };
 }
 
+type Invitee = { id: string; email: string };
+
+// The token and the code are secrets delivered to the address (or shared by the inviter):
+// holding one is enough, verified address or not (spec §6.12).
 export async function acceptInvitation(
   tokenOrCode: string,
-  user: { id: string; email: string },
+  user: Invitee,
 ): Promise<{ groupId: string }> {
   const key = tokenOrCode.trim();
   const inv = await db.groupInvitation.findFirst({
     where: { OR: [{ token: key }, { code: key.toUpperCase() }] },
   });
+  return accept(inv, user);
+}
+
+// From the "pending for you" list, matched on the address alone: only a verified one counts.
+export async function acceptPendingInvitation(
+  invitationId: string,
+  user: Invitee,
+): Promise<{ groupId: string }> {
+  return accept(await ownPendingInvitation(invitationId, user), user);
+}
+
+// Ids aren't secrets: someone else's invitation is reported missing, whatever its state.
+async function ownPendingInvitation(invitationId: string, user: Invitee): Promise<GroupInvitation> {
+  const inv = await db.groupInvitation.findFirst({
+    where: { id: invitationId, email: user.email.trim().toLowerCase() },
+  });
+  if (!inv) throw new InvitationError("NOT_FOUND");
+  if (!(await isEmailVerified(user.id))) throw new InvitationError("EMAIL_NOT_VERIFIED");
+  return inv;
+}
+
+async function accept(inv: GroupInvitation | null, user: Invitee): Promise<{ groupId: string }> {
   if (!inv) throw new InvitationError("NOT_FOUND");
   if (inv.acceptedAt) throw new InvitationError("ALREADY_USED");
   if (inv.expiresAt.getTime() < Date.now()) throw new InvitationError("EXPIRED");
@@ -204,18 +232,11 @@ export async function revokeInvitation(id: string, actor: { id: string }): Promi
   });
 }
 
-// The invitee turns an invitation down; also how a stale one for a foyer they already
-// belong to gets cleared.
-export async function declineInvitation(
-  token: string,
-  user: { id: string; email: string },
-): Promise<void> {
-  const inv = await db.groupInvitation.findUnique({ where: { token } });
-  if (!inv) throw new InvitationError("NOT_FOUND");
+// The invitee turns down an invitation from their pending list; also how a stale one for a
+// foyer they already belong to gets cleared.
+export async function declineInvitation(invitationId: string, user: Invitee): Promise<void> {
+  const inv = await ownPendingInvitation(invitationId, user);
   if (inv.acceptedAt) throw new InvitationError("ALREADY_USED");
-  if (inv.email !== user.email.trim().toLowerCase()) {
-    throw new InvitationError("WRONG_ACCOUNT", maskEmail(inv.email));
-  }
   await db.groupInvitation.delete({ where: { id: inv.id } });
   await logEvent({
     userId: user.id,
@@ -254,9 +275,14 @@ export async function getInvitationByToken(token: string) {
   };
 }
 
-export async function pendingInvitationsForEmail(email: string) {
-  return db.groupInvitation.findMany({
-    where: { email: email.toLowerCase(), acceptedAt: null, expiresAt: { gt: new Date() } },
-    include: { group: true },
+// Matched on the address alone, so empty until it is verified (spec §6.12). No token or code:
+// the list acts by id through acceptPendingInvitation / declineInvitation.
+export async function pendingInvitationsForUser(user: Invitee) {
+  if (!(await isEmailVerified(user.id))) return [];
+  const rows = await db.groupInvitation.findMany({
+    where: { email: user.email.toLowerCase(), acceptedAt: null, expiresAt: { gt: new Date() } },
+    select: { id: true, role: true, group: { select: { name: true } } },
+    orderBy: { createdAt: "desc" },
   });
+  return rows.map((r) => ({ id: r.id, role: r.role as GroupRole, groupName: r.group.name }));
 }

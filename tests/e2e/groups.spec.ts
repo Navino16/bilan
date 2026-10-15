@@ -135,6 +135,69 @@ test.describe("groups", () => {
     await memberCtx.close();
   });
 
+  test("an unverified address gets a hint instead of its invitations, the link still works (#240)", async ({
+    page,
+    browser,
+    baseURL,
+  }) => {
+    test.setTimeout(120_000);
+    const stamp = Date.now();
+    const name = `Foyer non vérifié ${stamp}`;
+    const email = `unverified-${stamp}@e2e.local`;
+    const password = "e2e-unverified-password-123";
+
+    await page.goto("/fr/groups");
+    await expect(async () => {
+      await page.getByRole("button", { name: /nouveau foyer/i }).click();
+      await expect(page.getByRole("dialog")).toBeVisible({ timeout: 1_000 });
+    }).toPass({ timeout: 20_000 });
+    await page.fill('input[name="name"]', name);
+    await page.getByRole("button", { name: /créer le foyer/i }).click();
+    await page.getByRole("link", { name: new RegExp(name) }).click();
+    await page.waitForURL(/\/groups\/[a-z0-9]+$/i);
+    await page.fill('input[name="email"]', email);
+    await page.getByRole("button", { name: /envoyer l’invitation/i }).click();
+    const share = page.locator('[data-slot="invitation-share"]');
+    const link = await share.getByRole("textbox", { name: "Lien d’invitation" }).inputValue();
+    expect(link).toMatch(/\/fr\/groups\/join\/[\w-]+$/);
+
+    // A fresh sign-up has an unverified address; e2e runs without SMTP.
+    // Explicitly signed out: browser.newContext() inherits the describe's owner storageState.
+    const ctx = await browser.newContext({ baseURL, storageState: { cookies: [], origins: [] } });
+    try {
+      const np = await ctx.newPage();
+      await np.goto("/fr/register");
+      await expect(np).toHaveURL(/\/fr\/register$/);
+      await expect(async () => {
+        if (!/\/dashboard$/.test(np.url())) {
+          await np.fill('input[name="name"]', "E2E Unverified");
+          await np.fill('input[name="email"]', email);
+          await np.fill('input[name="password"]', password);
+          await np.fill('input[name="confirmPassword"]', password);
+          await np.click('button[type="submit"]');
+        }
+        await expect(np).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
+      }).toPass({ timeout: 45_000 });
+      await expect(np.locator('[data-slot="verify-email-banner"]')).toHaveCount(0);
+
+      await np.goto("/fr/groups");
+      await expect(np.getByRole("heading", { name: "Foyers", level: 1 })).toBeVisible();
+      const hint = np.locator('[data-slot="unverified-invitations-hint"]');
+      await expect(hint).toContainText("une fois celle-ci vérifiée par un administrateur");
+      await expect(np.locator('[data-slot="pending-invitation"]')).toHaveCount(0);
+      await expect(np.getByText(name)).toHaveCount(0);
+
+      await np.goto(new URL(link).pathname);
+      await expect(async () => {
+        await np.getByRole("button", { name: /accepter/i }).click();
+        await np.waitForURL(/\/groups\/[a-z0-9]+$/i, { timeout: 5_000 });
+      }).toPass({ timeout: 20_000 });
+      await expect(np.getByRole("heading", { name })).toBeVisible();
+    } finally {
+      await ctx.close();
+    }
+  });
+
   test("the invitee can decline a pending invitation (#228)", async ({
     page,
     browser,

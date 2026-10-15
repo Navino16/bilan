@@ -364,6 +364,7 @@ async function main(): Promise<void> {
   });
   const userId = res.user.id;
   const actor = { id: userId };
+  await db.user.update({ where: { id: userId }, data: { emailVerified: true } });
   await grantRole(db, userId, "SUPER_ADMIN", userId);
   await seedDefaultCategories(userId, "fr", db);
 

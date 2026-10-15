@@ -71,4 +71,26 @@ describe("resolveOidcProvider", () => {
     const allowed = resolveOidcProvider(row({ allowSignUp: true }))!;
     expect(toOAuthConfig(allowed, false).disableSignUp).toBe(true);
   });
+
+  it("trusts email_verified only when literally true and about the mapped address (#240)", () => {
+    const plain = toOAuthConfig(resolveOidcProvider(row({}))!, true).mapProfileToUser;
+    expect(plain({ email: "a@x.test", email_verified: true })).toEqual({ emailVerified: true });
+    for (const claim of [false, "true", "false", 1, undefined]) {
+      expect(plain({ email: "a@x.test", email_verified: claim }).emailVerified).toBe(false);
+    }
+    const mapped = toOAuthConfig(
+      resolveOidcProvider(row({ config: { mapEmail: "mail" } as never }))!,
+      true,
+    ).mapProfileToUser;
+    expect(mapped({ email: "a@x.test", mail: "A@x.test", email_verified: true })).toEqual({
+      email: "A@x.test",
+      emailVerified: true,
+    });
+    expect(
+      mapped({ email: "a@x.test", mail: "b@x.test", email_verified: true }).emailVerified,
+    ).toBe(false);
+    expect(
+      mapped({ email: "a@x.test", mail: ["a@x.test"], email_verified: true }).emailVerified,
+    ).toBe(false);
+  });
 });

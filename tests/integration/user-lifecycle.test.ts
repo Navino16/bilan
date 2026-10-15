@@ -7,6 +7,7 @@ import { buildPermissionsChecker } from "@/server/auth/permissions";
 import { grantRole, setUserRole } from "@/server/services/users/roles";
 import {
   adminDeleteUser,
+  adminMarkEmailVerified,
   checkUserAdminAction,
   deleteOwnAccount,
   setUserDisabled,
@@ -161,6 +162,20 @@ describe("setUserDisabled", () => {
       where: { id: { in: [ids.super2, ids.super3] } },
       data: { banned: false, banReason: null },
     });
+  });
+});
+
+describe("adminMarkEmailVerified (#240)", () => {
+  it("follows the rank rule: only a super admin marks an administrator's address", async () => {
+    const verified = async (key: string) =>
+      (await db.user.findUniqueOrThrow({ where: { id: ids[key] } })).emailVerified;
+    expect(await refusal(adminMarkEmailVerified({ id: ids.admin }, ids.admin2))).toBe("FORBIDDEN");
+    expect(await refusal(adminMarkEmailVerified({ id: ids.admin }, ids.admin))).toBe("SELF");
+    expect(await verified("admin2")).toBe(false);
+    expect(await refusal(adminMarkEmailVerified({ id: ids.super1 }, ids.admin2))).toBe("OK");
+    expect(await verified("admin2")).toBe(true);
+    expect(await refusal(adminMarkEmailVerified({ id: ids.admin }, ids.member))).toBe("OK");
+    expect(await verified("member")).toBe(true);
   });
 });
 

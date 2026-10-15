@@ -91,6 +91,17 @@
         "invalid": "Adresse e-mail invalide."
       }
     },
+    "verifyEmail": {
+      "title": "Adresse vérifiée",
+      "failedTitle": "Vérification impossible",
+      "body": "Votre adresse e-mail est vérifiée. Les invitations à rejoindre un foyer envoyées à cette adresse sont maintenant visibles dans Foyers.",
+      "error": {
+        "expired": "Ce lien a expiré. Connectez-vous, puis renvoyez l’e-mail de vérification depuis le bandeau.",
+        "invalid": "Ce lien n’est pas valide. Connectez-vous, puis renvoyez l’e-mail de vérification depuis le bandeau."
+      },
+      "continue": "Voir mes foyers",
+      "signIn": "Se connecter"
+    },
     "resetConfirm": {
       "title": "Nouveau mot de passe",
       "subtitle": "Choisissez un nouveau mot de passe.",
@@ -186,6 +197,18 @@
     "tabsNav": "Navigation rapide",
     "close": "Fermer",
     "switchLanguage": "Passer en anglais (EN)",
+    "verifyEmail": {
+      "title": "Vérifiez votre adresse e-mail",
+      "body": "Suivez le lien envoyé à {email}. Les invitations à rejoindre un foyer envoyées à cette adresse apparaîtront une fois celle-ci vérifiée.",
+      "resend": "Renvoyer l’e-mail",
+      "sending": "Envoi…",
+      "sent": "E-mail envoyé. Pensez à regarder dans vos courriers indésirables.",
+      "error": {
+        "RATE_LIMITED": "Trop de demandes. Réessayez plus tard.",
+        "SMTP_DISABLED": "L’envoi d’e-mails est désactivé sur cette instance.",
+        "FAILED": "L’envoi a échoué. Réessayez."
+      }
+    },
     "period": {
       "previous": "Période précédente",
       "next": "Période suivante"
@@ -945,6 +968,7 @@
       "FAILED": "Échec. Réessayez.",
       "WRONG_ACCOUNT": "Cette invitation a été envoyée à {email}. Connectez-vous avec ce compte pour l’accepter.",
       "ALREADY_IN_GROUP": "Vous faites déjà partie de ce foyer.",
+      "EMAIL_NOT_VERIFIED": "Vérifiez d’abord votre adresse e-mail, ou utilisez le lien ou le code d’invitation.",
       "RATE_LIMITED": "Trop de tentatives. Réessayez plus tard."
     },
     "revokeFailed": "Échec de la révocation. Réessayez.",
@@ -955,7 +979,8 @@
     "mailDisabled": "L’e-mail est désactivé : transmettez ce lien.",
     "shareLink": "Lien d’invitation",
     "decline": "Refuser",
-    "declineConfirm": "Refuser cette invitation ?"
+    "declineConfirm": "Refuser cette invitation ?",
+    "unverifiedHint": "{smtp, select, true {Les invitations envoyées à votre adresse apparaîtront ici une fois celle-ci vérifiée : suivez le lien reçu par e-mail.} other {Les invitations envoyées à votre adresse apparaîtront ici une fois celle-ci vérifiée par un administrateur.}} En attendant, un lien ou un code d’invitation fonctionne déjà."
   },
   "dashboard": {
     "overline": "Vue d’ensemble",
@@ -1285,6 +1310,7 @@
       "matchCount": "{count, plural, =0 {Aucun résultat} one {# résultat} other {# résultats}}",
       "noMatch": "Aucun utilisateur ne correspond à cette recherche.",
       "disabledBadge": "Désactivé",
+      "unverifiedBadge": "Adresse non vérifiée",
       "actionsFor": "Actions pour {user}",
       "disable": "Désactiver",
       "enable": "Réactiver",
@@ -1293,6 +1319,10 @@
       "disableBody": "Ses sessions sont fermées et toute connexion est refusée (mot de passe, clé d’accès, OIDC). Ses données sont conservées ; vous pourrez le réactiver.",
       "enableTitle": "Réactiver {user} ?",
       "enableBody": "La personne pourra de nouveau se connecter.",
+      "verifyEmail": "Marquer l’adresse comme vérifiée",
+      "verifyEmailTitle": "Marquer l’adresse de {user} comme vérifiée ?",
+      "verifyEmailBody": "Faites-le seulement si vous savez que {email} appartient bien à cette personne : les invitations envoyées à cette adresse lui seront proposées.",
+      "verifyEmailConfirm": "Marquer comme vérifiée",
       "deleteTitle": "Supprimer définitivement {user} ?",
       "deleteBody": "Son compte et toutes ses données sont effacés, le journal d’audit est anonymisé. Action irréversible.",
       "deleteType": "Pour confirmer, saisissez {email}",
@@ -1572,6 +1602,10 @@
             "reset_requested": "Réinitialisation du mot de passe demandée",
             "reset_completed": "Mot de passe réinitialisé"
           },
+          "email": {
+            "verified": "Adresse e-mail vérifiée",
+            "verification_sent": "E-mail de vérification renvoyé"
+          },
           "passkey": {
             "added": "Clé d’accès ajoutée",
             "deleted": "Clé d’accès supprimée"
@@ -1594,7 +1628,8 @@
           "deleted": "Compte supprimé",
           "created_by_admin": "Utilisateur créé par un admin",
           "disabled": "Utilisateur désactivé",
-          "enabled": "Utilisateur réactivé"
+          "enabled": "Utilisateur réactivé",
+          "email_verified": "Adresse e-mail marquée comme vérifiée"
         },
         "settings": {
           "smtp": {
@@ -1802,6 +1837,7 @@
       "register": "Inscription",
       "reset": "Mot de passe oublié",
       "resetConfirm": "Nouveau mot de passe",
+      "verifyEmail": "Vérification de l’adresse",
       "setup": "Installation",
       "forbidden": "Accès refusé",
       "notFound": "Page introuvable"

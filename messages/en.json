@@ -91,6 +91,17 @@
         "invalid": "Invalid email address."
       }
     },
+    "verifyEmail": {
+      "title": "Address verified",
+      "failedTitle": "Verification failed",
+      "body": "Your email address is verified. Invitations to join a household sent to this address now show up in Households.",
+      "error": {
+        "expired": "This link has expired. Sign in, then resend the verification email from the banner.",
+        "invalid": "This link isn’t valid. Sign in, then resend the verification email from the banner."
+      },
+      "continue": "Go to my households",
+      "signIn": "Sign in"
+    },
     "resetConfirm": {
       "title": "New password",
       "subtitle": "Choose a new password.",
@@ -186,6 +197,18 @@
     "tabsNav": "Quick navigation",
     "close": "Close",
     "switchLanguage": "Switch to French (FR)",
+    "verifyEmail": {
+      "title": "Verify your email address",
+      "body": "Follow the link sent to {email}. Invitations to join a household sent to this address will show up once it’s verified.",
+      "resend": "Resend the email",
+      "sending": "Sending…",
+      "sent": "Email sent. Check your spam folder too.",
+      "error": {
+        "RATE_LIMITED": "Too many requests. Please try again later.",
+        "SMTP_DISABLED": "Email is turned off on this instance.",
+        "FAILED": "Sending failed. Please retry."
+      }
+    },
     "period": {
       "previous": "Previous period",
       "next": "Next period"
@@ -945,6 +968,7 @@
       "FAILED": "Failed. Please retry.",
       "WRONG_ACCOUNT": "This invitation was sent to {email}. Sign in with that account to accept it.",
       "ALREADY_IN_GROUP": "You’re already in this household.",
+      "EMAIL_NOT_VERIFIED": "Verify your email address first, or use the invitation link or code.",
       "RATE_LIMITED": "Too many attempts. Please try again later."
     },
     "revokeFailed": "Revoking failed. Try again.",
@@ -955,7 +979,8 @@
     "mailDisabled": "E-mail is disabled: share this link.",
     "shareLink": "Invitation link",
     "decline": "Decline",
-    "declineConfirm": "Decline this invitation?"
+    "declineConfirm": "Decline this invitation?",
+    "unverifiedHint": "{smtp, select, true {Invitations sent to your address will show up here once it’s verified: follow the link we emailed you.} other {Invitations sent to your address will show up here once an administrator verifies it.}} Meanwhile, an invitation link or code already works."
   },
   "dashboard": {
     "overline": "Overview",
@@ -1285,6 +1310,7 @@
       "matchCount": "{count, plural, =0 {No match} one {# match} other {# matches}}",
       "noMatch": "No user matches this search.",
       "disabledBadge": "Disabled",
+      "unverifiedBadge": "Unverified email",
       "actionsFor": "Actions for {user}",
       "disable": "Disable",
       "enable": "Re-enable",
@@ -1293,6 +1319,10 @@
       "disableBody": "Their sessions are closed and every sign-in is refused (password, passkey, OIDC). Their data is kept; you can re-enable them.",
       "enableTitle": "Re-enable {user}?",
       "enableBody": "They will be able to sign in again.",
+      "verifyEmail": "Mark email as verified",
+      "verifyEmailTitle": "Mark {user}’s email as verified?",
+      "verifyEmailBody": "Only do this if you know {email} belongs to this person: invitations sent to this address will be offered to them.",
+      "verifyEmailConfirm": "Mark as verified",
       "deleteTitle": "Permanently delete {user}?",
       "deleteBody": "Their account and all their data are erased, and the audit log is anonymized. This cannot be undone.",
       "deleteType": "To confirm, type {email}",
@@ -1572,6 +1602,10 @@
             "reset_requested": "Password reset requested",
             "reset_completed": "Password reset completed"
           },
+          "email": {
+            "verified": "Email address verified",
+            "verification_sent": "Verification email resent"
+          },
           "passkey": {
             "added": "Passkey added",
             "deleted": "Passkey deleted"
@@ -1594,7 +1628,8 @@
           "deleted": "Account deleted",
           "created_by_admin": "User created by an admin",
           "disabled": "User disabled",
-          "enabled": "User re-enabled"
+          "enabled": "User re-enabled",
+          "email_verified": "Email address marked as verified"
         },
         "settings": {
           "smtp": {
@@ -1802,6 +1837,7 @@
       "register": "Sign up",
       "reset": "Forgot password",
       "resetConfirm": "New password",
+      "verifyEmail": "Email verification",
       "setup": "Setup",
       "forbidden": "Access denied",
       "notFound": "Page not found"

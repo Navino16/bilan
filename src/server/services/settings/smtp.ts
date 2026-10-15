@@ -85,6 +85,10 @@ export function getSmtpConfig(database: PrismaClient = db): Promise<SmtpConfig |
   return database.smtpConfig.findUnique({ where: { id: SMTP_SINGLETON_ID } });
 }
 
+export async function isSmtpEnabled(database: PrismaClient = db): Promise<boolean> {
+  return (await getSmtpConfig(database))?.enabled ?? false;
+}
+
 export const SMTP_FAILURES = [
   "EAUTH",
   "ECONNECTION",
