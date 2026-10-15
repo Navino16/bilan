@@ -20,7 +20,7 @@
         "passkeyFailed": "La connexion par clé d’accès a été annulée ou n’a pas abouti.",
         "disabled": "Ce compte est désactivé. Contactez l’administrateur de l’instance.",
         "ssoFailed": "La connexion via le fournisseur d’identité a échoué. Réessayez.",
-        "ssoSignUpDisabled": "Aucun compte Bilan ne correspond à cette identité, et la création de compte n’est pas autorisée, par ce fournisseur ou parce que les inscriptions sont fermées. Demandez un compte à l’administrateur de l’instance.",
+        "ssoSignUpDisabled": "Aucun compte {appName} ne correspond à cette identité, et la création de compte n’est pas autorisée, par ce fournisseur ou parce que les inscriptions sont fermées. Demandez un compte à l’administrateur de l’instance.",
         "ssoNotLinked": "Aucun compte n’est lié à cette identité. Connectez-vous avec un autre moyen de connexion, puis liez-la depuis Paramètres > Sécurité.",
         "ssoDenied": "La connexion a été annulée ou refusée chez le fournisseur d’identité.",
         "ssoProvider": "Le fournisseur d’identité a renvoyé une erreur. Réessayez plus tard ou utilisez un autre moyen de connexion.",
@@ -299,7 +299,7 @@
     "sortBy": "Trier par",
     "sortPriority": "Priorité",
     "sortHits": "Utilisations",
-    "scopePersonal": "Perso",
+    "scopePersonal": "Personnelle",
     "match": {
       "CONTAINS": "Contient",
       "EXACT": "Égal",
@@ -652,7 +652,7 @@
       "ignore": "Ignorer",
       "empty": "Aucune paire à suggérer pour le moment.",
       "back": "Retour aux transactions",
-      "hint": "Bilan repère les paires de même montant et de sens opposé (un virement entre vos comptes, un remboursement) pour que vous puissiez les lier et ne pas les compter deux fois.",
+      "hint": "{appName} repère les paires de même montant et de sens opposé (un virement entre vos comptes, un remboursement) pour que vous puissiez les lier et ne pas les compter deux fois.",
       "ignoreFailed": "Impossible d’ignorer cette paire. Réessayez.",
       "ignored": "{count, plural, one {# paire ignorée} other {# paires ignorées}}",
       "ignoredHint": "Une paire restaurée peut de nouveau être suggérée.",
@@ -915,7 +915,7 @@
     "send": "Envoyer l’invitation",
     "sending": "Envoi…",
     "pending": "Invitations en attente",
-    "code": "Code",
+    "code": "Code : <mono>{code}</mono>",
     "expiresAt": "Expire le <date></date>",
     "revoke": "Révoquer",
     "revokeConfirm": "Révoquer cette invitation ?",
@@ -1094,7 +1094,7 @@
         "BAD_CONFIRM": "L’e-mail saisi ne correspond pas.",
         "RATE_LIMITED": "Trop de tentatives. Réessayez plus tard.",
         "FAILED": "La suppression a échoué. Réessayez.",
-        "LAST_SUPER_ADMIN": "Vous êtes le dernier super admin actif : nommez-en un autre avant de supprimer votre compte."
+        "LAST_SUPER_ADMIN": "Vous êtes le dernier super-administrateur actif : nommez-en un autre avant de supprimer votre compte."
       }
     },
     "security": {
@@ -1255,8 +1255,6 @@
       "name": "Nom",
       "email": "Adresse e-mail",
       "role": "Rôle",
-      "roleUser": "Utilisateur",
-      "roleAdmin": "Administrateur",
       "create": "Créer",
       "creating": "Création…",
       "created": "Utilisateur créé. Un lien de définition du mot de passe lui a été envoyé.",
@@ -1276,8 +1274,8 @@
         "UNAUTHORIZED": "Vous n’avez pas la permission de changer les rôles.",
         "INVALID": "Rôle invalide.",
         "SELF": "Vous ne pouvez pas changer votre propre rôle.",
-        "FORBIDDEN": "Seul un super admin peut attribuer ou retirer un rôle d’administration.",
-        "LAST_SUPER_ADMIN": "Impossible de retirer le dernier super admin.",
+        "FORBIDDEN": "Seul un super-administrateur peut attribuer ou retirer un rôle d’administration.",
+        "LAST_SUPER_ADMIN": "Impossible de retirer le dernier super-administrateur.",
         "NOT_FOUND": "Utilisateur introuvable.",
         "FAILED": "Échec du changement de rôle."
       },
@@ -1302,8 +1300,8 @@
         "UNAUTHORIZED": "Vous n’avez pas la permission de faire cela.",
         "INVALID": "Requête invalide.",
         "SELF": "Vous ne pouvez pas agir sur votre propre compte.",
-        "FORBIDDEN": "Seul un super admin peut agir sur un administrateur ou supprimer un compte.",
-        "LAST_SUPER_ADMIN": "Impossible : c’est le dernier super admin actif.",
+        "FORBIDDEN": "Seul un super-administrateur peut agir sur un administrateur ou supprimer un compte.",
+        "LAST_SUPER_ADMIN": "Impossible : c’est le dernier super-administrateur actif.",
         "NOT_FOUND": "Utilisateur introuvable.",
         "CONFIRMATION": "L’adresse saisie ne correspond pas.",
         "FAILED": "Échec. Réessayez."
@@ -1316,7 +1314,7 @@
       "roleConfirmTitle": "Changer le rôle de {user} ?",
       "roleConfirmBody": "{from} → {to}. Le changement prend effet immédiatement.",
       "roleConfirm": "Changer le rôle",
-      "roleSuperAdminWarning": "Un super admin a tous les droits, y compris sur les autres administrateurs et la suppression de comptes."
+      "roleSuperAdminWarning": "Un super-administrateur a tous les droits, y compris sur les autres administrateurs et la suppression de comptes."
     },
     "signupTokens": {
       "createTitle": "Créer un jeton",
@@ -1362,7 +1360,7 @@
       "modeLink": "Changer le mode d’inscription"
     },
     "settings": {
-      "appName": "Nom de l’application",
+      "appName": "Nom de l’instance",
       "registrationMode": "Mode d’inscription",
       "credentialsEnabled": "Connexion par mot de passe",
       "minPasswordLength": "Longueur minimale du mot de passe",
@@ -1459,7 +1457,7 @@
       "on": "Activé",
       "off": "Désactivé",
       "allowSignUp": "Autoriser l’inscription",
-      "allowSignUpHint": "Crée un compte Bilan à la première connexion d’une identité liée à aucun compte, uniquement si le mode d’inscription est « Ouvert ». Sinon, ce fournisseur ne connecte que les identités déjà liées à un compte. Une adresse e-mail identique ne suffit pas : un utilisateur existant lie l’identité depuis Paramètres > Sécurité.",
+      "allowSignUpHint": "Crée un compte {appName} à la première connexion d’une identité liée à aucun compte, uniquement si le mode d’inscription est « Ouvert ». Sinon, ce fournisseur ne connecte que les identités déjà liées à un compte. Une adresse e-mail identique ne suffit pas : un utilisateur existant lie l’identité depuis Paramètres > Sécurité.",
       "oidcSection": "Options OIDC",
       "issuer": "Issuer",
       "clientId": "Client ID",
@@ -1695,8 +1693,8 @@
     },
     "roles": {
       "USER": "Utilisateur",
-      "ADMIN": "Admin",
-      "SUPER_ADMIN": "Super admin"
+      "ADMIN": "Administrateur",
+      "SUPER_ADMIN": "Super-administrateur"
     }
   },
   "setup": {
@@ -1826,7 +1824,7 @@
     },
     "welcome": {
       "overline": "Premiers pas",
-      "title": "Bienvenue sur Bilan",
+      "title": "Bienvenue sur {appName}",
       "heading": "Deux étapes pour voir vos finances ici",
       "step1": "Créer un compte bancaire",
       "step1Hint": "Compte courant, livret, carte… Vos transactions y seront rattachées.",

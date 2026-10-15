@@ -6,6 +6,7 @@ import { loginRedirectPath, REQUEST_PATH_HEADER } from "@/lib/callback-url";
 import { isSetupNeededCached } from "@/server/services/setup-status";
 import { withClientIp } from "@/server/http/client-ip";
 import { notFoundResponse } from "@/server/http/not-found";
+import { getAppName } from "@/server/services/settings/app-settings";
 import { pageLocale } from "@/server/http/request-locale";
 
 const intlMiddleware = createIntlMiddleware({
@@ -87,7 +88,7 @@ export default async function middleware(req: NextRequest) {
       return Response.redirect(url, 307);
     }
   } else if (setupPath.test(pathname)) {
-    return withSecurityHeaders(notFoundResponse(pathname, req.headers));
+    return withSecurityHeaders(notFoundResponse(pathname, req.headers, await getAppName()));
   }
 
   const target = `${pathname}${req.nextUrl.search}`;

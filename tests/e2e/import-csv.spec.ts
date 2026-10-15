@@ -344,7 +344,7 @@ bad;LIGNE ${stamp};1,00;;B`;
 
     const rows = page.locator('[data-slot="import-preview-row"]');
     await expect(rows).toHaveCount(50, { timeout: 15_000 });
-    await expect(rows.first()).toContainText("1 mai 2019");
+    await expect(rows.first()).toContainText("1er mai 2019");
     // Date, Libellé, Montant and Décimales are ticked; Débit, Crédit and Type are not.
     const ticks = page.locator('#import-settings [data-slot="field-mapped"]');
     await expect(ticks).toHaveCount(4);

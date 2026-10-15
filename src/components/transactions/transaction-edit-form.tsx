@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
+import { formatAmountInput } from "@/lib/format";
 import { TRANSACTION_LABEL_MAX, TRANSACTION_TYPES } from "@/lib/validation/transaction";
 import { updateTransactionAction } from "@/server/transport/actions/transactions";
 
@@ -19,15 +20,6 @@ export type EditableItem = {
   note: string | null;
   linked: boolean;
 };
-
-// "-8.5" → "-8,50" where the locale writes decimals with a comma (readAmount takes both).
-function amountInputValue(amount: number, locale: string): string {
-  const decimal = new Intl.NumberFormat(locale)
-    .formatToParts(1.5)
-    .find((p) => p.type === "decimal");
-  const s = amount.toFixed(2);
-  return decimal?.value === "," ? s.replace(".", ",") : s;
-}
 
 export function TransactionEditForm({
   item,
@@ -95,7 +87,7 @@ export function TransactionEditForm({
                 name="amount"
                 inputMode="decimal"
                 required
-                defaultValue={amountInputValue(item.amount, locale)}
+                defaultValue={formatAmountInput(item.amount, locale)}
                 aria-invalid={error?.startsWith("AMOUNT_") || undefined}
                 aria-describedby={
                   [error && "tx-edit-error", item.linked && "tx-edit-linked"]

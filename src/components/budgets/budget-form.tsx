@@ -17,7 +17,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { budgetPlannedTotal, periodEndFor } from "@/lib/budgets";
-import { parseAmount } from "@/lib/amount";
+import { parseAmount, readAmount } from "@/lib/amount";
+import { formatAmountInput, formatMoney } from "@/lib/format";
 import {
   BUDGET_NAME_MAX,
   BUDGET_PERIOD_TYPES,
@@ -123,7 +124,7 @@ function BudgetFormBody({
       categoryId: l.categoryId ?? "",
       accountId: l.accountId ?? "",
       label: l.label ?? "",
-      plannedAmount: String(l.plannedAmount).replace(".", locale === "fr" ? "," : "."),
+      plannedAmount: formatAmountInput(l.plannedAmount, locale),
     })) ?? [blankLine()],
   );
 
@@ -139,7 +140,6 @@ function BudgetFormBody({
       budgetPlannedTotal(lines.map((l) => ({ plannedAmount: parseAmount(l.plannedAmount) || 0 }))),
     [lines],
   );
-  const nf = new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" });
 
   const linesPayload = JSON.stringify(
     lines.map((l) => ({
@@ -290,7 +290,7 @@ function BudgetFormBody({
           <div className="flex items-center justify-between">
             <Label>{t("lines")}</Label>
             <span className="text-muted-foreground text-sm tabular-nums">
-              {t("plannedTotalValue", { amount: nf.format(plannedTotal) })}
+              {t("plannedTotalValue", { amount: formatMoney(plannedTotal, locale) })}
             </span>
           </div>
 
@@ -327,11 +327,14 @@ function BudgetFormBody({
                 name="plannedAmount"
                 type="text"
                 inputMode="decimal"
-                pattern="[0-9\s]*([.,][0-9]{0,2})?"
-                placeholder="0,00"
+                placeholder={formatAmountInput(0, locale)}
                 aria-label={t("line.planned")}
                 value={line.plannedAmount}
                 onChange={(e) => updateLine(i, { plannedAmount: e.target.value })}
+                onBlur={(e) => {
+                  const r = readAmount(e.target.value);
+                  if (r.ok) updateLine(i, { plannedAmount: formatAmountInput(r.value, locale) });
+                }}
                 className="sm:w-28"
                 required
                 data-field={`lines.${i}.plannedAmount`}

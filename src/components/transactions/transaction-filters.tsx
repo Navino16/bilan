@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Tag, ChevronDown, Check, ListFilter, Landmark, Shapes, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,7 @@ import {
 } from "@/lib/transaction-filters";
 import { TRANSACTION_TYPES } from "@/lib/validation/transaction";
 import { readAmount } from "@/lib/amount";
+import { formatAmountInput } from "@/lib/format";
 import { hasUnsearchableWord, MIN_SEARCH_WORD } from "@/lib/text";
 
 type Direction = "" | "in" | "out";
@@ -84,11 +85,17 @@ function AmountBoundInput({
   className?: string;
   onCommit: (value: string) => void;
 }) {
-  const [draft, setDraft] = useState(value);
+  const locale = useLocale();
+  // The URL holds "12.3"; the field shows it the way the locale writes it ("12,30").
+  const display = (raw: string) => {
+    const r = raw.trim() ? readAmount(raw) : null;
+    return r?.ok ? formatAmountInput(Math.abs(r.value), locale) : raw;
+  };
+  const [draft, setDraft] = useState(() => display(value));
   const [seen, setSeen] = useState(value);
   if (value !== seen) {
     setSeen(value);
-    setDraft(value);
+    setDraft(display(value));
   }
   const parsed = draft.trim() ? readAmount(draft) : null;
   const invalid = parsed !== null && !parsed.ok;
@@ -96,6 +103,7 @@ function AmountBoundInput({
   function commit() {
     if (invalid) return;
     const next = parsed?.ok ? String(Math.abs(parsed.value)) : "";
+    setDraft(display(next));
     if (next !== value) onCommit(next);
   }
 

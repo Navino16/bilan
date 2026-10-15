@@ -164,6 +164,15 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
     // No implicit linking by email: an SSO identity signs in only once linked or SSO-created (#200).
     account: { modelName: "authAccount", accountLinking: { disableImplicitLinking: true } },
     databaseHooks: {
+      // Better Auth stores the /64 it rate-limits on; keep the full address, as security e-mails show it (#226).
+      session: {
+        create: {
+          before: async (_session, ctx) => {
+            const ip = ctx?.headers?.get(CLIENT_IP_HEADER);
+            return ip ? { data: { ipAddress: ip } } : undefined;
+          },
+        },
+      },
       user: {
         update: {
           before: async (data) => {

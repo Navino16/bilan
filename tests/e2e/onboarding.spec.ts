@@ -23,7 +23,7 @@ test.describe("first run of a brand-new user (#170)", () => {
 
     // Dashboard: a checklist instead of zeroed KPIs.
     const welcome = page.locator('[data-slot="welcome-card"]');
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Bienvenue sur Bilan");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^Bienvenue sur /);
     await expect(welcome).toBeVisible();
     await expect(page.locator('[data-slot="kpi-note"]')).toHaveCount(0);
     await expect(welcome.getByRole("link", { name: "Importer un relevé" })).toHaveCount(0);

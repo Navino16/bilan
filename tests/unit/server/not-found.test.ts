@@ -18,7 +18,7 @@ describe("pageLocale", () => {
 
 describe("notFoundResponse", () => {
   it("serves the 404 in the page's locale", async () => {
-    const en = notFoundResponse("/en/setup", h({ "accept-language": "fr" }));
+    const en = notFoundResponse("/en/setup", h({ "accept-language": "fr" }), "Bilan");
     expect(en.status).toBe(404);
     expect(en.headers.get("content-language")).toBe("en");
     const enBody = await en.text();
@@ -26,9 +26,16 @@ describe("notFoundResponse", () => {
     expect(enBody).toContain("This page doesn’t exist or has moved.");
     expect(enBody).toContain('<a href="/en">Back</a>');
 
-    const fr = await notFoundResponse("/fr/setup", h({ "accept-language": "en" })).text();
+    const fr = await notFoundResponse("/fr/setup", h({ "accept-language": "en" }), "Bilan").text();
     expect(fr).toContain('<html lang="fr">');
     expect(fr).toContain("Cette page n’existe pas ou a été déplacée.");
     expect(fr).toContain('<a href="/fr">Retour</a>');
+  });
+
+  it("names the instance, HTML-escaped (#226)", async () => {
+    const body = await notFoundResponse("/fr/setup", h({}), `Tom & "Jerry" <b>`).text();
+    expect(body).toContain("<title>Tom &amp; &quot;Jerry&quot; &lt;b&gt; — 404</title>");
+    expect(body).toContain("<h1>Tom &amp; &quot;Jerry&quot; &lt;b&gt;</h1>");
+    expect(body).not.toContain("<b>");
   });
 });

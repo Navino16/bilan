@@ -34,7 +34,7 @@ test.describe("admin user roles", () => {
       };
 
       try {
-        await setRole("Admin", "ADMIN");
+        await setRole("Administrateur", "ADMIN");
         await page.goto("/fr/admin/audit?action=user.role.changed", {
           waitUntil: "domcontentloaded",
           timeout: 90_000,
@@ -52,7 +52,7 @@ test.describe("admin user roles", () => {
       const select = targetRow(page).getByRole("combobox");
       const dialog = page.getByRole("alertdialog");
       await expect(async () => {
-        await select.selectOption({ label: "Super admin" });
+        await select.selectOption({ label: "Super-administrateur" });
         await expect(dialog).toBeVisible({ timeout: 2000 });
       }).toPass({ timeout: 30_000 });
       await expect(dialog).toContainText("E2E Roles Target");

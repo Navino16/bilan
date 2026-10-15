@@ -180,6 +180,7 @@ test.describe("transactions", () => {
     await page.getByRole("textbox", { name: "Montant min." }).fill("100");
     await page.getByRole("textbox", { name: "Montant min." }).press("Enter");
     await expect(page).toHaveURL(/min=100/);
+    await expect(page.getByRole("textbox", { name: "Montant min." })).toHaveValue("100,00");
     await expect(rows).toHaveCount(1);
     await resetFilters();
 

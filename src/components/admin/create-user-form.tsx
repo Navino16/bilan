@@ -15,6 +15,7 @@ import type { CreatableRole } from "@/lib/instance-roles";
 
 export function CreateUserForm({ roles }: { roles: CreatableRole[] }) {
   const t = useTranslations("admin.users");
+  const tRoles = useTranslations("admin.roles");
   const locale = useLocale();
   const router = useRouter();
   const form = useActionForm(adminCreateUserAction, { onSuccess: () => router.refresh() });
@@ -46,7 +47,7 @@ export function CreateUserForm({ roles }: { roles: CreatableRole[] }) {
             <NativeSelect id="cu-role" name="role" defaultValue="USER">
               {roles.map((r) => (
                 <option key={r} value={r}>
-                  {t(r === "ADMIN" ? "roleAdmin" : "roleUser")}
+                  {tRoles(r)}
                 </option>
               ))}
             </NativeSelect>

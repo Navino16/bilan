@@ -16,6 +16,21 @@ test.describe("error pages", () => {
     await expect(page).toHaveTitle("Page introuvable · Bilan");
   });
 
+  test("an unmatched /en/ path renders the English 404 (#226)", async ({ page }) => {
+    const res = await page.goto("/en/does-not-exist-xyz/deeper", {
+      waitUntil: "domcontentloaded",
+      timeout: 90_000,
+    });
+    expect(res?.status()).toBe(404);
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    await expect(page.getByRole("heading", { level: 1, name: "Page not found" })).toBeVisible();
+    await expect(page).toHaveTitle("Page not found · Bilan");
+    await expect(page.getByRole("link", { name: "Back to dashboard" })).toHaveAttribute(
+      "href",
+      "/en/dashboard",
+    );
+  });
+
   for (const [locale, message] of [
     ["fr", "Cette page n’existe pas ou a été déplacée."],
     ["en", "This page doesn’t exist or has moved."],

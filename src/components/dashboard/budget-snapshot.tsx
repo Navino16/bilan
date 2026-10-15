@@ -7,7 +7,7 @@ import { overline } from "@/components/transactions/bits";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import type { getCurrentBudget } from "@/server/services/budgets";
 import { BudgetBar, statusStyle } from "@/components/budgets/budget-status";
-import { formatDateRange } from "@/lib/format";
+import { formatDateRange, formatMoney } from "@/lib/format";
 
 export type CurrentBudget = Awaited<ReturnType<typeof getCurrentBudget>>;
 
@@ -24,12 +24,6 @@ export async function BudgetSnapshot({
   locale: string;
 }) {
   const t = await getTranslations("budgets");
-  const money = new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency: "EUR",
-    notation: "compact",
-    maximumFractionDigits: 1,
-  });
 
   if (!budget) {
     return (
@@ -92,8 +86,10 @@ export async function BudgetSnapshot({
                   className="shrink-0 text-[12.5px] tabular-nums"
                   style={l.status === "OVER" ? { color: "var(--expense)" } : undefined}
                 >
-                  {money.format(l.spent)}{" "}
-                  <span className="text-muted-foreground">/ {money.format(l.plannedAmount)}</span>
+                  {formatMoney(l.spent, locale)}{" "}
+                  <span className="text-muted-foreground">
+                    / {formatMoney(l.plannedAmount, locale)}
+                  </span>
                 </span>
               </div>
               <BudgetBar percent={l.percent} status={l.status} />
