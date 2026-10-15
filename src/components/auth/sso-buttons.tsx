@@ -47,7 +47,7 @@ export function SsoButtons({
           key={p.providerId}
           type="button"
           variant="outline"
-          className="w-full"
+          className="h-auto min-h-8 w-full py-1.5 text-center wrap-anywhere whitespace-normal"
           disabled={pending}
           onClick={() => start(p)}
         >

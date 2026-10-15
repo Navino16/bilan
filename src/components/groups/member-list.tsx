@@ -70,51 +70,59 @@ export function MemberList({
           const isSelf = m.userId === viewerId;
           const display = displayName(m);
           return (
-            <div key={m.userId} className="flex items-center gap-3 px-4 py-3 sm:px-6">
-              <Avatar className="size-8">
-                <AvatarFallback className="bg-accent text-accent-foreground text-xs">
-                  {display.slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="truncate text-sm font-medium">{display}</span>
-                  {isSelf && <Badge variant="secondary">{t("you")}</Badge>}
+            <div
+              key={m.userId}
+              data-slot="member-row"
+              className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-6"
+            >
+              <div className="flex min-w-0 flex-auto items-center gap-3">
+                <Avatar className="size-8">
+                  <AvatarFallback className="bg-accent text-accent-foreground text-xs">
+                    {display.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-sm font-medium">{display}</span>
+                    {isSelf && <Badge variant="secondary">{t("you")}</Badge>}
+                  </div>
+                  <div className="text-muted-foreground truncate text-xs">{m.email}</div>
                 </div>
-                <div className="text-muted-foreground truncate text-xs">{m.email}</div>
               </div>
-              {canManageRoles ? (
-                <NativeSelect
-                  aria-label={t("role")}
-                  value={m.role}
-                  disabled={pending}
-                  onChange={(e) => changeRole(m.userId, e.target.value)}
-                  size="sm"
-                >
-                  {GROUP_ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {t(`roles.${r}`)}
-                    </option>
-                  ))}
-                </NativeSelect>
-              ) : (
-                <Badge variant="outline">{t(`roles.${m.role}`)}</Badge>
-              )}
-              {!isSelf && canRemoveMember(viewerRole, m.role) && (
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t("remove")}
-                  disabled={pending}
-                  onClick={() => {
-                    setError(null);
-                    setRemoving(m);
-                    setConfirmOpen(true);
-                  }}
-                >
-                  <UserMinus />
-                </Button>
-              )}
+              <div className="ml-auto flex shrink-0 items-center gap-3">
+                {canManageRoles ? (
+                  <NativeSelect
+                    aria-label={t("role")}
+                    value={m.role}
+                    disabled={pending}
+                    onChange={(e) => changeRole(m.userId, e.target.value)}
+                    size="sm"
+                  >
+                    {GROUP_ROLES.map((r) => (
+                      <option key={r} value={r}>
+                        {t(`roles.${r}`)}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                ) : (
+                  <Badge variant="outline">{t(`roles.${m.role}`)}</Badge>
+                )}
+                {!isSelf && canRemoveMember(viewerRole, m.role) && (
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t("remove")}
+                    disabled={pending}
+                    onClick={() => {
+                      setError(null);
+                      setRemoving(m);
+                      setConfirmOpen(true);
+                    }}
+                  >
+                    <UserMinus />
+                  </Button>
+                )}
+              </div>
             </div>
           );
         })}

@@ -41,6 +41,7 @@ export function ScrollFade({
   return (
     <div
       ref={ref}
+      data-slot="scroll-fade"
       className={cn(
         "relative [scrollbar-width:none] overflow-x-auto [&::-webkit-scrollbar]:hidden",
         className,

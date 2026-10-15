@@ -159,7 +159,9 @@ export function UserActions({
             )
           : !error && <p className="text-muted-foreground text-sm">{t("deleteLoading")}</p>}
         <div className="space-y-2">
-          <Label htmlFor={`delete-confirm-${userId}`}>{t("deleteType", { email })}</Label>
+          <Label htmlFor={`delete-confirm-${userId}`} className="block leading-snug wrap-anywhere">
+            {t("deleteType", { email })}
+          </Label>
           <Input
             id={`delete-confirm-${userId}`}
             autoComplete="off"

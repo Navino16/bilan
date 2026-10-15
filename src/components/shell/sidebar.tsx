@@ -36,7 +36,11 @@ export function Sidebar({
       )}
     >
       <div className="px-5 py-6">
-        <Link href={`/${locale}/dashboard`} className="font-display text-2xl tracking-tight">
+        <Link
+          href={`/${locale}/dashboard`}
+          title={appName}
+          className="font-display line-clamp-2 text-2xl tracking-tight wrap-anywhere"
+        >
           {appName}
         </Link>
         <p className="text-muted-foreground mt-0.5 text-[10px] tracking-[0.12em] uppercase">

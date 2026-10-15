@@ -40,7 +40,9 @@ export function GroupList({ groups }: { groups: GroupListItem[] }) {
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span className="min-w-0 truncate font-medium">{g.name}</span>
+                <span className="min-w-0 truncate font-medium" title={g.name}>
+                  {g.name}
+                </span>
                 <Badge variant="outline">{t(`roles.${g.role}`)}</Badge>
               </div>
               <div className="text-muted-foreground truncate text-xs">

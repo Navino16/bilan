@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 
 // Below lg (1024px) the shell is the mobile one (drawer + bottom nav); the sidebar
 // only shows from lg up (#167). Every page must fit each width without scrolling sideways.
@@ -39,6 +39,72 @@ async function expectLayout(page: Page, path: string, width: number) {
       { message: `horizontal overflow on ${path} at ${width}px` },
     )
     .toBeLessThanOrEqual(0);
+}
+
+async function expectNoPageOverflow(page: Page, what: string) {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        ),
+      { message: `horizontal overflow on ${what}` },
+    )
+    .toBeLessThanOrEqual(0);
+}
+
+// The element's content is neither clipped nor spilling out sideways.
+async function expectFits(locator: Locator, what: string) {
+  await expect
+    .poll(() => locator.evaluate((el) => el.scrollWidth - el.clientWidth), { message: what })
+    .toBeLessThanOrEqual(0);
+}
+
+async function expectMinWidth(locator: Locator, min: number, what: string) {
+  await expect
+    .poll(async () => (await locator.boundingBox())?.width ?? 0, { message: what })
+    .toBeGreaterThanOrEqual(min);
+}
+
+async function deleteGroupIfPresent(page: Page, name: string) {
+  await page.goto("/fr/groups", { waitUntil: "domcontentloaded", timeout: 90_000 });
+  const card = page.getByRole("link", { name: new RegExp(name) });
+  if ((await card.count()) === 0) return;
+  await card.first().click();
+  await page.waitForURL(/\/groups\/[a-z0-9]+$/i);
+  const dialog = page.locator('[data-slot="confirm-dialog"]');
+  await expect(async () => {
+    await page.getByRole("main").getByRole("button", { name: "Supprimer le foyer" }).click();
+    await expect(dialog).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 20_000 });
+  await dialog.getByRole("button", { name: "Supprimer le foyer" }).click();
+  await page.waitForURL(/\/groups$/);
+}
+
+async function openUserDeleteDialog(page: Page, row: Locator) {
+  const dialog = page.locator('[data-slot="confirm-dialog"]');
+  await expect(async () => {
+    await row.getByRole("button", { name: /actions pour/i }).click();
+    await page.getByRole("menuitem", { name: /supprimer définitivement/i }).click();
+    await expect(dialog).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 20_000 });
+  return dialog;
+}
+
+async function confirmUserDelete(dialog: Locator, email: string) {
+  await dialog.getByRole("textbox").fill(email);
+  await dialog.getByRole("button", { name: /supprimer définitivement/i }).click();
+  await expect(dialog).toBeHidden();
+}
+
+async function deleteUserIfPresent(page: Page, email: string) {
+  await page.goto(`/fr/admin/users?q=${encodeURIComponent(email)}`, {
+    waitUntil: "domcontentloaded",
+    timeout: 90_000,
+  });
+  const row = page.locator('[data-slot="admin-user-row"]', { hasText: email });
+  if ((await row.count()) === 0) return;
+  await confirmUserDelete(await openUserDeleteDialog(page, row), email);
 }
 
 test.describe("responsive layout (#167)", () => {
@@ -139,6 +205,184 @@ test.describe("responsive layout (#167)", () => {
       const label = page.locator('[data-slot="row-label"]').first();
       await expect(label).toBeVisible();
       expect((await label.boundingBox())!.width).toBeGreaterThan(300);
+    });
+  });
+
+  test.describe("narrow widths and long names (#224)", () => {
+    test.describe("signed out", () => {
+      test.use({ storageState: { cookies: [], origins: [] } });
+
+      test("at 320px the passkey button wraps inside the login card", async ({ page }) => {
+        await page.setViewportSize({ width: 320, height: 800 });
+        await page.goto("/fr/login", { waitUntil: "domcontentloaded", timeout: 90_000 });
+        const passkey = page.getByRole("button", { name: /clé d’accès/i });
+        await expect(passkey).toBeVisible();
+        await expectFits(passkey, "passkey button text");
+        await expectNoPageOverflow(page, "/fr/login at 320px");
+      });
+    });
+
+    test.describe("as a user", () => {
+      test.use({ storageState: "tests/e2e/.auth/owner.json" });
+
+      test("period presets and category filter are not clipped on desktop", async ({ page }) => {
+        test.setTimeout(120_000);
+        for (const width of [1024, 1280]) {
+          await page.setViewportSize({ width, height: 900 });
+          await page.goto("/fr/transactions", { waitUntil: "domcontentloaded", timeout: 90_000 });
+          await expect(page.getByRole("button", { name: "Personnalisé" }).first()).toBeVisible();
+          await expectFits(
+            page.locator('main [data-slot="scroll-fade"]').first(),
+            `period presets at ${width}px`,
+          );
+          await expectFits(
+            page.locator('[data-slot="category-filter-label"]'),
+            `category filter label at ${width}px`,
+          );
+        }
+        await page.goto("/fr/categories", { waitUntil: "domcontentloaded", timeout: 90_000 });
+        await expectFits(page.locator('main [data-slot="scroll-fade"]').first(), "categories tabs");
+      });
+
+      test("at 320px the create form stacks Type/Category with matching heights", async ({
+        page,
+      }) => {
+        test.setTimeout(120_000);
+        await page.setViewportSize({ width: 320, height: 800 });
+        await page.goto("/fr/transactions?new=1", {
+          waitUntil: "domcontentloaded",
+          timeout: 90_000,
+        });
+        const type = page.locator("#tx-type");
+        const category = page.locator('[data-slot="category-combobox"]');
+        await expect(category).toBeVisible({ timeout: 20_000 });
+        await expect
+          .poll(
+            async () =>
+              ((await category.boundingBox())?.height ?? 0) -
+              ((await type.boundingBox())?.height ?? -1),
+            { message: "category vs type field height" },
+          )
+          .toBe(0);
+        await expectFits(category.locator("span").last(), "category combobox value");
+      });
+
+      test("at 320px member names keep their room next to the role select", async ({ page }) => {
+        await page.setViewportSize({ width: 320, height: 800 });
+        await page.goto("/fr/groups/e2e-shared-group", {
+          waitUntil: "domcontentloaded",
+          timeout: 90_000,
+        });
+        const row = page.locator('[data-slot="member-row"]', { hasText: "member@e2e.local" });
+        await expect(row).toBeVisible();
+        await expectFits(row.getByText("E2E Member", { exact: true }), "member name");
+        await expectMinWidth(row.getByRole("combobox"), 90, "member role select");
+        await expectNoPageOverflow(page, "group detail at 320px");
+      });
+
+      test("at 390px a long foyer name wraps in the title and the share dialog", async ({
+        page,
+      }) => {
+        test.setTimeout(120_000);
+        await page.setViewportSize({ width: 390, height: 844 });
+        const name = `Foyer au nom particulièrement long pour les tests ${Date.now()}`;
+        try {
+          await page.goto("/fr/groups", { waitUntil: "domcontentloaded", timeout: 90_000 });
+          await expect(async () => {
+            await page.getByRole("button", { name: /nouveau foyer/i }).click();
+            await expect(page.locator('input[name="name"]')).toBeVisible({ timeout: 2000 });
+          }).toPass({ timeout: 20_000 });
+          await page.fill('input[name="name"]', name);
+          await page.getByRole("button", { name: /créer le foyer/i }).click();
+          const card = page.getByRole("link", { name: new RegExp(name) });
+          await expect(card).toBeVisible({ timeout: 15_000 });
+          await card.click();
+          await page.waitForURL(/\/groups\/[a-z0-9]+$/i);
+
+          const title = page.locator("main h1");
+          await expect(title).toHaveAttribute("title", name);
+          await expectFits(title, "group title");
+          await expect
+            .poll(() => title.evaluate((el) => el.scrollHeight <= el.clientHeight), {
+              message: "group title clipped vertically",
+            })
+            .toBe(true);
+          // Wrapped onto several lines instead of being cut on one.
+          expect((await title.boundingBox())!.height).toBeGreaterThan(40);
+          await expectNoPageOverflow(page, "long group title at 390px");
+
+          await page.goto("/fr/accounts", { waitUntil: "domcontentloaded", timeout: 90_000 });
+          const account = page
+            .locator('[data-slot="card"]')
+            .filter({ hasText: "E2E Courant" })
+            .last();
+          const share = page.getByRole("menuitem", { name: /partager/i });
+          await expect(async () => {
+            await account.getByRole("button", { name: /^actions pour/i }).click();
+            await expect(share).toBeVisible({ timeout: 2000 });
+          }).toPass({ timeout: 20_000 });
+          await share.click();
+          const shareRow = page.locator('[data-slot="share-row"]', { hasText: name });
+          await expect(shareRow).toBeVisible();
+          await expectFits(shareRow.getByText(name), "share dialog group name");
+          await expectMinWidth(shareRow.getByLabel(name), 72, "share access select");
+        } finally {
+          await deleteGroupIfPresent(page, name);
+        }
+      });
+    });
+
+    test.describe("as a super admin", () => {
+      test.use({ storageState: "tests/e2e/.auth/superadmin.json" });
+
+      test("at 390px the user role select stays readable", async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.goto("/fr/admin/users?q=roles-target", {
+          waitUntil: "domcontentloaded",
+          timeout: 90_000,
+        });
+        const row = page.locator('[data-slot="admin-user-row"]', { hasText: "roles-target" });
+        await expect(row).toBeVisible();
+        await expectMinWidth(row.getByRole("combobox"), 80, "admin role select");
+        await expectNoPageOverflow(page, "admin users at 390px");
+      });
+
+      test("at 320px the delete dialog shows a long e-mail in full", async ({ page }) => {
+        test.setTimeout(120_000);
+        await page.setViewportSize({ width: 320, height: 800 });
+        const email = `e2e-delete-dialog-with-a-long-address-${Date.now()}@long-domain-e2e.local`;
+        try {
+          await page.goto("/fr/admin/users", { waitUntil: "domcontentloaded", timeout: 90_000 });
+          await expect(async () => {
+            await page.fill("#cu-name", "E2E Long e-mail");
+            await page.fill("#cu-email", email);
+            await page.getByRole("button", { name: /^créer$/i }).click();
+            await expect(page.getByText(/utilisateur créé/i)).toBeVisible({ timeout: 3000 });
+          }).toPass({ timeout: 30_000 });
+
+          await page.goto(`/fr/admin/users?q=${encodeURIComponent(email)}`, {
+            waitUntil: "domcontentloaded",
+            timeout: 90_000,
+          });
+          const row = page.locator('[data-slot="admin-user-row"]', { hasText: email });
+          await expectMinWidth(row.getByRole("combobox"), 80, "role select next to a long e-mail");
+          await expectNoPageOverflow(page, "admin users at 320px");
+          const dialog = await openUserDeleteDialog(page, row);
+
+          const label = dialog.locator("label");
+          await expect(label).toContainText(email);
+          await expectFits(label, "e-mail to type");
+          await expectFits(dialog, "delete dialog");
+          const [dialogBox, labelBox] = [await dialog.boundingBox(), await label.boundingBox()];
+          expect(dialogBox!.x + dialogBox!.width).toBeLessThanOrEqual(320);
+          expect(labelBox!.x + labelBox!.width).toBeLessThanOrEqual(
+            dialogBox!.x + dialogBox!.width,
+          );
+          await confirmUserDelete(dialog, email);
+        } finally {
+          await deleteUserIfPresent(page, email);
+        }
+      });
     });
   });
 });

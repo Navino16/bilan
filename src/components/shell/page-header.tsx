@@ -24,7 +24,7 @@ export function PageHeader({
         <div className={overlineClass}>{overline}</div>
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <h1
-            className="font-display min-w-0 truncate text-[2rem] leading-[1.1]"
+            className="font-display min-w-0 text-[2rem] leading-[1.1] wrap-anywhere"
             title={typeof title === "string" ? title : undefined}
           >
             {title}

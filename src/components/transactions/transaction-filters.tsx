@@ -262,7 +262,9 @@ export function TransactionFilters({
         <DropdownMenu>
           <DropdownMenuTrigger render={<button type="button" className={trigger} />}>
             <Tag className="size-3.5" />
-            <span className="max-w-32 truncate">{activeCatName}</span>
+            <span data-slot="category-filter-label" className="max-w-44 truncate">
+              {activeCatName}
+            </span>
             <ChevronDown className="size-3.5" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="max-h-80 w-56 overflow-auto">

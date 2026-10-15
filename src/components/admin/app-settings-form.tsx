@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { APP_NAME_MAX } from "@/lib/validation/app-name";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SectionCard } from "@/components/shell/section-card";
@@ -103,7 +104,7 @@ export function AppSettingsForm({
     <div className="space-y-6">
       <SettingsCard section="general">
         <Field settingKey="app_name" label={t("appName")}>
-          {(p) => <Input {...p} key={appName} defaultValue={appName} />}
+          {(p) => <Input {...p} key={appName} defaultValue={appName} maxLength={APP_NAME_MAX} />}
         </Field>
       </SettingsCard>
 

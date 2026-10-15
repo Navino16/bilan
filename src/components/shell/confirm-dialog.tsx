@@ -39,10 +39,10 @@ export function ConfirmDialog({
         <AlertDialog.Backdrop className="fixed inset-0 z-50 bg-black/10 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-xs" />
         <AlertDialog.Popup
           data-slot="confirm-dialog"
-          className="bg-popover text-popover-foreground fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl border bg-clip-padding p-6 text-sm shadow-lg transition duration-200 ease-in-out data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 sm:max-w-lg"
+          className="bg-popover text-popover-foreground fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 grid-cols-1 gap-4 rounded-xl border bg-clip-padding p-6 text-sm shadow-lg transition duration-200 ease-in-out data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 sm:max-w-lg"
         >
           <div className="flex flex-col gap-0.5 text-center sm:text-left">
-            <AlertDialog.Title className="font-heading text-foreground text-base font-medium">
+            <AlertDialog.Title className="font-heading text-foreground text-base font-medium wrap-anywhere">
               {title}
             </AlertDialog.Title>
             {description && (

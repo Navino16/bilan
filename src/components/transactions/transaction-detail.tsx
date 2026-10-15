@@ -271,7 +271,7 @@ export function TransactionDetail({
                   ) : (
                     <div
                       data-slot="category-readonly"
-                      className="border-border bg-muted/40 flex h-9 items-center gap-2 rounded-md border px-3 text-sm"
+                      className="border-border bg-muted/40 flex h-8 items-center gap-2 rounded-lg border px-2.5 text-sm"
                     >
                       {category && (
                         <span

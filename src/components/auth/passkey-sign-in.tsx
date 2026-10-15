@@ -29,7 +29,13 @@ export function PasskeySignIn({ redirectTo }: { redirectTo: string }) {
 
   return (
     <div className="space-y-4">
-      <Button type="button" variant="outline" className="w-full" disabled={pending} onClick={run}>
+      <Button
+        type="button"
+        variant="outline"
+        className="h-auto min-h-8 w-full py-1.5 text-center whitespace-normal"
+        disabled={pending}
+        onClick={run}
+      >
         <KeyRound />
         {t("passkey")}
       </Button>

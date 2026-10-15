@@ -58,7 +58,7 @@ export function CategoryCombobox({
             <button
               type="button"
               data-slot="category-combobox"
-              className="border-input bg-background hover:bg-muted/40 flex h-9 w-full items-center gap-2 rounded-md border px-3 text-sm"
+              className="border-input hover:bg-muted/40 focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 flex h-8 w-full min-w-0 items-center gap-2 rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
             />
           }
         >
@@ -72,7 +72,7 @@ export function CategoryCombobox({
           <span id={valueId} className="flex-1 truncate text-left">
             {current?.name ?? t("noCategory")}
           </span>
-          <ChevronDown className="size-4 shrink-0 opacity-60" />
+          <ChevronDown className="text-muted-foreground size-4 shrink-0" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="max-h-80 w-64 overflow-auto">
           <DropdownMenuItem onClick={() => select("")}>

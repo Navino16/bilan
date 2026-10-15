@@ -9,7 +9,7 @@ const ERROR_CODE = /^[A-Z][A-Z0-9_]*$/;
 
 type Issue = z.ZodError["issues"][number];
 
-function issueCode(issue: Issue): string {
+export function zodIssueCode(issue: Issue): string {
   switch (issue.code) {
     case "too_big":
       return issue.origin === "string" ? "TOO_LONG" : "TOO_BIG";
@@ -43,7 +43,7 @@ export function fieldErrorsFromZod(
     const key = issue.path.map(String).join(".");
     if (key in out) continue;
     const blank = input !== undefined && issue.path.length === 1 && isBlank(input[key]);
-    out[key] = blank ? "REQUIRED" : issueCode(issue);
+    out[key] = blank ? "REQUIRED" : zodIssueCode(issue);
   }
   return out;
 }

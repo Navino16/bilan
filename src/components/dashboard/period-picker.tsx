@@ -83,7 +83,7 @@ export function PeriodPicker({
       {wrap ? (
         <div className="-mx-0.5 max-w-full px-0.5">{presets}</div>
       ) : (
-        <ScrollFade className="-m-1 max-w-full p-1">{presets}</ScrollFade>
+        <ScrollFade className="-m-1 max-w-[calc(100%+0.5rem)] p-1">{presets}</ScrollFade>
       )}
       {customOpen && (
         <div className="flex flex-wrap items-center gap-2">

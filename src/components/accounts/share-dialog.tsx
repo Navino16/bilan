@@ -76,8 +76,8 @@ export function ShareDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0">
-        <DialogHeader className="border-border shrink-0 border-b px-6 pt-5 pb-4 text-left">
-          <span className="text-muted-foreground text-[0.7rem] font-medium tracking-[0.14em] uppercase">
+        <DialogHeader className="border-border shrink-0 border-b pt-5 pr-14 pb-4 pl-6 text-left">
+          <span className="text-muted-foreground text-[0.7rem] font-medium tracking-[0.14em] wrap-anywhere uppercase">
             {accountName}
           </span>
           <DialogTitle className="font-display text-2xl">{t("shareTitle")}</DialogTitle>
@@ -95,9 +95,16 @@ export function ShareDialog({
           ) : (
             <div className="border-border divide-border divide-y rounded-lg border">
               {groups.map((g) => (
-                <div key={g.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                  <span className="truncate text-sm font-medium">{g.name}</span>
+                <div
+                  key={g.id}
+                  data-slot="share-row"
+                  className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3"
+                >
+                  <span className="min-w-0 flex-auto text-sm font-medium wrap-anywhere">
+                    {g.name}
+                  </span>
                   <NativeSelect
+                    className="ml-auto shrink-0"
                     aria-label={g.name}
                     value={shares[g.id] ?? "NONE"}
                     disabled={pending}
