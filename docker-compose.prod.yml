@@ -1,4 +1,4 @@
-# Production stack (README "Self-hosting"). Needs app.env, db.env and keyring/keyfile
+# Production stack (docs/self-hosting.md). Needs app.env, db.env and keyring/keyfile
 # next to this file; no repo checkout.
 name: bilan
 
