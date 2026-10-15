@@ -20,8 +20,8 @@ const intlMiddleware = createIntlMiddleware({
   localeCookie: { maxAge: LOCALE_COOKIE_MAX_AGE },
 });
 
-// Spec §6.6 — security headers attached to every (non-static) page response; /api gets
-// its own from next.config.ts.
+// Spec §6.6 — security headers attached to every page response (static files excluded by
+// the matcher); /api gets its own from next.config.ts.
 //
 // CSP note (scope 8.5): a per-request nonce was evaluated but not shipped. The
 // app authors no inline <script> (the theme is server-rendered, no pre-paint
@@ -106,6 +106,11 @@ export default async function middleware(req: NextRequest) {
   return withSecurityHeaders(intlMiddleware(new NextRequest(req, { headers })));
 }
 
+// Real files are listed rather than excluding every dotted path: an unknown dotted path
+// then gets the locale redirect, the localized 404 and the security headers like any other
+// (tests/unit/server/proxy-matcher.test.ts keeps this list in sync with public/ and app/).
 export const config = {
-  matcher: ["/((?!api|_next|_vercel|.*\\..*).*)"],
+  matcher: [
+    "/((?!api|_next|_vercel|icons/|sw\\.js|favicon\\.ico|icon\\.png|apple-icon\\.png|manifest\\.webmanifest).*)",
+  ],
 };

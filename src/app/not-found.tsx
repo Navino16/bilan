@@ -9,7 +9,8 @@ import { getAppName } from "@/server/services/settings/app-settings";
 const MESSAGES = { fr, en };
 
 // Rendered outside `[locale]/layout.tsx` (root layout is a pass-through) for paths the
-// proxy skips (dotted, /api/*): it provides its own document and negotiates the locale.
+// proxy skips that match no file (e.g. /icons/missing.png): it provides its own document
+// and negotiates the locale.
 export default async function RootNotFound() {
   const h = await headers();
   const locale = negotiateLocale(h.get("cookie"), h.get("accept-language"));

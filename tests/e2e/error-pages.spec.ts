@@ -49,7 +49,7 @@ test.describe("error pages", () => {
     });
   }
 
-  test("a top-level path bypassing the locale proxy renders the themed root 404", async ({
+  test("an unknown dotted path renders the themed localized 404", async ({
     page,
     context,
     baseURL,
@@ -58,7 +58,6 @@ test.describe("error pages", () => {
       { name: "bilan-theme", value: "dark", url: baseURL! },
       { name: "NEXT_LOCALE", value: "fr", url: baseURL! },
     ]);
-    // A dotted path is excluded by the proxy matcher, so the root not-found handles it.
     const res = await page.goto("/does-not-exist.xyz", {
       waitUntil: "domcontentloaded",
       timeout: 90_000,
@@ -68,7 +67,7 @@ test.describe("error pages", () => {
     await expect(page.locator("html")).toHaveClass(/\bdark\b/);
   });
 
-  test("the root 404 follows the locale cookie, then the browser language (#245)", async ({
+  test("an unknown dotted path follows the locale cookie, then the browser language (#245)", async ({
     page,
     context,
     baseURL,
@@ -87,6 +86,15 @@ test.describe("error pages", () => {
       "href",
       "/en/dashboard",
     );
+
+    // Goes through the proxy like any page: locale redirect and security headers (#249).
+    const html = await page.request.get("/does-not-exist.xyz", {
+      headers: { "Accept-Language": "en-US,en;q=0.9" },
+    });
+    expect(html.status()).toBe(404);
+    expect(html.url()).toMatch(/\/en\/does-not-exist\.xyz$/);
+    expect(html.headers()["content-security-policy"]).toContain("default-src 'self'");
+    expect(html.headers()["x-content-type-options"]).toBe("nosniff");
 
     const api = await page.request.get("/api/nope");
     expect(api.status()).toBe(404);
