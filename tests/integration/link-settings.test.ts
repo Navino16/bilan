@@ -82,7 +82,7 @@ describe("link suggestion settings", () => {
     ).rejects.toBeInstanceOf(PreferenceInputError);
     await expect(
       updateLinkSuggestionSettings(owner, { windowDays: 3, minAmount: -1 }, "fr"),
-    ).rejects.toBeInstanceOf(PreferenceInputError);
+    ).rejects.toMatchObject({ fieldErrors: { minAmount: "TOO_SMALL" } });
   });
 
   it("drives suggestPairs: the window and the minimum amount filter pairs", async () => {

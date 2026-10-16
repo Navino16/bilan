@@ -364,7 +364,7 @@ When a recurring budget's period ends, a **Renew** button on its card creates th
 
 The **⋮** menu on a budget's card or details page offers **Edit**, **Archive** and **Delete**.
 
-- **Archive** a budget you no longer follow but want to keep. It leaves the list, the dashboard and the **Assign to a budget** menu, and it is no longer renewed. Its lines and assignments are kept. Archived budgets are grouped under **Archived budgets** at the bottom of the list: open one to view it, or choose **Unarchive** in its menu to bring it back.
+- **Archive** a budget you no longer follow but want to keep. It leaves the list, the dashboard and the **Assign to a budget** menu, and it is no longer renewed. Its lines and assignments are kept: a transaction's details still show its assignment, marked **Archived**, and you can remove it. Archived budgets are grouped under **Archived budgets** at the bottom of the list: open one to view it, or choose **Unarchive** in its menu to bring it back.
 - **Delete** removes the budget and its lines. Transactions are not affected, and the other periods of a recurring budget are kept.
 
 ### Include or exclude a transaction

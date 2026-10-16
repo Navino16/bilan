@@ -420,7 +420,8 @@
       "INVALID_LINE": "A line uses a category or account that isn’t available for this budget.",
       "AMOUNT_INVALID": "Invalid amount. Examples: -12.34 or 1,234.56.",
       "AMOUNT_AMBIGUOUS": "Ambiguous amount: write 1234 or 1.23 (no lone thousands separator).",
-      "AMOUNT_PRECISION": "The amount can’t have more than 2 decimals."
+      "AMOUNT_PRECISION": "The amount can’t have more than 2 decimals.",
+      "ARCHIVED": "This budget is archived: unarchive it to assign transactions to it."
     },
     "status": {
       "OK": "On track",
@@ -1818,11 +1819,11 @@
           "updated": "Budget updated",
           "deleted": "Budget deleted",
           "archived": "Budget archived",
+          "unarchived": "Budget unarchived",
           "assignment": {
             "create": "Transaction assigned to a budget",
             "delete": "Budget assignment removed"
-          },
-          "unarchived": "Budget unarchived"
+          }
         },
         "link": {
           "created": "Link created",

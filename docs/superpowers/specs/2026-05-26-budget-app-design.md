@@ -807,7 +807,7 @@ Creation (`/budgets/new`):
 - Lines: each line targets a category, an account, both, or just a label, with a `plannedAmount`.
 - Optional `description` (≤ 500 chars) and per-line `label` (≤ 80 chars, shown instead of the category/account name), both editable in the create/edit form.
 
-Archive (#260): a budget manager can archive/unarchive (`budgets.service.archiveBudget` / `unarchiveBudget`, audit `budget.archived` / `budget.unarchived`). Archived budgets leave the list (shown in a collapsed "Archived budgets" section), the dashboard, the assignment menu and the roll cron; their detail stays readable and their menu only offers unarchive/delete.
+Archive (#260): a budget manager can archive/unarchive (`budgets.service.archiveBudget` / `unarchiveBudget`, audit `budget.archived` / `budget.unarchived`). Archived budgets leave the list (shown in a collapsed "Archived budgets" section), the dashboard, the assignment menu and the roll cron; their detail stays readable and their menu only offers unarchive/delete. An archived budget takes no new assignment (`ARCHIVED`) and is never rolled, even by a direct call; existing assignments stay listed (marked archived) and removable in the transaction panel.
 
 `budgets.service.computeLine(line, budget)`:
 1. Select transactions visible to the budget's owner: own accounts + accounts shared via groups, within `[periodStart, periodEnd]`.

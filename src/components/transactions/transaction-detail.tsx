@@ -23,7 +23,7 @@ import { Pencil, Trash2, Unlink } from "lucide-react";
 import { formatPeriodLabel } from "@/lib/period";
 import { formatDate, formatLongDay } from "@/lib/format";
 import { editScope } from "@/lib/transaction-edit";
-import type { AssignableBudget } from "@/server/services/budgets";
+import type { AssignableBudget, TxAssignment } from "@/server/services/budgets";
 import type { LinkSummary } from "@/server/services/links";
 
 export type DetailItem = {
@@ -94,7 +94,10 @@ export function TransactionDetail({
   const locale = useLocale();
   const router = useRouter();
 
-  const [assignments, setAssignments] = useState<Record<string, string>>({});
+  const [loadedAssignments, setAssignments] = useState<{ txId: string; rows: TxAssignment[] }>({
+    txId: "",
+    rows: [],
+  });
   const [chosen, setChosen] = useState("");
   const [, startAssign] = useTransition();
   // Keyed by transaction id so switching rows needs no reset effect.
@@ -135,25 +138,25 @@ export function TransactionDetail({
     });
   }
 
-  // Lazily load which budgets this transaction is assigned to when the panel opens.
+  // Lazily load which budgets this transaction is assigned to when the panel opens,
+  // even with no assignable budget: an assignment to an archived one stays removable.
   // Only the async result sets state (a synchronous reset here would trip
-  // react-hooks/set-state-in-effect); the section isn't rendered without an item.
+  // react-hooks/set-state-in-effect); rows of another transaction are ignored.
   const itemId = item?.id;
   useEffect(() => {
-    if (!itemId || budgets.length === 0) return;
+    if (!itemId) return;
     let active = true;
     listAssignmentsForTxAction(itemId).then((rows) => {
-      if (active) setAssignments(Object.fromEntries(rows.map((r) => [r.budgetId, r.mode])));
+      if (active) setAssignments({ txId: itemId, rows });
     });
     return () => {
       active = false;
     };
-  }, [itemId, budgets.length]);
+  }, [itemId]);
+  const assignments = loadedAssignments.txId === itemId ? loadedAssignments.rows : [];
 
   function refreshAssignments(txId: string) {
-    listAssignmentsForTxAction(txId).then((rows) =>
-      setAssignments(Object.fromEntries(rows.map((r) => [r.budgetId, r.mode]))),
-    );
+    listAssignmentsForTxAction(txId).then((rows) => setAssignments({ txId, rows }));
   }
 
   function assign(mode: "INCLUDE" | "EXCLUDE") {
@@ -376,82 +379,82 @@ export function TransactionDetail({
                   </Field>
                 )}
 
-                {budgets.length > 0 && (
+                {(budgets.length > 0 || assignments.length > 0) && (
                   <Field label={tb("title")}>
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <NativeSelect
-                          aria-label={tb("choose")}
-                          value={chosen}
-                          onChange={(e) => setChosen(e.target.value)}
-                          className="min-w-0 flex-1"
-                        >
-                          <option value="">{tb("choose")}</option>
-                          {[...budgetGroups].map(([groupId, list]) => (
-                            <optgroup
-                              key={groupId}
-                              label={list[0].groupName ?? tBudgets("scopePersonal")}
-                            >
-                              {list.map((b) => (
-                                <option key={b.id} value={b.id}>
-                                  {budgetLabel(b)}
-                                </option>
-                              ))}
-                            </optgroup>
-                          ))}
-                        </NativeSelect>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={!chosen}
-                          onClick={() => assign("INCLUDE")}
-                        >
-                          {tb("include")}
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={!chosen}
-                          onClick={() => assign("EXCLUDE")}
-                        >
-                          {tb("exclude")}
-                        </Button>
-                      </div>
-
-                      {Object.keys(assignments).length > 0 && (
-                        <ul className="space-y-1.5">
-                          {budgets
-                            .filter((b) => assignments[b.id])
-                            .map((b) => (
-                              <li
-                                key={b.id}
-                                className="border-border flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                      {budgets.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <NativeSelect
+                            aria-label={tb("choose")}
+                            value={chosen}
+                            onChange={(e) => setChosen(e.target.value)}
+                            className="min-w-0 flex-1"
+                          >
+                            <option value="">{tb("choose")}</option>
+                            {[...budgetGroups].map(([groupId, list]) => (
+                              <optgroup
+                                key={groupId}
+                                label={list[0].groupName ?? tBudgets("scopePersonal")}
                               >
-                                <span className="min-w-0 flex-1 truncate">
-                                  {budgetLabel(b)}
-                                  {b.groupName && (
-                                    <span className="text-muted-foreground"> · {b.groupName}</span>
-                                  )}
-                                </span>
-                                <Badge
-                                  variant={
-                                    assignments[b.id] === "EXCLUDE" ? "outline" : "secondary"
-                                  }
-                                >
-                                  {tb(`mode${assignments[b.id]}`)}
-                                </Badge>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => unassign(b.id)}
-                                >
-                                  {tb("remove")}
-                                </Button>
-                              </li>
+                                {list.map((b) => (
+                                  <option key={b.id} value={b.id}>
+                                    {budgetLabel(b)}
+                                  </option>
+                                ))}
+                              </optgroup>
                             ))}
+                          </NativeSelect>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={!chosen}
+                            onClick={() => assign("INCLUDE")}
+                          >
+                            {tb("include")}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={!chosen}
+                            onClick={() => assign("EXCLUDE")}
+                          >
+                            {tb("exclude")}
+                          </Button>
+                        </div>
+                      )}
+
+                      {assignments.length > 0 && (
+                        <ul className="space-y-1.5">
+                          {assignments.map(({ budget: b, mode }) => (
+                            <li
+                              key={b.id}
+                              data-slot="budget-assignment"
+                              className="border-border flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                            >
+                              <span className="min-w-0 flex-1 truncate">
+                                {budgetLabel(b)}
+                                {b.groupName && (
+                                  <span className="text-muted-foreground"> · {b.groupName}</span>
+                                )}
+                              </span>
+                              {b.archived && (
+                                <Badge variant="outline">{tBudgets("archivedBadge")}</Badge>
+                              )}
+                              <Badge variant={mode === "EXCLUDE" ? "outline" : "secondary"}>
+                                {tb(`mode${mode as "INCLUDE" | "EXCLUDE"}`)}
+                              </Badge>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => unassign(b.id)}
+                              >
+                                {tb("remove")}
+                              </Button>
+                            </li>
+                          ))}
                         </ul>
                       )}
                     </div>

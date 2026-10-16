@@ -11,7 +11,9 @@ import {
   assignTransaction,
   unassignTransaction,
   listAssignableBudgets,
+  listAssignmentsForTx,
   rollRecurring,
+  rollRecurringSystem,
   getCurrentBudget,
   listRollableTemplates,
   BudgetAccessError,
@@ -908,6 +910,48 @@ describe("archive / description / line labels", () => {
     await archiveBudget(id, { id: owner });
     const rollable = await listRollableTemplates(new Date("2026-05-01T00:00:00.000Z"));
     expect(rollable.map((r) => r.id)).not.toContain(id);
+  });
+
+  it("an archived budget is never rolled, even by a direct call", async () => {
+    const { id } = await createBudget({ ...baseInput, recurring: true }, { id: owner });
+    await archiveBudget(id, { id: owner });
+    expect(await rollRecurring(id, { id: owner })).toEqual({ created: false });
+    expect(await rollRecurringSystem(id)).toEqual({ created: false });
+    expect(await db.budget.count({ where: { parentBudgetId: id } })).toBe(0);
+  });
+
+  it("keeps an assignment to an archived budget visible and removable, but takes no new one", async () => {
+    await db.budgetAssignment.deleteMany({});
+    const t = await tx("2026-03-06T00:00:00.000Z", -25, null);
+    const { id } = await createBudget(baseInput, { id: owner });
+    await assignTransaction({ budgetId: id, transactionId: t, mode: "INCLUDE" }, { id: owner });
+    await archiveBudget(id, { id: owner });
+
+    expect(await listAssignmentsForTx(t, owner)).toEqual([
+      {
+        budgetId: id,
+        mode: "INCLUDE",
+        budget: expect.objectContaining({ id, name: "Mars", archived: true, groupName: null }),
+      },
+    ]);
+    await expect(
+      assignTransaction({ budgetId: id, transactionId: t, mode: "EXCLUDE" }, { id: owner }),
+    ).rejects.toThrow("ARCHIVED");
+
+    await unassignTransaction({ budgetId: id, transactionId: t }, { id: owner });
+    expect(await listAssignmentsForTx(t, owner)).toEqual([]);
+  });
+
+  it("lists only the assignments on budgets the viewer can read", async () => {
+    await db.budgetAssignment.deleteMany({});
+    const t = await tx("2026-03-06T00:00:00.000Z", -25, null);
+    const shared = await createBudget({ ...baseInput, groupId }, { id: owner });
+    await assignTransaction(
+      { budgetId: shared.id, transactionId: t, mode: "EXCLUDE" },
+      { id: owner },
+    );
+    expect((await listAssignmentsForTx(t, owner)).map((a) => a.budgetId)).toEqual([shared.id]);
+    expect(await listAssignmentsForTx(t, stranger)).toEqual([]);
   });
 
   it("only a budget manager may archive or unarchive it", async () => {

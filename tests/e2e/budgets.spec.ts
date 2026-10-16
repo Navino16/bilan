@@ -228,7 +228,10 @@ test.describe("budgets", () => {
   test("edits a description and line labels, archives and unarchives a budget", async ({
     page,
   }) => {
-    const name = `Archive ${Date.now()}`;
+    const stamp = Date.now();
+    const name = `Archive ${stamp}`;
+    const label = `Resto ${stamp}`;
+    const renamed = `Sorties ${stamp}`;
     await page.goto("/fr/budgets");
     await expect(async () => {
       await page.getByRole("button", { name: /nouveau budget/i }).click();
@@ -237,59 +240,66 @@ test.describe("budgets", () => {
     await page.fill('input[name="name"]', name);
     await page.fill('textarea[name="description"]', "Sorties et restaurants");
     await page.fill('input[name="periodStart"]', "2033-01-01");
-    await page.getByRole("textbox", { name: "Libellé" }).fill("Restos");
+    await page.getByRole("textbox", { name: "Libellé" }).fill(label);
     await page.fill('input[name="plannedAmount"]', "120");
     await page.getByRole("button", { name: /créer le budget/i }).click();
 
     const card = page.locator('[data-slot="budget-card"]').filter({ hasText: name });
+    const archived = page.locator('[data-slot="archived-budgets"]');
+    const archivedRow = archived.locator('[data-slot="archived-budget"]').filter({ hasText: name });
     await expect(card.locator('[data-slot="budget-description"]')).toHaveText(
       "Sorties et restaurants",
       { timeout: 15_000 },
     );
-    await card.getByRole("link").first().click();
-    await expect(page.getByRole("heading", { name })).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator('[data-slot="budget-description"]')).toHaveText(
-      "Sorties et restaurants",
-    );
-    await expect(page.getByText("Restos", { exact: true })).toBeVisible();
+    try {
+      await card.getByRole("link").first().click();
+      await expect(page.getByRole("heading", { name })).toBeVisible({ timeout: 15_000 });
+      await expect(page.locator('[data-slot="budget-description"]')).toHaveText(
+        "Sorties et restaurants",
+      );
+      await expect(page.getByText(label, { exact: true })).toBeVisible();
 
-    // The edit form reads the description and the label back.
-    await page.getByRole("button", { name: `Actions pour ${name}` }).click();
-    await page.getByRole("menuitem", { name: /modifier/i }).click();
-    await expect(page.locator('textarea[name="description"]')).toHaveValue(
-      "Sorties et restaurants",
-    );
-    await expect(page.getByRole("textbox", { name: "Libellé" })).toHaveValue("Restos");
-    await page.getByRole("textbox", { name: "Libellé" }).fill("Restaurants");
-    await page.getByRole("button", { name: /enregistrer/i }).click();
-    await expect(page.getByText("Restaurants", { exact: true })).toBeVisible({ timeout: 15_000 });
+      // The edit form reads the description and the label back.
+      await page.getByRole("button", { name: `Actions pour ${name}` }).click();
+      await page.getByRole("menuitem", { name: /modifier/i }).click();
+      await expect(page.locator('textarea[name="description"]')).toHaveValue(
+        "Sorties et restaurants",
+      );
+      const labelInput = page.getByRole("textbox", { name: "Libellé" });
+      await expect(labelInput).toHaveValue(label);
+      await labelInput.fill(renamed);
+      await page.getByRole("button", { name: /enregistrer/i }).click();
+      await expect(page.getByText(renamed, { exact: true })).toBeVisible({ timeout: 15_000 });
 
-    await page.getByRole("button", { name: `Actions pour ${name}` }).click();
-    await page.getByRole("menuitem", { name: /^archiver$/i }).click();
-    await page
-      .locator('[data-slot="budget-archive-dialog"]')
-      .getByRole("button", { name: /^archiver$/i })
-      .click();
-    await expect(page.getByText("Archivé", { exact: true })).toBeVisible({ timeout: 15_000 });
+      await page.getByRole("button", { name: `Actions pour ${name}` }).click();
+      await page.getByRole("menuitem", { name: /^archiver$/i }).click();
+      await page
+        .locator('[data-slot="budget-archive-dialog"]')
+        .getByRole("button", { name: /^archiver$/i })
+        .click();
+      await expect(page.getByText("Archivé", { exact: true })).toBeVisible({ timeout: 15_000 });
 
-    await page.goto("/fr/budgets");
-    await expect(card).toHaveCount(0);
-    const archived = page.locator('[data-slot="archived-budgets"]');
-    await archived.locator("summary").click();
-    const row = archived.locator('[data-slot="archived-budget"]').filter({ hasText: name });
-    await expect(row).toBeVisible();
-    await row.getByRole("button", { name: `Actions pour ${name}` }).click();
-    await expect(page.getByRole("menuitem", { name: /modifier/i })).toHaveCount(0);
-    await page.getByRole("menuitem", { name: /désarchiver/i }).click();
-    await expect(card).toHaveCount(1, { timeout: 15_000 });
-
-    await card.getByRole("button", { name: `Actions pour ${name}` }).click();
-    await page.getByRole("menuitem", { name: /supprimer/i }).click();
-    await page
-      .locator('[data-slot="budget-delete-dialog"]')
-      .getByRole("button", { name: /^supprimer$/i })
-      .click();
-    await expect(card).toHaveCount(0, { timeout: 15_000 });
+      await page.goto("/fr/budgets");
+      await expect(card).toHaveCount(0);
+      await archived.locator("summary").click();
+      await expect(archivedRow).toBeVisible();
+      await archivedRow.getByRole("button", { name: `Actions pour ${name}` }).click();
+      await expect(page.getByRole("menuitem", { name: /modifier/i })).toHaveCount(0);
+      await page.getByRole("menuitem", { name: /désarchiver/i }).click();
+      await expect(card).toHaveCount(1, { timeout: 15_000 });
+    } finally {
+      // Delete it whether it ended up active or archived.
+      await page.goto("/fr/budgets");
+      if ((await card.count()) === 0) await archived.locator("summary").click();
+      const holder = (await card.count()) > 0 ? card : archivedRow;
+      await holder.getByRole("button", { name: `Actions pour ${name}` }).click();
+      await page.getByRole("menuitem", { name: /supprimer/i }).click();
+      await page
+        .locator('[data-slot="budget-delete-dialog"]')
+        .getByRole("button", { name: /^supprimer$/i })
+        .click();
+      await expect(holder).toHaveCount(0, { timeout: 15_000 });
+    }
   });
 
   test("the dashboard shows a budget snapshot", async ({ page }) => {

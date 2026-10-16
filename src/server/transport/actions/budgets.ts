@@ -14,6 +14,7 @@ import {
   listAssignmentsForTx,
   rollRecurring,
   BudgetAccessError,
+  type TxAssignment,
 } from "@/server/services/budgets";
 import { budgetInputSchema } from "@/lib/validation/budget";
 import { AMOUNT_ERRORS } from "@/lib/amount";
@@ -159,9 +160,7 @@ export async function unassignTransactionAction(
 // currently assigned to (INCLUDE/EXCLUDE). Requires a session AND that the
 // caller can read the transaction's account — otherwise a session holder could
 // enumerate any transaction id and learn its budget assignments (IDOR).
-export async function listAssignmentsForTxAction(
-  transactionId: string,
-): Promise<{ budgetId: string; mode: string }[]> {
+export async function listAssignmentsForTxAction(transactionId: string): Promise<TxAssignment[]> {
   const user = await requireSession();
   if (!transactionId) return [];
   const txRow = await db.transaction.findUnique({
@@ -170,7 +169,7 @@ export async function listAssignmentsForTxAction(
   });
   if (!txRow) return [];
   if (!(await canReadAccount(user.id, txRow.accountId))) return [];
-  return listAssignmentsForTx(transactionId);
+  return listAssignmentsForTx(transactionId, user.id);
 }
 
 export async function rollRecurringAction(

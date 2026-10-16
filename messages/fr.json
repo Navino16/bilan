@@ -420,7 +420,8 @@
       "INVALID_LINE": "Une ligne utilise une catégorie ou un compte non disponible pour ce budget.",
       "AMOUNT_INVALID": "Montant invalide. Exemples : -12,34 ou 1 234,56.",
       "AMOUNT_AMBIGUOUS": "Montant ambigu : écrivez 1234 ou 1,23 (sans séparateur de milliers seul).",
-      "AMOUNT_PRECISION": "Le montant ne peut pas avoir plus de 2 décimales."
+      "AMOUNT_PRECISION": "Le montant ne peut pas avoir plus de 2 décimales.",
+      "ARCHIVED": "Ce budget est archivé : désarchivez-le pour y affecter des transactions."
     },
     "status": {
       "OK": "Dans le budget",
@@ -1818,11 +1819,11 @@
           "updated": "Budget modifié",
           "deleted": "Budget supprimé",
           "archived": "Budget archivé",
+          "unarchived": "Budget désarchivé",
           "assignment": {
             "create": "Transaction affectée à un budget",
             "delete": "Affectation de budget retirée"
-          },
-          "unarchived": "Budget désarchivé"
+          }
         },
         "link": {
           "created": "Liaison créée",

@@ -364,7 +364,7 @@ Quand la période d’un budget récurrent se termine, un bouton **Renouveler** 
 
 Le menu **⋮** de la carte d’un budget ou de sa page de détail propose **Modifier**, **Archiver** et **Supprimer**.
 
-- **Archivez** un budget que vous ne suivez plus mais que vous voulez garder. Il quitte la liste, le tableau de bord et le menu **Assigner à un budget**, et il n’est plus renouvelé. Ses lignes et ses affectations sont conservées. Les budgets archivés sont regroupés sous **Budgets archivés** en bas de la liste : ouvrez-en un pour le consulter, ou choisissez **Désarchiver** dans son menu pour le rétablir.
+- **Archivez** un budget que vous ne suivez plus mais que vous voulez garder. Il quitte la liste, le tableau de bord et le menu **Assigner à un budget**, et il n’est plus renouvelé. Ses lignes et ses affectations sont conservées : le détail d’une transaction affiche toujours son affectation, marquée **Archivé**, et vous pouvez la retirer. Les budgets archivés sont regroupés sous **Budgets archivés** en bas de la liste : ouvrez-en un pour le consulter, ou choisissez **Désarchiver** dans son menu pour le rétablir.
 - **Supprimer** efface le budget et ses lignes. Les transactions ne sont pas touchées, et les autres périodes d’un budget récurrent sont conservées.
 
 ### Inclure ou exclure une transaction

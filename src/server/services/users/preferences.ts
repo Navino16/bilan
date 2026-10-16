@@ -7,6 +7,7 @@ import {
   type LinkSettings,
   type LinkSettingsInput,
 } from "@/lib/validation/link-settings";
+import { fieldErrorsFromZod, type FieldErrors } from "@/lib/validation/field-errors";
 
 // Never overwrites: an existing row holds a locale the user already chose.
 export async function storeSignupLocale(
@@ -37,7 +38,11 @@ export async function syncPreferredLocale(
   return true;
 }
 
-export class PreferenceInputError extends Error {}
+export class PreferenceInputError extends Error {
+  constructor(readonly fieldErrors: FieldErrors) {
+    super("INVALID");
+  }
+}
 
 export async function getLinkSuggestionSettings(
   userId: string,
@@ -61,7 +66,7 @@ export async function updateLinkSuggestionSettings(
   db: PrismaClient = defaultDb,
 ): Promise<LinkSettings> {
   const parsed = linkSettingsSchema.safeParse(input);
-  if (!parsed.success) throw new PreferenceInputError("INVALID");
+  if (!parsed.success) throw new PreferenceInputError(fieldErrorsFromZod(parsed.error, input));
   const data = {
     linkWindowDays: parsed.data.windowDays,
     linkMinAmount: parsed.data.minAmount,

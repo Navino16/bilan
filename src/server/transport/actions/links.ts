@@ -10,7 +10,10 @@ import {
   restoreSuggestion,
   type LinkSummary,
 } from "@/server/services/links";
-import { updateLinkSuggestionSettings } from "@/server/services/users/preferences";
+import {
+  PreferenceInputError,
+  updateLinkSuggestionSettings,
+} from "@/server/services/users/preferences";
 import { linkSettingsSchema } from "@/lib/validation/link-settings";
 import { AMOUNT_ERRORS } from "@/lib/amount";
 import { issueCode } from "@/lib/validation/amount";
@@ -109,9 +112,15 @@ export async function updateLinkSettingsAction(
     return invalidInput(parsed.error, input, issueCode(parsed.error.issues, AMOUNT_ERRORS));
   const locale = formData.get("locale");
   try {
-    await updateLinkSuggestionSettings(user.id, input, isLocale(locale) ? locale : defaultLocale);
+    await updateLinkSuggestionSettings(
+      user.id,
+      parsed.data,
+      isLocale(locale) ? locale : defaultLocale,
+    );
     return { ok: true };
-  } catch {
+  } catch (e) {
+    if (e instanceof PreferenceInputError)
+      return { ok: false, error: "INVALID", fieldErrors: e.fieldErrors };
     return { ok: false, error: "FAILED" };
   }
 }
