@@ -5,6 +5,7 @@ import { appSettings, getAppName } from "@/server/services/settings/app-settings
 import { listSsoProviders } from "@/server/services/users/identities";
 import { postLoginPath } from "@/lib/callback-url";
 import { loginSsoError } from "@/lib/sso-errors";
+import { isRegistrationClosed } from "@/lib/registration";
 import { LoginForm, type LoginNotice } from "@/components/auth/login-form";
 import { pageTitle } from "@/i18n/metadata";
 
@@ -40,9 +41,11 @@ export default async function LoginPage({
         : redirectTo,
     );
   }
-  const [credentialsEnabled, ssoProviders, appName] = await Promise.all([
+  const [credentialsEnabled, mode, ssoProviders, signUpProviders, appName] = await Promise.all([
     appSettings.get<boolean>("credentials_enabled"),
+    appSettings.get<string>("registration_mode"),
     listSsoProviders(),
+    listSsoProviders({ signUpOnly: true }),
     getAppName(),
   ]);
   const notice: LoginNotice | undefined =
@@ -55,6 +58,13 @@ export default async function LoginPage({
       notice={notice}
       ssoError={error ? loginSsoError(String(error)) : undefined}
       credentialsEnabled={credentialsEnabled ?? true}
+      registrationOpen={
+        !isRegistrationClosed({
+          mode: mode ?? "INVITE_ONLY",
+          credentialsEnabled: credentialsEnabled ?? true,
+          signUpProviders: signUpProviders.length,
+        })
+      }
       ssoProviders={ssoProviders}
       appName={appName}
     />

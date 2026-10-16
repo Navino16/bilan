@@ -43,7 +43,7 @@ Cliquez sur **Créer un compte** depuis la page de connexion. Ce que vous voyez 
 
 - **Inscriptions ouvertes** : renseignez **Nom**, **Adresse e-mail**, **Mot de passe** et **Confirmer le mot de passe**, puis cliquez sur **Créer le compte**.
 - **Sur invitation** (le réglage par défaut) : un champ **Jeton d’invitation** apparaît en premier. Votre administrateur vous transmet un jeton, ou un lien d’inscription qui le remplit pour vous.
-- **Fermées** : la page affiche « Les inscriptions sont fermées sur cette instance. » Demandez à votre administrateur de créer votre compte.
+- **Fermées** : la page de connexion n’affiche pas de lien **Créer un compte**, et la page d’inscription affiche « Les inscriptions sont fermées sur cette instance. » Demandez à votre administrateur de créer votre compte.
 
 Le mot de passe doit faire au moins 12 caractères par défaut (votre administrateur peut choisir un autre minimum). Vous êtes connecté aussitôt, et Bilan crée un jeu de catégories de départ dans votre langue.
 

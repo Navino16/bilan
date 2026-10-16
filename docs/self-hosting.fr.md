@@ -195,9 +195,10 @@ vers l'assistant :
 
 1. **Compte administrateur** : crée le premier compte, avec le rôle de super administrateur.
 2. **E-mail (SMTP)** : facultatif, configurable plus tard dans l'administration.
-3. **Connexion externe** : fournisseur OIDC facultatif. L'assistant affiche l'URL de
-   redirection à déclarer chez votre fournisseur d'identité.
-4. **Inscriptions** : _Sur invitation_ (par défaut, recommandé), _Ouvertes_ ou _Désactivées_
+3. **Connexion externe** : fournisseur OIDC facultatif (Google s'ajoute ensuite, depuis
+   l'administration). L'assistant affiche l'URL de redirection à déclarer chez votre
+   fournisseur d'identité.
+4. **Mode d'inscription** : _Sur invitation_ (par défaut, recommandé), _Ouvert_ ou _Désactivé_
    (seul un administrateur crée les comptes).
 
 L'assistant répond 404 dès qu'un utilisateur existe. Tout le reste (SMTP, fournisseurs SSO, mode

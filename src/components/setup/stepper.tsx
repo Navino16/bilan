@@ -46,7 +46,7 @@ export type SetupData = {
 const EMPTY_SMTP: SmtpData = {
   host: "",
   port: "587",
-  secure: true,
+  secure: false,
   username: "",
   password: "",
   fromAddress: "",

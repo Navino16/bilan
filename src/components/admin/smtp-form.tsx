@@ -115,11 +115,15 @@ export function SmtpForm({ defaults }: { defaults: SmtpDefaults }) {
             <NativeSelect
               id="smtp-secure"
               name="secure"
-              defaultValue={String(defaults?.secure ?? true)}
+              defaultValue={String(defaults?.secure ?? false)}
+              aria-describedby="smtp-secure-hint"
             >
-              <option value="true">{t("secureTls")}</option>
               <option value="false">{t("securePlain")}</option>
+              <option value="true">{t("secureTls")}</option>
             </NativeSelect>
+            <p id="smtp-secure-hint" className="text-muted-foreground text-xs">
+              {t("secureHint")}
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="smtp-enabled">{t("enabled")}</Label>

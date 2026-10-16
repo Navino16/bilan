@@ -6,6 +6,7 @@ import { grantRole, isActiveSuperAdmin, RoleChangeError } from "@/server/service
 import { seedDefaultCategories } from "@/server/services/categories/seed-defaults";
 import { storeSignupLocale } from "@/server/services/users/preferences";
 import { logEvent } from "@/server/services/audit";
+import { isSmtpEnabled } from "@/server/services/settings/smtp";
 import { env } from "@/env";
 import { defaultLocale, locales } from "@/i18n/config";
 import { nameSchema } from "@/lib/validation/name";
@@ -28,10 +29,11 @@ export type AdminCreateUserInput = z.input<typeof adminCreateUserSchema>;
 
 // Admin-provisions a user with a throwaway password, then sends the reset flow as a
 // "choose your password" mail (`setup=1`). The setup token is never returned or logged.
+// `setupMailSent` is false when no enabled SMTP config can deliver that mail.
 export async function adminCreateUser(
   input: AdminCreateUserInput,
   actor: { id: string },
-): Promise<{ id: string }> {
+): Promise<{ id: string; setupMailSent: boolean }> {
   const parsed = adminCreateUserSchema.parse(input);
   if (!mayHandleRole(await isActiveSuperAdmin(actor.id), parsed.role)) {
     throw new RoleChangeError("FORBIDDEN");
@@ -72,5 +74,5 @@ export async function adminCreateUser(
     entityId: user.id,
     metadata: { role: parsed.role },
   });
-  return { id: user.id };
+  return { id: user.id, setupMailSent: await isSmtpEnabled() };
 }

@@ -15,6 +15,7 @@ import { FieldError } from "@/components/forms/field-error";
 import type { SsoProviderView } from "@/server/services/users/identities";
 import { OrSeparator } from "./or-separator";
 import { SsoButtons } from "./sso-buttons";
+import { isRegistrationClosed } from "@/lib/registration";
 
 export function RegisterForm({
   locale,
@@ -48,7 +49,7 @@ export function RegisterForm({
     />
   );
 
-  if (mode === "DISABLED" || (!credentialsEnabled && ssoProviders.length === 0)) {
+  if (isRegistrationClosed({ mode, credentialsEnabled, signUpProviders: ssoProviders.length })) {
     return (
       <Alert>
         <AlertDescription>{t("closed")}</AlertDescription>

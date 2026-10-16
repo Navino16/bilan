@@ -123,12 +123,14 @@ export function StepOidc({
           {testing ? t("testing") : t("test")}
         </Button>
         {testResult?.ok && <span className="text-sm text-emerald-600">{t("testOk")}</span>}
-        {testResult && !testResult.ok && (
-          <span className="text-destructive text-sm">
-            {t("testFailed")} ({testResult.error})
-          </span>
-        )}
       </div>
+      {testResult && !testResult.ok && (
+        <p className="text-destructive text-sm" role="alert">
+          {t.has(`testError.${testResult.error}`)
+            ? t(`testError.${testResult.error}`)
+            : t("testFailed")}
+        </p>
+      )}
 
       <button
         type="button"

@@ -184,10 +184,10 @@ Open `APP_URL`. A fresh install (no user yet) redirects every page to the setup 
 
 1. **Admin account**: creates the first account, with the super admin role.
 2. **Email (SMTP)**: optional, can be configured later in Administration.
-3. **External login**: optional OIDC provider. The wizard shows the redirect URL to register
-   with your identity provider.
-4. **Registrations**: _Invite only_ (default, recommended), _Open_ or _Disabled_ (only an admin
-   creates accounts).
+3. **External login**: optional OIDC provider (Google is added later, from Administration). The
+   wizard shows the redirect URL to register with your identity provider.
+4. **Registration mode**: _Invite only_ (default, recommended), _Open_ or _Disabled_ (only an
+   admin creates accounts).
 
 The wizard answers 404 as soon as one user exists. Everything else (SMTP, SSO providers,
 registration mode, admin 2FA) is configured in the Administration pages, not in env files.

@@ -650,7 +650,7 @@ model ImportBatch {
 ```prisma
 model AuthProvider {
   id              String   @id @default(cuid())
-  type            String                              // credentials | oidc | google
+  type            String                              // oidc | google (password sign-in is the credentials_enabled setting)
   key             String   @unique                    // unique id for Better Auth
   displayName     String
   enabled         Boolean  @default(false)
@@ -743,15 +743,17 @@ If `User.count() === 0`, all routes (except `/setup`) redirect to `/setup`. Wiza
 ### 5.2 Login (multi-provider)
 
 Available providers on `/login`:
-- **Credentials** (email + password) — if enabled in settings.
+- **Credentials** (email + password) — if the `credentials_enabled` app setting is on (not an `AuthProvider` row). Turning it off is refused while a user would be left with no other usable sign-in method (#255), like deleting a provider.
 - **OIDC button(s)** — generated dynamically from `AuthProvider` table.
 - **Google** — if enabled.
 
+The "Create an account" link is only shown when `/register` offers a way to sign up (#255).
+
 Flow:
 - Credentials: form → Better Auth credentials provider → argon2id verify → if 2FA enabled, redirect to `/login/2fa` → create DB-backed session + httpOnly cookie → redirect to `/{locale}/dashboard`.
-- OIDC: Better Auth redirects to IdP → callback `/api/auth/callback/oidc-<key>` → session created → `/dashboard`.
+- OIDC: Better Auth redirects to IdP → callback `/api/auth/oauth2/callback/<key>` (generic OAuth plugin; Google: `/api/auth/callback/google`) → session created → `/dashboard`.
 
-Rate limit: 5 attempts / 15 minutes / IP → lockout. Failed attempts logged to `AuditLog`. Success also logged with IP + user-agent.
+Rate limit: see §6.7 (per IP + account, and per account). Failed attempts logged to `AuditLog`. Success also logged with IP + user-agent.
 
 Magic-link password reset: `/reset` → SMTP email → `/reset/[token]` → new password form → invalidates all tokens + active sessions.
 
@@ -759,7 +761,7 @@ Magic-link password reset: `/reset` → SMTP email → `/reset/[token]` → new 
 
 - `OPEN`: `/register` accessible to anyone.
 - `INVITE_ONLY`: `/register` requires `?invitation=<token>` (group) or `?adminToken=<token>` (admin signup token). Both validated server-side. Without token: shown a message + login link.
-- `DISABLED`: `/register` returns 404. Admin creates users from `/admin/users` (option to send magic-link `/setup-account/[token]` for the user to set their own password).
+- `DISABLED`: `/register` shows "Registration is closed on this instance." (also shown when password sign-in is off and no SSO provider allows sign-up). Admin creates users from `/admin/users`: the user is mailed a "choose your password" link (`/reset/<token>`, setup flavour of the reset flow, 1 h). Without SMTP no link is sent, and the admin is told so (#255).
 
 ### 5.4 Account creation & sharing
 
@@ -835,12 +837,14 @@ UI `/transactions/suggestions`: list pairs with Link / Ignore buttons. Ignore wr
 
 ### 5.9 Admin settings with hot reload
 
-`/admin/auth-providers` (permission `admin.settings.write`):
+`/admin/auth-providers` (permission `admin.security.write`, super admins only):
 1. `POST` (Server Action) → `settings.service.authProviders.update({ id, ...fields })` → encrypt clientSecret → invalidate cache → audit log.
 2. Better Auth handler reads config via cached wrapper (`cachedAuthProviders()`, 60s TTL).
 3. Update invalidates cache → next request rebuilds providers → effect immediate, no restart.
 
-Same pattern for SMTP, app settings, registration mode.
+Provider types are `oidc` and `google` only; a Google row stores just the client ID and secret.
+
+Same pattern for SMTP (`admin.security.write`) and app settings (`admin.settings.write`; the security keys — registration mode, password sign-in, password length, admin 2FA — also need `admin.security.write`).
 
 ### 5.10 RGPD: export & deletion
 
@@ -924,8 +928,8 @@ MVP: in-memory store (`@upstash/ratelimit` with memory adapter or custom).
 |---|---|---|
 | `/login` | 5 / 15min | IP + account (#243); wrong passwords only, the 2FA step shares it |
 | `/login` | 30 / 1h | Account (#243): caps guessing from rotating IPs; wrong passwords only |
-| `/register` | 3 / 1h | IP |
-| `/reset` | 3 / 1h | IP |
+| `/register` | 3 / 1h | E-mail address submitted (IP keys need a trusted proxy header) |
+| `/reset` | 3 / 1h | E-mail address submitted |
 | `/api/import/csv` | 10 / 1h | User |
 | `/api/import/pdf` | 10 / 1h | User |
 | API generic | 100 / 1min | User |

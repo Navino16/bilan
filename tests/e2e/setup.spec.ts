@@ -10,5 +10,5 @@ test.skip("setup wizard creates the first user", async ({ page }) => {
   await page.fill('input[name="email"]', "admin@bilan.local");
   await page.fill('input[name="password"]', "admin-strong-password-1!");
   await page.click('button[type="submit"]');
-  await expect(page.getByText(/registration|inscriptions/i)).toBeVisible();
+  await expect(page.getByText(/registration mode|mode d’inscription/i)).toBeVisible();
 });

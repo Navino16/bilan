@@ -28,6 +28,7 @@ type LoginProps = {
   notice?: LoginNotice;
   ssoError?: SsoError;
   credentialsEnabled: boolean;
+  registrationOpen: boolean;
   ssoProviders: SsoProviderView[];
   appName: string;
 };
@@ -44,6 +45,7 @@ function PasswordStep({
   notice,
   ssoError,
   credentialsEnabled,
+  registrationOpen,
   ssoProviders,
   appName,
   onRestart,
@@ -138,12 +140,17 @@ function PasswordStep({
         />
         <PasskeySignIn redirectTo={redirectTo} />
       </div>
-      <p className="text-muted-foreground text-center text-sm">
-        {t("noAccount")}{" "}
-        <Link href={`/${locale}/register`} className="text-foreground underline underline-offset-4">
-          {t("registerLink")}
-        </Link>
-      </p>
+      {registrationOpen && (
+        <p className="text-muted-foreground text-center text-sm">
+          {t("noAccount")}{" "}
+          <Link
+            href={`/${locale}/register`}
+            className="text-foreground underline underline-offset-4"
+          >
+            {t("registerLink")}
+          </Link>
+        </p>
+      )}
     </div>
   );
 }

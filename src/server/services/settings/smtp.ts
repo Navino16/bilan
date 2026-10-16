@@ -13,7 +13,8 @@ export const SMTP_SINGLETON_ID = "default";
 export const smtpSchema = z.object({
   host: z.string().min(1),
   port: z.coerce.number().int().min(1).max(65535),
-  secure: z.boolean().default(true),
+  // true: implicit TLS (465); false: nodemailer upgrades with STARTTLS when offered (587).
+  secure: z.boolean().default(false),
   username: z.string().min(1),
   // Empty keeps the stored password, but only for the same server and account (upsertSmtp).
   password: z.string(),

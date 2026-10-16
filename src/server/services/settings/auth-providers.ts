@@ -21,7 +21,8 @@ export const providerSchema = z
       .max(PROVIDER_KEY_MAX)
       .regex(/^[a-z0-9][a-z0-9_-]*$/)
       .refine((k) => !RESERVED_KEYS.includes(k)),
-    type: z.enum(["credentials", "oidc", "google"]),
+    // Password sign-in is the `credentials_enabled` app setting, not a provider row.
+    type: z.enum(["oidc", "google"]),
     displayName: z.string().trim().min(1).max(100),
     enabled: z.boolean(),
     issuer: z.string().trim().max(PROVIDER_TEXT_MAX).pipe(z.url()).optional().nullable(),
@@ -43,9 +44,7 @@ export const providerSchema = z
     // Better Auth's built-in Google provider owns the "google" providerId.
     if (p.key === "google" && p.type !== "google") ctx.addIssue({ code: "custom", path: ["key"] });
     if (p.type === "oidc" && !p.issuer) ctx.addIssue({ code: "custom", path: ["issuer"] });
-    if (p.type !== "credentials" && !p.clientId) {
-      ctx.addIssue({ code: "custom", path: ["clientId"] });
-    }
+    if (!p.clientId) ctx.addIssue({ code: "custom", path: ["clientId"] });
   });
 
 export type ProviderInput = z.input<typeof providerSchema>;
@@ -137,6 +136,15 @@ export function countLockouts(
   ).length;
 }
 
+// Users left with no usable sign-in method once password sign-in is turned off.
+export function countCredentialLockouts(
+  users: UserSignInMethods[],
+  usable: SignInUsability,
+): number {
+  const off = { ...usable, credentialsEnabled: false };
+  return users.filter((u) => u.hasPassword && !hasUsableSignIn(u, off)).length;
+}
+
 export type AuthProviderImpact = { linkedAccounts: number; lockedOut: number };
 
 type Client = Prisma.TransactionClient | PrismaClient;
@@ -226,19 +234,17 @@ export async function authProviderImpact(
   };
 }
 
-function needsSecret(p: ParsedProvider): boolean {
-  return p.type !== "credentials" && !p.clientSecret;
-}
-
+// Better Auth's Google provider only takes the client ID and secret.
 function columns(p: ParsedProvider, actorId: string) {
+  const oidc = p.type === "oidc";
   return {
     displayName: p.displayName,
     enabled: p.enabled,
-    issuer: p.issuer ?? null,
+    issuer: oidc ? (p.issuer ?? null) : null,
     clientId: p.clientId || null,
-    scopes: p.scopes || null,
-    config: buildAdvancedConfig(p) ?? Prisma.DbNull,
-    allowSignUp: p.type !== "credentials" && (p.allowSignUp ?? false),
+    scopes: oidc ? p.scopes || null : null,
+    config: (oidc && buildAdvancedConfig(p)) || Prisma.DbNull,
+    allowSignUp: p.allowSignUp ?? false,
     updatedById: actorId,
   };
 }
@@ -258,7 +264,7 @@ export async function createAuthProvider(
   database: PrismaClient = db,
 ): Promise<AuthProvider> {
   const parsed = providerSchema.parse(input);
-  if (needsSecret(parsed)) throw new AuthProviderError("SECRET_REQUIRED");
+  if (!parsed.clientSecret) throw new AuthProviderError("SECRET_REQUIRED");
   let row: AuthProvider;
   try {
     row = await database.$transaction(async (tx) => {
@@ -299,7 +305,7 @@ export async function updateAuthProvider(
   const existing = await database.authProvider.findUnique({ where: { key: parsed.key } });
   if (!existing) throw new AuthProviderError("NOT_FOUND");
   if (existing.type !== parsed.type) throw new AuthProviderError("TYPE_LOCKED");
-  if (needsSecret(parsed) && !existing.clientSecretEnc) {
+  if (!parsed.clientSecret && !existing.clientSecretEnc) {
     throw new AuthProviderError("SECRET_REQUIRED");
   }
   let row: AuthProvider;
@@ -320,6 +326,38 @@ export async function updateAuthProvider(
   invalidateAuthCache();
   await logEvent({ ...auditFields(row, actor), action: "settings.auth_provider.update" });
   return row;
+}
+
+export async function credentialLockouts(database: Client = db): Promise<number> {
+  const withPassword = await database.authAccount.findMany({
+    where: { providerId: "credential", password: { not: null } },
+    select: { userId: true },
+    distinct: ["userId"],
+  });
+  if (withPassword.length === 0) return 0;
+  const [methods, usable] = await Promise.all([
+    signInMethodsOf(
+      withPassword.map((a) => a.userId),
+      database,
+    ),
+    signInUsability(database),
+  ]);
+  return countCredentialLockouts([...methods.values()], usable);
+}
+
+// Runs `write`, which turns password sign-in off, under the provider lock like a deletion;
+// refused when a user would be left with no usable sign-in method.
+export async function disableCredentialsGuarded<T>(
+  write: () => Promise<T>,
+  database: PrismaClient = db,
+): Promise<T> {
+  if ((await appSettings.get<boolean>("credentials_enabled")) === false) return write();
+  return database.$transaction(async (tx) => {
+    await lockProviders(tx);
+    const lockedOut = await credentialLockouts(tx);
+    if (lockedOut > 0) throw new AuthProviderError("LOCKOUT", lockedOut);
+    return write();
+  });
 }
 
 // Refused when a linked user would have no other usable sign-in method (#163 decision B);

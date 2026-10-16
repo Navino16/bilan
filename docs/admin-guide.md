@@ -25,12 +25,12 @@ Almost everything is configured in the app. Changes take effect immediately, wit
 As long as the database has no user, every page redirects to the setup wizard (`/setup`). Open the app at its `APP_URL` and follow the four steps. Nothing is saved until you click **Finish** on the last step.
 
 1. **Admin account**: name, e-mail address and password (at least 12 characters by default). This account becomes the first **Super administrator**. Its address is marked as verified, since nobody else could verify it.
-2. **Email (SMTP)**: optional. Fill in the server details, or click **Skip** and configure it later under **Administration > SMTP**. See [E-mail (SMTP)](#e-mail-smtp).
-3. **External login**: optional. Adds one generic OIDC provider.
+2. **Email (SMTP)**: optional. Fill in the server details, or click **Skip** and configure it later under **Administration > SMTP**. Leave **Implicit TLS (port 465)** off for port 587 (STARTTLS). See [E-mail (SMTP)](#e-mail-smtp).
+3. **External login**: optional. Adds one generic OIDC provider, with the key `oidc`. A Google provider is added later, from **Auth providers**.
    - The wizard shows the **Redirect URL** to register at your identity provider: `<APP_URL>/api/auth/oauth2/callback/oidc`.
-   - **Test connection** checks the issuer's discovery document. The test only accepts public `https` addresses: an identity provider on a private network fails the test but can still work. Use **Skip** and add it later from **Auth providers** if you prefer.
+   - **Test connection** checks the issuer's discovery document. The test only contacts public `https` addresses, because the wizard is reachable before anyone signs in. An identity provider on a private network or `localhost` cannot be tested here, and the message says so, but it still works at sign-in: continue without testing.
    - The provider is created with sign-up not allowed. See [Allow sign-up](#allow-sign-up).
-4. **Registrations**: choose the registration mode. **Invite only** is the default and the recommended choice. See [Registration mode](#registration-mode).
+4. **Registration mode**: **Invite only** is the default and the recommended choice. See [Registration mode](#registration-mode).
 
 Click **Finish**: the account is created and you are signed in. From then on, `/setup` returns a 404 page.
 
@@ -74,6 +74,8 @@ Rank rules:
 
 To give someone the **Super administrator** role, create them as a **User** or **Administrator**, then change their role.
 
+Invitation tokens and **Mark email as verified** are reserved to super administrators on purpose: an administrator can create accounts, but cannot hand out sign-up tokens or vouch for someone's e-mail address.
+
 ## Managing users
 
 ![Users tab](images/en/admin-users.png)
@@ -86,7 +88,7 @@ To give someone the **Super administrator** role, create them as a **User** or *
 
 The user receives an e-mail with a link to choose their password. The link is valid for 1 hour; after that, they use **Forgot password?** on the sign-in page. Following the link also verifies their e-mail address.
 
-This flow needs a working SMTP server: the setup link is only delivered by e-mail. Without SMTP, let people sign up with an [invitation token](#invitation-tokens) instead, or have them sign in through [SSO](#single-sign-on-oidc-and-google).
+This flow needs a working SMTP server: the setup link is only delivered by e-mail, and Bilan never shows it to the administrator. Without SMTP, the account is still created, but the confirmation says that no e-mail was sent: the user cannot sign in until SMTP is configured, then they use **Forgot password?** on the sign-in page. On an instance without SMTP, let people sign up with an [invitation token](#invitation-tokens) instead.
 
 ### Search
 
@@ -110,7 +112,7 @@ The user's sessions are closed and every sign-in is refused (password, passkey, 
 
 ### Mark an e-mail address as verified
 
-Use this on instances without SMTP, where users cannot receive a verification link (see [E-mail address verification](#e-mail-address-verification)).
+Super administrators only. Use this on instances without SMTP, where users cannot receive a verification link (see [E-mail address verification](#e-mail-address-verification)).
 
 1. Open the row's actions menu and choose **Mark email as verified**.
 2. Confirm with **Mark as verified**.
@@ -152,9 +154,11 @@ The account and all its data are erased, and the user's entries in the audit log
 
 In every mode, administrators can still create accounts from **Users**.
 
+The sign-in page only shows **Create an account** when the sign-up page offers a way to sign up: not in **Disabled** mode, nor when password sign-in is disabled and no SSO provider may create accounts.
+
 ### Password sign-in
 
-When disabled, the sign-in page no longer offers e-mail and password. Users sign in with a passkey or an SSO identity. Before disabling it, make sure every user, and you first, has a passkey or a linked SSO identity: the app does not check this for you.
+When disabled, the sign-in page no longer offers e-mail and password. Users sign in with a passkey or an SSO identity. Make sure every user, and you first, has a passkey or an identity linked on an enabled provider: saving is refused while some users would be left with no way to sign in, and the message tells how many. Users created by an administrator who never chose their password count too.
 
 ### Mandatory admin 2FA
 
@@ -168,7 +172,7 @@ Enable your own two-factor authentication before turning this setting on.
 
 ![Invitation tokens tab](images/en/admin-signup-tokens.png)
 
-An invitation token lets someone create an account while the registration mode is **Invite only**. A notice at the top of the tab reminds you when the mode is **Open** (tokens are not needed) or **Disabled** (tokens are rejected).
+Only super administrators see this tab. An invitation token lets someone create an account while the registration mode is **Invite only**. A notice at the top of the tab reminds you when the mode is **Open** (tokens are not needed) or **Disabled** (tokens are rejected).
 
 ### Create a token
 
@@ -221,24 +225,24 @@ The same URL is used for sign-in and for linking an identity to an existing acco
 | Type          | **OIDC** or **Google**. Cannot be changed later. Only one Google provider is allowed.           |
 | Display name  | Label of the sign-in button                                                                     |
 | State         | **On** shows the provider on the sign-in page; **Off** hides it and refuses sign-ins through it |
+| Issuer        | OIDC only, required. The issuer URL; Bilan reads `<issuer>/.well-known/openid-configuration`.   |
+| Client ID     | Required                                                                                        |
+| Client secret | Required. Stored encrypted. When editing, leave blank to keep the current one.                  |
 | Allow sign-up | See [Allow sign-up](#allow-sign-up)                                                             |
 
-Under **OIDC options**:
+For an OIDC provider, **Advanced OIDC options** holds the optional settings:
 
-| Field                                      | Description                                                                                        |
-| ------------------------------------------ | -------------------------------------------------------------------------------------------------- |
-| Issuer                                     | OIDC only, required. The issuer URL; Bilan reads `<issuer>/.well-known/openid-configuration`.      |
-| Client ID                                  | Required for OIDC and Google                                                                       |
-| Client secret                              | Required for OIDC and Google. Stored encrypted. When editing, leave blank to keep the current one. |
-| Scopes                                     | OIDC only. Comma-separated. Default: `openid,email,profile`.                                       |
-| Claim → name                               | OIDC only. Userinfo claim to use as the user's name, if not the standard one.                      |
-| Claim → email                              | OIDC only. Userinfo claim to use as the e-mail address, if not the standard one.                   |
-| Authorization URL, Token URL, Userinfo URL | OIDC only. Set them only if the provider's discovery document is not usable: they override it.     |
-| PKCE                                       | OIDC only. Enable it if the provider supports or requires PKCE.                                    |
+| Field                                      | Description                                                                         |
+| ------------------------------------------ | ----------------------------------------------------------------------------------- |
+| Scopes                                     | Comma-separated. Default: `openid,email,profile`.                                   |
+| Claim → name                               | Userinfo claim to use as the user's name, if not the standard one.                  |
+| Claim → email                              | Userinfo claim to use as the e-mail address, if not the standard one.               |
+| Authorization URL, Token URL, Userinfo URL | Set them only if the provider's discovery document is not usable: they override it. |
+| PKCE                                       | Enable it if the provider supports or requires PKCE.                                |
 
-For a Google provider, only **Client ID** and **Client secret** are used. Create an OAuth client of type "Web application" in the Google Cloud console and add `<APP_URL>/api/auth/callback/google` to its authorized redirect URIs.
+A Google provider only takes a **Client ID** and a **Client secret**: the form hides the other fields. Create an OAuth client of type "Web application" in the Google Cloud console and add `<APP_URL>/api/auth/callback/google` to its authorized redirect URIs.
 
-The **Type** list also offers **Credentials**. Such an entry has no effect: password sign-in is controlled by **Password sign-in** under **Settings**.
+Password sign-in is not a provider: it is controlled by **Password sign-in** under **Settings**.
 
 ### Allow sign-up
 
@@ -280,18 +284,18 @@ Bilan does not ship a mail server: use an existing SMTP account (see [Requiremen
 1. Go to **Administration > SMTP**.
 2. Fill in the form and click **Save**.
 
-| Field        | Description                                                                                                                                            |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Host         | SMTP server name                                                                                                                                       |
-| Port         | Usually 465 (implicit TLS) or 587 (STARTTLS). Default: 587.                                                                                            |
-| Username     | SMTP account                                                                                                                                           |
-| Password     | Stored encrypted. Leave blank to keep the current one; it is only kept if the host, port, encryption and username are unchanged.                       |
-| From address | Sender address of every e-mail                                                                                                                         |
-| From name    | Optional sender name                                                                                                                                   |
-| Encryption   | **TLS/SSL**: TLS from the start of the connection (port 465). **None**: plain connection, upgraded with STARTTLS when the server offers it (port 587). |
-| State        | **On** sends e-mails; **Off** keeps the configuration but sends nothing                                                                                |
+| Field        | Description                                                                                                                                                                                                              |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Host         | SMTP server name                                                                                                                                                                                                         |
+| Port         | Usually 465 (implicit TLS) or 587 (STARTTLS). Default: 587.                                                                                                                                                              |
+| Username     | SMTP account                                                                                                                                                                                                             |
+| Password     | Stored encrypted. Leave blank to keep the current one; it is only kept if the host, port, encryption and username are unchanged.                                                                                         |
+| From address | Sender address of every e-mail                                                                                                                                                                                           |
+| From name    | Optional sender name                                                                                                                                                                                                     |
+| Encryption   | **STARTTLS if offered (port 587)**, the default: the connection is upgraded with STARTTLS when the server offers it, and stays unencrypted otherwise. **Implicit TLS (port 465)**: TLS from the start of the connection. |
+| State        | **On** sends e-mails; **Off** keeps the configuration but sends nothing                                                                                                                                                  |
 
-The default pair (587 with **TLS/SSL**) does not work with most servers: choose 465 with **TLS/SSL**, or 587 with **None**.
+The default pair (587 with **STARTTLS if offered**) suits most providers. For port 465, choose **Implicit TLS**.
 
 ### Send a test e-mail
 
@@ -319,7 +323,7 @@ E-mails are written in the recipient's language.
 Bilan works without SMTP, with these differences:
 
 - Household invitations: the inviter sees "E-mail is disabled: share this link." with a link to copy and send by other means.
-- Admin-created users do not receive their password-setup link. Prefer invitation tokens or SSO.
+- Admin-created users do not receive their password-setup link, and the confirmation says so. Prefer invitation tokens or SSO sign-up.
 - **Forgot password?** cannot deliver its link.
 - No verification e-mail is sent and the verification banner is hidden. An administrator marks addresses as verified instead (see below).
 - No security alerts are sent.

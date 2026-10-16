@@ -21,7 +21,7 @@
         "disabled": "Ce compte est désactivé. Contactez l’administrateur de l’instance.",
         "ssoFailed": "La connexion via le fournisseur d’identité a échoué. Réessayez.",
         "ssoSignUpDisabled": "Aucun compte {appName} ne correspond à cette identité, et la création de compte n’est pas autorisée, par ce fournisseur ou parce que les inscriptions sont fermées. Demandez un compte à l’administrateur de l’instance.",
-        "ssoNotLinked": "Aucun compte n’est lié à cette identité. Connectez-vous avec un autre moyen de connexion, puis liez-la depuis Paramètres > Sécurité.",
+        "ssoNotLinked": "Aucun compte n’est lié à cette identité. Connectez-vous avec un autre moyen de connexion, puis liez-la depuis Compte > Sécurité.",
         "ssoDenied": "La connexion a été annulée ou refusée chez le fournisseur d’identité.",
         "ssoProvider": "Le fournisseur d’identité a renvoyé une erreur. Réessayez plus tard ou utilisez un autre moyen de connexion.",
         "ssoExpired": "La demande de connexion a expiré ou a été ouverte dans un autre navigateur. Recommencez.",
@@ -1293,7 +1293,8 @@
       "role": "Rôle",
       "create": "Créer",
       "creating": "Création…",
-      "created": "Utilisateur créé. Un lien de définition du mot de passe lui a été envoyé.",
+      "created": "Utilisateur créé. Un lien pour définir son mot de passe lui a été envoyé par e-mail.",
+      "createdNoMail": "Utilisateur créé, mais aucun e-mail n’a été envoyé : le SMTP n’est pas configuré ou est désactivé, la personne ne peut donc pas encore définir son mot de passe. Une fois le SMTP configuré, elle utilisera « Mot de passe oublié ? » sur la page de connexion.",
       "empty": "Aucun utilisateur.",
       "error": {
         "UNAUTHORIZED": "Vous n’avez pas la permission de créer des utilisateurs.",
@@ -1301,8 +1302,8 @@
         "FAILED": "Échec de la création. Réessayez.",
         "FORBIDDEN": "Vous ne pouvez pas créer un utilisateur avec ce rôle."
       },
-      "createOverline": "Invitation",
-      "createHint": "La personne reçoit par e-mail un lien pour définir son mot de passe.",
+      "createOverline": "Nouveau compte",
+      "createHint": "La personne reçoit par e-mail un lien pour définir son mot de passe (SMTP requis).",
       "listOverline": "Comptes",
       "count": "{count, plural, =0 {Aucun compte} one {# compte} other {# comptes}}",
       "roleFor": "Rôle de {user}",
@@ -1419,7 +1420,8 @@
       "error": {
         "INVALID": "Valeur invalide.",
         "FAILED": "Échec de l’enregistrement.",
-        "FORBIDDEN": "Seul un super admin peut modifier ces paramètres."
+        "FORBIDDEN": "Seul un super admin peut modifier ces paramètres.",
+        "LOCKOUT": "Connexion par mot de passe conservée : {count, plural, one {# utilisateur n’aurait} other {# utilisateurs n’auraient}} plus aucun moyen de se connecter (ni clé d’accès, ni fournisseur actif lié)."
       },
       "general": {
         "overline": "Général",
@@ -1448,8 +1450,9 @@
       "fromAddress": "Adresse d’expédition",
       "fromName": "Nom d’expéditeur",
       "secure": "Chiffrement",
-      "secureTls": "TLS/SSL",
-      "securePlain": "Aucun",
+      "secureTls": "TLS implicite (port 465)",
+      "securePlain": "STARTTLS si proposé (port 587)",
+      "secureHint": "Le port 587 utilise STARTTLS : la connexion est chiffrée si le serveur le propose, sinon elle reste en clair. Le port 465 exige le TLS implicite.",
       "enabled": "État",
       "on": "Activé",
       "off": "Désactivé",
@@ -1490,7 +1493,6 @@
       "empty": "Aucun fournisseur configuré.",
       "key": "Clé",
       "type": "Type",
-      "typeCredentials": "Identifiants",
       "typeOidc": "OIDC",
       "typeGoogle": "Google",
       "displayName": "Nom affiché",
@@ -1498,8 +1500,9 @@
       "on": "Activé",
       "off": "Désactivé",
       "allowSignUp": "Autoriser l’inscription",
-      "allowSignUpHint": "Crée un compte {appName} à la première connexion d’une identité liée à aucun compte, uniquement si le mode d’inscription est « Ouvert ». Sinon, ce fournisseur ne connecte que les identités déjà liées à un compte. Une adresse e-mail identique ne suffit pas : un utilisateur existant lie l’identité depuis Paramètres > Sécurité.",
-      "oidcSection": "Options OIDC",
+      "allowSignUpHint": "Crée un compte {appName} à la première connexion d’une identité liée à aucun compte, uniquement si le mode d’inscription est « Ouvert ». Sinon, ce fournisseur ne connecte que les identités déjà liées à un compte. Une adresse e-mail identique ne suffit pas : un utilisateur existant lie l’identité depuis Compte > Sécurité.",
+      "oidcSection": "Options OIDC avancées",
+      "googleHint": "Google n’utilise que le client ID et le client secret.",
       "issuer": "Issuer",
       "clientId": "Client ID",
       "clientSecret": "Client secret",
@@ -1516,7 +1519,7 @@
       "saving": "Enregistrement…",
       "saved": "Fournisseur enregistré.",
       "error": {
-        "INVALID": "Vérifiez les champs : clé en minuscules (lettres, chiffres, - ou _), nom affiché, et pour OIDC l’issuer et le client ID.",
+        "INVALID": "Vérifiez les champs : clé en minuscules (lettres, chiffres, - ou _), nom affiché, client ID, et pour OIDC l’issuer.",
         "FAILED": "Échec de l’enregistrement.",
         "KEY_EXISTS": "Un fournisseur utilise déjà cette clé. Modifiez-le dans la liste ci-dessus.",
         "NOT_FOUND": "Ce fournisseur n’existe plus.",
@@ -1527,7 +1530,7 @@
       },
       "listOverline": "Connexion",
       "addOverline": "Nouveau",
-      "addHint": "Connexion par identifiants, OIDC ou Google.",
+      "addHint": "Connexion via OpenID Connect ou Google. La connexion par mot de passe se règle dans l’onglet Paramètres.",
       "delete": "Supprimer",
       "deleting": "Suppression…",
       "deleteTitle": "Supprimer le fournisseur {name} ?",
@@ -1750,7 +1753,7 @@
       "account": "Compte administrateur",
       "smtp": "E-mail (SMTP)",
       "oidc": "Connexion externe",
-      "registration": "Inscriptions"
+      "registration": "Mode d’inscription"
     },
     "account": {
       "name": "Nom",
@@ -1768,13 +1771,14 @@
       "password": "Mot de passe",
       "fromAddress": "Adresse d’expéditeur",
       "fromName": "Nom d’expéditeur",
-      "secure": "Connexion sécurisée (TLS)",
+      "secure": "TLS implicite (port 465)",
+      "secureHint": "Désactivé : STARTTLS si le serveur le propose (port 587), sinon connexion en clair.",
       "error": "Champs SMTP incomplets : serveur, port, identifiant, mot de passe et adresse d’expéditeur valide sont requis.",
       "save": "Enregistrer et continuer",
       "skip": "Passer"
     },
     "oidc": {
-      "description": "Optionnel — connexion via un fournisseur externe (Google, OIDC). Laissez vide pour en ajouter plus tard dans l’administration.",
+      "description": "Optionnel — connexion via un fournisseur d’identité OpenID Connect (Authentik, Keycloak…). Laissez vide pour en ajouter un plus tard dans l’administration, où vous pourrez aussi configurer Google.",
       "redirectUri": "URL de redirection",
       "redirectUriHint": "À enregistrer comme URI de redirection autorisée chez votre fournisseur d’identité.",
       "signUpHint": "Ce fournisseur ne connecte que les identités liées à un compte Bilan, et une adresse e-mail identique ne les lie pas. Pour qu’il crée un compte à la première connexion, autorisez l’inscription dans Administration > Fournisseurs d’authentification et choisissez le mode d’inscription « Ouvert ».",
@@ -1787,6 +1791,15 @@
       "testing": "Test en cours…",
       "testOk": "Discovery OIDC valide ✓",
       "testFailed": "Échec du test",
+      "testError": {
+        "UNAUTHORIZED": "Vous n’avez pas la permission de tester cette connexion.",
+        "NO_ISSUER": "Saisissez l’URL de l’issuer.",
+        "INVALID_URL": "L’URL de l’issuer n’est pas valide.",
+        "HTTPS_REQUIRED": "Le test ne vérifie que les issuers en https.",
+        "UNSAFE_HOST": "Le test ne contacte pas les adresses de réseau privé ou locales. Un fournisseur sur votre réseau local fonctionnera quand même à la connexion : continuez sans tester.",
+        "UNREACHABLE": "Document de découverte injoignable à cette adresse.",
+        "INVALID_DISCOVERY": "Le document de découverte ne contient pas les endpoints d’autorisation et de token."
+      },
       "advanced": "Options avancées",
       "pkce": "Activer PKCE",
       "endpointsHint": "Renseignez ces endpoints uniquement si la découverte automatique (.well-known) de votre fournisseur ne fonctionne pas.",
@@ -1810,11 +1823,11 @@
           "description": "Les nouveaux comptes nécessitent un jeton d’invitation. Recommandé."
         },
         "OPEN": {
-          "label": "Ouvertes",
+          "label": "Ouvert",
           "description": "N’importe qui peut créer un compte."
         },
         "DISABLED": {
-          "label": "Désactivées",
+          "label": "Désactivé",
           "description": "Seul un administrateur peut créer des comptes."
         }
       }

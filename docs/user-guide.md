@@ -43,7 +43,7 @@ Click **Create an account** on the sign-in page. What you see depends on how the
 
 - **Open registration**: fill in **Name**, **Email address**, **Password** and **Confirm password**, then click **Create account**.
 - **Invite only** (the default): an **Invitation token** field appears first. Your administrator gives you a token or a sign-up link that fills it in for you.
-- **Closed**: the page shows "Registration is closed on this instance." Ask your administrator to create your account.
+- **Closed**: the sign-in page has no **Create an account** link, and the sign-up page shows "Registration is closed on this instance." Ask your administrator to create your account.
 
 The password must be at least 12 characters long by default (your administrator may choose another minimum). You are signed in right away and Bilan creates a starter set of categories in your language.
 

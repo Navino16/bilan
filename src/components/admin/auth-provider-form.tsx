@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -46,14 +47,19 @@ export function AuthProviderForm({
   const t = useTranslations("admin.authProviders");
   const router = useRouter();
   const isEdit = Boolean(provider);
+  const [type, setType] = useState(provider?.type ?? "oidc");
   const form = useActionForm(saveAuthProviderAction, {
     resetOnSuccess: !isEdit,
-    onSuccess: () => router.refresh(),
+    onSuccess: () => {
+      if (!isEdit) setType("oidc");
+      router.refresh();
+    },
   });
   const { state, pending } = form;
 
   const cfg = provider?.config ?? {};
   const prefix = provider ? `ap-${provider.key}` : "ap-new";
+  const isOidc = type === "oidc";
 
   return (
     <form {...form.formProps} className="space-y-4">
@@ -81,8 +87,8 @@ export function AuthProviderForm({
             name={provider ? undefined : "type"}
             defaultValue={provider?.type ?? "oidc"}
             disabled={isEdit}
+            onChange={(e) => setType(e.target.value)}
           >
-            <option value="credentials">{t("typeCredentials")}</option>
             <option value="oidc">{t("typeOidc")}</option>
             <option value="google">{t("typeGoogle")}</option>
           </NativeSelect>
@@ -114,6 +120,46 @@ export function AuthProviderForm({
           </NativeSelect>
         </div>
       </div>
+      {isOidc && (
+        <div className="space-y-2">
+          <Label htmlFor={`${prefix}-issuer`}>{t("issuer")}</Label>
+          <Input
+            key={provider?.issuer ?? ""}
+            id={`${prefix}-issuer`}
+            name="issuer"
+            defaultValue={provider?.issuer ?? ""}
+            maxLength={PROVIDER_TEXT_MAX}
+            {...form.fieldProps("issuer")}
+          />
+          <FieldError form={form} name="issuer" />
+        </div>
+      )}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor={`${prefix}-clientId`}>{t("clientId")}</Label>
+          <Input
+            key={provider?.clientId ?? ""}
+            id={`${prefix}-clientId`}
+            name="clientId"
+            defaultValue={provider?.clientId ?? ""}
+            maxLength={PROVIDER_TEXT_MAX}
+            {...form.fieldProps("clientId")}
+          />
+          <FieldError form={form} name="clientId" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={`${prefix}-clientSecret`}>{t("clientSecret")}</Label>
+          <Input
+            id={`${prefix}-clientSecret`}
+            name="clientSecret"
+            type="password"
+            placeholder={isEdit ? t("secretKept") : ""}
+            {...form.fieldProps("clientSecret")}
+          />
+          <FieldError form={form} name="clientSecret" />
+        </div>
+      </div>
+      {!isOidc && <p className="text-muted-foreground text-xs">{t("googleHint")}</p>}
       <div className="flex items-start gap-2">
         <input
           id={`${prefix}-allowSignUp`}
@@ -132,132 +178,97 @@ export function AuthProviderForm({
         </div>
       </div>
 
-      <details className="rounded-lg border p-3">
-        <summary className="cursor-pointer text-sm font-medium">{t("oidcSection")}</summary>
-        <div className="mt-4 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor={`${prefix}-issuer`}>{t("issuer")}</Label>
-            <Input
-              key={provider?.issuer ?? ""}
-              id={`${prefix}-issuer`}
-              name="issuer"
-              defaultValue={provider?.issuer ?? ""}
-              maxLength={PROVIDER_TEXT_MAX}
-              {...form.fieldProps("issuer")}
-            />
-            <FieldError form={form} name="issuer" />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+      {isOidc && (
+        <details className="rounded-lg border p-3">
+          <summary className="cursor-pointer text-sm font-medium">{t("oidcSection")}</summary>
+          <div className="mt-4 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor={`${prefix}-clientId`}>{t("clientId")}</Label>
+              <Label htmlFor={`${prefix}-scopes`}>{t("scopes")}</Label>
               <Input
-                key={provider?.clientId ?? ""}
-                id={`${prefix}-clientId`}
-                name="clientId"
-                defaultValue={provider?.clientId ?? ""}
+                key={provider?.scopes ?? ""}
+                id={`${prefix}-scopes`}
+                name="scopes"
+                defaultValue={provider?.scopes ?? ""}
                 maxLength={PROVIDER_TEXT_MAX}
-                {...form.fieldProps("clientId")}
+                {...form.fieldProps("scopes")}
               />
-              <FieldError form={form} name="clientId" />
+              <FieldError form={form} name="scopes" />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor={`${prefix}-clientSecret`}>{t("clientSecret")}</Label>
-              <Input
-                id={`${prefix}-clientSecret`}
-                name="clientSecret"
-                type="password"
-                placeholder={isEdit ? t("secretKept") : ""}
-                {...form.fieldProps("clientSecret")}
-              />
-              <FieldError form={form} name="clientSecret" />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor={`${prefix}-mapName`}>{t("mapName")}</Label>
+                <Input
+                  key={cfg.mapName ?? ""}
+                  id={`${prefix}-mapName`}
+                  name="mapName"
+                  defaultValue={cfg.mapName ?? ""}
+                  {...form.fieldProps("mapName")}
+                />
+                <FieldError form={form} name="mapName" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`${prefix}-mapEmail`}>{t("mapEmail")}</Label>
+                <Input
+                  key={cfg.mapEmail ?? ""}
+                  id={`${prefix}-mapEmail`}
+                  name="mapEmail"
+                  defaultValue={cfg.mapEmail ?? ""}
+                  {...form.fieldProps("mapEmail")}
+                />
+                <FieldError form={form} name="mapEmail" />
+              </div>
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={`${prefix}-scopes`}>{t("scopes")}</Label>
-            <Input
-              key={provider?.scopes ?? ""}
-              id={`${prefix}-scopes`}
-              name="scopes"
-              defaultValue={provider?.scopes ?? ""}
-              maxLength={PROVIDER_TEXT_MAX}
-              {...form.fieldProps("scopes")}
-            />
-            <FieldError form={form} name="scopes" />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor={`${prefix}-mapName`}>{t("mapName")}</Label>
-              <Input
-                key={cfg.mapName ?? ""}
-                id={`${prefix}-mapName`}
-                name="mapName"
-                defaultValue={cfg.mapName ?? ""}
-                {...form.fieldProps("mapName")}
-              />
-              <FieldError form={form} name="mapName" />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor={`${prefix}-authorizationUrl`}>{t("authorizationUrl")}</Label>
+                <Input
+                  key={cfg.authorizationUrl ?? ""}
+                  id={`${prefix}-authorizationUrl`}
+                  name="authorizationUrl"
+                  defaultValue={cfg.authorizationUrl ?? ""}
+                  {...form.fieldProps("authorizationUrl")}
+                />
+                <FieldError form={form} name="authorizationUrl" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`${prefix}-tokenUrl`}>{t("tokenUrl")}</Label>
+                <Input
+                  key={cfg.tokenUrl ?? ""}
+                  id={`${prefix}-tokenUrl`}
+                  name="tokenUrl"
+                  defaultValue={cfg.tokenUrl ?? ""}
+                  {...form.fieldProps("tokenUrl")}
+                />
+                <FieldError form={form} name="tokenUrl" />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor={`${prefix}-mapEmail`}>{t("mapEmail")}</Label>
-              <Input
-                key={cfg.mapEmail ?? ""}
-                id={`${prefix}-mapEmail`}
-                name="mapEmail"
-                defaultValue={cfg.mapEmail ?? ""}
-                {...form.fieldProps("mapEmail")}
-              />
-              <FieldError form={form} name="mapEmail" />
-            </div>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor={`${prefix}-authorizationUrl`}>{t("authorizationUrl")}</Label>
-              <Input
-                key={cfg.authorizationUrl ?? ""}
-                id={`${prefix}-authorizationUrl`}
-                name="authorizationUrl"
-                defaultValue={cfg.authorizationUrl ?? ""}
-                {...form.fieldProps("authorizationUrl")}
-              />
-              <FieldError form={form} name="authorizationUrl" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`${prefix}-tokenUrl`}>{t("tokenUrl")}</Label>
-              <Input
-                key={cfg.tokenUrl ?? ""}
-                id={`${prefix}-tokenUrl`}
-                name="tokenUrl"
-                defaultValue={cfg.tokenUrl ?? ""}
-                {...form.fieldProps("tokenUrl")}
-              />
-              <FieldError form={form} name="tokenUrl" />
-            </div>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor={`${prefix}-userInfoUrl`}>{t("userInfoUrl")}</Label>
-              <Input
-                key={cfg.userInfoUrl ?? ""}
-                id={`${prefix}-userInfoUrl`}
-                name="userInfoUrl"
-                defaultValue={cfg.userInfoUrl ?? ""}
-                {...form.fieldProps("userInfoUrl")}
-              />
-              <FieldError form={form} name="userInfoUrl" />
-            </div>
-            <div className="flex items-end gap-2">
-              <input
-                id={`${prefix}-pkce`}
-                name="pkce"
-                type="checkbox"
-                value="true"
-                defaultChecked={cfg.pkce ?? false}
-                className="size-4"
-              />
-              <Label htmlFor={`${prefix}-pkce`}>{t("pkce")}</Label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor={`${prefix}-userInfoUrl`}>{t("userInfoUrl")}</Label>
+                <Input
+                  key={cfg.userInfoUrl ?? ""}
+                  id={`${prefix}-userInfoUrl`}
+                  name="userInfoUrl"
+                  defaultValue={cfg.userInfoUrl ?? ""}
+                  {...form.fieldProps("userInfoUrl")}
+                />
+                <FieldError form={form} name="userInfoUrl" />
+              </div>
+              <div className="flex items-end gap-2">
+                <input
+                  id={`${prefix}-pkce`}
+                  name="pkce"
+                  type="checkbox"
+                  value="true"
+                  defaultChecked={cfg.pkce ?? false}
+                  className="size-4"
+                />
+                <Label htmlFor={`${prefix}-pkce`}>{t("pkce")}</Label>
+              </div>
             </div>
           </div>
-        </div>
-      </details>
+        </details>
+      )}
 
       {state?.ok && (
         <Alert>

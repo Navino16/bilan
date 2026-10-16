@@ -24,13 +24,14 @@ import {
   AuthProviderError,
   createAuthProvider,
   deleteAuthProvider,
+  disableCredentialsGuarded,
   providerSchema,
   updateAuthProvider,
 } from "@/server/services/settings/auth-providers";
 import { invalidInput, zodIssueCode, type FormFailure } from "@/lib/validation/field-errors";
 import { MIN_PASSWORD_LENGTH_RANGE } from "@/lib/validation/app-settings";
 
-export type SettingsActionState = { ok: true } | FormFailure | null;
+export type SettingsActionState = { ok: true } | (FormFailure & { count?: number }) | null;
 
 function str(formData: FormData, key: string): string {
   return String(formData.get(key) ?? "").trim();
@@ -208,9 +209,17 @@ export async function setAppSettingsAction(
   ) {
     return { ok: false, error: "FORBIDDEN" };
   }
+  const save = () => appSettings.setMany(values, user.id);
   try {
-    await appSettings.setMany(values, user.id);
-  } catch {
+    if (values.some(([key, value]) => key === "credentials_enabled" && value === false)) {
+      await disableCredentialsGuarded(save);
+    } else {
+      await save();
+    }
+  } catch (e) {
+    if (e instanceof AuthProviderError && e.code === "LOCKOUT") {
+      return { ok: false, error: "LOCKOUT", count: e.count };
+    }
     return { ok: false, error: "FAILED" };
   }
   return { ok: true };

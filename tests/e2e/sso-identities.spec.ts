@@ -51,7 +51,6 @@ async function addProvider(page: Page, key: string, name: string) {
     await addForm.locator("#ap-new-key").fill(key);
     await addForm.locator("#ap-new-type").selectOption("oidc");
     await addForm.locator("#ap-new-displayName").fill(name);
-    await addForm.locator("details").evaluate((d) => ((d as HTMLDetailsElement).open = true));
     await addForm.locator("#ap-new-issuer").fill(serverBase());
     await addForm.locator("#ap-new-clientId").fill("e2e-client");
     await addForm.locator("#ap-new-clientSecret").fill("e2e-secret");

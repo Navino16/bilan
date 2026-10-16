@@ -105,13 +105,19 @@ export function StepSmtp({
           />
         </div>
       </div>
-      <div className="flex items-center gap-3">
-        <Switch
-          id="smtp-secure"
-          checked={data.secure}
-          onCheckedChange={(v) => onChange({ secure: v })}
-        />
-        <Label htmlFor="smtp-secure">{t("secure")}</Label>
+      <div className="space-y-1">
+        <div className="flex items-center gap-3">
+          <Switch
+            id="smtp-secure"
+            checked={data.secure}
+            onCheckedChange={(v) => onChange({ secure: v })}
+            aria-describedby="smtp-secure-hint"
+          />
+          <Label htmlFor="smtp-secure">{t("secure")}</Label>
+        </div>
+        <p id="smtp-secure-hint" className="text-muted-foreground text-xs">
+          {t("secureHint")}
+        </p>
       </div>
       {showError && filled && !complete && (
         <Alert variant="destructive">

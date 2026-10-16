@@ -93,8 +93,12 @@ test.describe("admin settings", () => {
       const editForm = page.locator(`form:has(#ap-${key}-key)`);
       const add = async () => {
         await addForm.locator("#ap-new-key").fill(key);
-        await addForm.locator("#ap-new-type").selectOption("credentials");
+        await addForm.locator("#ap-new-type").selectOption("oidc");
         await addForm.locator("#ap-new-displayName").fill("E2E provider");
+        await addForm.locator("#ap-new-enabled").selectOption("false");
+        await addForm.locator("#ap-new-issuer").fill("https://idp.e2e.invalid");
+        await addForm.locator("#ap-new-clientId").fill("e2e-client");
+        await addForm.locator("#ap-new-clientSecret").fill("e2e-secret");
         await addForm.getByRole("button", { name: "Ajouter" }).click();
       };
       await page.goto("/fr/admin/auth-providers", {
@@ -127,8 +131,11 @@ test.describe("admin settings", () => {
       });
       await expect(async () => {
         await addForm.locator("#ap-new-key").fill(key);
-        await addForm.locator("#ap-new-type").selectOption("credentials");
+        await addForm.locator("#ap-new-type").selectOption("oidc");
         await addForm.locator("#ap-new-displayName").fill("E2E select");
+        await addForm.locator("#ap-new-issuer").fill("https://idp.e2e.invalid");
+        await addForm.locator("#ap-new-clientId").fill("e2e-client");
+        await addForm.locator("#ap-new-clientSecret").fill("e2e-secret");
         await addForm.getByRole("button", { name: "Ajouter" }).click();
         await expect(editForm).toBeVisible({ timeout: 2000 });
       }).toPass({ timeout: 30_000 });
