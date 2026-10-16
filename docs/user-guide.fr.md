@@ -375,7 +375,7 @@ Un budget dont la portée est un foyer appartient au foyer :
 - Les propriétaires et les admins le créent, le modifient, le renouvellent et le suppriment. Tous les membres peuvent le consulter et y inclure ou en exclure des transactions.
 - Il compte les transactions des comptes partagés avec ce foyer.
 
-Un membre peut aussi **Inclure** une transaction de l’un de ses comptes privés. Elle compte alors dans les totaux pour tout le monde, et tous les membres la voient en entier dans le budget : date, montant, libellé, catégorie et nom du compte. Seule cette transaction devient visible : le compte privé et ses autres transactions restent masqués.
+Un membre peut aussi **Inclure** une transaction de l’un de ses comptes privés. Elle compte alors dans les totaux pour tout le monde, et tous les membres la voient en entier dans le budget : date, montant, libellé, catégorie et nom du compte. Seule cette transaction devient visible : le compte privé et ses autres transactions restent masqués. Si ce membre quitte ensuite le foyer, la transaction compte toujours mais s’affiche comme « Transaction d’un autre membre », sans ses détails.
 
 Vous ne pouvez **Inclure** qu’une transaction de l’un de vos comptes ou d’un compte partagé avec ce foyer : un compte qu’un autre foyer partage avec vous ne peut pas être inclus.
 

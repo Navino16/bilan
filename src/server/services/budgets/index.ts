@@ -553,9 +553,9 @@ export type BudgetTransaction = {
   id: string;
   date: Date;
   amount: number;
-  label: string;
+  label: string | null;
   categoryId: string | null;
-  accountName: string;
+  accountName: string | null;
 };
 
 // Per-line sums for display + a budget-wide dedup sum for the total: a tx that
@@ -623,32 +623,65 @@ async function readableAccountNames(userId: string): Promise<Map<string, string>
   return new Map((await visibleAccountRefs(userId)).map((a) => [a.id, a.name]));
 }
 
-// Counted transactions are shown in full to anyone who can read the budget, even
-// one included from another member's private account (spec §2.2).
-async function budgetTransactions(counted: BudgetRow[]): Promise<BudgetTransaction[]> {
+// Names of the accounts whose counted transactions the viewer sees in full; the
+// write-time INCLUDE guard is re-checked here so stale assignments stop exposing
+// rows (spec §2.2). Group budget: account shared with the group or owner still a member.
+async function displayableAccountNames(
+  accountIds: string[],
+  viewerId: string,
+  groupId: string | null,
+): Promise<Map<string, string>> {
+  if (!groupId) return readableAccountNames(viewerId);
+  const accounts = await db.bankAccount.findMany({
+    where: {
+      id: { in: accountIds },
+      OR: [
+        { shares: { some: { groupId } } },
+        { owner: { groupMemberships: { some: { groupId } } } },
+      ],
+    },
+    select: { id: true, name: true },
+  });
+  return new Map(accounts.map((a) => [a.id, a.name]));
+}
+
+async function budgetTransactions(
+  counted: BudgetRow[],
+  viewerId: string,
+  groupId: string | null,
+): Promise<BudgetTransaction[]> {
   const shown = [...counted]
     .sort((a, b) => b.date.getTime() - a.date.getTime())
     .slice(0, BUDGET_TRANSACTIONS_SHOWN);
-  const [rows, accounts] = await Promise.all([
-    db.transaction.findMany({
-      where: { id: { in: shown.map((r) => r.id) } },
-      select: { id: true, labelEnc: true },
-    }),
-    db.bankAccount.findMany({
-      where: { id: { in: [...new Set(shown.map((r) => r.accountId))] } },
-      select: { id: true, name: true },
-    }),
-  ]);
+  const visible = await displayableAccountNames(
+    [...new Set(shown.map((r) => r.accountId))],
+    viewerId,
+    groupId,
+  );
+  const rows = await db.transaction.findMany({
+    where: { id: { in: shown.filter((r) => visible.has(r.accountId)).map((r) => r.id) } },
+    select: { id: true, labelEnc: true },
+  });
   const labels = new Map(rows.map((r) => [r.id, decrypt(r.labelEnc, dataKey)]));
-  const names = new Map(accounts.map((a) => [a.id, a.name]));
-  return shown.map((r) => ({
-    id: r.id,
-    date: r.date,
-    amount: r.amount,
-    label: labels.get(r.id) ?? "",
-    categoryId: r.categoryId,
-    accountName: names.get(r.accountId) ?? "",
-  }));
+  return shown.map((r, i) =>
+    visible.has(r.accountId)
+      ? {
+          id: r.id,
+          date: r.date,
+          amount: r.amount,
+          label: labels.get(r.id) ?? "",
+          categoryId: r.categoryId,
+          accountName: visible.get(r.accountId)!,
+        }
+      : {
+          id: `hidden-${i}`,
+          date: r.date,
+          amount: r.amount,
+          label: null,
+          categoryId: null,
+          accountName: null,
+        },
+  );
 }
 
 export async function getBudgetDetail(
@@ -686,7 +719,7 @@ export async function getBudgetDetail(
     spentTotal,
     canManage: canManageBudget(b.groupId, roleByGroup),
     ...(await seriesNeighbours(b)),
-    transactions: withTransactions ? await budgetTransactions(counted) : [],
+    transactions: withTransactions ? await budgetTransactions(counted, viewerId, b.groupId) : [],
     transactionCount: counted.length,
   };
 }
