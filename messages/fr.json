@@ -1465,10 +1465,17 @@
       "passwordKept": "Laisser vide pour conserver l’actuel (même serveur et compte)",
       "fromAddress": "Adresse d’expédition",
       "fromName": "Nom d’expéditeur",
-      "secure": "Chiffrement",
-      "secureTls": "TLS implicite (port 465)",
-      "securePlain": "STARTTLS si proposé (port 587)",
-      "secureHint": "Le port 587 utilise STARTTLS : la connexion est chiffrée si le serveur le propose, sinon elle reste en clair. Le port 465 exige le TLS implicite.",
+      "security": {
+        "label": "Chiffrement",
+        "STARTTLS": "STARTTLS (port 587) — recommandé",
+        "TLS": "TLS implicite (port 465)",
+        "NONE": "Aucun — relais local uniquement, non chiffré",
+        "hint": {
+          "STARTTLS": "La connexion passe en TLS avant l’authentification ; l’envoi échoue si le serveur ne le prend pas en charge.",
+          "TLS": "La connexion est chiffrée dès le départ, comme l’attendent la plupart des fournisseurs sur le port 465.",
+          "NONE": "Le mot de passe et les e-mails, liens de réinitialisation compris, circulent en clair : à réserver à un relais sur la même machine ou sur un réseau local de confiance."
+        }
+      },
       "enabled": "État",
       "on": "Activé",
       "off": "Désactivé",
@@ -1787,8 +1794,6 @@
       "password": "Mot de passe",
       "fromAddress": "Adresse d’expéditeur",
       "fromName": "Nom d’expéditeur",
-      "secure": "TLS implicite (port 465)",
-      "secureHint": "Désactivé : STARTTLS si le serveur le propose (port 587), sinon connexion en clair.",
       "error": "Champs SMTP incomplets : serveur, port, identifiant, mot de passe et adresse d’expéditeur valide sont requis.",
       "save": "Enregistrer et continuer",
       "skip": "Passer"

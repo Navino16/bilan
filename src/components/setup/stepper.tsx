@@ -6,6 +6,11 @@ import { StepAccount } from "./step-account";
 import { StepSmtp } from "./step-smtp";
 import { StepOidc } from "./step-oidc";
 import { StepRegistrationMode } from "./step-registration-mode";
+import {
+  DEFAULT_SMTP_SECURITY,
+  SMTP_DEFAULT_PORTS,
+  type SmtpSecurityMode,
+} from "@/lib/smtp-security";
 
 const ORDER = ["account", "smtp", "oidc", "registration"] as const;
 type Step = (typeof ORDER)[number];
@@ -13,7 +18,7 @@ type Step = (typeof ORDER)[number];
 export type SmtpData = {
   host: string;
   port: string;
-  secure: boolean;
+  security: SmtpSecurityMode;
   username: string;
   password: string;
   fromAddress: string;
@@ -45,8 +50,8 @@ export type SetupData = {
 
 const EMPTY_SMTP: SmtpData = {
   host: "",
-  port: "587",
-  secure: false,
+  port: String(SMTP_DEFAULT_PORTS[DEFAULT_SMTP_SECURITY]),
+  security: DEFAULT_SMTP_SECURITY,
   username: "",
   password: "",
   fromAddress: "",

@@ -7,6 +7,7 @@ import {
   sendSmtpTest,
   SmtpPasswordRequiredError,
   SMTP_SINGLETON_ID,
+  smtpSchema,
 } from "@/server/services/settings/smtp";
 import { decrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
@@ -35,7 +36,7 @@ const mail = { to: "admin@bilan.local", subject: "Test", text: "Hello", locale: 
 const base = {
   host: "smtp.example.com",
   port: 587,
-  secure: true,
+  security: "STARTTLS" as const,
   username: "mailer",
   fromAddress: "bilan@example.com",
   fromName: "Bilan",
@@ -73,6 +74,20 @@ describe("SMTP config service", () => {
     expect(await db.smtpConfig.count()).toBe(1);
   });
 
+  it("defaults to STARTTLS and rejects unknown modes (#255)", () => {
+    const input: Record<string, unknown> = { ...base, password: "secret" };
+    delete input.security;
+    expect(smtpSchema.parse(input).security).toBe("STARTTLS");
+    expect(smtpSchema.safeParse({ ...input, security: "SSL" }).success).toBe(false);
+  });
+
+  it("round-trips each security mode (#255)", async () => {
+    for (const security of ["TLS", "NONE", "STARTTLS"] as const) {
+      await upsertSmtp({ ...base, security, password: "super-secret" }, actor);
+      expect((await getSmtpConfig())?.security).toBe(security);
+    }
+  });
+
   it("keeps the stored password when left empty for the same server and account", async () => {
     await upsertSmtp(
       { ...base, fromAddress: "noreply@example.com", password: "", enabled: false },
@@ -89,7 +104,7 @@ describe("SMTP config service", () => {
     ["host", { host: "evil.example.com" }],
     ["port", { port: 465 }],
     ["username", { username: "someone-else" }],
-    ["encryption", { secure: false }],
+    ["encryption", { security: "TLS" as const }],
   ])("requires the password again when the %s changes", async (_field, change) => {
     await expect(upsertSmtp({ ...base, ...change, password: "" }, actor)).rejects.toBeInstanceOf(
       SmtpPasswordRequiredError,
@@ -99,7 +114,14 @@ describe("SMTP config service", () => {
 
   it("updates the same singleton row with a new server and password", async () => {
     await upsertSmtp(
-      { ...base, host: "smtp2.example.com", port: 465, password: "super-secret", enabled: false },
+      {
+        ...base,
+        host: "smtp2.example.com",
+        port: 465,
+        security: "TLS",
+        password: "super-secret",
+        enabled: false,
+      },
       actor,
     );
     expect(await db.smtpConfig.count()).toBe(1);
@@ -111,6 +133,7 @@ describe("SMTP config service", () => {
     expect(transport.options[0]).toMatchObject({
       host: "smtp2.example.com",
       port: 465,
+      secure: true,
       auth: { user: "mailer", pass: "super-secret" },
       connectionTimeout: 10_000,
       greetingTimeout: 10_000,

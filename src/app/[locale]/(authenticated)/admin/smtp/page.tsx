@@ -22,7 +22,7 @@ export default async function AdminSmtpPage() {
             ? {
                 host: cfg.host,
                 port: cfg.port,
-                secure: cfg.secure,
+                security: cfg.security,
                 username: cfg.username,
                 fromAddress: cfg.fromAddress,
                 fromName: cfg.fromName,

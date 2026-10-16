@@ -196,17 +196,24 @@ model AuthProvider {
 }
 
 model SmtpConfig {
-  id          String   @id @default(cuid())
+  id          String       @id @default(cuid())
   host        String
   port        Int
-  secure      Boolean  @default(true)
+  security    SmtpSecurity @default(STARTTLS)
   username    String
-  passwordEnc String   @db.Text
+  passwordEnc String       @db.Text
   fromAddress String
   fromName    String?
-  enabled     Boolean  @default(false)
-  updatedAt   DateTime @updatedAt
+  enabled     Boolean      @default(false)
+  updatedAt   DateTime     @updatedAt
   updatedById String?
+}
+
+// TLS: implicit TLS (465); STARTTLS: upgrade required (587); NONE: unencrypted local relay.
+enum SmtpSecurity {
+  TLS
+  STARTTLS
+  NONE
 }
 
 model AppSetting {

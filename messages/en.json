@@ -1465,10 +1465,17 @@
       "passwordKept": "Leave blank to keep the current one (same server and account)",
       "fromAddress": "From address",
       "fromName": "From name",
-      "secure": "Encryption",
-      "secureTls": "Implicit TLS (port 465)",
-      "securePlain": "STARTTLS if offered (port 587)",
-      "secureHint": "Port 587 uses STARTTLS: the connection is encrypted when the server offers it, and stays unencrypted otherwise. Port 465 needs implicit TLS.",
+      "security": {
+        "label": "Encryption",
+        "STARTTLS": "STARTTLS (port 587) — recommended",
+        "TLS": "Implicit TLS (port 465)",
+        "NONE": "None — local relay only, unencrypted",
+        "hint": {
+          "STARTTLS": "The connection is upgraded to TLS before logging in; sending fails if the server doesn’t support it.",
+          "TLS": "The connection is encrypted from the start, as most providers expect on port 465.",
+          "NONE": "The password and emails, reset links included, travel in clear text: only for a relay on the same machine or a trusted local network."
+        }
+      },
       "enabled": "State",
       "on": "On",
       "off": "Off",
@@ -1787,8 +1794,6 @@
       "password": "Password",
       "fromAddress": "From address",
       "fromName": "From name",
-      "secure": "Implicit TLS (port 465)",
-      "secureHint": "Off: STARTTLS when the server offers it (port 587), unencrypted otherwise.",
       "error": "Incomplete SMTP fields: host, port, username, password and a valid from address are required.",
       "save": "Save and continue",
       "skip": "Skip"

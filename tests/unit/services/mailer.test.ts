@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const env = vi.hoisted(() => ({ NODE_ENV: "production" }));
 vi.mock("@/env", () => ({ env }));
@@ -9,9 +9,13 @@ vi.mock("@/server/db", () => ({
   db: { smtpConfig: { findFirst: async () => smtp.config } },
 }));
 const transport = vi.hoisted(() => ({ sendMail: vi.fn(async () => ({})) }));
-vi.mock("nodemailer", () => ({ default: { createTransport: () => transport } }));
+const createTransport = vi.hoisted(() =>
+  vi.fn<(options: Record<string, unknown>) => typeof transport>(() => transport),
+);
+vi.mock("nodemailer", () => ({ default: { createTransport } }));
 
-import { sendMail } from "@/server/services/mail/mailer";
+import type { SmtpConfig } from "@prisma/client";
+import { sendMail, sendWithConfig } from "@/server/services/mail/mailer";
 
 const mail = {
   to: "user@bilan.local",
@@ -61,5 +65,29 @@ describe("sendMail through SMTP", () => {
         headers: { "Content-Language": "fr" },
       }),
     );
+  });
+});
+
+describe("SMTP transport security (#255)", () => {
+  const cfg = {
+    host: "smtp.example.com",
+    port: 587,
+    username: "mailer",
+    passwordEnc: "x",
+    fromAddress: "bilan@example.com",
+    fromName: null,
+  };
+  beforeEach(() => createTransport.mockClear());
+
+  it.each([
+    ["TLS", { secure: true }],
+    ["STARTTLS", { secure: false, requireTLS: true }],
+    ["NONE", { secure: false, ignoreTLS: true }],
+  ] as const)("configures nodemailer for %s", async (security, expected) => {
+    await sendWithConfig({ ...cfg, security } as SmtpConfig, mail);
+    const options = createTransport.mock.calls[0]![0];
+    expect(options).toMatchObject(expected);
+    expect(options.requireTLS ?? false).toBe(security === "STARTTLS");
+    expect(options.ignoreTLS ?? false).toBe(security === "NONE");
   });
 });

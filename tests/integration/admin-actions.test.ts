@@ -216,6 +216,28 @@ describe("SMTP actions", () => {
     expect(await db.smtpConfig.count({ where: { host: "smtp.evil.test" } })).toBe(0);
   });
 
+  it("saves the submitted security mode, STARTTLS when absent, and rejects unknown ones (#255)", async () => {
+    current.user = users.super;
+    const fields = {
+      host: "smtp.example.test",
+      port: "465",
+      username: "mailer",
+      password: "secret",
+      fromAddress: "bilan@example.test",
+      enabled: "false",
+    };
+    expect(await upsertSmtpAction(null, form({ ...fields, security: "TLS" }))).toEqual({
+      ok: true,
+    });
+    expect((await db.smtpConfig.findFirst())?.security).toBe("TLS");
+    expect(await upsertSmtpAction(null, form(fields))).toEqual({ ok: true });
+    expect((await db.smtpConfig.findFirst())?.security).toBe("STARTTLS");
+    expect(await upsertSmtpAction(null, form({ ...fields, security: "SSL" }))).toMatchObject({
+      ok: false,
+    });
+    await db.smtpConfig.deleteMany();
+  });
+
   it("rate-limits the SMTP test per super admin", async () => {
     current.user = users.super;
     const results = [];

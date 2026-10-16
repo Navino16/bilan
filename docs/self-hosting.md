@@ -183,7 +183,9 @@ app port.
 Open `APP_URL`. A fresh install (no user yet) redirects every page to the setup wizard:
 
 1. **Admin account**: creates the first account, with the super admin role.
-2. **Email (SMTP)**: optional, can be configured later in Administration.
+2. **Email (SMTP)**: optional, can be configured later in Administration. Encryption defaults to
+   STARTTLS (port 587), which refuses to send if the server does not support it; _Implicit TLS_
+   (port 465) and _None_ (local relay only) are the alternatives.
 3. **External login**: optional OIDC provider (Google is added later, from Administration). The
    wizard shows the redirect URL to register with your identity provider.
 4. **Registration mode**: _Invite only_ (default, recommended), _Open_ or _Disabled_ (only an

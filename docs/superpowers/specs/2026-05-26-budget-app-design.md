@@ -670,7 +670,7 @@ model SmtpConfig {
   id           String   @id @default(cuid())          // singleton
   host         String
   port         Int
-  secure       Boolean  @default(true)
+  security     SmtpSecurity @default(STARTTLS)      // TLS (465) | STARTTLS (587, required) | NONE (local relay)
   username     String
   passwordEnc  String                                  // ENCRYPTED
   fromAddress  String
@@ -845,7 +845,7 @@ UI `/transactions/suggestions`: list pairs with Link / Ignore buttons. Ignore wr
 
 Provider types are `oidc` and `google` only; a Google row stores just the client ID and secret.
 
-Same pattern for SMTP (`admin.security.write`) and app settings (`admin.settings.write`; the security keys — registration mode, password sign-in, password length, admin 2FA — also need `admin.security.write`).
+Same pattern for SMTP (`admin.security.write`; encryption mode `STARTTLS` (default) maps to nodemailer `requireTLS`, so a stripped STARTTLS never sends credentials in clear, `TLS` to implicit TLS, `NONE` to `ignoreTLS` for a local relay — #255) and app settings (`admin.settings.write`; the security keys — registration mode, password sign-in, password length, admin 2FA — also need `admin.security.write`).
 
 ### 5.10 RGPD: export & deletion
 

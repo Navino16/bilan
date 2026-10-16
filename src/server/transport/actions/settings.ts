@@ -103,7 +103,7 @@ export async function upsertSmtpAction(
   const parsed = smtpSchema.safeParse({
     host: str(formData, "host"),
     port: str(formData, "port"),
-    secure: bool(formData, "secure"),
+    security: str(formData, "security") || undefined,
     username: str(formData, "username"),
     password: str(formData, "password"),
     fromAddress: str(formData, "fromAddress"),
