@@ -11,17 +11,23 @@ import { DEFAULT_SMTP_SECURITY, SMTP_SECURITY_MODES } from "@/lib/smtp-security"
 // singleton row under a fixed id.
 export const SMTP_SINGLETON_ID = "default";
 
-export const smtpSchema = z.object({
-  host: z.string().min(1),
-  port: z.coerce.number().int().min(1).max(65535),
-  security: z.enum(SMTP_SECURITY_MODES).default(DEFAULT_SMTP_SECURITY),
-  username: z.string().min(1),
-  // Empty keeps the stored password, but only for the same server and account (upsertSmtp).
-  password: z.string(),
-  fromAddress: z.email(),
-  fromName: z.string().optional().nullable(),
-  enabled: z.boolean().default(true),
-});
+// Empty username = unauthenticated relay. With a username, an empty password keeps the
+// stored one, but only for the same server and account (upsertSmtp).
+export const smtpSchema = z
+  .object({
+    host: z.string().min(1),
+    port: z.coerce.number().int().min(1).max(65535),
+    security: z.enum(SMTP_SECURITY_MODES).default(DEFAULT_SMTP_SECURITY),
+    username: z.string().default(""),
+    password: z.string().default(""),
+    fromAddress: z.email(),
+    fromName: z.string().optional().nullable(),
+    enabled: z.boolean().default(true),
+  })
+  .refine((v) => v.username.length > 0 || v.password.length === 0, {
+    path: ["username"],
+    message: "REQUIRED",
+  });
 
 export type SmtpInput = z.infer<typeof smtpSchema>;
 
@@ -38,7 +44,10 @@ export async function upsertSmtp(
 ): Promise<SmtpConfig> {
   const parsed = smtpSchema.parse(input);
   let passwordEnc: string;
-  if (parsed.password) {
+  if (!parsed.username) {
+    // passwordEnc is NOT NULL: an unauthenticated relay stores an encrypted empty secret.
+    passwordEnc = encrypt("", dataKey);
+  } else if (parsed.password) {
     passwordEnc = encrypt(parsed.password, dataKey);
   } else {
     // Reusing the secret for another host/account would hand it to a server the admin

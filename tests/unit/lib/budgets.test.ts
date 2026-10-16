@@ -49,9 +49,22 @@ describe("lineStatus", () => {
     expect(s.remaining).toBe(-20);
     expect(s.percent).toBe(120);
   });
-  it("handles a zero planned amount", () => {
-    expect(lineStatus(0, 0)).toMatchObject({ percent: 0, status: "OK" });
-    expect(lineStatus(0, 10)).toMatchObject({ percent: 100, status: "OVER" });
+  it("has no percent when spending against a zero planned amount", () => {
+    expect(lineStatus(0, 10)).toEqual({
+      plannedAmount: 0,
+      spent: 10,
+      remaining: -10,
+      percent: null,
+      status: "OVER",
+    });
+    expect(lineStatus(0, 0.01)).toMatchObject({ percent: null, status: "OVER" });
+  });
+  it("is OK at 0% with a zero planned amount and no spending", () => {
+    expect(lineStatus(0, 0)).toMatchObject({ remaining: 0, percent: 0, status: "OK" });
+    expect(lineStatus(0, 0.004)).toMatchObject({ percent: 0, status: "OK" });
+    expect(lineStatus(0, -5)).toMatchObject({ percent: 0, status: "OK" });
+    expect(lineStatus(0.004, 0)).toMatchObject({ percent: 0, status: "OK" });
+    expect(lineStatus(0.004, 1)).toMatchObject({ percent: null, status: "OVER" });
   });
 });
 

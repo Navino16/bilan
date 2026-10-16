@@ -28,7 +28,9 @@ export async function sendWithConfig(cfg: SmtpConfig, mail: Mail): Promise<void>
     host: cfg.host,
     port: cfg.port,
     ...TRANSPORT_SECURITY[cfg.security],
-    auth: { user: cfg.username, pass: decrypt(cfg.passwordEnc, dataKey) },
+    ...(cfg.username
+      ? { auth: { user: cfg.username, pass: decrypt(cfg.passwordEnc, dataKey) } }
+      : {}),
     connectionTimeout: 10_000,
     greetingTimeout: 10_000,
     socketTimeout: 20_000,

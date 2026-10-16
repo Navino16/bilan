@@ -12,7 +12,7 @@ import type { SmtpData } from "./stepper";
 
 // Optional. SMTP can also be configured later in the admin settings (Phase 8.4).
 // If the host is left blank the step is skipped; if filled, the required fields
-// are validated before advancing. Persisted atomically on the final step.
+// are validated before advancing (credentials are optional but go together). Persisted atomically on the final step.
 export function StepSmtp({
   data,
   onChange,
@@ -26,11 +26,12 @@ export function StepSmtp({
   const [showError, setShowError] = useState(false);
 
   const filled = data.host.trim().length > 0;
+  const hasUsername = data.username.trim().length > 0;
+  const hasPassword = data.password.length > 0;
   const complete =
     data.host.trim().length > 0 &&
     Number(data.port) >= 1 &&
-    data.username.trim().length > 0 &&
-    data.password.length > 0 &&
+    hasUsername === hasPassword &&
     /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(data.fromAddress);
 
   function handleNext() {
@@ -85,6 +86,7 @@ export function StepSmtp({
           autoComplete="off"
         />
       </div>
+      <p className="text-muted-foreground -mt-2 text-xs">{t("credentialsHint")}</p>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="smtp-from">{t("fromAddress")}</Label>

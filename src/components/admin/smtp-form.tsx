@@ -89,7 +89,7 @@ export function SmtpForm({ defaults }: { defaults: SmtpDefaults }) {
               id="smtp-username"
               name="username"
               defaultValue={defaults?.username ?? ""}
-              required
+              autoComplete="off"
               {...form.fieldProps("username")}
             />
             <FieldError form={form} name="username" />
@@ -100,12 +100,13 @@ export function SmtpForm({ defaults }: { defaults: SmtpDefaults }) {
               id="smtp-password"
               name="password"
               type="password"
-              placeholder={defaults ? t("passwordKept") : ""}
-              required={!defaults}
+              placeholder={defaults?.username ? t("passwordKept") : ""}
+              autoComplete="new-password"
               {...form.fieldProps("password")}
             />
             <FieldError form={form} name="password" />
           </div>
+          <p className="text-muted-foreground text-xs sm:col-span-2">{t("credentialsHint")}</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">

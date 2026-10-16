@@ -6,7 +6,8 @@ import {
   ownedOrThrow,
   type AccountAccess,
 } from "@/server/services/accounts";
-import { requireGroupRole } from "@/server/services/groups/roles";
+import { lockMember, requireGroupRole } from "@/server/services/groups/roles";
+import { dropGroupAssignments, unshareFromGroup } from "@/server/services/groups/detach";
 import { displayName } from "@/lib/validation/name";
 
 export { AccountAccessError } from "@/server/services/accounts";
@@ -31,21 +32,21 @@ export async function shareAccountWithGroup(
 ): Promise<void> {
   if (!PERMISSIONS.includes(input.permission)) throw new AccountAccessError("INVALID");
   await ownedOrThrow(input.accountId, actor.id);
-  // The owner must belong to the group they share into.
-  const membership = await db.groupMember.findUnique({
-    where: { groupId_userId: { groupId: input.groupId, userId: actor.id } },
-  });
-  if (!membership) throw new AccountAccessError("FORBIDDEN");
-
-  await db.accountShare.upsert({
-    where: { accountId_groupId: { accountId: input.accountId, groupId: input.groupId } },
-    update: { permission: input.permission },
-    create: {
-      accountId: input.accountId,
-      groupId: input.groupId,
-      permission: input.permission,
-      createdById: actor.id,
-    },
+  // The owner must belong to the group they share into, still at commit time (#259).
+  await db.$transaction(async (tx) => {
+    if (!(await lockMember(tx, input.groupId, actor.id))) {
+      throw new AccountAccessError("FORBIDDEN");
+    }
+    await tx.accountShare.upsert({
+      where: { accountId_groupId: { accountId: input.accountId, groupId: input.groupId } },
+      update: { permission: input.permission },
+      create: {
+        accountId: input.accountId,
+        groupId: input.groupId,
+        permission: input.permission,
+        createdById: actor.id,
+      },
+    });
   });
   await logEvent({
     userId: actor.id,
@@ -61,17 +62,19 @@ export async function revokeShare(
   actor: { id: string },
 ): Promise<void> {
   await ownedOrThrow(input.accountId, actor.id);
-  await db.accountShare
-    .delete({
-      where: { accountId_groupId: { accountId: input.accountId, groupId: input.groupId } },
-    })
-    .catch(() => undefined);
+  const account = { id: input.accountId };
+  // Without a share there is nothing to undo: the owner's INCLUDEs from a private account stay.
+  const removedAssignments = await db.$transaction(async (tx) =>
+    (await unshareFromGroup(tx, input.groupId, account)) > 0
+      ? dropGroupAssignments(tx, input.groupId, account)
+      : 0,
+  );
   await logEvent({
     userId: actor.id,
     action: "account.share.revoke",
     entity: "AccountShare",
     entityId: input.accountId,
-    metadata: { groupId: input.groupId },
+    metadata: { groupId: input.groupId, removedAssignments },
   });
 }
 

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "@/server/db";
 import { createAccount, listVisibleForUser } from "@/server/services/accounts";
 import { createGroup } from "@/server/services/groups";
+import { buildSecureFields } from "@/server/services/transactions/secure-fields";
 import {
   shareAccountWithGroup,
   revokeShare,
@@ -93,5 +94,89 @@ describe("account sharing & permissions", () => {
     expect((await listVisibleForUser(memberId)).some((a) => a.id === acc.id)).toBe(true);
     await revokeShare({ accountId: acc.id, groupId: grp.id }, { id: ownerId });
     expect((await listVisibleForUser(memberId)).some((a) => a.id === acc.id)).toBe(false);
+  });
+});
+
+async function txOn(accountId: string) {
+  const secure = buildSecureFields({ label: "Courses", rawLabel: "CB COURSES" });
+  return db.transaction.create({
+    data: {
+      accountId,
+      date: new Date("2026-03-05T00:00:00Z"),
+      amount: -20,
+      type: "CARD",
+      labelEnc: secure.labelEnc,
+      labelHash: secure.labelHash,
+      rawLabelEnc: secure.rawLabelEnc,
+      rawLabelHash: secure.rawLabelHash,
+      createdById: ownerId,
+    },
+  });
+}
+
+function budgetFor(owner: { groupId: string } | { userId: string }) {
+  return db.budget.create({
+    data: {
+      ...owner,
+      name: "Revoke budget",
+      periodType: "MONTH",
+      periodStart: new Date("2026-03-01T00:00:00Z"),
+      periodEnd: new Date("2026-03-31T23:59:59Z"),
+      createdById: ownerId,
+    },
+  });
+}
+
+describe("revoking a share (#259 follow-up)", () => {
+  it("drops that household's assignments on the account's transactions only", async () => {
+    const acc = await createAccount({ name: "Revoked", type: "CHECKING" }, ownerId);
+    const kept = await createAccount({ name: "Still shared", type: "CHECKING" }, ownerId);
+    const grp = await createGroup({ name: "Revoke grp" }, ownerId);
+    const other = await createGroup({ name: "Revoke other grp" }, ownerId);
+    for (const [accountId, groupId] of [
+      [acc.id, grp.id],
+      [acc.id, other.id],
+      [kept.id, grp.id],
+    ])
+      await shareAccountWithGroup({ accountId, groupId, permission: "READ" }, { id: ownerId });
+    const [tAcc, tKept] = [await txOn(acc.id), await txOn(kept.id)];
+    const [budget, otherBudget, personal] = [
+      await budgetFor({ groupId: grp.id }),
+      await budgetFor({ groupId: other.id }),
+      await budgetFor({ userId: ownerId }),
+    ];
+    const assign = (budgetId: string, transactionId: string, mode: string) =>
+      db.budgetAssignment.create({
+        data: { budgetId, transactionId, mode, assignedById: ownerId },
+      });
+    await assign(budget.id, tAcc.id, "EXCLUDE");
+    await assign(budget.id, tKept.id, "EXCLUDE");
+    await assign(otherBudget.id, tAcc.id, "EXCLUDE");
+    await assign(personal.id, tAcc.id, "INCLUDE");
+
+    await revokeShare({ accountId: acc.id, groupId: grp.id }, { id: ownerId });
+
+    const left = await db.budgetAssignment.findMany({
+      where: { budgetId: { in: [budget.id, otherBudget.id, personal.id] } },
+      select: { budgetId: true, transactionId: true },
+    });
+    expect(left).toHaveLength(3);
+    expect(left).not.toContainEqual({ budgetId: budget.id, transactionId: tAcc.id });
+    expect(left).toContainEqual({ budgetId: budget.id, transactionId: tKept.id });
+    expect(await db.accountShare.count({ where: { accountId: acc.id } })).toBe(1);
+    const audit = await db.auditLog.findFirst({
+      where: { action: "account.share.revoke", entityId: acc.id },
+    });
+    expect(audit?.metadata).toEqual({ groupId: grp.id, removedAssignments: 1 });
+
+    // Nothing was shared any more: an owner's INCLUDE from that account stays.
+    await assign(budget.id, tAcc.id, "INCLUDE");
+    await revokeShare({ accountId: acc.id, groupId: grp.id }, { id: ownerId });
+    expect(
+      await db.budgetAssignment.count({ where: { budgetId: budget.id, transactionId: tAcc.id } }),
+    ).toBe(1);
+
+    await db.budget.deleteMany({ where: { id: { in: [budget.id, otherBudget.id, personal.id] } } });
+    await db.group.deleteMany({ where: { id: { in: [grp.id, other.id] } } });
   });
 });

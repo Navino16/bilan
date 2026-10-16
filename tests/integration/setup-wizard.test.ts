@@ -72,4 +72,45 @@ describe("setup wizard", () => {
       else await db.appSetting.deleteMany({ where: { key: "min_password_length" } });
     }
   });
+
+  function setupForm(smtp: Record<string, string>): FormData {
+    const fd = new FormData();
+    fd.set("name", "Relay");
+    fd.set("email", "relay@bilan.local");
+    fd.set("password", "relay-strong-password-12345");
+    fd.set("locale", "en");
+    fd.set("mode", "INVITE_ONLY");
+    fd.set("smtp_host", "relay.lan");
+    fd.set("smtp_port", "25");
+    fd.set("smtp_security", "NONE");
+    fd.set("smtp_fromAddress", "bilan@example.com");
+    for (const [k, v] of Object.entries(smtp)) fd.set(`smtp_${k}`, v);
+    return fd;
+  }
+
+  it("rejects an SMTP username without its password", async () => {
+    expect(await completeSetupAction(null, setupForm({ username: "mailer" }))).toEqual({
+      ok: false,
+      error: "INVALID_SMTP",
+    });
+  });
+
+  it("saves an SMTP relay without credentials", async () => {
+    const mode = await db.appSetting.findUnique({ where: { key: "registration_mode" } });
+    await db.user.deleteMany({ where: { id: firstUserId } });
+    await db.smtpConfig.deleteMany();
+    try {
+      expect(await completeSetupAction(null, setupForm({}))).toEqual({ ok: true });
+      firstUserId = (await db.user.findUniqueOrThrow({ where: { email: "relay@bilan.local" } })).id;
+      expect(await db.smtpConfig.findFirst()).toMatchObject({
+        host: "relay.lan",
+        security: "NONE",
+        username: "",
+      });
+    } finally {
+      await db.smtpConfig.deleteMany();
+      if (mode) await appSettings.set("registration_mode", mode.value, firstUserId);
+      else await db.appSetting.deleteMany({ where: { key: "registration_mode" } });
+    }
+  });
 });

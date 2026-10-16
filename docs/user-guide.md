@@ -352,7 +352,7 @@ Each line and the budget as a whole show a status:
 | **Reached**        | exactly the planned amount, to the cent |
 | **Over budget**    | more than the planned amount            |
 
-Tip: **Reached** needs the exact amount, to the cent. Until then the percentage stays below 100 % (99.6 % is shown as 99 %), and any overspend shows at least 101 %.
+Tip: **Reached** needs the exact amount, to the cent. Until then the percentage stays below 100 % (99.6 % is shown as 99 %), and any overspend shows at least 101 %. A line planned at 0 € stays **On track** while nothing is spent; any spending puts it **Over budget**, with no percentage (—).
 
 Click a budget to open its details: each line with "… left" or "Over by …", **See transactions** for category lines, and the list of transactions **Counted in this budget**.
 
@@ -375,7 +375,7 @@ A budget with a household scope belongs to the household:
 - Owners and admins create, edit, renew and delete it. Every member can view it, and can include or exclude transactions.
 - It counts transactions from the accounts shared with that household.
 
-A member can also **Include** a transaction from one of their private accounts. It then counts in the totals for everyone, and every member sees it in the budget in full: date, amount, label, category and account name. Only that transaction becomes visible: the private account and its other transactions stay hidden. If that member later leaves the household, the transaction still counts but shows as “Another member’s transaction”, without its details.
+A member can also **Include** a transaction from one of their private accounts. It then counts in the totals for everyone, and every member sees it in the budget in full: date, amount, label, category and account name. Only that transaction becomes visible: the private account and its other transactions stay hidden. If that member later leaves the household or is removed from it, the transaction stops counting in the household budgets.
 
 You can only **Include** a transaction from one of your own accounts or from an account shared with this household: an account another household shares with you can't be included.
 
@@ -429,7 +429,7 @@ To hand over a household, an owner sets another member's role to **Owner**. A ho
 ### Share an account
 
 1. On **Accounts**, open the account's **⋮** menu and choose **Share**.
-2. For each household, choose **None**, **Read** or **Write**. The change applies immediately.
+2. For each household, choose **None**, **Read** or **Write**. The change applies immediately. Switching a household the account was shared with back to **None** also drops the inclusions and exclusions of its transactions in that household's budgets, so none of them count there any more.
 
 #### What Read and Write allow
 
@@ -443,10 +443,10 @@ Your private accounts and their transactions are never visible to other members,
 
 The **Danger zone** at the bottom of the household page offers:
 
-- **Leave**: you lose access to the household's shared accounts and budgets. The last owner can't leave.
+- **Leave**: you lose access to the household's shared accounts and budgets. Your accounts stop being shared with the household, and your transactions leave its budgets (included or excluded ones alike). The last owner can't leave.
 - **Delete household** (owners): removes the members, invitations and shares, along with the household's categories, rules and budgets. Transactions that used a household category become uncategorized. Accounts and transactions themselves are kept. The confirmation counts what is affected.
 
-Tip: leaving a household doesn't stop sharing your accounts with it, and once you have left you can no longer change that from the app. Set each of your accounts to **None** for that household before you leave.
+The same happens to a member an owner or admin removes. A household budget line limited to one of their accounts stays, counts nothing, and shows as a hidden account: edit or delete it.
 
 ## Dashboard and insights
 

@@ -769,6 +769,7 @@ Magic-link password reset: `/reset` → SMTP email → `/reset/[token]` → new 
 1. Owner creates account: `POST /accounts` (Server Action) → `accounts.service.create({ ownerId, name, type, ibanEnc?, ibanHash? })`.
 2. Sharing with a group: `POST /accounts/[id]/share` → `permissions.service.shareAccountWithGroup({ accountId, groupId, permission, actor })` → verifies actor is owner or admin → creates `AccountShare` → audit log.
 3. Visibility: `accounts.service.listVisibleForUser(userId)` returns own accounts + accounts shared via groups the user belongs to.
+4. Leaving or being removed from a group (#259): in the same transaction as the `GroupMember` deletion, the member's `AccountShare` rows to that group and the group budgets' `BudgetAssignment` rows (INCLUDE and EXCLUDE) on their transactions are deleted; the counts go in the `group.member.removed` audit metadata. Budget lines limited to one of their accounts are kept (they count nothing and show as a hidden account). Group deletion is unchanged. Revoking one share (`revokeShare`) does the same for that account and group, in one transaction, with `removedAssignments` in the `account.share.revoke` metadata; when no share existed, nothing is deleted.
 
 ### 5.5 CSV import (main flow)
 
@@ -814,7 +815,7 @@ Creation (`/budgets/new`):
    - Balanced groups (`|sum| < 0.005`): all members excluded.
    - Unbalanced groups: only the primary (largest absolute amount) counts, with the net sum as its effective amount.
 6. Sum effective amounts → `spent`.
-7. Return `{ plannedAmount, spent, remaining, percent, status: "OK" | "WARN" | "OVER" }`.
+7. Return `{ plannedAmount, spent, remaining, percent, status: "OK" | "WARN" | "REACHED" | "OVER" }`. With `plannedAmount = 0`, no spending is OK at 0 %; any spending is OVER with `percent = null` (shown as "—", full bar).
 
 Explicit assignment: from any transaction, "Assign to a budget" menu → choose budget (mine or my groups') → mode INCLUDE/EXCLUDE → creates `BudgetAssignment` (unique on `(budgetId, transactionId)`).
 
@@ -845,7 +846,7 @@ UI `/transactions/suggestions`: list pairs with Link / Ignore buttons. Ignore wr
 
 Provider types are `oidc` and `google` only; a Google row stores just the client ID and secret.
 
-Same pattern for SMTP (`admin.security.write`; encryption mode `STARTTLS` (default) maps to nodemailer `requireTLS`, so a stripped STARTTLS never sends credentials in clear, `TLS` to implicit TLS, `NONE` to `ignoreTLS` for a local relay — #255) and app settings (`admin.settings.write`; the security keys — registration mode, password sign-in, password length, admin 2FA — also need `admin.security.write`).
+Same pattern for SMTP (`admin.security.write`; encryption mode `STARTTLS` (default) maps to nodemailer `requireTLS`, so a stripped STARTTLS never sends credentials in clear, `TLS` to implicit TLS, `NONE` to `ignoreTLS` for a local relay — #255; username and password are optional in every mode: an empty username connects without `auth` and stores an encrypted empty `passwordEnc`, and a password is only reused when host, port, mode and a non-empty username are unchanged) and app settings (`admin.settings.write`; the security keys — registration mode, password sign-in, password length, admin 2FA — also need `admin.security.write`).
 
 ### 5.10 RGPD: export & deletion
 

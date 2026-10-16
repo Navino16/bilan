@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
 import { GROUP_ROLE_RANK as RANK, type GroupRole } from "@/lib/validation/group";
 
@@ -28,4 +29,27 @@ export async function requireGroupRole(
 
 export async function countOwners(groupId: string): Promise<number> {
   return db.groupMember.count({ where: { groupId, role: "OWNER" } });
+}
+
+export type LockedMember = { userId: string; role: GroupRole };
+
+// Shares, departures and the last-owner rule serialize on the group's membership rows (#259);
+// locking reads see the latest committed rows.
+export function lockGroupMembers(
+  tx: Prisma.TransactionClient,
+  groupId: string,
+): Promise<LockedMember[]> {
+  return tx.$queryRaw<LockedMember[]>`
+    SELECT userId, role FROM GroupMember WHERE groupId = ${groupId} FOR UPDATE`;
+}
+
+export async function lockMember(
+  tx: Prisma.TransactionClient,
+  groupId: string,
+  userId: string,
+): Promise<LockedMember | null> {
+  const rows = await tx.$queryRaw<LockedMember[]>`
+    SELECT userId, role FROM GroupMember
+    WHERE groupId = ${groupId} AND userId = ${userId} FOR UPDATE`;
+  return rows[0] ?? null;
 }

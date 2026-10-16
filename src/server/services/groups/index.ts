@@ -1,15 +1,18 @@
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import { nameSchema } from "@/lib/validation/name";
-import { GROUP_DESCRIPTION_MAX, canRemoveMember } from "@/lib/validation/group";
+import { GROUP_DESCRIPTION_MAX, canManageInGroup, canRemoveMember } from "@/lib/validation/group";
 import {
   GROUP_ROLES,
   GroupAccessError,
   type GroupRole,
+  type LockedMember,
   countOwners,
   getMembership,
+  lockGroupMembers,
   requireGroupRole,
 } from "./roles";
+import { dropGroupAssignments, unshareFromGroup } from "./detach";
 
 export { GroupAccessError } from "./roles";
 
@@ -155,35 +158,52 @@ export async function removeMember(
   targetUserId: string,
   actor: { id: string },
 ): Promise<void> {
-  const actorRole = await requireGroupRole(groupId, actor.id, "ADMIN");
-  const target = await getMembership(groupId, targetUserId);
-  if (!target) throw new GroupAccessError("NOT_MEMBER");
-  if (!canRemoveMember(actorRole, target.role)) throw new GroupAccessError("FORBIDDEN");
-  if (target.role === "OWNER" && (await countOwners(groupId)) <= 1) {
-    throw new GroupAccessError("LAST_OWNER");
-  }
-  await db.groupMember.delete({ where: { groupId_userId: { groupId, userId: targetUserId } } });
+  const detached = await removeMembership(groupId, targetUserId, (members, target) => {
+    const actorRole = members.find((m) => m.userId === actor.id)?.role;
+    if (!actorRole || !canManageInGroup(actorRole)) throw new GroupAccessError("FORBIDDEN");
+    if (target && !canRemoveMember(actorRole, target.role)) {
+      throw new GroupAccessError("FORBIDDEN");
+    }
+  });
   await logEvent({
     userId: actor.id,
     action: "group.member.removed",
     entity: "Group",
     entityId: groupId,
-    metadata: { targetUserId },
+    metadata: { targetUserId, ...detached },
   });
 }
 
 export async function leaveGroup(groupId: string, userId: string): Promise<void> {
-  const m = await getMembership(groupId, userId);
-  if (!m) throw new GroupAccessError("NOT_MEMBER");
-  if (m.role === "OWNER" && (await countOwners(groupId)) <= 1) {
-    throw new GroupAccessError("LAST_OWNER");
-  }
-  await db.groupMember.delete({ where: { groupId_userId: { groupId, userId } } });
+  const detached = await removeMembership(groupId, userId);
   await logEvent({
     userId,
     action: "group.member.removed",
     entity: "Group",
     entityId: groupId,
-    metadata: { targetUserId: userId, self: true },
+    metadata: { targetUserId: userId, self: true, ...detached },
+  });
+}
+
+// The departing member's accounts leave the household with them, private ones included (an
+// INCLUDE needs no share). Lines filtering on such an account stay and count nothing.
+async function removeMembership(
+  groupId: string,
+  userId: string,
+  authorize?: (members: LockedMember[], target: LockedMember | undefined) => void,
+): Promise<{ unsharedAccounts: number; removedAssignments: number }> {
+  return db.$transaction(async (tx) => {
+    const members = await lockGroupMembers(tx, groupId);
+    const target = members.find((m) => m.userId === userId);
+    authorize?.(members, target);
+    if (!target) throw new GroupAccessError("NOT_MEMBER");
+    const owners = members.filter((m) => m.role === "OWNER").length;
+    if (target.role === "OWNER" && owners <= 1) throw new GroupAccessError("LAST_OWNER");
+    await tx.groupMember.delete({ where: { groupId_userId: { groupId, userId } } });
+    const owned = { ownerId: userId };
+    return {
+      unsharedAccounts: await unshareFromGroup(tx, groupId, owned),
+      removedAssignments: await dropGroupAssignments(tx, groupId, owned),
+    };
   });
 }

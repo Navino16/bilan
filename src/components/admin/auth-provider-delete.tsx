@@ -18,10 +18,14 @@ export function AuthProviderDelete({
   providerKey,
   name,
   impact,
+  enabled,
+  credentialsEnabled,
 }: {
   providerKey: string;
   name: string;
   impact: AuthProviderImpact;
+  enabled: boolean;
+  credentialsEnabled: boolean;
 }) {
   const t = useTranslations("admin.authProviders");
   const router = useRouter();
@@ -70,7 +74,9 @@ export function AuthProviderDelete({
         )}
         {impact.lockedOut > 0 && (
           <p className="text-destructive text-sm">
-            {t("deleteLockout", { count: impact.lockedOut })}
+            {t(enabled && !credentialsEnabled ? "deleteLockoutNoPassword" : "deleteLockout", {
+              count: impact.lockedOut,
+            })}
           </p>
         )}
       </ConfirmDialog>

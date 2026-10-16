@@ -5,7 +5,7 @@ import { AuthProviderForm, type AuthProviderDefaults } from "@/components/admin/
 import { SectionCard } from "@/components/shell/section-card";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { pageTitle } from "@/i18n/metadata";
-import { getAppName } from "@/server/services/settings/app-settings";
+import { appSettings, getAppName } from "@/server/services/settings/app-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -18,10 +18,11 @@ export const generateMetadata = pageTitle("adminAuthProviders");
 
 export default async function AdminAuthProvidersPage() {
   await requirePermission("admin.security.write");
-  const [t, providers, appName] = await Promise.all([
+  const [t, providers, appName, credentials] = await Promise.all([
     getTranslations("admin.authProviders"),
     listAuthProviders(),
     getAppName(),
+    appSettings.get<boolean>("credentials_enabled"),
   ]);
   const impacts = await Promise.all(providers.map((p) => authProviderImpact(p)));
 
@@ -50,7 +51,12 @@ export default async function AdminAuthProvidersPage() {
             title={p.displayName}
             action={<StatusBadge active={p.enabled}>{p.enabled ? t("on") : t("off")}</StatusBadge>}
           >
-            <AuthProviderForm provider={defaults} impact={impacts[i]} appName={appName} />
+            <AuthProviderForm
+              provider={defaults}
+              impact={impacts[i]}
+              credentialsEnabled={credentials ?? true}
+              appName={appName}
+            />
           </SectionCard>
         );
       })}

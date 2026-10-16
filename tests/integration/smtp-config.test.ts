@@ -169,6 +169,48 @@ describe("SMTP config service", () => {
     consoleError.mockRestore();
   });
 
+  it("accepts empty credentials but not a password without a username", () => {
+    const noAuth = { ...base, username: "", password: "" };
+    expect(smtpSchema.parse(noAuth)).toMatchObject({ username: "", password: "" });
+    const input: Record<string, unknown> = { ...noAuth };
+    delete input.username;
+    delete input.password;
+    expect(smtpSchema.safeParse(input).success).toBe(true);
+    const res = smtpSchema.safeParse({ ...noAuth, password: "orphan" });
+    expect(res.success).toBe(false);
+    expect(res.error?.issues[0]).toMatchObject({ path: ["username"], message: "REQUIRED" });
+  });
+
+  it.each(["TLS", "STARTTLS", "NONE"] as const)(
+    "round-trips an unauthenticated relay and sends without auth (%s)",
+    async (security) => {
+      const row = await upsertSmtp({ ...base, security, username: "", password: "" }, actor);
+      expect(row.username).toBe("");
+      expect(row.passwordEnc).not.toBe("");
+      expect(decrypt(row.passwordEnc, dataKey)).toBe("");
+      expect(await sendSmtpTest(mail, actor)).toEqual({ ok: true });
+      expect(transport.options[0]).not.toHaveProperty("auth");
+    },
+  );
+
+  it("requires a password when adding a username to an unauthenticated relay", async () => {
+    await upsertSmtp({ ...base, username: "", password: "" }, actor);
+    await expect(upsertSmtp({ ...base, password: "" }, actor)).rejects.toBeInstanceOf(
+      SmtpPasswordRequiredError,
+    );
+    await upsertSmtp({ ...base, password: "relay-secret" }, actor);
+    expect(decrypt((await getSmtpConfig())!.passwordEnc, dataKey)).toBe("relay-secret");
+  });
+
+  it("lets an unauthenticated relay change host or mode freely", async () => {
+    await upsertSmtp({ ...base, username: "", password: "" }, actor);
+    const row = await upsertSmtp(
+      { ...base, host: "relay.lan", security: "NONE", username: "", password: "" },
+      actor,
+    );
+    expect(row).toMatchObject({ host: "relay.lan", security: "NONE", username: "" });
+  });
+
   it("removes the config, after which a test reports it missing", async () => {
     expect(await deleteSmtpConfig(actor)).toBe(true);
     expect(await getSmtpConfig()).toBeNull();

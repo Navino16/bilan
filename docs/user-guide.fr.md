@@ -352,7 +352,7 @@ Chaque ligne, et le budget dans son ensemble, affiche un statut :
 | **Atteint**         | exactement le montant prévu, au centime près |
 | **Dépassé**         | plus que le montant prévu                    |
 
-Astuce : **Atteint** demande le montant exact, au centime près. D’ici là, le pourcentage reste sous 100 % (99,6 % s’affiche 99 %), et tout dépassement affiche au moins 101 %.
+Astuce : **Atteint** demande le montant exact, au centime près. D’ici là, le pourcentage reste sous 100 % (99,6 % s’affiche 99 %), et tout dépassement affiche au moins 101 %. Une ligne prévue à 0 € reste **Dans le budget** tant que rien n’est dépensé ; la moindre dépense la passe en **Dépassé**, sans pourcentage (—).
 
 Cliquez sur un budget pour ouvrir son détail : chaque ligne avec « Reste … » ou « Dépassé de … », **Voir les transactions** pour les lignes de catégorie, et la liste des transactions **Comptées dans ce budget**.
 
@@ -375,7 +375,7 @@ Un budget dont la portée est un foyer appartient au foyer :
 - Les propriétaires et les admins le créent, le modifient, le renouvellent et le suppriment. Tous les membres peuvent le consulter et y inclure ou en exclure des transactions.
 - Il compte les transactions des comptes partagés avec ce foyer.
 
-Un membre peut aussi **Inclure** une transaction de l’un de ses comptes privés. Elle compte alors dans les totaux pour tout le monde, et tous les membres la voient en entier dans le budget : date, montant, libellé, catégorie et nom du compte. Seule cette transaction devient visible : le compte privé et ses autres transactions restent masqués. Si ce membre quitte ensuite le foyer, la transaction compte toujours mais s’affiche comme « Transaction d’un autre membre », sans ses détails.
+Un membre peut aussi **Inclure** une transaction de l’un de ses comptes privés. Elle compte alors dans les totaux pour tout le monde, et tous les membres la voient en entier dans le budget : date, montant, libellé, catégorie et nom du compte. Seule cette transaction devient visible : le compte privé et ses autres transactions restent masqués. Si ce membre quitte ensuite le foyer ou en est retiré, la transaction ne compte plus dans les budgets du foyer.
 
 Vous ne pouvez **Inclure** qu’une transaction de l’un de vos comptes ou d’un compte partagé avec ce foyer : un compte qu’un autre foyer partage avec vous ne peut pas être inclus.
 
@@ -429,7 +429,7 @@ Pour transmettre un foyer, un propriétaire donne le rôle **Propriétaire** à 
 ### Partager un compte
 
 1. Dans **Comptes**, ouvrez le menu **⋮** du compte et choisissez **Partager**.
-2. Pour chaque foyer, choisissez **Aucun**, **Lecture** ou **Écriture**. Le changement s’applique immédiatement.
+2. Pour chaque foyer, choisissez **Aucun**, **Lecture** ou **Écriture**. Le changement s’applique immédiatement. Repasser sur **Aucun** un foyer avec lequel le compte était partagé retire aussi les inclusions et exclusions de ses transactions dans les budgets de ce foyer : aucune n’y compte plus.
 
 #### Ce que permettent Lecture et Écriture
 
@@ -443,10 +443,10 @@ Vos comptes privés et leurs transactions ne sont jamais visibles des autres mem
 
 La **Zone de danger** en bas de la page du foyer propose :
 
-- **Quitter** : vous perdez l’accès aux comptes et budgets partagés du foyer. Le dernier propriétaire ne peut pas quitter.
+- **Quitter** : vous perdez l’accès aux comptes et budgets partagés du foyer. Vos comptes cessent d’être partagés avec le foyer, et vos transactions sortent de ses budgets (incluses comme exclues). Le dernier propriétaire ne peut pas quitter.
 - **Supprimer le foyer** (propriétaires) : retire les membres, les invitations et les partages, ainsi que les catégories, règles et budgets du foyer. Les transactions qui utilisaient une catégorie du foyer deviennent non catégorisées. Les comptes et les transactions sont conservés. La confirmation chiffre ce qui est touché.
 
-Astuce : quitter un foyer n’arrête pas le partage de vos comptes avec lui, et une fois parti, vous ne pouvez plus le modifier depuis l’application. Passez chacun de vos comptes sur **Aucun** pour ce foyer avant de partir.
+Il en va de même pour un membre retiré par un propriétaire ou un administrateur. Une ligne de budget du foyer limitée à l’un de ses comptes reste, ne compte plus rien et s’affiche comme un compte masqué : modifiez-la ou supprimez-la.
 
 ## Tableau de bord et analyses
 

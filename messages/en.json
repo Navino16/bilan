@@ -288,7 +288,7 @@
     "sharedAccounts": "Shared accounts",
     "noSharedAccounts": "No accounts shared with this household.",
     "shareTitle": "Share account",
-    "shareSubtitle": "Choose households and their access level.",
+    "shareSubtitle": "Choose households and their access level. Switching a household the account was shared with to None also drops that household’s budget inclusions and exclusions of its transactions.",
     "noGroups": "You don’t belong to any household.",
     "permNone": "None",
     "access": {
@@ -911,9 +911,9 @@
     "you": "You",
     "role": "Role",
     "remove": "Remove",
-    "removeConfirm": "Remove this member from the household?",
+    "removeConfirm": "Remove this member from the household? Their accounts stop being shared with it and their transactions leave its budgets.",
     "leave": "Leave",
-    "leaveConfirm": "Leave this household?",
+    "leaveConfirm": "Leave this household? Your accounts stop being shared with it and their transactions leave its budgets.",
     "delete": "Delete household",
     "deleteConfirm": "Permanently delete this household? This cannot be undone.",
     "deleteImpact": {
@@ -936,7 +936,7 @@
     },
     "dangerZone": "Danger zone",
     "dangerTitleOwner": "Leave or delete the household",
-    "leaveHint": "You will lose access to this household’s shared accounts and budgets.",
+    "leaveHint": "You will lose access to this household’s shared accounts and budgets, and your accounts stop being shared with it.",
     "leaveTitle": "Leave the household",
     "deleteHint": "Deleting removes the shares and the household’s categories, rules and budgets. This cannot be undone.",
     "removeTitle": "Remove {name}?"
@@ -1464,6 +1464,7 @@
       "username": "Username",
       "password": "Password",
       "passwordKept": "Leave blank to keep the current one (same server and account)",
+      "credentialsHint": "Leave the username and password empty for a relay that doesn’t require authentication.",
       "fromAddress": "From address",
       "fromName": "From name",
       "security": {
@@ -1560,7 +1561,8 @@
       "deleteTitle": "Delete the {name} provider?",
       "deleteBody": "It disappears from the sign-in page. This cannot be undone.",
       "deleteLinked": "{count, plural, one {# user account is linked} other {# user accounts are linked}} to this provider: those links will be removed.",
-      "deleteLockout": "{count, plural, one {# user would} other {# users would}} be left with no way to sign in (no password, passkey or other enabled provider). Disable this provider instead."
+      "deleteLockout": "{count, plural, one {# user would} other {# users would}} be left with no way to sign in (no password, passkey or other enabled provider). Disable this provider instead.",
+      "deleteLockoutNoPassword": "{count, plural, one {# user would} other {# users would}} be left with no way to sign in (no password, passkey or other enabled provider). With password sign-in off, disabling this provider is refused too: turn password sign-in back on, or have these users add a passkey or another provider first."
     },
     "audit": {
       "title": "Audit log",
@@ -1795,7 +1797,8 @@
       "password": "Password",
       "fromAddress": "From address",
       "fromName": "From name",
-      "error": "Incomplete SMTP fields: host, port, username, password and a valid from address are required.",
+      "credentialsHint": "Leave the username and password empty for a relay that doesn’t require authentication.",
+      "error": "Incomplete SMTP fields: host, port and a valid from address are required, and a username needs its password.",
       "save": "Save and continue",
       "skip": "Skip"
     },
