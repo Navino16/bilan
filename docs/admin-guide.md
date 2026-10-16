@@ -162,9 +162,11 @@ When disabled, the sign-in page no longer offers e-mail and password. Users sign
 
 ### Mandatory admin 2FA
 
-When enabled, an administrator or super administrator without two-factor authentication is sent to **Security** whenever they open the admin area, and their admin actions are refused. Their other pages work normally. Admin rights come back as soon as they enable two-factor authentication (authenticator app) on that page.
+When enabled, an administrator or super administrator without two-factor authentication is sent to **Security** whenever they open the admin area, where a banner explains why, and their admin actions are refused. Their other pages work normally. Admin rights come back as soon as they enable two-factor authentication (authenticator app) on that page.
 
-Enabling two-factor authentication asks for the account password. An administrator who only signs in through SSO must first set a password (**Forgot password?** on the sign-in page, which needs SMTP and password sign-in enabled).
+Enabling two-factor authentication asks for the account password. Bilan's two-factor authentication only protects password sign-ins: SSO and passkey sign-ins never ask for its code. So an administrator without a password (SSO only, possibly with passkeys) is exempt from this setting; their identity provider's own two-factor authentication is what protects them. If they later set a password (**Forgot password?** on the sign-in page), the setting applies to them too.
+
+An administrator with both a password and an SSO identity is subject to the setting. Once they have enabled two-factor authentication, a password sign-in asks for the code, and an SSO sign-in relies on the identity provider.
 
 Enable your own two-factor authentication before turning this setting on.
 
@@ -352,7 +354,7 @@ Users cannot change their e-mail address after sign-up.
 
 Every change of state is logged, reads are not. This includes:
 
-- authentication: sign-ins (password, passkey, 2FA step) and failed sign-ins, sign-ups, password changes and resets, two-factor changes, passkeys, revoked sessions, linked and unlinked SSO identities, address verifications;
+- authentication: sign-ins (password, passkey, 2FA step) and failed sign-ins, sign-ups, password changes and resets, two-factor changes, backup code regenerations, forgotten trusted devices, passkeys, revoked sessions, linked and unlinked SSO identities, address verifications;
 - users: creation by an administrator, role changes, disabling, re-enabling, address marked verified, deletion;
 - settings: every app setting, SMTP changes and tests, auth providers;
 - invitation tokens, households and their invitations;
@@ -400,7 +402,7 @@ The per-IP limits, the signed-in devices list and the new sign-in alerts rely on
 
 - A session lasts 7 days and is extended after a day of activity.
 - Users see their signed-in devices under **Security** and can sign them out.
-- After a successful two-factor sign-in, a user can trust the device: the two-factor step is then skipped on that device, and asked again after 30 days without signing in from it. These grants are dropped when the user signs out their other devices, changes or resets their password, or enables or disables two-factor authentication.
+- After a successful two-factor sign-in, a user can trust the device: the two-factor step is then skipped on that device, and asked again after 30 days without signing in from it. Users see their trusted devices under **Security** and can forget one or all of them. These grants are also dropped when the user signs out their other devices, changes or resets their password, or enables or disables two-factor authentication.
 - A password reset signs the user out everywhere.
 - Disabling a user closes all their sessions at once.
 

@@ -505,7 +505,15 @@ To turn it on:
 
 To turn it off, enter your **Password** and an **Authentication code** (from the app, or a backup code), then click **Disable**. Both are required.
 
-Your administrator can require two-factor authentication for administrators. Until an administrator sets it up, administration pages send them back to this page.
+While it is on, the card shows how many **Backup codes** you have left. To get a new set, click **Generate new codes**, enter your **Password** and an **Authentication code**, then click **Generate new codes** again. Your previous codes stop working at once. Save the new ones with **Copy** or **Download**: they are shown only this once.
+
+If your account has no password (you sign in through an identity provider or with a passkey), the card has nothing to set up: Bilan's two-factor authentication only protects password sign-ins, and your identity provider's own two-factor authentication applies instead.
+
+Your administrator can require two-factor authentication for administrators who have a password. Until such an administrator sets it up, administration pages send them back to this page, and a banner explains why.
+
+### Trusted devices
+
+When two-factor authentication is on, **Trusted devices** lists the browsers where you ticked **Trust this device**: browser and system when known, last use and expiry date. Click **Forget** next to a device, or **Forget all**. A forgotten device asks for the code again at its next sign-in with your password.
 
 ### Passkeys
 
@@ -517,7 +525,7 @@ If you signed in more than 24 hours ago, Bilan asks you to sign in again before 
 
 **Signed-in devices** lists where you are signed in: browser, system, IP address and last activity. Click **Sign out** next to a device you don't recognize, or **Sign out all** for every other device.
 
-Trusted devices (those that skip the 2FA code) are forgotten when you click **Sign out all**, change your password with **Sign out my other devices** on, reset your password, or turn two-factor authentication on or off.
+Trusted devices are also forgotten when you click **Sign out all**, change your password with **Sign out my other devices** on, reset your password, or turn two-factor authentication on or off.
 
 ### Connected identities
 

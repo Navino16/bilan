@@ -1150,6 +1150,11 @@
       "overline": "Compte",
       "title": "Sécurité",
       "subtitle": "Renforcez la protection de votre compte.",
+      "adminRequired": {
+        "title": "Double authentification obligatoire",
+        "body": "Cette instance impose la double authentification aux administrateurs. Tant que vous ne l’avez pas activée ci-dessous, les pages d’administration vous ramènent ici et vos actions d’administration sont refusées."
+      },
+      "ssoOnly": "Votre compte n’a pas de mot de passe : vous vous connectez par un fournisseur d’identité ou avec une clé d’accès. La double authentification de Bilan ne protège que les connexions par mot de passe ; c’est celle de votre fournisseur d’identité qui s’applique.",
       "twoFactor": "Double authentification",
       "twoFactorTitle": "Application d’authentification (TOTP)",
       "twoFactorHint": "Ajoutez un code à usage unique en plus de votre mot de passe.",
@@ -1166,6 +1171,17 @@
       "disable": "Désactiver",
       "disableCode": "Code d’authentification",
       "disableCodeHint": "Le code à 6 chiffres de votre application d’authentification, ou l’un de vos codes de secours.",
+      "disableTitle": "Désactiver la double authentification",
+      "regenerate": "Générer de nouveaux codes",
+      "regenerateWarning": "Vos codes de secours actuels cessent de fonctionner dès que les nouveaux sont générés.",
+      "codesRegenerated": "Gardez ces nouveaux codes en lieu sûr : ils ne seront plus affichés. Vos anciens codes ne fonctionnent plus.",
+      "codesSaved": "Terminé",
+      "codesLeft": "{count, plural, =0 {Plus aucun code de secours.} one {# code de secours restant.} other {# codes de secours restants.}}",
+      "copyCodes": "Copier",
+      "codesCopied": "Copiés",
+      "copyCodesFailed": "Copie impossible : sélectionnez les codes ou téléchargez-les.",
+      "downloadCodes": "Télécharger",
+      "cancel": "Annuler",
       "verify": "Vérifier et activer",
       "working": "En cours…",
       "error": {
@@ -1225,6 +1241,24 @@
           "FAILED": "Impossible de déconnecter cet appareil. Réessayez."
         },
         "signedIn": "Connexion le <time></time>"
+      },
+      "trustedDevicesCard": {
+        "title": "Appareils de confiance",
+        "hint": "Ces appareils ne demandent pas le code d’authentification quand vous vous connectez avec votre mot de passe. Oubliez ceux que vous n’utilisez plus.",
+        "count": "Appareils · {count, number}",
+        "none": "Aucun appareil de confiance.",
+        "unknownDevice": "Appareil inconnu",
+        "thisDevice": "Cet appareil",
+        "lastUsed": "Dernière utilisation le <time></time>",
+        "expires": "Expire le <time></time>",
+        "revoke": "Oublier",
+        "revokeAll": "Tout oublier",
+        "revokeDevice": "Oublier {device}",
+        "error": {
+          "NOT_FOUND": "Cet appareil n’est déjà plus de confiance.",
+          "INVALID": "Requête invalide.",
+          "FAILED": "Impossible d’oublier cet appareil. Réessayez."
+        }
       },
       "passkeysCard": {
         "overline": "Clés d’accès",
@@ -1600,6 +1634,7 @@
         "User": "Utilisateur",
         "Session": "Session",
         "Passkey": "Clé d’accès",
+        "TrustedDevice": "Appareil de confiance",
         "AppSetting": "Paramètre",
         "AuthProvider": "Fournisseur d’authentification",
         "SmtpConfig": "Configuration SMTP",
@@ -1629,7 +1664,9 @@
             "enabled": "Double authentification activée",
             "disabled": "Double authentification désactivée",
             "enable_failed": "Échec d’activation de la double authentification",
-            "disable_failed": "Échec de désactivation de la double authentification"
+            "disable_failed": "Échec de désactivation de la double authentification",
+            "backup_codes_regenerated": "Codes de secours régénérés",
+            "backup_codes_failed": "Échec de régénération des codes de secours"
           },
           "signup": "Compte créé (installation)",
           "register": {
@@ -1653,6 +1690,10 @@
           "session": {
             "revoked": "Session révoquée",
             "revoked_others": "Autres sessions révoquées"
+          },
+          "trusted_device": {
+            "revoked": "Appareil de confiance oublié",
+            "revoked_all": "Tous les appareils de confiance oubliés"
           },
           "identity": {
             "linked": "Identité SSO liée",

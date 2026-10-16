@@ -1150,6 +1150,11 @@
       "overline": "Account",
       "title": "Security",
       "subtitle": "Strengthen your account’s protection.",
+      "adminRequired": {
+        "title": "Two-factor authentication required",
+        "body": "This instance requires administrators to use two-factor authentication. Until you enable it below, the administration pages bring you back here and your admin actions are refused."
+      },
+      "ssoOnly": "Your account has no password: you sign in through an identity provider or with a passkey. Bilan’s two-factor authentication only protects password sign-ins; your identity provider’s own two-factor authentication applies instead.",
       "twoFactor": "Two-factor authentication",
       "twoFactorTitle": "Authenticator app (TOTP)",
       "twoFactorHint": "Add a one-time code on top of your password.",
@@ -1166,6 +1171,17 @@
       "disable": "Disable",
       "disableCode": "Authentication code",
       "disableCodeHint": "The 6-digit code from your authenticator app, or one of your backup codes.",
+      "disableTitle": "Disable two-factor authentication",
+      "regenerate": "Generate new codes",
+      "regenerateWarning": "Your current backup codes stop working as soon as the new ones are generated.",
+      "codesRegenerated": "Save these new codes somewhere safe: they won’t be shown again. Your previous codes no longer work.",
+      "codesSaved": "Done",
+      "codesLeft": "{count, plural, =0 {No backup codes left.} one {# backup code left.} other {# backup codes left.}}",
+      "copyCodes": "Copy",
+      "codesCopied": "Copied",
+      "copyCodesFailed": "Couldn’t copy: select the codes or download them.",
+      "downloadCodes": "Download",
+      "cancel": "Cancel",
       "verify": "Verify and enable",
       "working": "Working…",
       "error": {
@@ -1225,6 +1241,24 @@
           "FAILED": "Couldn’t sign this device out. Try again."
         },
         "signedIn": "Signed in on <time></time>"
+      },
+      "trustedDevicesCard": {
+        "title": "Trusted devices",
+        "hint": "These devices skip the authentication code when you sign in with your password. Forget one you no longer use.",
+        "count": "Devices · {count, number}",
+        "none": "No trusted device.",
+        "unknownDevice": "Unknown device",
+        "thisDevice": "This device",
+        "lastUsed": "Last used on <time></time>",
+        "expires": "Expires on <time></time>",
+        "revoke": "Forget",
+        "revokeAll": "Forget all",
+        "revokeDevice": "Forget {device}",
+        "error": {
+          "NOT_FOUND": "This device is no longer trusted.",
+          "INVALID": "Invalid request.",
+          "FAILED": "Couldn’t forget this device. Try again."
+        }
       },
       "passkeysCard": {
         "overline": "Passkeys",
@@ -1600,6 +1634,7 @@
         "User": "User",
         "Session": "Session",
         "Passkey": "Passkey",
+        "TrustedDevice": "Trusted device",
         "AppSetting": "Setting",
         "AuthProvider": "Auth provider",
         "SmtpConfig": "SMTP settings",
@@ -1629,7 +1664,9 @@
             "enabled": "Two-factor enabled",
             "disabled": "Two-factor disabled",
             "enable_failed": "Two-factor enable failed",
-            "disable_failed": "Two-factor disable failed"
+            "disable_failed": "Two-factor disable failed",
+            "backup_codes_regenerated": "Backup codes regenerated",
+            "backup_codes_failed": "Backup code regeneration failed"
           },
           "signup": "Account created (setup)",
           "register": {
@@ -1653,6 +1690,10 @@
           "session": {
             "revoked": "Session revoked",
             "revoked_others": "Other sessions revoked"
+          },
+          "trusted_device": {
+            "revoked": "Trusted device forgotten",
+            "revoked_all": "All trusted devices forgotten"
           },
           "identity": {
             "linked": "SSO identity linked",

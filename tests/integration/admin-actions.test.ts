@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { db } from "@/server/db";
 import { seedRolesAndPermissions } from "@/../prisma/seed";
 import { grantRole } from "@/server/services/users/roles";
-import { buildPermissionsChecker } from "@/server/auth/permissions";
+import { buildPermissionsChecker, isAdminTwoFactorBlocked } from "@/server/auth/permissions";
 import { appSettings } from "@/server/services/settings/app-settings";
 
 const current = vi.hoisted(() => ({ user: null as { id: string; email: string } | null }));
@@ -262,23 +262,53 @@ describe("SMTP actions", () => {
 });
 
 describe("admin 2FA enforcement (#243)", () => {
-  it("refuses admin Server Actions to an admin without 2FA once the instance requires it", async () => {
+  const withPassword = (ids: string[]) =>
+    db.authAccount.createMany({
+      data: ids.map((userId) => ({
+        id: `cred_${userId}`,
+        userId,
+        accountId: userId,
+        providerId: "credential",
+        password: "not-a-real-hash",
+      })),
+    });
+
+  async function requiringAdmin2fa(run: () => Promise<void>) {
     const saved = await db.appSetting.findUnique({ where: { key: "security.admin_2fa_required" } });
     await appSettings.set("security.admin_2fa_required", true, users.super.id);
     try {
+      await run();
+    } finally {
+      await db.authAccount.deleteMany({ where: { userId: { in: all } } });
+      await db.user.update({ where: { id: users.super.id }, data: { twoFactorEnabled: false } });
+      await appSettings.set("security.admin_2fa_required", saved?.value ?? false, users.super.id);
+    }
+  }
+
+  it("refuses admin Server Actions to an admin without 2FA once the instance requires it", async () => {
+    await requiringAdmin2fa(async () => {
+      await withPassword([users.admin.id, users.super.id]);
       current.user = users.admin;
       expect(
         await setUserDisabledAction(null, form({ userId: users.user.id, disabled: "false" })),
       ).toEqual({ ok: false, error: "UNAUTHORIZED" });
+      expect(await isAdminTwoFactorBlocked(users.admin.id)).toBe(true);
+      expect(await isAdminTwoFactorBlocked(users.user.id)).toBe(false);
       current.user = users.super;
       expect(await testOidcConnectionAction("")).toEqual({ ok: false, error: "UNAUTHORIZED" });
 
       await db.user.update({ where: { id: users.super.id }, data: { twoFactorEnabled: true } });
       expect(await testOidcConnectionAction("")).toEqual({ ok: false, error: "NO_ISSUER" });
-    } finally {
-      await db.user.update({ where: { id: users.super.id }, data: { twoFactorEnabled: false } });
-      await appSettings.set("security.admin_2fa_required", saved?.value ?? false, users.super.id);
-    }
+      expect(await isAdminTwoFactorBlocked(users.super.id)).toBe(false);
+    });
+  });
+
+  it("exempts an admin without a password, e.g. SSO only (#256)", async () => {
+    await requiringAdmin2fa(async () => {
+      current.user = users.super;
+      expect(await testOidcConnectionAction("")).toEqual({ ok: false, error: "NO_ISSUER" });
+      expect(await isAdminTwoFactorBlocked(users.super.id)).toBe(false);
+    });
   });
 });
 

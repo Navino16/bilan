@@ -4,6 +4,7 @@ const requestHeaders = new Headers();
 const state = vi.hoisted(() => ({
   settingOn: true,
   twoFactorEnabled: false,
+  hasPassword: true,
   permissions: ["admin.settings.write", "admin.audit.read"],
 }));
 
@@ -21,8 +22,15 @@ vi.mock("@/server/auth", () => ({
     api: { getSession: async () => ({ user: { id: "admin_1", banned: false }, session: {} }) },
   }),
 }));
+vi.mock("@/server/services/users/password", () => ({
+  hasPasswordCredential: async () => state.hasPassword,
+}));
 vi.mock("@/server/db", () => ({
   db: {
+    userRole: {
+      findFirst: async () =>
+        state.permissions.some((key) => key.startsWith("admin.")) ? { roleId: "admin" } : null,
+    },
     user: {
       findUnique: async () => ({
         banned: false,
@@ -42,12 +50,15 @@ vi.mock("@/server/services/settings/app-settings", () => ({
   appSettings: { get: async () => state.settingOn },
 }));
 
-const { hasEnforcedPermission, requirePermission } = await import("@/server/auth/permissions");
+const { hasEnforcedPermission, isAdminTwoFactorBlocked, requirePermission } =
+  await import("@/server/auth/permissions");
 
 describe("admin 2FA enforcement (#243 SEC-01)", () => {
   beforeEach(() => {
     state.settingOn = true;
     state.twoFactorEnabled = false;
+    state.hasPassword = true;
+    state.permissions = ["admin.settings.write", "admin.audit.read"];
     requestHeaders.set("x-bilan-path", "/en/admin/audit");
   });
 
@@ -80,5 +91,23 @@ describe("admin 2FA enforcement (#243 SEC-01)", () => {
   it("still answers 403 for a permission the user doesn't hold", async () => {
     await expect(requirePermission("admin.users.delete")).rejects.toThrow("FORBIDDEN");
     expect(await hasEnforcedPermission("admin_1", "admin.users.delete")).toBe(false);
+  });
+
+  it("exempts an admin without a password, e.g. SSO only (#256)", async () => {
+    state.hasPassword = false;
+    expect(await hasEnforcedPermission("admin_1", "admin.audit.read")).toBe(true);
+    expect(await requirePermission("admin.audit.read")).toMatchObject({ id: "admin_1" });
+    expect(await isAdminTwoFactorBlocked("admin_1")).toBe(false);
+  });
+
+  it("tells the Security page when the gate suspends the user's admin rights (#256)", async () => {
+    expect(await isAdminTwoFactorBlocked("admin_1")).toBe(true);
+    state.twoFactorEnabled = true;
+    expect(await isAdminTwoFactorBlocked("admin_1")).toBe(false);
+  });
+
+  it("shows no banner to a user without admin permissions (#256)", async () => {
+    state.permissions = ["transactions.read"];
+    expect(await isAdminTwoFactorBlocked("admin_1")).toBe(false);
   });
 });

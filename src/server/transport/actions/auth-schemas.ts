@@ -48,3 +48,4 @@ export const changePasswordSchema = z
   });
 
 export const revokeSessionSchema = z.string().min(1).max(64);
+export const revokeTrustedDeviceSchema = z.string().min(1).max(64);

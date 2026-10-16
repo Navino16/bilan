@@ -20,6 +20,7 @@ export const AUDIT_ENTITIES = [
   "User",
   "Session",
   "Passkey",
+  "TrustedDevice",
   "AppSetting",
   "AuthProvider",
   "SmtpConfig",

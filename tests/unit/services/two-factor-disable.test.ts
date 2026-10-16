@@ -5,6 +5,7 @@ const api = vi.hoisted(() => ({
   verifyTOTP: vi.fn(),
   verifyBackupCode: vi.fn(),
   disableTwoFactor: vi.fn(),
+  generateBackupCodes: vi.fn(),
 }));
 const logEvent = vi.hoisted(() => vi.fn());
 vi.mock("@/server/auth", () => ({ getAuth: async () => ({ api }) }));
@@ -14,7 +15,8 @@ vi.mock("@/server/db", () => ({
 vi.mock("@/server/services/users/password", () => ({ isCurrentPassword: async () => true }));
 vi.mock("@/server/services/audit", () => ({ logEvent }));
 
-const { disableTwoFactor } = await import("@/server/services/users/two-factor");
+const { disableTwoFactor, regenerateBackupCodes } =
+  await import("@/server/services/users/two-factor");
 
 const disable = (code = "123456") => disableTwoFactor(new Headers(), "user_1", "pw", code);
 const badCodeAudited = () =>
@@ -49,5 +51,38 @@ describe("disableTwoFactor code check (#243)", () => {
     expect(await disable("abcde-fghij")).toEqual({ ok: false, error: "FAILED" });
     expect(badCodeAudited()).toBe(false);
     expect(api.disableTwoFactor).not.toHaveBeenCalled();
+  });
+});
+
+describe("regenerateBackupCodes (#256)", () => {
+  const regenerate = (code = "123456") =>
+    regenerateBackupCodes(new Headers(), "user_1", "pw", code);
+  const audited = (action: string) =>
+    logEvent.mock.calls.some(([e]) => (e as { action: string }).action === action);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  it("keeps the current codes when the second factor is refused", async () => {
+    api.verifyBackupCode.mockRejectedValueOnce(new APIError("UNAUTHORIZED"));
+    expect(await regenerate("abcde-fghij")).toEqual({ ok: false, error: "BAD_CODE" });
+    expect(badCodeAudited()).toBe(true);
+    expect(api.generateBackupCodes).not.toHaveBeenCalled();
+  });
+
+  it("returns the new codes and audits the regeneration", async () => {
+    api.verifyTOTP.mockResolvedValueOnce({});
+    api.generateBackupCodes.mockResolvedValueOnce({ backupCodes: ["aaaaa-bbbbb"] });
+    expect(await regenerate()).toEqual({ ok: true, data: { backupCodes: ["aaaaa-bbbbb"] } });
+    expect(audited("auth.2fa.backup_codes_regenerated")).toBe(true);
+  });
+
+  it("reports a generation failure without auditing a regeneration", async () => {
+    api.verifyTOTP.mockResolvedValueOnce({});
+    api.generateBackupCodes.mockRejectedValueOnce(new Error("connection lost"));
+    expect(await regenerate()).toEqual({ ok: false, error: "FAILED" });
+    expect(audited("auth.2fa.backup_codes_regenerated")).toBe(false);
   });
 });

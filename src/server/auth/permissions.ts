@@ -6,6 +6,7 @@ import { redirect, forbidden } from "next/navigation";
 import { db } from "@/server/db";
 import { getAuth } from "@/server/auth";
 import { appSettings } from "@/server/services/settings/app-settings";
+import { hasPasswordCredential } from "@/server/services/users/password";
 import { defaultLocale } from "@/i18n/config";
 import {
   loginRedirectPath,
@@ -63,16 +64,31 @@ export async function requireSession() {
 // Spec §6.11: once the instance requires it, admin permissions are void until their holder
 // enrols 2FA. Every admin gate (pages, RSC requests, Server Actions) goes through here.
 const adminTwoFactorMissing = cache(async (userId: string): Promise<boolean> => {
-  const [settingOn, row] = await Promise.all([
+  const [settingOn, row, hasPassword] = await Promise.all([
     appSettings.get<boolean>("security.admin_2fa_required").then((v) => v ?? false),
     db.user.findUnique({ where: { id: userId }, select: { twoFactorEnabled: true } }),
+    hasPasswordCredential(userId),
   ]);
   return requiresTwoFactorSetup({
     isAdmin: true,
     twoFactorEnabled: Boolean(row?.twoFactorEnabled),
+    hasPassword,
     settingOn,
   });
 });
+
+// The Security page's banner: this user holds admin permissions that the gate suspends.
+export async function isAdminTwoFactorBlocked(userId: string): Promise<boolean> {
+  if (!(await adminTwoFactorMissing(userId))) return false;
+  const adminRole = await db.userRole.findFirst({
+    where: {
+      userId,
+      role: { permissions: { some: { permission: { key: { startsWith: "admin." } } } } },
+    },
+    select: { roleId: true },
+  });
+  return adminRole !== null;
+}
 
 function isAdminPermission(permissionKey: string): boolean {
   return permissionKey.startsWith("admin.");
@@ -99,12 +115,14 @@ export async function requirePermission(permissionKey: string) {
   return user;
 }
 
-// Pure gate predicate (spec §6.11): an admin must set up 2FA before using the
-// admin area once the instance requires it. True only when all three hold.
+// Pure gate predicate (spec §6.11): an admin must set up 2FA before using the admin area
+// once the instance requires it. An account without a password (SSO only, possibly with
+// passkeys) is exempt: Bilan's 2FA only guards password sign-ins (#256).
 export function requiresTwoFactorSetup(input: {
   isAdmin: boolean;
   twoFactorEnabled: boolean;
+  hasPassword: boolean;
   settingOn: boolean;
 }): boolean {
-  return input.isAdmin && input.settingOn && !input.twoFactorEnabled;
+  return input.isAdmin && input.settingOn && input.hasPassword && !input.twoFactorEnabled;
 }

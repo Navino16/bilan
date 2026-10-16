@@ -162,9 +162,11 @@ Une fois désactivée, la page de connexion ne propose plus l'e-mail et le mot d
 
 ### Double authentification obligatoire (admin)
 
-Une fois ce paramètre activé, un administrateur ou super-administrateur sans double authentification est renvoyé vers **Sécurité** dès qu'il ouvre l'administration, et ses actions d'administration sont refusées. Ses autres pages fonctionnent normalement. Ses droits d'administration reviennent dès qu'il active la double authentification (application d'authentification) sur cette page.
+Une fois ce paramètre activé, un administrateur ou super-administrateur sans double authentification est renvoyé vers **Sécurité** dès qu'il ouvre l'administration, où un bandeau en explique la raison, et ses actions d'administration sont refusées. Ses autres pages fonctionnent normalement. Ses droits d'administration reviennent dès qu'il active la double authentification (application d'authentification) sur cette page.
 
-L'activation de la double authentification demande le mot de passe du compte. Un administrateur qui se connecte uniquement par SSO doit d'abord définir un mot de passe (**Mot de passe oublié ?** sur la page de connexion, ce qui nécessite le SMTP et la connexion par mot de passe).
+L'activation de la double authentification demande le mot de passe du compte. La double authentification de Bilan ne protège que les connexions par mot de passe : les connexions par SSO ou par clé d'accès ne demandent jamais son code. Un administrateur sans mot de passe (SSO uniquement, éventuellement avec des clés d'accès) n'est donc pas concerné par ce paramètre ; c'est la double authentification de son fournisseur d'identité qui le protège. S'il définit plus tard un mot de passe (**Mot de passe oublié ?** sur la page de connexion), le paramètre s'applique aussi à lui.
+
+Un administrateur qui a à la fois un mot de passe et une identité SSO est concerné par le paramètre. Une fois sa double authentification activée, une connexion par mot de passe demande le code, et une connexion par SSO s'en remet au fournisseur d'identité.
 
 Activez votre propre double authentification avant d'activer ce paramètre.
 
@@ -352,7 +354,7 @@ Les utilisateurs ne peuvent pas changer d'adresse e-mail après l'inscription.
 
 Chaque changement d'état est journalisé, les lectures ne le sont pas. Cela comprend :
 
-- l'authentification : connexions (mot de passe, clé d'accès, étape de double authentification) et échecs de connexion, inscriptions, changements et réinitialisations de mot de passe, double authentification, clés d'accès, sessions révoquées, identités SSO liées et déliées, vérifications d'adresse ;
+- l'authentification : connexions (mot de passe, clé d'accès, étape de double authentification) et échecs de connexion, inscriptions, changements et réinitialisations de mot de passe, double authentification, régénérations de codes de secours, appareils de confiance oubliés, clés d'accès, sessions révoquées, identités SSO liées et déliées, vérifications d'adresse ;
 - les utilisateurs : création par un administrateur, changements de rôle, désactivation, réactivation, adresse marquée comme vérifiée, suppression ;
 - les paramètres : chaque paramètre de l'application, les modifications et tests SMTP, les fournisseurs d'authentification ;
 - les jetons d'invitation, les foyers et leurs invitations ;
@@ -400,7 +402,7 @@ Les limites par adresse IP, la liste des appareils connectés et les alertes de 
 
 - Une session dure 7 jours et est prolongée après une journée d'activité.
 - Les utilisateurs voient leurs appareils connectés dans **Sécurité** et peuvent les déconnecter.
-- Après une connexion avec double authentification, l'utilisateur peut faire confiance à l'appareil : l'étape de double authentification y est alors sautée, et redemandée après 30 jours sans connexion depuis cet appareil. Ces autorisations sont supprimées quand l'utilisateur déconnecte ses autres appareils, change ou réinitialise son mot de passe, ou active ou désactive la double authentification.
+- Après une connexion avec double authentification, l'utilisateur peut faire confiance à l'appareil : l'étape de double authentification y est alors sautée, et redemandée après 30 jours sans connexion depuis cet appareil. L'utilisateur voit ses appareils de confiance dans **Sécurité** et peut en oublier un ou tous. Ces autorisations sont aussi supprimées quand l'utilisateur déconnecte ses autres appareils, change ou réinitialise son mot de passe, ou active ou désactive la double authentification.
 - Une réinitialisation du mot de passe déconnecte l'utilisateur partout.
 - Désactiver un utilisateur ferme immédiatement toutes ses sessions.
 
