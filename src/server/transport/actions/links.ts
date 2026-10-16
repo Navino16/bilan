@@ -10,6 +10,13 @@ import {
   restoreSuggestion,
   type LinkSummary,
 } from "@/server/services/links";
+import { updateLinkSuggestionSettings } from "@/server/services/users/preferences";
+import { linkSettingsSchema } from "@/lib/validation/link-settings";
+import { AMOUNT_ERRORS } from "@/lib/amount";
+import { issueCode } from "@/lib/validation/amount";
+import { invalidInput, type FormFailure } from "@/lib/validation/field-errors";
+import { isLocale } from "@/lib/locale-negotiation";
+import { defaultLocale } from "@/i18n/config";
 
 export type LinkActionState = { ok: true; id?: string } | { ok: false; error: string } | null;
 
@@ -84,4 +91,27 @@ export async function getLinkSummaryAction(transactionId: string): Promise<LinkS
   const user = await requireSession();
   if (typeof transactionId !== "string" || !transactionId) return null;
   return getLinkSummary(transactionId, user.id);
+}
+
+export type LinkSettingsActionState = { ok: true } | FormFailure | null;
+
+export async function updateLinkSettingsAction(
+  _prev: LinkSettingsActionState,
+  formData: FormData,
+): Promise<LinkSettingsActionState> {
+  const user = await requireSession();
+  const input = {
+    windowDays: String(formData.get("windowDays") ?? ""),
+    minAmount: String(formData.get("minAmount") ?? ""),
+  };
+  const parsed = linkSettingsSchema.safeParse(input);
+  if (!parsed.success)
+    return invalidInput(parsed.error, input, issueCode(parsed.error.issues, AMOUNT_ERRORS));
+  const locale = formData.get("locale");
+  try {
+    await updateLinkSuggestionSettings(user.id, input, isLocale(locale) ? locale : defaultLocale);
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "FAILED" };
+  }
 }

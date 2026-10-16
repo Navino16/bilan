@@ -236,10 +236,22 @@ export async function deleteBudget(id: string, actor: { id: string }): Promise<v
   await logEvent({ userId: actor.id, action: "budget.deleted", entity: "Budget", entityId: id });
 }
 
+// Archived budgets leave the list, the dashboard, the assignment menu and the roll cron.
 export async function archiveBudget(id: string, actor: { id: string }): Promise<void> {
   await manageableOrThrow(id, actor.id);
   await db.budget.update({ where: { id }, data: { archived: true } });
   await logEvent({ userId: actor.id, action: "budget.archived", entity: "Budget", entityId: id });
+}
+
+export async function unarchiveBudget(id: string, actor: { id: string }): Promise<void> {
+  await manageableOrThrow(id, actor.id);
+  await db.budget.update({ where: { id }, data: { archived: false } });
+  await logEvent({
+    userId: actor.id,
+    action: "budget.unarchived",
+    entity: "Budget",
+    entityId: id,
+  });
 }
 
 export type BudgetListItem = {
@@ -256,6 +268,7 @@ export type BudgetListItem = {
   percent: number | null;
   status: BudgetStatus;
   description: string | null;
+  archived: boolean;
   parentBudgetId: string | null;
   lines: {
     categoryId: string | null;
@@ -277,11 +290,14 @@ function canManageBudget(groupId: string | null, roleByGroup: Map<string, string
   return role === "ADMIN" || role === "OWNER";
 }
 
-// The user's own budgets + those of groups they belong to (not archived).
-export async function listBudgetsForUser(userId: string): Promise<BudgetListItem[]> {
+// The user's own budgets + those of groups they belong to, active or archived ones.
+export async function listBudgetsForUser(
+  userId: string,
+  { archived = false }: { archived?: boolean } = {},
+): Promise<BudgetListItem[]> {
   const { groupIds, roleByGroup } = await budgetScopeForUser(userId);
   const rows = await db.budget.findMany({
-    where: { archived: false, OR: [{ userId }, { groupId: { in: groupIds } }] },
+    where: { archived, OR: [{ userId }, { groupId: { in: groupIds } }] },
     include: {
       lines: { select: { plannedAmount: true, categoryId: true, accountId: true, label: true } },
     },
@@ -295,6 +311,7 @@ export async function listBudgetsForUser(userId: string): Promise<BudgetListItem
     rows.map(
       async (b) =>
         b.recurring &&
+        !b.archived &&
         b.periodEnd.getTime() < now &&
         canManageBudget(b.groupId, roleByGroup) &&
         !(await nextInstanceExists(b)),
@@ -309,6 +326,7 @@ export async function listBudgetsForUser(userId: string): Promise<BudgetListItem
       id: b.id,
       name: b.name,
       description: b.description,
+      archived: b.archived,
       scope: b.groupId ? "GROUP" : "USER",
       groupId: b.groupId,
       parentBudgetId: b.parentBudgetId,
@@ -526,6 +544,7 @@ export type BudgetDetail = {
   id: string;
   name: string;
   description: string | null;
+  archived: boolean;
   scope: BudgetScope;
   periodType: string;
   periodStart: Date;
@@ -708,6 +727,7 @@ export async function getBudgetDetail(
     id: b.id,
     name: b.name,
     description: b.description,
+    archived: b.archived,
     scope: b.groupId ? "GROUP" : "USER",
     groupId: b.groupId,
     periodType: b.periodType,

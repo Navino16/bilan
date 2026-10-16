@@ -7,6 +7,8 @@ import {
   createBudget,
   updateBudget,
   deleteBudget,
+  archiveBudget,
+  unarchiveBudget,
   assignTransaction,
   unassignTransaction,
   listAssignmentsForTx,
@@ -90,6 +92,32 @@ export async function deleteBudgetAction(
   } catch (e) {
     return { ok: false, error: mapError(e) };
   }
+}
+
+async function setArchived(formData: FormData, archived: boolean): Promise<BudgetActionState> {
+  const user = await requireSession();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { ok: false, error: "INVALID" };
+  try {
+    await (archived ? archiveBudget : unarchiveBudget)(id, { id: user.id });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: mapError(e) };
+  }
+}
+
+export async function archiveBudgetAction(
+  _prev: BudgetActionState,
+  formData: FormData,
+): Promise<BudgetActionState> {
+  return setArchived(formData, true);
+}
+
+export async function unarchiveBudgetAction(
+  _prev: BudgetActionState,
+  formData: FormData,
+): Promise<BudgetActionState> {
+  return setArchived(formData, false);
 }
 
 export async function assignTransactionAction(

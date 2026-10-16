@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   FILTER_PARAMS,
   UNCATEGORIZED,
+  exportTransactionsHref,
   parseTransactionFilters,
   transactionsHref,
 } from "@/lib/transaction-filters";
@@ -89,6 +90,38 @@ describe("FILTER_PARAMS", () => {
   it("lists every param the reset button clears, but not the search", () => {
     expect([...FILTER_PARAMS].sort()).toEqual(
       ["accountId", "categoryId", "dir", "from", "max", "min", "sort", "to", "type"].sort(),
+    );
+  });
+});
+
+describe("exportTransactionsHref", () => {
+  it("exports everything in the locale when no filter is set", () => {
+    expect(exportTransactionsHref("fr", {})).toBe("/api/export/transactions?locale=fr");
+    expect(exportTransactionsHref("en", { from: "", to: "", accountId: "" })).toBe(
+      "/api/export/transactions?locale=en",
+    );
+  });
+
+  it("carries the date range and the account the export route reads", () => {
+    const href = exportTransactionsHref("fr", {
+      from: "2026-01-01",
+      to: "2026-03-31",
+      accountId: "acc1",
+    });
+    expect(href).toBe(
+      "/api/export/transactions?locale=fr&from=2026-01-01&to=2026-03-31&accountId=acc1",
+    );
+    const q = Object.fromEntries(new URL(href, "http://x").searchParams);
+    expect(parseTransactionFilters(q)).toMatchObject({
+      from: "2026-01-01",
+      to: "2026-03-31",
+      accountId: "acc1",
+    });
+  });
+
+  it("accepts an open-ended range", () => {
+    expect(exportTransactionsHref("fr", { from: "2026-01-01" })).toBe(
+      "/api/export/transactions?locale=fr&from=2026-01-01",
     );
   });
 });

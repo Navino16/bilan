@@ -307,7 +307,7 @@ Les transactions liées restent dans la liste avec l’étiquette **Liée**.
 
 ![Suggestions de liens](images/fr/suggestions.png)
 
-- **Depuis les suggestions** : sur **Transactions**, cliquez sur **Suggestions**. Bilan propose des paires de même montant et de sens opposé, à 30 jours d’écart au plus. Cliquez sur **Lier** pour accepter une paire ou **Ignorer** pour l’écarter. Les paires ignorées sont listées plus bas, et **Restaurer** permet de les suggérer de nouveau.
+- **Depuis les suggestions** : sur **Transactions**, cliquez sur **Suggestions**. Bilan propose des paires de même montant et de sens opposé, à 30 jours d’écart au plus. Cliquez sur **Lier** pour accepter une paire ou **Ignorer** pour l’écarter. Les paires ignorées sont listées plus bas, et **Restaurer** permet de les suggérer de nouveau. **Réglages** modifie, pour vous seul, l’**Écart maximal (jours)** entre les deux opérations (0 pour le même jour, jusqu’à 365) et le **Montant minimum** en dessous duquel aucune paire n’est suggérée.
 - **À la main** : [sélectionnez](#sélectionner-plusieurs-transactions) deux transactions ou plus et cliquez sur **Lier**.
 
 Rien n’est lié automatiquement. Il faut un accès en écriture à chaque compte concerné.
@@ -325,11 +325,11 @@ Un budget fixe ce que vous prévoyez de dépenser par catégorie ou par compte s
 ### Créer un budget
 
 1. Allez dans **Budgets** et cliquez sur **Nouveau budget**.
-2. Saisissez un **Nom**.
+2. Saisissez un **Nom** et, si vous le souhaitez, une **Description**.
 3. Choisissez la **Portée** : **Personnel**, ou un foyer que vous gérez (voir [Budgets de foyer](#budgets-de-foyer)). Elle ne peut plus être changée ensuite.
 4. Choisissez la **Période** : Semaine, Mois, Trimestre, Année ou Personnalisée, puis la date de **Début**. La date de fin découle de la période.
 5. Cochez **Récurrent** pour un budget qui se répète à chaque période.
-6. Ajoutez des **Lignes**. Pour chaque ligne, choisissez une **Catégorie** (ou **Toutes catégories**), un **Compte** (ou **Tous comptes**) et un **Montant prévu**.
+6. Ajoutez des **Lignes**. Pour chaque ligne, choisissez une **Catégorie** (ou **Toutes catégories**), un **Compte** (ou **Tous comptes**) et un **Montant prévu**. Une ligne peut aussi avoir un **Libellé**, affiché à la place du nom de la catégorie ou du compte.
 7. Cliquez sur **Créer le budget**.
 
 Comment les lignes comptent les dépenses :
@@ -360,6 +360,13 @@ Cliquez sur un budget pour ouvrir son détail : chaque ligne avec « Reste … �
 
 Quand la période d’un budget récurrent se termine, un bouton **Renouveler** sur sa carte crée la période suivante avec les mêmes lignes. Ce qui n’a pas été dépensé n’est pas reporté. Votre administrateur peut aussi mettre en place le renouvellement automatique. Les périodes d’une même série sont regroupées sur une carte : ouvrez **… autres périodes** pour les voir, ou utilisez les flèches de la page de détail.
 
+### Modifier, archiver ou supprimer un budget
+
+Le menu **⋮** de la carte d’un budget ou de sa page de détail propose **Modifier**, **Archiver** et **Supprimer**.
+
+- **Archivez** un budget que vous ne suivez plus mais que vous voulez garder. Il quitte la liste, le tableau de bord et le menu **Assigner à un budget**, et il n’est plus renouvelé. Ses lignes et ses affectations sont conservées. Les budgets archivés sont regroupés sous **Budgets archivés** en bas de la liste : ouvrez-en un pour le consulter, ou choisissez **Désarchiver** dans son menu pour le rétablir.
+- **Supprimer** efface le budget et ses lignes. Les transactions ne sont pas touchées, et les autres périodes d’un budget récurrent sont conservées.
+
 ### Inclure ou exclure une transaction
 
 Depuis le détail d’une transaction, sous **Assigner à un budget** :
@@ -372,7 +379,7 @@ Depuis le détail d’une transaction, sous **Assigner à un budget** :
 
 Un budget dont la portée est un foyer appartient au foyer :
 
-- Les propriétaires et les admins le créent, le modifient, le renouvellent et le suppriment. Tous les membres peuvent le consulter et y inclure ou en exclure des transactions.
+- Les propriétaires et les admins le créent, le modifient, le renouvellent, l’archivent et le suppriment. Tous les membres peuvent le consulter et y inclure ou en exclure des transactions.
 - Il compte les transactions des comptes partagés avec ce foyer.
 
 Un membre peut aussi **Inclure** une transaction de l’un de ses comptes privés. Elle compte alors dans les totaux pour tout le monde, et tous les membres la voient en entier dans le budget : date, montant, libellé, catégorie et nom du compte. Seule cette transaction devient visible : le compte privé et ses autres transactions restent masqués. Si ce membre quitte ensuite le foyer ou en est retiré, la transaction ne compte plus dans les budgets du foyer.
@@ -550,7 +557,7 @@ Allez dans **Données** dans la barre latérale.
 
 ### Exporter
 
-- **Transactions (CSV)** : toutes les transactions des comptes que vous voyez, avec date, montant, type, libellé, compte et catégorie. Le fichier s’ouvre dans un tableur et peut être réimporté dans Bilan. En français, il utilise le point-virgule comme séparateur et la virgule décimale.
+- **Transactions (CSV)** : les transactions des comptes que vous voyez, avec date, montant, type, libellé, compte et catégorie. Par défaut, le fichier les contient toutes ; pour le restreindre, choisissez une période (**Du**, **Au**) ou un **Compte** au-dessus des boutons. Le fichier s’ouvre dans un tableur et peut être réimporté dans Bilan. En français, il utilise le point-virgule comme séparateur et la virgule décimale.
 - **Toutes mes données (JSON)** : tout ce qui vous appartient, pour vos archives ou pour changer d’outil : profil, vos propres comptes (IBAN compris), leurs transactions avec notes et libellés d’origine, catégories, règles, noms de marchands, budgets, foyers, liens, historique des imports et votre journal d’activité récent. Les comptes que d’autres partagent avec vous n’y figurent pas.
 
 ### Supprimer votre compte

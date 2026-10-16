@@ -307,7 +307,7 @@ Linked transactions stay in the list with a **Linked** tag.
 
 ![Link suggestions](images/en/suggestions.png)
 
-- **From suggestions**: on **Transactions**, click **Suggestions**. Bilan suggests pairs with the same amount and opposite signs, at most 30 days apart. Click **Link** to accept a pair or **Ignore** to dismiss it. Ignored pairs are listed further down, and **Restore** makes a pair eligible again.
+- **From suggestions**: on **Transactions**, click **Suggestions**. Bilan suggests pairs with the same amount and opposite signs, at most 30 days apart. Click **Link** to accept a pair or **Ignore** to dismiss it. Ignored pairs are listed further down, and **Restore** makes a pair eligible again. **Settings** changes, for you only, the **Maximum gap (days)** between the two transactions (0 for the same day, up to 365) and the **Minimum amount** below which pairs aren't suggested.
 - **By hand**: [select](#select-several-transactions) two or more transactions and click **Link**.
 
 Nothing is linked automatically. Linking requires write access to every account involved.
@@ -325,11 +325,11 @@ A budget sets how much you plan to spend per category or account over a period, 
 ### Create a budget
 
 1. Go to **Budgets** and click **New budget**.
-2. Enter a **Name**.
+2. Enter a **Name** and, if you like, a **Description**.
 3. Choose the **Scope**: **Personal**, or a household you manage (see [Household budgets](#household-budgets)). It can't be changed later.
 4. Choose the **Period**: Week, Month, Quarter, Year or Custom, then the **Start** date. The end date follows from the period.
 5. Tick **Recurring** for a budget that repeats every period.
-6. Add **Lines**. For each line, pick a **Category** (or **All categories**), an **Account** (or **All accounts**) and a **Planned amount**.
+6. Add **Lines**. For each line, pick a **Category** (or **All categories**), an **Account** (or **All accounts**) and a **Planned amount**. A line can also have a **Label**, shown instead of the category or account name.
 7. Click **Create budget**.
 
 How lines count spending:
@@ -360,6 +360,13 @@ Click a budget to open its details: each line with "… left" or "Over by …", 
 
 When a recurring budget's period ends, a **Renew** button on its card creates the next period with the same lines. Unspent amounts are not carried over. Your administrator can also set up automatic renewal. The periods of a series are grouped on one card: open **… other periods** to see them, or use the arrows on the details page.
 
+### Edit, archive or delete a budget
+
+The **⋮** menu on a budget's card or details page offers **Edit**, **Archive** and **Delete**.
+
+- **Archive** a budget you no longer follow but want to keep. It leaves the list, the dashboard and the **Assign to a budget** menu, and it is no longer renewed. Its lines and assignments are kept. Archived budgets are grouped under **Archived budgets** at the bottom of the list: open one to view it, or choose **Unarchive** in its menu to bring it back.
+- **Delete** removes the budget and its lines. Transactions are not affected, and the other periods of a recurring budget are kept.
+
 ### Include or exclude a transaction
 
 From a transaction's details, under **Assign to a budget**:
@@ -372,7 +379,7 @@ From a transaction's details, under **Assign to a budget**:
 
 A budget with a household scope belongs to the household:
 
-- Owners and admins create, edit, renew and delete it. Every member can view it, and can include or exclude transactions.
+- Owners and admins create, edit, renew, archive and delete it. Every member can view it, and can include or exclude transactions.
 - It counts transactions from the accounts shared with that household.
 
 A member can also **Include** a transaction from one of their private accounts. It then counts in the totals for everyone, and every member sees it in the budget in full: date, amount, label, category and account name. Only that transaction becomes visible: the private account and its other transactions stay hidden. If that member later leaves the household or is removed from it, the transaction stops counting in the household budgets.
@@ -550,7 +557,7 @@ Go to **Data** in the sidebar.
 
 ### Export
 
-- **Transactions (CSV)**: every transaction on the accounts you can see, with date, amount, type, label, account and category. The file opens in a spreadsheet and can be imported back into Bilan. In French the file uses a semicolon separator and decimal comma.
+- **Transactions (CSV)**: the transactions on the accounts you can see, with date, amount, type, label, account and category. By default the file has all of them; to narrow it, set a date range (**From**, **To**) or pick an **Account** above the buttons. The file opens in a spreadsheet and can be imported back into Bilan. In French the file uses a semicolon separator and decimal comma.
 - **All my data (JSON)**: everything that belongs to you, for your records or to move elsewhere: profile, your own accounts (IBAN included), their transactions with notes and original labels, categories, rules, merchant names, budgets, households, links, import history and your recent activity log. Accounts other people share with you are not included.
 
 ### Delete your account

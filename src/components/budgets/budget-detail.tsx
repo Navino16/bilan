@@ -75,9 +75,22 @@ export function BudgetDetail({
               {detail.scope === "GROUP" ? t("scopeGroup") : t("scopePersonal")}
             </Badge>
             {detail.recurring && <Badge variant="outline">{t("recurring")}</Badge>}
+            {detail.archived && <Badge variant="outline">{t("archivedBadge")}</Badge>}
           </>
         }
-        subtitle={formatDateRange(detail.periodStart, detail.periodEnd, locale)}
+        subtitle={
+          <>
+            {formatDateRange(detail.periodStart, detail.periodEnd, locale)}
+            {detail.description && (
+              <p
+                data-slot="budget-description"
+                className="text-foreground/80 mt-1.5 wrap-anywhere whitespace-pre-line"
+              >
+                {detail.description}
+              </p>
+            )}
+          </>
+        }
         inlineActions={!detail.previousId && !detail.nextId}
         actions={
           <div className="flex items-center gap-2">
@@ -90,6 +103,7 @@ export function BudgetDetail({
             {detail.canManage && (
               <BudgetActions
                 budget={toEditableBudget(detail)}
+                archived={detail.archived}
                 options={formOptions}
                 afterDelete={() => router.push(`/${locale}/budgets`)}
               />

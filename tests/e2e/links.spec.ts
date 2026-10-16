@@ -164,3 +164,50 @@ test.describe("transaction links", () => {
     ).toBeVisible({ timeout: 20_000 });
   });
 });
+
+test.describe("link suggestion settings", () => {
+  // The member's own settings, so the owner's suggestion specs keep the defaults.
+  test.use({ storageState: "tests/e2e/.auth/member.json" });
+  test.skip(
+    ({ browserName }) => browserName === "webkit",
+    "Mobile click-driven link flow deferred to Phase 8.3",
+  );
+
+  async function save(
+    page: import("@playwright/test").Page,
+    windowDays: string,
+    minAmount: string,
+  ): Promise<void> {
+    await expect(async () => {
+      await page.getByRole("button", { name: /^réglages$/i }).click();
+      await expect(page.getByLabel("Écart maximal (jours)")).toBeVisible();
+    }).toPass();
+    await page.getByLabel("Écart maximal (jours)").fill(windowDays);
+    await page.getByLabel("Montant minimum").fill(minAmount);
+    await page.getByRole("button", { name: /^enregistrer$/i }).click();
+  }
+
+  test("changes the window and minimum amount and shows them on the page", async ({ page }) => {
+    await expect(async () => {
+      await page.goto("/fr/transactions/suggestions");
+      await expect(page.getByRole("heading", { name: /suggestions de liens/i })).toBeVisible();
+    }).toPass({ timeout: 30_000 });
+    const criteria = page.locator('[data-slot="suggestion-criteria"]');
+    try {
+      await save(page, "7", "1,234");
+      await expect(page.getByText(/montant ambigu/i)).toBeVisible();
+      await page.getByLabel("Montant minimum").fill("12,5");
+      await page.getByRole("button", { name: /^enregistrer$/i }).click();
+      await expect(criteria).toContainText("7 jours d’écart au plus", { timeout: 15_000 });
+      await expect(criteria).toContainText("12,50");
+
+      await page.reload();
+      await save(page, "0", "0");
+      await expect(criteria).toContainText("Paires du même jour", { timeout: 15_000 });
+    } finally {
+      await page.goto("/fr/transactions/suggestions");
+      await save(page, "30", "0");
+      await expect(criteria).toContainText("30 jours", { timeout: 15_000 });
+    }
+  });
+});

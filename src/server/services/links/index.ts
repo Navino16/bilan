@@ -5,6 +5,7 @@ import { toIsoDay } from "@/lib/period";
 import { visibleAccountIds, visibleAccountRefs } from "@/server/services/accounts";
 import { canWriteAccount } from "@/server/services/accounts/sharing";
 import { logEvent } from "@/server/services/audit";
+import { getLinkSuggestionSettings } from "@/server/services/users/preferences";
 import { findSuggestedPairs, pairKeyOf, type SuggestedPair } from "@/lib/links";
 
 export class LinkAccessError extends Error {}
@@ -109,18 +110,16 @@ function legOf(t: { id: string; label: string; date: Date; accountName: string }
 const SUGGESTION_SCAN_LIMIT = 5000;
 
 // Suggests +X/-X pairs over the user's visible, not-yet-linked transactions (the
-// most recent SUGGESTION_SCAN_LIMIT), within UserPreference.linkWindowDays /
-// linkMinAmount, excluding ignored pairs. Only the paired rows get their label decrypted.
+// most recent SUGGESTION_SCAN_LIMIT), within the user's link suggestion settings,
+// excluding ignored pairs. Only the paired rows get their label decrypted.
 export async function suggestPairs(userId: string): Promise<SuggestedPairView[]> {
-  const [pref, visible, ignoredRows] = await Promise.all([
-    db.userPreference.findUnique({ where: { userId } }),
+  const [{ windowDays, minAmount }, visible, ignoredRows] = await Promise.all([
+    getLinkSuggestionSettings(userId),
     visibleAccountRefs(userId),
     db.ignoredLinkSuggestion.findMany({ where: { userId }, select: { pairKey: true } }),
   ]);
   if (visible.length === 0) return [];
   const accountName = new Map(visible.map((a) => [a.id, a.name]));
-  const windowDays = pref?.linkWindowDays ?? 30;
-  const minAmount = pref ? Number(pref.linkMinAmount) : 0;
   const ignored = new Set(ignoredRows.map((r) => r.pairKey));
 
   const candidates = await db.transaction.findMany({

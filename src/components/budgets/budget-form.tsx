@@ -23,6 +23,8 @@ import { budgetPlannedTotal, periodEndFor } from "@/lib/budgets";
 import { parseAmount, readAmount } from "@/lib/amount";
 import { formatAmountInput, formatMoney } from "@/lib/format";
 import {
+  BUDGET_DESCRIPTION_MAX,
+  BUDGET_LINE_LABEL_MAX,
   BUDGET_NAME_MAX,
   BUDGET_PERIOD_TYPES,
   type BudgetPeriodType,
@@ -236,6 +238,21 @@ function BudgetFormBody({
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="bud-description">{t("description")}</Label>
+          <textarea
+            id="bud-description"
+            name="description"
+            defaultValue={budget?.description ?? ""}
+            placeholder={t("descriptionPlaceholder")}
+            maxLength={BUDGET_DESCRIPTION_MAX}
+            rows={2}
+            {...form.fieldProps("description")}
+            className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive w-full rounded-lg border bg-transparent px-2.5 py-1.5 text-base outline-none focus-visible:ring-3 md:text-sm"
+          />
+          <FieldError form={form} name="description" />
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="bud-scope">{t("scope")}</Label>
           <NativeSelect
             id="bud-scope"
@@ -320,6 +337,16 @@ function BudgetFormBody({
               key={i}
               className="border-border grid grid-cols-1 gap-2 rounded-md border p-3 sm:grid-cols-[1fr_1fr_auto_auto]"
             >
+              <Input
+                aria-label={t("line.label")}
+                placeholder={t("line.labelPlaceholder")}
+                value={line.label}
+                onChange={(e) => updateLine(i, { label: e.target.value })}
+                maxLength={BUDGET_LINE_LABEL_MAX}
+                className="sm:col-span-4"
+                data-field={`lines.${i}.label`}
+                {...form.fieldProps(`lines.${i}.label`)}
+              />
               <NativeSelect
                 aria-label={t("line.category")}
                 value={line.categoryId}

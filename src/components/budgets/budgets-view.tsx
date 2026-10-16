@@ -23,11 +23,13 @@ import { PageHeader } from "@/components/shell/page-header";
 
 export function BudgetsView({
   budgets,
+  archived,
   categories,
   accounts,
   groups,
 }: {
   budgets: BudgetListItem[];
+  archived: BudgetListItem[];
   categories: CategoryOption[];
   accounts: BudgetAccountOption[];
   groups: BudgetLineOption[];
@@ -164,6 +166,14 @@ export function BudgetsView({
                         {b.recurring && <Badge variant="outline">{t("recurring")}</Badge>}
                         <span>{formatDateRange(b.periodStart, b.periodEnd, locale)}</span>
                       </div>
+                      {b.description && (
+                        <p
+                          data-slot="budget-description"
+                          className="text-muted-foreground line-clamp-2 text-sm wrap-anywhere"
+                        >
+                          {b.description}
+                        </p>
+                      )}
                     </div>
                     <BudgetBar percent={b.percent} status={b.status} />
                     <div className="text-muted-foreground flex items-center justify-between text-sm tabular-nums">
@@ -233,6 +243,45 @@ export function BudgetsView({
             </li>
           ))}
         </ul>
+      )}
+
+      {archived.length > 0 && (
+        <details className="group/archived" data-slot="archived-budgets">
+          <summary className="text-muted-foreground hover:text-foreground flex cursor-pointer list-none items-center gap-1 text-[0.7rem] font-medium tracking-[0.14em] uppercase [&::-webkit-details-marker]:hidden">
+            <ChevronRight className="size-4 transition-transform group-open/archived:rotate-90" />
+            {t("archivedTitle", { count: archived.length })}
+          </summary>
+          <p className="text-muted-foreground mt-1 text-xs">{t("archivedHint")}</p>
+          <ul className="mt-3 space-y-2 opacity-80">
+            {archived.map((b) => (
+              <li key={b.id}>
+                <Card data-slot="archived-budget" className="flex-row items-center gap-2 px-4 py-3">
+                  <Link
+                    href={`/${locale}/budgets/${b.id}`}
+                    className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-0.5 text-sm"
+                  >
+                    <span className="min-w-0 truncate font-medium" title={b.name}>
+                      {b.name}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {formatDateRange(b.periodStart, b.periodEnd, locale)}
+                    </span>
+                    <span className="text-muted-foreground ml-auto tabular-nums">
+                      {nf.format(b.spentTotal)} / {nf.format(b.plannedTotal)}
+                    </span>
+                  </Link>
+                  {b.canManage && (
+                    <BudgetActions
+                      budget={toEditableBudget(b)}
+                      archived
+                      options={{ categories, accounts, groups }}
+                    />
+                  )}
+                </Card>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
     </div>
   );

@@ -28,6 +28,23 @@ test.describe("account data", () => {
     expect(enBody).not.toMatch(/,(CARD|TRANSFER|DIRECT_DEBIT|CHEQUE|OTHER),/);
   });
 
+  test("the CSV export keeps to the requested date range and readable account", async ({
+    page,
+  }) => {
+    const rows = async (query: string) =>
+      (await (await page.request.get(`/api/export/transactions?locale=fr&${query}`)).text())
+        .trim()
+        .split(/\r?\n/)
+        .slice(1);
+
+    // The seeded owner transaction (scripts/seed-e2e.ts) on its fixed account.
+    const seeded = await rows("accountId=e2e-owner-account&from=2020-01-15&to=2020-01-15");
+    expect(seeded.some((r) => r.includes("E2E seed"))).toBe(true);
+    expect(seeded.every((r) => r.includes(";E2E Courant;"))).toBe(true);
+    expect(await rows("accountId=e2e-owner-account&from=2020-01-16&to=2020-01-16")).toEqual([]);
+    expect(await rows("accountId=not-a-readable-account")).toEqual([]);
+  });
+
   test("the JSON export has a dated filename and no encrypted fields", async ({ page }) => {
     const res = await page.request.get("/api/export/data");
     expect(res.status()).toBe(200);
@@ -58,5 +75,30 @@ test.describe("account data", () => {
       /^bilan-transactions-\d{4}-\d{2}-\d{2}\.csv$/,
     );
     await expect(csvButton).toBeEnabled();
+  });
+
+  test("the CSV export button sends the chosen filters", async ({ page }) => {
+    await page.goto("/fr/settings/data", { waitUntil: "domcontentloaded", timeout: 90_000 });
+    const filters = page.locator('[data-slot="export-filters"]');
+    await expect(filters).toBeVisible();
+    await filters.getByLabel("Du").fill("2020-01-01");
+    await filters.getByLabel("Au").fill("2020-12-31");
+    await filters.getByLabel("Compte").selectOption({ label: "E2E Courant" });
+
+    const request = page.waitForRequest((r) => r.url().includes("/api/export/transactions"));
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", { name: /transactions \(csv\)/i }).click();
+    const params = new URL((await request).url()).searchParams;
+    expect(Object.fromEntries(params)).toEqual({
+      locale: "fr",
+      from: "2020-01-01",
+      to: "2020-12-31",
+      accountId: "e2e-owner-account",
+    });
+    await download;
+
+    // At 320 px the filters stack without overflowing the card.
+    await page.setViewportSize({ width: 320, height: 800 });
+    await expect.poll(() => filters.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
   });
 });

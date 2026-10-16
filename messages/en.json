@@ -401,7 +401,8 @@
       "otherSpending": "Other spending",
       "catchAllHint": "An “All categories / All accounts” line takes every expense that no other line matches.",
       "hidden": "Hidden category or account",
-      "archivedAccount": "{name} (archived)"
+      "archivedAccount": "{name} (archived)",
+      "labelPlaceholder": "Label (optional, defaults to the category or account)"
     },
     "plannedTotal": "Planned total",
     "save": "Save",
@@ -470,7 +471,16 @@
       "others": "{count, plural, one {# other budget in progress} other {# other budgets in progress}}",
       "moreLines": "{count, plural, one {# more line} other {# more lines}}"
     },
-    "plannedTotalValue": "Planned total: {amount}"
+    "plannedTotalValue": "Planned total: {amount}",
+    "description": "Description",
+    "descriptionPlaceholder": "Optional: what is this budget for?",
+    "archive": "Archive",
+    "unarchive": "Unarchive",
+    "archiveTitle": "Archive “{name}”?",
+    "archiveBody": "The budget leaves the list, the dashboard and the assignment menu, and is no longer renewed. Its lines and assignments are kept and you can unarchive it.",
+    "archivedTitle": "Archived budgets · {count, number}",
+    "archivedHint": "Out of the list, the dashboard and the assignment menu. Open one to view it, or unarchive it from its menu.",
+    "archivedBadge": "Archived"
   },
   "categories": {
     "title": "Categories",
@@ -688,7 +698,21 @@
       "ignored": "{count, plural, one {# ignored pair} other {# ignored pairs}}",
       "ignoredHint": "A restored pair can be suggested again.",
       "restore": "Restore",
-      "restoreFailed": "Couldn’t restore this pair. Try again."
+      "restoreFailed": "Couldn’t restore this pair. Try again.",
+      "criteria": "{days, plural, =0 {Pairs on the same day} one {Pairs up to # day apart} other {Pairs up to # days apart}}, from {amount}.",
+      "settings": {
+        "open": "Settings",
+        "title": "Suggestion settings",
+        "subtitle": "Choose which pairs are suggested to you. These settings only apply to you.",
+        "windowDays": "Maximum gap (days)",
+        "windowDaysHint": "Days between the two transactions, from 0 (same day) to 365.",
+        "minAmount": "Minimum amount",
+        "minAmountHint": "Pairs below this amount aren’t suggested.",
+        "cancel": "Cancel",
+        "save": "Save",
+        "saving": "Saving…",
+        "failed": "Couldn’t save these settings. Try again."
+      }
     },
     "filterSheet": {
       "reset": "Reset",
@@ -1144,7 +1168,14 @@
         "RATE_LIMITED": "Too many attempts. Try again later.",
         "FAILED": "Deletion failed. Please try again.",
         "LAST_SUPER_ADMIN": "You are the last active super administrator: appoint another one before deleting your account."
-      }
+      },
+      "exportFilters": "CSV export filters",
+      "exportFrom": "From",
+      "exportTo": "To",
+      "exportAccount": "Account",
+      "exportAllAccounts": "All accounts",
+      "exportArchivedAccount": "{name} (archived)",
+      "exportFiltersHint": "Leave empty to export everything. The JSON export always contains all your data."
     },
     "security": {
       "overline": "Account",
@@ -1790,7 +1821,8 @@
           "assignment": {
             "create": "Transaction assigned to a budget",
             "delete": "Budget assignment removed"
-          }
+          },
+          "unarchived": "Budget unarchived"
         },
         "link": {
           "created": "Link created",
