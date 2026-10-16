@@ -1155,6 +1155,7 @@
         "body": "Cette instance impose la double authentification aux administrateurs. Tant que vous ne l’avez pas activée ci-dessous, les pages d’administration vous ramènent ici et vos actions d’administration sont refusées."
       },
       "ssoOnly": "Votre compte n’a pas de mot de passe : vous vous connectez par un fournisseur d’identité ou avec une clé d’accès. La double authentification de Bilan ne protège que les connexions par mot de passe ; c’est celle de votre fournisseur d’identité qui s’applique.",
+      "passwordSignInOff": "La connexion par mot de passe est désactivée sur cette instance. La double authentification de Bilan ne protège que les connexions par mot de passe : elle ne s’applique donc pas pour l’instant, et c’est celle de votre fournisseur d’identité qui protège vos connexions.",
       "twoFactor": "Double authentification",
       "twoFactorTitle": "Application d’authentification (TOTP)",
       "twoFactorHint": "Ajoutez un code à usage unique en plus de votre mot de passe.",

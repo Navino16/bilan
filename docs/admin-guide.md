@@ -164,7 +164,7 @@ When disabled, the sign-in page no longer offers e-mail and password. Users sign
 
 When enabled, an administrator or super administrator without two-factor authentication is sent to **Security** whenever they open the admin area, where a banner explains why, and their admin actions are refused. Their other pages work normally. Admin rights come back as soon as they enable two-factor authentication (authenticator app) on that page.
 
-Enabling two-factor authentication asks for the account password. Bilan's two-factor authentication only protects password sign-ins: SSO and passkey sign-ins never ask for its code. So an administrator without a password (SSO only, possibly with passkeys) is exempt from this setting; their identity provider's own two-factor authentication is what protects them. If they later set a password (**Forgot password?** on the sign-in page), the setting applies to them too.
+Enabling two-factor authentication asks for the account password. Bilan's two-factor authentication only protects password sign-ins: SSO and passkey sign-ins never ask for its code. So an administrator without a password (SSO only, possibly with passkeys) is exempt from this setting; their identity provider's own two-factor authentication is what protects them. If they later set a password (**Forgot password?** on the sign-in page), the setting applies to them too. While **Password sign-in** is disabled, the setting applies to no one, since no sign-in asks for the code.
 
 An administrator with both a password and an SSO identity is subject to the setting. Once they have enabled two-factor authentication, a password sign-in asks for the code, and an SSO sign-in relies on the identity provider.
 

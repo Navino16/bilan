@@ -1,7 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { requiresTwoFactorSetup } from "@/server/auth/permissions";
 
-const blocked = { isAdmin: true, twoFactorEnabled: false, hasPassword: true, settingOn: true };
+const blocked = {
+  isAdmin: true,
+  twoFactorEnabled: false,
+  hasPassword: true,
+  passwordSignIn: true,
+  settingOn: true,
+};
 
 describe("requiresTwoFactorSetup", () => {
   it("is true only for an admin with a password, when the setting is on and 2FA isn't enabled yet", () => {
@@ -22,5 +28,9 @@ describe("requiresTwoFactorSetup", () => {
 
   it("is false for an account without a password: its IdP's MFA is authoritative (#256)", () => {
     expect(requiresTwoFactorSetup({ ...blocked, hasPassword: false })).toBe(false);
+  });
+
+  it("is false while password sign-in is disabled: a dormant password guards no sign-in (#256)", () => {
+    expect(requiresTwoFactorSetup({ ...blocked, passwordSignIn: false })).toBe(false);
   });
 });

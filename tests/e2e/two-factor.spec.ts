@@ -55,7 +55,6 @@ async function register(page: Page, email: string, password: string) {
   await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
 }
 
-// Enrols from Settings > Security; returns the TOTP secret, the backup codes and the code used.
 async function enrol(page: Page, password: string) {
   await page.goto("/fr/settings/security", { waitUntil: "domcontentloaded", timeout: 90_000 });
   const card = page.locator('[data-slot="two-factor-controls"]');
@@ -162,7 +161,6 @@ test.describe("two-factor sign-in", () => {
     const codesBlock = page.locator('[data-slot="backup-codes-controls"]');
     await expect(codesBlock).toContainText("10 codes de secours restants.");
 
-    // A trusted sign-in shows up under Trusted devices, as this device.
     await context.clearCookies();
     await signInWithPassword(page, email, password);
     await page.getByLabel("Faire confiance à cet appareil").check();
@@ -174,7 +172,6 @@ test.describe("two-factor sign-in", () => {
     await expect(devices.locator("li")).toHaveCount(1);
     await expect(devices.locator("li")).toContainText("Cet appareil");
 
-    // New codes take the password and a second factor; the old ones stop working.
     await expect(async () => {
       await codesBlock.getByRole("button", { name: "Générer de nouveaux codes" }).click();
       await expect(codesBlock.locator("#tfa-pw-codes")).toBeVisible({ timeout: 1_000 });
@@ -193,7 +190,6 @@ test.describe("two-factor sign-in", () => {
     await devices.getByRole("button", { name: /^Oublier / }).click();
     await expect(devices.getByText("Aucun appareil de confiance.")).toBeVisible();
 
-    // The forgotten browser is asked for a code again, and an old backup code is refused.
     await context.clearCookies({ name: /session_token/ });
     await signInWithPassword(page, email, password);
     await page.getByRole("button", { name: "Utiliser un code de secours" }).click();

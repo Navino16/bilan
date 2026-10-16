@@ -124,7 +124,6 @@ export async function disableTwoFactor(
   }
 }
 
-// Re-authenticated like disabling; the new set replaces every previous code.
 export async function regenerateBackupCodes(
   headers: Headers,
   userId: string,
@@ -144,12 +143,13 @@ export async function regenerateBackupCodes(
   return { ok: true, data: { backupCodes } };
 }
 
-// Null when 2FA isn't set up or the stored codes can't be read.
 export async function countBackupCodes(userId: string): Promise<number | null> {
+  if ((await db.twoFactor.count({ where: { userId } })) === 0) return null;
   try {
     const { backupCodes } = await (await twoFactorApi()).viewBackupCodes({ body: { userId } });
     return backupCodes.length;
-  } catch {
+  } catch (err) {
+    console.error("[bilan] backup code count failed", err);
     return null;
   }
 }

@@ -91,6 +91,8 @@ export async function revokeTrustedDevice(
 
 export async function revokeAllTrustedDevices(userId: string): Promise<{ count: number }> {
   const count = await purgeTrustedDevices(userId);
-  await logEvent({ userId, action: "auth.trusted_device.revoked_all", metadata: { count } });
+  if (count > 0) {
+    await logEvent({ userId, action: "auth.trusted_device.revoked_all", metadata: { count } });
+  }
   return { count };
 }

@@ -8,7 +8,6 @@ const SERVER_HOST = process.env.E2E_IDP_HOST ?? "127.0.0.1";
 const MEMBER_EMAIL = "member@e2e.local";
 
 let idp: Server;
-// The account the stub IdP signs in.
 let idpUser = { sub: "e2e-member-sub", email: MEMBER_EMAIL };
 let port = 0;
 const serverBase = () => `http://${SERVER_HOST}:${port}`;
@@ -68,6 +67,23 @@ async function deleteProvider(page: Page, key: string) {
   await editForm.getByRole("button", { name: "Supprimer" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Supprimer" }).click();
   await expect(editForm).toHaveCount(0);
+}
+
+async function deleteUser(page: Page, email: string): Promise<void> {
+  await page.goto(`/fr/admin/users?q=${encodeURIComponent(email)}`, {
+    waitUntil: "domcontentloaded",
+  });
+  const row = page.locator('[data-slot="admin-user-row"]', { hasText: email });
+  if ((await row.count()) === 0) return;
+  const dialog = page.locator('[data-slot="confirm-dialog"]');
+  await expect(async () => {
+    await row.getByRole("button", { name: /actions pour/i }).click();
+    await page.getByRole("menuitem", { name: /supprimer définitivement/i }).click();
+    await expect(dialog).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 20_000 });
+  await dialog.getByRole("textbox").fill(email);
+  await dialog.getByRole("button", { name: /supprimer définitivement/i }).click();
+  await expect(dialog).toBeHidden();
 }
 
 test.describe("SSO identities (#204)", () => {
@@ -167,8 +183,11 @@ test.describe("SSO identities (#204)", () => {
       );
       await expect(anon.locator("#tfa-pw-enable")).toHaveCount(0);
     } finally {
+      const ssoEmail = idpUser.email;
       idpUser = { sub: "e2e-member-sub", email: MEMBER_EMAIL };
       await anonContext.close();
+      // The provider delete is refused while it is this user's only sign-in method.
+      await deleteUser(adminPage, ssoEmail);
       await deleteProvider(adminPage, key);
       await admin.close();
     }

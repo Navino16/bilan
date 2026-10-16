@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const requestHeaders = new Headers();
 const state = vi.hoisted(() => ({
   settingOn: true,
+  credentialsEnabled: true as boolean | null,
   twoFactorEnabled: false,
   hasPassword: true,
   permissions: ["admin.settings.write", "admin.audit.read"],
@@ -47,7 +48,10 @@ vi.mock("@/server/db", () => ({
   },
 }));
 vi.mock("@/server/services/settings/app-settings", () => ({
-  appSettings: { get: async () => state.settingOn },
+  appSettings: {
+    get: async (key: string) =>
+      key === "credentials_enabled" ? state.credentialsEnabled : state.settingOn,
+  },
 }));
 
 const { hasEnforcedPermission, isAdminTwoFactorBlocked, requirePermission } =
@@ -58,6 +62,7 @@ describe("admin 2FA enforcement (#243 SEC-01)", () => {
     state.settingOn = true;
     state.twoFactorEnabled = false;
     state.hasPassword = true;
+    state.credentialsEnabled = true;
     state.permissions = ["admin.settings.write", "admin.audit.read"];
     requestHeaders.set("x-bilan-path", "/en/admin/audit");
   });
@@ -109,5 +114,13 @@ describe("admin 2FA enforcement (#243 SEC-01)", () => {
   it("shows no banner to a user without admin permissions (#256)", async () => {
     state.permissions = ["transactions.read"];
     expect(await isAdminTwoFactorBlocked("admin_1")).toBe(false);
+  });
+
+  it("exempts every admin while password sign-in is disabled instance-wide (#256)", async () => {
+    state.credentialsEnabled = false;
+    expect(await hasEnforcedPermission("admin_1", "admin.audit.read")).toBe(true);
+    expect(await isAdminTwoFactorBlocked("admin_1")).toBe(false);
+    state.credentialsEnabled = null;
+    expect(await isAdminTwoFactorBlocked("admin_1")).toBe(true);
   });
 });

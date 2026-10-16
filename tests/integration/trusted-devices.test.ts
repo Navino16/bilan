@@ -191,5 +191,10 @@ describe("revoking trusted devices (#256)", () => {
       where: { userId, action: "auth.trusted_device.revoked_all" },
     });
     expect(audit?.metadata).toEqual({ count: 2 });
+
+    expect(await revokeAllTrustedDevices(userId)).toEqual({ count: 0 });
+    expect(
+      await db.auditLog.count({ where: { userId, action: "auth.trusted_device.revoked_all" } }),
+    ).toBe(1);
   });
 });

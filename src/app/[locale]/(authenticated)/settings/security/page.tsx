@@ -6,7 +6,7 @@ import {
   requireSession,
 } from "@/server/auth/permissions";
 import { db } from "@/server/db";
-import { getMinPasswordLength } from "@/server/services/settings/app-settings";
+import { appSettings, getMinPasswordLength } from "@/server/services/settings/app-settings";
 import { hasPasswordCredential } from "@/server/services/users/password";
 import { listSessions } from "@/server/services/users/sessions";
 import { listPasskeys } from "@/server/services/users/passkeys";
@@ -43,16 +43,25 @@ export default async function SecuritySettingsPage({
   const t = await getTranslations("settings.security");
 
   const currentSessionId = (await getCurrentSession())?.session.id ?? null;
-  const [row, hasPassword, minPasswordLength, sessions, passkeys, identities, adminBlocked] =
-    await Promise.all([
-      db.user.findUnique({ where: { id: user.id }, select: { twoFactorEnabled: true } }),
-      hasPasswordCredential(user.id),
-      getMinPasswordLength(),
-      listSessions(user.id, currentSessionId),
-      listPasskeys(user.id),
-      listIdentities(user.id),
-      isAdminTwoFactorBlocked(user.id),
-    ]);
+  const [
+    row,
+    hasPassword,
+    passwordSignIn,
+    minPasswordLength,
+    sessions,
+    passkeys,
+    identities,
+    adminBlocked,
+  ] = await Promise.all([
+    db.user.findUnique({ where: { id: user.id }, select: { twoFactorEnabled: true } }),
+    hasPasswordCredential(user.id),
+    appSettings.get<boolean>("credentials_enabled").then((v) => v ?? true),
+    getMinPasswordLength(),
+    listSessions(user.id, currentSessionId),
+    listPasskeys(user.id),
+    listIdentities(user.id),
+    isAdminTwoFactorBlocked(user.id),
+  ]);
   // Bilan's 2FA only guards password sign-ins: without a password, the IdP's MFA applies (#256).
   const twoFactorOn = hasPassword && Boolean(row?.twoFactorEnabled);
   const [backupCodesLeft, trustedDevices] = twoFactorOn
@@ -88,12 +97,21 @@ export default async function SecuritySettingsPage({
       )}
 
       <SectionCard overline={t("twoFactor")} title={t("twoFactorTitle")} hint={t("twoFactorHint")}>
-        {hasPassword ? (
-          <TwoFactorControls enabled={twoFactorOn} backupCodesLeft={backupCodesLeft} />
-        ) : (
+        {!hasPassword ? (
           <p className="text-sm" data-slot="two-factor-sso-only">
             {t("ssoOnly")}
           </p>
+        ) : (
+          <div className="space-y-6">
+            {!passwordSignIn && (
+              <p className="text-sm" data-slot="two-factor-password-sign-in-off">
+                {t("passwordSignInOff")}
+              </p>
+            )}
+            {(passwordSignIn || twoFactorOn) && (
+              <TwoFactorControls enabled={twoFactorOn} backupCodesLeft={backupCodesLeft} />
+            )}
+          </div>
         )}
       </SectionCard>
 

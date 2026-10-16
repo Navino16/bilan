@@ -6,16 +6,21 @@ const api = vi.hoisted(() => ({
   verifyBackupCode: vi.fn(),
   disableTwoFactor: vi.fn(),
   generateBackupCodes: vi.fn(),
+  viewBackupCodes: vi.fn(),
 }));
+const twoFactorRows = vi.hoisted(() => ({ count: 1 }));
 const logEvent = vi.hoisted(() => vi.fn());
 vi.mock("@/server/auth", () => ({ getAuth: async () => ({ api }) }));
 vi.mock("@/server/db", () => ({
-  db: { user: { findUnique: async () => ({ twoFactorEnabled: true }) } },
+  db: {
+    user: { findUnique: async () => ({ twoFactorEnabled: true }) },
+    twoFactor: { count: async () => twoFactorRows.count },
+  },
 }));
 vi.mock("@/server/services/users/password", () => ({ isCurrentPassword: async () => true }));
 vi.mock("@/server/services/audit", () => ({ logEvent }));
 
-const { disableTwoFactor, regenerateBackupCodes } =
+const { countBackupCodes, disableTwoFactor, regenerateBackupCodes } =
   await import("@/server/services/users/two-factor");
 
 const disable = (code = "123456") => disableTwoFactor(new Headers(), "user_1", "pw", code);
@@ -84,5 +89,30 @@ describe("regenerateBackupCodes (#256)", () => {
     api.generateBackupCodes.mockRejectedValueOnce(new Error("connection lost"));
     expect(await regenerate()).toEqual({ ok: false, error: "FAILED" });
     expect(audited("auth.2fa.backup_codes_regenerated")).toBe(false);
+  });
+});
+
+describe("countBackupCodes (#256)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    twoFactorRows.count = 1;
+  });
+
+  it("is null without a two-factor setup", async () => {
+    twoFactorRows.count = 0;
+    expect(await countBackupCodes("user_1")).toBeNull();
+    expect(api.viewBackupCodes).not.toHaveBeenCalled();
+  });
+
+  it("counts the unused codes", async () => {
+    api.viewBackupCodes.mockResolvedValueOnce({ backupCodes: ["a", "b"] });
+    expect(await countBackupCodes("user_1")).toBe(2);
+  });
+
+  it("logs an unreadable set instead of passing it off as no setup", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    api.viewBackupCodes.mockRejectedValueOnce(new Error("bad key"));
+    expect(await countBackupCodes("user_1")).toBeNull();
+    expect(error).toHaveBeenCalledWith("[bilan] backup code count failed", expect.any(Error));
   });
 });

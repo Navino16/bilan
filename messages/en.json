@@ -1155,6 +1155,7 @@
         "body": "This instance requires administrators to use two-factor authentication. Until you enable it below, the administration pages bring you back here and your admin actions are refused."
       },
       "ssoOnly": "Your account has no password: you sign in through an identity provider or with a passkey. Bilan’s two-factor authentication only protects password sign-ins; your identity provider’s own two-factor authentication applies instead.",
+      "passwordSignInOff": "Password sign-in is turned off on this instance. Bilan’s two-factor authentication only protects password sign-ins, so it doesn’t apply for now: your identity provider’s own two-factor authentication protects your sign-ins.",
       "twoFactor": "Two-factor authentication",
       "twoFactorTitle": "Authenticator app (TOTP)",
       "twoFactorHint": "Add a one-time code on top of your password.",
