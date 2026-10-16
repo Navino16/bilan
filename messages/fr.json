@@ -288,7 +288,7 @@
     "sharedAccounts": "Comptes partagés",
     "noSharedAccounts": "Aucun compte partagé avec ce foyer.",
     "shareTitle": "Partager le compte",
-    "shareSubtitle": "Choisissez les foyers et leur niveau d’accès.",
+    "shareSubtitle": "Choisissez les foyers et leur niveau d’accès. Avec Aucun, les transactions du compte sortent aussi des budgets de ce foyer, y compris celles incluses ou exclues à la main.",
     "noGroups": "Vous n’appartenez à aucun foyer.",
     "permNone": "Aucun",
     "access": {
@@ -911,9 +911,9 @@
     "you": "Vous",
     "role": "Rôle",
     "remove": "Retirer",
-    "removeConfirm": "Retirer ce membre du foyer ?",
+    "removeConfirm": "Retirer ce membre du foyer ? Ses comptes ne seront plus partagés avec le foyer et leurs transactions sortiront de ses budgets.",
     "leave": "Quitter",
-    "leaveConfirm": "Quitter ce foyer ?",
+    "leaveConfirm": "Quitter ce foyer ? Vos comptes ne seront plus partagés avec lui et leurs transactions sortiront de ses budgets.",
     "delete": "Supprimer le foyer",
     "deleteConfirm": "Supprimer définitivement ce foyer ? Action irréversible.",
     "deleteImpact": {
@@ -936,7 +936,7 @@
     },
     "dangerZone": "Zone de danger",
     "dangerTitleOwner": "Quitter ou supprimer le foyer",
-    "leaveHint": "Vous perdrez l’accès aux comptes et budgets partagés de ce foyer.",
+    "leaveHint": "Vous perdrez l’accès aux comptes et budgets partagés de ce foyer, et vos comptes cesseront d’y être partagés.",
     "leaveTitle": "Quitter le foyer",
     "deleteHint": "La suppression retire les partages et supprime les catégories, règles et budgets du foyer. Action irréversible.",
     "removeTitle": "Retirer {name} ?"
@@ -1464,6 +1464,7 @@
       "username": "Utilisateur",
       "password": "Mot de passe",
       "passwordKept": "Laisser vide pour conserver l’actuel (même serveur et compte)",
+      "credentialsHint": "Laissez l’utilisateur et le mot de passe vides pour un relais qui n’exige pas d’authentification.",
       "fromAddress": "Adresse d’expédition",
       "fromName": "Nom d’expéditeur",
       "security": {
@@ -1560,7 +1561,8 @@
       "deleteTitle": "Supprimer le fournisseur {name} ?",
       "deleteBody": "Il disparaît de la page de connexion. Action irréversible.",
       "deleteLinked": "{count, plural, one {# compte utilisateur est lié} other {# comptes utilisateurs sont liés}} à ce fournisseur : ces liaisons seront supprimées.",
-      "deleteLockout": "{count, plural, one {# utilisateur n’aurait} other {# utilisateurs n’auraient}} plus aucun moyen de se connecter (ni mot de passe, ni clé d’accès, ni autre fournisseur actif). Désactivez plutôt ce fournisseur."
+      "deleteLockout": "{count, plural, one {# utilisateur n’aurait} other {# utilisateurs n’auraient}} plus aucun moyen de se connecter (ni mot de passe, ni clé d’accès, ni autre fournisseur actif). Désactivez plutôt ce fournisseur.",
+      "deleteLockoutNoPassword": "{count, plural, one {# utilisateur n’aurait} other {# utilisateurs n’auraient}} plus aucun moyen de se connecter (ni mot de passe, ni clé d’accès, ni autre fournisseur actif). La connexion par mot de passe étant désactivée, désactiver ce fournisseur est refusé aussi : réactivez la connexion par mot de passe, ou faites d’abord ajouter à ces utilisateurs une clé d’accès ou un autre fournisseur."
     },
     "audit": {
       "title": "Journal d’audit",
@@ -1795,7 +1797,8 @@
       "password": "Mot de passe",
       "fromAddress": "Adresse d’expéditeur",
       "fromName": "Nom d’expéditeur",
-      "error": "Champs SMTP incomplets : serveur, port, identifiant, mot de passe et adresse d’expéditeur valide sont requis.",
+      "credentialsHint": "Laissez l’identifiant et le mot de passe vides pour un relais qui n’exige pas d’authentification.",
+      "error": "Champs SMTP incomplets : serveur, port et adresse d’expéditeur valide sont requis, et un identifiant va avec son mot de passe.",
       "save": "Enregistrer et continuer",
       "skip": "Passer"
     },

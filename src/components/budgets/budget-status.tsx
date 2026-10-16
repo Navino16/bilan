@@ -23,12 +23,13 @@ const BAR_FILL: Record<BudgetStatus, string> = {
   OK: "var(--income)",
 };
 
-export function BudgetBar({ percent, status }: { percent: number; status: BudgetStatus }) {
+// A null percent (spending against a zero plan) fills the bar like any overspend.
+export function BudgetBar({ percent, status }: { percent: number | null; status: BudgetStatus }) {
   return (
     <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
       <div
         className="h-full rounded-full"
-        style={{ width: `${Math.min(100, percent)}%`, background: BAR_FILL[status] }}
+        style={{ width: `${Math.min(100, percent ?? 100)}%`, background: BAR_FILL[status] }}
       />
     </div>
   );

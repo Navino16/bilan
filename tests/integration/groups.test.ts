@@ -13,6 +13,9 @@ import {
 } from "@/server/services/groups";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
 import { GroupAccessError } from "@/server/services/groups/roles";
+import { getBudgetDetail, listBudgetsForUser } from "@/server/services/budgets";
+import { visibleAccountIds } from "@/server/services/accounts";
+import { canReadAccount } from "@/server/services/accounts/sharing";
 
 const owner = "grp_owner";
 const admin = "grp_admin";
@@ -196,5 +199,141 @@ describe("groups service", () => {
       null,
     );
     await db.bankAccount.delete({ where: { id: account.id } });
+  });
+});
+
+async function txOn(accountId: string, createdById: string) {
+  const secure = buildSecureFields({ label: "Courses", rawLabel: "CB COURSES" });
+  return db.transaction.create({
+    data: {
+      accountId,
+      date: new Date("2026-03-05T00:00:00Z"),
+      amount: -20,
+      type: "CARD",
+      labelEnc: secure.labelEnc,
+      labelHash: secure.labelHash,
+      rawLabelEnc: secure.rawLabelEnc,
+      rawLabelHash: secure.rawLabelHash,
+      createdById,
+    },
+  });
+}
+
+async function budgetFor(owner: { groupId: string } | { userId: string }, createdById: string) {
+  return db.budget.create({
+    data: {
+      ...owner,
+      name: "Departure budget",
+      periodType: "MONTH",
+      periodStart: new Date("2026-03-01T00:00:00Z"),
+      periodEnd: new Date("2026-03-31T23:59:59Z"),
+      createdById,
+      lines: { create: { plannedAmount: 100 } },
+    },
+  });
+}
+
+// The member shares one account with the household and with a second one (owner not in it),
+// keeps another private; the owner shares one account too.
+async function seedDeparture() {
+  const g = await createGroup({ name: "Departure" }, owner);
+  const other = await createGroup({ name: "Other household" }, admin);
+  for (const groupId of [g.id, other.id])
+    await db.groupMember.create({ data: { groupId, userId: member, role: "MEMBER" } });
+  const account = (ownerId: string, name: string) =>
+    db.bankAccount.create({ data: { ownerId, name, type: "CHECKING" } });
+  const memberShared = await account(member, "Member shared");
+  const memberPrivate = await account(member, "Member private");
+  const ownerShared = await account(owner, "Owner shared");
+  const share = (accountId: string, groupId: string, createdById: string) =>
+    db.accountShare.create({ data: { accountId, groupId, permission: "READ", createdById } });
+  await share(memberShared.id, g.id, member);
+  await share(memberShared.id, other.id, member);
+  await share(ownerShared.id, g.id, owner);
+
+  const [tMemberShared, tMemberPrivate, tOwner] = await Promise.all([
+    txOn(memberShared.id, member),
+    txOn(memberPrivate.id, member),
+    txOn(ownerShared.id, owner),
+  ]);
+  const budget = await budgetFor({ groupId: g.id }, owner);
+  const otherBudget = await budgetFor({ groupId: other.id }, admin);
+  const personal = await budgetFor({ userId: member }, member);
+  const assign = (budgetId: string, transactionId: string, mode: string, assignedById: string) =>
+    db.budgetAssignment.create({ data: { budgetId, transactionId, mode, assignedById } });
+  await assign(budget.id, tMemberShared.id, "EXCLUDE", owner);
+  await assign(budget.id, tMemberPrivate.id, "INCLUDE", member);
+  await assign(budget.id, tOwner.id, "EXCLUDE", owner);
+  await assign(otherBudget.id, tMemberShared.id, "EXCLUDE", admin);
+  await assign(personal.id, tMemberShared.id, "INCLUDE", member);
+
+  expect((await getBudgetDetail(budget.id, owner)).spentTotal).toBe(20);
+  return { g, other, memberShared, ownerShared, tOwner, budget, otherBudget, personal };
+}
+
+async function expectDetached(s: Awaited<ReturnType<typeof seedDeparture>>) {
+  const shares = await db.accountShare.findMany({
+    where: { groupId: { in: [s.g.id, s.other.id] } },
+    select: { accountId: true, groupId: true },
+  });
+  expect(shares).toHaveLength(2);
+  expect(shares).toEqual(
+    expect.arrayContaining([
+      { accountId: s.ownerShared.id, groupId: s.g.id },
+      { accountId: s.memberShared.id, groupId: s.other.id },
+    ]),
+  );
+  const left = await db.budgetAssignment.findMany({
+    where: { budgetId: { in: [s.budget.id, s.otherBudget.id, s.personal.id] } },
+    select: { budgetId: true, transactionId: true },
+  });
+  expect(left).toHaveLength(3);
+  expect(left).toContainEqual({ budgetId: s.budget.id, transactionId: s.tOwner.id });
+  expect(left.filter((a) => a.budgetId !== s.budget.id)).toHaveLength(2);
+
+  expect((await listBudgetsForUser(member)).some((b) => b.id === s.budget.id)).toBe(false);
+  await expect(getBudgetDetail(s.budget.id, member)).rejects.toThrow("FORBIDDEN");
+  expect(await visibleAccountIds(owner)).not.toContain(s.memberShared.id);
+  expect(await canReadAccount(owner, s.memberShared.id)).toBe(false);
+  expect((await getBudgetDetail(s.budget.id, owner)).spentTotal).toBe(0);
+}
+
+async function cleanupDeparture(s: Awaited<ReturnType<typeof seedDeparture>>) {
+  await db.group.deleteMany({ where: { id: { in: [s.g.id, s.other.id] } } });
+  await db.budget.deleteMany({ where: { id: s.personal.id } });
+  await db.bankAccount.deleteMany({ where: { ownerId: { in: [owner, member] } } });
+  await db.auditLog.deleteMany({ where: { entityId: { in: [s.g.id, s.other.id] } } });
+}
+
+describe("leaving or being removed from a household (#259)", () => {
+  it("drops the leaver's shares and the assignments of their transactions", async () => {
+    const s = await seedDeparture();
+    await leaveGroup(s.g.id, member);
+    await expectDetached(s);
+    const audit = await db.auditLog.findFirst({
+      where: { action: "group.member.removed", entityId: s.g.id },
+    });
+    expect(audit?.metadata).toEqual({
+      targetUserId: member,
+      self: true,
+      unsharedAccounts: 1,
+      removedAssignments: 2,
+    });
+    await cleanupDeparture(s);
+  });
+
+  it("does the same when an admin removes the member", async () => {
+    const s = await seedDeparture();
+    await removeMember(s.g.id, member, { id: owner });
+    await expectDetached(s);
+    const audit = await db.auditLog.findFirst({
+      where: { action: "group.member.removed", entityId: s.g.id },
+    });
+    expect(audit?.metadata).toEqual({
+      targetUserId: member,
+      unsharedAccounts: 1,
+      removedAssignments: 2,
+    });
+    await cleanupDeparture(s);
   });
 });

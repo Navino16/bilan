@@ -197,6 +197,8 @@ vers l'assistant :
 2. **E-mail (SMTP)** : facultatif, configurable plus tard dans l'administration. Le chiffrement
    est STARTTLS (port 587) par défaut, qui refuse d'envoyer si le serveur ne le prend pas en
    charge ; _TLS implicite_ (port 465) et _Aucun_ (relais local uniquement) sont les alternatives.
+   Laissez l'identifiant et le mot de passe vides pour un relais qui n'exige pas
+   d'authentification.
 3. **Connexion externe** : fournisseur OIDC facultatif (Google s'ajoute ensuite, depuis
    l'administration). L'assistant affiche l'URL de redirection à déclarer chez votre
    fournisseur d'identité.

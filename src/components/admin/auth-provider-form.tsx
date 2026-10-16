@@ -38,10 +38,12 @@ export type AuthProviderDefaults = {
 export function AuthProviderForm({
   provider,
   impact = { linkedAccounts: 0, lockedOut: 0 },
+  credentialsEnabled = true,
   appName,
 }: {
   provider?: AuthProviderDefaults;
   impact?: AuthProviderImpact;
+  credentialsEnabled?: boolean;
   appName: string;
 }) {
   const t = useTranslations("admin.authProviders");
@@ -291,6 +293,7 @@ export function AuthProviderForm({
             providerKey={provider.key}
             name={provider.displayName}
             impact={impact}
+            credentialsEnabled={credentialsEnabled}
           />
         )}
       </div>

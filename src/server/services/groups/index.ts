@@ -10,6 +10,7 @@ import {
   getMembership,
   requireGroupRole,
 } from "./roles";
+import { dropGroupAssignments, unshareFromGroup } from "./detach";
 
 export { GroupAccessError } from "./roles";
 
@@ -162,13 +163,13 @@ export async function removeMember(
   if (target.role === "OWNER" && (await countOwners(groupId)) <= 1) {
     throw new GroupAccessError("LAST_OWNER");
   }
-  await db.groupMember.delete({ where: { groupId_userId: { groupId, userId: targetUserId } } });
+  const detached = await removeMembership(groupId, targetUserId);
   await logEvent({
     userId: actor.id,
     action: "group.member.removed",
     entity: "Group",
     entityId: groupId,
-    metadata: { targetUserId },
+    metadata: { targetUserId, ...detached },
   });
 }
 
@@ -178,12 +179,28 @@ export async function leaveGroup(groupId: string, userId: string): Promise<void>
   if (m.role === "OWNER" && (await countOwners(groupId)) <= 1) {
     throw new GroupAccessError("LAST_OWNER");
   }
-  await db.groupMember.delete({ where: { groupId_userId: { groupId, userId } } });
+  const detached = await removeMembership(groupId, userId);
   await logEvent({
     userId,
     action: "group.member.removed",
     entity: "Group",
     entityId: groupId,
-    metadata: { targetUserId: userId, self: true },
+    metadata: { targetUserId: userId, self: true, ...detached },
+  });
+}
+
+// The departing member's accounts leave the household with them, private ones included (an
+// INCLUDE needs no share). Lines filtering on such an account stay and count nothing.
+async function removeMembership(
+  groupId: string,
+  userId: string,
+): Promise<{ unsharedAccounts: number; removedAssignments: number }> {
+  return db.$transaction(async (tx) => {
+    await tx.groupMember.delete({ where: { groupId_userId: { groupId, userId } } });
+    const owned = { ownerId: userId };
+    return {
+      unsharedAccounts: await unshareFromGroup(tx, groupId, owned),
+      removedAssignments: await dropGroupAssignments(tx, groupId, owned),
+    };
   });
 }

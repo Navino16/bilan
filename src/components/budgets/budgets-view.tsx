@@ -170,7 +170,9 @@ export function BudgetsView({
                       <span>
                         {nf.format(b.spentTotal)} / {nf.format(b.plannedTotal)}
                       </span>
-                      <span>{formatPercent(b.percent / 100, locale)}</span>
+                      <span>
+                        {b.percent === null ? "—" : formatPercent(b.percent / 100, locale)}
+                      </span>
                     </div>
                   </Link>
                   {b.canManage && (

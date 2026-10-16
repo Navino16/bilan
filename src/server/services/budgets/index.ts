@@ -253,7 +253,7 @@ export type BudgetListItem = {
   recurring: boolean;
   plannedTotal: number;
   spentTotal: number;
-  percent: number;
+  percent: number | null;
   status: BudgetStatus;
   description: string | null;
   parentBudgetId: string | null;

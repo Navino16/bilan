@@ -187,7 +187,8 @@ export async function completeSetupAction(
       fromName: str(formData, "smtp_fromName") || null,
       enabled: true,
     });
-    if (!r.success || !r.data.password) return { ok: false, error: "INVALID_SMTP" };
+    if (!r.success || (r.data.username && !r.data.password))
+      return { ok: false, error: "INVALID_SMTP" };
     smtp = r.data;
   }
 

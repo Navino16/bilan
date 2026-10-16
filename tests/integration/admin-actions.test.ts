@@ -238,6 +238,19 @@ describe("SMTP actions", () => {
     await db.smtpConfig.deleteMany();
   });
 
+  it("saves a relay without credentials", async () => {
+    current.user = users.super;
+    const fields = { host: "relay.example.test", port: "25", fromAddress: "bilan@example.test" };
+    expect(
+      await upsertSmtpAction(null, form({ ...fields, security: "NONE", enabled: "false" })),
+    ).toEqual({ ok: true });
+    expect((await db.smtpConfig.findFirst())?.username).toBe("");
+    expect(
+      await upsertSmtpAction(null, form({ ...fields, password: "orphan", enabled: "false" })),
+    ).toMatchObject({ ok: false, error: "INVALID", fieldErrors: { username: "REQUIRED" } });
+    await db.smtpConfig.deleteMany();
+  });
+
   it("rate-limits the SMTP test per super admin", async () => {
     current.user = users.super;
     const results = [];

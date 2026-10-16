@@ -7,6 +7,7 @@ import {
   type AccountAccess,
 } from "@/server/services/accounts";
 import { requireGroupRole } from "@/server/services/groups/roles";
+import { dropGroupAssignments, unshareFromGroup } from "@/server/services/groups/detach";
 import { displayName } from "@/lib/validation/name";
 
 export { AccountAccessError } from "@/server/services/accounts";
@@ -61,17 +62,19 @@ export async function revokeShare(
   actor: { id: string },
 ): Promise<void> {
   await ownedOrThrow(input.accountId, actor.id);
-  await db.accountShare
-    .delete({
-      where: { accountId_groupId: { accountId: input.accountId, groupId: input.groupId } },
-    })
-    .catch(() => undefined);
+  const account = { id: input.accountId };
+  // Without a share there is nothing to undo: the owner's INCLUDEs from a private account stay.
+  const removedAssignments = await db.$transaction(async (tx) =>
+    (await unshareFromGroup(tx, input.groupId, account)) > 0
+      ? dropGroupAssignments(tx, input.groupId, account)
+      : 0,
+  );
   await logEvent({
     userId: actor.id,
     action: "account.share.revoke",
     entity: "AccountShare",
     entityId: input.accountId,
-    metadata: { groupId: input.groupId },
+    metadata: { groupId: input.groupId, removedAssignments },
   });
 }
 

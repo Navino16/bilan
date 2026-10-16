@@ -90,4 +90,20 @@ describe("SMTP transport security (#255)", () => {
     expect(options.requireTLS ?? false).toBe(security === "STARTTLS");
     expect(options.ignoreTLS ?? false).toBe(security === "NONE");
   });
+
+  it("authenticates with the stored credentials", async () => {
+    await sendWithConfig({ ...cfg, security: "STARTTLS" } as SmtpConfig, mail);
+    expect(createTransport.mock.calls[0]![0].auth).toEqual({
+      user: "mailer",
+      pass: "smtp-password",
+    });
+  });
+
+  it.each(["TLS", "STARTTLS", "NONE"] as const)(
+    "connects without auth when no username is set (%s)",
+    async (security) => {
+      await sendWithConfig({ ...cfg, username: "", security } as SmtpConfig, mail);
+      expect(createTransport.mock.calls[0]![0]).not.toHaveProperty("auth");
+    },
+  );
 });
