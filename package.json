@@ -22,7 +22,7 @@
     "setup": "bash scripts/init.sh",
     "ci": "npm run lint && npm run typecheck && npm run test",
     "db:up": "docker compose up -d mariadb mariadb-test",
-    "db:backup": "bash scripts/backup.sh",
+    "db:backup-dev": "bash scripts/backup-dev.sh",
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio",

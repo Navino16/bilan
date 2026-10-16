@@ -177,11 +177,11 @@ export function BudgetDetail({
                 >
                   <CategoryAvatar category={meta} size={28} />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm">{tx.label ?? t("detail.hiddenTx")}</div>
+                    <div className="truncate text-sm">{tx.label}</div>
                     <div className="text-muted-foreground truncate text-[11.5px]">
                       {formatDayMonth(tx.date, locale)}
                       {meta ? ` · ${meta.name}` : ""}
-                      {tx.accountName ? ` · ${tx.accountName}` : ""}
+                      {` · ${tx.accountName}`}
                     </div>
                   </div>
                   <span

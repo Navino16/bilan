@@ -375,7 +375,7 @@ A budget with a household scope belongs to the household:
 - Owners and admins create, edit, renew and delete it. Every member can view it, and can include or exclude transactions.
 - It counts transactions from the accounts shared with that household.
 
-A member can also **Include** a transaction from one of their private accounts. It then counts in the totals for everyone. Other members only see its date and amount, under the label "Another member's transaction"; the label, category and account stay hidden.
+A member can also **Include** a transaction from one of their private accounts. It then counts in the totals for everyone, and every member sees it in the budget in full: date, amount, label, category and account name. Only that transaction becomes visible: the private account and its other transactions stay hidden.
 
 ## Households
 
@@ -435,7 +435,7 @@ To hand over a household, an owner sets another member's role to **Owner**. A ho
 - **Write**: everything in Read, plus adding, editing, recategorizing, deleting, importing, linking and unlinking transactions.
 - Only you, the owner, can edit, share, archive or delete the account, and see its IBAN.
 
-Your private accounts and their transactions are never visible to other members. A household budget only counts the accounts shared with that household.
+Your private accounts and their transactions are never visible to other members, except a transaction you include in a household budget (see [Household budgets](#household-budgets)). A household budget only counts the accounts shared with that household.
 
 ### Leave or delete a household
 

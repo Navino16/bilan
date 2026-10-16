@@ -549,15 +549,13 @@ export type BudgetDetail = {
 
 export const BUDGET_TRANSACTIONS_SHOWN = 100;
 
-// A transaction counted in the budget. `label`/`accountName` are null when the
-// viewer can't read its account (another member's INCLUDE into a group budget).
 export type BudgetTransaction = {
   id: string;
   date: Date;
   amount: number;
-  label: string | null;
+  label: string;
   categoryId: string | null;
-  accountName: string | null;
+  accountName: string;
 };
 
 // Per-line sums for display + a budget-wide dedup sum for the total: a tx that
@@ -625,26 +623,31 @@ async function readableAccountNames(userId: string): Promise<Map<string, string>
   return new Map((await visibleAccountRefs(userId)).map((a) => [a.id, a.name]));
 }
 
-async function budgetTransactions(
-  counted: BudgetRow[],
-  viewerId: string,
-): Promise<BudgetTransaction[]> {
+// Counted transactions are shown in full to anyone who can read the budget, even
+// one included from another member's private account (spec §2.2).
+async function budgetTransactions(counted: BudgetRow[]): Promise<BudgetTransaction[]> {
   const shown = [...counted]
     .sort((a, b) => b.date.getTime() - a.date.getTime())
     .slice(0, BUDGET_TRANSACTIONS_SHOWN);
-  const visible = await readableAccountNames(viewerId);
-  const rows = await db.transaction.findMany({
-    where: { id: { in: shown.filter((r) => visible.has(r.accountId)).map((r) => r.id) } },
-    select: { id: true, labelEnc: true },
-  });
+  const [rows, accounts] = await Promise.all([
+    db.transaction.findMany({
+      where: { id: { in: shown.map((r) => r.id) } },
+      select: { id: true, labelEnc: true },
+    }),
+    db.bankAccount.findMany({
+      where: { id: { in: [...new Set(shown.map((r) => r.accountId))] } },
+      select: { id: true, name: true },
+    }),
+  ]);
   const labels = new Map(rows.map((r) => [r.id, decrypt(r.labelEnc, dataKey)]));
-  return shown.map((r, i) => ({
-    id: visible.has(r.accountId) ? r.id : `hidden-${i}`,
+  const names = new Map(accounts.map((a) => [a.id, a.name]));
+  return shown.map((r) => ({
+    id: r.id,
     date: r.date,
     amount: r.amount,
-    label: labels.get(r.id) ?? null,
-    categoryId: visible.has(r.accountId) ? r.categoryId : null,
-    accountName: visible.get(r.accountId) ?? null,
+    label: labels.get(r.id) ?? "",
+    categoryId: r.categoryId,
+    accountName: names.get(r.accountId) ?? "",
   }));
 }
 
@@ -683,7 +686,7 @@ export async function getBudgetDetail(
     spentTotal,
     canManage: canManageBudget(b.groupId, roleByGroup),
     ...(await seriesNeighbours(b)),
-    transactions: withTransactions ? await budgetTransactions(counted, viewerId) : [],
+    transactions: withTransactions ? await budgetTransactions(counted) : [],
     transactionCount: counted.length,
   };
 }

@@ -375,7 +375,7 @@ Un budget dont la portée est un foyer appartient au foyer :
 - Les propriétaires et les admins le créent, le modifient, le renouvellent et le suppriment. Tous les membres peuvent le consulter et y inclure ou en exclure des transactions.
 - Il compte les transactions des comptes partagés avec ce foyer.
 
-Un membre peut aussi **Inclure** une transaction de l’un de ses comptes privés. Elle compte alors dans les totaux pour tout le monde. Les autres membres n’en voient que la date et le montant, sous le libellé « Transaction d’un autre membre » ; le libellé, la catégorie et le compte restent masqués.
+Un membre peut aussi **Inclure** une transaction de l’un de ses comptes privés. Elle compte alors dans les totaux pour tout le monde, et tous les membres la voient en entier dans le budget : date, montant, libellé, catégorie et nom du compte. Seule cette transaction devient visible : le compte privé et ses autres transactions restent masqués.
 
 ## Foyers
 
@@ -435,7 +435,7 @@ Pour transmettre un foyer, un propriétaire donne le rôle **Propriétaire** à 
 - **Écriture** : tout ce que permet Lecture, plus ajouter, modifier, recatégoriser, supprimer, importer, lier et délier des transactions.
 - Vous seul, en tant que propriétaire, pouvez modifier, partager, archiver ou supprimer le compte, et voir son IBAN.
 
-Vos comptes privés et leurs transactions ne sont jamais visibles des autres membres. Un budget de foyer ne compte que les comptes partagés avec ce foyer.
+Vos comptes privés et leurs transactions ne sont jamais visibles des autres membres, sauf une transaction que vous incluez dans un budget de foyer (voir [Budgets de foyer](#budgets-de-foyer)). Un budget de foyer ne compte que les comptes partagés avec ce foyer.
 
 ### Quitter ou supprimer un foyer
 

@@ -72,7 +72,9 @@ Toutes les variables de `app.env` et `db.env` sont obligatoires, sauf `TRUSTED_I
 | `db.env`  | `MARIADB_ROOT_PASSWORD`, `MARIADB_PASSWORD`                             | `openssl rand -hex 24` pour chacun (en hexadécimal, car il entre dans `DATABASE_URL`)  |
 
 `DATA_ENCRYPTION_KEY` et `SEARCH_TOKEN_KEY` doivent faire 32 octets une fois décodées, sinon
-l'app refuse de démarrer. Avec deux fichiers séparés, le mot de passe root de MariaDB n'atteint
+l'app refuse de démarrer. L'app démarre sans `CRON_SECRET`, mais ses routes cron répondent alors
+`404` et le service `cron` s'arrête : les [tâches planifiées](#tâches-planifiées) ne tournent
+jamais. Avec deux fichiers séparés, le mot de passe root de MariaDB n'atteint
 jamais les conteneurs `app` et `cron`.
 
 Facultatif, depuis le shell ou un fichier `.env` placé à côté du fichier compose :

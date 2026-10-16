@@ -65,7 +65,7 @@ tests/e2e/.auth
 # Local design reference drops
 /img.png
 
-# Encrypted DB backups (scripts/backup.sh)
+# Encrypted DB backups (scripts/backup-dev.sh)
 backups/
 
 # Prod runtime files (README "Self-hosting")

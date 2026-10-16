@@ -40,6 +40,11 @@ Bilan runs from published Docker images with MariaDB, behind an HTTPS reverse pr
 [self-hosting guide](docs/self-hosting.md) for the files to create and the commands to run.
 A fresh install opens on a setup wizard that creates the first administrator account.
 
+Back up `app.env` along with the database: `DATA_ENCRYPTION_KEY` encrypts labels, notes,
+IBANs and stored secrets, `AUTH_SECRET` encrypts two-factor secrets and backup codes, and
+`SEARCH_TOKEN_KEY` builds the search index. Without them a restored database is unreadable. See
+[Backup and restore](docs/self-hosting.md#backup-and-restore).
+
 ## Development
 
 Requirements: Node 24, Docker.
@@ -85,6 +90,7 @@ already exists; `npm run db:seed-dev -- --reset` wipes and re-seeds it.
 | `npm run ci`                         | lint + typecheck + test         |
 | `npm run db:seed-dev`                | Seed the demo user (above)      |
 | `npm run db:reindex-search`          | Rebuild the search index        |
+| `npm run db:backup-dev`              | Encrypted dump of the dev DB    |
 | `bash scripts/prod-smoke.sh`         | Boot and check the prod compose |
 
 `npm run db:reindex-search` decrypts every transaction label and rewrites its search tokens

@@ -72,7 +72,8 @@ Every variable of `app.env` and `db.env` is mandatory, except `TRUSTED_IP_HEADER
 | `db.env`  | `MARIADB_ROOT_PASSWORD`, `MARIADB_PASSWORD`                             | `openssl rand -hex 24` each (hex, because it goes into `DATABASE_URL`)        |
 
 `DATA_ENCRYPTION_KEY` and `SEARCH_TOKEN_KEY` must decode to 32 bytes: the app refuses to start
-otherwise. The two env files keep the MariaDB root password out of the app and cron containers.
+otherwise. The app starts without `CRON_SECRET`, but its cron routes then answer `404` and the
+`cron` service exits, so the [scheduled jobs](#scheduled-jobs) never run. The two env files keep the MariaDB root password out of the app and cron containers.
 
 Optional, from the shell or a `.env` file next to the compose file:
 

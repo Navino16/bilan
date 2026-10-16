@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
-# Encrypted MariaDB backup for Bilan.
+# Encrypted backup of the DEVELOPMENT database only: the `budget` database of the
+# dev compose `mariadb` container, with the dev credentials. For a production
+# install, follow docs/self-hosting.md#backup-and-restore instead.
 #
-# Dumps the `budget` database from the running `mariadb` container and encrypts
-# the stream with AES-256 (openssl, PBKDF2) into backups/bilan-<timestamp>.sql.enc.
-# Nothing plaintext ever touches disk.
+# Encrypts the dump stream with AES-256 (openssl, PBKDF2) into
+# backups/bilan-dev-<timestamp>.sql.enc. Nothing plaintext ever touches disk.
 #
 # Usage:
-#   BACKUP_PASSPHRASE='…' npm run db:backup
+#   BACKUP_PASSPHRASE='…' npm run db:backup-dev
 #
 # Restore (decrypt → pipe back into the DB):
 #   openssl enc -d -aes-256-cbc -pbkdf2 -pass env:BACKUP_PASSPHRASE \
-#     -in backups/bilan-<timestamp>.sql.enc \
+#     -in backups/bilan-dev-<timestamp>.sql.enc \
 #     | docker compose exec -T mariadb mariadb -uapp -papp_password budget
 set -euo pipefail
 
@@ -20,7 +21,7 @@ if [[ -z "${BACKUP_PASSPHRASE:-}" ]]; then
 fi
 
 mkdir -p backups
-out="backups/bilan-$(date +%F-%H%M).sql.enc"
+out="backups/bilan-dev-$(date +%F-%H%M).sql.enc"
 
 docker compose exec -T mariadb mariadb-dump -uapp -papp_password budget \
   | openssl enc -aes-256-cbc -pbkdf2 -salt -pass env:BACKUP_PASSPHRASE \

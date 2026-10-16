@@ -427,8 +427,7 @@
       "counted": "Counted in this budget",
       "transactions": "{count, plural, =0 {No transactions} one {# transaction} other {# transactions}}",
       "latestOnly": "Showing the {count, number} most recent.",
-      "noTransactions": "No transaction counts in this budget yet.",
-      "hiddenTx": "Another member’s transaction"
+      "noTransactions": "No transaction counts in this budget yet."
     },
     "assign": {
       "title": "Assign to a budget",

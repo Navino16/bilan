@@ -84,7 +84,7 @@ Decisions consolidated from the clarifying-questions phase.
   - Balanced groups (sum = 0): all transactions excluded from totals.
   - Unbalanced groups: the **primary** transaction (largest absolute amount) receives the net sum in its category; other members are neutralized.
 - **Budgets**: scoped to user OR group; can target categories AND/OR accounts; custom periods (week, month, quarter, year, custom); automatic matching by category/account + explicit `BudgetAssignment` (`INCLUDE` / `EXCLUDE`) overrides.
-- **Privacy on shared budgets**: full transparency (label, amount, date visible to group members) when a transaction is assigned to a shared budget — even if the source account is not shared.
+- **Privacy on shared budgets**: full transparency — every group member sees the date, amount, label, category and account name of each transaction counted in a group budget, including one a member assigned (`INCLUDE`) from a private account. Only that transaction becomes visible: the private account and its other transactions stay private.
 - **Currency**: EUR only.
 - **Mobile**: responsive mobile-first (Playwright includes mobile viewport tests).
 - **i18n**: fr/en at minimum, language preference per user, `next-intl`.
@@ -815,6 +815,8 @@ Creation (`/budgets/new`):
 
 Explicit assignment: from any transaction, "Assign to a budget" menu → choose budget (mine or my groups') → mode INCLUDE/EXCLUDE → creates `BudgetAssignment` (unique on `(budgetId, transactionId)`).
 
+The budget detail lists the counted transactions in full to everyone who can read the budget, including a private transaction included in a group budget (§2.2).
+
 ### 5.8 Transaction links
 
 **Manual mode**:
@@ -1064,6 +1066,7 @@ DATABASE_TEST_URL=mysql://app:app_password@localhost:3307/budget_test
 AUTH_SECRET=                  # openssl rand -base64 32
 DATA_ENCRYPTION_KEY=          # openssl rand -base64 32
 SEARCH_TOKEN_KEY=             # openssl rand -base64 32
+CRON_SECRET=                  # openssl rand -base64 32 (unset: the /api/cron routes 404)
 
 LOG_LEVEL=info
 DISABLE_RATE_LIMIT=false      # for E2E only
@@ -1115,13 +1118,14 @@ After this, `npm run dev` works.
 
 Settings service has a 60-second in-process cache. When an admin updates a setting via `/admin/*`, `cache.delete(key)` + `invalidateAuthCache()` (when relevant) are called. Next request rebuilds the auth handler with the new config. No restart needed.
 
-### 8.9 Production deployment (post-MVP)
+### 8.9 Production deployment
 
-Documented for the future:
-- `docker-compose.prod.yml` with prod target + Caddy reverse proxy (TLS, HSTS, rate limit).
-- Secrets via Docker secrets or env vars from the host.
-- Health check endpoint `/api/health`.
-- Encrypted DB backups via `mariadb-dump | age` cron, 30-day retention.
+As shipped (operator guide: `docs/self-hosting.md`):
+- `docker-compose.prod.yml` runs the published `ghcr.io/navino16/bilan` image (`prod` target) with three services: `mariadb` (at-rest encryption, keyring bind-mounted), `app` (runs `prisma migrate deploy` then the standalone server) and `cron` (same image, calls the token-guarded `/api/cron/*` routes; it exits without `CRON_SECRET`).
+- No bundled reverse proxy: the operator puts their own TLS proxy (Caddy, Traefik, nginx…) in front of the app port. The app itself sends HSTS and the other security headers; rate limiting is in-app.
+- Secrets come from env files next to the compose file (`app.env`, `db.env`), not Docker secrets.
+- No dedicated health endpoint: the `app` healthcheck fetches `/fr/login`, which needs the database (a fresh install redirects it to `/fr/setup`).
+- Backups are a documented operator script (`mariadb-dump` inside the `mariadb` container, gzip, `openssl enc` with a passphrase file, host cron, 30-day retention). `npm run db:backup-dev` only targets the development database.
 
 ---
 
