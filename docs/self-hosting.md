@@ -72,7 +72,8 @@ Every variable of `app.env` and `db.env` is mandatory, except `TRUSTED_IP_HEADER
 | `db.env`  | `MARIADB_ROOT_PASSWORD`, `MARIADB_PASSWORD`                             | `openssl rand -hex 24` each (hex, because it goes into `DATABASE_URL`)        |
 
 `DATA_ENCRYPTION_KEY` and `SEARCH_TOKEN_KEY` must decode to 32 bytes: the app refuses to start
-otherwise. The two env files keep the MariaDB root password out of the app and cron containers.
+otherwise. The app starts without `CRON_SECRET`, but its cron routes then answer `404` and the
+`cron` service exits, so the [scheduled jobs](#scheduled-jobs) never run. The two env files keep the MariaDB root password out of the app and cron containers.
 
 Optional, from the shell or a `.env` file next to the compose file:
 
@@ -182,11 +183,13 @@ app port.
 Open `APP_URL`. A fresh install (no user yet) redirects every page to the setup wizard:
 
 1. **Admin account**: creates the first account, with the super admin role.
-2. **Email (SMTP)**: optional, can be configured later in Administration.
-3. **External login**: optional OIDC provider. The wizard shows the redirect URL to register
-   with your identity provider.
-4. **Registrations**: _Invite only_ (default, recommended), _Open_ or _Disabled_ (only an admin
-   creates accounts).
+2. **Email (SMTP)**: optional, can be configured later in Administration. Encryption defaults to
+   STARTTLS (port 587), which refuses to send if the server does not support it; _Implicit TLS_
+   (port 465) and _None_ (local relay only) are the alternatives.
+3. **External login**: optional OIDC provider (Google is added later, from Administration). The
+   wizard shows the redirect URL to register with your identity provider.
+4. **Registration mode**: _Invite only_ (default, recommended), _Open_ or _Disabled_ (only an
+   admin creates accounts).
 
 The wizard answers 404 as soon as one user exists. Everything else (SMTP, SSO providers,
 registration mode, admin 2FA) is configured in the Administration pages, not in env files.

@@ -98,10 +98,13 @@ export async function previewCsvBatch(
   const detected = effective.decimal
     ? { mark: effective.decimal, guessed: false }
     : detectDecimalMark(amountCells(rows, effective), delimiter);
+  const dates = effective.dateOrder
+    ? { order: effective.dateOrder, guessed: false }
+    : detectDateOrder(rows.map((r) => r[effective.date] ?? ""));
   const resolved: ResolvedCsvMapping = {
     ...effective,
     decimal: detected.mark,
-    dateOrder: effective.dateOrder ?? detectDateOrder(rows.map((r) => r[effective.date] ?? "")),
+    dateOrder: dates.order,
   };
   const { rows: normalized, rejected } = mapRows(rows, resolved);
   // Conditional, so a commit that started meanwhile is never pushed back to REVIEW.
@@ -125,6 +128,7 @@ export async function previewCsvBatch(
     rejectedCount: rejected.length,
     rejected: rejected.slice(0, REJECTED_SHOWN),
     decimalGuessed: detected.guessed,
+    dateOrderGuessed: dates.guessed,
     preview: p.rows,
     page: p.page,
     pageSize: PREVIEW_PAGE_SIZE,

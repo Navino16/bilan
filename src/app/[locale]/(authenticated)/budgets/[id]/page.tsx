@@ -38,7 +38,9 @@ export default async function BudgetDetailPage({
 
   const [tree, foreign, accountRows, accountOptions, groupRows] = await Promise.all([
     listForUser(user.id),
-    listForeignCategories(user.id),
+    listForeignCategories(user.id, {
+      alsoIds: detail.transactions.flatMap((t) => (t.categoryId ? [t.categoryId] : [])),
+    }),
     listVisibleForUser(user.id, { includeArchived: true }),
     listBudgetAccountOptions(user.id),
     listGroupsForUser(user.id),

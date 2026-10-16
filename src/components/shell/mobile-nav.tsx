@@ -95,7 +95,7 @@ export function MobileNav({
             </Button>
           </div>
           <div className="flex items-center justify-between gap-3">
-            <ThemeToggle label={t("themeToggle")} theme={theme} />
+            <ThemeToggle theme={theme} />
             <LanguageSwitcher syncPreference />
           </div>
         </div>

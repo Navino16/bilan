@@ -58,7 +58,9 @@ export function CreateUserForm({ roles }: { roles: CreatableRole[] }) {
       </div>
       {state?.ok && (
         <Alert>
-          <AlertDescription>{t("created")}</AlertDescription>
+          <AlertDescription>
+            {t(state.setupMailSent ? "created" : "createdNoMail")}
+          </AlertDescription>
         </Alert>
       )}
       {form.error && (

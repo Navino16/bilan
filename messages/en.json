@@ -21,7 +21,7 @@
         "disabled": "This account is disabled. Contact the instance administrator.",
         "ssoFailed": "Signing in through the identity provider failed. Try again.",
         "ssoSignUpDisabled": "No {appName} account matches this identity, and account creation isn’t allowed, either by this provider or because registration is closed. Ask the instance administrator for an account.",
-        "ssoNotLinked": "No account is linked to this identity. Sign in with another sign-in method, then link it from Settings > Security.",
+        "ssoNotLinked": "No account is linked to this identity. Sign in with another sign-in method, then link it from Account > Security.",
         "ssoDenied": "Sign-in was canceled or refused at the identity provider.",
         "ssoProvider": "The identity provider returned an error. Try again later or use another sign-in method.",
         "ssoExpired": "The sign-in request expired or was opened in another browser. Start again.",
@@ -148,7 +148,16 @@
   },
   "shell": {
     "tagline": "Finances · {year}",
-    "themeToggle": "Dark theme",
+    "theme": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System",
+      "current": {
+        "light": "Light theme",
+        "dark": "Dark theme",
+        "system": "System theme"
+      }
+    },
     "openMenu": "Open menu",
     "groups": {
       "workspace": "Workspace",
@@ -170,7 +179,7 @@
     },
     "tabs": {
       "dashboard": "Home",
-      "transactions": "Activity",
+      "transactions": "Transactions",
       "budgets": "Budgets",
       "accounts": "Accounts",
       "categories": "Categories"
@@ -414,7 +423,7 @@
     },
     "status": {
       "OK": "On track",
-      "WARN": "Near limit",
+      "WARN": "Almost reached",
       "REACHED": "Reached",
       "OVER": "Over budget"
     },
@@ -628,8 +637,6 @@
         "EXACT": "Equals",
         "REGEX": "Regex"
       },
-      "scope": "Scope",
-      "scopePersonal": "My accounts",
       "existingNote": "Existing transactions will not be re-categorized automatically.",
       "decline": "No thanks",
       "confirm": "Create rule"
@@ -760,10 +767,7 @@
     "colRawLabel": "Raw label",
     "colCategory": "Suggested category",
     "autoDetected": "auto-detected",
-    "csvTab": "CSV",
-    "pdfTab": "PDF",
     "account": "Account",
-    "chooseFile": "Choose a file",
     "drop": "Drop a CSV or PDF file here, or click to browse.",
     "mapping": "Column mapping",
     "decimal": {
@@ -781,13 +785,9 @@
     "colCredit": "Credit",
     "colType": "Type",
     "none": "—",
-    "preview": "Preview",
-    "rowsDetected": "{count, plural, one {# row detected} other {# rows detected}}",
-    "commit": "Import",
     "importing": "Importing…",
-    "summary": "{imported, number} imported · {skipped, number} skipped (duplicates)",
+    "summary": "{imported, plural, one {# transaction imported} other {# transactions imported}} · {skipped, plural, one {# duplicate skipped} other {# duplicates skipped}}",
     "viewTransactions": "View transactions",
-    "pdfDrop": "Drop a PDF statement here, or click to browse.",
     "bankDetected": "Detected bank: {bank}",
     "bankUnknown": "Bank not recognized — review the rows below before importing.",
     "supportedBanks": "Supported banks: {list}",
@@ -821,7 +821,7 @@
       "overline": "History",
       "title": "Recent imports",
       "empty": "No imports yet.",
-      "rows": "{imported, number} imported · {skipped, number} skipped",
+      "rows": "{imported, plural, one {# transaction imported} other {# transactions imported}} · {skipped, plural, one {# duplicate skipped} other {# duplicates skipped}}",
       "status": {
         "COMPLETED": "Imported",
         "REVERTED": "Undone"
@@ -879,7 +879,10 @@
     "dateOrder": {
       "label": "Date order",
       "DMY": "DD/MM",
-      "MDY": "MM/DD"
+      "MDY": "MM/DD",
+      "guessed": "Date order guessed ({order}): check the dates (“Date order” setting).",
+      "confirm": "Dates look right",
+      "useOther": "Use {order}"
     }
   },
   "groups": {
@@ -912,7 +915,12 @@
     "leave": "Leave",
     "leaveConfirm": "Leave this household?",
     "delete": "Delete household",
-    "deleteConfirm": "Permanently delete this household? Associated shares will be removed.",
+    "deleteConfirm": "Permanently delete this household? This cannot be undone.",
+    "deleteImpact": {
+      "shares": "{count, plural, one {# shared account stops being shared; it stays with its owner} other {# shared accounts stop being shared; they stay with their owners}}.",
+      "owned": "{categories, plural, one {# household category} other {# household categories}}, {rules, plural, one {# rule} other {# rules}} and {budgets, plural, one {# budget} other {# budgets}} will be deleted.",
+      "uncategorized": "{count, plural, one {# transaction will become uncategorized} other {# transactions will become uncategorized}}."
+    },
     "back": "Back to households",
     "roles": {
       "OWNER": "Owner",
@@ -930,7 +938,7 @@
     "dangerTitleOwner": "Leave or delete the household",
     "leaveHint": "You will lose access to this household’s shared accounts and budgets.",
     "leaveTitle": "Leave the household",
-    "deleteHint": "Deleting removes all associated shares. This cannot be undone.",
+    "deleteHint": "Deleting removes the shares and the household’s categories, rules and budgets. This cannot be undone.",
     "removeTitle": "Remove {name}?"
   },
   "invitations": {
@@ -1121,6 +1129,14 @@
       "cancel": "Cancel",
       "deleting": "Deleting…",
       "confirmDelete": "Delete permanently",
+      "impact": {
+        "title": "What will be deleted:",
+        "accounts": "{count, plural, one {# bank account} other {# bank accounts}} and {transactions, plural, one {# transaction} other {# transactions}}{shared, plural, =0 {} one {, including # account shared with a household: its members will no longer see it} other {, including # accounts shared with households: their members will no longer see them}}.",
+        "personal": "Your personal categories, rules and budgets, your imports and your preferences.",
+        "transfer": "Household “{group}” will be handed over to {to}.",
+        "group": "Household “{group}”, of which you are the only member, will be deleted with its categories, rules and budgets.",
+        "budgetLines": "Lines in household or other members’ budgets that targeted your accounts will no longer be limited to an account."
+      },
       "error": {
         "REQUIRED": "Please enter your password.",
         "BAD_PASSWORD": "Incorrect password.",
@@ -1294,7 +1310,8 @@
       "role": "Role",
       "create": "Create",
       "creating": "Creating…",
-      "created": "User created. A password-setup link has been sent to them.",
+      "created": "User created. A password-setup link has been emailed to them.",
+      "createdNoMail": "User created, but no email was sent: SMTP is not configured or is disabled, so they can’t set their password yet. Once SMTP is configured, they can use “Forgot password?” on the sign-in page.",
       "empty": "No users.",
       "error": {
         "UNAUTHORIZED": "You don’t have permission to create users.",
@@ -1302,8 +1319,8 @@
         "FAILED": "Creation failed. Please try again.",
         "FORBIDDEN": "You can’t create a user with this role."
       },
-      "createOverline": "Invitation",
-      "createHint": "They receive an email with a link to set their password.",
+      "createOverline": "New account",
+      "createHint": "They receive an email with a link to set their password (requires SMTP).",
       "listOverline": "Accounts",
       "count": "{count, plural, =0 {No accounts} one {# account} other {# accounts}}",
       "roleFor": "{user}’s role",
@@ -1420,7 +1437,8 @@
       "error": {
         "INVALID": "Invalid value.",
         "FAILED": "Save failed.",
-        "FORBIDDEN": "Only a super admin can change these settings."
+        "FORBIDDEN": "Only a super admin can change these settings.",
+        "LOCKOUT": "Password sign-in kept: {count, plural, one {# user would} other {# users would}} be left with no way to sign in (no passkey or enabled linked provider)."
       },
       "general": {
         "overline": "General",
@@ -1448,9 +1466,17 @@
       "passwordKept": "Leave blank to keep the current one (same server and account)",
       "fromAddress": "From address",
       "fromName": "From name",
-      "secure": "Encryption",
-      "secureTls": "TLS/SSL",
-      "securePlain": "None",
+      "security": {
+        "label": "Encryption",
+        "STARTTLS": "STARTTLS (port 587) — recommended",
+        "TLS": "Implicit TLS (port 465)",
+        "NONE": "None — local relay only, unencrypted",
+        "hint": {
+          "STARTTLS": "The connection is upgraded to TLS before logging in; sending fails if the server doesn’t support it.",
+          "TLS": "The connection is encrypted from the start, as most providers expect on port 465.",
+          "NONE": "The password and emails, reset links included, travel in clear text: only for a relay on the same machine or a trusted local network."
+        }
+      },
       "enabled": "State",
       "on": "On",
       "off": "Off",
@@ -1491,7 +1517,6 @@
       "empty": "No providers configured.",
       "key": "Key",
       "type": "Type",
-      "typeCredentials": "Credentials",
       "typeOidc": "OIDC",
       "typeGoogle": "Google",
       "displayName": "Display name",
@@ -1499,8 +1524,9 @@
       "on": "On",
       "off": "Off",
       "allowSignUp": "Allow sign-up",
-      "allowSignUpHint": "Creates a {appName} account on the first sign-in of an identity no account is linked to, only while the registration mode is “Open”. Otherwise this provider only signs in identities already linked to an account. Same email is not enough: an existing user links the identity from Settings > Security.",
-      "oidcSection": "OIDC options",
+      "allowSignUpHint": "Creates a {appName} account on the first sign-in of an identity no account is linked to, only while the registration mode is “Open”. Otherwise this provider only signs in identities already linked to an account. Same email is not enough: an existing user links the identity from Account > Security.",
+      "oidcSection": "Advanced OIDC options",
+      "googleHint": "Google only uses the client ID and client secret.",
       "issuer": "Issuer",
       "clientId": "Client ID",
       "clientSecret": "Client secret",
@@ -1517,18 +1543,18 @@
       "saving": "Saving…",
       "saved": "Provider saved.",
       "error": {
-        "INVALID": "Check the fields: a lowercase key (letters, digits, - or _), a display name, and for OIDC the issuer and client ID.",
+        "INVALID": "Check the fields: a lowercase key (letters, digits, - or _), a display name, a client ID, and for OIDC the issuer.",
         "FAILED": "Save failed.",
         "KEY_EXISTS": "A provider already uses this key. Edit it in the list above.",
         "NOT_FOUND": "This provider no longer exists.",
         "SECRET_REQUIRED": "The client secret is required.",
-        "LOCKOUT": "Deletion refused: {count, plural, one {# user would} other {# users would}} be left with no way to sign in.",
+        "LOCKOUT": "Refused: {count, plural, one {# user would} other {# users would}} be left with no way to sign in.",
         "TYPE_LOCKED": "A provider’s type can’t be changed. Create a new one instead.",
         "GOOGLE_EXISTS": "A Google provider already exists."
       },
       "listOverline": "Sign-in",
       "addOverline": "New",
-      "addHint": "Credentials, OIDC or Google sign-in.",
+      "addHint": "OpenID Connect or Google sign-in. Password sign-in is set in the Settings tab.",
       "delete": "Delete",
       "deleting": "Deleting…",
       "deleteTitle": "Delete the {name} provider?",
@@ -1751,7 +1777,7 @@
       "account": "Admin account",
       "smtp": "Email (SMTP)",
       "oidc": "External login",
-      "registration": "Registrations"
+      "registration": "Registration mode"
     },
     "account": {
       "name": "Name",
@@ -1769,13 +1795,12 @@
       "password": "Password",
       "fromAddress": "From address",
       "fromName": "From name",
-      "secure": "Secure connection (TLS)",
       "error": "Incomplete SMTP fields: host, port, username, password and a valid from address are required.",
       "save": "Save and continue",
       "skip": "Skip"
     },
     "oidc": {
-      "description": "Optional — log in via an external provider (Google, OIDC). Leave blank to add one later in admin settings.",
+      "description": "Optional — sign in through an OpenID Connect identity provider (Authentik, Keycloak…). Leave blank to add one later in the admin area, where you can also set up Google.",
       "redirectUri": "Redirect URL",
       "redirectUriHint": "Register this as an allowed redirect URI in your identity provider.",
       "signUpHint": "This provider only signs in identities linked to a Bilan account, and a matching email does not link them. To let it create accounts on first sign-in, allow sign-up in Administration > Auth providers and set the registration mode to “Open”.",
@@ -1788,6 +1813,15 @@
       "testing": "Testing…",
       "testOk": "OIDC discovery valid ✓",
       "testFailed": "Test failed",
+      "testError": {
+        "UNAUTHORIZED": "You don’t have permission to test this connection.",
+        "NO_ISSUER": "Enter the issuer URL.",
+        "INVALID_URL": "The issuer URL isn’t valid.",
+        "HTTPS_REQUIRED": "The test only checks https issuers.",
+        "UNSAFE_HOST": "The test doesn’t contact private-network or local addresses. A provider on your local network will still work at sign-in: continue without testing.",
+        "UNREACHABLE": "No discovery document could be reached at this address.",
+        "INVALID_DISCOVERY": "The discovery document lacks the authorization and token endpoints."
+      },
       "advanced": "Advanced options",
       "pkce": "Enable PKCE",
       "endpointsHint": "Only set these endpoints if your provider’s automatic (.well-known) discovery doesn’t work.",

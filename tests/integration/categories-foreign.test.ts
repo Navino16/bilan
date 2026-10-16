@@ -99,4 +99,11 @@ describe("listForeignCategories", () => {
     expect(ids).not.toContain(memberCatId);
     expect(await listForeignCategories(owner)).toEqual([]);
   });
+
+  it("adds the requested extra categories, never the user's own", async () => {
+    const tree = await listForeignCategories(member, { alsoIds: [hiddenId, memberCatId] });
+    const ids = tree.map((n) => n.id);
+    expect(ids).toContain(hiddenId);
+    expect(ids).not.toContain(memberCatId);
+  });
 });

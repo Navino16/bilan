@@ -340,7 +340,11 @@ export const listForUser = cache(async (userId: string): Promise<CategoryNode[]>
 // Categories the user can't use but meets on the transactions they can see
 // (an owner's personal ones on a shared account), plus their ancestors for
 // colour inheritance. Display only: never offered in a picker (#159).
-export async function listForeignCategories(userId: string): Promise<CategoryNode[]> {
+// `alsoIds`: categories met elsewhere, e.g. on a private transaction counted in a household budget.
+export async function listForeignCategories(
+  userId: string,
+  { alsoIds = [] }: { alsoIds?: string[] } = {},
+): Promise<CategoryNode[]> {
   const own = await listForUser(userId);
   const known = new Set<string>();
   const collect = (nodes: CategoryNode[]): void => {
@@ -363,7 +367,9 @@ export async function listForeignCategories(userId: string): Promise<CategoryNod
       },
     },
   });
-  let missing = used.map((u) => u.categoryId!);
+  let missing = [
+    ...new Set([...used.map((u) => u.categoryId!), ...alsoIds.filter((id) => !known.has(id))]),
+  ];
   const rows: Parameters<typeof buildTree>[0] = [];
   while (missing.length > 0) {
     const found = await db.category.findMany({ where: { id: { in: missing } } });

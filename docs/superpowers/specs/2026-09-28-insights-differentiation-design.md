@@ -23,7 +23,7 @@ The donut and the trend are **removed** from Insights (they stay on the dashboar
 | # | Decision | Rationale |
 |---|----------|-----------|
 | D1 | Layout **A "narrative"** (mockup reviewed in brainstorming): 2 tiles → "What changed" card → Top merchants + Income cards. | Answers "what changed?" at a glance; clearest break from the dashboard. |
-| D2 | The comparison is **current period vs `previousPeriod(period)`**, the same pair the dashboard uses. A period still in progress ("Ce mois", the current quarter/year) is compared with the **full** previous period, and both pages show an **in-progress warning** (§7). | User choice: the partial-vs-full gap reads as the trend so far; consistent with the dashboard KPIs; the warning keeps it honest. |
+| D2 | The comparison is **current period vs `previousPeriod(period)`**, the same pair the dashboard uses (`comparisonFor` in `src/lib/period.ts`). A period still in progress ("Ce mois", the current quarter/year) is compared on **elapsed days**: the reference side is cut to the same number of days from its start, and both pages show an **in-progress note** (§7). *Amended since approval: the first version compared with the full previous period.* | Like-for-like: a partial period against a full one always reads as a drop; consistent with the dashboard KPIs. |
 | D3 | Merchants are grouped by a **normalized label** computed after in-memory decryption, not by `labelHash`. | Imports store the raw bank label as the label (`imports/commit.ts`), which carries dates/amounts (`CB SUPERMARKET 02/04/26`) → exact-hash grouping would fragment one merchant into many rows. Decrypting one period's expenses is cheap and `listTransactions` already decrypts server-side, so plaintext exposure is unchanged. |
 | D4 | Merchants exclude `type = TRANSFER`. | Otherwise unlinked internal transfers ("VIR COMPTE JOINT", "VIR LIVRET A") top the list. |
 | D5 | Categories are compared at the **stored (leaf) level**, uncategorized included as "Sans catégorie". | Same granularity as the dashboard breakdown. |
@@ -54,7 +54,7 @@ export type InsightsData = {
   incomeTotal: number;
 };
 
-export async function getInsights(userId: string, period: Period, previous: Period): Promise<InsightsData>;
+export async function getInsights(userId: string, period: Period, comparison: Comparison): Promise<InsightsData>;
 ```
 
 - Rows come from the existing `loadRows` (visible accounts, period bounds, link collapse). `loadRows` gains an opt-in to also select `labelEnc` and `type`; only the current period needs them (merchants). `collapseLinkedRows` spreads the primary row, so the extra fields survive collapsing.
@@ -92,15 +92,19 @@ Server component taking `InsightsData`, the current and previous `Period`, and `
 
 The page (`insights/page.tsx`) calls `getInsights` instead of `getDashboard`.
 
-## 7. In-progress warning (Insights + dashboard)
+## 7. In-progress comparison (Insights + dashboard)
 
-- `periodInProgress(p, now = new Date())` in `src/lib/period.ts`: true when `p.from <= now <= p.to`. Called in the page (like `clampPeriodToNow`, the `now` default keeps `Date` out of the render — `react-hooks/purity`) and passed to the view as a prop.
-- When true, both views render one muted line with an `Info` icon right under the `PageHeader` (`data-slot="period-in-progress"`): *"Période en cours : comparée à la période précédente complète ({previous})."* / *"Period in progress: compared with the full previous period ({previous})."* — `{previous}` = `formatPeriodLabel(previous, locale)`.
-- Dashboard: only the line is added; KPI deltas are unchanged.
+- `periodInProgress(p, now = new Date())` in `src/lib/period.ts`: true when `p.from <= now <= p.to`.
+- `comparisonFor(period, baseline, now)` is built in the page (the `now` default keeps `Date` out of the render — `react-hooks/purity`) and passed to the view. While the period is in progress it sets `elapsedDays` (days from `period.from` to today, inclusive) and cuts the reference side to match:
+  - baseline `prev`: `previous` = the first `elapsedDays` days of `previousPeriod(period)` (whole period if shorter);
+  - baselines `avg3`/`avg6`/`avg12` (month periods only, `?vs=`): only days `1..elapsedDays` of each averaged month are kept (`averageMonthRows`); months before the first transaction are left out of the average.
+  - Once the period is over, `elapsedDays` is `null` and the full reference is used.
+- `ComparisonNote` (`src/components/dashboard/comparison-note.tsx`) renders one muted line with an `Info` icon under the `PageHeader` of both views (`data-slot="period-in-progress"`), only while `elapsedDays` is set: *"Period in progress: compared with the same number of days of the previous period ({previous})."* — `{previous}` = `formatPeriodLabel(comparison.previous, locale)`, i.e. the cut range — or, for an average baseline, *"…compared with the same days (days 1–N) of each month."*
+- The dashboard KPI deltas and the Insights changes/income use the same cut reference.
 
 ## 8. i18n
 
-`messages/fr.json` and `messages/en.json` edited together: the `insights` namespace drops the donut/trend keys and gains the tile, card-title, "nouveau", "×" count and legend keys; the in-progress line gets one key `dashboard.periodInProgress`, which the Insights view also reads.
+`messages/fr.json` and `messages/en.json` edited together: the `insights` namespace drops the donut/trend keys and gains the tile, card-title, "nouveau", "×" count and legend keys; the in-progress line uses `dashboard.inProgressPrev` / `dashboard.inProgressAvg`, which the Insights view also reads.
 
 ## 9. Testing
 
@@ -112,7 +116,6 @@ The page (`insights/page.tsx`) calls `getInsights` instead of `getDashboard`.
 
 ## 10. Out of scope
 
-- Trimming the previous period to the elapsed length (rejected, D2).
 - A 6/12-month history grid.
 - Persisted merchant aliases or a merchant field on transactions.
 - Drill-down from a merchant/category row to the filtered transaction list.

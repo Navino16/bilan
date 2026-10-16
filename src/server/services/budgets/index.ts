@@ -549,8 +549,6 @@ export type BudgetDetail = {
 
 export const BUDGET_TRANSACTIONS_SHOWN = 100;
 
-// A transaction counted in the budget. `label`/`accountName` are null when the
-// viewer can't read its account (another member's INCLUDE into a group budget).
 export type BudgetTransaction = {
   id: string;
   date: Date;
@@ -625,27 +623,65 @@ async function readableAccountNames(userId: string): Promise<Map<string, string>
   return new Map((await visibleAccountRefs(userId)).map((a) => [a.id, a.name]));
 }
 
+// Names of the accounts whose counted transactions the viewer sees in full; the
+// write-time INCLUDE guard is re-checked here so stale assignments stop exposing
+// rows (spec §2.2). Group budget: account shared with the group or owner still a member.
+async function displayableAccountNames(
+  accountIds: string[],
+  viewerId: string,
+  groupId: string | null,
+): Promise<Map<string, string>> {
+  if (!groupId) return readableAccountNames(viewerId);
+  const accounts = await db.bankAccount.findMany({
+    where: {
+      id: { in: accountIds },
+      OR: [
+        { shares: { some: { groupId } } },
+        { owner: { groupMemberships: { some: { groupId } } } },
+      ],
+    },
+    select: { id: true, name: true },
+  });
+  return new Map(accounts.map((a) => [a.id, a.name]));
+}
+
 async function budgetTransactions(
   counted: BudgetRow[],
   viewerId: string,
+  groupId: string | null,
 ): Promise<BudgetTransaction[]> {
   const shown = [...counted]
     .sort((a, b) => b.date.getTime() - a.date.getTime())
     .slice(0, BUDGET_TRANSACTIONS_SHOWN);
-  const visible = await readableAccountNames(viewerId);
+  const visible = await displayableAccountNames(
+    [...new Set(shown.map((r) => r.accountId))],
+    viewerId,
+    groupId,
+  );
   const rows = await db.transaction.findMany({
     where: { id: { in: shown.filter((r) => visible.has(r.accountId)).map((r) => r.id) } },
     select: { id: true, labelEnc: true },
   });
   const labels = new Map(rows.map((r) => [r.id, decrypt(r.labelEnc, dataKey)]));
-  return shown.map((r, i) => ({
-    id: visible.has(r.accountId) ? r.id : `hidden-${i}`,
-    date: r.date,
-    amount: r.amount,
-    label: labels.get(r.id) ?? null,
-    categoryId: visible.has(r.accountId) ? r.categoryId : null,
-    accountName: visible.get(r.accountId) ?? null,
-  }));
+  return shown.map((r, i) =>
+    visible.has(r.accountId)
+      ? {
+          id: r.id,
+          date: r.date,
+          amount: r.amount,
+          label: labels.get(r.id) ?? "",
+          categoryId: r.categoryId,
+          accountName: visible.get(r.accountId)!,
+        }
+      : {
+          id: `hidden-${i}`,
+          date: r.date,
+          amount: r.amount,
+          label: null,
+          categoryId: null,
+          accountName: null,
+        },
+  );
 }
 
 export async function getBudgetDetail(
@@ -683,7 +719,7 @@ export async function getBudgetDetail(
     spentTotal,
     canManage: canManageBudget(b.groupId, roleByGroup),
     ...(await seriesNeighbours(b)),
-    transactions: withTransactions ? await budgetTransactions(counted, viewerId) : [],
+    transactions: withTransactions ? await budgetTransactions(counted, viewerId, b.groupId) : [],
     transactionCount: counted.length,
   };
 }
@@ -726,13 +762,24 @@ export async function assignTransaction(
   actor: { id: string },
 ): Promise<void> {
   if (input.mode !== "INCLUDE" && input.mode !== "EXCLUDE") throw new BudgetAccessError("INVALID");
-  await readableOrThrow(input.budgetId, actor.id);
+  const budget = await readableOrThrow(input.budgetId, actor.id);
   const txRow = await db.transaction.findUnique({
     where: { id: input.transactionId },
     select: { accountId: true },
   });
   if (!txRow) throw new BudgetAccessError("NOT_FOUND");
   if (!(await canReadAccount(actor.id, txRow.accountId))) throw new BudgetAccessError("FORBIDDEN");
+  // An INCLUDE shows the transaction to every group member (spec §2.2), so reading the
+  // account through another group isn't enough.
+  if (input.mode === "INCLUDE" && budget.groupId) {
+    const includable = await db.bankAccount.count({
+      where: {
+        id: txRow.accountId,
+        OR: [{ ownerId: actor.id }, { shares: { some: { groupId: budget.groupId } } }],
+      },
+    });
+    if (includable === 0) throw new BudgetAccessError("FORBIDDEN");
+  }
 
   await db.budgetAssignment.upsert({
     where: {

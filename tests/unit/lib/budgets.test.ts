@@ -28,7 +28,15 @@ describe("lineStatus", () => {
   });
   it("is WARN from 80% up to just below planned", () => {
     expect(lineStatus(100, 80).status).toBe("WARN");
-    expect(lineStatus(100, 99.6)).toMatchObject({ percent: 100, status: "WARN" });
+    expect(lineStatus(100, 99.6)).toMatchObject({ percent: 99, status: "WARN" });
+    expect(lineStatus(100, 99.99)).toMatchObject({ percent: 99, status: "WARN" });
+  });
+  it("keeps the displayed percent in line with the status (#255)", () => {
+    expect(lineStatus(100, 79.6)).toMatchObject({ percent: 79, status: "OK" });
+    expect(lineStatus(100, 99.996)).toMatchObject({ percent: 100, status: "REACHED" });
+    expect(lineStatus(100, 100.004)).toMatchObject({ percent: 100, status: "REACHED" });
+    expect(lineStatus(100, 100.01)).toMatchObject({ percent: 101, status: "OVER" });
+    expect(lineStatus(100, 100.4)).toMatchObject({ percent: 101, status: "OVER" });
   });
   it("is REACHED when spent equals planned (#230)", () => {
     expect(lineStatus(100, 100)).toMatchObject({ remaining: 0, percent: 100, status: "REACHED" });

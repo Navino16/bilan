@@ -25,7 +25,7 @@ import {
   type UserDeletionImpact,
 } from "@/server/services/users/lifecycle";
 
-export type AdminActionState = { ok: true } | FormFailure | null;
+export type AdminActionState = { ok: true; setupMailSent?: boolean } | FormFailure | null;
 export type UserLifecycleState = { ok: true } | { ok: false; error: string } | null;
 
 async function requirePerm(key: string): Promise<{ id: string } | null> {
@@ -46,8 +46,8 @@ export async function adminCreateUserAction(
   if (!parsed.success) return invalidInput(parsed.error, input);
 
   try {
-    await adminCreateUser(parsed.data, { id: actor.id });
-    return { ok: true };
+    const { setupMailSent } = await adminCreateUser(parsed.data, { id: actor.id });
+    return { ok: true, setupMailSent };
   } catch (e) {
     if (e instanceof UserExistsError || e instanceof RoleChangeError)
       return failureOnField({ ok: false, error: e.message }, { USER_EXISTS: "email" });

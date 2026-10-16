@@ -43,7 +43,7 @@ Cliquez sur **Créer un compte** depuis la page de connexion. Ce que vous voyez 
 
 - **Inscriptions ouvertes** : renseignez **Nom**, **Adresse e-mail**, **Mot de passe** et **Confirmer le mot de passe**, puis cliquez sur **Créer le compte**.
 - **Sur invitation** (le réglage par défaut) : un champ **Jeton d’invitation** apparaît en premier. Votre administrateur vous transmet un jeton, ou un lien d’inscription qui le remplit pour vous.
-- **Fermées** : la page affiche « Les inscriptions sont fermées sur cette instance. » Demandez à votre administrateur de créer votre compte.
+- **Fermées** : la page de connexion n’affiche pas de lien **Créer un compte**, et la page d’inscription affiche « Les inscriptions sont fermées sur cette instance. » Demandez à votre administrateur de créer votre compte.
 
 Le mot de passe doit faire au moins 12 caractères par défaut (votre administrateur peut choisir un autre minimum). Vous êtes connecté aussitôt, et Bilan crée un jeu de catégories de départ dans votre langue.
 
@@ -77,7 +77,7 @@ Sur ordinateur, la barre latérale a deux groupes :
 
 En haut à droite, le bouton **EN**/**FR** change de langue. Bilan retient votre choix et l’utilise aussi pour les e-mails qu’il vous envoie. Vos initiales ouvrent un menu avec **Se déconnecter**.
 
-L’interrupteur **Thème sombre** se trouve en bas de la barre latérale. Tant que vous n’y touchez pas, Bilan suit le thème de votre système.
+Le bouton de thème se trouve en bas de la barre latérale. Il propose **Clair**, **Sombre** et **Système**. **Système** (le choix par défaut) suit le réglage de votre appareil.
 
 ### Sur téléphone
 
@@ -85,8 +85,8 @@ L’interrupteur **Thème sombre** se trouve en bas de la barre latérale. Tant 
 | ---------------------------------------------------------------- | ---------------------------------------------------------------- |
 | ![Tableau de bord sur téléphone](images/fr/mobile-dashboard.png) | ![Transactions sur téléphone](images/fr/mobile-transactions.png) |
 
-- La barre du bas donne un accès rapide à **Accueil**, **Transac.** (transactions), **Budgets**, **Comptes** et **Catégories**.
-- Le bouton de menu en haut à gauche ouvre tout le reste : Analyses, Importer, Foyers, Sécurité, Données, l’interrupteur de thème et le bouton de langue.
+- La barre du bas donne un accès rapide à **Accueil**, **Transactions**, **Budgets**, **Comptes** et **Catégories**.
+- Le bouton de menu en haut à gauche ouvre tout le reste : Analyses, Importer, Foyers, Sécurité, Données, le bouton de thème et le bouton de langue.
 - Sur la page des transactions, les filtres sont derrière le bouton **Filtres**.
 
 Bilan peut s’installer comme une application : utilisez l’option **Installer** ou **Ajouter à l’écran d’accueil** de votre navigateur. Une connexion reste nécessaire : vos données financières ne sont jamais stockées sur l’appareil.
@@ -214,17 +214,17 @@ Bilan importe des fichiers CSV (jusqu’à 5 Mo) et des relevés PDF (jusqu’à
 Points à vérifier dans l’aperçu :
 
 - **Décimales** : quand Bilan a dû deviner, un avertissement vous demande de vérifier les montants. Cliquez sur **C’est correct**, ou sur le bouton qui passe à l’autre séparateur.
-- **Ordre des dates** : Bilan ne choisit MM/JJ que lorsque le fichier ne peut pas se lire en JJ/MM (par exemple 12/25). Quand toutes les dates conviennent aux deux ordres, il retient JJ/MM sans avertissement. Pour un fichier au format américain, vérifiez donc les dates. Les dates écrites 2026-10-15 ne sont jamais ambiguës.
+- **Ordre des dates** : Bilan ne choisit MM/JJ que lorsque le fichier ne peut pas se lire en JJ/MM (par exemple 12/25). Quand toutes les dates conviennent aux deux ordres, il retient JJ/MM et un avertissement vous demande de vérifier les dates. Cliquez sur **Les dates sont correctes**, ou sur **Utiliser MM/JJ**. Les dates écrites 2026-10-15 ne sont jamais ambiguës.
 - **Doublons** : une ligne de même date, même montant et même libellé bancaire qu’une transaction déjà importée sur ce compte est marquée **doublon** et ignorée. Impossible de la forcer. Les transactions saisies à la main ne sont jamais considérées comme des doublons. Les lignes identiques d’un même fichier sont toutes conservées.
 - **Lignes illisibles** : les lignes avec une date ou un montant non reconnus, un montant hors limites ou un libellé vide sont ignorées. Bilan indique leur nombre et jusqu’à 5 exemples avec leur numéro de ligne. Si toute une colonne pose problème, elle est signalée à gauche : essayez une autre correspondance.
 
-Changer la correspondance, le compte ou le séparateur décimal recalcule l’aperçu, et vous perdez les lignes décochées et les catégories choisies.
+Changer la correspondance, le compte, le séparateur décimal ou l’ordre des dates recalcule l’aperçu, et vous perdez les lignes décochées et les catégories choisies.
 
 Bilan ne mémorise pas la correspondance d’un import à l’autre, mais il reconnaît les noms de colonnes habituels en français et en anglais.
 
 ### Importer un relevé PDF
 
-Déposez le PDF sur la même page. Bilan lit les relevés **LCL** et **Revolut** (relevés en français). Pour les autres banques, il tente une lecture générique des lignes « date, libellé, montant » : relisez l’aperçu avec attention. Les PDF scannés (images) ne sont pas lisibles.
+Déposez le PDF sur la même page. Bilan lit les relevés **LCL** et **Revolut** (relevés en français). L’aperçu indique la banque détectée. Pour les autres banques, il signale une banque non reconnue et tente une lecture générique des lignes « date, libellé, montant » : relisez l’aperçu avec attention. Les PDF scannés (images) ne sont pas lisibles.
 
 Un relevé Revolut peut contenir plusieurs sections (compte courant, dépôt). Chaque section a son propre choix de **Compte de destination**. Choisissez **Ne pas importer** pour en ignorer une.
 
@@ -352,7 +352,7 @@ Chaque ligne, et le budget dans son ensemble, affiche un statut :
 | **Atteint**         | exactement le montant prévu, au centime près |
 | **Dépassé**         | plus que le montant prévu                    |
 
-Astuce : 99,6 % s’affiche 100 % mais reste **Bientôt atteint**. **Atteint** demande le montant exact.
+Astuce : **Atteint** demande le montant exact, au centime près. D’ici là, le pourcentage reste sous 100 % (99,6 % s’affiche 99 %), et tout dépassement affiche au moins 101 %.
 
 Cliquez sur un budget pour ouvrir son détail : chaque ligne avec « Reste … » ou « Dépassé de … », **Voir les transactions** pour les lignes de catégorie, et la liste des transactions **Comptées dans ce budget**.
 
@@ -375,7 +375,9 @@ Un budget dont la portée est un foyer appartient au foyer :
 - Les propriétaires et les admins le créent, le modifient, le renouvellent et le suppriment. Tous les membres peuvent le consulter et y inclure ou en exclure des transactions.
 - Il compte les transactions des comptes partagés avec ce foyer.
 
-Un membre peut aussi **Inclure** une transaction de l’un de ses comptes privés. Elle compte alors dans les totaux pour tout le monde. Les autres membres n’en voient que la date et le montant, sous le libellé « Transaction d’un autre membre » ; le libellé, la catégorie et le compte restent masqués.
+Un membre peut aussi **Inclure** une transaction de l’un de ses comptes privés. Elle compte alors dans les totaux pour tout le monde, et tous les membres la voient en entier dans le budget : date, montant, libellé, catégorie et nom du compte. Seule cette transaction devient visible : le compte privé et ses autres transactions restent masqués. Si ce membre quitte ensuite le foyer, la transaction compte toujours mais s’affiche comme « Transaction d’un autre membre », sans ses détails.
+
+Vous ne pouvez **Inclure** qu’une transaction de l’un de vos comptes ou d’un compte partagé avec ce foyer : un compte qu’un autre foyer partage avec vous ne peut pas être inclus.
 
 ## Foyers
 
@@ -435,14 +437,14 @@ Pour transmettre un foyer, un propriétaire donne le rôle **Propriétaire** à 
 - **Écriture** : tout ce que permet Lecture, plus ajouter, modifier, recatégoriser, supprimer, importer, lier et délier des transactions.
 - Vous seul, en tant que propriétaire, pouvez modifier, partager, archiver ou supprimer le compte, et voir son IBAN.
 
-Vos comptes privés et leurs transactions ne sont jamais visibles des autres membres. Un budget de foyer ne compte que les comptes partagés avec ce foyer.
+Vos comptes privés et leurs transactions ne sont jamais visibles des autres membres, sauf une transaction que vous incluez dans un budget de foyer (voir [Budgets de foyer](#budgets-de-foyer)). Un budget de foyer ne compte que les comptes partagés avec ce foyer.
 
 ### Quitter ou supprimer un foyer
 
 La **Zone de danger** en bas de la page du foyer propose :
 
 - **Quitter** : vous perdez l’accès aux comptes et budgets partagés du foyer. Le dernier propriétaire ne peut pas quitter.
-- **Supprimer le foyer** (propriétaires) : retire les membres, les invitations et les partages, ainsi que les catégories, règles et budgets du foyer. Les transactions qui utilisaient une catégorie du foyer deviennent non catégorisées. Les comptes et les transactions sont conservés.
+- **Supprimer le foyer** (propriétaires) : retire les membres, les invitations et les partages, ainsi que les catégories, règles et budgets du foyer. Les transactions qui utilisaient une catégorie du foyer deviennent non catégorisées. Les comptes et les transactions sont conservés. La confirmation chiffre ce qui est touché.
 
 Astuce : quitter un foyer n’arrête pas le partage de vos comptes avec lui, et une fois parti, vous ne pouvez plus le modifier depuis l’application. Passez chacun de vos comptes sur **Aucun** pour ce foyer avant de partir.
 
@@ -545,7 +547,7 @@ Allez dans **Données** dans la barre latérale.
 
 ### Supprimer votre compte
 
-Cliquez sur **Supprimer mon compte**, saisissez votre **Mot de passe** (ou votre adresse e-mail si vous vous connectez uniquement via un fournisseur d’identité), puis cliquez sur **Supprimer définitivement**. La suppression est immédiate et définitive :
+Cliquez sur **Supprimer mon compte**, saisissez votre **Mot de passe** (ou votre adresse e-mail si vous vous connectez uniquement via un fournisseur d’identité), puis cliquez sur **Supprimer définitivement**. La confirmation détaille ce qui disparaît : nombre de comptes et de transactions, foyers transmis ou supprimés. La suppression est immédiate et définitive :
 
 - vos comptes et leurs transactions sont supprimés, y compris ceux partagés avec un foyer : les autres membres les perdent aussi ;
 - pour chaque foyer dont vous êtes propriétaire, un autre membre devient propriétaire ; un foyer sans autre membre est supprimé ;

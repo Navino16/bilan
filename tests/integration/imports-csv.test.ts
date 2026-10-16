@@ -350,6 +350,7 @@ pas une date;X;-1,00;Carte`;
     );
     const monthFirst = await previewCsvBatch(batch.id, owner);
     expect(monthFirst.mapping.dateOrder).toBe("MDY");
+    expect(monthFirst.dateOrderGuessed).toBe(false);
     expect(monthFirst.rejectedCount).toBe(0);
     expect(monthFirst.preview.map((r) => r.date.slice(0, 10)).sort()).toEqual([
       "2026-10-03",
@@ -376,6 +377,27 @@ pas une date;X;-1,00;Carte`;
     expect(rows.map((r) => r.date.toISOString().slice(0, 10))).toEqual([
       "2026-10-03",
       "2026-12-25",
+    ]);
+  });
+
+  it("flags ambiguous dates as guessed until the user picks an order (#255)", async () => {
+    const tag = `AMB${Date.now()}`;
+    const csv = `Date;Libellé;Montant
+03/10/2026;CB ${tag} A;-1,00
+04/11/2026;CB ${tag} B;-2,00`;
+    const batch = await createCsvBatch(
+      { accountId, filename: "ambiguous.csv", text: csv },
+      { id: owner },
+    );
+    const guessed = await previewCsvBatch(batch.id, owner);
+    expect(guessed.mapping.dateOrder).toBe("DMY");
+    expect(guessed.dateOrderGuessed).toBe(true);
+
+    const confirmed = await previewCsvBatch(batch.id, owner, guessed.mapping);
+    expect(confirmed.dateOrderGuessed).toBe(false);
+    expect(confirmed.preview.map((r) => r.date.slice(0, 10)).sort()).toEqual([
+      "2026-10-03",
+      "2026-11-04",
     ]);
   });
 

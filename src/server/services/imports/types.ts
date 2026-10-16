@@ -60,6 +60,7 @@ export type ImportPreview = {
   rejectedCount: number; // rows of the file that couldn't be read with this mapping
   rejected: RejectedRow[]; // a few examples
   decimalGuessed: boolean; // no amount settled mapping.decimal: it came from a fallback
+  dateOrderGuessed: boolean; // no date settled mapping.dateOrder, and some read differently
   preview: PreviewRow[]; // one page of enriched rows
   page: number;
   pageSize: number;

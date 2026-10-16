@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
 import { db } from "@/server/db";
 import {
   createBudget,
@@ -16,6 +16,7 @@ import {
 } from "@/server/services/budgets";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
 import { createLink } from "@/server/services/links";
+import { canReadAccount } from "@/server/services/accounts/sharing";
 
 const owner = "bud_owner";
 const stranger = "bud_stranger";
@@ -295,45 +296,180 @@ describe("getBudgetDetail / computeLine", () => {
     ]);
   });
 
-  it("masks a counted transaction the viewer can't read", async () => {
+  it("shows every member a private transaction included in a household budget (spec §2.2)", async () => {
     await db.groupMember.create({ data: { groupId, userId: stranger, role: "MEMBER" } });
     const privateAccount = await db.bankAccount.create({
       data: { ownerId: stranger, name: "Privé", type: "CHECKING" },
     });
-    const s = buildSecureFields({ label: "Secret", rawLabel: "Secret" });
-    const hidden = await db.transaction.create({
-      data: {
-        accountId: privateAccount.id,
-        date: new Date("2026-03-05T00:00:00.000Z"),
-        amount: -12,
-        type: "OTHER",
-        labelEnc: s.labelEnc,
-        labelHash: s.labelHash,
-        rawLabelEnc: s.rawLabelEnc,
-        rawLabelHash: s.rawLabelHash,
-        categoryId: catId,
-        createdById: stranger,
-      },
-    });
+    const strangerCat = await db.category.create({ data: { userId: stranger, name: "Perso" } });
+    const privateTx = async (label: string, day: string) => {
+      const s = buildSecureFields({ label, rawLabel: label });
+      return db.transaction.create({
+        data: {
+          accountId: privateAccount.id,
+          date: new Date(`2026-03-${day}T00:00:00.000Z`),
+          amount: -12,
+          type: "OTHER",
+          labelEnc: s.labelEnc,
+          labelHash: s.labelHash,
+          rawLabelEnc: s.rawLabelEnc,
+          rawLabelHash: s.rawLabelHash,
+          categoryId: strangerCat.id,
+          createdById: stranger,
+        },
+      });
+    };
+    const included = await privateTx("Cinéma", "05");
+    const unrelated = await privateTx("Secret", "06");
     try {
       const { id } = await createBudget(
         { ...baseInput, groupId, lines: [{ categoryId: catId, plannedAmount: 100 }] },
         { id: owner },
       );
       await assignTransaction(
-        { budgetId: id, transactionId: hidden.id, mode: "INCLUDE" },
+        { budgetId: id, transactionId: included.id, mode: "INCLUDE" },
         { id: stranger },
       );
-      const [row] = (await getBudgetDetail(id, owner)).transactions;
-      expect(row).toMatchObject({ amount: -12, label: null, categoryId: null, accountName: null });
-      expect(row.id).not.toBe(hidden.id);
-      expect((await getBudgetDetail(id, stranger)).transactions[0].label).toBe("Secret");
+      const detail = await getBudgetDetail(id, owner);
+      expect(detail.transactions).toEqual([
+        {
+          id: included.id,
+          date: included.date,
+          amount: -12,
+          label: "Cinéma",
+          categoryId: strangerCat.id,
+          accountName: "Privé",
+        },
+      ]);
+      expect(detail.transactionCount).toBe(1);
+      expect(await canReadAccount(owner, privateAccount.id)).toBe(false);
+      expect(JSON.stringify(detail)).not.toContain(unrelated.id);
     } finally {
-      await db.budgetAssignment.deleteMany({ where: { transactionId: hidden.id } });
-      await db.transaction.delete({ where: { id: hidden.id } });
+      await db.budgetAssignment.deleteMany({ where: { transactionId: included.id } });
+      await db.transaction.deleteMany({ where: { accountId: privateAccount.id } });
       await db.bankAccount.delete({ where: { id: privateAccount.id } });
+      await db.category.delete({ where: { id: strangerCat.id } });
       await db.groupMember.deleteMany({ where: { groupId, userId: stranger } });
     }
+  });
+
+  describe("re-checks visibility of included transactions when displayed", () => {
+    let strangerAccount: string;
+
+    async function strangerTx(): Promise<{ id: string; date: Date }> {
+      const s = buildSecureFields({ label: "Cinéma", rawLabel: "Cinéma" });
+      return db.transaction.create({
+        data: {
+          accountId: strangerAccount,
+          date: new Date("2026-03-05T00:00:00.000Z"),
+          amount: -12,
+          type: "OTHER",
+          labelEnc: s.labelEnc,
+          labelHash: s.labelHash,
+          rawLabelEnc: s.rawLabelEnc,
+          rawLabelHash: s.rawLabelHash,
+          createdById: stranger,
+        },
+        select: { id: true, date: true },
+      });
+    }
+
+    const masked = (date: Date) => ({
+      id: "hidden-0",
+      date,
+      amount: -12,
+      label: null,
+      categoryId: null,
+      accountName: null,
+    });
+
+    beforeEach(async () => {
+      strangerAccount = (
+        await db.bankAccount.create({
+          data: { ownerId: stranger, name: "Privé", type: "CHECKING" },
+        })
+      ).id;
+      await db.groupMember.create({ data: { groupId, userId: stranger, role: "MEMBER" } });
+    });
+
+    afterEach(async () => {
+      await db.budgetAssignment.deleteMany({
+        where: { transaction: { accountId: strangerAccount } },
+      });
+      await db.transaction.deleteMany({ where: { accountId: strangerAccount } });
+      await db.accountShare.deleteMany({ where: { accountId: strangerAccount } });
+      await db.bankAccount.delete({ where: { id: strangerAccount } });
+      await db.groupMember.deleteMany({ where: { groupId, userId: stranger } });
+    });
+
+    it("masks a private transaction once its owner left the household, still counting it", async () => {
+      const t = await strangerTx();
+      const { id } = await createBudget(
+        { ...baseInput, groupId, lines: [{ categoryId: catId, plannedAmount: 100 }] },
+        { id: owner },
+      );
+      await assignTransaction(
+        { budgetId: id, transactionId: t.id, mode: "INCLUDE" },
+        { id: stranger },
+      );
+      await db.groupMember.deleteMany({ where: { groupId, userId: stranger } });
+
+      const detail = await getBudgetDetail(id, owner);
+      expect(detail.transactions).toEqual([masked(t.date)]);
+      expect(detail.transactionCount).toBe(1);
+      expect(detail.spentTotal).toBe(12);
+      expect(JSON.stringify(detail)).not.toContain(t.id);
+    });
+
+    it("keeps showing a transaction of an account shared with the household after its owner left", async () => {
+      await db.accountShare.create({
+        data: { accountId: strangerAccount, groupId, permission: "READ", createdById: stranger },
+      });
+      const t = await strangerTx();
+      const { id } = await createBudget(
+        { ...baseInput, groupId, lines: [{ categoryId: catId, plannedAmount: 100 }] },
+        { id: owner },
+      );
+      await assignTransaction(
+        { budgetId: id, transactionId: t.id, mode: "INCLUDE" },
+        { id: stranger },
+      );
+      await db.groupMember.deleteMany({ where: { groupId, userId: stranger } });
+
+      const detail = await getBudgetDetail(id, owner);
+      expect(detail.transactions).toEqual([
+        {
+          id: t.id,
+          date: t.date,
+          amount: -12,
+          label: "Cinéma",
+          categoryId: null,
+          accountName: "Privé",
+        },
+      ]);
+    });
+
+    it("masks an INCLUDE in a personal budget from an account its owner can no longer read", async () => {
+      await db.accountShare.create({
+        data: { accountId: strangerAccount, groupId, permission: "READ", createdById: stranger },
+      });
+      const t = await strangerTx();
+      const { id } = await createBudget(
+        { ...baseInput, lines: [{ categoryId: catId, plannedAmount: 100 }] },
+        { id: owner },
+      );
+      await assignTransaction(
+        { budgetId: id, transactionId: t.id, mode: "INCLUDE" },
+        { id: owner },
+      );
+      expect((await getBudgetDetail(id, owner)).transactions[0].label).toBe("Cinéma");
+      await db.accountShare.deleteMany({ where: { accountId: strangerAccount } });
+
+      const detail = await getBudgetDetail(id, owner);
+      expect(detail.transactions).toEqual([masked(t.date)]);
+      expect(detail.transactionCount).toBe(1);
+      expect(detail.spentTotal).toBe(12);
+    });
   });
 
   it("picks the personal budget in progress for the dashboard", async () => {
@@ -438,6 +574,70 @@ describe("assignTransaction", () => {
     await expect(
       assignTransaction({ budgetId: id, transactionId: t, mode: "INCLUDE" }, { id: stranger }),
     ).rejects.toBeInstanceOf(BudgetAccessError);
+  });
+
+  it("INCLUDE into a group budget needs the account owned by the actor or shared with that group", async () => {
+    const own = await tx("2026-03-06T00:00:00.000Z", -10, null);
+    const other = await db.group.create({ data: { name: "Autre foyer", createdById: stranger } });
+    await db.groupMember.createMany({
+      data: [
+        { groupId: other.id, userId: stranger, role: "OWNER" },
+        { groupId: other.id, userId: owner, role: "MEMBER" },
+      ],
+    });
+    const foreign = await db.bankAccount.create({
+      data: { ownerId: stranger, name: "Commun", type: "CHECKING" },
+    });
+    await db.accountShare.create({
+      data: {
+        accountId: foreign.id,
+        groupId: other.id,
+        permission: "WRITE",
+        createdById: stranger,
+      },
+    });
+    const s = buildSecureFields({ label: "Autre", rawLabel: "Autre" });
+    const foreignTx = await db.transaction.create({
+      data: {
+        accountId: foreign.id,
+        date: new Date("2026-03-07T00:00:00.000Z"),
+        amount: -20,
+        type: "OTHER",
+        labelEnc: s.labelEnc,
+        labelHash: s.labelHash,
+        rawLabelEnc: s.rawLabelEnc,
+        rawLabelHash: s.rawLabelHash,
+        createdById: stranger,
+      },
+    });
+    try {
+      const { id } = await createBudget({ ...baseInput, groupId }, { id: owner });
+      await assignTransaction({ budgetId: id, transactionId: own, mode: "INCLUDE" }, { id: owner });
+
+      expect(await canReadAccount(owner, foreign.id)).toBe(true);
+      await expect(
+        assignTransaction(
+          { budgetId: id, transactionId: foreignTx.id, mode: "INCLUDE" },
+          { id: owner },
+        ),
+      ).rejects.toThrow(new BudgetAccessError("FORBIDDEN"));
+      expect(await db.budgetAssignment.count({ where: { transactionId: foreignTx.id } })).toBe(0);
+
+      await db.accountShare.create({
+        data: { accountId: foreign.id, groupId, permission: "READ", createdById: stranger },
+      });
+      await assignTransaction(
+        { budgetId: id, transactionId: foreignTx.id, mode: "INCLUDE" },
+        { id: owner },
+      );
+      expect(await db.budgetAssignment.count({ where: { budgetId: id } })).toBe(2);
+    } finally {
+      await db.budgetAssignment.deleteMany({ where: { transactionId: foreignTx.id } });
+      await db.transaction.deleteMany({ where: { accountId: foreign.id } });
+      await db.bankAccount.delete({ where: { id: foreign.id } });
+      await db.groupMember.deleteMany({ where: { groupId: other.id } });
+      await db.group.delete({ where: { id: other.id } });
+    }
   });
 
   it("lists budgets the actor may assign to (own + group budgets they're a member of)", async () => {

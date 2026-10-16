@@ -45,7 +45,7 @@ CREATE TABLE `SmtpConfig` (
     `id` VARCHAR(191) NOT NULL,
     `host` VARCHAR(191) NOT NULL,
     `port` INTEGER NOT NULL,
-    `secure` BOOLEAN NOT NULL DEFAULT true,
+    `security` ENUM('TLS', 'STARTTLS', 'NONE') NOT NULL DEFAULT 'STARTTLS',
     `username` VARCHAR(191) NOT NULL,
     `passwordEnc` TEXT NOT NULL,
     `fromAddress` VARCHAR(191) NOT NULL,

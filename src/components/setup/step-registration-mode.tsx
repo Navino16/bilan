@@ -42,7 +42,7 @@ export function StepRegistrationMode({
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="smtp_host" value={data.smtp.host} />
       <input type="hidden" name="smtp_port" value={data.smtp.port} />
-      <input type="hidden" name="smtp_secure" value={String(data.smtp.secure)} />
+      <input type="hidden" name="smtp_security" value={data.smtp.security} />
       <input type="hidden" name="smtp_username" value={data.smtp.username} />
       <input type="hidden" name="smtp_password" value={data.smtp.password} />
       <input type="hidden" name="smtp_fromAddress" value={data.smtp.fromAddress} />

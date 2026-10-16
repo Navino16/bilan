@@ -1,11 +1,13 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { db } from "@/server/db";
 import { appSettings } from "@/server/services/settings/app-settings";
 import {
   AuthProviderError,
   authProviderImpact,
   createAuthProvider,
+  credentialLockouts,
   deleteAuthProvider,
+  disableCredentialsGuarded,
   providerSchema,
   updateAuthProvider,
   type ProviderInput,
@@ -20,6 +22,8 @@ const users = {
   google: `ap_google_${stamp}`,
   twoIdps: `ap_two_idps_${stamp}`,
   passwordOnly: `ap_password_only_${stamp}`,
+  credentialOnly: `ap_credential_only_${stamp}`,
+  disableOnly: `ap_disable_only_${stamp}`,
 };
 const key = `ap-${stamp}`;
 const keys = {
@@ -30,6 +34,7 @@ const keys = {
   main: `ap-main-${stamp}`,
   other: `ap-other-${stamp}`,
   off: `ap-off-${stamp}`,
+  disable: `ap-disable-${stamp}`,
 };
 const googleKeys = [`ap-google-${stamp}`, `ap-google2-${stamp}`];
 const allKeys = [key, ...Object.values(keys), ...googleKeys];
@@ -62,6 +67,7 @@ beforeAll(async () => {
   });
   await link(users.password, "credential", "hashed");
   await link(users.passwordOnly, "credential", "hashed");
+  await link(users.credentialOnly, "credential", "hashed");
   await db.passkey.create({
     data: {
       id: `ap_pk_${stamp}`,
@@ -94,10 +100,13 @@ describe("providerSchema (#163)", () => {
     expect(
       providerSchema.safeParse({ ...oidc, type: "google", issuer: null, clientId: null }).success,
     ).toBe(false);
+  });
+
+  it("refuses the credentials type: password sign-in is an app setting (#255)", () => {
     expect(
       providerSchema.safeParse({ ...oidc, type: "credentials", issuer: null, clientId: null })
         .success,
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("trims and bounds the issuer", () => {
@@ -158,9 +167,9 @@ describe("auth provider create / update (#163)", () => {
   });
 
   it("refuses to change a provider's type", async () => {
-    expect(
-      await codeOf(updateAuthProvider({ ...oidc, type: "credentials", issuer: null }, actor)),
-    ).toBe("TYPE_LOCKED");
+    expect(await codeOf(updateAuthProvider({ ...oidc, type: "google", issuer: null }, actor))).toBe(
+      "TYPE_LOCKED",
+    );
     expect((await db.authProvider.findUnique({ where: { key } }))?.type).toBe("oidc");
   });
 
@@ -184,6 +193,26 @@ describe("auth provider create / update (#163)", () => {
       "GOOGLE_EXISTS",
     );
     await deleteAuthProvider(googleKeys[0], actor);
+  });
+
+  it("drops the OIDC-only fields of a Google provider, which ignores them (#255)", async () => {
+    const row = await createAuthProvider(
+      {
+        ...oidc,
+        key: googleKeys[0],
+        type: "google",
+        displayName: "Google",
+        enabled: false,
+        scopes: "openid",
+        pkce: true,
+      },
+      actor,
+    );
+    try {
+      expect(row).toMatchObject({ issuer: null, scopes: null, config: null, clientId: "client" });
+    } finally {
+      await deleteAuthProvider(googleKeys[0], actor);
+    }
   });
 });
 
@@ -288,6 +317,119 @@ describe("authProviderImpact queries (#163)", () => {
     } finally {
       await appSettings.set("credentials_enabled", prior?.value ?? true, actor.id);
       if (!prior) await db.appSetting.delete({ where: { key: "credentials_enabled" } });
+    }
+  });
+});
+
+describe("disabling password sign-in (#255)", () => {
+  it("counts the users a password-only account would lock out", async () => {
+    const before = await credentialLockouts();
+    await db.passkey.create({
+      data: {
+        id: `ap_pk2_${stamp}`,
+        userId: users.credentialOnly,
+        publicKey: "pk",
+        credentialID: `cred2-${stamp}`,
+        deviceType: "singleDevice",
+      },
+    });
+    try {
+      expect(await credentialLockouts()).toBe(before - 1);
+    } finally {
+      await db.passkey.delete({ where: { id: `ap_pk2_${stamp}` } });
+    }
+  });
+
+  it("refuses to run the write while a user would be locked out", async () => {
+    const prior = await db.appSetting.findUnique({ where: { key: "credentials_enabled" } });
+    await appSettings.set("credentials_enabled", true, actor.id);
+    const write = vi.fn(async () => "written");
+    try {
+      const error = await errorOf(disableCredentialsGuarded(write));
+      expect(error?.code).toBe("LOCKOUT");
+      expect(error?.count).toBeGreaterThanOrEqual(1);
+      expect(write).not.toHaveBeenCalled();
+    } finally {
+      await appSettings.set("credentials_enabled", prior?.value ?? true, actor.id);
+      if (!prior) await db.appSetting.delete({ where: { key: "credentials_enabled" } });
+    }
+  });
+
+  it("doesn't check again when password sign-in is already off", async () => {
+    const prior = await db.appSetting.findUnique({ where: { key: "credentials_enabled" } });
+    await appSettings.set("credentials_enabled", false, actor.id);
+    try {
+      expect(await disableCredentialsGuarded(async () => "written")).toBe("written");
+    } finally {
+      await appSettings.set("credentials_enabled", prior?.value ?? true, actor.id);
+      if (!prior) await db.appSetting.delete({ where: { key: "credentials_enabled" } });
+    }
+  });
+});
+
+describe("disabling a provider while password sign-in is off (#255)", () => {
+  const withCredentials = async (enabled: boolean, run: () => Promise<void>) => {
+    const prior = await db.appSetting.findUnique({ where: { key: "credentials_enabled" } });
+    await appSettings.set("credentials_enabled", enabled, actor.id);
+    try {
+      await run();
+    } finally {
+      await appSettings.set("credentials_enabled", prior?.value ?? true, actor.id);
+      if (!prior) await db.appSetting.delete({ where: { key: "credentials_enabled" } });
+    }
+  };
+  const input = { ...oidc, key: keys.disable, clientSecret: null };
+  const enabledNow = async () =>
+    (await db.authProvider.findUniqueOrThrow({ where: { key: keys.disable } })).enabled;
+
+  beforeAll(async () => {
+    await createAuthProvider({ ...oidc, key: keys.disable }, actor);
+    await link(users.disableOnly, keys.disable);
+  });
+
+  it("refuses when a linked user would have no usable sign-in method left", async () => {
+    await withCredentials(false, async () => {
+      expect(await errorOf(updateAuthProvider({ ...input, enabled: false }, actor))).toEqual({
+        code: "LOCKOUT",
+        count: 1,
+      });
+      expect(await enabledNow()).toBe(true);
+    });
+  });
+
+  it("still saves other changes to an enabled provider", async () => {
+    await withCredentials(false, async () => {
+      await updateAuthProvider({ ...input, displayName: "Renamed IdP" }, actor);
+      const row = await db.authProvider.findUniqueOrThrow({ where: { key: keys.disable } });
+      expect(row).toMatchObject({ displayName: "Renamed IdP", enabled: true });
+    });
+  });
+
+  it("allows it while password sign-in is on", async () => {
+    await withCredentials(true, async () => {
+      await updateAuthProvider({ ...input, enabled: false }, actor);
+      expect(await enabledNow()).toBe(false);
+      await updateAuthProvider({ ...input, enabled: true }, actor);
+    });
+  });
+
+  it("allows it when the linked user keeps a passkey", async () => {
+    await db.passkey.create({
+      data: {
+        id: `ap_pk3_${stamp}`,
+        userId: users.disableOnly,
+        publicKey: "pk",
+        credentialID: `cred3-${stamp}`,
+        deviceType: "singleDevice",
+      },
+    });
+    try {
+      await withCredentials(false, async () => {
+        await updateAuthProvider({ ...input, enabled: false }, actor);
+        expect(await enabledNow()).toBe(false);
+      });
+    } finally {
+      await db.passkey.delete({ where: { id: `ap_pk3_${stamp}` } });
     }
   });
 });

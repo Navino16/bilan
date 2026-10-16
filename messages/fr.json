@@ -21,7 +21,7 @@
         "disabled": "Ce compte est désactivé. Contactez l’administrateur de l’instance.",
         "ssoFailed": "La connexion via le fournisseur d’identité a échoué. Réessayez.",
         "ssoSignUpDisabled": "Aucun compte {appName} ne correspond à cette identité, et la création de compte n’est pas autorisée, par ce fournisseur ou parce que les inscriptions sont fermées. Demandez un compte à l’administrateur de l’instance.",
-        "ssoNotLinked": "Aucun compte n’est lié à cette identité. Connectez-vous avec un autre moyen de connexion, puis liez-la depuis Paramètres > Sécurité.",
+        "ssoNotLinked": "Aucun compte n’est lié à cette identité. Connectez-vous avec un autre moyen de connexion, puis liez-la depuis Compte > Sécurité.",
         "ssoDenied": "La connexion a été annulée ou refusée chez le fournisseur d’identité.",
         "ssoProvider": "Le fournisseur d’identité a renvoyé une erreur. Réessayez plus tard ou utilisez un autre moyen de connexion.",
         "ssoExpired": "La demande de connexion a expiré ou a été ouverte dans un autre navigateur. Recommencez.",
@@ -148,7 +148,16 @@
   },
   "shell": {
     "tagline": "Finances · {year}",
-    "themeToggle": "Thème sombre",
+    "theme": {
+      "light": "Clair",
+      "dark": "Sombre",
+      "system": "Système",
+      "current": {
+        "light": "Thème clair",
+        "dark": "Thème sombre",
+        "system": "Thème du système"
+      }
+    },
     "openMenu": "Ouvrir le menu",
     "groups": {
       "workspace": "Espace",
@@ -170,7 +179,7 @@
     },
     "tabs": {
       "dashboard": "Accueil",
-      "transactions": "Transac.",
+      "transactions": "Transactions",
       "budgets": "Budgets",
       "accounts": "Comptes",
       "categories": "Catégories"
@@ -628,8 +637,6 @@
         "EXACT": "Égal à",
         "REGEX": "Regex"
       },
-      "scope": "Portée",
-      "scopePersonal": "Mes comptes",
       "existingNote": "Les transactions existantes ne seront pas reclassées automatiquement.",
       "decline": "Non merci",
       "confirm": "Créer la règle"
@@ -760,10 +767,7 @@
     "colRawLabel": "Libellé brut",
     "colCategory": "Catégorie suggérée",
     "autoDetected": "auto-détecté",
-    "csvTab": "CSV",
-    "pdfTab": "PDF",
     "account": "Compte",
-    "chooseFile": "Choisir un fichier",
     "drop": "Déposez un fichier CSV ou PDF ici, ou cliquez pour parcourir.",
     "mapping": "Correspondance des colonnes",
     "decimal": {
@@ -781,13 +785,9 @@
     "colCredit": "Crédit",
     "colType": "Type",
     "none": "—",
-    "preview": "Aperçu",
-    "rowsDetected": "{count, plural, one {# ligne détectée} other {# lignes détectées}}",
-    "commit": "Importer",
     "importing": "Import en cours…",
-    "summary": "{imported, plural, one {# importée} other {# importées}} · {skipped, plural, one {# ignorée} other {# ignorées}} (doublons)",
+    "summary": "{imported, plural, one {# transaction importée} other {# transactions importées}} · {skipped, plural, one {# doublon ignoré} other {# doublons ignorés}}",
     "viewTransactions": "Voir les transactions",
-    "pdfDrop": "Déposez un relevé PDF ici, ou cliquez pour parcourir.",
     "bankDetected": "Banque détectée : {bank}",
     "bankUnknown": "Banque non reconnue — vérifiez les lignes ci-dessous avant d’importer.",
     "supportedBanks": "Banques prises en charge : {list}",
@@ -821,7 +821,7 @@
       "overline": "Historique",
       "title": "Imports récents",
       "empty": "Aucun import pour l’instant.",
-      "rows": "{imported, plural, one {# importée} other {# importées}} · {skipped, plural, one {# ignorée} other {# ignorées}}",
+      "rows": "{imported, plural, one {# transaction importée} other {# transactions importées}} · {skipped, plural, one {# doublon ignoré} other {# doublons ignorés}}",
       "status": {
         "COMPLETED": "Importé",
         "REVERTED": "Annulé"
@@ -879,7 +879,10 @@
     "dateOrder": {
       "label": "Ordre des dates",
       "DMY": "JJ/MM",
-      "MDY": "MM/JJ"
+      "MDY": "MM/JJ",
+      "guessed": "Ordre des dates deviné ({order}) : vérifiez les dates (réglage « Ordre des dates »).",
+      "confirm": "Les dates sont correctes",
+      "useOther": "Utiliser {order}"
     }
   },
   "groups": {
@@ -912,7 +915,12 @@
     "leave": "Quitter",
     "leaveConfirm": "Quitter ce foyer ?",
     "delete": "Supprimer le foyer",
-    "deleteConfirm": "Supprimer définitivement ce foyer ? Les partages associés seront retirés.",
+    "deleteConfirm": "Supprimer définitivement ce foyer ? Action irréversible.",
+    "deleteImpact": {
+      "shares": "{count, plural, one {# compte partagé ne le sera plus ; il reste à son propriétaire} other {# comptes partagés ne le seront plus ; ils restent à leurs propriétaires}}.",
+      "owned": "{categories, plural, one {# catégorie du foyer} other {# catégories du foyer}}, {rules, plural, one {# règle} other {# règles}} et {budgets, plural, one {# budget} other {# budgets}} seront supprimés.",
+      "uncategorized": "{count, plural, one {# transaction passera sans catégorie} other {# transactions passeront sans catégorie}}."
+    },
     "back": "Retour aux foyers",
     "roles": {
       "OWNER": "Propriétaire",
@@ -930,7 +938,7 @@
     "dangerTitleOwner": "Quitter ou supprimer le foyer",
     "leaveHint": "Vous perdrez l’accès aux comptes et budgets partagés de ce foyer.",
     "leaveTitle": "Quitter le foyer",
-    "deleteHint": "La suppression retire tous les partages associés. Action irréversible.",
+    "deleteHint": "La suppression retire les partages et supprime les catégories, règles et budgets du foyer. Action irréversible.",
     "removeTitle": "Retirer {name} ?"
   },
   "invitations": {
@@ -1121,6 +1129,14 @@
       "cancel": "Annuler",
       "deleting": "Suppression…",
       "confirmDelete": "Supprimer définitivement",
+      "impact": {
+        "title": "Ce qui sera supprimé :",
+        "accounts": "{count, plural, one {# compte bancaire} other {# comptes bancaires}} et {transactions, plural, one {# transaction} other {# transactions}}{shared, plural, =0 {} one {, dont # compte partagé avec un foyer : ses membres ne le verront plus} other {, dont # comptes partagés avec des foyers : leurs membres ne les verront plus}}.",
+        "personal": "Vos catégories, règles et budgets personnels, vos imports et vos préférences.",
+        "transfer": "Le foyer « {group} » sera transmis à {to}.",
+        "group": "Le foyer « {group} », dont vous êtes l’unique membre, sera supprimé avec ses catégories, règles et budgets.",
+        "budgetLines": "Les lignes des budgets de foyer ou d’autres membres qui visaient vos comptes ne seront plus limitées à un compte."
+      },
       "error": {
         "REQUIRED": "Veuillez saisir votre mot de passe.",
         "BAD_PASSWORD": "Mot de passe incorrect.",
@@ -1294,7 +1310,8 @@
       "role": "Rôle",
       "create": "Créer",
       "creating": "Création…",
-      "created": "Utilisateur créé. Un lien de définition du mot de passe lui a été envoyé.",
+      "created": "Utilisateur créé. Un lien pour définir son mot de passe lui a été envoyé par e-mail.",
+      "createdNoMail": "Utilisateur créé, mais aucun e-mail n’a été envoyé : le SMTP n’est pas configuré ou est désactivé, la personne ne peut donc pas encore définir son mot de passe. Une fois le SMTP configuré, elle utilisera « Mot de passe oublié ? » sur la page de connexion.",
       "empty": "Aucun utilisateur.",
       "error": {
         "UNAUTHORIZED": "Vous n’avez pas la permission de créer des utilisateurs.",
@@ -1302,8 +1319,8 @@
         "FAILED": "Échec de la création. Réessayez.",
         "FORBIDDEN": "Vous ne pouvez pas créer un utilisateur avec ce rôle."
       },
-      "createOverline": "Invitation",
-      "createHint": "La personne reçoit par e-mail un lien pour définir son mot de passe.",
+      "createOverline": "Nouveau compte",
+      "createHint": "La personne reçoit par e-mail un lien pour définir son mot de passe (SMTP requis).",
       "listOverline": "Comptes",
       "count": "{count, plural, =0 {Aucun compte} one {# compte} other {# comptes}}",
       "roleFor": "Rôle de {user}",
@@ -1420,7 +1437,8 @@
       "error": {
         "INVALID": "Valeur invalide.",
         "FAILED": "Échec de l’enregistrement.",
-        "FORBIDDEN": "Seul un super admin peut modifier ces paramètres."
+        "FORBIDDEN": "Seul un super admin peut modifier ces paramètres.",
+        "LOCKOUT": "Connexion par mot de passe conservée : {count, plural, one {# utilisateur n’aurait} other {# utilisateurs n’auraient}} plus aucun moyen de se connecter (ni clé d’accès, ni fournisseur actif lié)."
       },
       "general": {
         "overline": "Général",
@@ -1448,9 +1466,17 @@
       "passwordKept": "Laisser vide pour conserver l’actuel (même serveur et compte)",
       "fromAddress": "Adresse d’expédition",
       "fromName": "Nom d’expéditeur",
-      "secure": "Chiffrement",
-      "secureTls": "TLS/SSL",
-      "securePlain": "Aucun",
+      "security": {
+        "label": "Chiffrement",
+        "STARTTLS": "STARTTLS (port 587) — recommandé",
+        "TLS": "TLS implicite (port 465)",
+        "NONE": "Aucun — relais local uniquement, non chiffré",
+        "hint": {
+          "STARTTLS": "La connexion passe en TLS avant l’authentification ; l’envoi échoue si le serveur ne le prend pas en charge.",
+          "TLS": "La connexion est chiffrée dès le départ, comme l’attendent la plupart des fournisseurs sur le port 465.",
+          "NONE": "Le mot de passe et les e-mails, liens de réinitialisation compris, circulent en clair : à réserver à un relais sur la même machine ou sur un réseau local de confiance."
+        }
+      },
       "enabled": "État",
       "on": "Activé",
       "off": "Désactivé",
@@ -1491,7 +1517,6 @@
       "empty": "Aucun fournisseur configuré.",
       "key": "Clé",
       "type": "Type",
-      "typeCredentials": "Identifiants",
       "typeOidc": "OIDC",
       "typeGoogle": "Google",
       "displayName": "Nom affiché",
@@ -1499,8 +1524,9 @@
       "on": "Activé",
       "off": "Désactivé",
       "allowSignUp": "Autoriser l’inscription",
-      "allowSignUpHint": "Crée un compte {appName} à la première connexion d’une identité liée à aucun compte, uniquement si le mode d’inscription est « Ouvert ». Sinon, ce fournisseur ne connecte que les identités déjà liées à un compte. Une adresse e-mail identique ne suffit pas : un utilisateur existant lie l’identité depuis Paramètres > Sécurité.",
-      "oidcSection": "Options OIDC",
+      "allowSignUpHint": "Crée un compte {appName} à la première connexion d’une identité liée à aucun compte, uniquement si le mode d’inscription est « Ouvert ». Sinon, ce fournisseur ne connecte que les identités déjà liées à un compte. Une adresse e-mail identique ne suffit pas : un utilisateur existant lie l’identité depuis Compte > Sécurité.",
+      "oidcSection": "Options OIDC avancées",
+      "googleHint": "Google n’utilise que le client ID et le client secret.",
       "issuer": "Issuer",
       "clientId": "Client ID",
       "clientSecret": "Client secret",
@@ -1517,18 +1543,18 @@
       "saving": "Enregistrement…",
       "saved": "Fournisseur enregistré.",
       "error": {
-        "INVALID": "Vérifiez les champs : clé en minuscules (lettres, chiffres, - ou _), nom affiché, et pour OIDC l’issuer et le client ID.",
+        "INVALID": "Vérifiez les champs : clé en minuscules (lettres, chiffres, - ou _), nom affiché, client ID, et pour OIDC l’issuer.",
         "FAILED": "Échec de l’enregistrement.",
         "KEY_EXISTS": "Un fournisseur utilise déjà cette clé. Modifiez-le dans la liste ci-dessus.",
         "NOT_FOUND": "Ce fournisseur n’existe plus.",
         "SECRET_REQUIRED": "Le client secret est requis.",
-        "LOCKOUT": "Suppression refusée : {count, plural, one {# utilisateur n’aurait} other {# utilisateurs n’auraient}} plus aucun moyen de se connecter.",
+        "LOCKOUT": "Refusé : {count, plural, one {# utilisateur n’aurait} other {# utilisateurs n’auraient}} plus aucun moyen de se connecter.",
         "TYPE_LOCKED": "Le type d’un fournisseur ne peut pas être modifié. Créez-en un nouveau.",
         "GOOGLE_EXISTS": "Un fournisseur Google existe déjà."
       },
       "listOverline": "Connexion",
       "addOverline": "Nouveau",
-      "addHint": "Connexion par identifiants, OIDC ou Google.",
+      "addHint": "Connexion via OpenID Connect ou Google. La connexion par mot de passe se règle dans l’onglet Paramètres.",
       "delete": "Supprimer",
       "deleting": "Suppression…",
       "deleteTitle": "Supprimer le fournisseur {name} ?",
@@ -1751,7 +1777,7 @@
       "account": "Compte administrateur",
       "smtp": "E-mail (SMTP)",
       "oidc": "Connexion externe",
-      "registration": "Inscriptions"
+      "registration": "Mode d’inscription"
     },
     "account": {
       "name": "Nom",
@@ -1769,13 +1795,12 @@
       "password": "Mot de passe",
       "fromAddress": "Adresse d’expéditeur",
       "fromName": "Nom d’expéditeur",
-      "secure": "Connexion sécurisée (TLS)",
       "error": "Champs SMTP incomplets : serveur, port, identifiant, mot de passe et adresse d’expéditeur valide sont requis.",
       "save": "Enregistrer et continuer",
       "skip": "Passer"
     },
     "oidc": {
-      "description": "Optionnel — connexion via un fournisseur externe (Google, OIDC). Laissez vide pour en ajouter plus tard dans l’administration.",
+      "description": "Optionnel — connexion via un fournisseur d’identité OpenID Connect (Authentik, Keycloak…). Laissez vide pour en ajouter un plus tard dans l’administration, où vous pourrez aussi configurer Google.",
       "redirectUri": "URL de redirection",
       "redirectUriHint": "À enregistrer comme URI de redirection autorisée chez votre fournisseur d’identité.",
       "signUpHint": "Ce fournisseur ne connecte que les identités liées à un compte Bilan, et une adresse e-mail identique ne les lie pas. Pour qu’il crée un compte à la première connexion, autorisez l’inscription dans Administration > Fournisseurs d’authentification et choisissez le mode d’inscription « Ouvert ».",
@@ -1788,6 +1813,15 @@
       "testing": "Test en cours…",
       "testOk": "Discovery OIDC valide ✓",
       "testFailed": "Échec du test",
+      "testError": {
+        "UNAUTHORIZED": "Vous n’avez pas la permission de tester cette connexion.",
+        "NO_ISSUER": "Saisissez l’URL de l’issuer.",
+        "INVALID_URL": "L’URL de l’issuer n’est pas valide.",
+        "HTTPS_REQUIRED": "Le test ne vérifie que les issuers en https.",
+        "UNSAFE_HOST": "Le test ne contacte pas les adresses de réseau privé ou locales. Un fournisseur sur votre réseau local fonctionnera quand même à la connexion : continuez sans tester.",
+        "UNREACHABLE": "Document de découverte injoignable à cette adresse.",
+        "INVALID_DISCOVERY": "Le document de découverte ne contient pas les endpoints d’autorisation et de token."
+      },
       "advanced": "Options avancées",
       "pkce": "Activer PKCE",
       "endpointsHint": "Renseignez ces endpoints uniquement si la découverte automatique (.well-known) de votre fournisseur ne fonctionne pas.",
@@ -1811,11 +1845,11 @@
           "description": "Les nouveaux comptes nécessitent un jeton d’invitation. Recommandé."
         },
         "OPEN": {
-          "label": "Ouvertes",
+          "label": "Ouvert",
           "description": "N’importe qui peut créer un compte."
         },
         "DISABLED": {
-          "label": "Désactivées",
+          "label": "Désactivé",
           "description": "Seul un administrateur peut créer des comptes."
         }
       }

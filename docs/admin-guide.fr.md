@@ -25,12 +25,12 @@ Presque tout se configure dans l'application. Les modifications s'appliquent imm
 Tant que la base ne contient aucun utilisateur, toutes les pages redirigent vers l'assistant d'installation (`/setup`). Ouvrez l'application à son adresse `APP_URL` et suivez les quatre étapes. Rien n'est enregistré avant le clic sur **Terminer** à la dernière étape.
 
 1. **Compte administrateur** : nom, adresse e-mail et mot de passe (12 caractères minimum par défaut). Ce compte devient le premier **Super-administrateur**. Son adresse est marquée comme vérifiée, puisque personne d'autre ne pourrait la vérifier.
-2. **E-mail (SMTP)** : facultatif. Renseignez le serveur, ou cliquez sur **Passer** et configurez-le plus tard dans **Administration > SMTP**. Voir [E-mails (SMTP)](#e-mails-smtp).
-3. **Connexion externe** : facultatif. Ajoute un fournisseur OIDC générique.
+2. **E-mail (SMTP)** : facultatif. Renseignez le serveur, ou cliquez sur **Passer** et configurez-le plus tard dans **Administration > SMTP**. Gardez le chiffrement par défaut **STARTTLS (port 587)**, sauf si votre fournisseur en demande un autre. Voir [E-mails (SMTP)](#e-mails-smtp).
+3. **Connexion externe** : facultatif. Ajoute un fournisseur OIDC générique, de clé `oidc`. Un fournisseur Google s'ajoute ensuite, depuis **Fournisseurs d'authentification**.
    - L'assistant affiche l'**URL de redirection** à déclarer chez votre fournisseur d'identité : `<APP_URL>/api/auth/oauth2/callback/oidc`.
-   - **Tester la connexion** vérifie le document de découverte de l'issuer. Le test n'accepte que des adresses `https` publiques : un fournisseur d'identité sur un réseau privé échoue au test mais peut tout de même fonctionner. Vous pouvez aussi cliquer sur **Passer** et l'ajouter plus tard depuis **Fournisseurs d'authentification**.
+   - **Tester la connexion** vérifie le document de découverte de l'issuer. Le test ne contacte que des adresses `https` publiques, car l'assistant est accessible avant toute connexion. Un fournisseur d'identité sur un réseau privé ou sur `localhost` ne peut pas être testé ici, et le message l'indique, mais il fonctionnera à la connexion : continuez sans tester.
    - Le fournisseur est créé sans autoriser l'inscription. Voir [Autoriser l'inscription](#autoriser-linscription).
-4. **Inscriptions** : choisissez le mode d'inscription. **Sur invitation** est le choix par défaut et recommandé. Voir [Mode d'inscription](#mode-dinscription).
+4. **Mode d'inscription** : **Sur invitation** est le choix par défaut et recommandé. Voir [Mode d'inscription](#mode-dinscription).
 
 Cliquez sur **Terminer** : le compte est créé et vous êtes connecté. Ensuite, `/setup` renvoie une page 404.
 
@@ -74,6 +74,8 @@ Règles de rang :
 
 Pour donner le rôle **Super-administrateur** à quelqu'un, créez son compte en **Utilisateur** ou **Administrateur**, puis changez son rôle.
 
+Les jetons d'invitation et **Marquer l'adresse comme vérifiée** sont volontairement réservés aux super-administrateurs : un administrateur peut créer des comptes, mais pas distribuer de jetons d'inscription ni se porter garant de l'adresse e-mail de quelqu'un.
+
 ## Gérer les utilisateurs
 
 ![Onglet Utilisateurs](images/fr/admin-users.png)
@@ -86,7 +88,7 @@ Pour donner le rôle **Super-administrateur** à quelqu'un, créez son compte en
 
 La personne reçoit un e-mail avec un lien pour choisir son mot de passe. Le lien est valable 1 heure ; passé ce délai, elle utilise **Mot de passe oublié ?** sur la page de connexion. Suivre ce lien vérifie aussi son adresse e-mail.
 
-Ce parcours nécessite un serveur SMTP fonctionnel : le lien n'est transmis que par e-mail. Sans SMTP, faites plutôt inscrire les personnes avec un [jeton d'invitation](#jetons-dinvitation), ou faites-les se connecter par [SSO](#authentification-unique-oidc-et-google).
+Ce parcours nécessite un serveur SMTP fonctionnel : le lien n'est transmis que par e-mail, et Bilan ne le montre jamais à l'administrateur. Sans SMTP, le compte est tout de même créé, mais la confirmation indique qu'aucun e-mail n'a été envoyé : la personne ne peut pas se connecter tant que le SMTP n'est pas configuré, puis elle utilise **Mot de passe oublié ?** sur la page de connexion. Sur une instance sans SMTP, faites plutôt inscrire les personnes avec un [jeton d'invitation](#jetons-dinvitation).
 
 ### Rechercher
 
@@ -110,7 +112,7 @@ Les sessions de la personne sont fermées et toute connexion est refusée (mot d
 
 ### Marquer une adresse e-mail comme vérifiée
 
-À utiliser sur les instances sans SMTP, où les utilisateurs ne peuvent pas recevoir de lien de vérification (voir [Vérification des adresses e-mail](#vérification-des-adresses-e-mail)).
+Réservé aux super-administrateurs. À utiliser sur les instances sans SMTP, où les utilisateurs ne peuvent pas recevoir de lien de vérification (voir [Vérification des adresses e-mail](#vérification-des-adresses-e-mail)).
 
 1. Ouvrez le menu d'actions de la ligne et choisissez **Marquer l'adresse comme vérifiée**.
 2. Confirmez avec **Marquer comme vérifiée**.
@@ -152,9 +154,11 @@ Le compte et toutes ses données sont effacés, et ses entrées du journal d'aud
 
 Quel que soit le mode, les administrateurs peuvent toujours créer des comptes depuis **Utilisateurs**.
 
+La page de connexion n'affiche **Créer un compte** que si la page d'inscription permet de s'inscrire : pas en mode **Désactivé**, ni quand la connexion par mot de passe est désactivée et qu'aucun fournisseur SSO ne peut créer de compte.
+
 ### Connexion par mot de passe
 
-Une fois désactivée, la page de connexion ne propose plus l'e-mail et le mot de passe. Les utilisateurs se connectent avec une clé d'accès ou une identité SSO. Avant de la désactiver, assurez-vous que chaque utilisateur, à commencer par vous, dispose d'une clé d'accès ou d'une identité SSO liée : l'application ne le vérifie pas pour vous.
+Une fois désactivée, la page de connexion ne propose plus l'e-mail et le mot de passe. Les utilisateurs se connectent avec une clé d'accès ou une identité SSO. Assurez-vous que chaque utilisateur, à commencer par vous, dispose d'une clé d'accès ou d'une identité liée à un fournisseur actif : l'enregistrement est refusé tant que des utilisateurs se retrouveraient sans aucun moyen de connexion, et le message indique combien. Les utilisateurs créés par un administrateur qui n'ont jamais choisi leur mot de passe comptent aussi.
 
 ### Double authentification obligatoire (admin)
 
@@ -168,7 +172,7 @@ Activez votre propre double authentification avant d'activer ce paramètre.
 
 ![Onglet Jetons d'invitation](images/fr/admin-signup-tokens.png)
 
-Un jeton d'invitation permet de créer un compte quand le mode d'inscription est **Sur invitation**. Un bandeau en haut de l'onglet vous prévient quand le mode est **Ouvert** (les jetons ne sont pas demandés) ou **Désactivé** (les jetons sont refusés).
+Seuls les super-administrateurs voient cet onglet. Un jeton d'invitation permet de créer un compte quand le mode d'inscription est **Sur invitation**. Un bandeau en haut de l'onglet vous prévient quand le mode est **Ouvert** (les jetons ne sont pas demandés) ou **Désactivé** (les jetons sont refusés).
 
 ### Créer un jeton
 
@@ -221,24 +225,24 @@ La même URL sert à la connexion et à la liaison d'une identité à un compte 
 | Type                    | **OIDC** ou **Google**. Non modifiable ensuite. Un seul fournisseur Google est possible.                                   |
 | Nom affiché             | Libellé du bouton de connexion                                                                                             |
 | État                    | **Activé** affiche le fournisseur sur la page de connexion ; **Désactivé** le masque et refuse les connexions par ce biais |
+| Issuer                  | OIDC uniquement, obligatoire. L'URL de l'issuer ; Bilan lit `<issuer>/.well-known/openid-configuration`.                   |
+| Client ID               | Obligatoire                                                                                                                |
+| Client secret           | Obligatoire. Stocké chiffré. En modification, laissez vide pour conserver l'actuel.                                        |
 | Autoriser l'inscription | Voir [Autoriser l'inscription](#autoriser-linscription)                                                                    |
 
-Dans **Options OIDC** :
+Pour un fournisseur OIDC, **Options OIDC avancées** regroupe les réglages facultatifs :
 
-| Champ                                          | Description                                                                                                                 |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Issuer                                         | OIDC uniquement, obligatoire. L'URL de l'issuer ; Bilan lit `<issuer>/.well-known/openid-configuration`.                    |
-| Client ID                                      | Obligatoire pour OIDC et Google                                                                                             |
-| Client secret                                  | Obligatoire pour OIDC et Google. Stocké chiffré. En modification, laissez vide pour conserver l'actuel.                     |
-| Scopes                                         | OIDC uniquement. Séparés par des virgules. Par défaut : `openid,email,profile`.                                             |
-| Claim → nom                                    | OIDC uniquement. Claim userinfo à utiliser comme nom, si ce n'est pas le claim standard.                                    |
-| Claim → e-mail                                 | OIDC uniquement. Claim userinfo à utiliser comme adresse e-mail, si ce n'est pas le claim standard.                         |
-| URL d'autorisation, URL de token, URL userinfo | OIDC uniquement. À renseigner seulement si le document de découverte du fournisseur est inutilisable : elles le remplacent. |
-| PKCE                                           | OIDC uniquement. À cocher si le fournisseur prend en charge ou exige PKCE.                                                  |
+| Champ                                          | Description                                                                                                |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Scopes                                         | Séparés par des virgules. Par défaut : `openid,email,profile`.                                             |
+| Claim → nom                                    | Claim userinfo à utiliser comme nom, si ce n'est pas le claim standard.                                    |
+| Claim → e-mail                                 | Claim userinfo à utiliser comme adresse e-mail, si ce n'est pas le claim standard.                         |
+| URL d'autorisation, URL de token, URL userinfo | À renseigner seulement si le document de découverte du fournisseur est inutilisable : elles le remplacent. |
+| PKCE                                           | À cocher si le fournisseur prend en charge ou exige PKCE.                                                  |
 
-Pour un fournisseur Google, seuls **Client ID** et **Client secret** sont utilisés. Créez un client OAuth de type « Application Web » dans la console Google Cloud et ajoutez `<APP_URL>/api/auth/callback/google` à ses URI de redirection autorisées.
+Un fournisseur Google ne prend qu'un **Client ID** et un **Client secret** : le formulaire masque les autres champs. Créez un client OAuth de type « Application Web » dans la console Google Cloud et ajoutez `<APP_URL>/api/auth/callback/google` à ses URI de redirection autorisées.
 
-La liste **Type** propose aussi **Identifiants**. Une telle entrée n'a aucun effet : la connexion par mot de passe se règle avec **Connexion par mot de passe** dans **Paramètres**.
+La connexion par mot de passe n'est pas un fournisseur : elle se règle avec **Connexion par mot de passe** dans **Paramètres**.
 
 ### Autoriser l'inscription
 
@@ -280,18 +284,18 @@ Bilan n'inclut pas de serveur de messagerie : utilisez un compte SMTP existant (
 1. Allez dans **Administration > SMTP**.
 2. Remplissez le formulaire et cliquez sur **Enregistrer**.
 
-| Champ                | Description                                                                                                                                           |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Hôte                 | Nom du serveur SMTP                                                                                                                                   |
-| Port                 | En général 465 (TLS implicite) ou 587 (STARTTLS). Par défaut : 587.                                                                                   |
-| Utilisateur          | Compte SMTP                                                                                                                                           |
-| Mot de passe         | Stocké chiffré. Laissez vide pour conserver l'actuel ; il n'est conservé que si l'hôte, le port, le chiffrement et l'utilisateur sont inchangés.      |
-| Adresse d'expédition | Adresse d'expéditeur de tous les e-mails                                                                                                              |
-| Nom d'expéditeur     | Nom d'expéditeur facultatif                                                                                                                           |
-| Chiffrement          | **TLS/SSL** : TLS dès l'ouverture de la connexion (port 465). **Aucun** : connexion en clair, passée en STARTTLS si le serveur le propose (port 587). |
-| État                 | **Activé** envoie les e-mails ; **Désactivé** conserve la configuration sans rien envoyer                                                             |
+| Champ                | Description                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Hôte                 | Nom du serveur SMTP                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Port                 | En général 587 (STARTTLS), 465 (TLS implicite) ou 25 (relais local sans chiffrement). Par défaut : 587.                                                                                                                                                                                                                                                                                                                       |
+| Utilisateur          | Compte SMTP                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Mot de passe         | Stocké chiffré. Laissez vide pour conserver l'actuel ; il n'est conservé que si l'hôte, le port, le chiffrement et l'utilisateur sont inchangés.                                                                                                                                                                                                                                                                              |
+| Adresse d'expédition | Adresse d'expéditeur de tous les e-mails                                                                                                                                                                                                                                                                                                                                                                                      |
+| Nom d'expéditeur     | Nom d'expéditeur facultatif                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Chiffrement          | **STARTTLS (port 587)**, par défaut et recommandé : la connexion passe en TLS avant l'authentification, et rien n'est envoyé si le serveur ne le prend pas en charge. **TLS implicite (port 465)** : TLS dès l'ouverture de la connexion. **Aucun** : le mot de passe et les e-mails, liens de réinitialisation compris, circulent en clair ; à réserver à un relais sur la même machine ou sur un réseau local de confiance. |
+| État                 | **Activé** envoie les e-mails ; **Désactivé** conserve la configuration sans rien envoyer                                                                                                                                                                                                                                                                                                                                     |
 
-La combinaison par défaut (587 avec **TLS/SSL**) ne fonctionne pas avec la plupart des serveurs : choisissez 465 avec **TLS/SSL**, ou 587 avec **Aucun**.
+La combinaison par défaut (587 avec **STARTTLS**) convient à la plupart des fournisseurs. Pour le port 465, choisissez **TLS implicite**. Changer le chiffrement passe aussi le port à celui qui correspond (587, 465 ou 25), sauf si vous avez saisi un port personnalisé.
 
 ### Envoyer un e-mail de test
 
@@ -319,7 +323,7 @@ Les e-mails sont rédigés dans la langue du destinataire.
 Bilan fonctionne sans SMTP, avec ces différences :
 
 - Invitations dans un foyer : la personne qui invite voit « L'e-mail est désactivé : transmettez ce lien. » avec un lien à copier et à transmettre par un autre moyen.
-- Les utilisateurs créés par un administrateur ne reçoivent pas leur lien de définition du mot de passe. Préférez les jetons d'invitation ou le SSO.
+- Les utilisateurs créés par un administrateur ne reçoivent pas leur lien de définition du mot de passe, et la confirmation le signale. Préférez les jetons d'invitation ou l'inscription par SSO.
 - **Mot de passe oublié ?** ne peut pas transmettre son lien.
 - Aucun e-mail de vérification n'est envoyé et le bandeau de vérification est masqué. Un administrateur marque alors les adresses comme vérifiées (voir ci-dessous).
 - Aucune alerte de sécurité n'est envoyée.

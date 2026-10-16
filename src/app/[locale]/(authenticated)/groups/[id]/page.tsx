@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ChevronLeft, Pencil } from "lucide-react";
 import { requireSession } from "@/server/auth/permissions";
-import { getGroupDetail, GroupAccessError } from "@/server/services/groups";
+import { getGroupDetail, groupDeletionImpact, GroupAccessError } from "@/server/services/groups";
 import { listInvitations } from "@/server/services/groups/invitations";
 import { listAccountsSharedWithGroup } from "@/server/services/accounts/sharing";
 import { GROUP_ROLE_RANK as RANK } from "@/lib/validation/group";
@@ -61,6 +61,8 @@ export default async function GroupDetailPage({
         expiresAt: inv.expiresAt.toISOString(),
       }))
     : [];
+  const deletionImpact =
+    viewerRole === "OWNER" ? await groupDeletionImpact(id, { id: user.id }) : null;
 
   return (
     <div className="space-y-6">
@@ -158,7 +160,12 @@ export default async function GroupDetailPage({
         </SectionCard>
       )}
 
-      <GroupDangerZone groupId={group.id} viewerRole={viewerRole} isLastOwner={isLastOwner} />
+      <GroupDangerZone
+        groupId={group.id}
+        viewerRole={viewerRole}
+        isLastOwner={isLastOwner}
+        deletionImpact={deletionImpact}
+      />
     </div>
   );
 }

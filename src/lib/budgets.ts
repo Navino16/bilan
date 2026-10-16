@@ -26,19 +26,27 @@ export type LineStatus = {
   status: BudgetStatus;
 };
 
-// OVER and REACHED compare amounts within epsilon, not the rounded percent (99.6 % is WARN).
+// OVER and REACHED compare amounts within epsilon; the displayed percent is then
+// clamped so it never contradicts the status (99.6 % reads 99 %, a tiny overspend 101 %).
 export function lineStatus(plannedAmount: number, spent: number): LineStatus {
   const remaining = round2(plannedAmount - spent);
-  const percent =
-    plannedAmount > 0 ? Math.round((spent / plannedAmount) * 100) : spent > EPSILON ? 100 : 0;
+  const ratio = plannedAmount > 0 ? (spent / plannedAmount) * 100 : spent > EPSILON ? 100 : 0;
   const status: BudgetStatus =
     spent > plannedAmount + EPSILON
       ? "OVER"
       : plannedAmount > EPSILON && plannedAmount - spent <= EPSILON
         ? "REACHED"
-        : percent >= 80
+        : ratio >= 80
           ? "WARN"
           : "OK";
+  const percent =
+    plannedAmount <= 0
+      ? ratio
+      : status === "OVER"
+        ? Math.max(101, Math.round(ratio))
+        : status === "REACHED"
+          ? 100
+          : Math.min(99, Math.floor(ratio));
   return { plannedAmount: round2(plannedAmount), spent: round2(spent), remaining, percent, status };
 }
 

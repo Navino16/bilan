@@ -5,8 +5,9 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { SmtpSecurityField } from "@/components/admin/smtp-security-field";
+import { portAfterSecurityChange } from "@/lib/smtp-security";
 import type { SmtpData } from "./stepper";
 
 // Optional. SMTP can also be configured later in the admin settings (Phase 8.4).
@@ -105,14 +106,13 @@ export function StepSmtp({
           />
         </div>
       </div>
-      <div className="flex items-center gap-3">
-        <Switch
-          id="smtp-secure"
-          checked={data.secure}
-          onCheckedChange={(v) => onChange({ secure: v })}
-        />
-        <Label htmlFor="smtp-secure">{t("secure")}</Label>
-      </div>
+      <SmtpSecurityField
+        id="smtp-security"
+        value={data.security}
+        onChange={(security) =>
+          onChange({ security, port: portAfterSecurityChange(data.port, security) })
+        }
+      />
       {showError && filled && !complete && (
         <Alert variant="destructive">
           <AlertDescription>{t("error")}</AlertDescription>

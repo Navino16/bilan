@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useRef, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Send, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -18,11 +18,18 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { ConfirmDialog } from "@/components/shell/confirm-dialog";
 import { useActionForm } from "@/components/forms/use-action-form";
 import { FieldError } from "@/components/forms/field-error";
+import { SmtpSecurityField } from "@/components/admin/smtp-security-field";
+import {
+  DEFAULT_SMTP_SECURITY,
+  portAfterSecurityChange,
+  SMTP_DEFAULT_PORTS,
+  type SmtpSecurityMode,
+} from "@/lib/smtp-security";
 
 export type SmtpDefaults = {
   host: string;
   port: number;
-  secure: boolean;
+  security: SmtpSecurityMode;
   username: string;
   fromAddress: string;
   fromName: string | null;
@@ -37,6 +44,14 @@ export function SmtpForm({ defaults }: { defaults: SmtpDefaults }) {
     onSuccess: () => router.refresh(),
   });
   const { state, pending } = form;
+  const [security, setSecurity] = useState(defaults?.security ?? DEFAULT_SMTP_SECURITY);
+  const portRef = useRef<HTMLInputElement>(null);
+
+  function changeSecurity(mode: SmtpSecurityMode) {
+    setSecurity(mode);
+    if (portRef.current)
+      portRef.current.value = portAfterSecurityChange(portRef.current.value, mode);
+  }
 
   return (
     <div className="space-y-6">
@@ -56,10 +71,11 @@ export function SmtpForm({ defaults }: { defaults: SmtpDefaults }) {
           <div className="space-y-2">
             <Label htmlFor="smtp-port">{t("port")}</Label>
             <Input
+              ref={portRef}
               id="smtp-port"
               name="port"
               type="number"
-              defaultValue={defaults?.port ?? 587}
+              defaultValue={defaults?.port ?? SMTP_DEFAULT_PORTS[DEFAULT_SMTP_SECURITY]}
               required
               {...form.fieldProps("port")}
             />
@@ -110,17 +126,12 @@ export function SmtpForm({ defaults }: { defaults: SmtpDefaults }) {
           </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="smtp-secure">{t("secure")}</Label>
-            <NativeSelect
-              id="smtp-secure"
-              name="secure"
-              defaultValue={String(defaults?.secure ?? true)}
-            >
-              <option value="true">{t("secureTls")}</option>
-              <option value="false">{t("securePlain")}</option>
-            </NativeSelect>
-          </div>
+          <SmtpSecurityField
+            id="smtp-security"
+            name="security"
+            value={security}
+            onChange={changeSecurity}
+          />
           <div className="space-y-2">
             <Label htmlFor="smtp-enabled">{t("enabled")}</Label>
             <NativeSelect

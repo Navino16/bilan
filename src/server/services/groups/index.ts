@@ -92,6 +92,32 @@ export async function updateGroup(
   await logEvent({ userId: actor.id, action: "group.updated", entity: "Group", entityId: groupId });
 }
 
+export type GroupDeletionImpact = {
+  shares: number;
+  categories: number;
+  rules: number;
+  budgets: number;
+  // Transactions filed under one of the household's categories: they become uncategorized.
+  uncategorized: number;
+};
+
+// Shown in the owner's confirmation before deleteGroup: shares, categories, rules and
+// budgets cascade with the group; Transaction.category is SetNull.
+export async function groupDeletionImpact(
+  groupId: string,
+  actor: { id: string },
+): Promise<GroupDeletionImpact> {
+  await requireGroupRole(groupId, actor.id, "OWNER");
+  const [shares, categories, rules, budgets, uncategorized] = await Promise.all([
+    db.accountShare.count({ where: { groupId } }),
+    db.category.count({ where: { groupId } }),
+    db.categorizationRule.count({ where: { groupId } }),
+    db.budget.count({ where: { groupId } }),
+    db.transaction.count({ where: { category: { groupId } } }),
+  ]);
+  return { shares, categories, rules, budgets, uncategorized };
+}
+
 export async function deleteGroup(groupId: string, actor: { id: string }): Promise<void> {
   await requireGroupRole(groupId, actor.id, "OWNER");
   await db.group.delete({ where: { id: groupId } });

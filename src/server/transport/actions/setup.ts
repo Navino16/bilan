@@ -180,7 +180,7 @@ export async function completeSetupAction(
     const r = smtpSchema.safeParse({
       host: str(formData, "smtp_host"),
       port: str(formData, "smtp_port"),
-      secure: str(formData, "smtp_secure") === "true",
+      security: str(formData, "smtp_security") || undefined,
       username: str(formData, "smtp_username"),
       password: str(formData, "smtp_password"),
       fromAddress: str(formData, "smtp_fromAddress"),

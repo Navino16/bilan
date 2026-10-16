@@ -10,7 +10,6 @@ import { getAppName } from "@/server/services/settings/app-settings";
 export const dynamic = "force-dynamic";
 
 const TYPE_KEY = {
-  credentials: "typeCredentials",
   oidc: "typeOidc",
   google: "typeGoogle",
 } as const;

@@ -323,6 +323,34 @@ bad;LIGNE ${stamp};1,00;;B`;
     await page.getByRole("button", { name: "Annuler", exact: true }).click();
   });
 
+  test("ambiguous dates flag a guessed date order that can be switched (#255)", async ({
+    page,
+  }) => {
+    const stamp = Date.now();
+    await page.goto("/fr/import");
+    const uploaded = page.waitForResponse((r) => r.url().endsWith("/api/import/csv"), {
+      timeout: 30_000,
+    });
+    await page.locator('input[type="file"]').setInputFiles({
+      name: `dates-${stamp}.csv`,
+      mimeType: "text/csv",
+      buffer: Buffer.from(`Date;Libellé;Montant\n03/10/2019;CB DATES ${stamp};-2,00`, "utf8"),
+    });
+    await uploaded;
+
+    const warning = page.locator('[data-slot="import-date-order-guessed"]');
+    await expect(warning).toContainText("Ordre des dates deviné (JJ/MM)", { timeout: 15_000 });
+    const monthFirst = page
+      .getByRole("group", { name: "Ordre des dates" })
+      .getByRole("button", { name: "MM/JJ" });
+    await expect(async () => {
+      await page.getByRole("button", { name: "Utiliser MM/JJ" }).click({ timeout: 2_000 });
+      await expect(monthFirst).toHaveAttribute("aria-pressed", "true", { timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
+    await expect(warning).toHaveCount(0, { timeout: 15_000 });
+    await page.getByRole("button", { name: "Annuler", exact: true }).click();
+  });
+
   test("a refused remap keeps the mapping and explains why beside it; dates show the year (#225)", async ({
     page,
   }) => {

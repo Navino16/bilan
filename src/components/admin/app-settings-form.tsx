@@ -51,7 +51,9 @@ function SettingsCard({
         </div>
         {form.error && (
           <Alert variant="destructive">
-            <AlertDescription>{t(`error.${form.error}`)}</AlertDescription>
+            <AlertDescription>
+              {t(`error.${form.error}`, { count: (state && !state.ok && state.count) || 0 })}
+            </AlertDescription>
           </Alert>
         )}
       </form>

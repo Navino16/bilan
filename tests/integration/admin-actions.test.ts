@@ -151,6 +151,18 @@ describe("adminCreateUserAction", () => {
       ),
     ).toEqual({ ok: false, error: "USER_EXISTS", fieldErrors: { email: "USER_EXISTS" } });
   });
+
+  it("says no setup link was mailed while SMTP isn't configured (#255)", async () => {
+    current.user = users.super;
+    const email = `act-nomail+${stamp}@bilan.local`;
+    try {
+      expect(
+        await adminCreateUserAction(null, form({ name: "No Mail", email, role: "USER" })),
+      ).toEqual({ ok: true, setupMailSent: false });
+    } finally {
+      await db.user.deleteMany({ where: { email } });
+    }
+  });
 });
 
 describe("user lifecycle actions", () => {
@@ -204,6 +216,28 @@ describe("SMTP actions", () => {
     expect(await db.smtpConfig.count({ where: { host: "smtp.evil.test" } })).toBe(0);
   });
 
+  it("saves the submitted security mode, STARTTLS when absent, and rejects unknown ones (#255)", async () => {
+    current.user = users.super;
+    const fields = {
+      host: "smtp.example.test",
+      port: "465",
+      username: "mailer",
+      password: "secret",
+      fromAddress: "bilan@example.test",
+      enabled: "false",
+    };
+    expect(await upsertSmtpAction(null, form({ ...fields, security: "TLS" }))).toEqual({
+      ok: true,
+    });
+    expect((await db.smtpConfig.findFirst())?.security).toBe("TLS");
+    expect(await upsertSmtpAction(null, form(fields))).toEqual({ ok: true });
+    expect((await db.smtpConfig.findFirst())?.security).toBe("STARTTLS");
+    expect(await upsertSmtpAction(null, form({ ...fields, security: "SSL" }))).toMatchObject({
+      ok: false,
+    });
+    await db.smtpConfig.deleteMany();
+  });
+
   it("rate-limits the SMTP test per super admin", async () => {
     current.user = users.super;
     const results = [];
@@ -252,7 +286,7 @@ describe("security settings (#223)", () => {
       error: "FORBIDDEN",
     });
     await expect(
-      saveAuthProviderAction(null, form({ mode: "create", key: "x", type: "credentials" })),
+      saveAuthProviderAction(null, form({ mode: "create", key: "x", type: "oidc" })),
     ).rejects.toThrow("FORBIDDEN");
     await expect(deleteAuthProviderAction("x")).rejects.toThrow("FORBIDDEN");
     expect(await testOidcConnectionAction("")).toEqual({ ok: false, error: "UNAUTHORIZED" });
@@ -282,5 +316,31 @@ describe("security settings (#223)", () => {
       ok: false,
       error: "NOT_FOUND",
     });
+  });
+
+  it("refuses to disable password sign-in while it would lock a user out (#255)", async () => {
+    current.user = users.super;
+    const prior = await db.appSetting.findUnique({ where: { key: "credentials_enabled" } });
+    await appSettings.set("credentials_enabled", true, users.super.id);
+    const accountId = `act_pw_${stamp}`;
+    await db.authAccount.create({
+      data: {
+        id: accountId,
+        userId: users.user.id,
+        accountId: users.user.id,
+        providerId: "credential",
+        password: "hashed",
+      },
+    });
+    try {
+      const res = await setAppSettingsAction(null, form({ "s:credentials_enabled": "false" }));
+      expect(res).toMatchObject({ ok: false, error: "LOCKOUT" });
+      expect(res && !res.ok && res.count).toBeGreaterThanOrEqual(1);
+      expect(await appSettings.get("credentials_enabled")).toBe(true);
+    } finally {
+      await db.authAccount.delete({ where: { id: accountId } });
+      await appSettings.set("credentials_enabled", prior?.value ?? true, users.super.id);
+      if (!prior) await db.appSetting.delete({ where: { key: "credentials_enabled" } });
+    }
   });
 });

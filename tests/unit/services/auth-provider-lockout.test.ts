@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  countCredentialLockouts,
   countLockouts,
   hasUsableSignIn,
   type UserSignInMethods,
@@ -56,5 +57,23 @@ describe("hasUsableSignIn", () => {
 
   it("never treats the credential row itself as a provider", () => {
     expect(hasUsableSignIn(user({ providerIds: ["credential"] }), usable(false, []))).toBe(false);
+  });
+});
+
+describe("countCredentialLockouts (#255)", () => {
+  it("counts users whose password is their only usable method", () => {
+    const pw = user({ providerIds: ["credential"], hasPassword: true });
+    expect(countCredentialLockouts([pw], usable(true))).toBe(1);
+  });
+
+  it("keeps users with a passkey or an identity on an enabled provider", () => {
+    const withPasskey = user({ providerIds: ["credential"], hasPassword: true, hasPasskey: true });
+    const withIdp = user({ providerIds: ["credential", "idp"], hasPassword: true });
+    expect(countCredentialLockouts([withPasskey, withIdp], usable(true, ["idp"]))).toBe(0);
+    expect(countCredentialLockouts([withIdp], usable(true, []))).toBe(1);
+  });
+
+  it("ignores users without a password, who lose nothing", () => {
+    expect(countCredentialLockouts([user({ providerIds: [] })], usable(true))).toBe(0);
   });
 });

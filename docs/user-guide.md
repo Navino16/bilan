@@ -43,7 +43,7 @@ Click **Create an account** on the sign-in page. What you see depends on how the
 
 - **Open registration**: fill in **Name**, **Email address**, **Password** and **Confirm password**, then click **Create account**.
 - **Invite only** (the default): an **Invitation token** field appears first. Your administrator gives you a token or a sign-up link that fills it in for you.
-- **Closed**: the page shows "Registration is closed on this instance." Ask your administrator to create your account.
+- **Closed**: the sign-in page has no **Create an account** link, and the sign-up page shows "Registration is closed on this instance." Ask your administrator to create your account.
 
 The password must be at least 12 characters long by default (your administrator may choose another minimum). You are signed in right away and Bilan creates a starter set of categories in your language.
 
@@ -77,7 +77,7 @@ On a computer, the sidebar has two groups:
 
 At the top right, the **FR**/**EN** button switches the language. Bilan remembers your choice and also uses it for the e-mails it sends you. Your initials open a menu with **Sign out**.
 
-The **Dark theme** switch sits at the bottom of the sidebar. Until you use it, Bilan follows your system theme.
+The theme button sits at the bottom of the sidebar. It offers **Light**, **Dark** and **System**. **System** (the default) follows your device's setting.
 
 ### On a phone
 
@@ -85,8 +85,8 @@ The **Dark theme** switch sits at the bottom of the sidebar. Until you use it, B
 | ------------------------------------------------------- | ------------------------------------------------------------- |
 | ![Dashboard on a phone](images/en/mobile-dashboard.png) | ![Transactions on a phone](images/en/mobile-transactions.png) |
 
-- The bottom bar gives quick access to **Home**, **Activity** (transactions), **Budgets**, **Accounts** and **Categories**.
-- The menu button at the top left opens everything else: Insights, Import, Households, Security, Data, the theme switch and the language button.
+- The bottom bar gives quick access to **Home**, **Transactions**, **Budgets**, **Accounts** and **Categories**.
+- The menu button at the top left opens everything else: Insights, Import, Households, Security, Data, the theme button and the language button.
 - On the transactions page, filters live behind the **Filters** button.
 
 Bilan can be installed as an app: use your browser's **Install** or **Add to Home Screen** option. It still needs a connection: your financial data is never stored on the device.
@@ -214,17 +214,17 @@ Bilan imports CSV files (up to 5 MB) and PDF statements (up to 10 MB) exported f
 Things to check in the preview:
 
 - **Decimal mark**: when Bilan had to guess, a warning asks you to check the amounts. Click **Looks right**, or the button that switches to the other mark.
-- **Date order**: Bilan picks MM/DD only when the file can't be read as DD/MM (for example 12/25). When every date fits both orders, it assumes DD/MM and shows no warning. For a US-style file, check that the dates are right. Dates written as 2026-10-15 are never ambiguous.
+- **Date order**: Bilan picks MM/DD only when the file can't be read as DD/MM (for example 12/25). When every date fits both orders, it assumes DD/MM and a warning asks you to check the dates. Click **Dates look right**, or **Use MM/DD**. Dates written as 2026-10-15 are never ambiguous.
 - **Duplicates**: a row with the same date, amount and bank label as a transaction already imported into this account is marked **duplicate** and skipped. You can't force it in. Transactions you entered by hand are never treated as duplicates. Identical rows within the same file are all kept.
 - **Unreadable rows**: rows with an unrecognized date or amount, an amount out of range or an empty label are skipped. Bilan shows how many there were and up to 5 examples with their line number. If a whole column is wrong, the sidebar flags it: try another column mapping.
 
-Changing the mapping, the account or the decimal mark rebuilds the preview, and you lose the rows you unticked and the categories you picked.
+Changing the mapping, the account, the decimal mark or the date order rebuilds the preview, and you lose the rows you unticked and the categories you picked.
 
 Bilan doesn't remember the mapping between imports, but it recognizes the usual column names in French and English.
 
 ### Import a PDF statement
 
-Drop the PDF on the same page. Bilan reads statements from **LCL** and **Revolut** (French-language statements). For other banks it tries a generic reading of "date, label, amount" lines, so check the preview carefully. Scanned PDFs (images) can't be read.
+Drop the PDF on the same page. Bilan reads statements from **LCL** and **Revolut** (French-language statements). The preview shows the detected bank. For other banks it warns that the bank isn't recognized and tries a generic reading of "date, label, amount" lines, so check the preview carefully. Scanned PDFs (images) can't be read.
 
 A Revolut statement can contain several sections (current account, deposit). Each section gets its own **Target account** choice. Pick **Don't import** to skip one.
 
@@ -345,14 +345,14 @@ How lines count spending:
 
 Each line and the budget as a whole show a status:
 
-| Status          | Meaning                                 |
-| --------------- | --------------------------------------- |
-| **On track**    | under 80 % of the planned amount        |
-| **Near limit**  | 80 % or more, not reached yet           |
-| **Reached**     | exactly the planned amount, to the cent |
-| **Over budget** | more than the planned amount            |
+| Status             | Meaning                                 |
+| ------------------ | --------------------------------------- |
+| **On track**       | under 80 % of the planned amount        |
+| **Almost reached** | 80 % or more, not reached yet           |
+| **Reached**        | exactly the planned amount, to the cent |
+| **Over budget**    | more than the planned amount            |
 
-Tip: 99.6 % is shown as 100 % but is still **Near limit**. **Reached** needs the exact amount.
+Tip: **Reached** needs the exact amount, to the cent. Until then the percentage stays below 100 % (99.6 % is shown as 99 %), and any overspend shows at least 101 %.
 
 Click a budget to open its details: each line with "… left" or "Over by …", **See transactions** for category lines, and the list of transactions **Counted in this budget**.
 
@@ -375,7 +375,9 @@ A budget with a household scope belongs to the household:
 - Owners and admins create, edit, renew and delete it. Every member can view it, and can include or exclude transactions.
 - It counts transactions from the accounts shared with that household.
 
-A member can also **Include** a transaction from one of their private accounts. It then counts in the totals for everyone. Other members only see its date and amount, under the label "Another member's transaction"; the label, category and account stay hidden.
+A member can also **Include** a transaction from one of their private accounts. It then counts in the totals for everyone, and every member sees it in the budget in full: date, amount, label, category and account name. Only that transaction becomes visible: the private account and its other transactions stay hidden. If that member later leaves the household, the transaction still counts but shows as “Another member’s transaction”, without its details.
+
+You can only **Include** a transaction from one of your own accounts or from an account shared with this household: an account another household shares with you can't be included.
 
 ## Households
 
@@ -435,14 +437,14 @@ To hand over a household, an owner sets another member's role to **Owner**. A ho
 - **Write**: everything in Read, plus adding, editing, recategorizing, deleting, importing, linking and unlinking transactions.
 - Only you, the owner, can edit, share, archive or delete the account, and see its IBAN.
 
-Your private accounts and their transactions are never visible to other members. A household budget only counts the accounts shared with that household.
+Your private accounts and their transactions are never visible to other members, except a transaction you include in a household budget (see [Household budgets](#household-budgets)). A household budget only counts the accounts shared with that household.
 
 ### Leave or delete a household
 
 The **Danger zone** at the bottom of the household page offers:
 
 - **Leave**: you lose access to the household's shared accounts and budgets. The last owner can't leave.
-- **Delete household** (owners): removes the members, invitations and shares, along with the household's categories, rules and budgets. Transactions that used a household category become uncategorized. Accounts and transactions themselves are kept.
+- **Delete household** (owners): removes the members, invitations and shares, along with the household's categories, rules and budgets. Transactions that used a household category become uncategorized. Accounts and transactions themselves are kept. The confirmation counts what is affected.
 
 Tip: leaving a household doesn't stop sharing your accounts with it, and once you have left you can no longer change that from the app. Set each of your accounts to **None** for that household before you leave.
 
@@ -545,7 +547,7 @@ Go to **Data** in the sidebar.
 
 ### Delete your account
 
-Click **Delete my account**, type your **Password** (or your e-mail address if you sign in only through an identity provider), then click **Delete permanently**. Deletion is immediate and final:
+Click **Delete my account**, type your **Password** (or your e-mail address if you sign in only through an identity provider), then click **Delete permanently**. The confirmation lists what will go: how many accounts and transactions, the households handed over or deleted. Deletion is immediate and final:
 
 - your accounts and their transactions are deleted, including those shared with a household: other members lose them too;
 - for each household you own, another member becomes owner; a household with no other member is deleted;

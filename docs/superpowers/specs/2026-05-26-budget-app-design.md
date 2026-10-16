@@ -84,7 +84,8 @@ Decisions consolidated from the clarifying-questions phase.
   - Balanced groups (sum = 0): all transactions excluded from totals.
   - Unbalanced groups: the **primary** transaction (largest absolute amount) receives the net sum in its category; other members are neutralized.
 - **Budgets**: scoped to user OR group; can target categories AND/OR accounts; custom periods (week, month, quarter, year, custom); automatic matching by category/account + explicit `BudgetAssignment` (`INCLUDE` / `EXCLUDE`) overrides.
-- **Privacy on shared budgets**: full transparency (label, amount, date visible to group members) when a transaction is assigned to a shared budget — even if the source account is not shared.
+- **Privacy on shared budgets**: full transparency — every group member sees the date, amount, label, category and account name of each transaction counted in a group budget, including one a member assigned (`INCLUDE`) from a private account. Only that transaction becomes visible: the private account and its other transactions stay private. Visibility is re-checked when displayed: a counted transaction is shown in full only while its account is shared with the household or its owner is still a member (otherwise masked but still counted); a personal budget masks one from an account its owner can no longer read.
+- **Include scope on group budgets**: an `INCLUDE` into a group budget is allowed only for a transaction whose account the actor owns or that is shared with that same group — reading an account through another group is not enough. Personal budgets accept any account the actor can read.
 - **Currency**: EUR only.
 - **Mobile**: responsive mobile-first (Playwright includes mobile viewport tests).
 - **i18n**: fr/en at minimum, language preference per user, `next-intl`.
@@ -650,7 +651,7 @@ model ImportBatch {
 ```prisma
 model AuthProvider {
   id              String   @id @default(cuid())
-  type            String                              // credentials | oidc | google
+  type            String                              // oidc | google (password sign-in is the credentials_enabled setting)
   key             String   @unique                    // unique id for Better Auth
   displayName     String
   enabled         Boolean  @default(false)
@@ -669,7 +670,7 @@ model SmtpConfig {
   id           String   @id @default(cuid())          // singleton
   host         String
   port         Int
-  secure       Boolean  @default(true)
+  security     SmtpSecurity @default(STARTTLS)      // TLS (465) | STARTTLS (587, required) | NONE (local relay)
   username     String
   passwordEnc  String                                  // ENCRYPTED
   fromAddress  String
@@ -743,15 +744,17 @@ If `User.count() === 0`, all routes (except `/setup`) redirect to `/setup`. Wiza
 ### 5.2 Login (multi-provider)
 
 Available providers on `/login`:
-- **Credentials** (email + password) — if enabled in settings.
+- **Credentials** (email + password) — if the `credentials_enabled` app setting is on (not an `AuthProvider` row). Turning it off is refused while a user would be left with no other usable sign-in method (#255), like deleting a provider.
 - **OIDC button(s)** — generated dynamically from `AuthProvider` table.
 - **Google** — if enabled.
 
+The "Create an account" link is only shown when `/register` offers a way to sign up (#255).
+
 Flow:
 - Credentials: form → Better Auth credentials provider → argon2id verify → if 2FA enabled, redirect to `/login/2fa` → create DB-backed session + httpOnly cookie → redirect to `/{locale}/dashboard`.
-- OIDC: Better Auth redirects to IdP → callback `/api/auth/callback/oidc-<key>` → session created → `/dashboard`.
+- OIDC: Better Auth redirects to IdP → callback `/api/auth/oauth2/callback/<key>` (generic OAuth plugin; Google: `/api/auth/callback/google`) → session created → `/dashboard`.
 
-Rate limit: 5 attempts / 15 minutes / IP → lockout. Failed attempts logged to `AuditLog`. Success also logged with IP + user-agent.
+Rate limit: see §6.7 (per IP + account, and per account). Failed attempts logged to `AuditLog`. Success also logged with IP + user-agent.
 
 Magic-link password reset: `/reset` → SMTP email → `/reset/[token]` → new password form → invalidates all tokens + active sessions.
 
@@ -759,7 +762,7 @@ Magic-link password reset: `/reset` → SMTP email → `/reset/[token]` → new 
 
 - `OPEN`: `/register` accessible to anyone.
 - `INVITE_ONLY`: `/register` requires `?invitation=<token>` (group) or `?adminToken=<token>` (admin signup token). Both validated server-side. Without token: shown a message + login link.
-- `DISABLED`: `/register` returns 404. Admin creates users from `/admin/users` (option to send magic-link `/setup-account/[token]` for the user to set their own password).
+- `DISABLED`: `/register` shows "Registration is closed on this instance." (also shown when password sign-in is off and no SSO provider allows sign-up). Admin creates users from `/admin/users`: the user is mailed a "choose your password" link (`/reset/<token>`, setup flavour of the reset flow, 1 h). Without SMTP no link is sent, and the admin is told so (#255).
 
 ### 5.4 Account creation & sharing
 
@@ -815,6 +818,8 @@ Creation (`/budgets/new`):
 
 Explicit assignment: from any transaction, "Assign to a budget" menu → choose budget (mine or my groups') → mode INCLUDE/EXCLUDE → creates `BudgetAssignment` (unique on `(budgetId, transactionId)`).
 
+The budget detail lists the counted transactions in full to everyone who can read the budget, including a private transaction included in a group budget (§2.2).
+
 ### 5.8 Transaction links
 
 **Manual mode**:
@@ -833,12 +838,14 @@ UI `/transactions/suggestions`: list pairs with Link / Ignore buttons. Ignore wr
 
 ### 5.9 Admin settings with hot reload
 
-`/admin/auth-providers` (permission `admin.settings.write`):
+`/admin/auth-providers` (permission `admin.security.write`, super admins only):
 1. `POST` (Server Action) → `settings.service.authProviders.update({ id, ...fields })` → encrypt clientSecret → invalidate cache → audit log.
 2. Better Auth handler reads config via cached wrapper (`cachedAuthProviders()`, 60s TTL).
 3. Update invalidates cache → next request rebuilds providers → effect immediate, no restart.
 
-Same pattern for SMTP, app settings, registration mode.
+Provider types are `oidc` and `google` only; a Google row stores just the client ID and secret.
+
+Same pattern for SMTP (`admin.security.write`; encryption mode `STARTTLS` (default) maps to nodemailer `requireTLS`, so a stripped STARTTLS never sends credentials in clear, `TLS` to implicit TLS, `NONE` to `ignoreTLS` for a local relay — #255) and app settings (`admin.settings.write`; the security keys — registration mode, password sign-in, password length, admin 2FA — also need `admin.security.write`).
 
 ### 5.10 RGPD: export & deletion
 
@@ -922,8 +929,8 @@ MVP: in-memory store (`@upstash/ratelimit` with memory adapter or custom).
 |---|---|---|
 | `/login` | 5 / 15min | IP + account (#243); wrong passwords only, the 2FA step shares it |
 | `/login` | 30 / 1h | Account (#243): caps guessing from rotating IPs; wrong passwords only |
-| `/register` | 3 / 1h | IP |
-| `/reset` | 3 / 1h | IP |
+| `/register` | 3 / 1h | E-mail address submitted (IP keys need a trusted proxy header) |
+| `/reset` | 3 / 1h | E-mail address submitted |
 | `/api/import/csv` | 10 / 1h | User |
 | `/api/import/pdf` | 10 / 1h | User |
 | API generic | 100 / 1min | User |
@@ -1064,6 +1071,7 @@ DATABASE_TEST_URL=mysql://app:app_password@localhost:3307/budget_test
 AUTH_SECRET=                  # openssl rand -base64 32
 DATA_ENCRYPTION_KEY=          # openssl rand -base64 32
 SEARCH_TOKEN_KEY=             # openssl rand -base64 32
+CRON_SECRET=                  # openssl rand -base64 32 (unset: the /api/cron routes 404)
 
 LOG_LEVEL=info
 DISABLE_RATE_LIMIT=false      # for E2E only
@@ -1115,13 +1123,14 @@ After this, `npm run dev` works.
 
 Settings service has a 60-second in-process cache. When an admin updates a setting via `/admin/*`, `cache.delete(key)` + `invalidateAuthCache()` (when relevant) are called. Next request rebuilds the auth handler with the new config. No restart needed.
 
-### 8.9 Production deployment (post-MVP)
+### 8.9 Production deployment
 
-Documented for the future:
-- `docker-compose.prod.yml` with prod target + Caddy reverse proxy (TLS, HSTS, rate limit).
-- Secrets via Docker secrets or env vars from the host.
-- Health check endpoint `/api/health`.
-- Encrypted DB backups via `mariadb-dump | age` cron, 30-day retention.
+As shipped (operator guide: `docs/self-hosting.md`):
+- `docker-compose.prod.yml` runs the published `ghcr.io/navino16/bilan` image (`prod` target) with three services: `mariadb` (at-rest encryption, keyring bind-mounted), `app` (runs `prisma migrate deploy` then the standalone server) and `cron` (same image, calls the token-guarded `/api/cron/*` routes; it exits without `CRON_SECRET`).
+- No bundled reverse proxy: the operator puts their own TLS proxy (Caddy, Traefik, nginx…) in front of the app port. The app itself sends HSTS and the other security headers; rate limiting is in-app.
+- Secrets come from env files next to the compose file (`app.env`, `db.env`), not Docker secrets.
+- No dedicated health endpoint: the `app` healthcheck fetches `/fr/login`, which needs the database (a fresh install redirects it to `/fr/setup`).
+- Backups are a documented operator script (`mariadb-dump` inside the `mariadb` container, gzip, `openssl enc` with a passphrase file, host cron, 30-day retention). `npm run db:backup-dev` only targets the development database.
 
 ---
 

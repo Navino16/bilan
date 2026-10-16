@@ -34,6 +34,9 @@ test.describe("register and delete an account", () => {
       await page.getByRole("button", { name: "Supprimer mon compte" }).click();
       await expect(page.getByRole("dialog")).toBeVisible({ timeout: 1_000 });
     }).toPass({ timeout: 20_000 });
+    await expect(page.getByRole("dialog").locator('[data-slot="delete-impact"]')).toContainText(
+      "Vos catégories, règles et budgets personnels",
+    );
     await page.getByRole("dialog").getByLabel("Mot de passe").fill(password);
     await page
       .getByRole("dialog")

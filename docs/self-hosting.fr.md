@@ -72,7 +72,9 @@ Toutes les variables de `app.env` et `db.env` sont obligatoires, sauf `TRUSTED_I
 | `db.env`  | `MARIADB_ROOT_PASSWORD`, `MARIADB_PASSWORD`                             | `openssl rand -hex 24` pour chacun (en hexadécimal, car il entre dans `DATABASE_URL`)  |
 
 `DATA_ENCRYPTION_KEY` et `SEARCH_TOKEN_KEY` doivent faire 32 octets une fois décodées, sinon
-l'app refuse de démarrer. Avec deux fichiers séparés, le mot de passe root de MariaDB n'atteint
+l'app refuse de démarrer. L'app démarre sans `CRON_SECRET`, mais ses routes cron répondent alors
+`404` et le service `cron` s'arrête : les [tâches planifiées](#tâches-planifiées) ne tournent
+jamais. Avec deux fichiers séparés, le mot de passe root de MariaDB n'atteint
 jamais les conteneurs `app` et `cron`.
 
 Facultatif, depuis le shell ou un fichier `.env` placé à côté du fichier compose :
@@ -192,10 +194,13 @@ Ouvrez `APP_URL`. Sur une installation neuve (aucun utilisateur), toutes les pag
 vers l'assistant :
 
 1. **Compte administrateur** : crée le premier compte, avec le rôle de super administrateur.
-2. **E-mail (SMTP)** : facultatif, configurable plus tard dans l'administration.
-3. **Connexion externe** : fournisseur OIDC facultatif. L'assistant affiche l'URL de
-   redirection à déclarer chez votre fournisseur d'identité.
-4. **Inscriptions** : _Sur invitation_ (par défaut, recommandé), _Ouvertes_ ou _Désactivées_
+2. **E-mail (SMTP)** : facultatif, configurable plus tard dans l'administration. Le chiffrement
+   est STARTTLS (port 587) par défaut, qui refuse d'envoyer si le serveur ne le prend pas en
+   charge ; _TLS implicite_ (port 465) et _Aucun_ (relais local uniquement) sont les alternatives.
+3. **Connexion externe** : fournisseur OIDC facultatif (Google s'ajoute ensuite, depuis
+   l'administration). L'assistant affiche l'URL de redirection à déclarer chez votre
+   fournisseur d'identité.
+4. **Mode d'inscription** : _Sur invitation_ (par défaut, recommandé), _Ouvert_ ou _Désactivé_
    (seul un administrateur crée les comptes).
 
 L'assistant répond 404 dès qu'un utilisateur existe. Tout le reste (SMTP, fournisseurs SSO, mode

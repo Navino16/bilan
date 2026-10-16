@@ -43,6 +43,11 @@ Le [guide d'auto-hébergement](docs/self-hosting.fr.md) détaille les fichiers �
 commandes à lancer. Une installation neuve s'ouvre sur un assistant qui crée le premier compte
 administrateur.
 
+Sauvegardez `app.env` avec la base : `DATA_ENCRYPTION_KEY` chiffre les libellés, notes, IBAN et
+secrets enregistrés, `AUTH_SECRET` chiffre les secrets de double authentification et les codes
+de secours, et `SEARCH_TOKEN_KEY` construit l'index de recherche. Sans eux, une base restaurée
+est illisible. Voir [Sauvegarde et restauration](docs/self-hosting.fr.md#sauvegarde-et-restauration).
+
 ## Développement
 
 Prérequis : Node 24, Docker.

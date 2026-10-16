@@ -5,6 +5,7 @@ import { encrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
 import { logEvent } from "@/server/services/audit";
 import { sendWithConfig, type Mail } from "@/server/services/mail/mailer";
+import { DEFAULT_SMTP_SECURITY, SMTP_SECURITY_MODES } from "@/lib/smtp-security";
 
 // A self-hosted instance has a single outgoing SMTP config, so it's stored as a
 // singleton row under a fixed id.
@@ -13,7 +14,7 @@ export const SMTP_SINGLETON_ID = "default";
 export const smtpSchema = z.object({
   host: z.string().min(1),
   port: z.coerce.number().int().min(1).max(65535),
-  secure: z.boolean().default(true),
+  security: z.enum(SMTP_SECURITY_MODES).default(DEFAULT_SMTP_SECURITY),
   username: z.string().min(1),
   // Empty keeps the stored password, but only for the same server and account (upsertSmtp).
   password: z.string(),
@@ -48,7 +49,7 @@ export async function upsertSmtp(
       existing.host === parsed.host &&
       existing.port === parsed.port &&
       existing.username === parsed.username &&
-      existing.secure === parsed.secure;
+      existing.security === parsed.security;
     if (!sameServer) throw new SmtpPasswordRequiredError();
     passwordEnc = existing.passwordEnc;
   }
@@ -56,7 +57,7 @@ export async function upsertSmtp(
   const data = {
     host: parsed.host,
     port: parsed.port,
-    secure: parsed.secure,
+    security: parsed.security,
     username: parsed.username,
     passwordEnc,
     fromAddress: parsed.fromAddress,
