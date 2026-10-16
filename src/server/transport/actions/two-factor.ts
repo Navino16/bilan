@@ -8,10 +8,17 @@ import { isBadPassword } from "@/server/services/users/password";
 import {
   disableTwoFactor,
   enableTwoFactor,
+  regenerateBackupCodes,
   type FailedAction,
   type TwoFactorEnrolment,
   type TwoFactorError,
 } from "@/server/services/users/two-factor";
+import {
+  revokeAllTrustedDevices,
+  revokeTrustedDevice,
+  type RevokeTrustedDeviceError,
+} from "@/server/services/users/trusted-devices";
+import { revokeTrustedDeviceSchema } from "./auth-schemas";
 
 export type TwoFactorActionState<T> =
   | { ok: true; data: T }
@@ -55,4 +62,34 @@ export async function disableTwoFactorAction(
   return withPasswordLimit(user.id, "auth.2fa.disable_failed", () =>
     disableTwoFactor(headers, user.id, password, code),
   );
+}
+
+export async function regenerateBackupCodesAction(
+  password: unknown,
+  code: unknown,
+): Promise<TwoFactorActionState<{ backupCodes: string[] }>> {
+  const user = await requireSession();
+  if (typeof password !== "string" || !password) return { ok: false, error: "BAD_PASSWORD" };
+  if (typeof code !== "string" || !code.trim()) return { ok: false, error: "BAD_CODE" };
+  const headers = await authHeaders();
+  return withPasswordLimit(user.id, "auth.2fa.backup_codes_failed", () =>
+    regenerateBackupCodes(headers, user.id, password, code),
+  );
+}
+
+export type TrustedDeviceActionState =
+  | { ok: true }
+  | { ok: false; error: RevokeTrustedDeviceError | "INVALID" | "FAILED" };
+
+export async function revokeTrustedDeviceAction(id: unknown): Promise<TrustedDeviceActionState> {
+  const user = await requireSession();
+  const parsed = revokeTrustedDeviceSchema.safeParse(id);
+  if (!parsed.success) return { ok: false, error: "INVALID" };
+  return revokeTrustedDevice(user.id, parsed.data);
+}
+
+export async function revokeAllTrustedDevicesAction(): Promise<TrustedDeviceActionState> {
+  const user = await requireSession();
+  await revokeAllTrustedDevices(user.id);
+  return { ok: true };
 }

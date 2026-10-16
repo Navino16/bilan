@@ -15,7 +15,9 @@ import { changePasswordAction } from "@/server/transport/actions/auth";
 import {
   disableTwoFactorAction,
   enableTwoFactorAction,
+  regenerateBackupCodesAction,
 } from "@/server/transport/actions/two-factor";
+import { countBackupCodes } from "@/server/services/users/two-factor";
 
 const email = `tfa-actions+${Date.now()}@bilan.local`;
 const password = "two-factor-actions-password";
@@ -179,6 +181,71 @@ describe("two-factor Server Actions (#200)", () => {
     });
     expect(await audits("auth.2fa.enable_failed", "rate_limit")).toBe(1);
     expect(await audits("auth.2fa.disable_failed", "rate_limit")).toBe(1);
+  });
+});
+
+describe("backup code regeneration (#256)", () => {
+  const storedCodes = async () => {
+    const row = await db.twoFactor.findFirstOrThrow({ where: { userId } });
+    const { secretConfig } = await (await getAuth()).$context;
+    return JSON.parse(await symmetricDecrypt({ key: secretConfig, data: row.backupCodes }));
+  };
+
+  it("refuses a wrong password or code and keeps the current codes", async () => {
+    const { secret, backupCodes } = await enrolled();
+    expect(await regenerateBackupCodesAction("wrong-password", totpNow(secret))).toEqual({
+      ok: false,
+      error: "BAD_PASSWORD",
+    });
+    expect(await regenerateBackupCodesAction(password, "abcde-fghij")).toEqual({
+      ok: false,
+      error: "BAD_CODE",
+    });
+    expect(await audits("auth.2fa.backup_codes_failed", "bad_password")).toBe(1);
+    expect(await audits("auth.2fa.backup_codes_failed", "bad_code")).toBe(1);
+    expect(await storedCodes()).toEqual(backupCodes);
+  });
+
+  it("replaces every code after a TOTP re-authentication, and audits it", async () => {
+    const { secret, backupCodes } = await enrolled();
+    const res = await regenerateBackupCodesAction(password, totpNow(secret));
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.data.backupCodes).toHaveLength(backupCodes.length);
+    expect(res.data.backupCodes.some((c) => backupCodes.includes(c))).toBe(false);
+    expect(await storedCodes()).toEqual(res.data.backupCodes);
+    expect(await countBackupCodes(userId)).toBe(backupCodes.length);
+    expect(
+      await db.auditLog.count({ where: { userId, action: "auth.2fa.backup_codes_regenerated" } }),
+    ).toBe(1);
+    expect(await twoFactorOn()).toBe(true);
+  });
+
+  it("accepts a backup code, which the old set then no longer offers", async () => {
+    const { backupCodes } = await enrolled();
+    const res = await regenerateBackupCodesAction(password, backupCodes[0]);
+    expect(res.ok).toBe(true);
+    expect(await regenerateBackupCodesAction(password, backupCodes[1])).toEqual({
+      ok: false,
+      error: "BAD_CODE",
+    });
+  });
+
+  it("has nothing to regenerate without an enabled 2FA", async () => {
+    expect(await regenerateBackupCodesAction(password, "123456")).toEqual({
+      ok: false,
+      error: "NOT_ENABLED",
+    });
+    expect(await countBackupCodes(userId)).toBeNull();
+  });
+
+  it("shares the per-user password limiter", async () => {
+    await enrolled();
+    for (let i = 0; i < 5; i++) changePasswordLimiter.consume(userId);
+    expect(await regenerateBackupCodesAction(password, "123456")).toMatchObject({
+      error: "RATE_LIMITED",
+    });
+    expect(await audits("auth.2fa.backup_codes_failed", "rate_limit")).toBe(1);
   });
 });
 

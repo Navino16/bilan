@@ -910,6 +910,12 @@ Sessions are listed server-side, without their tokens: Better Auth's `/list-sess
 
 2FA: enrolling again over an active 2FA is refused; disabling it takes the password and a current TOTP or backup code (#243).
 
+Backup codes are regenerated from Settings > Security with the same re-authentication as disabling (password + current TOTP or backup code); the new set replaces the old one and is shown once (`auth.2fa.backup_codes_regenerated`). The page shows how many unused codes remain (#256).
+
+Trusted devices are Better Auth `trust-device-*` verification rows (no device data; replaced at each password sign-in they skip the code for). Settings > Security lists them with the browser and system of the session created alongside, and forgets one or all through Server Actions (`auth.trusted_device.revoked`, `auth.trusted_device.revoked_all`) (#256).
+
+Bilan's 2FA only guards password sign-ins: SSO and passkey sign-ins never ask for it. An account without a password (SSO only, possibly with passkeys) gets no 2FA controls, and the mandatory admin 2FA setting doesn't apply to it: the IdP's MFA is authoritative. While password sign-in is off instance-wide (`credentials_enabled = false`), a dormant password guards no sign-in: every account is exempt the same way, and the 2FA card says so. An admin with a password stays subject to it, and the Security page explains the redirect with a banner while their admin rights are suspended (#256).
+
 ### 6.5 CSRF
 
 Handled natively by Better Auth + Next.js Server Actions (origin check + token). No additional config required.

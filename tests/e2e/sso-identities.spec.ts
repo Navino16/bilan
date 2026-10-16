@@ -8,6 +8,7 @@ const SERVER_HOST = process.env.E2E_IDP_HOST ?? "127.0.0.1";
 const MEMBER_EMAIL = "member@e2e.local";
 
 let idp: Server;
+let idpUser = { sub: "e2e-member-sub", email: MEMBER_EMAIL };
 let port = 0;
 const serverBase = () => `http://${SERVER_HOST}:${port}`;
 
@@ -37,14 +38,14 @@ function stubIdp(req: IncomingMessage, res: ServerResponse) {
     case "/token":
       return json({ access_token: "e2e-at", token_type: "Bearer", expires_in: 3600 });
     case "/userinfo":
-      return json({ sub: "e2e-member-sub", email: MEMBER_EMAIL, email_verified: true, name: "M" });
+      return json({ ...idpUser, email_verified: true, name: "M" });
     default:
       res.writeHead(404);
       res.end();
   }
 }
 
-async function addProvider(page: Page, key: string, name: string) {
+async function addProvider(page: Page, key: string, name: string, allowSignUp = false) {
   const addForm = page.locator("form:has(#ap-new-key)");
   await page.goto("/fr/admin/auth-providers", { waitUntil: "domcontentloaded", timeout: 90_000 });
   await expect(async () => {
@@ -54,6 +55,7 @@ async function addProvider(page: Page, key: string, name: string) {
     await addForm.locator("#ap-new-issuer").fill(serverBase());
     await addForm.locator("#ap-new-clientId").fill("e2e-client");
     await addForm.locator("#ap-new-clientSecret").fill("e2e-secret");
+    await addForm.locator("#ap-new-allowSignUp").setChecked(allowSignUp);
     await addForm.getByRole("button", { name: "Ajouter" }).click();
     await expect(page.locator(`form:has(#ap-${key}-key)`)).toBeVisible({ timeout: 2000 });
   }).toPass({ timeout: 30_000 });
@@ -65,6 +67,23 @@ async function deleteProvider(page: Page, key: string) {
   await editForm.getByRole("button", { name: "Supprimer" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Supprimer" }).click();
   await expect(editForm).toHaveCount(0);
+}
+
+async function deleteUser(page: Page, email: string): Promise<void> {
+  await page.goto(`/fr/admin/users?q=${encodeURIComponent(email)}`, {
+    waitUntil: "domcontentloaded",
+  });
+  const row = page.locator('[data-slot="admin-user-row"]', { hasText: email });
+  if ((await row.count()) === 0) return;
+  const dialog = page.locator('[data-slot="confirm-dialog"]');
+  await expect(async () => {
+    await row.getByRole("button", { name: /actions pour/i }).click();
+    await page.getByRole("menuitem", { name: /supprimer définitivement/i }).click();
+    await expect(dialog).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 20_000 });
+  await dialog.getByRole("textbox").fill(email);
+  await dialog.getByRole("button", { name: /supprimer définitivement/i }).click();
+  await expect(dialog).toBeHidden();
 }
 
 test.describe("SSO identities (#204)", () => {
@@ -133,6 +152,42 @@ test.describe("SSO identities (#204)", () => {
     } finally {
       await anonContext.close();
       await memberContext.close();
+      await deleteProvider(adminPage, key);
+      await admin.close();
+    }
+  });
+
+  test("an SSO-only account is told its IdP handles two-factor authentication (#256)", async ({
+    browser,
+  }) => {
+    test.setTimeout(120_000);
+    const stamp = Date.now();
+    const key = `e2e-idp-sso-${stamp}`;
+    const name = `E2E SSO ${stamp}`;
+    idpUser = { sub: `e2e-sso-only-${stamp}`, email: `sso-only-${stamp}@e2e.local` };
+    const admin = await browser.newContext({ storageState: "tests/e2e/.auth/superadmin.json" });
+    const anonContext = await browser.newContext();
+    const adminPage = await admin.newPage();
+    const anon = await anonContext.newPage();
+    await addProvider(adminPage, key, name, true);
+    try {
+      await expect(async () => {
+        await anon.goto("/fr/login", { waitUntil: "networkidle", timeout: 30_000 });
+        await anon.getByRole("button", { name: `Continuer avec ${name}` }).click({ timeout: 2000 });
+        await expect(anon).not.toHaveURL(/\/login/, { timeout: 5000 });
+      }).toPass({ timeout: 30_000 });
+
+      await anon.goto("/fr/settings/security", { waitUntil: "domcontentloaded", timeout: 90_000 });
+      await expect(anon.locator('[data-slot="two-factor-sso-only"]')).toContainText(
+        "Votre compte n’a pas de mot de passe",
+      );
+      await expect(anon.locator("#tfa-pw-enable")).toHaveCount(0);
+    } finally {
+      const ssoEmail = idpUser.email;
+      idpUser = { sub: "e2e-member-sub", email: MEMBER_EMAIL };
+      await anonContext.close();
+      // The provider delete is refused while it is this user's only sign-in method.
+      await deleteUser(adminPage, ssoEmail);
       await deleteProvider(adminPage, key);
       await admin.close();
     }

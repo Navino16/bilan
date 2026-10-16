@@ -45,6 +45,35 @@ async function signInWithPassword(page: Page, email: string, password: string) {
   });
 }
 
+async function register(page: Page, email: string, password: string) {
+  await page.goto("/fr/register");
+  await page.fill('input[name="name"]', "E2E Two Factor");
+  await page.fill('input[name="email"]', email);
+  await page.fill('input[name="password"]', password);
+  await page.fill('input[name="confirmPassword"]', password);
+  await page.click('button[type="submit"]');
+  await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
+}
+
+async function enrol(page: Page, password: string) {
+  await page.goto("/fr/settings/security", { waitUntil: "domcontentloaded", timeout: 90_000 });
+  const card = page.locator('[data-slot="two-factor-controls"]');
+  await card.locator("#tfa-pw-enable").fill(password);
+  await card.locator("#tfa-pw-enable").press("Enter");
+  await expect(card.getByRole("img", { name: /QR code/ })).toBeVisible({ timeout: 15_000 });
+  const secret = (await card.locator("code").textContent())!.replace(/\s/g, "");
+  const backupCodes = (await card.getByRole("list").locator("li").allTextContents()).map((c) =>
+    c.trim(),
+  );
+  const enrolCode = totp(secret);
+  await card.locator("#tfa-code").fill(enrolCode);
+  await submitCode(page, "Vérifier et activer");
+  await expect(page.getByText("La double authentification est activée")).toBeVisible({
+    timeout: 15_000,
+  });
+  return { card, secret, backupCodes, enrolCode };
+}
+
 test.describe("two-factor sign-in", () => {
   test.skip(
     ({ browserName }) => browserName === "webkit",
@@ -59,30 +88,9 @@ test.describe("two-factor sign-in", () => {
     const email = `twofactor-${Date.now()}@e2e.local`;
     const password = "e2e-twofactor-pw-123";
 
-    await page.goto("/fr/register");
-    await page.fill('input[name="name"]', "E2E Two Factor");
-    await page.fill('input[name="email"]', email);
-    await page.fill('input[name="password"]', password);
-    await page.fill('input[name="confirmPassword"]', password);
-    await page.click('button[type="submit"]');
-    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
-
-    await page.goto("/fr/settings/security", { waitUntil: "domcontentloaded", timeout: 90_000 });
-    const card = page.locator('[data-slot="two-factor-controls"]');
-    await card.locator("#tfa-pw-enable").fill(password);
-    await card.locator("#tfa-pw-enable").press("Enter");
-    await expect(card.getByRole("img", { name: /QR code/ })).toBeVisible({ timeout: 15_000 });
-    const secret = (await card.locator("code").textContent())!.replace(/\s/g, "");
-    const backupCodes = card.getByRole("list").locator("li");
-    const backupCode = (await backupCodes.nth(0).textContent())!.trim();
-    const disableCode = (await backupCodes.nth(1).textContent())!.trim();
-
-    const enrolCode = totp(secret);
-    await card.locator("#tfa-code").fill(enrolCode);
-    await submitCode(page, "Vérifier et activer");
-    await expect(page.getByText("La double authentification est activée")).toBeVisible({
-      timeout: 15_000,
-    });
+    await register(page, email, password);
+    const { card, secret, backupCodes, enrolCode } = await enrol(page, password);
+    const [backupCode, disableCode] = backupCodes;
 
     // A password alone must not open a session.
     await context.clearCookies();
@@ -139,5 +147,57 @@ test.describe("two-factor sign-in", () => {
         timeout: 15_000,
       },
     );
+  });
+
+  test("regenerates the backup codes and forgets a trusted device (#256)", async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(240_000);
+    const email = `twofactor-self-${Date.now()}@e2e.local`;
+    const password = "e2e-twofactor-pw-456";
+    await register(page, email, password);
+    const { secret, backupCodes, enrolCode } = await enrol(page, password);
+    const codesBlock = page.locator('[data-slot="backup-codes-controls"]');
+    await expect(codesBlock).toContainText("10 codes de secours restants.");
+
+    await context.clearCookies();
+    await signInWithPassword(page, email, password);
+    await page.getByLabel("Faire confiance à cet appareil").check();
+    await page.getByLabel("Code de vérification").fill(await nextTotp(page, secret, enrolCode));
+    await submitCode(page);
+    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
+    await page.goto("/fr/settings/security", { waitUntil: "domcontentloaded", timeout: 90_000 });
+    const devices = page.locator('[data-slot="trusted-devices-controls"]');
+    await expect(devices.locator("li")).toHaveCount(1);
+    await expect(devices.locator("li")).toContainText("Cet appareil");
+
+    await expect(async () => {
+      await codesBlock.getByRole("button", { name: "Générer de nouveaux codes" }).click();
+      await expect(codesBlock.locator("#tfa-pw-codes")).toBeVisible({ timeout: 1_000 });
+    }).toPass({ timeout: 20_000 });
+    await codesBlock.locator("#tfa-pw-codes").fill(password);
+    await codesBlock.getByLabel("Code d’authentification").fill(backupCodes[0]);
+    await codesBlock.getByRole("button", { name: "Générer de nouveaux codes" }).click();
+    const newCodes = codesBlock.getByRole("list", { name: "Codes de secours" }).locator("li");
+    await expect(newCodes).toHaveCount(10, { timeout: 15_000 });
+    const newCode = (await newCodes.nth(0).textContent())!.trim();
+    expect(backupCodes).not.toContain(newCode);
+    await expect(codesBlock.getByRole("button", { name: "Télécharger" })).toBeVisible();
+    await codesBlock.getByRole("button", { name: "Terminé" }).click();
+    await expect(codesBlock).toContainText("10 codes de secours restants.");
+
+    await devices.getByRole("button", { name: /^Oublier / }).click();
+    await expect(devices.getByText("Aucun appareil de confiance.")).toBeVisible();
+
+    await context.clearCookies({ name: /session_token/ });
+    await signInWithPassword(page, email, password);
+    await page.getByRole("button", { name: "Utiliser un code de secours" }).click();
+    await page.getByLabel("Code de secours").fill(backupCodes[1]);
+    await submitCode(page);
+    await expect(page.getByText("Code invalide. Réessayez.")).toBeVisible();
+    await page.getByLabel("Code de secours").fill(newCode);
+    await submitCode(page);
+    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
   });
 });

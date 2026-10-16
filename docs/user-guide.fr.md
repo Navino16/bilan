@@ -505,7 +505,15 @@ Pour l’activer :
 
 Pour la désactiver, saisissez votre **Mot de passe** et un **Code d’authentification** (de l’application, ou un code de secours), puis cliquez sur **Désactiver**. Les deux sont obligatoires.
 
-Votre administrateur peut rendre la double authentification obligatoire pour les administrateurs. Tant qu’un administrateur ne l’a pas activée, les pages d’administration le renvoient vers cette page.
+Tant qu’elle est activée, la carte indique combien de **Codes de secours** il vous reste. Pour en obtenir de nouveaux, cliquez sur **Générer de nouveaux codes**, saisissez votre **Mot de passe** et un **Code d’authentification**, puis cliquez de nouveau sur **Générer de nouveaux codes**. Vos anciens codes cessent aussitôt de fonctionner. Gardez les nouveaux avec **Copier** ou **Télécharger** : ils ne sont affichés qu’à ce moment-là.
+
+Si votre compte n’a pas de mot de passe (vous vous connectez par un fournisseur d’identité ou avec une clé d’accès), la carte n’a rien à configurer : la double authentification de Bilan ne protège que les connexions par mot de passe, et c’est celle de votre fournisseur d’identité qui s’applique.
+
+Votre administrateur peut rendre la double authentification obligatoire pour les administrateurs qui ont un mot de passe. Tant qu’un tel administrateur ne l’a pas activée, les pages d’administration le renvoient vers cette page, où un bandeau en explique la raison.
+
+### Appareils de confiance
+
+Quand la double authentification est activée, **Appareils de confiance** liste les navigateurs où vous avez coché **Faire confiance à cet appareil** : navigateur et système quand ils sont connus, dernière utilisation et date d’expiration. Cliquez sur **Oublier** à côté d’un appareil, ou sur **Tout oublier**. Un appareil oublié redemande le code à sa prochaine connexion par mot de passe.
 
 ### Clés d’accès
 
@@ -517,7 +525,7 @@ Si votre connexion date de plus de 24 heures, Bilan vous demande de vous reconne
 
 **Appareils connectés** liste les endroits où vous êtes connecté : navigateur, système, adresse IP et dernière activité. Cliquez sur **Déconnecter** à côté d’un appareil que vous ne reconnaissez pas, ou sur **Tout déconnecter** pour tous les autres appareils.
 
-Les appareils de confiance (ceux qui ne demandent pas le code de double authentification) sont oubliés quand vous cliquez sur **Tout déconnecter**, changez de mot de passe avec **Déconnecter mes autres appareils** activé, réinitialisez votre mot de passe, ou activez ou désactivez la double authentification.
+Les appareils de confiance sont aussi oubliés quand vous cliquez sur **Tout déconnecter**, changez de mot de passe avec **Déconnecter mes autres appareils** activé, réinitialisez votre mot de passe, ou activez ou désactivez la double authentification.
 
 ### Identités connectées
 

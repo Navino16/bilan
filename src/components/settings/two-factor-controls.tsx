@@ -13,6 +13,7 @@ import {
   enableTwoFactorAction,
 } from "@/server/transport/actions/two-factor";
 import { TotpQr } from "./totp-qr";
+import { BackupCodeList, BackupCodesControls, useTwoFactorErrorText } from "./backup-codes";
 
 function secretFromUri(uri: string): string {
   try {
@@ -23,9 +24,16 @@ function secretFromUri(uri: string): string {
   }
 }
 
-export function TwoFactorControls({ enabled }: { enabled: boolean }) {
+export function TwoFactorControls({
+  enabled,
+  backupCodesLeft,
+}: {
+  enabled: boolean;
+  backupCodesLeft: number | null;
+}) {
   const t = useTranslations("settings.security");
   const router = useRouter();
+  const failureText = useTwoFactorErrorText();
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -80,49 +88,53 @@ export function TwoFactorControls({ enabled }: { enabled: boolean }) {
       router.refresh();
     });
 
-  const errorText =
-    error === "RATE_LIMITED" && retryAfter
-      ? t("error.rateLimitedFor", { minutes: Math.ceil(retryAfter / 60) })
-      : error && t(`error.${error}`);
+  const errorText = failureText(error ? { error, retryAfter } : null);
 
-  // Enabled → offer disable.
   if (enabled) {
     return (
-      <form onSubmit={disable} className="space-y-4" data-slot="two-factor-controls">
+      <div className="space-y-6" data-slot="two-factor-controls">
         <p className="text-sm">{t("statusEnabled")}</p>
-        <div className="space-y-2 sm:w-1/2">
-          <Label htmlFor="tfa-pw-disable">{t("password")}</Label>
-          <Input
-            id="tfa-pw-disable"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-          />
-        </div>
-        <div className="space-y-2 sm:w-1/2">
-          <Label htmlFor="tfa-code-disable">{t("disableCode")}</Label>
-          <Input
-            id="tfa-code-disable"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            autoComplete="one-time-code"
-            aria-describedby="tfa-code-disable-hint"
-            className="font-mono"
-          />
-          <p id="tfa-code-disable-hint" className="text-muted-foreground text-xs">
-            {t("disableCodeHint")}
-          </p>
-        </div>
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{errorText}</AlertDescription>
-          </Alert>
-        )}
-        <Button type="submit" variant="destructive" disabled={pending || !password || !code.trim()}>
-          {pending ? t("working") : t("disable")}
-        </Button>
-      </form>
+        <BackupCodesControls remaining={backupCodesLeft} />
+        <form onSubmit={disable} className="space-y-4 border-t pt-6">
+          <h3 className="text-sm font-medium">{t("disableTitle")}</h3>
+          <div className="space-y-2 sm:w-1/2">
+            <Label htmlFor="tfa-pw-disable">{t("password")}</Label>
+            <Input
+              id="tfa-pw-disable"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+            />
+          </div>
+          <div className="space-y-2 sm:w-1/2">
+            <Label htmlFor="tfa-code-disable">{t("disableCode")}</Label>
+            <Input
+              id="tfa-code-disable"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              autoComplete="one-time-code"
+              aria-describedby="tfa-code-disable-hint"
+              className="font-mono"
+            />
+            <p id="tfa-code-disable-hint" className="text-muted-foreground text-xs">
+              {t("disableCodeHint")}
+            </p>
+          </div>
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{errorText}</AlertDescription>
+            </Alert>
+          )}
+          <Button
+            type="submit"
+            variant="destructive"
+            disabled={pending || !password || !code.trim()}
+          >
+            {pending ? t("working") : t("disable")}
+          </Button>
+        </form>
+      </div>
     );
   }
 
@@ -141,14 +153,7 @@ export function TwoFactorControls({ enabled }: { enabled: boolean }) {
           </div>
         </div>
         <p className="text-sm">{t("enrolBackup")}</p>
-        <ul
-          aria-label={t("backupCodes")}
-          className="bg-muted grid grid-cols-2 gap-1 rounded-md p-3 font-mono text-xs sm:grid-cols-4"
-        >
-          {enrol.backupCodes.map((c) => (
-            <li key={c}>{c}</li>
-          ))}
-        </ul>
+        <BackupCodeList codes={enrol.backupCodes} />
         <div className="space-y-2">
           <Label htmlFor="tfa-code" className="font-normal">
             {t("enrolVerify")}

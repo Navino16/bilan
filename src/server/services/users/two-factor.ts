@@ -14,7 +14,10 @@ export type TwoFactorError =
 export type TwoFactorEnrolment = { totpURI: string; backupCodes: string[] };
 type Result<T> = { ok: true; data: T } | { ok: false; error: TwoFactorError };
 
-export type FailedAction = "auth.2fa.enable_failed" | "auth.2fa.disable_failed";
+export type FailedAction =
+  | "auth.2fa.enable_failed"
+  | "auth.2fa.disable_failed"
+  | "auth.2fa.backup_codes_failed";
 
 type PasswordInput = { body: { password: string }; headers: Headers };
 type CodeInput = { body: { code: string }; headers: Headers };
@@ -24,6 +27,9 @@ type TwoFactorApi = {
   disableTwoFactor(input: PasswordInput): Promise<{ status: boolean }>;
   verifyTOTP(input: CodeInput): Promise<unknown>;
   verifyBackupCode(input: CodeInput): Promise<unknown>;
+  generateBackupCodes(input: PasswordInput): Promise<{ backupCodes: string[] }>;
+  // Server-only (no HTTP route).
+  viewBackupCodes(input: { body: { userId: string } }): Promise<{ backupCodes: string[] }>;
 };
 
 async function twoFactorApi(): Promise<TwoFactorApi> {
@@ -84,8 +90,23 @@ async function verifyCode(api: TwoFactorApi, headers: Headers, code: string): Pr
   }
 }
 
-// Decision S1 (#243): the password and a current TOTP or backup code. Success is audited
-// (`auth.2fa.disabled` + alert mail) by the auth-audit after-hook.
+// Decision S1 (#243): the password and a current TOTP or backup code.
+async function reauthenticate(
+  headers: Headers,
+  userId: string,
+  password: string,
+  code: string,
+  action: FailedAction,
+): Promise<{ ok: true; api: TwoFactorApi } | { ok: false; error: TwoFactorError }> {
+  if (!(await isCurrentPassword(userId, password))) return badPassword(userId, action);
+  if (!(await twoFactorEnabled(userId))) return { ok: false, error: "NOT_ENABLED" };
+  const api = await twoFactorApi();
+  if (await verifyCode(api, headers, code)) return { ok: true, api };
+  await logEvent({ userId, action, metadata: { reason: "bad_code" } });
+  return { ok: false, error: "BAD_CODE" };
+}
+
+// Success is audited (`auth.2fa.disabled` + alert mail) by the auth-audit after-hook.
 export async function disableTwoFactor(
   headers: Headers,
   userId: string,
@@ -93,17 +114,42 @@ export async function disableTwoFactor(
   code: string,
 ): Promise<Result<null>> {
   const action = "auth.2fa.disable_failed";
-  if (!(await isCurrentPassword(userId, password))) return badPassword(userId, action);
-  if (!(await twoFactorEnabled(userId))) return { ok: false, error: "NOT_ENABLED" };
-  const api = await twoFactorApi();
   try {
-    if (!(await verifyCode(api, headers, code))) {
-      await logEvent({ userId, action, metadata: { reason: "bad_code" } });
-      return { ok: false, error: "BAD_CODE" };
-    }
-    await api.disableTwoFactor({ body: { password }, headers });
+    const auth = await reauthenticate(headers, userId, password, code, action);
+    if (!auth.ok) return auth;
+    await auth.api.disableTwoFactor({ body: { password }, headers });
     return { ok: true, data: null };
   } catch (err) {
     return failure(err, userId, action);
+  }
+}
+
+export async function regenerateBackupCodes(
+  headers: Headers,
+  userId: string,
+  password: string,
+  code: string,
+): Promise<Result<{ backupCodes: string[] }>> {
+  const action = "auth.2fa.backup_codes_failed";
+  let backupCodes: string[];
+  try {
+    const auth = await reauthenticate(headers, userId, password, code, action);
+    if (!auth.ok) return auth;
+    ({ backupCodes } = await auth.api.generateBackupCodes({ body: { password }, headers }));
+  } catch (err) {
+    return failure(err, userId, action);
+  }
+  await logEvent({ userId, action: "auth.2fa.backup_codes_regenerated" });
+  return { ok: true, data: { backupCodes } };
+}
+
+export async function countBackupCodes(userId: string): Promise<number | null> {
+  if ((await db.twoFactor.count({ where: { userId } })) === 0) return null;
+  try {
+    const { backupCodes } = await (await twoFactorApi()).viewBackupCodes({ body: { userId } });
+    return backupCodes.length;
+  } catch (err) {
+    console.error("[bilan] backup code count failed", err);
+    return null;
   }
 }
