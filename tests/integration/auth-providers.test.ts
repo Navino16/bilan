@@ -23,6 +23,7 @@ const users = {
   twoIdps: `ap_two_idps_${stamp}`,
   passwordOnly: `ap_password_only_${stamp}`,
   credentialOnly: `ap_credential_only_${stamp}`,
+  disableOnly: `ap_disable_only_${stamp}`,
 };
 const key = `ap-${stamp}`;
 const keys = {
@@ -33,6 +34,7 @@ const keys = {
   main: `ap-main-${stamp}`,
   other: `ap-other-${stamp}`,
   off: `ap-off-${stamp}`,
+  disable: `ap-disable-${stamp}`,
 };
 const googleKeys = [`ap-google-${stamp}`, `ap-google2-${stamp}`];
 const allKeys = [key, ...Object.values(keys), ...googleKeys];
@@ -361,6 +363,73 @@ describe("disabling password sign-in (#255)", () => {
     } finally {
       await appSettings.set("credentials_enabled", prior?.value ?? true, actor.id);
       if (!prior) await db.appSetting.delete({ where: { key: "credentials_enabled" } });
+    }
+  });
+});
+
+describe("disabling a provider while password sign-in is off (#255)", () => {
+  const withCredentials = async (enabled: boolean, run: () => Promise<void>) => {
+    const prior = await db.appSetting.findUnique({ where: { key: "credentials_enabled" } });
+    await appSettings.set("credentials_enabled", enabled, actor.id);
+    try {
+      await run();
+    } finally {
+      await appSettings.set("credentials_enabled", prior?.value ?? true, actor.id);
+      if (!prior) await db.appSetting.delete({ where: { key: "credentials_enabled" } });
+    }
+  };
+  const input = { ...oidc, key: keys.disable, clientSecret: null };
+  const enabledNow = async () =>
+    (await db.authProvider.findUniqueOrThrow({ where: { key: keys.disable } })).enabled;
+
+  beforeAll(async () => {
+    await createAuthProvider({ ...oidc, key: keys.disable }, actor);
+    await link(users.disableOnly, keys.disable);
+  });
+
+  it("refuses when a linked user would have no usable sign-in method left", async () => {
+    await withCredentials(false, async () => {
+      expect(await errorOf(updateAuthProvider({ ...input, enabled: false }, actor))).toEqual({
+        code: "LOCKOUT",
+        count: 1,
+      });
+      expect(await enabledNow()).toBe(true);
+    });
+  });
+
+  it("still saves other changes to an enabled provider", async () => {
+    await withCredentials(false, async () => {
+      await updateAuthProvider({ ...input, displayName: "Renamed IdP" }, actor);
+      const row = await db.authProvider.findUniqueOrThrow({ where: { key: keys.disable } });
+      expect(row).toMatchObject({ displayName: "Renamed IdP", enabled: true });
+    });
+  });
+
+  it("allows it while password sign-in is on", async () => {
+    await withCredentials(true, async () => {
+      await updateAuthProvider({ ...input, enabled: false }, actor);
+      expect(await enabledNow()).toBe(false);
+      await updateAuthProvider({ ...input, enabled: true }, actor);
+    });
+  });
+
+  it("allows it when the linked user keeps a passkey", async () => {
+    await db.passkey.create({
+      data: {
+        id: `ap_pk3_${stamp}`,
+        userId: users.disableOnly,
+        publicKey: "pk",
+        credentialID: `cred3-${stamp}`,
+        deviceType: "singleDevice",
+      },
+    });
+    try {
+      await withCredentials(false, async () => {
+        await updateAuthProvider({ ...input, enabled: false }, actor);
+        expect(await enabledNow()).toBe(false);
+      });
+    } finally {
+      await db.passkey.delete({ where: { id: `ap_pk3_${stamp}` } });
     }
   });
 });

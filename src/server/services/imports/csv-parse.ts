@@ -40,11 +40,14 @@ function pick(headers: string[], hints: string[]): string | undefined {
   return undefined;
 }
 
+// Letters-only boundaries: "Date_valeur" is a date header, "Mandate" and "Validated amount" aren't.
+const DATE_WORD = /(?<![a-z])date(?![a-z])/i;
+
 // Best-effort column mapping from header names. The UI lets the user correct it.
 // A date-like header ("Date valeur") is never the amount, despite its "valeur".
 export function detectMapping(headers: string[]): CsvMapping {
   const amount = pick(
-    headers.filter((h) => !h.toLowerCase().includes("date")),
+    headers.filter((h) => !DATE_WORD.test(h)),
     AMOUNT_HINTS,
   );
   return {

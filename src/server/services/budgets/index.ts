@@ -729,13 +729,24 @@ export async function assignTransaction(
   actor: { id: string },
 ): Promise<void> {
   if (input.mode !== "INCLUDE" && input.mode !== "EXCLUDE") throw new BudgetAccessError("INVALID");
-  await readableOrThrow(input.budgetId, actor.id);
+  const budget = await readableOrThrow(input.budgetId, actor.id);
   const txRow = await db.transaction.findUnique({
     where: { id: input.transactionId },
     select: { accountId: true },
   });
   if (!txRow) throw new BudgetAccessError("NOT_FOUND");
   if (!(await canReadAccount(actor.id, txRow.accountId))) throw new BudgetAccessError("FORBIDDEN");
+  // An INCLUDE shows the transaction to every group member (spec §2.2), so reading the
+  // account through another group isn't enough.
+  if (input.mode === "INCLUDE" && budget.groupId) {
+    const includable = await db.bankAccount.count({
+      where: {
+        id: txRow.accountId,
+        OR: [{ ownerId: actor.id }, { shares: { some: { groupId: budget.groupId } } }],
+      },
+    });
+    if (includable === 0) throw new BudgetAccessError("FORBIDDEN");
+  }
 
   await db.budgetAssignment.upsert({
     where: {

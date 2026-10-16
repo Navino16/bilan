@@ -75,7 +75,8 @@ export async function saveAuthProviderAction(
     const save = mode === "create" ? createAuthProvider : updateAuthProvider;
     await save(parsed.data, { id: user.id });
   } catch (e) {
-    return { ok: false, error: e instanceof AuthProviderError ? e.code : "FAILED" };
+    if (e instanceof AuthProviderError) return { ok: false, error: e.code, count: e.count };
+    return { ok: false, error: "FAILED" };
   }
   return { ok: true };
 }

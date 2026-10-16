@@ -1540,7 +1540,7 @@
         "KEY_EXISTS": "A provider already uses this key. Edit it in the list above.",
         "NOT_FOUND": "This provider no longer exists.",
         "SECRET_REQUIRED": "The client secret is required.",
-        "LOCKOUT": "Deletion refused: {count, plural, one {# user would} other {# users would}} be left with no way to sign in.",
+        "LOCKOUT": "Refused: {count, plural, one {# user would} other {# users would}} be left with no way to sign in.",
         "TYPE_LOCKED": "A provider’s type can’t be changed. Create a new one instead.",
         "GOOGLE_EXISTS": "A Google provider already exists."
       },

@@ -277,7 +277,9 @@ export function AuthProviderForm({
       )}
       {state && !state.ok && (
         <Alert variant="destructive">
-          <AlertDescription>{t(`error.${state.error}`)}</AlertDescription>
+          <AlertDescription>
+            {t(`error.${state.error}`, { count: state.count ?? 0 })}
+          </AlertDescription>
         </Alert>
       )}
       <div className="flex flex-wrap items-center gap-2">

@@ -1540,7 +1540,7 @@
         "KEY_EXISTS": "Un fournisseur utilise déjà cette clé. Modifiez-le dans la liste ci-dessus.",
         "NOT_FOUND": "Ce fournisseur n’existe plus.",
         "SECRET_REQUIRED": "Le client secret est requis.",
-        "LOCKOUT": "Suppression refusée : {count, plural, one {# utilisateur n’aurait} other {# utilisateurs n’auraient}} plus aucun moyen de se connecter.",
+        "LOCKOUT": "Refusé : {count, plural, one {# utilisateur n’aurait} other {# utilisateurs n’auraient}} plus aucun moyen de se connecter.",
         "TYPE_LOCKED": "Le type d’un fournisseur ne peut pas être modifié. Créez-en un nouveau.",
         "GOOGLE_EXISTS": "Un fournisseur Google existe déjà."
       },

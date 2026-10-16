@@ -149,7 +149,8 @@ export type AuthProviderImpact = { linkedAccounts: number; lockedOut: number };
 
 type Client = Prisma.TransactionClient | PrismaClient;
 
-// Serialises provider deletions, Google creations and identity unlinks so their checks can't race.
+// Serialises provider deletions and disables, Google creations and identity unlinks
+// so their checks can't race.
 export async function lockProviders(tx: Prisma.TransactionClient): Promise<void> {
   await tx.$queryRaw`SELECT id FROM AuthProvider FOR UPDATE`;
 }
@@ -295,27 +296,41 @@ export async function createAuthProvider(
 }
 
 // The type is immutable: changing it would cut linked users off, bypassing the delete guard.
-// An empty client secret keeps the stored one.
+// An empty client secret keeps the stored one. With password sign-in off, disabling is guarded
+// like a deletion, under the same lock as disableCredentialsGuarded.
 export async function updateAuthProvider(
   input: ProviderInput,
   actor: { id: string },
   database: PrismaClient = db,
 ): Promise<AuthProvider> {
   const parsed = providerSchema.parse(input);
-  const existing = await database.authProvider.findUnique({ where: { key: parsed.key } });
-  if (!existing) throw new AuthProviderError("NOT_FOUND");
-  if (existing.type !== parsed.type) throw new AuthProviderError("TYPE_LOCKED");
-  if (!parsed.clientSecret && !existing.clientSecretEnc) {
-    throw new AuthProviderError("SECRET_REQUIRED");
-  }
   let row: AuthProvider;
   try {
-    row = await database.authProvider.update({
-      where: { key: parsed.key },
-      data: {
-        ...columns(parsed, actor.id),
-        ...(parsed.clientSecret ? { clientSecretEnc: encrypt(parsed.clientSecret, dataKey) } : {}),
-      },
+    row = await database.$transaction(async (tx) => {
+      if (!parsed.enabled) await lockProviders(tx);
+      const existing = await tx.authProvider.findUnique({ where: { key: parsed.key } });
+      if (!existing) throw new AuthProviderError("NOT_FOUND");
+      if (existing.type !== parsed.type) throw new AuthProviderError("TYPE_LOCKED");
+      if (!parsed.clientSecret && !existing.clientSecretEnc) {
+        throw new AuthProviderError("SECRET_REQUIRED");
+      }
+      if (
+        existing.enabled &&
+        !parsed.enabled &&
+        (await appSettings.get<boolean>("credentials_enabled")) === false
+      ) {
+        const { lockedOut } = await authProviderImpact(existing, tx);
+        if (lockedOut > 0) throw new AuthProviderError("LOCKOUT", lockedOut);
+      }
+      return tx.authProvider.update({
+        where: { key: parsed.key },
+        data: {
+          ...columns(parsed, actor.id),
+          ...(parsed.clientSecret
+            ? { clientSecretEnc: encrypt(parsed.clientSecret, dataKey) }
+            : {}),
+        },
+      });
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2025") {

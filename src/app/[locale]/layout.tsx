@@ -5,7 +5,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { hasLocale } from "next-intl";
 import { locales } from "@/i18n/config";
 import { DocumentShell } from "@/components/shell/document-shell";
-import { THEME_COLOR } from "@/lib/theme";
+import { SYSTEM_THEME_COLORS, THEME_COLOR } from "@/lib/theme";
 import { currentTheme } from "@/server/theme";
 import { getAppName } from "@/server/services/settings/app-settings";
 
@@ -23,13 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export async function generateViewport(): Promise<Viewport> {
   const theme = await currentTheme();
   return {
-    themeColor:
-      theme === "system"
-        ? [
-            { media: "(prefers-color-scheme: light)", color: THEME_COLOR.light },
-            { media: "(prefers-color-scheme: dark)", color: THEME_COLOR.dark },
-          ]
-        : THEME_COLOR[theme],
+    themeColor: theme === "system" ? SYSTEM_THEME_COLORS : THEME_COLOR[theme],
     width: "device-width",
     initialScale: 1,
     viewportFit: "cover",

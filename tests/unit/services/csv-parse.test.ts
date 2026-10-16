@@ -93,6 +93,11 @@ describe("parseCsv + detectMapping", () => {
     expect(detectMapping(["Date de valeur", "Libellé", "Montant"]).amount).toBe("Montant");
     expect(detectMapping(["Date", "Libellé", "Valeur"]).amount).toBe("Valeur");
   });
+
+  it("only treats a whole-word date as a date column when picking the amount", () => {
+    expect(detectMapping(["Date", "Mandate", "Validated amount"]).amount).toBe("Validated amount");
+    expect(detectMapping(["Date", "Libellé", "Date_valeur"]).amount).toBeUndefined();
+  });
 });
 
 describe("mapRows", () => {

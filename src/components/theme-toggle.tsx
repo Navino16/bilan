@@ -11,17 +11,34 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { THEME_COLOR, THEMES, themeCookie, type Theme } from "@/lib/theme";
+import { SYSTEM_THEME_COLORS, THEME_COLOR, THEMES, themeCookie, type Theme } from "@/lib/theme";
 
-const OS_DARK = "(prefers-color-scheme: dark)";
 const ICONS = { light: Sun, dark: Moon, system: Monitor } as const;
 
-function setThemeColor(color: string) {
-  // Updated in place rather than removed: the tags are React-managed.
-  for (const meta of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) {
-    meta.removeAttribute("media");
-    meta.content = color;
+// Updated in place rather than removed: the tags are React-managed. A pinned theme renders
+// a single tag, so going back to "system" adds the second one the layout would render.
+function setThemeColor(theme: Theme) {
+  const metas = [...document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')];
+  if (theme !== "system") {
+    for (const meta of metas) {
+      meta.removeAttribute("media");
+      meta.content = THEME_COLOR[theme];
+    }
+    return;
   }
+  SYSTEM_THEME_COLORS.forEach(({ media, color }, i) => {
+    let meta = metas[i];
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "theme-color";
+      const last = metas.at(-1);
+      if (last) last.after(meta);
+      else document.head.append(meta);
+      metas.push(meta);
+    }
+    meta.media = media;
+    meta.content = color;
+  });
 }
 
 // Another mounted toggle (sidebar vs. mobile drawer) may have changed the theme.
@@ -40,8 +57,7 @@ export function ThemeToggle({ theme }: { theme: Theme }) {
     const root = document.documentElement.classList;
     root.toggle("dark", next === "dark");
     root.toggle("light", next === "light");
-    const dark = next === "system" ? window.matchMedia(OS_DARK).matches : next === "dark";
-    setThemeColor(dark ? THEME_COLOR.dark : THEME_COLOR.light);
+    setThemeColor(next);
     document.cookie = themeCookie(next);
   }
 

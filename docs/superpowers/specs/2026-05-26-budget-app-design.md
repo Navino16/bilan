@@ -85,6 +85,7 @@ Decisions consolidated from the clarifying-questions phase.
   - Unbalanced groups: the **primary** transaction (largest absolute amount) receives the net sum in its category; other members are neutralized.
 - **Budgets**: scoped to user OR group; can target categories AND/OR accounts; custom periods (week, month, quarter, year, custom); automatic matching by category/account + explicit `BudgetAssignment` (`INCLUDE` / `EXCLUDE`) overrides.
 - **Privacy on shared budgets**: full transparency — every group member sees the date, amount, label, category and account name of each transaction counted in a group budget, including one a member assigned (`INCLUDE`) from a private account. Only that transaction becomes visible: the private account and its other transactions stay private.
+- **Include scope on group budgets**: an `INCLUDE` into a group budget is allowed only for a transaction whose account the actor owns or that is shared with that same group — reading an account through another group is not enough. Personal budgets accept any account the actor can read.
 - **Currency**: EUR only.
 - **Mobile**: responsive mobile-first (Playwright includes mobile viewport tests).
 - **i18n**: fr/en at minimum, language preference per user, `next-intl`.

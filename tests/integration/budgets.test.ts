@@ -342,7 +342,6 @@ describe("getBudgetDetail / computeLine", () => {
         },
       ]);
       expect(detail.transactionCount).toBe(1);
-      // The account itself and its other transactions stay private.
       expect(await canReadAccount(owner, privateAccount.id)).toBe(false);
       expect(JSON.stringify(detail)).not.toContain(unrelated.id);
     } finally {
@@ -456,6 +455,70 @@ describe("assignTransaction", () => {
     await expect(
       assignTransaction({ budgetId: id, transactionId: t, mode: "INCLUDE" }, { id: stranger }),
     ).rejects.toBeInstanceOf(BudgetAccessError);
+  });
+
+  it("INCLUDE into a group budget needs the account owned by the actor or shared with that group", async () => {
+    const own = await tx("2026-03-06T00:00:00.000Z", -10, null);
+    const other = await db.group.create({ data: { name: "Autre foyer", createdById: stranger } });
+    await db.groupMember.createMany({
+      data: [
+        { groupId: other.id, userId: stranger, role: "OWNER" },
+        { groupId: other.id, userId: owner, role: "MEMBER" },
+      ],
+    });
+    const foreign = await db.bankAccount.create({
+      data: { ownerId: stranger, name: "Commun", type: "CHECKING" },
+    });
+    await db.accountShare.create({
+      data: {
+        accountId: foreign.id,
+        groupId: other.id,
+        permission: "WRITE",
+        createdById: stranger,
+      },
+    });
+    const s = buildSecureFields({ label: "Autre", rawLabel: "Autre" });
+    const foreignTx = await db.transaction.create({
+      data: {
+        accountId: foreign.id,
+        date: new Date("2026-03-07T00:00:00.000Z"),
+        amount: -20,
+        type: "OTHER",
+        labelEnc: s.labelEnc,
+        labelHash: s.labelHash,
+        rawLabelEnc: s.rawLabelEnc,
+        rawLabelHash: s.rawLabelHash,
+        createdById: stranger,
+      },
+    });
+    try {
+      const { id } = await createBudget({ ...baseInput, groupId }, { id: owner });
+      await assignTransaction({ budgetId: id, transactionId: own, mode: "INCLUDE" }, { id: owner });
+
+      expect(await canReadAccount(owner, foreign.id)).toBe(true);
+      await expect(
+        assignTransaction(
+          { budgetId: id, transactionId: foreignTx.id, mode: "INCLUDE" },
+          { id: owner },
+        ),
+      ).rejects.toThrow(new BudgetAccessError("FORBIDDEN"));
+      expect(await db.budgetAssignment.count({ where: { transactionId: foreignTx.id } })).toBe(0);
+
+      await db.accountShare.create({
+        data: { accountId: foreign.id, groupId, permission: "READ", createdById: stranger },
+      });
+      await assignTransaction(
+        { budgetId: id, transactionId: foreignTx.id, mode: "INCLUDE" },
+        { id: owner },
+      );
+      expect(await db.budgetAssignment.count({ where: { budgetId: id } })).toBe(2);
+    } finally {
+      await db.budgetAssignment.deleteMany({ where: { transactionId: foreignTx.id } });
+      await db.transaction.deleteMany({ where: { accountId: foreign.id } });
+      await db.bankAccount.delete({ where: { id: foreign.id } });
+      await db.groupMember.deleteMany({ where: { groupId: other.id } });
+      await db.group.delete({ where: { id: other.id } });
+    }
   });
 
   it("lists budgets the actor may assign to (own + group budgets they're a member of)", async () => {
