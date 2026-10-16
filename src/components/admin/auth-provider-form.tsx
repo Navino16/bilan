@@ -293,6 +293,7 @@ export function AuthProviderForm({
             providerKey={provider.key}
             name={provider.displayName}
             impact={impact}
+            enabled={provider.enabled}
             credentialsEnabled={credentialsEnabled}
           />
         )}

@@ -63,6 +63,8 @@ describe("lineStatus", () => {
     expect(lineStatus(0, 0)).toMatchObject({ remaining: 0, percent: 0, status: "OK" });
     expect(lineStatus(0, 0.004)).toMatchObject({ percent: 0, status: "OK" });
     expect(lineStatus(0, -5)).toMatchObject({ percent: 0, status: "OK" });
+    expect(lineStatus(0.004, 0)).toMatchObject({ percent: 0, status: "OK" });
+    expect(lineStatus(0.004, 1)).toMatchObject({ percent: null, status: "OVER" });
   });
 });
 

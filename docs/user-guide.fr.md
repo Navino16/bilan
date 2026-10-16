@@ -429,7 +429,7 @@ Pour transmettre un foyer, un propriétaire donne le rôle **Propriétaire** à 
 ### Partager un compte
 
 1. Dans **Comptes**, ouvrez le menu **⋮** du compte et choisissez **Partager**.
-2. Pour chaque foyer, choisissez **Aucun**, **Lecture** ou **Écriture**. Le changement s’applique immédiatement. Repasser un foyer sur **Aucun** retire aussi les transactions du compte de ses budgets, y compris celles incluses ou exclues à la main.
+2. Pour chaque foyer, choisissez **Aucun**, **Lecture** ou **Écriture**. Le changement s’applique immédiatement. Repasser sur **Aucun** un foyer avec lequel le compte était partagé retire aussi les inclusions et exclusions de ses transactions dans les budgets de ce foyer : aucune n’y compte plus.
 
 #### Ce que permettent Lecture et Écriture
 

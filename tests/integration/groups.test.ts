@@ -15,7 +15,7 @@ import { buildSecureFields } from "@/server/services/transactions/secure-fields"
 import { GroupAccessError } from "@/server/services/groups/roles";
 import { getBudgetDetail, listBudgetsForUser } from "@/server/services/budgets";
 import { visibleAccountIds } from "@/server/services/accounts";
-import { canReadAccount } from "@/server/services/accounts/sharing";
+import { canReadAccount, shareAccountWithGroup } from "@/server/services/accounts/sharing";
 
 const owner = "grp_owner";
 const admin = "grp_admin";
@@ -335,5 +335,42 @@ describe("leaving or being removed from a household (#259)", () => {
       removedAssignments: 2,
     });
     await cleanupDeparture(s);
+  });
+});
+
+describe("membership changes under concurrency (#259 review)", () => {
+  it("never leaves a share behind when sharing races with leaving", async () => {
+    const account = await db.bankAccount.create({
+      data: { ownerId: member, name: "Racing account", type: "CHECKING" },
+    });
+    for (let i = 0; i < 5; i++) {
+      const g = await createGroup({ name: `Race ${i}` }, owner);
+      await db.groupMember.create({ data: { groupId: g.id, userId: member, role: "MEMBER" } });
+      await Promise.allSettled([
+        shareAccountWithGroup(
+          { accountId: account.id, groupId: g.id, permission: "READ" },
+          { id: member },
+        ),
+        leaveGroup(g.id, member),
+      ]);
+      expect(await db.accountShare.count({ where: { groupId: g.id } })).toBe(0);
+      await db.group.delete({ where: { id: g.id } });
+    }
+    await db.bankAccount.delete({ where: { id: account.id } });
+  });
+
+  it("keeps one owner when the last two owners leave at once", async () => {
+    for (let i = 0; i < 3; i++) {
+      const g = await createGroup({ name: `Owners ${i}` }, owner);
+      await db.groupMember.create({ data: { groupId: g.id, userId: admin, role: "OWNER" } });
+      const results = await Promise.allSettled([leaveGroup(g.id, owner), leaveGroup(g.id, admin)]);
+      const rejected = results.filter((r) => r.status === "rejected");
+      expect(rejected).toHaveLength(1);
+      expect((rejected[0] as PromiseRejectedResult).reason).toMatchObject({
+        message: "LAST_OWNER",
+      });
+      expect(await db.groupMember.count({ where: { groupId: g.id, role: "OWNER" } })).toBe(1);
+      await db.group.delete({ where: { id: g.id } });
+    }
   });
 });

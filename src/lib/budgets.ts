@@ -32,7 +32,7 @@ export type LineStatus = {
 export function lineStatus(plannedAmount: number, spent: number): LineStatus {
   const amounts = { plannedAmount: round2(plannedAmount), spent: round2(spent) };
   const remaining = round2(plannedAmount - spent);
-  if (plannedAmount <= 0) {
+  if (plannedAmount <= EPSILON) {
     const over = spent > plannedAmount + EPSILON;
     return { ...amounts, remaining, percent: over ? null : 0, status: over ? "OVER" : "OK" };
   }

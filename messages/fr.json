@@ -288,7 +288,7 @@
     "sharedAccounts": "Comptes partagés",
     "noSharedAccounts": "Aucun compte partagé avec ce foyer.",
     "shareTitle": "Partager le compte",
-    "shareSubtitle": "Choisissez les foyers et leur niveau d’accès. Avec Aucun, les transactions du compte sortent aussi des budgets de ce foyer, y compris celles incluses ou exclues à la main.",
+    "shareSubtitle": "Choisissez les foyers et leur niveau d’accès. Repasser sur Aucun un foyer avec lequel le compte était partagé retire aussi ses transactions incluses ou exclues dans les budgets de ce foyer.",
     "noGroups": "Vous n’appartenez à aucun foyer.",
     "permNone": "Aucun",
     "access": {

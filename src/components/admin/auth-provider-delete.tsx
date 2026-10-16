@@ -18,12 +18,13 @@ export function AuthProviderDelete({
   providerKey,
   name,
   impact,
+  enabled,
   credentialsEnabled,
 }: {
   providerKey: string;
   name: string;
   impact: AuthProviderImpact;
-  // Without password sign-in, disabling the provider is refused too, so the hint differs.
+  enabled: boolean;
   credentialsEnabled: boolean;
 }) {
   const t = useTranslations("admin.authProviders");
@@ -73,7 +74,7 @@ export function AuthProviderDelete({
         )}
         {impact.lockedOut > 0 && (
           <p className="text-destructive text-sm">
-            {t(credentialsEnabled ? "deleteLockout" : "deleteLockoutNoPassword", {
+            {t(enabled && !credentialsEnabled ? "deleteLockoutNoPassword" : "deleteLockout", {
               count: impact.lockedOut,
             })}
           </p>

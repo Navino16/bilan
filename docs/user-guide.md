@@ -429,7 +429,7 @@ To hand over a household, an owner sets another member's role to **Owner**. A ho
 ### Share an account
 
 1. On **Accounts**, open the account's **⋮** menu and choose **Share**.
-2. For each household, choose **None**, **Read** or **Write**. The change applies immediately. Setting a household back to **None** also removes the account's transactions from its budgets, including the ones included or excluded by hand.
+2. For each household, choose **None**, **Read** or **Write**. The change applies immediately. Switching a household the account was shared with back to **None** also drops the inclusions and exclusions of its transactions in that household's budgets, so none of them count there any more.
 
 #### What Read and Write allow
 

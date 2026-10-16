@@ -288,7 +288,7 @@
     "sharedAccounts": "Shared accounts",
     "noSharedAccounts": "No accounts shared with this household.",
     "shareTitle": "Share account",
-    "shareSubtitle": "Choose households and their access level. With None, the account’s transactions also leave that household’s budgets, including the ones included or excluded by hand.",
+    "shareSubtitle": "Choose households and their access level. Switching a household the account was shared with to None also drops that household’s budget inclusions and exclusions of its transactions.",
     "noGroups": "You don’t belong to any household.",
     "permNone": "None",
     "access": {
