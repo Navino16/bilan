@@ -9,15 +9,18 @@ import { SectionCard } from "@/components/shell/section-card";
 import { ConfirmDialog } from "@/components/shell/confirm-dialog";
 import type { GroupRole } from "@/lib/validation/group";
 import { deleteGroupAction, leaveGroupAction } from "@/server/transport/actions/groups";
+import type { GroupDeletionImpact } from "@/server/services/groups";
 
 export function GroupDangerZone({
   groupId,
   viewerRole,
   isLastOwner,
+  deletionImpact: impact,
 }: {
   groupId: string;
   viewerRole: GroupRole;
   isLastOwner: boolean;
+  deletionImpact: GroupDeletionImpact | null;
 }) {
   const t = useTranslations("groups");
   const locale = useLocale();
@@ -26,6 +29,23 @@ export function GroupDangerZone({
   const [error, setError] = useState<string | null>(null);
   const [kind, setKind] = useState<"leave" | "delete">("leave");
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const consequences = impact
+    ? [
+        ...(impact.shares > 0 ? [t("deleteImpact.shares", { count: impact.shares })] : []),
+        ...(impact.categories + impact.rules + impact.budgets > 0
+          ? [
+              t("deleteImpact.owned", {
+                categories: impact.categories,
+                rules: impact.rules,
+                budgets: impact.budgets,
+              }),
+            ]
+          : []),
+        ...(impact.uncategorized > 0
+          ? [t("deleteImpact.uncategorized", { count: impact.uncategorized })]
+          : []),
+      ]
+    : [];
 
   function ask(next: "leave" | "delete") {
     setError(null);
@@ -78,7 +98,18 @@ export function GroupDangerZone({
         onConfirm={run}
         pending={pending}
         error={error ? t(`error.${error}`) : undefined}
-      />
+      >
+        {kind === "delete" && consequences.length > 0 && (
+          <ul
+            data-slot="group-delete-impact"
+            className="text-muted-foreground list-disc space-y-1 pl-5 text-sm"
+          >
+            {consequences.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        )}
+      </ConfirmDialog>
     </SectionCard>
   );
 }

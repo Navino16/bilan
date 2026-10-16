@@ -40,7 +40,7 @@ export function BottomNav({ className }: { className?: string }) {
             onNavigate={onNavigateTo(href)}
             aria-label={tFull(item.key)}
             className={cn(
-              "flex min-w-0 flex-col items-center gap-1 px-1 py-2.5 text-[10px] transition-colors",
+              "flex min-w-0 flex-col items-center gap-1 px-0.5 py-2.5 text-[10px] transition-colors",
               shown ? "text-primary font-medium" : "text-muted-foreground",
             )}
           >

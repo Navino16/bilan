@@ -148,7 +148,16 @@
   },
   "shell": {
     "tagline": "Finances · {year}",
-    "themeToggle": "Dark theme",
+    "theme": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System",
+      "current": {
+        "light": "Light theme",
+        "dark": "Dark theme",
+        "system": "System theme"
+      }
+    },
     "openMenu": "Open menu",
     "groups": {
       "workspace": "Workspace",
@@ -170,7 +179,7 @@
     },
     "tabs": {
       "dashboard": "Home",
-      "transactions": "Activity",
+      "transactions": "Transactions",
       "budgets": "Budgets",
       "accounts": "Accounts",
       "categories": "Categories"
@@ -414,7 +423,7 @@
     },
     "status": {
       "OK": "On track",
-      "WARN": "Near limit",
+      "WARN": "Almost reached",
       "REACHED": "Reached",
       "OVER": "Over budget"
     },
@@ -627,8 +636,6 @@
         "EXACT": "Equals",
         "REGEX": "Regex"
       },
-      "scope": "Scope",
-      "scopePersonal": "My accounts",
       "existingNote": "Existing transactions will not be re-categorized automatically.",
       "decline": "No thanks",
       "confirm": "Create rule"
@@ -759,10 +766,7 @@
     "colRawLabel": "Raw label",
     "colCategory": "Suggested category",
     "autoDetected": "auto-detected",
-    "csvTab": "CSV",
-    "pdfTab": "PDF",
     "account": "Account",
-    "chooseFile": "Choose a file",
     "drop": "Drop a CSV or PDF file here, or click to browse.",
     "mapping": "Column mapping",
     "decimal": {
@@ -780,13 +784,9 @@
     "colCredit": "Credit",
     "colType": "Type",
     "none": "—",
-    "preview": "Preview",
-    "rowsDetected": "{count, plural, one {# row detected} other {# rows detected}}",
-    "commit": "Import",
     "importing": "Importing…",
-    "summary": "{imported, number} imported · {skipped, number} skipped (duplicates)",
+    "summary": "{imported, plural, one {# transaction imported} other {# transactions imported}} · {skipped, plural, one {# duplicate skipped} other {# duplicates skipped}}",
     "viewTransactions": "View transactions",
-    "pdfDrop": "Drop a PDF statement here, or click to browse.",
     "bankDetected": "Detected bank: {bank}",
     "bankUnknown": "Bank not recognized — review the rows below before importing.",
     "supportedBanks": "Supported banks: {list}",
@@ -820,7 +820,7 @@
       "overline": "History",
       "title": "Recent imports",
       "empty": "No imports yet.",
-      "rows": "{imported, number} imported · {skipped, number} skipped",
+      "rows": "{imported, plural, one {# transaction imported} other {# transactions imported}} · {skipped, plural, one {# duplicate skipped} other {# duplicates skipped}}",
       "status": {
         "COMPLETED": "Imported",
         "REVERTED": "Undone"
@@ -878,7 +878,10 @@
     "dateOrder": {
       "label": "Date order",
       "DMY": "DD/MM",
-      "MDY": "MM/DD"
+      "MDY": "MM/DD",
+      "guessed": "Date order guessed ({order}): check the dates (“Date order” setting).",
+      "confirm": "Dates look right",
+      "useOther": "Use {order}"
     }
   },
   "groups": {
@@ -911,7 +914,12 @@
     "leave": "Leave",
     "leaveConfirm": "Leave this household?",
     "delete": "Delete household",
-    "deleteConfirm": "Permanently delete this household? Associated shares will be removed.",
+    "deleteConfirm": "Permanently delete this household? This cannot be undone.",
+    "deleteImpact": {
+      "shares": "{count, plural, one {# shared account stops being shared; it stays with its owner} other {# shared accounts stop being shared; they stay with their owners}}.",
+      "owned": "{categories, plural, one {# household category} other {# household categories}}, {rules, plural, one {# rule} other {# rules}} and {budgets, plural, one {# budget} other {# budgets}} will be deleted.",
+      "uncategorized": "{count, plural, one {# transaction will become uncategorized} other {# transactions will become uncategorized}}."
+    },
     "back": "Back to households",
     "roles": {
       "OWNER": "Owner",
@@ -929,7 +937,7 @@
     "dangerTitleOwner": "Leave or delete the household",
     "leaveHint": "You will lose access to this household’s shared accounts and budgets.",
     "leaveTitle": "Leave the household",
-    "deleteHint": "Deleting removes all associated shares. This cannot be undone.",
+    "deleteHint": "Deleting removes the shares and the household’s categories, rules and budgets. This cannot be undone.",
     "removeTitle": "Remove {name}?"
   },
   "invitations": {
@@ -1120,6 +1128,14 @@
       "cancel": "Cancel",
       "deleting": "Deleting…",
       "confirmDelete": "Delete permanently",
+      "impact": {
+        "title": "What will be deleted:",
+        "accounts": "{count, plural, one {# bank account} other {# bank accounts}} and {transactions, plural, one {# transaction} other {# transactions}}{shared, plural, =0 {} one {, including # account shared with a household: its members will no longer see it} other {, including # accounts shared with households: their members will no longer see them}}.",
+        "personal": "Your personal categories, rules and budgets, your imports and your preferences.",
+        "transfer": "Household “{group}” will be handed over to {to}.",
+        "group": "Household “{group}”, of which you are the only member, will be deleted with its categories, rules and budgets.",
+        "budgetLines": "Lines in household or other members’ budgets that targeted your accounts will no longer be limited to an account."
+      },
       "error": {
         "REQUIRED": "Please enter your password.",
         "BAD_PASSWORD": "Incorrect password.",

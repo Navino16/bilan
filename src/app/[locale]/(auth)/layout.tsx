@@ -15,9 +15,8 @@ export default async function AuthLayout({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const [t, tShell, appName, theme] = await Promise.all([
+  const [t, appName, theme] = await Promise.all([
     getTranslations("app"),
-    getTranslations("shell"),
     getAppName(),
     currentTheme(),
   ]);
@@ -25,7 +24,7 @@ export default async function AuthLayout({
     <div className="bg-background flex min-h-screen w-full flex-col">
       <SkipLink />
       <div className="flex items-center justify-end gap-3 px-4 pt-4">
-        <ThemeToggle label={tShell("themeToggle")} theme={theme} />
+        <ThemeToggle theme={theme} />
         <LanguageSwitcher />
       </div>
       <main

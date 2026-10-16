@@ -31,6 +31,7 @@ import { previewCategoryId, rejectedFields } from "@/lib/import-preview";
 import { RevertImportDialog } from "./revert-import-dialog";
 import { AddBlockedState, ADD_BLOCKED_ID } from "@/components/onboarding/add-blocked";
 import type { AddTransactionBlocker } from "@/lib/onboarding";
+import { SUPPORTED_BANKS, type BankKey } from "@/server/services/imports/pdf/detect";
 
 type Account = { id: string; name: string; bankName: string | null };
 type PreviewRow = {
@@ -65,6 +66,7 @@ type Preview = {
   rejectedCount?: number;
   rejected?: { row: number; reason: string; value: string }[];
   decimalGuessed?: boolean;
+  dateOrderGuessed?: boolean;
   preview?: PreviewRow[];
   page?: number;
   pageSize?: number;
@@ -82,6 +84,9 @@ function isPdfFile(f: File): boolean {
 
 const MARK_KEY: Record<DecimalMark, "comma" | "dot"> = { ",": "comma", ".": "dot" };
 const otherMark = (m: DecimalMark): DecimalMark => (m === "," ? "." : ",");
+const isBankKey = (b: string | null | undefined): b is BankKey =>
+  (SUPPORTED_BANKS as readonly string[]).includes(b ?? "");
+const otherDateOrder = (o: DateOrder): DateOrder => (o === "DMY" ? "MDY" : "DMY");
 
 function columnsOf(mapping: Record<string, string | undefined> | undefined) {
   return Object.fromEntries(
@@ -280,13 +285,23 @@ export function ImportWizard({
     );
   }
 
-  function chooseDateOrder(order: DateOrder) {
-    if (!preview || preview.source !== "CSV" || order === shownDateOrder) return;
+  // Same confirm-or-switch flow as chooseDecimal, for a guessed date order.
+  function chooseDateOrder(order: DateOrder, fromBanner = false) {
+    if (!preview || preview.source !== "CSV") return;
+    const confirming = order === shownDateOrder;
+    if (confirming && !preview.dateOrderGuessed) return;
     const previous = dateOrderChoice;
     setDateOrderChoice(order);
     void refresh(
-      { mapping: csvMappingBody(columns, decimalChoice, order), page: 0 },
-      { resetEdits: true, mapping: true, onFail: () => setDateOrderChoice(previous) },
+      {
+        mapping: csvMappingBody(columns, decimalChoice, order),
+        page: confirming ? (preview.page ?? 0) : 0,
+      },
+      {
+        resetEdits: !confirming,
+        mapping: !fromBanner,
+        onFail: () => setDateOrderChoice(previous),
+      },
     );
   }
 
@@ -795,7 +810,7 @@ export function ImportWizard({
                         aria-label={t("dateOrder.label")}
                         items={DATE_ORDERS.map((o) => ({ id: o, label: t(`dateOrder.${o}`) }))}
                         value={shownDateOrder}
-                        onChange={chooseDateOrder}
+                        onChange={(order) => chooseDateOrder(order)}
                         disabled={busy}
                         className="grid w-full grid-cols-2"
                       />
@@ -871,6 +886,61 @@ export function ImportWizard({
                         onClick={() => chooseDecimal(otherMark(guessedMark), true)}
                       >
                         {t("decimal.useOther", { mark: MARK_KEY[otherMark(guessedMark)] })}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {preview.source === "PDF" &&
+                  (isBankKey(preview.bank) ? (
+                    <p data-slot="import-pdf-bank" className="text-muted-foreground mt-1 text-xs">
+                      {t("bankDetected", { bank: t(`banks.${preview.bank}`) })}
+                    </p>
+                  ) : (
+                    <div
+                      data-slot="import-pdf-bank"
+                      role="status"
+                      className="mt-2 space-y-0.5 text-xs"
+                      style={{ color: "var(--warning-text)" }}
+                    >
+                      <p className="font-medium">{t("bankUnknown")}</p>
+                      <p>
+                        {t("supportedBanks", {
+                          list: new Intl.ListFormat(locale, { type: "conjunction" }).format(
+                            SUPPORTED_BANKS.map((b) => t(`banks.${b}`)),
+                          ),
+                        })}
+                      </p>
+                    </div>
+                  ))}
+                {preview.source === "CSV" && preview.dateOrderGuessed && (
+                  <div className="mt-2 space-y-2" data-slot="import-date-order-guessed">
+                    <p
+                      role="status"
+                      className="text-xs font-medium"
+                      style={{ color: "var(--warning-text)" }}
+                    >
+                      {t("dateOrder.guessed", { order: t(`dateOrder.${shownDateOrder}`) })}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="max-md:h-10"
+                        disabled={busy}
+                        onClick={() => chooseDateOrder(shownDateOrder, true)}
+                      >
+                        {t("dateOrder.confirm")}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="max-md:h-10"
+                        disabled={busy}
+                        onClick={() => chooseDateOrder(otherDateOrder(shownDateOrder), true)}
+                      >
+                        {t("dateOrder.useOther", {
+                          order: t(`dateOrder.${otherDateOrder(shownDateOrder)}`),
+                        })}
                       </Button>
                     </div>
                   </div>

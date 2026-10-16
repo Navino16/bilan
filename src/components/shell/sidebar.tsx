@@ -69,7 +69,7 @@ export function Sidebar({
 
       <div className="border-border space-y-3 border-t px-4 py-4">
         <UserIdentity user={user} />
-        <ThemeToggle label={t("themeToggle")} theme={theme} />
+        <ThemeToggle theme={theme} />
       </div>
     </aside>
   );

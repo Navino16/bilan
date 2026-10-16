@@ -30,6 +30,10 @@ test.describe("import wizard", () => {
     await expect(page.locator('[data-slot="import-preview-row"]').first()).toBeVisible({
       timeout: 15_000,
     });
+    // The synthetic statement has no bank fingerprint: the generic reader is flagged (#255).
+    await expect(page.locator('[data-slot="import-pdf-bank"]')).toContainText(
+      "Banque non reconnue",
+    );
 
     const committed = page.waitForResponse(
       (r) => r.url().includes("/commit") && r.request().method() === "POST",

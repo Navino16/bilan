@@ -22,16 +22,19 @@ import { useActionForm } from "@/components/forms/use-action-form";
 import { FieldError } from "@/components/forms/field-error";
 import { PageHeader } from "@/components/shell/page-header";
 import { SectionCard } from "@/components/shell/section-card";
+import type { OwnDeletionImpact } from "@/server/services/users/own-deletion";
 import { DownloadButton } from "./download-button";
 
 export function DataControls({
   locale,
   hasPassword,
   email,
+  impact,
 }: {
   locale: string;
   hasPassword: boolean;
   email: string;
+  impact: OwnDeletionImpact | null;
 }) {
   const t = useTranslations("settings.data");
   const [open, setOpen] = useState(false);
@@ -40,6 +43,23 @@ export function DataControls({
     resetOnSuccess: false,
     onSuccess: () => window.location.assign(`/${locale}/login?deleted=1`),
   });
+  const consequences = impact
+    ? [
+        ...(impact.accounts > 0
+          ? [
+              t("impact.accounts", {
+                count: impact.accounts,
+                transactions: impact.transactions,
+                shared: impact.sharedAccounts,
+              }),
+            ]
+          : []),
+        t("impact.personal"),
+        ...impact.transfers.map((tr) => t("impact.transfer", tr)),
+        ...impact.deletedGroups.map((group) => t("impact.group", { group })),
+        ...(impact.budgetLines > 0 ? [t("impact.budgetLines")] : []),
+      ]
+    : [];
 
   return (
     <div className="space-y-6">
@@ -100,6 +120,16 @@ export function DataControls({
                 <DialogTitle>{t("deleteTitle")}</DialogTitle>
                 <DialogDescription>{t("deleteWarning")}</DialogDescription>
               </DialogHeader>
+              {consequences.length > 0 && (
+                <div data-slot="delete-impact" className="space-y-1.5 text-sm">
+                  <p className="font-medium">{t("impact.title")}</p>
+                  <ul className="text-muted-foreground list-disc space-y-1 pl-5">
+                    {consequences.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {hasPassword ? (
                 <div className="space-y-2">
                   <Label htmlFor="delete-password">{t("passwordLabel")}</Label>

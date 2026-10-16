@@ -41,8 +41,12 @@ function pick(headers: string[], hints: string[]): string | undefined {
 }
 
 // Best-effort column mapping from header names. The UI lets the user correct it.
+// A date-like header ("Date valeur") is never the amount, despite its "valeur".
 export function detectMapping(headers: string[]): CsvMapping {
-  const amount = pick(headers, AMOUNT_HINTS);
+  const amount = pick(
+    headers.filter((h) => !h.toLowerCase().includes("date")),
+    AMOUNT_HINTS,
+  );
   return {
     date: pick(headers, DATE_HINTS) ?? headers[0] ?? "",
     label: pick(headers, LABEL_HINTS) ?? headers[1] ?? "",
@@ -204,14 +208,22 @@ const TWO_DIGIT_PIVOT = (new Date().getUTCFullYear() % 100) + 1;
 const DAY_MONTH = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2}|\d{4})$/;
 const withoutTime = (raw: string) => raw.trim().replace(/[ T]\d{1,2}:\d{2}(:\d{2})?.*$/, "");
 
+export type DateOrderDetection = { order: DateOrder; guessed: boolean };
+
 // Month-first only when some date can't be day-first ("12/25") and none can't be month-first ("25/12").
-export function detectDateOrder(values: string[]): DateOrder {
+// `guessed` when no date settles the order and some would read differently ("03/10").
+export function detectDateOrder(values: string[]): DateOrderDetection {
   const parts = values.flatMap((v) => {
     const m = DAY_MONTH.exec(withoutTime(v));
     return m ? [[Number(m[1]), Number(m[2])]] : [];
   });
-  const monthFirst = parts.some(([, b]) => b > 12) && !parts.some(([a]) => a > 12);
-  return monthFirst ? "MDY" : DEFAULT_DATE_ORDER;
+  const dayFirstOnly = parts.some(([a]) => a > 12);
+  const monthFirstOnly = parts.some(([, b]) => b > 12);
+  const monthFirst = monthFirstOnly && !dayFirstOnly;
+  return {
+    order: monthFirst ? "MDY" : DEFAULT_DATE_ORDER,
+    guessed: !dayFirstOnly && !monthFirstOnly && parts.some(([a, b]) => a !== b),
+  };
 }
 
 // d/m/yyyy, dd/mm/yy (→ 20yy or 19yy), dd.mm.yyyy, dd-mm-yyyy (m/d first with "MDY"),

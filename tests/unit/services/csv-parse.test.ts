@@ -83,6 +83,16 @@ describe("parseCsv + detectMapping", () => {
     expect(mapping.debit).toBe("Débit");
     expect(mapping.credit).toBe("Crédit");
   });
+
+  it("never maps a value-date column to the amount (#255)", () => {
+    const mapping = detectMapping(["Date opération", "Date valeur", "Libellé", "Débit", "Crédit"]);
+    expect(mapping.date).toBe("Date opération");
+    expect(mapping.amount).toBeUndefined();
+    expect(mapping.debit).toBe("Débit");
+    expect(mapping.credit).toBe("Crédit");
+    expect(detectMapping(["Date de valeur", "Libellé", "Montant"]).amount).toBe("Montant");
+    expect(detectMapping(["Date", "Libellé", "Valeur"]).amount).toBe("Valeur");
+  });
 });
 
 describe("mapRows", () => {
@@ -291,13 +301,25 @@ describe("date order (#245)", () => {
   });
 
   it("detects month-first only when a date can't be day-first and none can't be month-first", () => {
-    expect(detectDateOrder(["10/03/2026", "12/25/2026"])).toBe("MDY");
-    expect(detectDateOrder(["12/25/26 10:15", "garbage", ""])).toBe("MDY");
-    expect(detectDateOrder(["25/12/2026", "12/25/2026"])).toBe("DMY");
-    expect(detectDateOrder(["25/12/2026", "03/10/2026"])).toBe("DMY");
-    expect(detectDateOrder(["03/10/2026", "04/11/2026"])).toBe("DMY");
-    expect(detectDateOrder(["2026-12-25", "2026-03-10"])).toBe("DMY");
-    expect(detectDateOrder([])).toBe("DMY");
+    const order = (values: string[]) => detectDateOrder(values).order;
+    expect(order(["10/03/2026", "12/25/2026"])).toBe("MDY");
+    expect(order(["12/25/26 10:15", "garbage", ""])).toBe("MDY");
+    expect(order(["25/12/2026", "12/25/2026"])).toBe("DMY");
+    expect(order(["25/12/2026", "03/10/2026"])).toBe("DMY");
+    expect(order(["03/10/2026", "04/11/2026"])).toBe("DMY");
+    expect(order(["2026-12-25", "2026-03-10"])).toBe("DMY");
+    expect(order([])).toBe("DMY");
+  });
+
+  it("flags the date order as guessed only when no date settles it (#255)", () => {
+    const guessed = (values: string[]) => detectDateOrder(values).guessed;
+    expect(guessed(["03/10/2026", "04/11/2026"])).toBe(true);
+    expect(guessed(["03/10/26 10:15", "garbage"])).toBe(true);
+    expect(guessed(["03/10/2026", "25/12/2026"])).toBe(false);
+    expect(guessed(["03/10/2026", "12/25/2026"])).toBe(false);
+    expect(guessed(["01/01/2026", "05/05/2026"])).toBe(false);
+    expect(guessed(["2026-03-10", "2026-04-11"])).toBe(false);
+    expect(guessed([])).toBe(false);
   });
 
   it("is applied by mapRows", () => {

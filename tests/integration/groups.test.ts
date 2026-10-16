@@ -6,10 +6,12 @@ import {
   getGroupDetail,
   updateGroup,
   deleteGroup,
+  groupDeletionImpact,
   changeMemberRole,
   removeMember,
   leaveGroup,
 } from "@/server/services/groups";
+import { buildSecureFields } from "@/server/services/transactions/secure-fields";
 import { GroupAccessError } from "@/server/services/groups/roles";
 
 const owner = "grp_owner";
@@ -137,5 +139,62 @@ describe("groups service", () => {
     );
     await deleteGroup(g.id, { id: owner });
     expect(await db.group.findUnique({ where: { id: g.id } })).toBeNull();
+  });
+
+  it("previews what deleting a household takes with it (#255)", async () => {
+    const g = await createGroup({ name: "Impact" }, owner);
+    await db.groupMember.create({ data: { groupId: g.id, userId: member, role: "MEMBER" } });
+    const account = await db.bankAccount.create({
+      data: { ownerId: owner, name: "Impact account", type: "CHECKING" },
+    });
+    await db.accountShare.create({
+      data: { accountId: account.id, groupId: g.id, permission: "READ", createdById: owner },
+    });
+    const category = await db.category.create({ data: { groupId: g.id, name: "Courses" } });
+    await db.categorizationRule.create({
+      data: { groupId: g.id, categoryId: category.id, pattern: "carrefour", matchType: "CONTAINS" },
+    });
+    await db.budget.create({
+      data: {
+        groupId: g.id,
+        name: "Impact budget",
+        periodType: "MONTH",
+        periodStart: new Date("2026-01-01T00:00:00Z"),
+        periodEnd: new Date("2026-01-31T00:00:00Z"),
+        createdById: owner,
+      },
+    });
+    const secure = buildSecureFields({ label: "Carrefour", rawLabel: "CB CARREFOUR" });
+    const tx = await db.transaction.create({
+      data: {
+        accountId: account.id,
+        categoryId: category.id,
+        date: new Date("2026-01-05T00:00:00Z"),
+        amount: -12,
+        type: "CARD",
+        labelEnc: secure.labelEnc,
+        labelHash: secure.labelHash,
+        rawLabelEnc: secure.rawLabelEnc,
+        rawLabelHash: secure.rawLabelHash,
+        createdById: owner,
+      },
+    });
+
+    await expect(groupDeletionImpact(g.id, { id: member })).rejects.toBeInstanceOf(
+      GroupAccessError,
+    );
+    expect(await groupDeletionImpact(g.id, { id: owner })).toEqual({
+      shares: 1,
+      categories: 1,
+      rules: 1,
+      budgets: 1,
+      uncategorized: 1,
+    });
+
+    await deleteGroup(g.id, { id: owner });
+    expect((await db.transaction.findUniqueOrThrow({ where: { id: tx.id } })).categoryId).toBe(
+      null,
+    );
+    await db.bankAccount.delete({ where: { id: account.id } });
   });
 });
