@@ -402,7 +402,9 @@ describe("OIDC discovery at handler build", () => {
   };
   const discoveryFetch = (onDiscovery: (signal?: AbortSignal | null) => Promise<Response>) =>
     vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) =>
-      String(input).startsWith(issuer) ? onDiscovery(init?.signal) : realFetch(input, init),
+      new URL(input instanceof Request ? input.url : input).origin === issuer
+        ? onDiscovery(init?.signal)
+        : realFetch(input, init),
     );
 
   it("leaves out a provider whose discovery hangs", async () => {
