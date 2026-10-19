@@ -73,3 +73,6 @@ backups/
 
 # Claude Code local state (agent worktrees)
 .claude/
+
+# Real bank statements dropped locally to develop importers (personal data)
+/samples/
