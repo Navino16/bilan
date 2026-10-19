@@ -3,7 +3,7 @@ import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import { insertRows, finalizeBatch, type CommitOptions, type InsertTotals } from "./commit";
 import { buildPreview, PREVIEW_PAGE_SIZE } from "./preview";
-// Static import → pdfjs/pdf-parse stay externalized (next.config serverExternalPackages),
+// Static import → pdfjs stays externalized (next.config serverExternalPackages),
 // so the pdfjs worker resolves. Only the PDF route imports this module, so the CSV
 // path never loads pdfjs.
 import { parsePdf, type BankKey } from "./pdf";

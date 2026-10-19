@@ -53,7 +53,7 @@ Self-hosted personal-finance application. A full web app with multi-user support
 | Prisma | 7.x (with `@prisma/adapter-mariadb`) | ORM with MariaDB-native driver |
 | MariaDB | 11 | Database |
 | Better Auth | 1.6 (+ `@better-auth/passkey`) | DB-backed sessions, 2FA, passkeys, admin plugin, generic OIDC plugin |
-| papaparse · pdf-parse / pdfjs-dist | — | CSV and PDF statement parsing |
+| papaparse · pdfjs-dist | — | CSV and PDF statement parsing |
 | re2js | — | Linear-time regex engine for user `REGEX` rules (no ReDoS) |
 | nodemailer | — | Outgoing mail through the admin-configured SMTP |
 | Node | 24 LTS | Runtime, LTS until April 2028 |
