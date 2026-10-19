@@ -1291,7 +1291,7 @@ GitHub Actions, Node 24, npm. Four workflows in `.github/workflows/`.
 
 **CodeQL** comes from GitHub's code-scanning default setup (repository settings), not from a workflow file.
 
-Actions are pinned to major versions (`actions/checkout@v6`, `actions/setup-node@v6` with `cache: npm`, `codecov/codecov-action@v7`, `actions/upload-artifact@v7`). Dependabot (`.github/dependabot.yml`) opens weekly grouped PRs against `develop` for npm, GitHub Actions and Docker. They run the same CI.
+Actions are pinned to major versions (`actions/checkout@v7`, `actions/setup-node@v7` with `cache: npm`, `codecov/codecov-action@v7`, `actions/upload-artifact@v7`). Dependabot (`.github/dependabot.yml`) opens weekly grouped PRs against `develop` for npm, GitHub Actions and Docker. They run the same CI.
 
 **Reporting config**: Vitest uses the `default` and JUnit reporters, with Cobertura coverage. Playwright uses `list`, JUnit and HTML (`.reports/playwright-report/`).
 
