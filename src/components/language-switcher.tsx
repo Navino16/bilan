@@ -1,7 +1,7 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { syncLocaleAction } from "@/server/transport/actions/preferences";
 
@@ -14,12 +14,11 @@ export function LanguageSwitcher({ syncPreference = false }: { syncPreference?: 
   const other = locale === "fr" ? "en" : "fr";
 
   async function switchTo() {
-    // Swap only the leading locale segment; read the query at click time so no
-    // useSearchParams() Suspense boundary is needed on static pages.
-    const next = pathname.replace(new RegExp(`^/${locale}(?=/|$)`), `/${other}`);
-    const target = `${next}${window.location.search}${window.location.hash}`;
+    // Read the query at click time so no useSearchParams() Suspense boundary is needed
+    // on static pages; `pathname` comes without its locale prefix.
+    const target = `${pathname}${window.location.search}${window.location.hash}`;
     if (syncPreference) await syncLocaleAction(other).catch(() => {});
-    router.push(target);
+    router.push(target, { locale: other });
   }
 
   return (

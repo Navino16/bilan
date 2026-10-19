@@ -36,6 +36,7 @@ export function CategoryCombobox({
 }) {
   const t = useTranslations("transactions");
   const valueId = useId();
+  const labelId = useId();
   const [value, setValue] = useState(defaultValue ?? "");
   const current =
     categories.find((c) => c.id === value) ??
@@ -49,11 +50,17 @@ export function CategoryCombobox({
   return (
     <>
       {name && <input type="hidden" name={name} value={value} />}
+      {ariaLabel && (
+        <span id={labelId} hidden>
+          {ariaLabel}
+        </span>
+      )}
       <DropdownMenu>
+        {/* The name carries the visible value after the label (WCAG 2.5.3). */}
         <DropdownMenuTrigger
           id={id}
-          aria-label={ariaLabel}
-          aria-describedby={id || ariaLabel ? valueId : undefined}
+          aria-labelledby={ariaLabel ? `${labelId} ${valueId}` : undefined}
+          aria-describedby={id && !ariaLabel ? valueId : undefined}
           render={
             <button
               type="button"

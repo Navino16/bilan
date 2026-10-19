@@ -21,11 +21,10 @@ export function UserMenu({ user }: { user: ShellUser }) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        aria-label={t("open")}
-        className="ring-offset-background focus-visible:ring-ring rounded-full outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-      >
-        <Avatar className="h-9 w-9">
+      {/* Named by hidden text, not aria-label: the visible initials aren't part of the name (WCAG 2.5.3). */}
+      <DropdownMenuTrigger className="ring-offset-background focus-visible:ring-ring rounded-full outline-none focus-visible:ring-2 focus-visible:ring-offset-2">
+        <span className="sr-only">{t("open")}</span>
+        <Avatar aria-hidden className="h-9 w-9">
           <AvatarFallback className="bg-accent text-accent-foreground text-xs font-medium">
             {initials}
           </AvatarFallback>
