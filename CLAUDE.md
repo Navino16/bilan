@@ -39,5 +39,5 @@ npm run db:seed-dev  # demo user dev@bilan.local / dev-password-123, 12 months o
 
 ## Important notes
 
-- Repo is **private** on a Free plan → no branch protection (ruleset saved in `scripts/github-ruleset.json` for if it goes public/Pro). Safeguards = Git Flow + CI.
+- Repo is **public**. The `Main/Develop` ruleset (managed in the GitHub settings) requires a PR, squash merge, linear history and green CI + CodeQL checks; no approval needed.
 - Bootstrap secrets stay in `.env` (`DATABASE_URL`, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `SEARCH_TOKEN_KEY`, `APP_URL`); everything else is configured in the app's admin UI.
