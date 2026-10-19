@@ -26,7 +26,8 @@ import {
   type ResolvedOidc,
 } from "./providers";
 import { authPlugins } from "./plugins";
-import { authDb, onAuthError } from "./auth-errors";
+import { onAuthError } from "./auth-errors";
+import { authDb } from "./auth-db";
 import { markSsoSignUp } from "./auth-audit";
 import { nameOnCreate, nameOnUpdate } from "./user-name";
 import { RESET_TOKEN_TTL_SEC, sendPasswordResetMail } from "@/server/services/mail/password-reset";
@@ -103,7 +104,7 @@ export function toOAuthConfig(o: ResolvedOidc, registrationOpen: boolean) {
   };
 }
 
-const DISCOVERY_PROBE_MS = 2_000;
+const DISCOVERY_PROBE_MS = 5_000;
 
 // Better Auth fetches discovery documents, without a timeout, while building the handler that
 // every auth call awaits: a hung IdP would stall password sign-ins too. A fast failure is fine,
@@ -176,7 +177,10 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
   }
 
   const hung = await Promise.all(oidcProviders.map(discoveryHangs));
-  const servedOidc = oidcProviders.filter((_, i) => !hung[i]);
+  const servedOidc = oidcProviders.filter((o, i) => {
+    if (hung[i]) console.warn(`[bilan] OIDC provider "${o.providerId}" left out: discovery hangs`);
+    return !hung[i];
+  });
   const oidcPlugin =
     servedOidc.length > 0
       ? [genericOAuth({ config: servedOidc.map((o) => toOAuthConfig(o, registrationOpen)) })]

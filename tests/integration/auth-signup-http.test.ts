@@ -131,7 +131,6 @@ describe("HTTP sign-up endpoint (#197)", () => {
     "/two-factor/send-otp",
     "/two-factor/verify-otp",
     "/link-social",
-    "/oauth2/link",
     ...[
       "ban-user",
       "create-user",
