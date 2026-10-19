@@ -5,7 +5,7 @@ import { parseLclItems } from "./lcl";
 import { parseGenericText } from "./generic";
 import type { ParsedProduct } from "../types";
 
-export { SUPPORTED_BANKS, type BankKey } from "./detect";
+export { type BankKey } from "./detect";
 
 // Loads a PDF, detects the bank, dispatches to the matching parser (or the
 // generic fallback). Single-product banks (LCL, generic) yield one "default"

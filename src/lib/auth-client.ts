@@ -10,4 +10,4 @@ export const authClient = createAuthClient({
   plugins: [twoFactorClient(), passkeyClient(), genericOAuthClient()],
 });
 
-export const { signIn, signOut, useSession } = authClient;
+export const { signIn, signOut } = authClient;

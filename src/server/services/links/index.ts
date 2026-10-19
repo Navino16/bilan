@@ -88,17 +88,6 @@ export async function listLinkedTxIds(userId: string): Promise<Set<string>> {
   return new Set(members.map((m) => m.transactionId));
 }
 
-// The link id a transaction belongs to, or null when unlinked or not visible.
-export async function getLinkForTx(transactionId: string, userId: string): Promise<string | null> {
-  const visible = new Set(await visibleAccountIds(userId));
-  const member = await db.transactionLinkMember.findUnique({
-    where: { transactionId },
-    select: { linkId: true, transaction: { select: { accountId: true } } },
-  });
-  if (!member || !visible.has(member.transaction.accountId)) return null;
-  return member.linkId;
-}
-
 export type PairLeg = { id: string; label: string; date: string; accountName: string };
 
 export type SuggestedPairView = SuggestedPair & { positive: PairLeg; negative: PairLeg };

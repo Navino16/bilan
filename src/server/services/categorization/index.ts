@@ -5,7 +5,7 @@ import { requireGroupRole } from "@/server/services/groups/roles";
 import { assertCategoryAssignable, CategoryAccessError } from "@/server/services/categories";
 import { ruleInputSchema, type RuleInput } from "@/lib/validation/rule";
 import { isValidRulePattern } from "./regex";
-import { pickByPriority, proposeRule, type Rule } from "./match";
+import { pickByPriority, type Rule } from "./match";
 import type { RuleMatchType } from "@/lib/validation/rule";
 
 export class RuleAccessError extends Error {}
@@ -224,5 +224,3 @@ export async function toggleRule(
     entityId: id,
   });
 }
-
-export { proposeRule };

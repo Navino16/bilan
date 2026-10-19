@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { CategoryAvatar, CategoryChip, Pill } from "./bits";
-import { type FlatCategory } from "./category-picker";
+import { type FlatCategory } from "./category-tree";
 import { categoryIndex } from "./category-tree";
 import { CreateRuleDialog } from "./create-rule-dialog";
 import {

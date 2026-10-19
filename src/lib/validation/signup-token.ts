@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const SIGNUP_TOKEN_EXPIRY_DAYS = [1, 7, 30, 90] as const;
 export const SIGNUP_TOKEN_DEFAULT_EXPIRY_DAYS = 7;
-export const SIGNUP_TOKEN_MAX_USES = 10_000;
+const SIGNUP_TOKEN_MAX_USES = 10_000;
 export const SIGNUP_TOKEN_DESCRIPTION_MAX = 191;
 
 export function signupTokenExpiry(days: number | null, now: Date): Date | undefined {

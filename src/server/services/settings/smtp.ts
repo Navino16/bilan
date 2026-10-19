@@ -109,7 +109,7 @@ export const SMTP_FAILURES = [
 ] as const;
 export type SmtpFailure = (typeof SMTP_FAILURES)[number];
 
-export function smtpFailureCode(error: unknown): SmtpFailure {
+function smtpFailureCode(error: unknown): SmtpFailure {
   const code = (error as { code?: unknown } | null)?.code;
   return SMTP_FAILURES.find((c) => c !== "OTHER" && c === code) ?? "OTHER";
 }

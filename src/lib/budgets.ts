@@ -15,8 +15,6 @@ export function budgetPlannedTotal(lines: { plannedAmount: number }[]): number {
   return round2(lines.reduce((s, l) => s + l.plannedAmount, 0));
 }
 
-export const _EPSILON = EPSILON; // exported for later tasks that need the tolerance
-
 export type BudgetStatus = "OK" | "WARN" | "REACHED" | "OVER";
 export type LineStatus = {
   plannedAmount: number;

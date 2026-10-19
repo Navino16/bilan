@@ -61,7 +61,7 @@ export async function revokeSignupToken(id: string): Promise<boolean> {
 
 export type SignupTokenStatus = "active" | "revoked" | "expired" | "usedUp";
 
-export function signupTokenStatus(
+function signupTokenStatus(
   tk: Pick<AdminSignupToken, "revokedAt" | "expiresAt" | "maxUses" | "usedCount">,
   now: Date,
 ): SignupTokenStatus {

@@ -20,7 +20,7 @@ import { SegmentedTabs, overline } from "./bits";
 import { PeriodPicker } from "@/components/dashboard/period-picker";
 import { useNavigationTransition } from "@/components/shell/navigation-pending";
 import { useSelectionMode } from "./selection-mode";
-import type { FlatCategory } from "./category-picker";
+import type { FlatCategory } from "./category-tree";
 import {
   DEFAULT_SORT,
   FILTER_PARAMS,

@@ -59,7 +59,7 @@ const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
 const MIN_YEAR = 1970;
 const MAX_YEAR = 2100;
 // Longer chart windows are cut: charts and aggregates stop making sense (and get slow).
-export const MAX_RANGE_YEARS = 10;
+const MAX_RANGE_YEARS = 10;
 
 // A real calendar day in a sane year range ("2026-02-30", "2026-13-45" and
 // "0000-01-01" are rejected rather than rolled over).
@@ -218,7 +218,7 @@ export function toIsoDay(d: Date): string {
 }
 
 // "Mai 2026" — localized month + year label for a month period.
-export function formatMonthLabel(p: Period, locale: string): string {
+function formatMonthLabel(p: Period, locale: string): string {
   const d = p.year && p.month ? new Date(Date.UTC(p.year, p.month - 1, 1)) : p.from;
   return formatMonthYear(d, locale);
 }

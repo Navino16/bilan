@@ -10,7 +10,7 @@ import { mailLocale } from "@/server/services/mail/locale";
 // Wired into Better Auth's emailVerification.expiresIn; the templates say "24 hours".
 export const VERIFY_TOKEN_TTL_SEC = 24 * 60 * 60;
 
-export function verificationLink(token: string, locale: Locale, appUrl: string = env.APP_URL) {
+function verificationLink(token: string, locale: Locale, appUrl: string = env.APP_URL) {
   const origin = new URL(appUrl).origin;
   const callback = `${origin}/${locale}/verify-email`;
   return `${origin}/api/auth/verify-email?token=${encodeURIComponent(token)}&callbackURL=${encodeURIComponent(callback)}`;
@@ -44,7 +44,7 @@ const TEMPLATES: Record<Locale, (i: Input) => { subject: string; text: string }>
   }),
 };
 
-export function verificationMail(locale: Locale, input: Input) {
+function verificationMail(locale: Locale, input: Input) {
   return TEMPLATES[locale]({ ...input, account: oneLine(input.account) });
 }
 
