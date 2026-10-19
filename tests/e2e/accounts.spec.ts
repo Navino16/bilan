@@ -145,6 +145,44 @@ test.describe("accounts", () => {
   });
 });
 
+// The stale-session step-up (password or new sign-in) is covered by the integration tests:
+// the e2e suite can't age a browser session past the 10-minute window.
+test.describe("IBAN reveal (#257)", () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+  test.skip(
+    ({ browserName }) => browserName === "webkit",
+    "Playwright WebKit doesn't deliver taps in this env (project-wide skip)",
+  );
+
+  test("a fresh sign-in reveals the full IBAN without asking again", async ({ page }) => {
+    await page.goto("/fr/login");
+    await page.fill('input[name="email"]', "owner@e2e.local");
+    await page.fill('input[name="password"]', "e2e-owner-pw-123456");
+    await page.click('button[type="submit"]');
+    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
+
+    const name = `IBAN ${Date.now()}`;
+    await page.goto("/fr/accounts");
+    await expect(async () => {
+      await page.getByRole("button", { name: /nouveau compte/i }).click();
+      await expect(page.locator('input[name="name"]')).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 20_000 });
+    await page.fill('input[name="name"]', name);
+    await page.fill('input[name="iban"]', "FR76 3000 6000 0112 3456 7890 189");
+    await page.getByRole("button", { name: /créer le compte/i }).click();
+
+    const card = page.locator('[data-slot="card"]').filter({ hasText: name }).last();
+    const iban = card.locator('[data-slot="account-iban"]');
+    await expect(iban).toHaveText("•••• 0189");
+    await card.getByRole("button", { name: "Afficher l’IBAN" }).click();
+    await expect(iban).toHaveText("FR76 3000 6000 0112 3456 7890 189");
+    await expect(page.locator('[data-slot="step-up"]')).toHaveCount(0);
+
+    await card.getByRole("button", { name: "Masquer l’IBAN" }).click();
+    await expect(iban).toHaveText("•••• 0189");
+  });
+});
+
 test("unauthenticated /accounts redirects to login", async ({ page }) => {
   await page.goto("/fr/accounts");
   await expect(page).toHaveURL(/\/login\?callbackUrl=%2Ffr%2Faccounts$/);

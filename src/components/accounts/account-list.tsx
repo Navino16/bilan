@@ -16,6 +16,12 @@ import type { FlatCategory } from "@/components/transactions/category-tree";
 import type { VisibleAccount } from "@/server/services/accounts";
 import { balanceLegend, balanceSegments } from "@/lib/balance-legend";
 import { revealAccountIbanAction } from "@/server/transport/actions/accounts";
+import type { StepUpMethod } from "@/server/services/users/step-up";
+import {
+  StepUpDialog,
+  useStepUpErrorText,
+  type StepUpFailure,
+} from "@/components/auth/step-up-dialog";
 
 const OTHERS_COLOR = "var(--cat-other)";
 
@@ -34,24 +40,40 @@ function useMoney() {
 
 function IbanReveal({ id, masked }: { id: string; masked: string }) {
   const t = useTranslations("accounts");
+  const errorText = useStepUpErrorText();
   const [revealed, setRevealed] = useState<string | null>(null);
+  const [reauth, setReauth] = useState<StepUpMethod | null>(null);
+  const [failure, setFailure] = useState<StepUpFailure | null>(null);
   const [pending, startTransition] = useTransition();
   const shown = revealed !== null;
 
+  async function revealWithPassword(password: string): Promise<{ ok: true } | StepUpFailure> {
+    const res = await revealAccountIbanAction(id, password);
+    if (res.ok) setRevealed(res.iban);
+    return res;
+  }
+
   function toggle() {
+    setFailure(null);
     if (shown) {
       setRevealed(null);
       return;
     }
     startTransition(async () => {
-      const full = await revealAccountIbanAction(id);
-      if (full) setRevealed(full);
+      try {
+        const res = await revealAccountIbanAction(id);
+        if (res.ok) setRevealed(res.iban);
+        else if (res.error === "REAUTH_REQUIRED") setReauth(res.method);
+        else setFailure(res);
+      } catch {
+        setFailure({ ok: false, error: "FAILED" });
+      }
     });
   }
 
   return (
-    <div className="text-muted-foreground flex items-center gap-1.5 font-mono text-xs">
-      <span>{shown ? revealed : masked}</span>
+    <div className="text-muted-foreground flex min-w-0 items-center gap-1.5 font-mono text-xs">
+      <span data-slot="account-iban">{shown ? revealed : masked}</span>
       <button
         type="button"
         onClick={toggle}
@@ -62,6 +84,20 @@ function IbanReveal({ id, masked }: { id: string; masked: string }) {
       >
         {shown ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
       </button>
+      {failure && (
+        <span role="alert" className="text-destructive truncate font-sans">
+          {errorText(failure)}
+        </span>
+      )}
+      {reauth && (
+        <StepUpDialog
+          method={reauth}
+          purpose="iban"
+          confirm={revealWithPassword}
+          onConfirmed={() => setReauth(null)}
+          onClose={() => setReauth(null)}
+        />
+      )}
     </div>
   );
 }

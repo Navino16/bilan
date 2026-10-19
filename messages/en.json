@@ -223,6 +223,33 @@
       "next": "Next period"
     }
   },
+  "stepUp": {
+    "title": "Confirm it’s you",
+    "passwordBody": {
+      "iban": "You signed in more than 10 minutes ago. Enter your password to show the full IBAN.",
+      "export": "You signed in more than 10 minutes ago. Enter your password to download all your data, IBANs included."
+    },
+    "signInBody": {
+      "iban": "You signed in more than 10 minutes ago. Sign in again to show the full IBAN.",
+      "export": "You signed in more than 10 minutes ago. Sign in again to download all your data, IBANs included."
+    },
+    "signInHint": "You’ll be signed out, then come back to this page once you sign in again.",
+    "password": "Password",
+    "confirm": {
+      "iban": "Show IBAN",
+      "export": "Download"
+    },
+    "checking": "Checking…",
+    "signInAgain": "Sign in again",
+    "cancel": "Cancel",
+    "error": {
+      "BAD_PASSWORD": "Incorrect password.",
+      "RATE_LIMITED": "Too many attempts. Try again later.",
+      "rateLimitedFor": "Too many attempts. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
+      "NOT_FOUND": "This IBAN is no longer available.",
+      "FAILED": "Something went wrong. Please try again."
+    }
+  },
   "accounts": {
     "overline": "Wealth",
     "title": "Accounts",
@@ -1735,6 +1762,10 @@
           }
         },
         "user": {
+          "data": {
+            "exported": "Full data export downloaded",
+            "export_failed": "Full data export refused"
+          },
           "role": {
             "granted": "Role granted",
             "changed": "Role changed"
@@ -1779,6 +1810,10 @@
           }
         },
         "account": {
+          "iban": {
+            "revealed": "IBAN revealed",
+            "reveal_failed": "IBAN reveal refused"
+          },
           "created": "Bank account created",
           "updated": "Bank account updated",
           "archived": "Bank account archived",

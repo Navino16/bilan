@@ -223,6 +223,33 @@
       "next": "Période suivante"
     }
   },
+  "stepUp": {
+    "title": "Confirmez votre identité",
+    "passwordBody": {
+      "iban": "Votre connexion date de plus de 10 minutes. Saisissez votre mot de passe pour afficher l’IBAN complet.",
+      "export": "Votre connexion date de plus de 10 minutes. Saisissez votre mot de passe pour télécharger toutes vos données, IBAN compris."
+    },
+    "signInBody": {
+      "iban": "Votre connexion date de plus de 10 minutes. Reconnectez-vous pour afficher l’IBAN complet.",
+      "export": "Votre connexion date de plus de 10 minutes. Reconnectez-vous pour télécharger toutes vos données, IBAN compris."
+    },
+    "signInHint": "Votre session actuelle sera fermée, puis vous reviendrez sur cette page après la connexion.",
+    "password": "Mot de passe",
+    "confirm": {
+      "iban": "Afficher l’IBAN",
+      "export": "Télécharger"
+    },
+    "checking": "Vérification…",
+    "signInAgain": "Se reconnecter",
+    "cancel": "Annuler",
+    "error": {
+      "BAD_PASSWORD": "Mot de passe incorrect.",
+      "RATE_LIMITED": "Trop de tentatives. Réessayez plus tard.",
+      "rateLimitedFor": "Trop de tentatives. Réessayez dans {minutes, plural, one {# minute} other {# minutes}}.",
+      "NOT_FOUND": "Cet IBAN n’est plus disponible.",
+      "FAILED": "Une erreur est survenue. Veuillez réessayer."
+    }
+  },
   "accounts": {
     "overline": "Patrimoine",
     "title": "Comptes",
@@ -1735,6 +1762,10 @@
           }
         },
         "user": {
+          "data": {
+            "exported": "Export complet des données téléchargé",
+            "export_failed": "Export complet des données refusé"
+          },
           "role": {
             "granted": "Rôle attribué",
             "changed": "Rôle modifié"
@@ -1779,6 +1810,10 @@
           }
         },
         "account": {
+          "iban": {
+            "revealed": "IBAN affiché",
+            "reveal_failed": "Affichage de l’IBAN refusé"
+          },
           "created": "Compte bancaire créé",
           "updated": "Compte bancaire modifié",
           "archived": "Compte bancaire archivé",

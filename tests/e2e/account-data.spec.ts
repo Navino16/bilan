@@ -45,7 +45,18 @@ test.describe("account data", () => {
     expect(await rows("accountId=not-a-readable-account")).toEqual([]);
   });
 
-  test("the JSON export has a dated filename and no encrypted fields", async ({ page }) => {
+  // Needs a sign-in under 10 minutes old (#257); the stored owner session may be older.
+  test("the JSON export has a dated filename and no encrypted fields", async ({
+    browser,
+    baseURL,
+  }) => {
+    const ctx = await browser.newContext({ baseURL, storageState: { cookies: [], origins: [] } });
+    const page = await ctx.newPage();
+    await page.goto("/fr/login");
+    await page.fill('input[name="email"]', "owner@e2e.local");
+    await page.fill('input[name="password"]', "e2e-owner-pw-123456");
+    await page.click('button[type="submit"]');
+    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 });
     const res = await page.request.get("/api/export/data");
     expect(res.status()).toBe(200);
     expect(res.headers()["content-disposition"]).toMatch(
@@ -54,6 +65,7 @@ test.describe("account data", () => {
     const body = await res.text();
     expect(body).not.toContain("ibanEnc");
     expect(body).not.toContain("labelEnc");
+    await ctx.close();
   });
 
   test("the data settings page downloads exports with progress feedback", async ({ page }) => {

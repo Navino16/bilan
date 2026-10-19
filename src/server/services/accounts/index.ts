@@ -5,7 +5,7 @@ import { hmacForSearch } from "@/server/crypto/hmac";
 import { dataKey, searchKey } from "@/server/crypto/keys";
 import { logEvent } from "@/server/services/audit";
 import { accountInputSchema, type AccountInput } from "@/lib/validation/account";
-import { isValidIban, normalizeIban, maskIban, formatIban } from "./iban";
+import { isValidIban, normalizeIban, maskIban } from "./iban";
 import { displayName } from "@/lib/validation/name";
 
 // Thrown for both authorization failures and invalid business input so callers
@@ -149,14 +149,6 @@ export async function getAccountForUser(id: string, userId: string) {
   const acc = await db.bankAccount.findUnique({ where: { id } });
   if (!acc || acc.ownerId !== userId) return null;
   return acc;
-}
-
-// Decrypts the IBAN on demand for the owner only — kept out of listVisibleForUser
-// so the clear IBAN never ships in the page payload, only on explicit reveal.
-export async function getAccountIban(id: string, userId: string): Promise<string | null> {
-  const acc = await db.bankAccount.findUnique({ where: { id } });
-  if (!acc || acc.ownerId !== userId || !acc.ibanEnc) return null;
-  return formatIban(decrypt(acc.ibanEnc, dataKey));
 }
 
 export async function isAccountArchived(id: string): Promise<boolean> {

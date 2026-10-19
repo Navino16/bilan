@@ -114,6 +114,13 @@ Un nouveau compte est privé. Pour le partager, voir [Partager un compte](#parta
 
 La carte n’affiche que les 4 derniers caractères. Cliquez sur l’œil (**Afficher l’IBAN**) pour voir l’IBAN complet, puis de nouveau pour le masquer. Seul le propriétaire du compte voit l’IBAN ; les personnes avec qui vous le partagez ne le voient jamais.
 
+Si vous vous êtes connecté il y a moins de 10 minutes, l’IBAN s’affiche aussitôt. Sinon, Bilan vous demande d’abord de confirmer votre identité :
+
+- Si vous vous connectez avec un mot de passe, saisissez-le et cliquez sur **Afficher l’IBAN**. Pendant les 5 minutes suivantes, Bilan ne le redemande pas. Après 5 mots de passe erronés en 15 minutes, patientez avant de réessayer.
+- Si votre compte n’a pas de mot de passe (fournisseur d’identité ou clé d’accès uniquement), ou si la connexion par mot de passe est désactivée, cliquez sur **Se reconnecter** : votre session est fermée, puis vous revenez sur la page des comptes une fois reconnecté. L’IBAN s’affiche alors aussitôt.
+
+Chaque affichage d’un IBAN complet est enregistré dans le journal d’activité, sans l’IBAN lui-même.
+
 Pour changer ou retirer l’IBAN, ouvrez **Modifier** dans le menu de la carte. Laissez le champ vide pour garder celui enregistré, ou cochez **Retirer l’IBAN enregistré**.
 
 ### Archiver ou supprimer un compte
@@ -558,7 +565,7 @@ Allez dans **Données** dans la barre latérale.
 ### Exporter
 
 - **Transactions (CSV)** : les transactions des comptes que vous voyez, avec date, montant, type, libellé, compte et catégorie. Par défaut, le fichier les contient toutes ; pour le restreindre, choisissez une période (**Du**, **Au**) ou un **Compte** au-dessus des boutons. Le fichier s’ouvre dans un tableur et peut être réimporté dans Bilan. En français, il utilise le point-virgule comme séparateur et la virgule décimale.
-- **Toutes mes données (JSON)** : tout ce qui vous appartient, pour vos archives ou pour changer d’outil : profil, vos propres comptes (IBAN compris), leurs transactions avec notes et libellés d’origine, catégories, règles, noms de marchands, budgets, foyers, liens, historique des imports et votre journal d’activité récent. Les comptes que d’autres partagent avec vous n’y figurent pas.
+- **Toutes mes données (JSON)** : tout ce qui vous appartient, pour vos archives ou pour changer d’outil : profil, vos propres comptes (IBAN compris), leurs transactions avec notes et libellés d’origine, catégories, règles, noms de marchands, budgets, foyers, liens, historique des imports et votre journal d’activité récent. Les comptes que d’autres partagent avec vous n’y figurent pas. Comme il contient vos IBAN complets, il vous demande de confirmer votre identité comme pour [voir un IBAN](#voir-liban) si votre connexion date de plus de 10 minutes.
 
 ### Supprimer votre compte
 
