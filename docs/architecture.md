@@ -1,8 +1,8 @@
 # Bilan — Architecture
 
-> The original design of Bilan (May 2026), kept as the architecture reference: stack, data model,
-> key flows, security and deployment. Where it and the code differ, the code is right. Code
-> comments cite its sections as `spec §N`.
+> How Bilan is built: stack, data model, key flows, security, testing and deployment. It started
+> as the design spec (May 2026) and was checked against the code in October 2026. Where it and the
+> code differ, the code is right. Code comments cite its sections as `spec §N`.
 
 ---
 
@@ -10,15 +10,14 @@
 
 ### Background
 
-Personal finance tracking application. Supersedes an earlier throwaway Python script that parsed CSV bank statements, categorized transactions, and produced an HTML report.
-
-The new application is a full web app with multi-user support, real database, multiple import sources (CSV / PDF / manual), customizable categorization rules, and budgets.
+Self-hosted personal-finance application. A full web app with multi-user support, a relational database, several import sources (bank CSV, bank PDF statements, manual entry), user-configurable categorization rules, transaction links and budgets.
 
 ### Primary users
 
-- The account owner (technical) — manages 3 bank accounts (personal + joint + partner's account).
-- Their partner — separate account, shared joint account.
-- Potential extension: other household members or shared groups (e.g., shared trip).
+- A person managing several bank accounts (personal, joint, savings…), some of them shared with a partner or the rest of the household.
+- The other members of that household: each has their own accounts and sees the accounts shared with the group.
+- Other shared groups (e.g., a trip with friends): a user can belong to several groups.
+- The instance administrator, who configures the app (sign-up, SSO, SMTP, users) from the admin UI.
 
 ### Goals
 
@@ -29,95 +28,96 @@ The new application is a full web app with multi-user support, real database, mu
 5. Link related transactions (refunds, partial reimbursements) and exclude balanced groups from averages.
 6. Maintain strict security: bank data is sensitive, encryption at rest is mandatory.
 
-### Non-goals (for MVP)
+### Non-goals
 
 - Multi-currency (EUR only).
-- Native mobile apps (responsive web is mobile-first).
+- Native mobile apps (responsive mobile-first web, installable as a PWA).
 - Automatic bank-account connection (PSD2 / Open Banking) — manual imports only.
-- Automatic migration of historical data (user will re-import manually via CSV).
 
 ---
 
-## 2. Scoping Decisions (Brainstorming Output)
-
-Decisions consolidated from the clarifying-questions phase.
+## 2. Key Decisions
 
 ### 2.1 Stack
 
-| Component | Version (May 2026) | Choice rationale |
+| Component | Version | Choice rationale |
 |---|---|---|
-| Next.js | 16.2 LTS | App Router stable, full-stack TypeScript |
-| React | 19.2 | Server Components, Compiler |
-| TypeScript | 6.0 | Strict mode + ESM by default |
+| Next.js | 16.2 | App Router, full-stack TypeScript, `output: "standalone"` |
+| React | 19.2 | Server Components, Server Actions |
+| TypeScript | 6.0 | Strict mode |
 | Tailwind CSS | v4 | Styling, driven by Bilan design tokens (see §9) |
-| shadcn/ui | latest | Accessible primitives (Radix), re-skinned with Bilan tokens |
+| shadcn/ui | 4.x (`base-nova` style) | Accessible primitives (Base UI, `@base-ui/react`), re-skinned with Bilan tokens |
 | Fonts | Newsreader · IBM Plex Sans · IBM Plex Mono | Self-hosted via `next/font` (see §9.2) |
-| react-hook-form + Zod | latest | Forms + runtime validation |
-| next-intl | latest | i18n fr/en routing |
+| Zod | 4.x | Runtime validation; forms post to Server Actions through `useActionState` (`src/components/forms/use-action-form.ts`) |
+| next-intl | 4.x | i18n fr/en routing |
 | Prisma | 7.x (with `@prisma/adapter-mariadb`) | ORM with MariaDB-native driver |
-| MariaDB | 11 LTS | Database |
-| Better Auth | latest | Native DB-backed sessions, RBAC, 2FA, passkeys, OIDC plugin |
+| MariaDB | 11 | Database |
+| Better Auth | 1.6 (+ `@better-auth/passkey`) | DB-backed sessions, 2FA, passkeys, admin plugin, generic OIDC plugin |
+| papaparse · pdf-parse / pdfjs-dist | — | CSV and PDF statement parsing |
+| re2js | — | Linear-time regex engine for user `REGEX` rules (no ReDoS) |
+| nodemailer | — | Outgoing mail through the admin-configured SMTP |
 | Node | 24 LTS | Runtime, LTS until April 2028 |
-| Vitest | latest | Unit + integration tests |
-| Playwright | latest | E2E tests |
-| Docker Compose | latest | Local stack (app + mariadb + mariadb-test + adminer) |
-| Package manager | **npm** | Aligned with the `librarr` project (npm ci, package-lock.json) |
-| GitHub Actions | — | CI/CD (`ci.yml` + `build.yml`), aligned on `librarr` — see §7.6 / §10.4 |
+| Vitest | 4.x | Unit + integration tests |
+| Playwright | 1.x | E2E tests |
+| Docker Compose | — | Local stack (app + mariadb + mariadb-test + adminer); production stack (mariadb + app + cron) in `docker-compose.prod.yml` |
+| Package manager | **npm** | `npm ci`, `package-lock.json` |
+| GitHub Actions | — | CI/CD (`ci.yml`, `build.yml`, `prod-smoke.yml`) — see §7.6 / §10.4 |
 | Codecov | — | Coverage + test results upload |
-| ghcr.io | — | Multi-arch Docker image registry |
-| Dependabot | — | Dependency updates |
+| ghcr.io | — | Multi-arch (amd64 + arm64) Docker image registry |
+| Dependabot | — | Dependency updates (npm + GitHub Actions) |
 
-> Note on auth: Auth.js was considered but Better Auth (which now maintains Auth.js) is the 2026 recommendation for new self-hosted projects. It provides RBAC, 2FA, passkeys, immediate session revocation, and dynamic OIDC providers out of the box.
+> Note on auth: Better Auth (which now maintains Auth.js) is the recommendation for new self-hosted projects. It provides 2FA, passkeys, immediate session revocation, and dynamic OIDC providers out of the box; RBAC is Bilan's own `Role`/`Permission` tables (§2.3).
 
 ### 2.2 Architecture choices
 
 - **Full-stack Next.js** (single project, App Router).
-- **Transport mix**: Server Actions for short CRUD; Route Handlers (API) for heavy / streaming endpoints (imports, exports); Server Components for read-only views. All business logic lives in `server/services/*` (pure TypeScript, testable).
+- **Transport mix**: Server Actions for short CRUD; Route Handlers (API) for imports, exports, cron and auth endpoints; Server Components for read-only views. All business logic lives in `server/services/*` (pure TypeScript, testable).
 - **Database**: relational, Prisma + MariaDB.
 - **Multi-user model**: shared via **groups (households)** only. A user may belong to multiple groups. Accounts always have a user owner; sharing is done by granting a group access to an account (READ or WRITE).
-- **Categories model**: owned by `User` OR `Group` (symmetric with accounts via XOR ownership). Default categories seeded at signup in user's locale.
-- **Categorization**: user-configurable rules (pattern + match type). When a user changes a transaction's category, the UI proposes creating a rule.
-- **Transaction links**: manual + auto-suggestions. Pairs `+X/-X` within configurable window. No minimum amount.
+- **Categories model**: owned by `User` OR `Group` (symmetric with accounts via XOR ownership, enforced in the service layer). Default categories seeded at signup in user's locale.
+- **Categorization**: user-configurable rules (pattern + match type `CONTAINS | EXACT | STARTS_WITH | REGEX`, priority), scoped to a user or a group. When a user changes a transaction's category, the UI proposes creating a rule.
+- **Transaction links**: manual + auto-suggestions. Pairs `+X/-X` within a per-user window (default 30 days) and above an optional per-user minimum amount (default 0).
   - Balanced groups (sum = 0): all transactions excluded from totals.
   - Unbalanced groups: the **primary** transaction (largest absolute amount) receives the net sum in its category; other members are neutralized.
-- **Budgets**: scoped to user OR group; can target categories AND/OR accounts; custom periods (week, month, quarter, year, custom); automatic matching by category/account + explicit `BudgetAssignment` (`INCLUDE` / `EXCLUDE`) overrides.
+- **Budgets**: scoped to user OR group; can target categories AND/OR accounts; custom periods (week, month, quarter, year, custom), optionally recurring (rolled into the next period by a cron route); automatic matching by category/account + explicit `BudgetAssignment` (`INCLUDE` / `EXCLUDE`) overrides.
 - **Privacy on shared budgets**: full transparency — every group member sees the date, amount, label, category and account name of each transaction counted in a group budget, including one a member assigned (`INCLUDE`) from a private account. Only that transaction becomes visible: the private account and its other transactions stay private. Visibility is re-checked when displayed: a counted transaction is shown in full only while its account is shared with the household or its owner is still a member (otherwise masked but still counted); a personal budget masks one from an account its owner can no longer read.
 - **Include scope on group budgets**: an `INCLUDE` into a group budget is allowed only for a transaction whose account the actor owns or that is shared with that same group — reading an account through another group is not enough. Personal budgets accept any account the actor can read.
 - **Currency**: EUR only.
-- **Mobile**: responsive mobile-first (Playwright includes mobile viewport tests).
-- **i18n**: fr/en at minimum, language preference per user, `next-intl`.
+- **Mobile**: responsive mobile-first, installable PWA (Playwright runs a mobile project on an iPhone 14 profile).
+- **i18n**: fr/en, language preference per user, `next-intl`.
 
 ### 2.3 Security choices
 
-- **Encryption at rest at MariaDB level** (innodb_encrypt_tables) — protects against disk theft.
-- **Application-level encryption** AES-256-GCM on sensitive fields: transaction labels, raw labels, notes, account IBAN, OIDC client secrets, SMTP password, secret settings.
-- **Search on encrypted labels**: HMAC-SHA256 of the normalized full label (exact match) + a `TransactionSearchToken` table with one HMAC per normalized word prefix of 3 to 12 chars (word-beginning search, #192; a query word is cut to 12 chars). No substring search inside a word. Accents stripped, lowercase. Changing the tokenization requires `npm run db:reindex-search`.
+- **Encryption at rest at MariaDB level** (`innodb_encrypt_tables` + `innodb_encrypt_log`, `file_key_management` keyring) — protects against disk theft.
+- **Application-level encryption** AES-256-GCM on sensitive fields: transaction labels, raw labels, notes, account IBAN, merchant aliases, OIDC client secrets, SMTP password.
+- **Search on encrypted labels**: HMAC-SHA256 of the normalized full label (exact match) + a `TransactionSearchToken` table with one HMAC per normalized word prefix of 3 to 12 chars (word-beginning search, #192; a query word is cut to 12 chars). No substring search inside a word. Accents stripped, lowercase. Changing the tokenization requires `npm run db:reindex-search`. IBANs get the same kind of HMAC blind index (`ibanHash`).
 - **Keys**: `DATA_ENCRYPTION_KEY` (AES) and `SEARCH_TOKEN_KEY` (HMAC) are **separate** — defense in depth.
-- **Password hashing**: argon2id with OWASP 2025 recommended parameters (handled by Better Auth).
-- **Sessions**: DB-backed, httpOnly + secure + sameSite=strict cookies, immediate revocation supported.
-- **Multi-provider auth**: Credentials (toggleable), generic OIDC (e.g., Authentik), optional Google. OIDC providers configured via DB through `/admin/auth-providers` UI (hot-reload, no restart needed).
-- **Roles**: configurable `Role` + `Permission` + `RolePermission` + `UserRole` tables (initial seed: `SUPER_ADMIN`, `ADMIN`, `USER`).
+- **Password hashing**: Better Auth's default (scrypt via `node:crypto`); minimum length configurable by the admin (default 12).
+- **Sessions**: DB-backed (7 days, refreshed after 1 day), no cookie cache so revocation is immediate; Better Auth cookie attributes (httpOnly, sameSite=lax, `Secure` + `__Secure-` prefix on HTTPS).
+- **Second factors**: TOTP 2FA (backup codes, trusted devices) and passkeys; admins can be required to enrol 2FA; step-up re-authentication guards IBAN reveal and full data export.
+- **Multi-provider auth**: Credentials (toggleable), generic OIDC (e.g., Authentik), optional Google. Providers configured via DB through the `/admin/auth-providers` UI (hot-reload, no restart needed).
+- **Roles**: configurable `Role` + `Permission` + `RolePermission` + `UserRole` tables (seeded on every start: `SUPER_ADMIN`, `ADMIN`, `USER`).
 - **Registration mode**: `OPEN | INVITE_ONLY | DISABLED` configurable from admin UI.
 - **Admin signup tokens**: generic invite tokens (separate from group invitations) for `INVITE_ONLY` mode.
-- **Audit log**: every state-mutating event (auth, sharing, settings, transactions) tracked in `AuditLog` with 12-month retention.
+- **Audit log**: every state-mutating event (auth, sharing, settings, transactions) tracked in `AuditLog` with 12-month retention (purged by a cron route).
 - **CI**: GitHub Actions; **Dependabot** for dependency updates.
 
 ### 2.4 Other settings — all in the web UI
 
-All application configuration is editable from the web admin UI. Only bootstrap secrets stay in `.env`: `DATABASE_URL`, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `SEARCH_TOKEN_KEY`, `APP_URL`.
+All application configuration is editable from the web admin UI. Only bootstrap values stay in `.env`: `DATABASE_URL`, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `SEARCH_TOKEN_KEY`, `APP_URL`, plus the optional `CRON_SECRET` (enables the cron routes) and `TRUSTED_IP_HEADER` (client-IP header set by the reverse proxy) — validated by `src/env.ts`.
 
-Database-stored settings include: auth providers, SMTP, app branding, security policy (min password length, lockout, session duration), app parameters (link suggestion window, rate limits, registration mode).
+Database-stored settings include: auth providers, SMTP, app name, security policy (registration mode, credentials toggle, min password length, admin 2FA requirement). Per-user preferences (locale, link-suggestion window and minimum amount) live in `UserPreference`. Session duration and rate limits are fixed in code.
 
 ### 2.5 Tests
 
-- **Unit + E2E from the start** (decided rather than deferred).
-- Unit + integration tests target `server/services/*` (pure business logic + Prisma).
-- E2E tests via Playwright with an isolated `mariadb-test` container.
-- Server Actions and API Routes are thin wrappers (≤15 lines) — not directly unit-tested.
+- **Unit + integration + E2E**, all in CI.
+- Unit + integration tests mostly target `server/services/*` (pure business logic + Prisma); integration tests run against the `mariadb-test` container (`budget_test`).
+- E2E tests via Playwright (desktop Chromium + mobile project) against a server whose database is seeded by `scripts/seed-e2e.ts`.
+- Server Actions and API Routes are thin wrappers (session, Zod validation, service call, error mapping); only the ones carrying logic of their own (auth, setup, cron, error mapping) have dedicated tests.
 
 ### 2.6 MVP scope
 
-- **MVP with multi-user from day 1** (decided rather than ship solo-only first).
+- **Multi-user from the first release**: groups, sharing and group budgets are part of the core model, not an add-on.
 
 ---
 
@@ -126,25 +126,32 @@ Database-stored settings include: auth providers, SMTP, app branding, security p
 ### 3.1 Layered overview
 
 ```
-┌─────────────────────────────────────────────────┐
-│  app/  ── UI (Server Components + Client)       │  ← Responsive mobile-first, i18n
-├─────────────────────────────────────────────────┤
-│  server/transport/                              │
-│    ├ actions/  (Server Actions — short CRUD)    │  ← Thin wrappers (≤15 lines)
-│    └ api/      (Route Handlers — imports, exports) │
-├─────────────────────────────────────────────────┤
-│  server/services/  (business logic, pure TS)    │  ← 90% of unit tests target this
-│    ├ accounts, transactions, categorization     │
-│    ├ budgets, links, permissions, groups        │
-│    ├ imports/ (csv, pdf)                        │
-│    └ settings/ (auth-providers, smtp, app)      │
-├─────────────────────────────────────────────────┤
-│  server/auth/  (Better Auth + dynamic providers) │
-├─────────────────────────────────────────────────┤
-│  server/crypto/  (AES-256-GCM, HMAC, argon2id)  │
-├─────────────────────────────────────────────────┤
-│  server/db/  (Prisma client + adapter-mariadb)   │
-└─────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│  app/  ── UI (Server Components + Client)            │  ← Responsive mobile-first, i18n
+│    └ api/  (Route Handlers — imports, exports, cron) │
+├──────────────────────────────────────────────────────┤
+│  proxy.ts  (setup gate, session fast-path, i18n,     │
+│             security headers)                        │
+├──────────────────────────────────────────────────────┤
+│  server/transport/                                   │
+│    ├ actions/  (Server Actions — short CRUD)         │  ← Thin wrappers
+│    └ http/     (shared Route Handler helpers)        │
+├──────────────────────────────────────────────────────┤
+│  server/services/  (business logic, pure TS)         │  ← Most unit/integration tests target this
+│    ├ accounts, transactions, categories,             │
+│    │ categorization, merchants, links, budgets       │
+│    ├ groups, users, signup-tokens, audit, rgpd       │
+│    ├ dashboard, export, mail, onboarding             │
+│    ├ imports/ (csv, pdf)                             │
+│    └ settings/ (auth-providers, smtp, app-settings)  │
+├──────────────────────────────────────────────────────┤
+│  server/auth/  (Better Auth + dynamic providers,     │
+│                 RBAC permissions, rate limits)       │
+├──────────────────────────────────────────────────────┤
+│  server/crypto/  (AES-256-GCM, HMAC)                 │
+├──────────────────────────────────────────────────────┤
+│  server/db/  (Prisma client + adapter-mariadb)       │
+└──────────────────────────────────────────────────────┘
 ```
 
 ### 3.2 Transport rules
@@ -152,90 +159,105 @@ Database-stored settings include: auth providers, SMTP, app branding, security p
 | Use case | Solution | Why |
 |---|---|---|
 | Create tx, edit category, share account, create budget, etc. | **Server Action** | Short mutation, automatic cache revalidation |
-| Upload CSV/PDF (parsing 10s+) | **API Route** | Streaming, large payload, headers control |
-| Future external integration (webhook, accountant export) | **API Route** | Must be callable outside the browser |
+| Upload CSV/PDF, preview, commit, progress polling | **API Route** | Large multipart payload, status codes and headers control |
+| Exports (transactions CSV, full data export) | **API Route** | File download |
+| Cron jobs (audit purge, import purge, recurring budgets) | **API Route** | Called outside the browser (cron container, `CRON_SECRET` bearer) |
 | Read (transaction list, dashboard) | **Server Component** | Direct server render, no API needed |
 
-All business logic in `server/services/*`. Transport wrappers validate input with Zod, call the service, return the result.
+All business logic in `server/services/*`. Transport wrappers check the session, validate input with Zod, call the service, map errors to a result. The proxy only checks that a session cookie is present (redirect to `/login` without a DB round-trip); the authoritative check is `requireSession()` / `requirePermission()` in layouts, pages and wrappers.
 
 ### 3.3 Directory structure
 
 ```
 budget/
-├── docker-compose.yml
-├── Dockerfile                      # dev + prod targets
+├── docker-compose.yml              # local stack: mariadb, mariadb-test, adminer, app (dev)
+├── docker-compose.prod.yml         # production: mariadb, app, cron
+├── Dockerfile                      # dev, builder, migrator, prod stages
+├── docker/                         # cron, mariadb (conf, keyring), migrate (Prisma CLI)
 ├── package.json
+├── prisma.config.ts
 ├── prisma/
 │   ├── schema.prisma               # adapter mariadb
 │   ├── migrations/
-│   └── seed.ts                     # roles + permissions
+│   ├── seed.ts                     # roles + permissions + default app settings
+│   └── seed-data/                  # default categories (fr, en)
 ├── messages/                       # i18n
 │   ├── fr.json
 │   └── en.json
+├── scripts/                        # init, dev/e2e seeds, search reindex, prod smoke, docs
+├── public/                         # icons, PWA service worker
 ├── src/
 │   ├── app/
 │   │   ├── [locale]/
-│   │   │   ├── (setup)/            # /setup (first launch)
-│   │   │   ├── (auth)/             # /login, /register, /reset
+│   │   │   ├── (setup)/setup/      # first launch
+│   │   │   ├── (auth)/             # /login, /register, /reset, /verify-email
 │   │   │   ├── (authenticated)/
 │   │   │   │   ├── dashboard/
-│   │   │   │   ├── transactions/
+│   │   │   │   ├── transactions/   # + suggestions/ (link suggestions)
 │   │   │   │   ├── accounts/
 │   │   │   │   ├── budgets/
 │   │   │   │   ├── categories/
-│   │   │   │   ├── groups/
-│   │   │   │   ├── import/
-│   │   │   │   └── settings/       # user preferences (language, 2FA, sessions)
-│   │   │   └── admin/              # app settings (role required)
-│   │   │       ├── auth-providers/
-│   │   │       ├── smtp/
-│   │   │       ├── app-settings/
-│   │   │       ├── users/
-│   │   │       ├── signup-tokens/
-│   │   │       └── audit-log/
+│   │   │   │   ├── insights/
+│   │   │   │   ├── groups/         # + join/[token]
+│   │   │   │   ├── import/         # csv/, pdf/
+│   │   │   │   ├── settings/       # security/ (2FA, passkeys, sessions), data/ (export, deletion)
+│   │   │   │   └── admin/          # app settings (permission required)
+│   │   │   │       ├── auth-providers/
+│   │   │   │       ├── smtp/
+│   │   │   │       ├── app-settings/
+│   │   │   │       ├── users/
+│   │   │   │       ├── signup-tokens/
+│   │   │   │       └── audit/
+│   │   │   ├── 403/
+│   │   │   └── [...rest]/          # localized 404
 │   │   └── api/                    # Route Handlers (outside [locale])
 │   │       ├── auth/[...all]/      # Better Auth
-│   │       ├── import/csv/
-│   │       ├── import/pdf/
-│   │       └── export/
-│   ├── components/
+│   │       ├── import/             # csv/, pdf/ (+ [batchId]/preview, commit), [batchId]/progress
+│   │       ├── export/             # transactions/, data/
+│   │       ├── cron/               # purge-audit/, purge-imports/, roll-budgets/
+│   │       └── [...path]/          # JSON 404 for unknown API routes
+│   ├── components/                 # feature components + ui/ (shadcn)
+│   ├── hooks/
 │   ├── i18n/                       # next-intl config
 │   ├── server/
-│   │   ├── services/
-│   │   ├── transport/              # actions + api
-│   │   ├── auth/                   # Better Auth + dynamic providers
+│   │   ├── services/               # incl. settings/ (TTL-cached DB reads)
+│   │   ├── transport/              # actions/ + http/
+│   │   ├── auth/                   # Better Auth + dynamic providers, permissions, rate limits
 │   │   ├── crypto/
 │   │   ├── db/
-│   │   └── settings/               # cached DB reads
+│   │   └── http/                   # client IP, request locale, 404 response
 │   ├── lib/                        # utils, Zod schemas, shared types
-│   ├── middleware.ts               # next-intl + auth guard + security headers
+│   ├── proxy.ts                    # setup gate + session fast-path + next-intl + security headers
+│   ├── instrumentation.ts          # seeds roles/permissions/settings at server start
 │   └── env.ts                      # envalid validation
 ├── tests/
 │   ├── unit/
 │   ├── integration/
-│   └── e2e/
+│   ├── e2e/
+│   └── fixtures/
 └── docs/
-    └── architecture.md             # this document
+    ├── architecture.md             # this document
+    └── …                           # user, admin, self-hosting and development guides
 ```
 
 ### 3.4 i18n routing
 
-- URL prefix: `/[locale]/...` (e.g., `/fr/dashboard`, `/en/dashboard`).
+- URL prefix: `/[locale]/...` (e.g., `/fr/dashboard`, `/en/dashboard`); default locale `fr`.
 - Initial locale: detected from `Accept-Language` header. The browsing locale lives in the next-intl `NEXT_LOCALE` cookie (persistent, 1 year, per browser); a stored preference never forces a redirect.
 - `UserPreference.locale` drives e-mails only. It is written at sign-up, at every sign-in (locale of the sign-in page) and by the language switcher.
 - E-mail locale (one rule for every sender): the recipient's `UserPreference.locale` when the recipient is a known user, otherwise the locale of the page that triggered the send. Mails carry a `Content-Language` header.
-- Default categories: two fixture sets (`prisma/seed-data/categories-fr.json` and `categories-en.json`) are bundled. At user signup, the set matching the user's chosen locale is copied into `Category` rows owned by that user with `isDefault = true`. Users can rename, add, delete freely.
+- Default categories: two fixture sets (`prisma/seed-data/categories-fr.json` and `categories-en.json`) are bundled. At user signup, the set matching the sign-up page's locale is copied into `Category` rows owned by that user with `isDefault = true`. Users can rename, add, delete freely.
 - Language switcher in the header.
 - All dates/numbers formatted via `Intl.DateTimeFormat` / `Intl.NumberFormat` based on locale.
 
 ### 3.5 Bootstrap (first launch)
 
 When `User.count() === 0`:
-- All routes redirect to `/setup`.
-- Wizard steps:
+- Every page redirects to `/setup` (`src/proxy.ts`).
+- Wizard steps, submitted together in one atomic Server Action at the end:
   1. Create first user (auto-granted `SUPER_ADMIN` role).
   2. Optional: SMTP configuration.
-  3. Optional: OIDC provider configuration.
+  3. Optional: OIDC provider configuration (with a connection test).
   4. Choose registration mode (default: `INVITE_ONLY`).
 
 `/setup` is disabled (404) as soon as at least one user exists.
@@ -244,66 +266,131 @@ When `User.count() === 0`:
 
 ## 4. Data Model
 
-Prisma schema, grouped logically. Owner XOR constraints (User XOR Group) are enforced at the service layer with Zod plus a DB check trigger.
+Prisma schema (`prisma/schema.prisma`), grouped logically. Owner XOR constraints (User XOR Group) are enforced at the service layer only: MariaDB rejects a CHECK on a column that is part of a FK with a referential action (error 1901), as noted in the categories and rules migrations.
 
 ### 4.1 Group A — Identity & Access
 
 ```prisma
-// Generated by Better Auth CLI, extended with business relations
+// Better Auth core tables, extended with business relations
 model User {
-  id              String   @id
-  email           String   @unique
-  emailVerified   Boolean  @default(false)
-  name            String?
-  image           String?
-  twoFactorEnabled Boolean @default(false)
-  banned          Boolean  @default(false)
-  banReason       String?
-  banExpires      DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id               String    @id
+  email            String    @unique
+  emailVerified    Boolean   @default(false)
+  name             String?
+  image            String?
+  twoFactorEnabled Boolean   @default(false)
+  role             String?                            // Better Auth admin plugin (admin | user); not used for authorization
+  banned           Boolean   @default(false)
+  banReason        String?
+  banExpires       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   // Better Auth relations
-  sessions        Session[]
-  authAccounts    AuthAccount[]
-  verifications   Verification[]
-  twoFactors      TwoFactor[]
-  passkeys        Passkey[]
+  sessions         Session[]
+  authAccounts     AuthAccount[]
+  twoFactors       TwoFactor[]
+  passkeys         Passkey[]
 
   // Business relations
-  ownedAccounts   BankAccount[]      @relation("AccountOwner")
-  categories      Category[]
-  budgets         Budget[]
+  roles            UserRole[]
+  preference       UserPreference?
+  accounts         BankAccount[]        @relation("AccountOwner")
   groupMemberships GroupMember[]
-  sentInvitations GroupInvitation[]  @relation("InvitedBy")
-  preference      UserPreference?
-  roles           UserRole[]
+  sentInvitations  GroupInvitation[]    @relation("InvitedBy")
+  categories       Category[]
+  rules            CategorizationRule[]
+  budgets          Budget[]
+  merchantAliases  MerchantAlias[]
 }
 
-model Session         { /* generated by Better Auth — DB-backed */ }
-model AuthAccount     { /* generated — OAuth/OIDC linked accounts (NOT BankAccount) */ }
-model Verification    { /* generated — magic links, email verify */ }
-model TwoFactor       { /* generated — secret, backup codes (encrypted) */ }
-model Passkey         { /* generated — WebAuthn credentials */ }
+model Session {                                       // DB-backed, no cookie cache
+  id             String   @id
+  userId         String
+  token          String   @unique
+  expiresAt      DateTime
+  ipAddress      String?
+  userAgent      String?  @db.Text
+  impersonatedBy String?                              // admin plugin, set during impersonation
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+}
 
-// RBAC — our own tables (preferred over Better Auth admin plugin's simple string-based role,
-// which only supports flat string roles on User. Our model has fine-grained permissions per role.
-// The Better Auth admin plugin is still enabled for its utilities (impersonation, banning),
-// but its built-in role string is unused — we set every user's role to "USER" by default.)
+model AuthAccount {                                   // Better Auth "Account", renamed (NOT BankAccount)
+  id                    String    @id
+  userId                String
+  accountId             String
+  providerId            String                        // credential | google | <oidc key>
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?   @db.Text            // password hash (credential provider)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+model Verification {                                  // no FK to User
+  id         String   @id
+  identifier String
+  value      String   @db.Text
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  @@index([identifier])
+}
+
+model TwoFactor {
+  id           String  @id
+  userId       String
+  secret       String  @db.Text
+  backupCodes  String  @db.Text
+  verified     Boolean @default(true)
+  lastUsedStep Int?                                   // last accepted TOTP step, blocks replay
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+}
+
+model Passkey {                                       // WebAuthn credentials
+  id           String   @id
+  name         String?
+  publicKey    String   @db.Text
+  userId       String
+  credentialID String
+  counter      Int      @default(0)
+  deviceType   String
+  backedUp     Boolean  @default(false)
+  transports   String?
+  aaguid       String?
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+}
+
+// RBAC — our own tables. The Better Auth admin plugin is enabled for its utilities
+// (impersonation, banning); its `User.role` string is not used for authorization —
+// permissions resolve through UserRole → RolePermission.
 model Role {
-  id          String @id @default(cuid())
-  key         String @unique             // SUPER_ADMIN, ADMIN, USER
+  id          String  @id @default(cuid())
+  key         String  @unique                         // SUPER_ADMIN, ADMIN, USER
   name        String
   description String?
-  isSystem    Boolean @default(false)    // protection against deletion
+  isSystem    Boolean @default(false)                 // protection against deletion
   permissions RolePermission[]
   users       UserRole[]
 }
 
 model Permission {
   id          String @id @default(cuid())
-  key         String @unique             // admin.settings.write, admin.users.read, ...
-  scope       String                     // admin | system
+  key         String @unique                          // admin.settings.write, admin.users.read, ...
+  scope       String                                  // admin | system
   description String
   roles       RolePermission[]
 }
@@ -314,6 +401,7 @@ model RolePermission {
   role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
   @@id([roleId, permissionId])
+  @@index([permissionId])
 }
 
 model UserRole {
@@ -324,8 +412,19 @@ model UserRole {
   user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
   role      Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
   @@id([userId, roleId])
+  @@index([roleId])
 }
 ```
+
+`Verification` rows carry short-lived grants, distinguished by `identifier` prefix:
+
+| Identifier | Value | Use |
+|---|---|---|
+| `reset-password:<token>` | user id | Password reset; the identifier is stored **hashed** (`verification.storeIdentifier` override). |
+| `trust-device-…` | user id | "Trust this device" 2FA skip (Better Auth). Listed and revoked from the user's security settings (`services/users/trusted-devices.ts`). |
+| `step-up-<sessionId>` | user id | Step-up re-authentication by password, 5-minute TTL, bound to one session (`services/users/step-up.ts`). A sign-in less than 10 minutes old counts as step-up without a row. |
+
+Email verification sets `User.emailVerified` (`services/users/email-verification.ts`).
 
 ### 4.2 Group B — Groups (households) & Sharing
 
@@ -334,7 +433,7 @@ model Group {
   id           String   @id @default(cuid())
   name         String
   description  String?
-  createdById  String
+  createdById  String                                 // no FK; reassigned on user erasure
   createdAt    DateTime @default(now())
   archived     Boolean  @default(false)
 
@@ -342,20 +441,21 @@ model Group {
   invitations   GroupInvitation[]
   accountShares AccountShare[]
   categories    Category[]
-  budgets       Budget[]
   rules         CategorizationRule[]
+  budgets       Budget[]
 }
 
 model GroupMember {
   id        String   @id @default(cuid())
   groupId   String
   userId    String
-  role      String                              // OWNER | ADMIN | MEMBER
+  role      String                                    // OWNER | ADMIN | MEMBER
   joinedAt  DateTime @default(now())
 
   group     Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
   user      User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@unique([groupId, userId])
+  @@index([userId])
 }
 
 model GroupInvitation {
@@ -372,8 +472,9 @@ model GroupInvitation {
   createdAt     DateTime @default(now())
 
   group         Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  invitedBy     User  @relation("InvitedBy", fields: [invitedById], references: [id])
+  invitedBy     User  @relation("InvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
   @@index([email])
+  @@index([groupId])
 }
 
 model AccountShare {
@@ -387,17 +488,18 @@ model AccountShare {
   account     BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
   group       Group       @relation(fields: [groupId], references: [id], onDelete: Cascade)
   @@unique([accountId, groupId])
+  @@index([groupId])
 }
 
 model AdminSignupToken {
-  id          String   @id @default(cuid())
-  token       String   @unique
+  id          String    @id @default(cuid())
+  token       String    @unique
   description String?
   maxUses     Int?                                    // null = unlimited
-  usedCount   Int      @default(0)
+  usedCount   Int       @default(0)
   expiresAt   DateTime?
   createdById String
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
   revokedAt   DateTime?
 }
 ```
@@ -406,23 +508,26 @@ model AdminSignupToken {
 
 ```prisma
 model BankAccount {
-  id          String   @id @default(cuid())
-  ownerId     String
-  name        String
-  type        String                                  // CHECKING | SAVINGS | CREDIT | OTHER
-  ibanEnc     String?                                 // encrypted IBAN
-  ibanHash    String?                                 // HMAC for equality search
-  bankName    String?
-  color       String?  @default("#2563eb")
-  icon        String?
-  archived    Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  id             String   @id @default(cuid())
+  ownerId        String
+  name           String
+  type           String                               // CHECKING | SAVINGS | CREDIT | OTHER
+  initialBalance Decimal  @default(0) @db.Decimal(12, 2) // CLEAR — balance = initialBalance + Σ transactions
+  ibanEnc        String?  @db.Text                    // encrypted IBAN (AES-256-GCM)
+  ibanHash       String?                              // HMAC-SHA256 blind index for equality search
+  bankName       String?
+  color          String?  @default("#2563eb")
+  icon           String?
+  archived       Boolean  @default(false)
+  createdAt      DateTime @default(now())
 
   owner        User @relation("AccountOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  transactions Transaction[]
   shares       AccountShare[]
+  transactions Transaction[]
   imports      ImportBatch[]
   budgetLines  BudgetLine[]
+  @@index([ownerId])
+  @@index([ibanHash])
 }
 ```
 
@@ -435,49 +540,52 @@ model Category {
   color     String?
   icon      String?
   parentId  String?
-  parent    Category?  @relation("Hierarchy", fields: [parentId], references: [id])
-  children  Category[] @relation("Hierarchy")
+  parent    Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children  Category[] @relation("CategoryHierarchy")
 
-  // Owner XOR (User or Group)
+  // Owner XOR (User or Group) — service layer
   userId    String?
   groupId   String?
   user      User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
   group     Group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
-  isDefault Boolean @default(false)
+  isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
 
   transactions Transaction[]
-  budgetLines  BudgetLine[]
   rules        CategorizationRule[]
+  budgetLines  BudgetLine[]
   @@index([userId])
   @@index([groupId])
+  @@index([parentId])
 }
 
 model CategorizationRule {
   id            String  @id @default(cuid())
-  pattern       String                              // literal or regex source
-  matchType     String                              // CONTAINS | REGEX | EXACT | STARTS_WITH
+  pattern       String                                // literal or regex source
+  matchType     String                                // CONTAINS | EXACT | STARTS_WITH | REGEX
   caseSensitive Boolean @default(false)
   priority      Int     @default(100)
   categoryId    String
   category      Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
-  // Scope XOR
+  // Scope XOR (User or Group) — service layer
   userId        String?
   groupId       String?
   user          User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
   group         Group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
-  enabled       Boolean @default(true)
+  enabled       Boolean  @default(true)
+  hits          Int      @default(0)                  // transactions categorized by this rule; decremented on import revert
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   @@index([userId])
   @@index([groupId])
+  @@index([categoryId])
 }
 ```
 
-### 4.5 Group E — Transactions, Search Tokens, Links
+### 4.5 Group E — Transactions, Search Tokens, Merchant Aliases, Links
 
 ```prisma
 model Transaction {
@@ -487,28 +595,28 @@ model Transaction {
   amount        Decimal  @db.Decimal(12, 2)           // CLEAR — for SQL aggregations
   type          String                                // CARD | TRANSFER | DIRECT_DEBIT | CHEQUE | ATM | OTHER
 
-  labelEnc      String                                // ENCRYPTED (AES-256-GCM)
+  labelEnc      String   @db.Text                     // ENCRYPTED (AES-256-GCM)
   labelHash     String                                // HMAC-SHA256 of normalized label
-  rawLabelEnc   String                                // ENCRYPTED (raw import label)
+  rawLabelEnc   String   @db.Text                     // ENCRYPTED (raw import label)
   rawLabelHash  String                                // HMAC-SHA256
-  noteEnc       String?                               // ENCRYPTED (user note)
+  noteEnc       String?  @db.Text                     // ENCRYPTED (user note)
 
   categoryId          String?
-  category            Category? @relation(fields: [categoryId], references: [id])
+  category            Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   manuallyCategorized Boolean   @default(false)
 
-  importBatchId String?
-  importBatch   ImportBatch? @relation(fields: [importBatchId], references: [id])
-  externalId    String?                               // dedup key (bank ref or content hash)
-
+  externalId    String?                               // dedup key for imported rows (content hash)
+  createdById   String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  createdById   String?
 
-  account             BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  searchTokens        TransactionSearchToken[]
-  linkMembership      TransactionLinkMember?
-  budgetAssignments   BudgetAssignment[]
+  importBatchId String?
+  importBatch   ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+
+  account           BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  searchTokens      TransactionSearchToken[]
+  linkMembership    TransactionLinkMember?
+  budgetAssignments BudgetAssignment[]
 
   @@unique([accountId, externalId])
   @@index([accountId, date])
@@ -516,6 +624,7 @@ model Transaction {
   @@index([labelHash])
   @@index([rawLabelHash])
   @@index([date])
+  @@index([importBatchId])
 }
 
 model TransactionSearchToken {
@@ -527,13 +636,27 @@ model TransactionSearchToken {
   @@index([transactionId])
 }
 
+// Per-user display name for a merchant (#125)
+model MerchantAlias {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyHash   String                                    // HMAC of the merchant key — lookup/uniqueness handle
+  keyEnc    String   @db.Text                         // ENCRYPTED merchant key
+  nameEnc   String   @db.Text                         // ENCRYPTED display name
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([userId, keyHash])
+}
+
 model TransactionLink {
   id          String   @id @default(cuid())
   name        String?
-  createdById String
+  createdById String                                  // no FK; deleted explicitly on user erasure
   createdAt   DateTime @default(now())
 
   members     TransactionLinkMember[]
+  @@index([createdById])
 }
 
 model TransactionLinkMember {
@@ -543,15 +666,19 @@ model TransactionLinkMember {
   link          TransactionLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
   transaction   Transaction     @relation(fields: [transactionId], references: [id], onDelete: Cascade)
   @@id([linkId, transactionId])
+  @@index([linkId])
 }
 
-model IgnoredLinkSuggestion {
+model IgnoredLinkSuggestion {                         // no FK; deleted explicitly on user erasure
   userId    String
-  pairKey   String                                    // canonical "txid1|txid2" sort
+  pairKey   String                                    // canonical "txid1|txid2" (ids sorted)
   ignoredAt DateTime @default(now())
   @@id([userId, pairKey])
+  @@index([userId])
 }
 ```
+
+A link needs at least two members: when member transactions are deleted (e.g. an import revert), links left with fewer are dissolved (`services/links/dissolve.ts`). Link-suggestion parameters are per user, in `UserPreference` (§4.8).
 
 ### 4.6 Group F — Budgets
 
@@ -561,7 +688,7 @@ model Budget {
   name           String
   description    String?
 
-  // Owner XOR
+  // Owner XOR — service layer
   userId         String?
   groupId        String?
   user           User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -572,8 +699,8 @@ model Budget {
   periodStart    DateTime
   periodEnd      DateTime
   recurring      Boolean  @default(false)
-  parentBudgetId String?                              // for recurring instances → template
-  parentBudget   Budget?  @relation("BudgetRecurrence", fields: [parentBudgetId], references: [id])
+  parentBudgetId String?                              // recurring instance → series template
+  parentBudget   Budget?  @relation("BudgetRecurrence", fields: [parentBudgetId], references: [id], onDelete: SetNull)
   instances      Budget[] @relation("BudgetRecurrence")
 
   archived       Boolean  @default(false)
@@ -584,6 +711,7 @@ model Budget {
   assignments BudgetAssignment[]
   @@index([userId, periodStart])
   @@index([groupId, periodStart])
+  @@index([parentBudgetId])
 }
 
 model BudgetLine {
@@ -591,7 +719,7 @@ model BudgetLine {
   budgetId      String
   budget        Budget  @relation(fields: [budgetId], references: [id], onDelete: Cascade)
 
-  // Granularity: category AND/OR account (at least one required, enforced at service layer)
+  // Filters: category (incl. descendants) and/or account; neither = catch-all line for unmatched expenses
   categoryId    String?
   category      Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   accountId     String?
@@ -613,24 +741,27 @@ model BudgetAssignment {
   budget        Budget      @relation(fields: [budgetId], references: [id], onDelete: Cascade)
   transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
   @@unique([budgetId, transactionId])
+  @@index([transactionId])
 }
 ```
+
+Deleting a series template promotes its oldest instance to template and re-parents the others onto it (`services/budgets`), so the series stays linked. Archived budgets leave the lists, the dashboard and the recurring roll.
 
 ### 4.7 Group G — Imports
 
 ```prisma
 model ImportBatch {
   id            String   @id @default(cuid())
-  accountId     String
-  source        String                                // CSV | PDF | MANUAL
+  accountId     String                                // upload account (PDF products may map to others: metadata.accountIds)
+  source        String                                // CSV | PDF
   filename      String?
-  filenameHash  String?
-  status        String                                // PENDING | PARSING | REVIEW | COMPLETED | FAILED
+  filenameHash  String?                               // SHA-256 of the filename
+  status        String                                // PARSING | REVIEW | COMMITTING | COMPLETED | REVERTED | FAILED
   totalRows     Int      @default(0)
   importedRows  Int      @default(0)
   skippedRows   Int      @default(0)
   errorMessage  String?
-  metadata      Json?                                 // e.g., CSV column mapping used
+  metadata      Json?                                 // see below
   createdById   String
   createdAt     DateTime @default(now())
   completedAt   DateTime?
@@ -641,72 +772,86 @@ model ImportBatch {
 }
 ```
 
+| Stage | `status` | `metadata` |
+|---|---|---|
+| Upload / preview | CSV `PARSING` → `REVIEW`; PDF created in `REVIEW` | Raw payload for the review step: CSV `text` or parsed PDF `products` + `bank`, and `fileSizeBytes`. |
+| Commit | `COMMITTING` → `COMPLETED` | Trimmed to `{ fileSizeBytes, bank?, accountIds, ruleHits? }` — the plaintext payload is dropped (`lib/import-status.ts`). A commit importing nothing fails. |
+| Undo | `COMPLETED` → `REVERTED` | Revert deletes the batch's transactions, decrements `CategorizationRule.hits` from `ruleHits`, dissolves undersized links (`services/imports/revert.ts`). Requires write access on every account in `accountIds`. |
+| Discard / purge | — | Uncommitted batches (`PARSING`, `REVIEW`, `FAILED`) can be discarded; stale ones (and crashed `COMMITTING` ones, with their rows) are purged. |
+
 ### 4.8 Group H — Settings, Preferences, Audit
 
 ```prisma
 model AuthProvider {
   id              String   @id @default(cuid())
   type            String                              // oidc | google (password sign-in is the credentials_enabled setting)
-  key             String   @unique                    // unique id for Better Auth
+  key             String   @unique                    // provider id for Better Auth
   displayName     String
   enabled         Boolean  @default(false)
   // OIDC-specific
   issuer          String?
   clientId        String?
-  clientSecretEnc String?                              // ENCRYPTED
-  scopes          String?                              // CSV
+  clientSecretEnc String?  @db.Text                   // ENCRYPTED
+  scopes          String?                             // CSV
   // Generic
-  config          Json?
+  config          Json?                               // OIDC advanced options (pkce, endpoint URLs, claim mapping)
+  allowSignUp     Boolean  @default(false)            // unknown IdP user may create an account on first sign-in (#200)
   updatedAt       DateTime @updatedAt
   updatedById     String?
 }
 
 model SmtpConfig {
-  id           String   @id @default(cuid())          // singleton
+  id           String       @id @default(cuid())      // singleton
   host         String
   port         Int
-  security     SmtpSecurity @default(STARTTLS)      // TLS (465) | STARTTLS (587, required) | NONE (local relay)
+  security     SmtpSecurity @default(STARTTLS)
   username     String
-  passwordEnc  String                                  // ENCRYPTED
+  passwordEnc  String       @db.Text                  // ENCRYPTED (encrypted empty string for an unauthenticated relay)
   fromAddress  String
   fromName     String?
-  enabled      Boolean  @default(false)
-  updatedAt    DateTime @updatedAt
+  enabled      Boolean      @default(false)
+  updatedAt    DateTime     @updatedAt
   updatedById  String?
 }
 
+enum SmtpSecurity {
+  TLS                                                 // implicit TLS (465)
+  STARTTLS                                            // upgrade required (587)
+  NONE                                                // unencrypted local relay
+}
+
 model AppSetting {
-  key       String   @id                              // app.name, app.registration_mode, links.suggestion_window_days...
-  value     Json                                      // typed at the service level
-  isSecret  Boolean  @default(false)                  // if true → encrypted at-rest application-side
-  updatedAt DateTime @updatedAt
+  key         String   @id                            // registration_mode, credentials_enabled, min_password_length, app_name, security.admin_2fa_required
+  value       Json                                    // typed at the service level
+  isSecret    Boolean  @default(false)                // reserved: no current key is secret
+  updatedAt   DateTime @updatedAt
   updatedById String?
 }
 
 model AuditLog {
   id         String   @id @default(cuid())
-  userId     String?                                  // null if system action (cron, setup)
-  action     String                                   // auth.login.success, settings.smtp.update, account.share.create, ...
-  entity     String?                                  // BankAccount, Budget, ...
+  userId     String?                                  // no FK; null for system actions, nulled on user erasure
+  action     String                                   // auth.login.success, import.reverted, budget.archived, ...
+  entity     String?                                  // BankAccount, Budget, ImportBatch, ...
   entityId   String?
-  metadata   Json?                                    // diff old/new, ip, etc.
+  metadata   Json?
   ipAddress  String?
-  userAgent  String?
+  userAgent  String?  @db.Text
   createdAt  DateTime @default(now())
   @@index([userId, createdAt])
   @@index([entity, entityId])
   @@index([action, createdAt])
+  @@index([createdAt])
+  @@index([entity, createdAt])
 }
 
 model UserPreference {
-  userId            String  @id
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  locale            String  @default("fr")            // fr | en
-  defaultAccountId  String?
-  defaultBudgetId   String?
-  linkWindowDays    Int     @default(30)
-  linkMinAmount     Decimal @db.Decimal(12, 2) @default(0)
-  dashboardLayout   Json?
+  userId          String  @id
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  locale          String  @default("fr")              // fr | en
+  linkWindowDays  Int     @default(30)                // link suggestions: max days between the two transactions
+  linkMinAmount   Decimal @default(0) @db.Decimal(12, 2) // link suggestions: minimum amount
+  dashboardLayout Json?
 }
 ```
 
@@ -714,13 +859,16 @@ model UserPreference {
 
 | Decision | Detail |
 |---|---|
-| Owner XOR | For `Category`, `Budget`, `CategorizationRule`: exactly one of `userId` or `groupId`. Service-level Zod + DB check trigger. |
-| Application encryption | `Transaction.labelEnc/rawLabelEnc/noteEnc`, `BankAccount.ibanEnc`, `AuthProvider.clientSecretEnc`, `SmtpConfig.passwordEnc`, `AppSetting.value` when `isSecret=true`. |
-| Scalable search | HMAC on full label (equality) + `TransactionSearchToken` (per word prefix, 3–12 chars). |
-| Transaction dedup | Unique `(accountId, externalId)` when externalId is set (bank ref or content hash for CSV/PDF). Manual entries: no externalId, no auto-dedup. |
-| Cascade deletes | User → ownedAccounts → transactions → tokens/links. Group → members/categories/budgets/shares. BankAccount → tx/shares. Budget → lines/assignments. |
-| Indexes | All hashes (`labelHash`, `tokenHash`), `(accountId, date)`, `(categoryId, date)`, `(userId/groupId, periodStart)`. |
-| No soft delete | Cascade deletes only (simpler for RGPD). `archived` flag for non-deleted but inactive entities (accounts, budgets). |
+| Owner XOR | For `Category`, `Budget`, `CategorizationRule`: exactly one of `userId` or `groupId`. Enforced in the service layer only (no DB CHECK: MariaDB error 1901). |
+| Application encryption | AES-256-GCM: `Transaction.labelEnc/rawLabelEnc/noteEnc`, `BankAccount.ibanEnc`, `MerchantAlias.keyEnc/nameEnc`, `AuthProvider.clientSecretEnc`, `SmtpConfig.passwordEnc`. `AppSetting.isSecret` exists but no setting uses it. |
+| Scalable search | HMAC blind indexes on full values (`labelHash`, `rawLabelHash`, `ibanHash`, `MerchantAlias.keyHash`) + `TransactionSearchToken` (one HMAC per word prefix of 3–12 chars, label and raw label). |
+| Transaction dedup | Unique `(accountId, externalId)`. Imported rows: `externalId` = SHA-256 of day + amount + raw label, with an occurrence index for identical rows in one file. Manual entries: no `externalId`, no dedup. |
+| Cascade deletes | User → accounts → transactions → tokens/link memberships/assignments; User → categories, rules, budgets, merchant aliases, memberships, sent invitations, preference, auth tables. Group → members/invitations/shares/categories/rules/budgets. Budget → lines/assignments. Category → rules. |
+| SetNull | Deleting a category un-categorizes transactions, detaches children and budget lines; deleting an account detaches budget lines; deleting an import batch detaches its transactions; deleting a budget detaches its instances. |
+| FK-less columns | `Group.createdById`, `TransactionLink.createdById`, `IgnoredLinkSuggestion.userId`, `AuditLog.userId`: handled explicitly on user erasure (`services/rgpd`) — group ownership passed on (or group deleted), links and ignored pairs deleted, audit rows anonymised. |
+| Indexes | All hashes (`labelHash`, `rawLabelHash`, `tokenHash`, `ibanHash`), `(accountId, date)`, `(categoryId, date)`, `(userId/groupId, periodStart)`, audit `(action/entity/userId, createdAt)`. |
+| No soft delete | Hard deletes only (simpler for RGPD). `archived` flag for non-deleted but inactive entities (accounts, groups, budgets). Imports are undone by revert, which deletes their transactions. |
+| Grants in `Verification` | Password-reset tokens (hashed), trusted devices and step-up grants are `Verification` rows keyed by identifier prefix — no dedicated tables. |
 
 ---
 
@@ -728,145 +876,176 @@ model UserPreference {
 
 ### 5.1 Bootstrap (first launch)
 
-If `User.count() === 0`, all routes (except `/setup`) redirect to `/setup`. Wizard:
-1. Create first user (email + password) → auto-grant `SUPER_ADMIN` role, seed default categories in chosen locale, create `UserPreference`.
+If `User.count() === 0`, every page (except `/setup`) redirects to `/{locale}/setup` (`src/proxy.ts`; `/api/*` is outside the proxy matcher). The wizard collects four steps client-side; nothing is written until the last one:
+1. First user (name + email + password, at least `min_password_length`, default 12).
 2. Optional: SMTP config.
-3. Optional: OIDC provider config.
+3. Optional: OIDC provider config, with a "Test connection" probe of the issuer's discovery document (`testOidcConnectionAction`: HTTPS only, private/loopback/metadata addresses refused, connection pinned to the checked IP).
 4. Choose registration mode (default `INVITE_ONLY`).
 
-`/setup` is permanently disabled (returns 404) as soon as one user exists.
+Submitting step 4 runs one Server Action, `completeSetupAction`, gated by `isSetupNeeded()`: `bootstrap.completeSetup` signs the user up (and in) through Better Auth, grants `SUPER_ADMIN`, marks the address verified (`via: setup`), creates `UserPreference` with the wizard's locale, seeds the default categories in that locale and audits `auth.signup` (`via: setup`); then the registration mode is saved and SMTP / the OIDC provider are stored only if filled in. The browser lands on `/{locale}/dashboard`.
+
+`/setup` is permanently disabled (404) as soon as one user exists: the proxy caches "setup done" for the life of the process, and the page itself redirects home if reached anyway.
 
 ### 5.2 Login (multi-provider)
 
-Available providers on `/login`:
+Available methods on `/login`:
 - **Credentials** (email + password) — if the `credentials_enabled` app setting is on (not an `AuthProvider` row). Turning it off is refused while a user would be left with no other usable sign-in method (#255), like deleting a provider.
-- **OIDC button(s)** — generated dynamically from `AuthProvider` table.
-- **Google** — if enabled.
+- **SSO button(s)** — one per enabled `AuthProvider` row that has its credentials (`oidc` rows through Better Auth's generic OAuth plugin, the `google` row as Better Auth's Google provider).
+- **Passkey** — always offered (WebAuthn, RP ID = `APP_URL` host).
 
 The "Create an account" link is only shown when `/register` offers a way to sign up (#255).
 
 Flow:
-- Credentials: form → Better Auth credentials provider → argon2id verify → if 2FA enabled, redirect to `/login/2fa` → create DB-backed session + httpOnly cookie → redirect to `/{locale}/dashboard`.
-- OIDC: Better Auth redirects to IdP → callback `/api/auth/oauth2/callback/<key>` (generic OAuth plugin; Google: `/api/auth/callback/google`) → session created → `/dashboard`.
+- Credentials: form → `loginAction` (Server Action) → `auth.api.signInEmail` → the `bilan-auth-guard` plugin reserves the rate-limit slots → Better Auth checks the password hash → if 2FA is enabled and the device isn't trusted, the same page swaps to the code step (TOTP or backup code, optional "trust this device") → DB-backed session + httpOnly cookie → redirect to the safe `callbackUrl`, else `/{locale}/dashboard`. A disabled (banned) user gets a "disabled" error once the password checked out.
+- Passkey: `signIn.passkey()` → `/api/auth/passkey/verify-authentication` → session. 2FA only guards password sign-ins.
+- SSO: Better Auth redirects to the IdP → callback `/api/auth/oauth2/callback/<key>` (generic OAuth; Google: `/api/auth/callback/google`) → session → `callbackUrl` / `/dashboard`. No implicit linking by e-mail: an SSO identity signs in only once linked (Settings > Security) or SSO-created. Creating the account needs the provider's `allowSignUp` and registration `OPEN`. A refused callback lands on `/login?error=<code>` (localized message).
 
-Rate limit: see §6.7 (per IP + account, and per account). Failed attempts logged to `AuditLog`. Success also logged with IP + user-agent.
+Rate limit: see §6.7 (per IP + account, and per account). Failed attempts logged to `AuditLog`. Success also logged with IP + user-agent, and sends the "new sign-in" e-mail (§5.13).
 
-Magic-link password reset: `/reset` → SMTP email → `/reset/[token]` → new password form → invalidates all tokens + active sessions.
+Password reset link: `/reset` → `resetRequestAction` (always answers OK) → SMTP e-mail → `/{locale}/reset/<token>` (1 h; only the token's hash is stored) → the page checks the token up front → new password form → revokes all sessions, purges trusted devices, marks the address verified, audits `auth.password.changed` and sends the "password changed" e-mail.
 
 ### 5.3 Registration mode handling
 
-- `OPEN`: `/register` accessible to anyone.
-- `INVITE_ONLY`: `/register` requires `?invitation=<token>` (group) or `?adminToken=<token>` (admin signup token). Both validated server-side. Without token: shown a message + login link.
-- `DISABLED`: `/register` shows "Registration is closed on this instance." (also shown when password sign-in is off and no SSO provider allows sign-up). Admin creates users from `/admin/users`: the user is mailed a "choose your password" link (`/reset/<token>`, setup flavour of the reset flow, 1 h). Without SMTP no link is sent, and the admin is told so (#255).
+- `OPEN`: `/register` accessible to anyone; SSO providers with `allowSignUp` also show sign-up buttons.
+- `INVITE_ONLY`: the password form requires an admin signup token (field prefilled from `?adminToken=<token>`, the link `/admin/signup-tokens` hands out). `registerAction` consumes it atomically (`signup-tokens.consumeSignupToken`: not revoked, not expired, under `maxUses`) and refunds it if the sign-up failed without creating the user. Missing token → `TOKEN_REQUIRED`, unusable → `BAD_TOKEN`. Group invitations don't open registration: an invitee needs an account first (§5.11). SSO sign-up is off (the IdP round trip can't carry a token).
+- `DISABLED`: `/register` shows "Registration is closed on this instance." (also shown when password sign-in is off and no SSO provider allows sign-up). Any value other than `OPEN` / `INVITE_ONLY` counts as `DISABLED`.
+
+In every mode, an admin can create users from `/admin/users` (`users/create.adminCreateUser`, role chosen by the admin): the user is mailed a "choose your password" link (`/reset/<token>`, setup flavour of the reset flow, 1 h). Without SMTP no link is sent, and the admin is told so (#255).
 
 ### 5.4 Account creation & sharing
 
-1. Owner creates account: `POST /accounts` (Server Action) → `accounts.service.create({ ownerId, name, type, ibanEnc?, ibanHash? })`.
-2. Sharing with a group: `POST /accounts/[id]/share` → `permissions.service.shareAccountWithGroup({ accountId, groupId, permission, actor })` → verifies actor is owner or admin → creates `AccountShare` → audit log.
-3. Visibility: `accounts.service.listVisibleForUser(userId)` returns own accounts + accounts shared via groups the user belongs to.
+1. Owner creates account: `createAccountAction` (Server Action, `/accounts`) → `accounts.createAccount(input, ownerId)` → validates and normalizes the optional IBAN, stores `ibanEnc` + `ibanHash` → audit `account.created`.
+2. Sharing with a group: `shareAccountAction` → `accounts/sharing.shareAccountWithGroup({ accountId, groupId, permission: READ | WRITE }, actor)` → actor must be the account owner and, at commit time, still a member of the group (#259) → upserts `AccountShare` → audit `account.share.create`.
+3. Visibility: `accounts.listVisibleForUser(userId, { includeArchived? })` returns own accounts + accounts shared via groups the user belongs to (archived ones only on request). Access is OWNER > WRITE > READ (`getEffectiveAccess`). Shared viewers never get the IBAN; the owner sees it masked, and the clear value takes a step-up (§6.4).
 4. Leaving or being removed from a group (#259): in the same transaction as the `GroupMember` deletion, the member's `AccountShare` rows to that group and the group budgets' `BudgetAssignment` rows (INCLUDE and EXCLUDE) on their transactions are deleted; the counts go in the `group.member.removed` audit metadata. Budget lines limited to one of their accounts are kept (they count nothing and show as a hidden account). Group deletion is unchanged. Revoking one share (`revokeShare`) does the same for that account and group, in one transaction, with `removedAssignments` in the `account.share.revoke` metadata; when no share existed, nothing is deleted.
 
-### 5.5 CSV import (main flow)
+### 5.5 CSV / PDF import (main flow)
 
-1. `/import/csv`: UI upload → `multipart POST /api/import/csv` (Route Handler).
-2. Route Handler validates MIME + size, creates `ImportBatch` (status: PARSING), parses with papaparse, returns preview (first 50 rows + detected mapping).
-3. UI: user confirms column mapping (date, amount, label, type) and visualizes suggested categorization per row.
-4. `POST /api/import/csv/[batchId]/commit` → `imports.csv.service`:
-   - For each row: normalize date/amount, compute `externalId` (hash of date+amount+rawLabel), compute `labelHash` / `rawLabelHash` / search tokens, encrypt labels + empty note, auto-categorize (`categorization.service.suggest`).
-   - Dedup check on `(accountId, externalId)`.
-   - Batch insert: `Transaction` + `TransactionSearchToken[]`.
-   - Update `ImportBatch.status = COMPLETED`.
-5. UI shows summary (totalRows, importedRows, skippedRows) + link to imported transactions.
+1. `/import` (single wizard; `/import/csv` and `/import/pdf` redirect to it): pick a writable, non-archived account, upload → `multipart POST /api/import/csv` or `/api/import/pdf` (Route Handlers).
+2. The Route Handler checks extension/MIME and size (CSV 5 MB, PDF 10 MB; a CSV must also look like text), then:
+   - CSV: creates `ImportBatch` (`PARSING`, raw text kept in `metadata`), parses with papaparse and returns the preview with the detected mapping (`date`, `label`, `amount` or `debit`/`credit`, optional `type`) plus the guessed decimal mark and date order. Each preview moves the batch to `REVIEW`.
+   - PDF: detects the bank (LCL, Revolut, else a generic parser), stores the parsed rows per product (one per Revolut statement section) and creates the batch directly in `REVIEW`.
+3. UI: the preview is paged (50 rows) and computed over all rows: duplicates already in the destination account, suggested category per row (`categorization.suggestMany`), rejected rows. The user can edit the CSV mapping (`POST /api/import/csv/[batchId]/preview`), map each PDF product to an account or ignore it, untick rows and override categories.
+4. `POST /api/import/{csv|pdf}/[batchId]/commit` claims the batch (`REVIEW` → `COMMITTING`), then `imports/commit.insertRows`:
+   - For each row: `externalId` = sha256 of day + amount + rawLabel (identical twins in one file get an occurrence index), encrypted label/rawLabel (the label starts as the raw label), `labelHash` / `rawLabelHash` / search tokens, type from the mapped column or derived from the label; category = the user's override (only categories they can use), else the rule suggestion.
+   - Dedup check on `(accountId, externalId)`; unticked rows are skipped.
+   - Insert by chunks of 500: `Transaction` + `TransactionSearchToken[]`, bumping `importedRows` (the wizard polls `GET /api/import/[batchId]/progress`).
+   - `finalizeBatch`: `COMPLETED` + counters, rule hits recorded, raw payload trimmed from `metadata`, audit `import.committed`. A commit that imports nothing fails (`NOTHING_TO_IMPORT`); a failed commit deletes its partial rows and returns the batch to `REVIEW`.
+5. UI shows summary (imported, skipped duplicates, rejected rows) + link to transactions + "Undo" (§5.12). Cancelling or uploading another file discards the uncommitted batch (best effort).
 
 ### 5.6 Auto-categorization & learning
 
-`categorization.suggest(rawLabel, amount, scope)`:
-1. Load applicable rules: system rules + rules where `userId = current` OR `groupId IN (user's groups)`, sorted by priority DESC.
-2. Match by type (EXACT, STARTS_WITH, CONTAINS [case-insensitive default], REGEX).
-3. Return `{ categoryId, confidence, ruleId }` on first match, else `{ categoryId: null, confidence: 0 }`.
+`categorization.suggest(rawLabel, { userId })` (`suggestMany` for imports, rules loaded once):
+1. Load enabled rules where `userId = current` OR `groupId IN (user's groups)`, sorted by priority DESC. There are no system rules.
+2. Match by type (EXACT, STARTS_WITH, CONTAINS, REGEX). Case-insensitive by default; case-insensitive non-REGEX rules also ignore accents; REGEX runs on re2js and a bad pattern never matches.
+3. Return `{ categoryId, ruleId }` of the highest-priority match, else `{ categoryId: null, ruleId: null }`. Imports credit the rule's `hits` counter (taken back on undo).
 
 When a user manually changes a category:
-1. Update transaction (`manuallyCategorized = true`).
-2. Dialog: "You categorized 'CARREFOUR CITY' as Groceries. Create a rule for similar future transactions?"
-   - Pattern proposed: most distinctive token (e.g., "LECLERC").
-   - matchType: CONTAINS.
-   - Scope: my account / this group / none.
-3. On confirm: create `CategorizationRule`. On decline: nothing.
+1. Update transaction (`manuallyCategorized = true`, audit `transaction.recategorized`).
+2. Dialog: "Create a rule for similar future transactions?"
+   - Pattern proposed: the longest normalized token of the label (`lib/propose-rule`), editable.
+   - matchType: CONTAINS by default, selectable.
+   - Scope: always a personal rule; group rules are created from `/categories` (group ADMIN+).
+   - Existing transactions are not re-categorized.
+3. On confirm: create `CategorizationRule` (`rule.created`). On decline: nothing.
 
 ### 5.7 Budget creation & calculation
 
-Creation (`/budgets/new`):
-- Owner: self or a group.
-- Period: preset (current month, quarter, year) or custom.
-- Recurring: if yes, instances auto-created at each period start.
-- Lines: each line targets a category, an account, both, or just a label, with a `plannedAmount`.
+Creation (form dialog on `/budgets`):
+- Owner: self or a group (group budgets need group ADMIN+).
+- Period: preset (`WEEK`, `MONTH`, `QUARTER`, `YEAR`, end checked against the start) or `CUSTOM`.
+- Recurring: if yes, the next-period instance (same lines, chained to the template by `parentBudgetId`) is created once the period has ended, by the daily roll cron (§5.14) or by hand from the list.
+- Lines: each line targets a category (with its sub-categories), an account, both, or neither (catch-all), with a `plannedAmount`. Lines may only use accounts the budget draws from and categories the actor can use (a group budget: personal ones or that group's).
 - Optional `description` (≤ 500 chars) and per-line `label` (≤ 80 chars, shown instead of the category/account name), both editable in the create/edit form.
 
 Archive (#260): a budget manager can archive/unarchive (`budgets.service.archiveBudget` / `unarchiveBudget`, audit `budget.archived` / `budget.unarchived`). Archived budgets leave the list (shown in a collapsed "Archived budgets" section), the dashboard, the assignment menu and the roll cron; their detail stays readable and their menu only offers unarchive/delete. An archived budget takes no new assignment (`ARCHIVED`) and is never rolled, even by a direct call; existing assignments stay listed (marked archived) and removable in the transaction panel.
 
-`budgets.service.computeLine(line, budget)`:
-1. Select transactions visible to the budget's owner: own accounts + accounts shared via groups, within `[periodStart, periodEnd]`.
-2. Filter by line's category/account constraints.
-3. Subtract transactions with `BudgetAssignment(mode=EXCLUDE)` on this budget.
-4. Add transactions with `BudgetAssignment(mode=INCLUDE)` on this budget (even if they don't match the line filters — explicit override).
-5. Apply link logic:
+`budgets.computeBudgetSpend(budget)` (all lines at once):
+1. Load the candidate transactions: a personal budget draws from the owner's visible accounts (own + shared via groups), a group budget from the accounts shared with that group, within `[periodStart, periodEnd]`; plus every transaction assigned to this budget, whatever its account or date.
+2. Apply link logic over that whole set first:
    - Balanced groups (`|sum| < 0.005`): all members excluded.
    - Unbalanced groups: only the primary (largest absolute amount) counts, with the net sum as its effective amount.
-6. Sum effective amounts → `spent`.
-7. Return `{ plannedAmount, spent, remaining, percent, status: "OK" | "WARN" | "REACHED" | "OVER" }`. With `plannedAmount = 0`, no spending is OK at 0 %; any spending is OVER with `percent = null` (shown as "—", full bar).
+3. Skip transactions with `BudgetAssignment(mode=EXCLUDE)` on this budget.
+4. Match lines: category (subtree) and/or account; a line without a category only takes expenses; when a category line and one of its ancestors both match, only the most specific counts; an expense no line matches goes to the catch-all lines.
+5. A transaction with `BudgetAssignment(mode=INCLUDE)` counts even if no line matches (explicit override): it goes to the total and to the first line.
+6. Sum effective amounts → `spent` per line and for the budget.
+7. Per line (`lib/budgets.lineStatus`): `{ plannedAmount, spent, remaining, percent, status: "OK" | "WARN" (≥ 80 %) | "REACHED" | "OVER" }`. With `plannedAmount = 0`, no spending is OK at 0 %; any spending is OVER with `percent = null` (shown as "—", full bar).
 
-Explicit assignment: from any transaction, "Assign to a budget" menu → choose budget (mine or my groups') → mode INCLUDE/EXCLUDE → creates `BudgetAssignment` (unique on `(budgetId, transactionId)`).
+Explicit assignment: from any transaction, "Assign to a budget" menu → choose budget (mine or my groups', not archived) → mode INCLUDE/EXCLUDE → `budgets.assignTransaction` upserts `BudgetAssignment` (unique on `(budgetId, transactionId)`). The transaction's account must be readable; an INCLUDE into a group budget also needs the account to be the actor's own or shared with that group.
 
-The budget detail lists the counted transactions in full to everyone who can read the budget, including a private transaction included in a group budget (§2.2).
+The budget detail lists the latest 100 counted transactions in full to everyone who can read the budget, including a private transaction included in a group budget (§2.2); for a group budget, rows from an account neither shared with the group nor owned by a current member show masked.
 
 ### 5.8 Transaction links
 
 **Manual mode**:
-1. `/transactions`: "Link mode" toggle (local state).
-2. Click transactions to select (each must be visible to the user, not already in a link).
-3. Confirm: `links.service.create({ transactionIds, userId })` → creates `TransactionLink` + `TransactionLinkMember[]`.
+1. `/transactions`: selection mode (local state, also used for bulk delete).
+2. Click transactions to select (2+; none already in a link).
+3. Confirm: `createLinkAction` → `links.createLink({ transactionIds, userId })` → requires WRITE on every account involved → creates `TransactionLink` + `TransactionLinkMember[]` (audit `link.created`). Unlinking (`deleteLink`) also needs WRITE on every member's account.
 
-**Auto suggestions**: `links.service.suggestPairs(userId)`:
-1. Load all visible transactions, not in any link.
-2. For each `+X`, find `-X` within `±UserPreference.linkWindowDays` days.
+**Auto suggestions**: `links.suggestPairs(userId)`:
+1. Load the 5 000 most recent visible transactions not in any link.
+2. For each `+X` (largest first), find an unused `-X` within `±UserPreference.linkWindowDays` days, closest date first; each transaction is used in at most one pair.
 3. Filter by `UserPreference.linkMinAmount`.
 4. Exclude pairs in `IgnoredLinkSuggestion(userId)`.
 5. Sort by amount DESC, days delta ASC.
 
-UI `/transactions/suggestions`: list pairs with Link / Ignore buttons. Ignore writes to `IgnoredLinkSuggestion`. A **Settings** dialog on that page edits the user's own `linkWindowDays` (integer 0–365) and `linkMinAmount` (≥ 0), via `users/preferences.updateLinkSuggestionSettings` (#260).
+UI `/transactions/suggestions`: list pairs with Link / Ignore buttons. Ignore writes to `IgnoredLinkSuggestion`; ignored pairs are listed on the same page and can be restored (`restoreSuggestion`). A **Settings** dialog on that page edits the user's own `linkWindowDays` (integer 0–365) and `linkMinAmount` (≥ 0), via `users/preferences.updateLinkSuggestionSettings` (#260).
 
 ### 5.9 Admin settings with hot reload
 
 `/admin/auth-providers` (permission `admin.security.write`, super admins only):
-1. `POST` (Server Action) → `settings.service.authProviders.update({ id, ...fields })` → encrypt clientSecret → invalidate cache → audit log.
-2. Better Auth handler reads config via cached wrapper (`cachedAuthProviders()`, 60s TTL).
-3. Update invalidates cache → next request rebuilds providers → effect immediate, no restart.
+1. Server Action → `settings/auth-providers.createAuthProvider` / `updateAuthProvider` (keyed by `key`) → encrypt clientSecret (an empty one keeps the stored secret) → `invalidateAuthCache()` → audit `settings.auth_provider.*`. Deleting, or disabling while password sign-in is off, is refused when a linked user would be left with no usable sign-in method; the provider's linked identities go with it.
+2. `getAuth()` caches the Better Auth handler for 60 s and builds it from `providerCache` (enabled `AuthProvider` rows, 60 s TTL).
+3. `invalidateAuthCache()` drops both and bumps a generation (a build that raced it is used once, not cached) → next request rebuilds providers → effect immediate, no restart.
 
-Provider types are `oidc` and `google` only; a Google row stores just the client ID and secret.
+Provider types are `oidc` and `google` only (one Google row at most); a Google row stores just the client ID and secret. The type can't be changed after creation.
 
-Same pattern for SMTP (`admin.security.write`; encryption mode `STARTTLS` (default) maps to nodemailer `requireTLS`, so a stripped STARTTLS never sends credentials in clear, `TLS` to implicit TLS, `NONE` to `ignoreTLS` for a local relay — #255; username and password are optional in every mode: an empty username connects without `auth` and stores an encrypted empty `passwordEnc`, and a password is only reused when host, port, mode and a non-empty username are unchanged) and app settings (`admin.settings.write`; the security keys — registration mode, password sign-in, password length, admin 2FA — also need `admin.security.write`).
+SMTP (`admin.security.write`) has no cache: `sendMail` reads the enabled `SmtpConfig` row on every send. Encryption mode `STARTTLS` (default) maps to nodemailer `requireTLS`, so a stripped STARTTLS never sends credentials in clear, `TLS` to implicit TLS, `NONE` to `ignoreTLS` for a local relay — #255; username and password are optional in every mode: an empty username connects without `auth` and stores an encrypted empty `passwordEnc`, and a password is only reused when host, port, mode and a non-empty username are unchanged. Without an enabled config, mails are only written to the server log.
+
+App settings (`admin.settings.write`; the security keys — registration mode, password sign-in, password length, admin 2FA — also need `admin.security.write`): `appSettings` caches each key 60 s; a write drops the key and audits `settings.<key>.update`, and changing a key the auth config reads (`registration_mode`, `credentials_enabled`, `min_password_length`, `app_name`) also calls `invalidateAuthCache()`.
 
 ### 5.10 RGPD: export & deletion
 
-**Export JSON**: `/settings/data/export` → `rgpd.service.exportUserData(userId)` returns:
+**Export JSON**: `/settings/data` → "Download" → `GET /api/export/data`, behind the step-up (§6.4: a session under 10 minutes old, else the password confirmed via `confirmDataExportAction`, else "sign in again"; until then `403 REAUTH_REQUIRED`) → `rgpd.exportOwnData` → `exportUserData(userId)` returns:
 - User + UserPreference.
-- All owned `BankAccount` + decrypted `Transaction[]` + categories + rules.
-- Groups joined + sent invitations.
-- Budgets + lines + assignments.
-- Links involving the user's transactions.
-- The user's own audit log entries.
+- All owned `BankAccount` (clear IBAN) + their decrypted `Transaction[]` + own categories, rules and merchant aliases.
+- Group memberships + sent invitations (without token/code).
+- Own budgets + lines + assignments.
+- Links and ignored link suggestions, limited to the owned accounts' transactions.
+- Import batches (history fields only).
+- The user's own audit log entries (latest 5 000).
 
-Downloaded as JSON blob.
+Downloaded as a JSON attachment; audit `user.data.exported` (`via`).
 
 **Export CSV**: `/api/export/transactions` takes the transaction-list filters; the `/settings/data` UI exposes `from` / `to` and `accountId` (any account the user can read, archived ones included). An unreadable `accountId` yields an empty file.
 
-**Account deletion**: `/settings/data/delete` → re-auth confirmation → `rgpd.service.deleteUser(userId)`:
-- Cascade delete: User → ownedAccounts → transactions → tokens/links.
-- Cascade delete: owned categories, budgets.
-- Remove from all GroupMember records.
-- Invalidate all sessions.
-- Keep `AuditLog "user.deleted"` (anonymous).
-- Logout + redirect home.
+**Account deletion**: `/settings/data` → shows the impact (accounts, transactions, groups handed over or deleted) → re-auth (current password, rate-limited; SSO-only accounts type their e-mail instead) → `deleteAccountAction` → `users/lifecycle.deleteOwnAccount(userId)` (refused for the last active super admin) → `rgpd.eraseUser`:
+- Delete the links the user created and their ignored suggestions; anonymize their audit rows (`userId` nulled).
+- Each group they own passes to another owner, else the earliest other member is promoted, else the group is deleted.
+- Cascade delete: User → owned accounts → transactions → tokens/link members/assignments/import batches; categories, budgets, rules, merchant aliases, memberships, sessions, auth accounts, 2FA, passkeys, preference.
+- Keep `AuditLog "user.deleted"` (anonymous, `metadata.self = true`).
+- Redirect to `/login?deleted=1`.
+
+### 5.11 Group invitations
+
+`/groups/[id]` (group ADMIN+) → `groups/invitations.createInvitation({ groupId, email, role: ADMIN | MEMBER })` → nominative invitation, 7 days, with a link (`/{locale}/groups/join/<token>`) and a 6-character code; mailed in the invitee's locale, or handed to the inviter to share when SMTP is off or fails. Re-inviting a pending address renews it. The invitee, signed in with the invited address, accepts from the link page, by code, or from the "pending for you" list on `/groups` (that list needs a verified address, §6.12) → `GroupMember` created, other pending invitations to that group for the address deleted, audit `group.invitation.accept`. Accepting is rate-limited per user.
+
+### 5.12 Import undo & discard
+
+The import history on `/import` lists the latest 20 `COMPLETED` / `REVERTED` batches on accounts the user can write. "Undo" (from the history or the commit summary) first shows the impact (`getRevertImpact`: transactions, linked, assigned to a budget, edited since the import), then `imports/revert.revertImport`: WRITE needed on every account the batch touched; in one transaction the batch is claimed `COMPLETED` → `REVERTED`, its rule hits are taken back, its transactions are deleted (search tokens, assignments and link memberships cascade) and links left with fewer than 2 members are dissolved; audit `import.reverted` (`deleted`, `linksDissolved`). The batch row stays in the history as `REVERTED`.
+
+An uncommitted batch (`PARSING`, `REVIEW`, `FAILED`) is discarded when the user cancels or uploads another file (`discardBatch`, `import.discarded`); the hourly purge (§5.14) removes the rest.
+
+### 5.13 Security e-mails
+
+`mail/security-notifications.notifySecurityEvent` mails the user, in their preferred locale, on: every successful sign-in (`new_login`, naming the method; not the first SSO sign-in that creates the account), a password change or reset (`password_changed`), a passkey added (`passkey_added`) and 2FA turned off (`two_factor_disabled`). Each mail gives the time (UTC), IP and device. Sent fire-and-forget from the Better Auth hooks, so direct API calls get them too; a failure is audited `mail.security.failed`. Without SMTP they are only logged.
+
+### 5.14 Scheduled jobs
+
+The `cron` container calls `POST /api/cron/<job>` with `Authorization: Bearer $CRON_SECRET` (unset → the routes 404, wrong token → 401). Schedule (UTC, `docker/cron/crontab`):
+- `roll-budgets`, daily 00:05: creates the next instance of every ended, non-archived recurring budget that has none yet (idempotent; audit `budget.created` with `system: true`).
+- `purge-audit`, daily 03:00: deletes audit entries older than 12 months (`audit.purged`).
+- `purge-imports`, hourly: deletes uncommitted batches, and batches stuck in `COMMITTING`, older than 24 h with their partial rows (`import.purged`).
 
 ---
 
@@ -874,11 +1053,20 @@ Downloaded as JSON blob.
 
 ### 6.1 Application encryption (AES-256-GCM)
 
-Storage format: `v1.<iv-b64>.<ciphertext-b64>.<authTag-b64>`. Version prefix supports key rotation.
+Storage format: `v1.<iv>.<ciphertext>.<authTag>`, each part base64url, 12-byte random IV. The version prefix is there for key rotation; `decrypt` refuses any other version.
 
-Service `server/crypto/encryption.ts` provides `encrypt(plaintext, key)` and `decrypt(stored, key)`. `DATA_ENCRYPTION_KEY` loaded once at boot (base64, 32 bytes decoded). Never logged, never serialized, accessed only via `server/crypto/keys.ts`.
+Service `server/crypto/encryption.ts` provides `encrypt(plaintext, key)` and `decrypt(stored, key)`. `DATA_ENCRYPTION_KEY` (base64, 32 bytes decoded, checked by `src/env.ts`) is decoded once into `dataKey` by `server/crypto/keys.ts`, the only module that reads it. Never logged, never serialized.
 
-Key rotation (post-MVP): CLI script reads all rows, decrypts with old key, re-encrypts with new key, updates with new version prefix.
+Encrypted columns:
+- `Transaction.labelEnc`, `rawLabelEnc`, `noteEnc`;
+- `BankAccount.ibanEnc`;
+- `MerchantAlias.keyEnc`, `nameEnc` (#125);
+- `SmtpConfig.passwordEnc`;
+- `AuthProvider.clientSecretEnc` (SSO client secrets).
+
+Not app-encrypted (MariaDB's at-rest encryption still covers them, §6.14): amounts, dates, account/category/budget names. An import's parsed rows (CSV text, PDF products) sit in clear in `ImportBatch.metadata` until the commit or revert drops them; uncommitted batches are purged after 24 h by the `purge-imports` cron. Better Auth encrypts the TOTP secret and the backup codes itself, with `AUTH_SECRET` (the `twoFactor` plugin defaults `storeBackupCodes` to `encrypted`).
+
+Key rotation (post-MVP, not implemented): CLI script reads all rows, decrypts with old key, re-encrypts with new key, updates with new version prefix.
 
 ### 6.2 HMAC blind index (HMAC-SHA256)
 
@@ -890,23 +1078,25 @@ Tokenization: split on non-alphanumeric, keep words ≥ 3 chars, index every pre
 
 On transaction creation/import: store `labelHash`, `rawLabelHash`, and one `TransactionSearchToken` per distinct prefix of the label and raw label, inserted in shuffled order.
 
-Search by word beginning: each query word ≥ 3 chars is cut to 12 chars, hashed → indexed lookup on `TransactionSearchToken.tokenHash`; all query words must match (AND). No substring search inside a word.
+Search by word beginning: each query word ≥ 3 chars is cut to 12 chars, hashed → indexed lookup on `TransactionSearchToken.tokenHash`; all query words must match (AND). No substring search inside a word. A query made only of words < 3 chars matches nothing.
+
+The same key gives equality lookups elsewhere: `BankAccount.ibanHash` (normalized IBAN) and `MerchantAlias.keyHash` (`HMAC("merchant:" + key)`, unique per user).
 
 Leakage trade-off: the token count per transaction reveals word lengths, tokens shared by the same transactions reveal prefix chains, and the frequent 3-letter tokens are open to frequency analysis. Accepted for usable search; the labels themselves stay AES-encrypted.
 
-A tokenization or normalization change makes stored tokens stale: rebuild them with `npm run db:reindex-search` (add `--rehash` when `normalizeText` changes, so `labelHash`/`rawLabelHash` are rewritten too).
+A tokenization or normalization change makes stored tokens stale: rebuild them with `npm run db:reindex-search` (add `--rehash` when `normalizeText` changes, so `labelHash`/`rawLabelHash` are rewritten too). Without `--rehash`, a `labelHash` mismatch aborts the run (wrong `SEARCH_TOKEN_KEY`).
 
-### 6.3 Password hashing — argon2id
+### 6.3 Password hashing — scrypt
 
-OWASP 2025 parameters: memoryCost 19456 KiB, timeCost 2, parallelism 1, hashLength 32. Handled by Better Auth. Minimum password length configurable in `AppSetting` (default 12), no complexity rules (anti-pattern), optional HaveIBeenPwned check (Better Auth plugin, post-MVP).
+Better Auth's default hasher (no override): `node:crypto` scrypt, N = 16384, r = 16, p = 1, 64-byte key, 16-byte random salt, password NFKC-normalized. Minimum length configurable in `AppSetting` `min_password_length` (default 12; the register form's own floor is 8), maximum 128, no complexity rules (anti-pattern). HaveIBeenPwned check: not implemented (§6.11).
 
 ### 6.4 Sessions
 
-DB-backed, 7-day expiration, refresh after 1 day of activity. Cookie attributes: httpOnly, secure, sameSite=strict, signed.
+DB-backed, 7-day expiration, refresh after 1 day of activity. The cookie cache is off, so a revoked session stops working on its next request (#142). Cookie attributes (Better Auth defaults): httpOnly, sameSite=lax, signed, `secure` + `__Secure-` prefix when `APP_URL` is HTTPS.
 
-`/settings/sessions`: list active sessions, revoke one or all but current. New session created at each login (prevents session fixation).
+Settings > Security (`/settings/security`): list active sessions, revoke one or all but current (`auth.session.revoked`, `auth.session.revoked_others`). New session created at each login (prevents session fixation).
 
-Sessions are listed server-side, without their tokens: Better Auth's `/list-sessions` is disabled, `/api/auth/*` answers `Cache-Control: no-store`. Revoking the other sessions, or a password reset, also drops the "trusted device" grants that skip the 2FA step (#243).
+Sessions are listed server-side, without their tokens: Better Auth's `/list-sessions` is disabled, `/api/auth/*` answers `Cache-Control: no-store`. Revoking the other sessions (also offered by the password change), a password reset, or enabling/disabling 2FA also drops the "trusted device" grants that skip the 2FA step (#243).
 
 2FA: enrolling again over an active 2FA is refused; disabling it takes the password and a current TOTP or backup code (#243).
 
@@ -920,74 +1110,96 @@ Reading a clear IBAN takes a step-up (#257): revealing one, which only the accou
 
 ### 6.5 CSRF
 
-Handled natively by Better Auth + Next.js Server Actions (origin check + token). No additional config required.
+No CSRF tokens; origin checks plus SameSite cookies. Better Auth checks the request origin of `/api/auth/*` against `trustedOrigins` (`APP_URL` only); Next.js Server Actions compare `Origin` with the host. The other Route Handlers (`/api/import/*`, exports) rely on the `sameSite=lax` session cookie, which a cross-site POST doesn't carry. No additional config.
 
-### 6.6 Security headers (middleware)
+### 6.6 Security headers (proxy)
 
-Added to every response: `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (deny geolocation/microphone/camera).
+Added to every response: `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: geolocation=(), microphone=(), camera=()` (`src/lib/security-headers.ts`).
 
-Pages get them from the proxy; `/api/*` from `next.config.ts` `headers()` with `default-src 'none'` as CSP, since running the proxy there would cap request bodies (imports) at its 10 MB clone limit (#243).
+Pages get them from the proxy (`src/proxy.ts`); `/api/*` from `next.config.ts` `headers()` with `default-src 'none'; frame-ancestors 'none'` as CSP, since running the proxy there would cap request bodies (imports) at its 10 MB clone limit (#243).
 
-CSP strict with per-request nonce on inline scripts/styles. `frame-ancestors 'none'`, `form-action 'self'`, `upgrade-insecure-requests` (only when `APP_URL` is HTTPS: on plain HTTP Safari would upgrade even localhost assets and load no CSS).
+Page CSP: `default-src 'self'`, `script-src 'self' 'unsafe-inline'` (+ `'unsafe-eval'` outside production, for HMR), `style-src 'self' 'unsafe-inline'`, `img-src 'self' data: blob:`, `font-src 'self' data:`, `connect-src 'self'`, `object-src 'none'`, `frame-ancestors 'none'`, `form-action 'self'`, `base-uri 'self'`, `upgrade-insecure-requests` (production only, and only when `APP_URL` is HTTPS: on plain HTTP Safari would upgrade even localhost assets and load no CSS). A per-request nonce was evaluated and not shipped (scope 8.5): the app authors no inline script, Next's own RSC bootstrap scripts would need one, and next-intl's rewrites don't propagate a nonce'd request CSP cleanly.
 
 ### 6.7 Rate limiting
 
-MVP: in-memory store (`@upstash/ratelimit` with memory adapter or custom).
+In-memory fixed-window counters (`server/auth/rate-limit.ts`), one store per process (`processState`), keyed as below. Client IPs come from `TRUSTED_IP_HEADER` (default `x-forwarded-for`, last hop), resolved by the proxy into an internal header; a client-sent value never survives (`server/http/client-ip.ts`).
 
 | Endpoint | Limit | Scope |
 |---|---|---|
-| `/login` | 5 / 15min | IP + account (#243); wrong passwords only, the 2FA step shares it |
-| `/login` | 30 / 1h | Account (#243): caps guessing from rotating IPs; wrong passwords only |
-| `/register` | 3 / 1h | E-mail address submitted (IP keys need a trusted proxy header) |
-| `/reset` | 3 / 1h | E-mail address submitted |
-| `/api/import/csv` | 10 / 1h | User |
-| `/api/import/pdf` | 10 / 1h | User |
-| API generic | 100 / 1min | User |
+| Sign-in (`/sign-in/email`) | 5 / 15min | IP + account (#243); wrong passwords only, cleared by a completed sign-in |
+| Sign-in (`/sign-in/email`) | 30 / 1h | Account (#243): caps guessing from rotating IPs; wrong passwords only |
+| 2FA code at sign-in | 5 / 10min | Pending sign-in; over the limit the pending sign-in is dropped (password again) |
+| Register | 3 / 1h | E-mail address submitted |
+| Password reset request | 3 / 1h | E-mail address submitted |
+| Password change, 2FA enable/disable/backup codes, step-up (§6.4) | 5 / 15min | User (one shared bucket); wrong passwords/codes only |
+| Invitation accept (code) | 10 / 15min | User |
+| Verification e-mail resend | 3 / 1h | User; only sent mails count |
+| SMTP test | 5 / 1min | User |
+
+Better Auth's own in-memory per-IP limiter also runs on `/api/auth/*` in production (its defaults: 100 / 10 s, 3 / 10 s on sign-in). Imports and the other API routes are not rate-limited.
 
 Each in-memory limiter holds at most 10 000 buckets: expired ones are dropped first, then the oldest (#243).
 
-Over the limit: HTTP 429 + `Retry-After` header. Logged to `AuditLog`. Post-MVP: switch to Redis when scaling to multiple instances.
+Over the limit: the Better Auth sign-in and 2FA endpoints answer HTTP 429 + `Retry-After`; Server Actions return `RATE_LIMITED` (with `retryAfter` where known). Audited: sign-in (`auth.login.failed`, `reason: RATE_LIMITED` / `TOO_MANY_ATTEMPTS`), password change, 2FA actions and step-up (`reason: rate_limit`). Post-MVP: switch to Redis when scaling to multiple instances.
 
 ### 6.8 Audit log — events tracked
 
-Auth (`auth.login.success/failed`, `auth.logout`, `auth.session.revoked`, `auth.password.reset_requested`, `auth.password.changed`, `auth.2fa.enabled/disabled`, `auth.signup`), users (`user.created_by_admin`, `user.deleted`, `user.role.granted/revoked`), accounts (`account.created/updated/archived`, `account.share.create/revoke`, `account.iban.revealed/reveal_failed`), data export (`user.data.exported/export_failed`), groups (`group.created/deleted`, `group.invitation.create/accept/revoke`), transactions (manual ones), imports (`transaction.imported_batch`), budgets (`budget.created/deleted`, `budget.assignment.create/delete`), settings (`settings.*.update`, `settings.registration_mode.update`), admin (`admin.signup_token.create/revoke`).
+`AuditLog` rows written through `logEvent` (`server/services/audit.ts`):
 
-Rule: every state-mutating event is logged. Reads are not (volume control), except reading clear IBANs: reveal and full data export (#257). Retention: 12 months, cron purge.
+- Sign-in & registration: `auth.login.success`, `auth.login.failed`, `auth.login.2fa_pending`, `auth.register.success/failed`, `auth.signup` (first super admin, `via: setup`).
+- Password: `auth.password.reset_requested`, `auth.password.reset_completed`, `auth.password.changed`, `auth.password.change_failed`.
+- 2FA & passkeys: `auth.2fa.enabled/disabled`, `auth.2fa.enable_failed/disable_failed`, `auth.2fa.backup_codes_regenerated`, `auth.2fa.backup_codes_failed`, `auth.passkey.added/deleted`.
+- Sessions & devices: `auth.session.revoked`, `auth.session.revoked_others`, `auth.trusted_device.revoked`, `auth.trusted_device.revoked_all`.
+- Identities & e-mail: `auth.identity.linked/unlinked/link_failed`, `auth.email.verified`, `auth.email.verification_sent`.
+- Users (admin): `user.created_by_admin`, `user.deleted`, `user.disabled/enabled`, `user.role.granted`, `user.role.changed`, `user.email_verified`; data export `user.data.exported/export_failed`.
+- Accounts: `account.created/updated/archived/unarchived/deleted`, `account.share.create/revoke`, `account.iban.revealed/reveal_failed`.
+- Groups: `group.created/updated/deleted`, `group.member.removed`, `group.member.role_changed`, `group.invitation.create/resend/accept/decline/revoke`.
+- Transactions & links: `transaction.created/updated/deleted/recategorized`, `link.created/deleted`, `link.suggestionIgnored/suggestionRestored`.
+- Imports: `import.created/committed/discarded/reverted`, `import.purged` (cron).
+- Categories & rules: `category.created/updated/deleted`, `rule.created/updated/deleted/enabled/disabled`.
+- Budgets: `budget.created/updated/archived/unarchived/deleted`, `budget.assignment.create/delete`.
+- Settings: `settings.<key>.update` (app settings, e.g. `settings.registration_mode.update`), `settings.smtp.update/delete/test`, `settings.auth_provider.create/update/delete`.
+- Admin signup tokens: `signup_token.created/revoked/deleted`.
+- System: `mail.security.failed` (a security or verification mail that couldn't be sent), `audit.purged` (cron).
 
-Sign-ins are audited alike whatever the method (#258): `auth.login.success` / `auth.login.failed` carry `method` (`password`, `totp`, `backup_code`, `passkey`, `sso` + `providerId`), and every successful one sends the "new sign-in" security e-mail, which names the method (an SSO one by the provider's display name). A first SSO sign-in that creates the account is audited as `auth.register.success` (`method: sso`) only, without the e-mail, like a password sign-up; linking an identity is `auth.identity.linked` only. A refused SSO callback is audited with Better Auth's error code once the OAuth state is read, mapped through an allow-list (`other` otherwise) since the IdP-side `?error=` is caller-controlled, and with the provider key only when it is a configured one; `access_denied` (cancelled at the IdP) isn't a failed sign-in. Earlier refusals (forged/expired state, an OIDC IdP's own refusal) can't be told from a link and aren't audited.
+Sign-out is not audited.
+
+Rule: security events and state-mutating actions are logged (merchant display names and user preferences are not). Reads are not (volume control), except reading clear IBANs: reveal and full data export (#257). Retention: 12 months, purged by the token-guarded `POST /api/cron/purge-audit` (inert without `CRON_SECRET`). The admin viewer shows financial entities by id only, never their labels (#244).
+
+Sign-ins are audited alike whatever the method (#258): `auth.login.success` / `auth.login.failed` carry `method` (`password`, `totp`, `backup_code`, `passkey`, `sso` + `providerId`), and every successful one sends the "new sign-in" security e-mail (§6.15), which names the method (an SSO one by the provider's display name). A first SSO sign-in that creates the account is audited as `auth.register.success` (`method: sso`) only, without the e-mail, like a password sign-up; linking an identity is `auth.identity.linked` only. A refused SSO callback is audited with Better Auth's error code once the OAuth state is read, mapped through an allow-list (`other` otherwise) since the IdP-side `?error=` is caller-controlled, and with the provider key only when it is a configured one; `access_denied` (cancelled at the IdP) isn't a failed sign-in. Earlier refusals (forged/expired state, an OIDC IdP's own refusal) can't be told from a link and aren't audited.
 
 ### 6.9 Env validation at boot
 
-`src/env.ts` uses `envalid`. Validates `NODE_ENV`, `DATABASE_URL`, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY` (base64 length check), `SEARCH_TOKEN_KEY`, `APP_URL`. App refuses to start if any are missing or malformed.
+`src/env.ts` uses `envalid`. Validates `NODE_ENV`, `APP_URL` (URL), `DATABASE_URL`, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY` and `SEARCH_TOKEN_KEY` (each must decode from base64 to 32 bytes); optional `CRON_SECRET` (unset → cron routes 404) and `TRUSTED_IP_HEADER` (default `x-forwarded-for`). Parsed on first access, which `instrumentation.ts` triggers at server start (DB seed); any missing or malformed value throws `Invalid environment variables: …`.
 
 ### 6.10 Dependencies & CI
 
-GitHub Actions: lint, typecheck, unit tests, integration tests, E2E tests, `npm audit` (fail on HIGH/CRITICAL).
+GitHub Actions, on every PR to `develop`/`main` (`ci.yml`, `permissions: contents: read`): lint (ESLint + Prettier), typecheck, build, unit tests with coverage, integration tests (MariaDB 11), E2E tests (Playwright, Chromium + WebKit, against a production build). `prod-smoke.yml` boots the production compose on PRs touching the image, Docker or Prisma files. `build.yml` builds and pushes the multi-arch image to GHCR on `develop` and tags. No `npm audit` step.
 
-Dependabot: weekly npm updates, minor/patch grouped, major separate.
+Dependabot: weekly updates for npm, GitHub Actions and Docker, targeting `develop`; minor/patch grouped per ecosystem, majors separate; `@types/node` majors ignored (tracks the Node 24 runtime).
 
 ### 6.11 Future security improvements (post-MVP roadmap)
 
 Kept as a list of hardening ideas with their triggers; some have been delivered since.
 
-| Improvement | Priority | Trigger | Effort |
-|---|---|---|---|
-| External KMS for `DATA_ENCRYPTION_KEY` (Vault, AWS KMS, Bitwarden Secrets Manager) | Medium | Production deployment beyond localhost, or 1+ admins with env-var access | M |
-| HSM / TPM for root key | Low | Pro hosting with ISO/PCI requirements | L |
-| Redis-backed rate limiting | Medium | Multi-instance deployment (≥2 Next.js replicas) | S |
-| CAPTCHA / hCaptcha on login + signup | Low | Public exposure with detected abuse | S |
-| WebAuthn / passkeys mandatory for SUPER_ADMIN | Medium | Real admin accounts with sensitive access | S (Better Auth ready, just enforce) |
-| 2FA TOTP mandatory for all (via setting) | Medium | Group reaches 3+ members | S |
-| Application-level forward secrecy | Very low | External security audit requesting it | L |
-| External SIEM logs (Loki, Datadog, BetterStack) | Medium | First incident where local audit log proves insufficient | M |
-| WAF (Caddy + CrowdSec) | Medium | Public exposure | S |
-| Encrypted automated DB backups | High | As soon as real data exists | S |
-| Penetration testing (OWASP ZAP in CI, manual audit) | Low | Before public opening | M |
-| HSM / Yubikey for root key | Very low | App becomes critical | L |
-| HaveIBeenPwned password check | Low | Easy via Better Auth plugin | S |
-| Security email notifications ("new login from…", "password changed") | Medium | When SMTP is configured | M |
-| Personal API access tokens (for scripts/automation) | Low | When external integration needed | M |
-| Anomaly detection (login from new geo, etc.) | Low | Enough audit volume for stats | L |
+| Improvement | Priority | Trigger | Effort | Status |
+|---|---|---|---|---|
+| External KMS for `DATA_ENCRYPTION_KEY` (Vault, AWS KMS, Bitwarden Secrets Manager) | Medium | Production deployment beyond localhost, or 1+ admins with env-var access | M | Open |
+| HSM / TPM for root key | Low | Pro hosting with ISO/PCI requirements | L | Open |
+| Redis-backed rate limiting | Medium | Multi-instance deployment (≥2 Next.js replicas) | S | Open |
+| CAPTCHA / hCaptcha on login + signup | Low | Public exposure with detected abuse | S | Open |
+| WebAuthn / passkeys mandatory for SUPER_ADMIN | Medium | Real admin accounts with sensitive access | S (Better Auth ready, just enforce) | Partial: passkeys available to everyone, not enforced; admins can be required to use TOTP 2FA instead (next row) |
+| 2FA TOTP mandatory for all (via setting) | Medium | Group reaches 3+ members | S | Partial: `security.admin_2fa_required` voids admin permissions until 2FA is enrolled (admins with a password only, §6.4); nothing for other users |
+| Application-level forward secrecy | Very low | External security audit requesting it | L | Open |
+| External SIEM logs (Loki, Datadog, BetterStack) | Medium | First incident where local audit log proves insufficient | M | Open |
+| WAF (Caddy + CrowdSec) | Medium | Public exposure | S | Open |
+| Encrypted automated DB backups | High | As soon as real data exists | S | Partial: documented recipe (`docs/self-hosting.md`, encrypted `mariadb-dump` from cron); not shipped in the stack |
+| Penetration testing (OWASP ZAP in CI, manual audit) | Low | Before public opening | M | Open |
+| HSM / Yubikey for root key | Very low | App becomes critical | L | Open |
+| HaveIBeenPwned password check | Low | Easy via Better Auth plugin | S | Open |
+| Security email notifications ("new login from…", "password changed") | Medium | When SMTP is configured | M | Delivered (§6.15) |
+| Personal API access tokens (for scripts/automation) | Low | When external integration needed | M | Open |
+| Anomaly detection (login from new geo, etc.) | Low | Enough audit volume for stats | L | Open |
 
 Legend: **S** = a few hours · **M** = 1-3 days · **L** = 1+ week.
 
@@ -998,11 +1210,29 @@ Sign-in never requires a verified address. `User.emailVerified` turns true when:
 - a password reset succeeds (the mailed reset link proves the address — covers admin-created users' "choose your password" mail);
 - an SSO provider asserts it: only a literal `email_verified: true`, and only for the `email` claim (not a remapped one);
 - an admin marks it in Administration → Utilisateurs (`admin.users.update`, rank rule, audited `user.email_verified`) — the path for instances without SMTP;
-- the first super admin is created verified by the setup wizard, as nobody else could verify them (#243, audited with `via` = `setup`).
+- the first super admin is created verified by the setup wizard, as nobody else could verify them (#243).
 
-The first three are audited `auth.email.verified` with `via` = `link` / `password_reset` / `sso`. `/change-email` is disabled: addresses never change after sign-up.
+All but the admin path are audited `auth.email.verified` with `via` = `link` / `password_reset` / `sso` / `setup`. `/change-email` is disabled: addresses never change after sign-up.
 
 What it gates: invitations matched on the address alone. « Invitations en attente pour vous » on `/groups` is empty until the address is verified, and accepting/declining from that list (by invitation id) is refused. The invitation link (token) and the 6-char code keep working for unverified users: they are secrets delivered to the address or shared by the inviter.
+
+### 6.13 TOTP hardening & passkeys
+
+TOTP through Better Auth's `twoFactor` plugin (30 s, 6 digits, ±1 step). A code is accepted once (RFC 6238 §5.2): a guard claims the matched step in `TwoFactor.lastUsedStep` before Better Auth's own check, and a reuse at sign-in is audited `auth.login.failed` (`reason: CODE_REUSED`) (#223). Code guesses at sign-in are capped per pending sign-in (§6.7).
+
+Passkeys through `@better-auth/passkey`, with the WebAuthn RP ID and origin pinned to `APP_URL` rather than the request's `Origin`. They are an optional sign-in method managed from Settings > Security; adding one sends a security e-mail.
+
+### 6.14 Database encryption at rest
+
+MariaDB's `file_key_management` plugin encrypts InnoDB tables and redo logs (`innodb_encrypt_tables`, `innodb_encrypt_log`, AES-CTR) with the key in `keyring/keyfile`, mounted read-only (`docker-compose.prod.yml`; dev: `docker/mariadb/conf.d/encryption.cnf`). The keyring is generated locally and git-ignored. It complements §6.1: it covers every column, but not someone with database credentials.
+
+### 6.15 Security e-mail notifications
+
+Sent when SMTP is configured, in the user's locale, with the time, client IP and device: new sign-in (any method, §6.8), password changed (change or reset), passkey added, 2FA disabled. Never awaited by the request; a delivery failure is audited `mail.security.failed`.
+
+### 6.16 Better Auth HTTP surface
+
+Better Auth endpoints that Server Actions wrap (sign-up, password change/reset, 2FA enable/disable, session listing/revocation, verification resend) or that the app doesn't use (profile update, account unlinking/linking, IdP token access, the admin plugin's endpoints, `/change-email`) are disabled (`disabledPaths`), so the rate limits, permission checks and audit above can't be bypassed (#200, #204, #243). No implicit account linking by e-mail: an SSO identity signs in only once linked or SSO-created. Password-reset tokens are stored hashed in the verification table. The OpenAPI reference is mounted outside production only.
 
 ---
 
@@ -1010,60 +1240,69 @@ What it gates: invitations matched on the address alone. « Invitations en atten
 
 ### 7.1 Pyramid
 
-- ~150-300+ **unit tests** (Vitest, `server/services/*` pure functions).
-- ~30-50 **integration tests** (Vitest + real `mariadb-test` container).
-- ~15-20 **E2E scenarios** (Playwright, full stack).
+- **Unit tests** (Vitest, `tests/unit/`): pure logic in `src/lib`, `src/server/services`, validation schemas, crypto, the proxy and Server Action wrappers. About 90 files.
+- **Integration tests** (Vitest, `tests/integration/`): services against a real MariaDB test database. About 65 files.
+- **E2E scenarios** (Playwright, `tests/e2e/`): full stack, about 40 spec files.
 
-Server Actions and API Routes are thin wrappers; no direct tests, covered indirectly by E2E.
+Business logic lives in services, so most behaviour is tested there. Server Actions and Route Handlers stay thin, but the risky parts are tested directly: auth, field errors and cron routes in `tests/unit/transport/`, admin and 2FA actions and the auth route in `tests/integration/`.
 
 ### 7.2 Unit test domains
 
-`categorization` (match types, priority, normalization), `links` pure logic (`getPrimaryTransaction`, `computeNetSum`, `isBalanced`, auto-suggestion pairing), `budgets` pure logic (filter/include/exclude/calc), `crypto/encryption` (round-trip, format, key failure), `crypto/hmac` (stability, normalization), `imports/csv-parser` (separator detection, mapping, invalid rows, FR/EN dates), `imports/dedup`, `permissions` (visibility, write check).
+`tests/unit/` is split by area: `auth` (permissions, rate limiter, provider cache, OIDC resolution, 2FA enforcement, TOTP replay), `crypto` (encryption round-trip, HMAC), `services` (categorization matching, CSV parsing, PDF statement parsers, IBAN, mailer, app settings, export), `lib` (budgets, links, periods, formatting, insights, theme), `validation` (Zod schemas), `server` (proxy and its matcher, client IP, request locale), `transport` (Server Action and route wrappers), `components`, `i18n`, `docker` (migrate toolkit, prod-smoke workflow) and `env.test.ts`.
 
 ### 7.3 Integration test domains
 
-`transactions.service` (encryption + tokens, dedup, category update), `imports.csv` end-to-end, `accounts + permissions`, `budgets.service` calc with mix of auto matching + assignments, `groups.service` invitation flow with email mock, `links.service` with real data, `settings.service` provider update + cache invalidation.
+Services against the database: accounts and sharing, transactions (encryption, search tokens, dedup, edit/delete), CSV/PDF imports and revert, categories and rules, budgets, groups and invitations, links, dashboard and insights, settings and SMTP config, auth (sign-up, login guard, sessions, passkeys, password reset, email verification, SSO link/sign-up, provider hot reload), admin actions, audit, GDPR export/deletion, step-up, setup wizard and seed.
 
-Setup: `prisma migrate reset` once at suite start, `TRUNCATE TABLE` between tests, single worker (sequential).
+Setup: `tests/setup.ts` sets the bootstrap env vars and defaults `DATABASE_URL` to the `mariadb-test` container (`budget_test`, port 3307). There is no reset between tests: each file creates its own fixtures with fixed ids and deletes them in `beforeAll`/`afterAll` (`tests/integration/support/` restores app settings). The CI test database is migrated but not seeded, so tests create the roles, permissions and settings they need. Files run one at a time (`fileParallelism: false`) because they share the database.
 
 ### 7.4 E2E scenarios (Playwright)
 
-`auth.spec.ts`, `accounts.spec.ts`, `transactions.spec.ts`, `import.spec.ts`, `groups.spec.ts`, `budgets.spec.ts`, `links.spec.ts`, `admin.spec.ts`, `i18n.spec.ts`, `rgpd.spec.ts`. Run on both Desktop Chrome and iPhone 14 viewports (mobile-first validation).
+One spec per area in `tests/e2e/` (accounts, transactions, CSV/PDF import, categories, rules, budgets, links, groups, insights, dashboard, admin pages and settings, two-factor, SSO identities, security headers, PWA, accessibility with axe-core, responsive layout, mobile sheets…). An `auth.setup.ts` project signs in the users created by `scripts/seed-e2e.ts` and saves their storage state.
 
-### 7.5 Coverage targets
+Projects: `chromium` (Desktop Chrome) and `mobile` (iPhone 14, WebKit). Most interactive specs skip WebKit, where Playwright does not deliver taps in this environment; mobile interactions are tested on Chromium with a phone viewport. One worker, no full parallelism, one retry in CI. Service workers are blocked. Locally the run reuses the dev server; in CI it serves a production build (`npm run start`). `PLAYWRIGHT_BASE_URL` targets a server that is already running (docs/development.md).
 
-- Services (unit + integration): ≥ 85% statements.
-- Critical logic (crypto, budgets, permissions, dedup): 100%.
-- E2E flows: all priority scenarios green.
+### 7.5 Coverage
 
-Coverage report visible in PR comments, not blocking initially.
+V8 coverage (`@vitest/coverage-v8`) writes text and Cobertura reports to `.reports/coverage/`. CI measures coverage on unit tests only and uploads it to Codecov. No threshold is enforced, and a failed upload does not fail the job. The original targets (≥ 85% on services, 100% on crypto, budgets, permissions and dedup) are goals, not gates.
 
-### 7.6 CI flow — aligned on the `librarr` project
+### 7.6 CI flow
 
-The CI mirrors the `librarr` project's setup (Node 24, npm, GitHub Actions). Two workflows.
+GitHub Actions, Node 24, npm. Four workflows in `.github/workflows/`.
 
-**`.github/workflows/ci.yml`** — runs on `pull_request` to `main`/`develop`, with `concurrency` (cancel-in-progress). Parallel jobs:
-- **lint** — `npm ci` → `npm run lint`
-- **build** — `npm ci` → `npm run build`
-- **test** — `npm ci` → `npm run test:coverage` → upload coverage (cobertura `.reports/coverage/cobertura-coverage.xml`) + JUnit (`.reports/junit.xml`) to **Codecov**
-- **integration** — same with a `mariadb:11` service container (migrate + run integration tests)
-- **e2e** — `npx playwright install chromium --with-deps` → `npm run test:e2e` → upload artifacts (`.reports/test-results/`, `.reports/monocart/`) + JUnit (`.reports/junit-e2e.xml`) to Codecov
+**`ci.yml`** runs on `pull_request` to `main`/`develop`, with `concurrency` (cancel-in-progress) and placeholder bootstrap secrets in `env`. Parallel jobs (job names are the required check names, §10.3):
 
-Actions pinned to recent majors: `actions/checkout@v6`, `actions/setup-node@v6` (`cache: npm`), `codecov/codecov-action@v5`, `actions/upload-artifact@v7`. All jobs required to merge (branch protection). Dependabot PRs run the same CI.
+- **Lint**: `npm ci` → `npm run lint` (ESLint + Prettier check)
+- **Typecheck**: `prisma generate` → `npm run typecheck`
+- **Build**: `prisma generate` → `npm run build` (dummy `DATABASE_URL`, nothing connects)
+- **Test (unit + coverage)**: `npx vitest run tests/unit --coverage` → Cobertura coverage and JUnit results (`.reports/junit.xml`) to **Codecov**
+- **Integration**: `mariadb:11` service container → `prisma migrate deploy` → `npm run test:integration` → JUnit to Codecov
+- **E2E**: `mariadb:11` service → migrate → `scripts/seed-e2e.ts` → `npx playwright install chromium webkit --with-deps` → `npm run build` → `npm run test:e2e` → upload the Playwright report and `test-results/` as artifacts, JUnit (`.reports/junit-e2e.xml`) to Codecov
 
-**Reporting config** (to produce the `.reports/` files): Vitest with cobertura + JUnit reporters; Playwright with `monocart-reporter` + JUnit reporter.
+**`prod-smoke.yml`** runs on PRs that touch the Dockerfile, `docker/`, `docker-compose.prod.yml`, Prisma, `next.config.ts`, `src/instrumentation.ts`, the npm manifests or the smoke script itself. It runs `scripts/prod-smoke.sh`, which builds the prod image, boots `docker-compose.prod.yml` from a temp directory and checks it. It is a separate workflow because a single job inside `ci.yml` cannot be path-filtered. It is not a required check.
 
-> The Docker build + release workflow (`build.yml`) is described in §10.4.
+**`close-issues-on-develop.yml`** closes the issues a PR references (`Closes #n`, `Fixes #n`…) when it is merged into `develop`. GitHub only does this by itself for the default branch (`main`).
+
+**`build.yml`** builds the Docker image and publishes releases, see §10.4.
+
+**CodeQL** comes from GitHub's code-scanning default setup (repository settings), not from a workflow file.
+
+Actions are pinned to major versions (`actions/checkout@v6`, `actions/setup-node@v6` with `cache: npm`, `codecov/codecov-action@v5`, `actions/upload-artifact@v7`). Dependabot (`.github/dependabot.yml`) opens weekly grouped PRs against `develop` for npm, GitHub Actions and Docker. They run the same CI.
+
+**Reporting config**: Vitest uses the `default` and JUnit reporters, with Cobertura coverage. Playwright uses `list`, JUnit and HTML (`.reports/playwright-report/`).
 
 ### 7.7 npm scripts
 
 ```
-dev, dev:e2e, build, start,
+dev, build, start,
 lint, format, typecheck,
-test, test:coverage, test:unit, test:integration, test:e2e,
-db:up, db:reset, db:migrate, db:studio,
-ci
+test, test:watch, test:unit, test:integration, test:coverage, test:e2e,
+setup, ci,
+db:up, db:migrate, db:reset, db:studio, db:seed-dev, db:reindex-search, db:backup-dev,
+icons, docs:db, docs:screenshots
 ```
+
+`npm run ci` = lint + typecheck + `vitest run` (unit + integration). What each script does: docs/development.md.
 
 ---
 
@@ -1071,168 +1310,209 @@ ci
 
 ### 8.1 Environment variables (bootstrap-only)
 
-`.env.example`:
-```bash
-NODE_ENV=development
-APP_URL=http://localhost:3000
+`src/env.ts` validates these at first use (envalid) and refuses to start if one is invalid:
 
-DATABASE_URL=mysql://app:app_password@localhost:3306/budget
-DATABASE_TEST_URL=mysql://app:app_password@localhost:3307/budget_test
+| Variable | Rule |
+| --- | --- |
+| `NODE_ENV` | `development`, `test` or `production` |
+| `APP_URL` | URL (the public HTTPS URL in production) |
+| `DATABASE_URL` | MariaDB connection string |
+| `AUTH_SECRET` | required (a dev default exists outside production) |
+| `DATA_ENCRYPTION_KEY`, `SEARCH_TOKEN_KEY` | base64, must decode to 32 bytes |
+| `CRON_SECRET` | optional; unset → the `/api/cron/*` routes answer 404 |
+| `TRUSTED_IP_HEADER` | optional header name, default `x-forwarded-for` (client IP set by the reverse proxy) |
 
-AUTH_SECRET=                  # openssl rand -base64 32
-DATA_ENCRYPTION_KEY=          # openssl rand -base64 32
-SEARCH_TOKEN_KEY=             # openssl rand -base64 32
-CRON_SECRET=                  # openssl rand -base64 32 (unset: the /api/cron routes 404)
+Templates: `.env.example` (development) and `app.env.example` / `db.env.example` (production compose). `scripts/init.sh` creates `.env` from `.env.example` and fills `AUTH_SECRET`, `DATA_ENCRYPTION_KEY` and `SEARCH_TOKEN_KEY` with `openssl rand -base64 32`. `CRON_SECRET` is left empty in dev. The test database URL is set in `tests/setup.ts`.
 
-LOG_LEVEL=info
-DISABLE_RATE_LIMIT=false      # for E2E only
-SKIP_EMAIL_VERIFICATION=false # for dev only
-```
+Everything else (SSO providers, SMTP, registration mode, password policy, app name…) is configured in the admin UI and stored in `AppSetting` / `AuthProvider`.
 
-Auto-generated by `scripts/init.sh` at first install (random secrets from openssl).
+### 8.2 Docker Compose (development)
 
-### 8.2 Docker Compose
+`docker-compose.yml` has four services:
 
-`docker-compose.yml` provides four services: `mariadb` (with `innodb_encrypt_tables=ON` and a keyring volume), `mariadb-test` (tmpfs-backed for fast resets), `adminer` (DB explorer), `app` (Next.js dev container with bind mount). MariaDB keyring file is generated by `scripts/init.sh`.
+- `mariadb`: `mariadb:11`, at-rest encryption (`file_key_management`, `innodb-encrypt-tables`/`-log`), keyring bind-mounted from `docker/mariadb/keyring/`, data in the named volume `mariadb_data`, port 3306.
+- `mariadb-test`: `mariadb:11` on tmpfs (fast, disposable), port 3307, database `budget_test`.
+- `adminer`: DB explorer on port 8080.
+- `app`: the Dockerfile `dev` target, with the repo bind-mounted on `/app`, `.env` as its env file, port 3000.
+
+`scripts/init.sh` generates the keyring file.
 
 ### 8.3 Dockerfile (multi-stage)
 
-`base` (node:24-alpine), `deps` (`npm ci`), `dev` (`node:24` / glibc, used by docker-compose — glibc so the host's bind-mounted `node_modules` with native binaries like Prisma engines stay compatible), `builder` (`npm run build` with prisma generate), `prod` (standalone runtime, non-root user `nextjs:1001`).
+- `base`: `node:24-alpine` plus `libc6-compat` and `openssl`.
+- `deps`: `npm ci`.
+- `dev`: `node:24` (Debian/glibc), used by the dev compose. glibc keeps the host's bind-mounted `node_modules` (Prisma engines and other native modules) binary-compatible.
+- `builder`: dummy build-time env (not carried into the final image), `prisma generate`, `next build`.
+- `migrator`: a pinned Prisma CLI (`docker/migrate/package.json` + lockfile) with the schema and migrations, in `/opt/migrate`.
+- `prod`: standalone Next.js output, non-root user `nextjs:1001`, plus `/opt/migrate` and the cron scripts (`/opt/cron`). The command runs `prisma migrate deploy` and then `node server.js`. Overriding the command (e.g. `sh`) skips the migration, which is how a failed migration is repaired (docs/self-hosting.md).
 
 ### 8.4 Better Auth configuration
 
-`src/server/auth/index.ts` builds the auth handler from DB-stored config:
-- Loads dynamic providers (`getDynamicProviders()`, 60s cache) and security settings.
-- Enables credentials if configured, builds social providers, builds OIDC plugin instances for each enabled `AuthProvider`.
-- Plugins: `admin`, `twoFactor`, `passkey`, `openAPI`.
-- Sessions: 7d expiry, 1d refresh threshold, cookie cache 5min.
-- In-memory rate limiting (MVP).
+`src/server/auth/index.ts` builds the options (`buildOptions()`) from bootstrap env and DB-stored settings:
 
-Cached handler in module scope. `invalidateAuthCache()` called when admin updates settings.
+- App settings `credentials_enabled`, `registration_mode`, `min_password_length` and `app_name`, plus the enabled `AuthProvider` rows (`providerCache`, 60 s TTL). Google rows become a social provider (`disableIdTokenSignIn`). `oidc` rows become `genericOAuth` configs (discovery URL from the issuer, optional explicit endpoints, PKCE, claim mapping). SSO sign-up also needs open registration.
+- Plugins (`src/server/auth/plugins.ts`): `admin` (kept for its ban check, its HTTP endpoints disabled), `twoFactor` (TOTP with replay protection), `passkey` (`@better-auth/passkey`, RP ID and origin pinned to `APP_URL`), the app's login-guard plugin, and `openAPI` outside production only. Then `genericOAuth` when OIDC providers exist, and `nextCookies()` last.
+- `disabledPaths` blocks the Better Auth endpoints the app replaces with Server Actions (sign-up, password change/reset, 2FA enable/disable, session listing/revocation, linking…) or does not use.
+- No implicit account linking by email. The client IP comes from the proxy-resolved header. Reset tokens are stored hashed.
+- Sessions: 7-day expiry, refreshed after 1 day, **cookie cache disabled**, so a revoked session stops on its next request.
+- Rate limiting is in memory (`src/server/auth/rate-limit.ts`, per process).
 
-Route handler at `src/app/api/auth/[...all]/route.ts` proxies to the built handler.
+`getAuth()` caches the handler for 60 s, keyed by a process-wide generation counter (`processState`). `invalidateAuthCache()` bumps the generation and clears the provider cache. The route handler `src/app/api/auth/[...all]/route.ts` rebuilds the request with the client-IP header, forwards it to `auth.handler` and sets `Cache-Control: no-store`.
 
 ### 8.5 next-intl
 
-`src/i18n/config.ts` defines `locales = ["fr", "en"]`, default `fr`. Middleware combines `next-intl` routing (always prefix), setup-needed guard, auth guard for `(authenticated)` routes, and security header injection.
+`src/i18n/config.ts`: `locales = ["fr", "en"]`, default `fr`. Messages are in `messages/{fr,en}.json`, loaded by `src/i18n/request.ts`. `src/proxy.ts` (Next 16 "proxy", formerly middleware) runs, in order:
+
+1. The setup guard: before the first user exists, everything redirects to `/<locale>/setup`; after that, `/setup` returns 404.
+2. A session-cookie presence check on authenticated paths (redirect to login; the authoritative check is `requireSession()` in the layout).
+3. Client-IP header normalisation.
+4. `next-intl` routing (`localePrefix: "always"`, 1-year locale cookie).
+5. Security headers, including the CSP.
+
+`/api/*` gets its own headers from `next.config.ts`.
 
 ### 8.6 Prisma + MariaDB adapter
 
-`prisma/schema.prisma` uses `previewFeatures = ["driverAdapters"]`. `src/server/db/index.ts` instantiates `PrismaMariaDb` adapter and the Prisma client.
+Prisma 7: driver adapters are stable (no `previewFeatures`), and the datasource URL and seed command live in `prisma.config.ts`. `src/server/db/index.ts` creates one `PrismaClient` per process with the `PrismaMariaDb` adapter (`@prisma/adapter-mariadb`).
 
 ### 8.7 Init script
 
-`scripts/init.sh` (called by `npm run setup`):
-1. Generate `.env` from `.env.example` with random secrets if `.env` missing.
-2. Generate MariaDB keyring file if missing.
-3. Start mariadb + mariadb-test containers.
-4. Run `prisma migrate deploy` and `prisma db seed` (seeds Permissions and Roles, no users).
+`scripts/init.sh` (`npm run setup`):
 
-After this, `npm run dev` works.
+1. Generate `.env` from `.env.example` with random secrets if `.env` is missing.
+2. Generate the MariaDB keyring file if missing.
+3. Start `mariadb` and `mariadb-test`, wait for them to be healthy, and grant the `app` user global privileges (Prisma Migrate needs a shadow database).
+4. Run `prisma migrate deploy` on `budget` and `budget_test`, then `prisma db seed` on `budget` (roles, permissions and default settings, no users).
+
+After this, `npm run dev` works. The same seed (`seedRolesAndPermissions`, `seedAppSettings`) also runs idempotently on every server start, from `src/instrumentation.ts`. Settings changed in the admin UI are kept.
 
 ### 8.8 Hot reload of settings
 
-Settings service has a 60-second in-process cache. When an admin updates a setting via `/admin/*`, `cache.delete(key)` + `invalidateAuthCache()` (when relevant) are called. Next request rebuilds the auth handler with the new config. No restart needed.
+`AppSettingsService` (`src/server/services/settings/app-settings.ts`) caches each key for 60 s. A write drops the cached key and records an audit event. Writing an auth-affecting key (`registration_mode`, `credentials_enabled`, `min_password_length`, `app_name`) calls `invalidateAuthCache()`. Saving an SSO provider invalidates the auth cache too. Caches live in `processState` (one per process, shared by every route's module copy), so the next request rebuilds the handler with the new config. No restart is needed.
 
 ### 8.9 Production deployment
 
 As shipped (operator guide: `docs/self-hosting.md`):
-- `docker-compose.prod.yml` runs the published `ghcr.io/navino16/bilan` image (`prod` target) with three services: `mariadb` (at-rest encryption, keyring bind-mounted), `app` (runs `prisma migrate deploy` then the standalone server) and `cron` (same image, calls the token-guarded `/api/cron/*` routes; it exits without `CRON_SECRET`).
-- No bundled reverse proxy: the operator puts their own TLS proxy (Caddy, Traefik, nginx…) in front of the app port. The app itself sends HSTS and the other security headers; rate limiting is in-app.
-- Secrets come from env files next to the compose file (`app.env`, `db.env`), not Docker secrets.
+
+- `docker-compose.prod.yml` runs the published `ghcr.io/navino16/bilan` image (`prod` target, `linux/amd64` + `linux/arm64`, tag `${BILAN_VERSION:-latest}`, host port `${BILAN_PORT:-3000}`) with three services:
+  - `mariadb`: at-rest encryption, keyring bind-mounted from `./keyring`, port not published.
+  - `app`: applies pending migrations, seeds roles, permissions and default settings, then serves.
+  - `cron`: same image, runs as root with busybox `crond` (`docker/cron/`). It writes `CRON_SECRET` to a file and calls `purge-imports` once, exiting if that fails (a wrong secret shows as a restart loop). Then, in UTC: `roll-budgets` daily at 00:05, `purge-audit` daily at 03:00, `purge-imports` hourly. It exits without `CRON_SECRET`.
+- No bundled reverse proxy: the operator puts their own TLS proxy (Caddy, Traefik, nginx…) in front of the app port and sets `TRUSTED_IP_HEADER` if needed. The app sends HSTS and the other security headers. Rate limiting is in-app and in memory.
+- Secrets come from env files next to the compose file (`app.env`, `db.env`), not Docker secrets. `db.env` keeps the MariaDB root password out of the app and cron containers.
 - No dedicated health endpoint: the `app` healthcheck fetches `/fr/login`, which needs the database (a fresh install redirects it to `/fr/setup`).
-- Backups are a documented operator script (`mariadb-dump` inside the `mariadb` container, gzip, `openssl enc` with a passphrase file, host cron, 30-day retention). `npm run db:backup-dev` only targets the development database.
+- Backups are an operator script documented in docs/self-hosting.md: `mariadb-dump` inside the `mariadb` container, gzip, `openssl enc` with a passphrase file, host cron, 30-day retention. `npm run db:backup-dev` only targets the development database.
+- PWA: `src/app/manifest.ts` plus a hand-written service worker (`public/sw.js`), registered in production only. It caches only static, non-sensitive assets and never authenticated pages.
 
 ---
 
 ## 9. UI/UX & Design System — "Bilan"
 
-The visual design was first mocked up with Claude Design from this spec. That prototype was the reference while the UI was built and has since been removed from the repository: its tokens now live in `src/app/globals.css`, and the shadcn components are themed with them.
+The visual design was first mocked up with Claude Design from this spec. That prototype was the reference while the UI was built and has since been removed from the repository. Its tokens now live in `src/app/globals.css`, and the shadcn components are themed with them.
 
 ### 9.1 Visual direction
 
-"Bilan" — **editorial × calm × tactile numbers**, private-banking-meets-Notion. Warm paper canvas, forest-green primary, terracotta (not red) for expenses.
+"Bilan": **editorial × calm × tactile numbers**, private banking meets Notion. A warm paper canvas, a forest-green primary, and terracotta (not red) for expenses.
 
 ### 9.2 Design tokens (`src/app/globals.css`)
 
-**Palette (light)**: paper `#F7F4ED`, card `#FFFFFF`, ink `#15130F`, primary forest `#1F4D3A`, income `#2D6B47`, expense terracotta `#B14A3B`, warning `#B6841F`, info `#2F5F8F`. Earthy category palette (groceries `#5E8C5A`, housing `#6E5B8C`, transport `#2F6B8F`, food `#C9763E`, leisure `#A86B9C`, health `#4F8C7B`, savings `#B68F36`, shopping `#8C5A3E`, bills `#4A6675`). Full **dark theme** provided.
+**Palette (light)**: paper `#F7F4ED`, card `#FFFFFF`, ink `#15130F`, primary forest `#1F4D3A`, income `#2D6B47`, expense terracotta `#B14A3B`, warning `#B6841F`, info `#2F5F8F`. Earthy category palette (`--cat-*`): groceries `#5E8C5A`, housing `#6E5B8C`, transport `#2F6B8F`, food `#C9763E`, leisure `#A86B9C`, health `#4F8C7B`, savings `#B68F36`, shopping `#8C5A3E`, bills `#4A6675`, plus income, other and uncategorized. Every token has a **dark** value (`@variant dark`).
 
-**Typography**: display serif **Newsreader**, UI sans **IBM Plex Sans**, numbers **IBM Plex Mono** (tabular figures). Display 56/40px, h1 28px, body 14px, big numbers 44/28/18px.
+Text-contrast tokens (`--ink-3`, `--warning-text`, `--expense-text`) are darker than the fill colours so that text reaches WCAG AA (4.5:1). `--warning` and `--expense` stay for fills. `--category-glyph` switches to the paper colour in dark mode, where white glyphs fall under 3:1 on the pastel palette.
 
-**Spacing/radii**: 4–64px scale, radii 4–20px + pill. Density token (`--row-h`): compact 36 / cozy 48 / roomy 60 — **locked to cozy** in-app (not user-exposed).
+**Typography** (`src/lib/fonts.ts`, `next/font/google`, served by the app): display serif **Newsreader** (`--font-display`, also `--font-heading`), UI sans **IBM Plex Sans** (`--font-sans`), numbers **IBM Plex Mono** (`--font-mono`). Amounts use tabular figures (`tabular-nums`). Sizes are Tailwind utilities, not tokens.
 
-### 9.3 Confirmed UX decisions (from the design chat)
+**Radii**: one `--radius` (0.625rem), from which `--radius-sm` to `--radius-4xl` are derived. Spacing is Tailwind's default scale. Density is fixed at the "cozy" row height: there is no density token or setting.
 
-- **Native light/dark theme** (toggle), stored per browser in the `bilan-theme` cookie (no cookie = system).
-- **Density locked to cozy** — removed from user/admin settings.
-- **Dashboard layout: editorial** (asymmetric grid, serif month title, KPI row, category donut with amounts + %).
-- **Budget visualization: horizontal bar** (over-budget aware: primary → warning at >85% → expense when over). Donut/gauge/sparkline exist as components but bar is the chosen default.
-- **Single budget creation entry point** (no duplicate "+ New" buttons).
-- **Navigation**: desktop sidebar; mobile bottom nav (Dashboard · Transactions · [+] · Budgets · More) + **hamburger drawer** for the rest (Categories, Links, Household, Import, Preferences, Admin) + **contextual green action button** in the mobile topbar (per-screen: add account / new category / new budget / invite / new transaction / link mode / import).
-- **Forms**: centered **modals on desktop**, ascending **bottom sheets on mobile**, for: new transaction (large serif amount, in/out/transfer, category chips), add account (type, bank, balance, encrypted IBAN, color palette), new category (live preview, parent, scope perso/household, palette, symbol), new budget (period, scope, dynamic category lines with caps, computed total), invite member (email, role, message).
-- **Key interactions**: click a transaction → detail panel (side panel desktop / bottom sheet mobile); change category → "create a rule for similar transactions?" dialog; month prev/next navigation shared; account selector in topbar; "my data" / "household" scope switch.
-- **Flagship screen**: Dashboard — monthly overview.
+**Logo**: the mark is defined once in `src/lib/brand.ts` (the design's B, with a middle bar added so it stays legible at 16 px). The `BilanMark` component (`src/components/brand/bilan-mark.tsx`) draws it in the app. `npm run icons` (`scripts/generate-icons.ts`) writes the favicon, the app/Apple icons, the PWA icons (`public/icons/`) and the README logos (`docs/images/logo.svg`, `logo-dark.svg`).
 
-### 9.4 Component library — all shadcn/ui, themed Bilan
+### 9.3 Confirmed UX decisions
 
-**The Bilan visual design is unchanged.** It is implemented entirely through **shadcn/ui**, themed with the Bilan tokens — not by hand-rolling a parallel component system.
+- **Native light/dark theme** with a toggle (light / dark / system), stored per browser in the `bilan-theme` cookie (no cookie = system). The server renders the theme class, so there is no flash on load (`src/lib/theme.ts`).
+- **Density locked to cozy**, not exposed in user or admin settings.
+- **Dashboard layout: editorial**. The page header has a serif period title, a period picker and prev/next navigation. Below come a KPI row, a category donut with amounts and %, mini bars, and recent transactions.
+- **Budget visualization: horizontal bar**, aware of overspending. The fill is income-green while OK, warning from 80% and when the budget is exactly reached, and expense when over (`lineStatus` in `src/lib/budgets.ts`).
+- **One budget creation entry point**, in the page header (plus the empty state's call to action).
+- **Navigation**:
+  - Desktop: a sidebar with a workspace group (Dashboard, Insights, Transactions, Import, Budgets, Accounts, Categories, Groups) and an account group (Security, Data, Admin when permitted).
+  - Mobile: a bottom bar with five tabs (Dashboard, Transactions, Budgets, Accounts, Categories) and a **hamburger drawer** with the full navigation, the language switcher and the theme toggle (`src/components/shell/nav-items.ts`).
+  - Links have no page of their own: they are handled from Transactions (`/transactions/suggestions`).
+- **Forms**: centred **dialogs on desktop**, **bottom sheets on mobile** (`useIsMobile`): new transaction, account, category, budget, group, rule.
+- **Key interactions**:
+  - Clicking a transaction opens a detail panel (side sheet on desktop, bottom sheet on mobile).
+  - Changing a category offers to create a rule for similar transactions.
+  - Prev/next period navigation.
+- **Flagship screen**: the Dashboard's monthly overview.
 
-- **Theming**: the Bilan tokens are mapped onto shadcn's CSS variables (`--background`, `--foreground`, `--primary`, `--card`, `--border`, `--radius`, `--font-sans`, etc.) for both light and dark themes. Done once at setup. This reproduces the Bilan look (paper canvas, forest green, terracotta, Newsreader/IBM Plex) across every shadcn component.
-- **All components come from shadcn** (Button, Card, Dialog, Sheet, Combobox, Tabs, Popover, Calendar, Input, Switch, Badge, Progress, Tooltip, Toast…). Accessibility (Radix) is therefore included everywhere by default.
-- **Charts**: use **shadcn Charts (Recharts)** for the donut (category breakdown), bars (budget viz), and sparklines/mini-bars — colored with the Bilan category palette.
-- **Marginal custom pieces**: a few Bilan-specific visuals not covered by shadcn (e.g. the large serif amount display, the category color-dot chip, the over-budget-aware bar) are thin wrappers/compositions on top of shadcn primitives + tokens.
+### 9.4 Component library: shadcn/ui, themed Bilan
 
-> Stack note: §2.1 fonts updated — **Newsreader + IBM Plex Sans + IBM Plex Mono** (self-hosted via `next/font`, wired into the shadcn `--font-*` variables).
+The Bilan look is implemented through **shadcn/ui** themed with the Bilan tokens, not through a hand-rolled parallel component system.
+
+- **Theming**: the "Shadcn bridge" block in `globals.css` maps the Bilan tokens onto shadcn's variables (`--background`, `--foreground`, `--primary`, `--card`, `--border`, `--ring`, `--chart-1…5`, `--sidebar-*`, `--radius`…) for light and dark. `@theme inline` exposes them to Tailwind v4.
+- **Primitives**: the shadcn components in `src/components/ui/` (Button, Card, Dialog, Sheet, Dropdown menu, Input, Label, Switch, Badge, Alert, Avatar, Radio group, native select…). They use the `base-nova` style, built on **Base UI** (`@base-ui/react`), which provides their accessibility. Icons come from lucide.
+- **Charts**: dependency-free SVG components (`src/components/dashboard/charts.tsx`: donut, mini bars), coloured with the category palette. There is no Recharts.
+- **Bilan-specific pieces**, built on these primitives and the tokens: the large serif amounts, the category colour chip, the overspending-aware budget bar.
+
+> Stack note (§2.1): the fonts are **Newsreader + IBM Plex Sans + IBM Plex Mono**, loaded with `next/font` and wired into the `--font-*` variables.
 
 ---
 
 ## 10. Development Workflow (GitHub + Git Flow)
 
+Local setup, scripts, demo data and e2e options: [docs/development.md](development.md). Production operations: [docs/self-hosting.md](self-hosting.md).
+
 ### 10.1 Repository & branching — Git Flow
 
-The project lives in a **GitHub repository**, using the **Git Flow** model:
+The project is a **public GitHub repository** (`Navino16/bilan`, AGPL-3.0), using the **Git Flow** model:
 
-- **`main`** — production branch. Tagged at each release. Always stable/released.
-- **`develop`** — integration branch. All features land here first.
-- **`feature/<scope>`** — branched from `develop`, merged back into `develop` via PR.
-- **`release/<version>`** — branched from `develop` when cutting a release, merged into **both** `main` and `develop`, tagged on `main`.
-- **`hotfix/<version>`** — branched from `main` for urgent fixes, merged into `main` and `develop`.
+- **`main`**: the release branch and the repository's default branch. Tagged at each release.
+- **`develop`**: the integration branch. All features land here first.
+- **`feature/<topic>`**: branched from `develop`, merged back into `develop` through a PR.
+- **`release/<version>`**: branched from `develop` to cut a release, merged into **both** `main` and `develop`, tagged on `main`.
+- **`hotfix/<version>`**: branched from `main` for urgent fixes, merged into `main` and `develop`.
 
-**Releases are manual**: the user runs the Git Flow commands (`git flow release start/finish`) to cut releases when they decide. The CI does **not** auto-release.
+**Releases are manual**: the maintainer runs the Git Flow commands (`git flow release start/finish`) when they decide to cut one. CI does **not** release on its own.
 
 ### 10.2 Issues & traceability
 
-- One GitHub issue per change, with its goal and acceptance criteria.
-- The PR references it with `Closes #<n>`, so merging into `develop` closes the issue.
-- Labels: a type (`enhancement`, `bug`, `documentation`, `infra`, `security`, `dependencies`), which feeds the release changelog, plus an area (`frontend`, `backend`).
+- Work is tracked by GitHub issues: one issue per change, with its goal and acceptance criteria. Issue templates are in `.github/ISSUE_TEMPLATE/`.
+- The PR body references the issue with `Closes #<n>`. Merging into `develop` closes it through `close-issues-on-develop.yml`, since GitHub only auto-closes from the default branch.
+- Labels: every PR gets a **type** label (`enhancement`, `bug`, `security`, `infra`, `documentation`, `dependencies`, `breaking change`), because the release changelog is built from them (§10.4). An area label (`frontend`, `backend`) can be added. The `phase-N` labels date from the initial roadmap.
 
 ### 10.3 Pull requests
 
-- PR target: `develop` (features), `main` (releases via Git Flow).
-- PR title in conventional-commit style (`feat: …`, `fix: …`, `refactor: …`) — communicates intent and feeds an eventual CHANGELOG.
-- Merge only when CI is green (lint, typecheck, unit, integration, e2e, audit) — branch protection on `develop` and `main`.
-- Commits stay 1-line English conventional.
+- Target: `develop` for features and fixes. Releases and hotfixes reach `main` through Git Flow.
+- PR title in conventional-commit style (`feat: …`, `fix: …`, `refactor: …`). With squash merge it becomes the commit on the branch.
+- A GitHub ruleset, **`Main/Develop`**, protects `main` and `develop`. It is configured in the repository settings, not in the repo. It enforces:
+  - changes only through a PR, with **no approval required**; review threads must be resolved;
+  - **squash merge only** and **linear history**; no force-push, deletion or creation of these branches;
+  - required status checks, up to date with the base: **Lint, Typecheck, Build, Test (unit + coverage), Integration, E2E** (the `ci.yml` jobs, §7.6) and **CodeQL** (code-scanning default setup), plus a code-scanning gate on CodeQL alerts.
+  - Repository admins can bypass the ruleset.
+- `prod-smoke.yml` runs on PRs that touch the Docker/Prisma/build files, but it is not a required check.
+- Branches are deleted automatically after merge.
+- Commits are one-line, English, conventional.
 
-### 10.4 CI/CD workflows (aligned on `librarr`)
+### 10.4 CI/CD workflows
 
-Two workflows, mirroring the `librarr` project.
+**`ci.yml`**: on PRs to `main`/`develop`. Jobs and reporting are in §7.6.
 
-**`ci.yml`** — on PR to `main`/`develop`: lint, build, test (+ Codecov), integration, e2e (+ Codecov). See §7.6. Required to merge.
+**`build.yml`**: on push to `develop` (except changes limited to `**.md`, `.github/**`, `tests/**`, `scripts/**`), on any tag, and on `workflow_dispatch`:
 
-**`build.yml`** — on push to `develop`, on `*` tags, and `workflow_dispatch`:
-1. **lint** + **test** (gate).
-2. **docker** (matrix `linux/amd64` on ubuntu-latest + `linux/arm64` on ubuntu-24.04-arm): build with Buildx + GHA cache, push by digest to **ghcr.io** (`ghcr.io/<owner>/bilan`).
-3. **merge** — combine per-arch digests into a multi-arch manifest, tagged via `docker/metadata-action` (semver `{{version}}`, `{{major}}.{{minor}}`, branch, PR, `sha-` prefix; `latest=auto`).
-4. **release** (only on tags `refs/tags/*`) — generate CHANGELOG from PR labels via `mikepenz/release-changelog-builder-action` (categories: breaking change, enhancement, bug, documentation, dependencies; base branch `develop`), then create the GitHub Release via `softprops/action-gh-release`.
-5. **notify-discord** (only on tags) — post the release to a Discord webhook with the changelog excerpt.
+1. **Lint** and **Test** (unit tests) gate the build.
+2. **Build (linux/amd64 | linux/arm64)**: a matrix on `ubuntu-latest` and `ubuntu-24.04-arm`. Each runner builds the `prod` target with Buildx and the GHA cache, then pushes it by digest to **ghcr.io** (`ghcr.io/navino16/bilan`).
+3. **Merge Manifests**: combines the per-arch digests into a multi-arch manifest, tagged with `docker/metadata-action` (semver `{{version}}` and `{{major}}.{{minor}}`, branch, PR, `sha-` prefix; `latest=auto`).
+4. **Create Release** (tags only): builds the changelog from PR labels with `mikepenz/release-changelog-builder-action` (categories: breaking change, enhancement, bug, security, infra, documentation, dependencies; base branch `develop`), then creates the GitHub Release with `softprops/action-gh-release`.
+5. **Discord Release Notification** (tags only): posts the release and a changelog excerpt to a Discord webhook, mentioning a role.
 
-**Release flow**: the user cuts a release via Git Flow (manual `git flow release finish` → tag on `main`). Pushing the tag triggers `build.yml`'s release + Discord steps. So the **decision is manual** (the user tags), and the **packaging/publishing is automated** — exactly like `librarr`.
+**Release flow**: the maintainer cuts a release with Git Flow (`git flow release finish` → tag on `main`) and pushes the tag. The tag triggers `build.yml`: images, GitHub Release, Discord. The **decision is manual**; **packaging and publishing are automated**.
 
-**Required secrets/vars**: `CODECOV_TOKEN`, `GITHUB_TOKEN` (auto, for ghcr.io + release), `DISCORD_RELEASES_WEBHOOK`, `DISCORD_RELEASE_ROLE_ID`. Image registry: `ghcr.io`.
+**Secrets / variables**: `CODECOV_TOKEN` (secret), `DISCORD_RELEASES_WEBHOOK` (secret), `DISCORD_RELEASE_ROLE_ID` (repository variable), and `GITHUB_TOKEN` (automatic, used for ghcr.io and the release). Image registry: `ghcr.io`.
 
 ### 10.5 Conventions recap
 
-- Code, tests, comments, commit messages, issue/PR titles: **English**. UI strings: **French/English** (next-intl).
-- Commits: 1 line, conventional-ish (`feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, `test:`).
-- No `--no-verify`, no force-push to `main`/`develop`.
+- Code, tests, comments, commit messages, issue/PR titles: **English**. UI strings: **French and English** (next-intl). Keep `messages/fr.json` and `messages/en.json` in sync by hand: CI has no check that both files have the same keys.
+- Commits: one line, conventional (`feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, `test:`).
+- Business logic goes in `src/server/services/*`. Server Actions and Route Handlers stay thin.
+- Run `npm run ci` before opening a PR.
+- No `--no-verify`. The ruleset blocks force-pushes to `main`/`develop`.
 - Dependabot PRs follow the same flow (target `develop`, CI must pass).

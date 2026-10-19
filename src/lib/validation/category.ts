@@ -8,7 +8,7 @@ const emptyToUndefined = (v: unknown) => (typeof v === "string" && v.trim() === 
 
 // A category is owned by the current user (personal) when `groupId` is absent,
 // or by a group when `groupId` is set. The XOR (userId vs groupId) is resolved
-// in the service from the session + this field, and enforced by a DB CHECK.
+// in the service from the session + this field; no DB CHECK, MariaDB rejects one on a FK column.
 export const categoryInputSchema = z.object({
   name: z.string().trim().min(1).max(CATEGORY_NAME_MAX),
   color: z.preprocess(emptyToUndefined, z.string().refine(isCategoryColor).optional()),

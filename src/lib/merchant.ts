@@ -1,4 +1,4 @@
-// Normalizes bank labels so one merchant's rows group together (spec §5):
+// Normalizes bank labels so one merchant's rows group together:
 // operation prefix, card ref, dates (and what follows) and trailing amounts/refs go.
 const PREFIX = /^(PAIEMENT PAR CARTE|CARTE|CB|PRLV SEPA|PRLV|VIR SEPA|VIREMENT|VIR)\s+/i;
 const LEADING_REF = /^(X\d{4}\s+)?(\d{2}\/\d{2}(\/\d{2,4})?\s+)?/i;

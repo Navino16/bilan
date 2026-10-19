@@ -90,11 +90,11 @@ model Verification {
 }
 
 model TwoFactor {
-  id          String  @id
-  userId      String
-  secret      String  @db.Text
-  backupCodes String  @db.Text
-  verified    Boolean @default(true)
+  id           String  @id
+  userId       String
+  secret       String  @db.Text
+  backupCodes  String  @db.Text
+  verified     Boolean @default(true)
   // Last accepted TOTP time-step, so a code can't be replayed within its window (#223).
   lastUsedStep Int?
 
@@ -180,7 +180,7 @@ model UserPreference {
 
 model AuthProvider {
   id              String   @id @default(cuid())
-  type            String // credentials | oidc | google
+  type            String // oidc | google
   key             String   @unique
   displayName     String
   enabled         Boolean  @default(false)
@@ -401,9 +401,9 @@ model Transaction {
   importBatchId String?
   importBatch   ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
 
-  account        BankAccount              @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  searchTokens   TransactionSearchToken[]
-  linkMembership TransactionLinkMember?
+  account           BankAccount              @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  searchTokens      TransactionSearchToken[]
+  linkMembership    TransactionLinkMember?
   budgetAssignments BudgetAssignment[]
 
   @@unique([accountId, externalId])
@@ -428,10 +428,10 @@ model TransactionSearchToken {
 model ImportBatch {
   id           String    @id @default(cuid())
   accountId    String
-  source       String // CSV | PDF | MANUAL
+  source       String // CSV | PDF
   filename     String?
   filenameHash String?
-  status       String // PENDING | PARSING | REVIEW | COMPLETED | FAILED
+  status       String // PARSING | REVIEW | COMMITTING | COMPLETED | REVERTED (FAILED is never set)
   totalRows    Int       @default(0)
   importedRows Int       @default(0)
   skippedRows  Int       @default(0)
@@ -534,8 +534,8 @@ model Budget {
   // impossible on MariaDB: error 1901 on a FK column with a referential action).
   userId  String?
   groupId String?
-  user    User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  group   Group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group   Group?  @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   periodType     String // WEEK | MONTH | QUARTER | YEAR | CUSTOM
   periodStart    DateTime

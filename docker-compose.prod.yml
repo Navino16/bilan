@@ -51,7 +51,7 @@ services:
     restart: unless-stopped
     init: true
     user: root
-    # Same image and trust domain as the app; only CRON_SECRET is read (spec §7).
+    # Same image and trust domain as the app; only CRON_SECRET is read.
     env_file:
       - app.env
     command: ["sh", "/opt/cron/start.sh"]

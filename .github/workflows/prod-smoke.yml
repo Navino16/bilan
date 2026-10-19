@@ -1,6 +1,6 @@
 name: Prod smoke
 
-# A separate workflow: GitHub Actions cannot path-filter one job inside ci.yml (spec §9).
+# A separate workflow: GitHub Actions cannot path-filter one job inside ci.yml.
 on:
   pull_request:
     branches: [main, develop]
