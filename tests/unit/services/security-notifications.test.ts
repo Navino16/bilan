@@ -52,9 +52,29 @@ describe("securityMail", () => {
     expect(fr.text).toContain("Adresse IP : 203.0.113.7");
   });
 
+  it.each([
+    [{ kind: "sso", provider: "Authentik" }, "Authentik (SSO)", "Authentik (SSO)"],
+    [{ kind: "password" }, "mot de passe", "password"],
+    [
+      { kind: "totp" },
+      "mot de passe et code d’authentification",
+      "password and authenticator code",
+    ],
+    [{ kind: "passkey" }, "clé d’accès", "passkey"],
+  ] as const)("names the sign-in method %j (#258)", (method, fr, en) => {
+    const input = { appName: "Maison", at, origin, method };
+    expect(securityMail("new_login", "fr", input).text).toContain(
+      `Méthode de connexion : ${fr}\nAdresse IP`,
+    );
+    expect(securityMail("new_login", "en", input).text).toContain(
+      `Sign-in method: ${en}\nIP address`,
+    );
+  });
+
   it("omits the origin lines when none is given", () => {
     const en = securityMail("password_changed", "en", { appName: "Maison", at });
     expect(en.text).not.toContain("IP address");
+    expect(en.text).not.toContain("Sign-in method");
     expect(en.subject).toBe("Maison — your password was changed");
   });
 });
@@ -86,6 +106,19 @@ describe("notifySecurityEvent", () => {
         "Maison — nouvelle connexion à votre compte",
       );
     }
+  });
+
+  it("passes the sign-in method into the mail", async () => {
+    findUser.mockResolvedValue({ email: "user@bilan.local", preference: { locale: "en" } });
+    await notifySecurityEvent("new_login", {
+      userId: "u1",
+      at,
+      origin,
+      method: { kind: "sso", provider: "Google" },
+    });
+    expect((sendMail.mock.calls[0][0] as { text: string }).text).toContain(
+      "Sign-in method: Google (SSO)",
+    );
   });
 
   it("falls back to the triggering request's locale, then the default (#245)", async () => {

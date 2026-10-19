@@ -20,12 +20,18 @@ export type SecurityEvent =
 
 type Origin = { ip: string | null; userAgent: string | null };
 
+export type SignInMethod =
+  | { kind: "password" | "totp" | "backup_code" | "passkey" }
+  | { kind: "sso"; provider: string };
+
 type Copy = {
   date: string;
   ip: string;
   device: string;
   unknownIp: string;
   unknownDevice: string;
+  method: string;
+  methods: Record<Exclude<SignInMethod["kind"], "sso">, string>;
   events: Record<
     SecurityEvent,
     (appName: string) => { subject: string; intro: string; outro: string[] }
@@ -39,6 +45,13 @@ const COPY: Record<Locale, Copy> = {
     device: "Appareil :",
     unknownIp: "inconnue",
     unknownDevice: "inconnu",
+    method: "Méthode de connexion :",
+    methods: {
+      password: "mot de passe",
+      totp: "mot de passe et code d’authentification",
+      backup_code: "mot de passe et code de secours",
+      passkey: "clé d’accès",
+    },
     events: {
       new_login: (appName) => ({
         subject: `${appName} — nouvelle connexion à votre compte`,
@@ -79,6 +92,13 @@ const COPY: Record<Locale, Copy> = {
     device: "Device:",
     unknownIp: "unknown",
     unknownDevice: "unknown",
+    method: "Sign-in method:",
+    methods: {
+      password: "password",
+      totp: "password and authenticator code",
+      backup_code: "password and backup code",
+      passkey: "passkey",
+    },
     events: {
       new_login: (appName) => ({
         subject: `${appName} — new sign-in to your account`,
@@ -123,15 +143,20 @@ export function formatDevice(userAgent: string | null, locale: Locale): string {
   return known || userAgent?.slice(0, 80) || COPY[locale].unknownDevice;
 }
 
+function formatMethod(method: SignInMethod, locale: Locale): string {
+  return method.kind === "sso" ? `${method.provider} (SSO)` : COPY[locale].methods[method.kind];
+}
+
 // Times are shown in UTC: users have no time-zone preference to format them in.
 export function securityMail(
   event: SecurityEvent,
   locale: Locale,
-  input: { appName: string; at: Date; origin?: Origin },
+  input: { appName: string; at: Date; origin?: Origin; method?: SignInMethod },
 ): { subject: string; text: string } {
   const copy = COPY[locale];
   const { subject, intro, outro } = copy.events[event](input.appName);
   const at = formatDateTime(input.at, locale, { timeZone: "UTC" });
+  const method = input.method ? [`${copy.method} ${formatMethod(input.method, locale)}`] : [];
   const origin = input.origin
     ? [
         `${copy.ip} ${formatIp(input.origin.ip, locale)}`,
@@ -140,14 +165,14 @@ export function securityMail(
     : [];
   return {
     subject,
-    text: [intro, "", `${copy.date} ${at} (UTC)`, ...origin, "", ...outro].join("\n"),
+    text: [intro, "", `${copy.date} ${at} (UTC)`, ...method, ...origin, "", ...outro].join("\n"),
   };
 }
 
 export async function notifySecurityEvent(
   event: SecurityEvent,
   // `pageLocale`: the triggering request's, for a user without a stored preference.
-  input: { userId: string; at: Date; origin?: Origin; pageLocale?: Locale },
+  input: { userId: string; at: Date; origin?: Origin; pageLocale?: Locale; method?: SignInMethod },
 ): Promise<void> {
   try {
     const user = await db.user.findUnique({
@@ -160,6 +185,7 @@ export async function notifySecurityEvent(
       appName: await getAppName(),
       at: input.at,
       origin: input.origin,
+      method: input.method,
     });
     await sendMail({ to: user.email, ...mail, locale });
   } catch (e) {

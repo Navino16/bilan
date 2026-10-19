@@ -542,12 +542,12 @@ If your administrator has set up Google or another identity provider, click **Li
 
 When the instance can send e-mail, Bilan e-mails you after:
 
-- a new sign-in with your password, a passkey or a backup code;
+- a new sign-in with your password, a passkey, a backup code or an identity provider;
 - a password change or reset;
 - a new passkey;
 - two-factor authentication being turned off.
 
-The alert gives the date, IP address and device. If it wasn't you, change your password right away. These alerts can't be turned off.
+The alert gives the date, the sign-in method, the IP address and the device. If it wasn't you, change your password right away. These alerts can't be turned off.
 
 ## Your data
 
