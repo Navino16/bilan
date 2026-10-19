@@ -95,6 +95,14 @@ describe("two-factor Server Actions (#200)", () => {
     expect(await db.twoFactor.count({ where: { userId } })).toBe(1);
   });
 
+  it("stores the backup codes encrypted, never in clear", async () => {
+    const res = await enableTwoFactorAction(password);
+    if (!res.ok) throw new Error("enrolment failed");
+    const { backupCodes: stored } = await db.twoFactor.findFirstOrThrow({ where: { userId } });
+    for (const code of res.data.backupCodes) expect(stored).not.toContain(code);
+    expect(() => JSON.parse(stored)).toThrow();
+  });
+
   it("refuses to re-enrol over an enabled 2FA, keeping its secret (#243)", async () => {
     await enrolled();
     const before = await db.twoFactor.findFirstOrThrow({ where: { userId } });
