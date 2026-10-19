@@ -22,7 +22,7 @@ import { ImportAccessError } from "./errors";
 import type { CsvMapping, ImportPreview, CommitSummary, ResolvedCsvMapping } from "./types";
 
 // NOTE: the PDF service lives in `./pdf-service` (not here) so the CSV path never
-// statically pulls in pdfjs/pdf-parse. pdfjs must stay an externalized server
+// statically pulls in pdfjs. pdfjs must stay an externalized server
 // package (next.config `serverExternalPackages`) for its worker to resolve, which
 // only holds for STATIC imports — so the PDF route imports pdf-service directly.
 
