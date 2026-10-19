@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   Dialog,
   DialogTrigger,
@@ -23,22 +24,28 @@ import { FieldError } from "@/components/forms/field-error";
 import { PageHeader } from "@/components/shell/page-header";
 import { SectionCard } from "@/components/shell/section-card";
 import type { OwnDeletionImpact } from "@/server/services/users/own-deletion";
+import { exportTransactionsHref } from "@/lib/transaction-filters";
 import { DownloadButton } from "./download-button";
+
+export type ExportAccountOption = { id: string; name: string; archived: boolean };
 
 export function DataControls({
   locale,
   hasPassword,
   email,
   impact,
+  accounts,
 }: {
   locale: string;
   hasPassword: boolean;
   email: string;
   impact: OwnDeletionImpact | null;
+  accounts: ExportAccountOption[];
 }) {
   const t = useTranslations("settings.data");
   const [open, setOpen] = useState(false);
   const [exportFailed, setExportFailed] = useState(false);
+  const [exportFilter, setExportFilter] = useState({ from: "", to: "", accountId: "" });
   const form = useActionForm(deleteAccountAction, {
     resetOnSuccess: false,
     onSuccess: () => window.location.assign(`/${locale}/login?deleted=1`),
@@ -67,9 +74,50 @@ export function DataControls({
 
       {/* Export */}
       <SectionCard overline={t("exportOverline")} title={t("exportTitle")} hint={t("exportHint")}>
+        <fieldset data-slot="export-filters" className="space-y-3">
+          <legend className="text-sm font-medium">{t("exportFilters")}</legend>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="export-from">{t("exportFrom")}</Label>
+              <Input
+                id="export-from"
+                type="date"
+                value={exportFilter.from}
+                max={exportFilter.to || undefined}
+                onChange={(e) => setExportFilter((f) => ({ ...f, from: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="export-to">{t("exportTo")}</Label>
+              <Input
+                id="export-to"
+                type="date"
+                value={exportFilter.to}
+                min={exportFilter.from || undefined}
+                onChange={(e) => setExportFilter((f) => ({ ...f, to: e.target.value }))}
+              />
+            </div>
+            <div className="min-w-0 space-y-2">
+              <Label htmlFor="export-account">{t("exportAccount")}</Label>
+              <NativeSelect
+                id="export-account"
+                value={exportFilter.accountId}
+                onChange={(e) => setExportFilter((f) => ({ ...f, accountId: e.target.value }))}
+              >
+                <option value="">{t("exportAllAccounts")}</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.archived ? t("exportArchivedAccount", { name: a.name }) : a.name}
+                  </option>
+                ))}
+              </NativeSelect>
+            </div>
+          </div>
+          <p className="text-muted-foreground text-xs">{t("exportFiltersHint")}</p>
+        </fieldset>
         <div className="flex flex-col gap-2 sm:flex-row">
           <DownloadButton
-            href={`/api/export/transactions?locale=${locale}`}
+            href={exportTransactionsHref(locale, exportFilter)}
             fallbackFilename="bilan-transactions.csv"
             pendingLabel={t("exporting")}
             onError={setExportFailed}

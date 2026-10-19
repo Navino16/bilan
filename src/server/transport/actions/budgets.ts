@@ -7,11 +7,14 @@ import {
   createBudget,
   updateBudget,
   deleteBudget,
+  archiveBudget,
+  unarchiveBudget,
   assignTransaction,
   unassignTransaction,
   listAssignmentsForTx,
   rollRecurring,
   BudgetAccessError,
+  type TxAssignment,
 } from "@/server/services/budgets";
 import { budgetInputSchema } from "@/lib/validation/budget";
 import { AMOUNT_ERRORS } from "@/lib/amount";
@@ -92,6 +95,32 @@ export async function deleteBudgetAction(
   }
 }
 
+async function setArchived(formData: FormData, archived: boolean): Promise<BudgetActionState> {
+  const user = await requireSession();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { ok: false, error: "INVALID" };
+  try {
+    await (archived ? archiveBudget : unarchiveBudget)(id, { id: user.id });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: mapError(e) };
+  }
+}
+
+export async function archiveBudgetAction(
+  _prev: BudgetActionState,
+  formData: FormData,
+): Promise<BudgetActionState> {
+  return setArchived(formData, true);
+}
+
+export async function unarchiveBudgetAction(
+  _prev: BudgetActionState,
+  formData: FormData,
+): Promise<BudgetActionState> {
+  return setArchived(formData, false);
+}
+
 export async function assignTransactionAction(
   _prev: BudgetActionState,
   formData: FormData,
@@ -131,9 +160,7 @@ export async function unassignTransactionAction(
 // currently assigned to (INCLUDE/EXCLUDE). Requires a session AND that the
 // caller can read the transaction's account — otherwise a session holder could
 // enumerate any transaction id and learn its budget assignments (IDOR).
-export async function listAssignmentsForTxAction(
-  transactionId: string,
-): Promise<{ budgetId: string; mode: string }[]> {
+export async function listAssignmentsForTxAction(transactionId: string): Promise<TxAssignment[]> {
   const user = await requireSession();
   if (!transactionId) return [];
   const txRow = await db.transaction.findUnique({
@@ -142,7 +169,7 @@ export async function listAssignmentsForTxAction(
   });
   if (!txRow) return [];
   if (!(await canReadAccount(user.id, txRow.accountId))) return [];
-  return listAssignmentsForTx(transactionId);
+  return listAssignmentsForTx(transactionId, user.id);
 }
 
 export async function rollRecurringAction(

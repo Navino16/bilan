@@ -87,3 +87,14 @@ export function transactionsHref(
   if (filter.search) params.set("search", filter.search);
   return `/${locale}/transactions?${params.toString()}`;
 }
+
+export type ExportFilter = { from?: string; to?: string; accountId?: string };
+
+// The CSV export reads the same params as the list (see parseTransactionFilters).
+export function exportTransactionsHref(locale: string, filter: ExportFilter): string {
+  const params = new URLSearchParams({ locale });
+  if (filter.from) params.set("from", filter.from);
+  if (filter.to) params.set("to", filter.to);
+  if (filter.accountId) params.set("accountId", filter.accountId);
+  return `/api/export/transactions?${params.toString()}`;
+}

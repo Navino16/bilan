@@ -236,10 +236,22 @@ export async function deleteBudget(id: string, actor: { id: string }): Promise<v
   await logEvent({ userId: actor.id, action: "budget.deleted", entity: "Budget", entityId: id });
 }
 
+// Archived budgets leave the list, the dashboard, the assignment menu and the roll cron.
 export async function archiveBudget(id: string, actor: { id: string }): Promise<void> {
   await manageableOrThrow(id, actor.id);
   await db.budget.update({ where: { id }, data: { archived: true } });
   await logEvent({ userId: actor.id, action: "budget.archived", entity: "Budget", entityId: id });
+}
+
+export async function unarchiveBudget(id: string, actor: { id: string }): Promise<void> {
+  await manageableOrThrow(id, actor.id);
+  await db.budget.update({ where: { id }, data: { archived: false } });
+  await logEvent({
+    userId: actor.id,
+    action: "budget.unarchived",
+    entity: "Budget",
+    entityId: id,
+  });
 }
 
 export type BudgetListItem = {
@@ -256,6 +268,7 @@ export type BudgetListItem = {
   percent: number | null;
   status: BudgetStatus;
   description: string | null;
+  archived: boolean;
   parentBudgetId: string | null;
   lines: {
     categoryId: string | null;
@@ -277,11 +290,14 @@ function canManageBudget(groupId: string | null, roleByGroup: Map<string, string
   return role === "ADMIN" || role === "OWNER";
 }
 
-// The user's own budgets + those of groups they belong to (not archived).
-export async function listBudgetsForUser(userId: string): Promise<BudgetListItem[]> {
+// The user's own budgets + those of groups they belong to, active or archived ones.
+export async function listBudgetsForUser(
+  userId: string,
+  { archived = false }: { archived?: boolean } = {},
+): Promise<BudgetListItem[]> {
   const { groupIds, roleByGroup } = await budgetScopeForUser(userId);
   const rows = await db.budget.findMany({
-    where: { archived: false, OR: [{ userId }, { groupId: { in: groupIds } }] },
+    where: { archived, OR: [{ userId }, { groupId: { in: groupIds } }] },
     include: {
       lines: { select: { plannedAmount: true, categoryId: true, accountId: true, label: true } },
     },
@@ -295,6 +311,7 @@ export async function listBudgetsForUser(userId: string): Promise<BudgetListItem
     rows.map(
       async (b) =>
         b.recurring &&
+        !b.archived &&
         b.periodEnd.getTime() < now &&
         canManageBudget(b.groupId, roleByGroup) &&
         !(await nextInstanceExists(b)),
@@ -309,6 +326,7 @@ export async function listBudgetsForUser(userId: string): Promise<BudgetListItem
       id: b.id,
       name: b.name,
       description: b.description,
+      archived: b.archived,
       scope: b.groupId ? "GROUP" : "USER",
       groupId: b.groupId,
       parentBudgetId: b.parentBudgetId,
@@ -526,6 +544,7 @@ export type BudgetDetail = {
   id: string;
   name: string;
   description: string | null;
+  archived: boolean;
   scope: BudgetScope;
   periodType: string;
   periodStart: Date;
@@ -708,6 +727,7 @@ export async function getBudgetDetail(
     id: b.id,
     name: b.name,
     description: b.description,
+    archived: b.archived,
     scope: b.groupId ? "GROUP" : "USER",
     groupId: b.groupId,
     periodType: b.periodType,
@@ -763,6 +783,7 @@ export async function assignTransaction(
 ): Promise<void> {
   if (input.mode !== "INCLUDE" && input.mode !== "EXCLUDE") throw new BudgetAccessError("INVALID");
   const budget = await readableOrThrow(input.budgetId, actor.id);
+  if (budget.archived) throw new BudgetAccessError("ARCHIVED");
   const txRow = await db.transaction.findUnique({
     where: { id: input.transactionId },
     select: { accountId: true },
@@ -834,23 +855,29 @@ export type AssignableBudget = {
   groupName: string | null;
   periodStart: Date;
   periodEnd: Date;
+  archived: boolean;
 };
 
-export async function listAssignableBudgets(userId: string): Promise<AssignableBudget[]> {
-  const { groupIds } = await budgetScopeForUser(userId);
-  const rows = await db.budget.findMany({
-    where: { archived: false, OR: [{ userId }, { groupId: { in: groupIds } }] },
-    select: {
-      id: true,
-      name: true,
-      groupId: true,
-      group: { select: { name: true } },
-      periodStart: true,
-      periodEnd: true,
-    },
-    orderBy: [{ periodStart: "desc" }, { name: "asc" }],
-  });
-  return rows.map((b) => ({
+const assignableSelect = {
+  id: true,
+  name: true,
+  groupId: true,
+  group: { select: { name: true } },
+  periodStart: true,
+  periodEnd: true,
+  archived: true,
+} as const;
+
+function toAssignable(b: {
+  id: string;
+  name: string;
+  groupId: string | null;
+  group: { name: string } | null;
+  periodStart: Date;
+  periodEnd: Date;
+  archived: boolean;
+}): AssignableBudget {
+  return {
     id: b.id,
     name: b.name,
     scope: b.groupId ? "GROUP" : "USER",
@@ -858,17 +885,38 @@ export async function listAssignableBudgets(userId: string): Promise<AssignableB
     groupName: b.group?.name ?? null,
     periodStart: b.periodStart,
     periodEnd: b.periodEnd,
-  }));
+    archived: b.archived,
+  };
 }
 
-// The assignments on a transaction (for the detail panel to show current state).
+export async function listAssignableBudgets(userId: string): Promise<AssignableBudget[]> {
+  const { groupIds } = await budgetScopeForUser(userId);
+  const rows = await db.budget.findMany({
+    where: { archived: false, OR: [{ userId }, { groupId: { in: groupIds } }] },
+    select: assignableSelect,
+    orderBy: [{ periodStart: "desc" }, { name: "asc" }],
+  });
+  return rows.map(toAssignable);
+}
+
+export type TxAssignment = { budgetId: string; mode: string; budget: AssignableBudget };
+
+// The assignments on a transaction for the detail panel, on budgets the viewer can
+// read, archived ones included so they stay removable.
 export async function listAssignmentsForTx(
   transactionId: string,
-): Promise<{ budgetId: string; mode: string }[]> {
-  return db.budgetAssignment.findMany({
-    where: { transactionId },
-    select: { budgetId: true, mode: true },
+  viewerId: string,
+): Promise<TxAssignment[]> {
+  const { groupIds } = await budgetScopeForUser(viewerId);
+  const rows = await db.budgetAssignment.findMany({
+    where: {
+      transactionId,
+      budget: { OR: [{ userId: viewerId }, { groupId: { in: groupIds } }] },
+    },
+    select: { budgetId: true, mode: true, budget: { select: assignableSelect } },
+    orderBy: { assignedAt: "asc" },
   });
+  return rows.map((r) => ({ budgetId: r.budgetId, mode: r.mode, budget: toAssignable(r.budget) }));
 }
 
 async function nextInstanceExists(b: {
@@ -900,6 +948,7 @@ async function rollFrom(
   auditUserId: string | null,
 ): Promise<{ created: boolean; id?: string }> {
   if (!b.recurring) throw new BudgetAccessError("NOT_RECURRING");
+  if (b.archived) return { created: false };
   const template = b.parentBudgetId ?? b.id; // chain instances off the original template
   const period = nextPeriod(b.periodType as BudgetPeriodType, b.periodStart, b.periodEnd);
   if (await nextInstanceExists(b)) return { created: false };

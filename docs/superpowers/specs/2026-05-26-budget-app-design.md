@@ -805,6 +805,9 @@ Creation (`/budgets/new`):
 - Period: preset (current month, quarter, year) or custom.
 - Recurring: if yes, instances auto-created at each period start.
 - Lines: each line targets a category, an account, both, or just a label, with a `plannedAmount`.
+- Optional `description` (≤ 500 chars) and per-line `label` (≤ 80 chars, shown instead of the category/account name), both editable in the create/edit form.
+
+Archive (#260): a budget manager can archive/unarchive (`budgets.service.archiveBudget` / `unarchiveBudget`, audit `budget.archived` / `budget.unarchived`). Archived budgets leave the list (shown in a collapsed "Archived budgets" section), the dashboard, the assignment menu and the roll cron; their detail stays readable and their menu only offers unarchive/delete. An archived budget takes no new assignment (`ARCHIVED`) and is never rolled, even by a direct call; existing assignments stay listed (marked archived) and removable in the transaction panel.
 
 `budgets.service.computeLine(line, budget)`:
 1. Select transactions visible to the budget's owner: own accounts + accounts shared via groups, within `[periodStart, periodEnd]`.
@@ -835,7 +838,7 @@ The budget detail lists the counted transactions in full to everyone who can rea
 4. Exclude pairs in `IgnoredLinkSuggestion(userId)`.
 5. Sort by amount DESC, days delta ASC.
 
-UI `/transactions/suggestions`: list pairs with Link / Ignore buttons. Ignore writes to `IgnoredLinkSuggestion`.
+UI `/transactions/suggestions`: list pairs with Link / Ignore buttons. Ignore writes to `IgnoredLinkSuggestion`. A **Settings** dialog on that page edits the user's own `linkWindowDays` (integer 0–365) and `linkMinAmount` (≥ 0), via `users/preferences.updateLinkSuggestionSettings` (#260).
 
 ### 5.9 Admin settings with hot reload
 
@@ -859,6 +862,8 @@ Same pattern for SMTP (`admin.security.write`; encryption mode `STARTTLS` (defau
 - The user's own audit log entries.
 
 Downloaded as JSON blob.
+
+**Export CSV**: `/api/export/transactions` takes the transaction-list filters; the `/settings/data` UI exposes `from` / `to` and `accountId` (any account the user can read, archived ones included). An unreadable `accountId` yields an empty file.
 
 **Account deletion**: `/settings/data/delete` → re-auth confirmation → `rgpd.service.deleteUser(userId)`:
 - Cascade delete: User → ownedAccounts → transactions → tokens/links.

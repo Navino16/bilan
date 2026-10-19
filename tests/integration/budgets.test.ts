@@ -4,12 +4,16 @@ import {
   createBudget,
   updateBudget,
   deleteBudget,
+  archiveBudget,
+  unarchiveBudget,
   listBudgetsForUser,
   getBudgetDetail,
   assignTransaction,
   unassignTransaction,
   listAssignableBudgets,
+  listAssignmentsForTx,
   rollRecurring,
+  rollRecurringSystem,
   getCurrentBudget,
   listRollableTemplates,
   BudgetAccessError,
@@ -845,6 +849,127 @@ describe("hardening (group scope, dedup, links, out-of-period, canManage)", () =
       expect(asMember?.canManage).toBe(false);
       const asOwner = (await listBudgetsForUser(owner)).find((b) => b.groupId === groupId);
       expect(asOwner?.canManage).toBe(true);
+    } finally {
+      await db.groupMember.deleteMany({ where: { groupId, userId: stranger } });
+    }
+  });
+});
+
+describe("archive / description / line labels", () => {
+  it("keeps a description and per-line labels through create, update and detail", async () => {
+    const { id } = await createBudget(
+      {
+        ...baseInput,
+        description: "  Courses du mois  ",
+        lines: [{ categoryId: catId, label: " Supermarché ", plannedAmount: 300 }],
+      },
+      { id: owner },
+    );
+    let detail = await getBudgetDetail(id, owner);
+    expect(detail.description).toBe("Courses du mois");
+    expect(detail.lines[0].label).toBe("Supermarché");
+    expect((await listBudgetsForUser(owner)).find((b) => b.id === id)?.description).toBe(
+      "Courses du mois",
+    );
+
+    await updateBudget(
+      id,
+      { ...baseInput, description: "", lines: [{ categoryId: catId, plannedAmount: 300 }] },
+      { id: owner },
+    );
+    detail = await getBudgetDetail(id, owner);
+    expect(detail.description).toBeNull();
+    expect(detail.lines[0].label).toBeNull();
+  });
+
+  it("archived budgets leave the list, the assignable menu and the dashboard, and come back", async () => {
+    const { id } = await createBudget(baseInput, { id: owner });
+    await archiveBudget(id, { id: owner });
+
+    expect((await listBudgetsForUser(owner)).map((b) => b.id)).not.toContain(id);
+    const archived = await listBudgetsForUser(owner, { archived: true });
+    expect(archived.map((b) => b.id)).toEqual([id]);
+    expect(archived[0]).toMatchObject({ archived: true, canManage: true, rollable: false });
+    expect((await listAssignableBudgets(owner)).map((b) => b.id)).not.toContain(id);
+    expect(await getCurrentBudget(owner, new Date("2026-03-15T12:00:00.000Z"))).toBeNull();
+    expect((await getBudgetDetail(id, owner)).archived).toBe(true);
+
+    await unarchiveBudget(id, { id: owner });
+    expect((await listBudgetsForUser(owner)).map((b) => b.id)).toContain(id);
+    expect(await listBudgetsForUser(owner, { archived: true })).toEqual([]);
+    expect((await getBudgetDetail(id, owner)).archived).toBe(false);
+    const actions = await db.auditLog.findMany({
+      where: { entityId: id, action: { in: ["budget.archived", "budget.unarchived"] } },
+      select: { action: true },
+    });
+    expect(actions.map((a) => a.action).sort()).toEqual(["budget.archived", "budget.unarchived"]);
+  });
+
+  it("an archived recurring budget is not rolled", async () => {
+    const { id } = await createBudget({ ...baseInput, recurring: true }, { id: owner });
+    await archiveBudget(id, { id: owner });
+    const rollable = await listRollableTemplates(new Date("2026-05-01T00:00:00.000Z"));
+    expect(rollable.map((r) => r.id)).not.toContain(id);
+  });
+
+  it("an archived budget is never rolled, even by a direct call", async () => {
+    const { id } = await createBudget({ ...baseInput, recurring: true }, { id: owner });
+    await archiveBudget(id, { id: owner });
+    expect(await rollRecurring(id, { id: owner })).toEqual({ created: false });
+    expect(await rollRecurringSystem(id)).toEqual({ created: false });
+    expect(await db.budget.count({ where: { parentBudgetId: id } })).toBe(0);
+  });
+
+  it("keeps an assignment to an archived budget visible and removable, but takes no new one", async () => {
+    await db.budgetAssignment.deleteMany({});
+    const t = await tx("2026-03-06T00:00:00.000Z", -25, null);
+    const { id } = await createBudget(baseInput, { id: owner });
+    await assignTransaction({ budgetId: id, transactionId: t, mode: "INCLUDE" }, { id: owner });
+    await archiveBudget(id, { id: owner });
+
+    expect(await listAssignmentsForTx(t, owner)).toEqual([
+      {
+        budgetId: id,
+        mode: "INCLUDE",
+        budget: expect.objectContaining({ id, name: "Mars", archived: true, groupName: null }),
+      },
+    ]);
+    await expect(
+      assignTransaction({ budgetId: id, transactionId: t, mode: "EXCLUDE" }, { id: owner }),
+    ).rejects.toThrow("ARCHIVED");
+
+    await unassignTransaction({ budgetId: id, transactionId: t }, { id: owner });
+    expect(await listAssignmentsForTx(t, owner)).toEqual([]);
+  });
+
+  it("lists only the assignments on budgets the viewer can read", async () => {
+    await db.budgetAssignment.deleteMany({});
+    const t = await tx("2026-03-06T00:00:00.000Z", -25, null);
+    const shared = await createBudget({ ...baseInput, groupId }, { id: owner });
+    await assignTransaction(
+      { budgetId: shared.id, transactionId: t, mode: "EXCLUDE" },
+      { id: owner },
+    );
+    expect((await listAssignmentsForTx(t, owner)).map((a) => a.budgetId)).toEqual([shared.id]);
+    expect(await listAssignmentsForTx(t, stranger)).toEqual([]);
+  });
+
+  it("only a budget manager may archive or unarchive it", async () => {
+    const own = await createBudget(baseInput, { id: owner });
+    await expect(archiveBudget(own.id, { id: stranger })).rejects.toBeInstanceOf(BudgetAccessError);
+    const shared = await createBudget({ ...baseInput, groupId }, { id: owner });
+    await db.groupMember.create({ data: { groupId, userId: stranger, role: "MEMBER" } });
+    try {
+      await expect(archiveBudget(shared.id, { id: stranger })).rejects.toBeInstanceOf(
+        BudgetAccessError,
+      );
+      await archiveBudget(shared.id, { id: owner });
+      await expect(unarchiveBudget(shared.id, { id: stranger })).rejects.toBeInstanceOf(
+        BudgetAccessError,
+      );
+      // A plain member still sees the household's archived budget, read-only.
+      const seen = await listBudgetsForUser(stranger, { archived: true });
+      expect(seen.find((b) => b.id === shared.id)?.canManage).toBe(false);
     } finally {
       await db.groupMember.deleteMany({ where: { groupId, userId: stranger } });
     }

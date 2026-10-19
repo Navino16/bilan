@@ -17,8 +17,9 @@ export default async function BudgetsPage({ params }: { params: Promise<{ locale
   setRequestLocale(locale);
   const user = await requireSession();
 
-  const [budgets, tree, accounts, groupRows] = await Promise.all([
+  const [budgets, archived, tree, accounts, groupRows] = await Promise.all([
     listBudgetsForUser(user.id),
+    listBudgetsForUser(user.id, { archived: true }),
     listForUser(user.id),
     listBudgetAccountOptions(user.id),
     listGroupsForUser(user.id),
@@ -30,6 +31,12 @@ export default async function BudgetsPage({ params }: { params: Promise<{ locale
     .map((g) => ({ id: g.id, name: g.name }));
 
   return (
-    <BudgetsView budgets={budgets} categories={categories} accounts={accounts} groups={groups} />
+    <BudgetsView
+      budgets={budgets}
+      archived={archived}
+      categories={categories}
+      accounts={accounts}
+      groups={groups}
+    />
   );
 }

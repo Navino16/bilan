@@ -401,7 +401,8 @@
       "otherSpending": "Autres dépenses",
       "catchAllHint": "Une ligne « Toutes catégories / Tous comptes » reprend toutes les dépenses qui n’entrent dans aucune autre ligne.",
       "hidden": "Catégorie ou compte non visible",
-      "archivedAccount": "{name} (archivé)"
+      "archivedAccount": "{name} (archivé)",
+      "labelPlaceholder": "Libellé (facultatif, sinon la catégorie ou le compte)"
     },
     "plannedTotal": "Total prévu",
     "save": "Enregistrer",
@@ -419,7 +420,8 @@
       "INVALID_LINE": "Une ligne utilise une catégorie ou un compte non disponible pour ce budget.",
       "AMOUNT_INVALID": "Montant invalide. Exemples : -12,34 ou 1 234,56.",
       "AMOUNT_AMBIGUOUS": "Montant ambigu : écrivez 1234 ou 1,23 (sans séparateur de milliers seul).",
-      "AMOUNT_PRECISION": "Le montant ne peut pas avoir plus de 2 décimales."
+      "AMOUNT_PRECISION": "Le montant ne peut pas avoir plus de 2 décimales.",
+      "ARCHIVED": "Ce budget est archivé : désarchivez-le pour y affecter des transactions."
     },
     "status": {
       "OK": "Dans le budget",
@@ -470,7 +472,16 @@
       "others": "{count, plural, one {# autre budget en cours} other {# autres budgets en cours}}",
       "moreLines": "{count, plural, one {# autre ligne} other {# autres lignes}}"
     },
-    "plannedTotalValue": "Total prévu : {amount}"
+    "plannedTotalValue": "Total prévu : {amount}",
+    "description": "Description",
+    "descriptionPlaceholder": "Optionnel : à quoi sert ce budget ?",
+    "archive": "Archiver",
+    "unarchive": "Désarchiver",
+    "archiveTitle": "Archiver « {name} » ?",
+    "archiveBody": "Le budget quitte la liste, le tableau de bord et le menu d’affectation, et il n’est plus renouvelé. Ses lignes et ses affectations sont conservées et vous pourrez le désarchiver.",
+    "archivedTitle": "Budgets archivés · {count, number}",
+    "archivedHint": "Hors de la liste, du tableau de bord et du menu d’affectation. Ouvrez-en un pour le consulter, ou désarchivez-le depuis son menu.",
+    "archivedBadge": "Archivé"
   },
   "categories": {
     "title": "Catégories",
@@ -688,7 +699,21 @@
       "ignored": "{count, plural, one {# paire ignorée} other {# paires ignorées}}",
       "ignoredHint": "Une paire restaurée peut de nouveau être suggérée.",
       "restore": "Restaurer",
-      "restoreFailed": "Impossible de restaurer cette paire. Réessayez."
+      "restoreFailed": "Impossible de restaurer cette paire. Réessayez.",
+      "criteria": "{days, plural, =0 {Paires du même jour} one {Paires à # jour d’écart au plus} other {Paires à # jours d’écart au plus}}, à partir de {amount}.",
+      "settings": {
+        "open": "Réglages",
+        "title": "Réglages des suggestions",
+        "subtitle": "Choisissez quelles paires vous sont suggérées. Ces réglages ne concernent que vous.",
+        "windowDays": "Écart maximal (jours)",
+        "windowDaysHint": "Nombre de jours entre les deux opérations, de 0 (même jour) à 365.",
+        "minAmount": "Montant minimum",
+        "minAmountHint": "Les paires d’un montant inférieur ne sont pas suggérées.",
+        "cancel": "Annuler",
+        "save": "Enregistrer",
+        "saving": "Enregistrement…",
+        "failed": "Impossible d’enregistrer ces réglages. Réessayez."
+      }
     },
     "filterSheet": {
       "reset": "Réinitialiser",
@@ -1144,7 +1169,14 @@
         "RATE_LIMITED": "Trop de tentatives. Réessayez plus tard.",
         "FAILED": "La suppression a échoué. Réessayez.",
         "LAST_SUPER_ADMIN": "Vous êtes le dernier super-administrateur actif : nommez-en un autre avant de supprimer votre compte."
-      }
+      },
+      "exportFilters": "Filtres de l’export CSV",
+      "exportFrom": "Du",
+      "exportTo": "Au",
+      "exportAccount": "Compte",
+      "exportAllAccounts": "Tous les comptes",
+      "exportArchivedAccount": "{name} (archivé)",
+      "exportFiltersHint": "Laissez vide pour tout exporter. L’export JSON contient toujours l’intégralité de vos données."
     },
     "security": {
       "overline": "Compte",
@@ -1787,6 +1819,7 @@
           "updated": "Budget modifié",
           "deleted": "Budget supprimé",
           "archived": "Budget archivé",
+          "unarchived": "Budget désarchivé",
           "assignment": {
             "create": "Transaction affectée à un budget",
             "delete": "Affectation de budget retirée"
