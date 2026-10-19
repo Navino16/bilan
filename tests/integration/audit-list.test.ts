@@ -139,15 +139,18 @@ describe("listAuditLog", () => {
           groupId: ids.group,
           email: "invite-audit@bilan.local",
           invitedById: userId,
-          token: "auditlist_invite_token",
-          code: "AUDITLST",
+          tokenEnc: "auditlist_invite_token",
+          tokenHash: "auditlist_invite_token",
+          codeEnc: "AUDITLST",
+          codeHash: "AUDITLST",
           expiresAt: new Date("2099-01-01T00:00:00Z"),
         },
       });
       await db.adminSignupToken.create({
         data: {
           id: ids.token,
-          token: "auditlist_signup_token",
+          tokenEnc: "auditlist_signup_token",
+          tokenHash: "auditlist_signup_token",
           description: "Jeton famille",
           createdById: userId,
         },

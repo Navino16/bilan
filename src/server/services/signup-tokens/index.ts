@@ -1,6 +1,11 @@
 import { randomBytes } from "node:crypto";
 import type { AdminSignupToken } from "@prisma/client";
 import { db } from "@/server/db";
+import { decrypt, encrypt } from "@/server/crypto/encryption";
+import { hmacExact } from "@/server/crypto/hmac";
+import { dataKey, searchKey } from "@/server/crypto/keys";
+
+const tokenHash = (token: string) => hmacExact(token, searchKey);
 
 export async function createSignupToken(input: {
   description?: string;
@@ -11,7 +16,8 @@ export async function createSignupToken(input: {
   const token = randomBytes(24).toString("base64url");
   const row = await db.adminSignupToken.create({
     data: {
-      token,
+      tokenEnc: encrypt(token, dataKey),
+      tokenHash: tokenHash(token),
       description: input.description ?? null,
       maxUses: input.maxUses ?? null,
       expiresAt: input.expiresAt ?? null,
@@ -27,7 +33,7 @@ export async function consumeSignupToken(token: string): Promise<{ ok: boolean }
   // token (e.g. both passing a maxUses=1 check before either increments).
   const { count } = await db.adminSignupToken.updateMany({
     where: {
-      token,
+      tokenHash: tokenHash(token),
       revokedAt: null,
       AND: [
         { OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
@@ -45,7 +51,7 @@ export async function consumeSignupToken(token: string): Promise<{ ok: boolean }
 // never drive usedCount below zero.
 export async function refundSignupToken(token: string): Promise<void> {
   await db.adminSignupToken.updateMany({
-    where: { token, usedCount: { gt: 0 } },
+    where: { tokenHash: tokenHash(token), usedCount: { gt: 0 } },
     data: { usedCount: { decrement: 1 } },
   });
 }
@@ -71,11 +77,21 @@ function signupTokenStatus(
   return "active";
 }
 
-export async function listSignupTokens(
-  now: Date = new Date(),
-): Promise<(AdminSignupToken & { status: SignupTokenStatus })[]> {
-  const rows = await db.adminSignupToken.findMany({ orderBy: { createdAt: "desc" } });
-  return rows.map((r) => ({ ...r, status: signupTokenStatus(r, now) }));
+type SignupTokenRow = Omit<AdminSignupToken, "tokenEnc" | "tokenHash"> & {
+  token: string;
+  status: SignupTokenStatus;
+};
+
+export async function listSignupTokens(now: Date = new Date()): Promise<SignupTokenRow[]> {
+  const rows = await db.adminSignupToken.findMany({
+    omit: { tokenHash: true },
+    orderBy: { createdAt: "desc" },
+  });
+  return rows.map(({ tokenEnc, ...r }) => ({
+    ...r,
+    token: decrypt(tokenEnc, dataKey),
+    status: signupTokenStatus(r, now),
+  }));
 }
 
 // Only a token that can no longer be used may be deleted; an active one is revoked first.

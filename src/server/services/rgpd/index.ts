@@ -118,7 +118,7 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
     db.groupMember.findMany({ where: { userId }, include: { group: true } }),
     db.groupInvitation.findMany({
       where: { invitedById: userId },
-      omit: { token: true, code: true },
+      omit: { tokenEnc: true, tokenHash: true, codeEnc: true, codeHash: true },
     }),
     db.ignoredLinkSuggestion.findMany({
       where: { userId },

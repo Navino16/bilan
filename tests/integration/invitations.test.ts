@@ -18,6 +18,8 @@ vi.mock("@/server/auth/permissions", async (importOriginal) => ({
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 
 import { db } from "@/server/db";
+import { decrypt } from "@/server/crypto/encryption";
+import { dataKey } from "@/server/crypto/keys";
 import { invitationAcceptLimiter } from "@/server/auth/rate-limit";
 import { createGroup } from "@/server/services/groups";
 import {
@@ -60,6 +62,11 @@ describe("invitations service", () => {
     );
     expect(inv.code).toMatch(/^[A-Z0-9]{6}$/);
     expect(inv.token.length).toBeGreaterThan(20);
+    const row = await db.groupInvitation.findUniqueOrThrow({ where: { id: inv.id } });
+    expect(JSON.stringify(row)).not.toContain(inv.token);
+    expect(JSON.stringify(row)).not.toContain(inv.code);
+    expect(decrypt(row.tokenEnc, dataKey)).toBe(inv.token);
+    expect(decrypt(row.codeEnc, dataKey)).toBe(inv.code);
     expect(
       await db.auditLog.findFirst({
         where: { action: "group.invitation.create", entityId: inv.id },
@@ -225,7 +232,9 @@ describe("invitations service", () => {
     expect(rotated.code).not.toBe(first.code);
     expect(rotated.acceptUrl).toMatch(new RegExp(`/groups/join/${rotated.token}$`));
     const [row] = await db.groupInvitation.findMany({ where: { groupId: g.id } });
-    expect(row).toMatchObject({ token: rotated.token, code: rotated.code, role: "MEMBER" });
+    expect(row.role).toBe("MEMBER");
+    expect(decrypt(row.tokenEnc, dataKey)).toBe(rotated.token);
+    expect(decrypt(row.codeEnc, dataKey)).toBe(rotated.code);
     expect(row.expiresAt.getTime()).toBeGreaterThan(Date.now());
   });
 
@@ -279,7 +288,9 @@ describe("invitations service", () => {
       expect(first).toEqual({
         ok: true,
         renewed: false,
-        shareUrl: expect.stringMatching(new RegExp(`/groups/join/${inv.token}$`)),
+        shareUrl: expect.stringMatching(
+          new RegExp(`/groups/join/${decrypt(inv.tokenEnc, dataKey)}$`),
+        ),
         mailFailed: true,
       });
       expect(await submit()).toMatchObject({ ok: true, renewed: true, mailFailed: true });
@@ -317,7 +328,9 @@ describe("invitations service", () => {
     expect(off).toEqual({
       ok: true,
       renewed: false,
-      shareUrl: expect.stringMatching(new RegExp(`/groups/join/${inv.token}$`)),
+      shareUrl: expect.stringMatching(
+        new RegExp(`/groups/join/${decrypt(inv.tokenEnc, dataKey)}$`),
+      ),
     });
 
     smtp.delivered = true;
@@ -357,8 +370,10 @@ describe("invitations service", () => {
         groupId: g.id,
         email: "invitee@bilan.local",
         invitedById: owner,
-        token: "stale-token-228",
-        code: "STL228",
+        tokenEnc: "stale-token-228",
+        tokenHash: "stale-token-228",
+        codeEnc: "STL228",
+        codeHash: "STL228",
         expiresAt: new Date(Date.now() + 60_000),
       },
     });
