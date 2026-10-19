@@ -387,9 +387,29 @@
       "INVALID": "Vérifiez les champs.",
       "INVALID_REGEX": "Expression régulière invalide ou non prise en charge (les références arrière et les assertions avant/arrière ne sont pas acceptées).",
       "FORBIDDEN": "Action non autorisée.",
-      "FAILED": "Échec. Réessayez."
+      "FAILED": "Échec. Réessayez.",
+      "NOT_FOUND": "Cette règle n’existe plus.",
+      "DISABLED": "Cette règle est désactivée."
     },
-    "deleteFailed": "Échec de la suppression. Réessayez."
+    "deleteFailed": "Échec de la suppression. Réessayez.",
+    "apply": {
+      "overlineCreated": "Règle créée",
+      "overlineUpdated": "Règle modifiée",
+      "overlineStandalone": "Règle",
+      "title": "Appliquer aux transactions existantes ?",
+      "intro": "La règle « {pattern} » → <chip>{category}</chip> correspond à {matched, plural, one {# transaction existante} other {# transactions existantes}}.",
+      "loading": "Recherche des transactions concernées…",
+      "moving": "{count, plural, one {passe} other {passent}} dans <chip>{category}</chip>",
+      "movingFromOther": "dont {count} actuellement dans une autre catégorie",
+      "kept": "{count, plural, one {reste} other {restent}} avec « {pattern} », plus prioritaire",
+      "keptHint": "Montez la priorité de cette règle pour les reprendre.",
+      "manual": "{count, plural, one {catégorisée} other {catégorisées}} à la main : {count, plural, one {elle ne bouge pas} other {elles ne bougent pas}}",
+      "none": "Aucune transaction existante n’est à reclasser.",
+      "later": "Plus tard",
+      "close": "Fermer",
+      "apply": "Reclasser {count, plural, one {# transaction} other {# transactions}}",
+      "button": "Appliquer « {pattern} » aux transactions existantes"
+    }
   },
   "budgets": {
     "overline": "Planification",
@@ -673,7 +693,7 @@
         "EXACT": "Égal à",
         "REGEX": "Regex"
       },
-      "existingNote": "Les transactions existantes ne seront pas reclassées automatiquement.",
+      "existingNote": "À l’étape suivante, vous verrez les transactions existantes concernées avant de les reclasser.",
       "decline": "Non merci",
       "confirm": "Créer la règle"
     },

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2 } from "lucide-react";
+import { History, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CategoryChip, Pill, SegmentedTabs } from "@/components/transactions/bits";
 import type { FlatCategory } from "@/components/transactions/category-tree";
@@ -11,6 +11,8 @@ import type { RuleMatchType } from "@/lib/validation/rule";
 import { deleteRuleAction, toggleRuleAction } from "@/server/transport/actions/rules";
 import { ConfirmDialog } from "@/components/shell/confirm-dialog";
 import { RuleDialog, type EditableRule } from "./rule-dialog";
+import { RuleApplyDialog } from "./rule-apply-dialog";
+import type { RuleApplyTarget } from "./rule-apply-step";
 import type { ScopeGroup } from "./category-form";
 
 export type RuleRow = {
@@ -28,7 +30,7 @@ export type RuleRow = {
   hits: number;
 };
 
-const COLS = "grid-cols-[32px_64px_1fr_minmax(0,108px)_minmax(0,140px)_72px_96px_60px]";
+const COLS = "grid-cols-[32px_64px_1fr_minmax(0,108px)_minmax(0,140px)_72px_96px_92px]";
 
 export function RulesList({
   rules,
@@ -42,6 +44,7 @@ export function RulesList({
   const t = useTranslations("rules");
   const router = useRouter();
   const [editing, setEditing] = useState<EditableRule | null>(null);
+  const [applying, setApplying] = useState<RuleApplyTarget | null>(null);
   const [pending, startTransition] = useTransition();
   const [deleting, setDeleting] = useState<RuleRow | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -111,6 +114,24 @@ export function RulesList({
         {sorted.map((r) => {
           const actions = (
             <span className="flex items-center justify-end gap-0.5">
+              {r.enabled && (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t("apply.button", { pattern: r.pattern })}
+                  disabled={pending}
+                  onClick={() =>
+                    setApplying({
+                      id: r.id,
+                      pattern: r.pattern,
+                      categoryName: r.categoryName ?? "—",
+                      categoryColor: r.categoryColor,
+                    })
+                  }
+                >
+                  <History />
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon-sm"
@@ -203,6 +224,8 @@ export function RulesList({
           );
         })}
       </div>
+
+      <RuleApplyDialog rule={applying} onOpenChange={(o) => !o && setApplying(null)} />
 
       <ConfirmDialog
         open={deleteOpen}
