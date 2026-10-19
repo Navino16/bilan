@@ -44,11 +44,10 @@ export async function adminCreateUser(
   const ctx = await auth.$context;
   const email = parsed.email.toLowerCase();
   if (await ctx.internalAdapter.findUserByEmail(email)) throw new UserExistsError();
-  const user = await ctx.internalAdapter.createUser({
-    email,
-    name: parsed.name,
-    emailVerified: false,
-  });
+  const user = await ctx.internalAdapter.createUser(
+    { email, name: parsed.name, emailVerified: false },
+    { method: "admin" },
+  );
   await ctx.internalAdapter.linkAccount({
     userId: user.id,
     providerId: "credential",

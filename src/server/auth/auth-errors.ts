@@ -1,4 +1,5 @@
-import { APIError, isAPIError } from "better-auth/api";
+import { isAPIError } from "better-auth/api";
+import { db } from "@/server/db";
 
 type DriverCause = { code?: unknown; message?: unknown };
 type DbError = {
@@ -21,14 +22,25 @@ export function isTwoFactorWriteConflict(err: unknown): boolean {
   );
 }
 
-// Better Auth's onAPIError.onError: a thrown APIError becomes the response.
+// The client Better Auth writes through. A refused TwoFactor update reads as "no row updated",
+// which Better Auth answers with a 409 (#243): its onAPIError hook can't replace a response.
+export const authDb = db.$extends({
+  query: {
+    twoFactor: {
+      async update({ args, query }) {
+        try {
+          return await query(args);
+        } catch (err) {
+          if (isTwoFactorWriteConflict(err)) return null as never;
+          throw err;
+        }
+      },
+    },
+  },
+});
+
+// Better Auth's onAPIError.onError.
 export function onAuthError(err: unknown): void {
-  if (isTwoFactorWriteConflict(err)) {
-    throw new APIError("UNAUTHORIZED", {
-      code: "INVALID_BACKUP_CODE",
-      message: "Invalid backup code",
-    });
-  }
   // Setting onError mutes Better Auth's own logging; the router still logs non-API errors.
   if (isAPIError(err) && err.status === "INTERNAL_SERVER_ERROR") console.error("[bilan] auth", err);
 }

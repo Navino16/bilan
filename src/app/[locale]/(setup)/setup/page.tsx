@@ -22,7 +22,7 @@ export default async function SetupPage({ params }: { params: Promise<{ locale: 
   if (userCount > 0) redirect(`/${locale}`);
 
   const t = await getTranslations("setup");
-  const oidcCallbackUrl = `${env.APP_URL.replace(/\/$/, "")}/api/auth/oauth2/callback/oidc`;
+  const oidcCallbackUrl = `${env.APP_URL.replace(/\/$/, "")}/api/auth/callback/oidc`;
   return (
     <main className="space-y-6">
       <header className="space-y-1">

@@ -60,7 +60,7 @@ afterAll(async () => {
 });
 
 describe("concurrent backup-code use (#243)", () => {
-  it("lets one pending sign-in through and refuses the others with a 401", async () => {
+  it("lets one pending sign-in through and refuses the others", async () => {
     const pending: string[] = [];
     for (let i = 0; i < 4; i++) {
       const res = await post("/sign-in/email", { email, password });
@@ -70,8 +70,10 @@ describe("concurrent backup-code use (#243)", () => {
     const results = await Promise.all(
       pending.map((cookie) => post("/two-factor/verify-backup-code", { code: backupCode }, cookie)),
     );
-    const statuses = results.map((r) => r.status).sort();
-    expect(statuses).toEqual([200, 401, 401, 401]);
+    // A loser that reads the consumed code gets a 401, one that loses the write a 409.
+    const statuses = results.map((r) => r.status);
+    expect(statuses.filter((s) => s === 200)).toHaveLength(1);
+    expect(statuses.filter((s) => s !== 200).every((s) => s === 401 || s === 409)).toBe(true);
     expect(await db.session.count({ where: { userId } })).toBe(1);
   });
 });

@@ -31,10 +31,7 @@ export function SsoButtons({
       // Absolute: Better Auth only accepts relative callbacks from a narrow character set.
       const abs = (path: string) => new URL(path, window.location.origin).href;
       const urls = { callbackURL: abs(callbackURL), errorCallbackURL: abs(errorCallbackURL) };
-      const res =
-        p.kind === "google"
-          ? await signIn.social({ provider: "google", ...urls })
-          : await signIn.oauth2({ providerId: p.providerId, ...urls });
+      const res = await signIn.social({ provider: p.providerId, ...urls });
       if (res.error) setFailed(isOriginError(res.error.code) ? "badOrigin" : "startFailed");
     });
   }

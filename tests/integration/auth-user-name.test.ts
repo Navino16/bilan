@@ -13,21 +13,27 @@ afterAll(async () => {
 describe("Better Auth user name hooks (#163)", () => {
   it("stores the email as the name when an account is created with a blank name", async () => {
     const ctx = await (await getAuth()).$context;
-    const user = await ctx.internalAdapter.createUser({
-      email: emails[0],
-      name: "   ",
-      emailVerified: false,
-    });
+    const user = await ctx.internalAdapter.createUser(
+      {
+        email: emails[0],
+        name: "   ",
+        emailVerified: false,
+      },
+      { method: "email-password" },
+    );
     expect((await db.user.findUnique({ where: { id: user.id } }))?.name).toBe(emails[0]);
   });
 
   it("trims names on update and refuses a blank one", async () => {
     const ctx = await (await getAuth()).$context;
-    const user = await ctx.internalAdapter.createUser({
-      email: emails[1],
-      name: "  Ann  ",
-      emailVerified: false,
-    });
+    const user = await ctx.internalAdapter.createUser(
+      {
+        email: emails[1],
+        name: "  Ann  ",
+        emailVerified: false,
+      },
+      { method: "email-password" },
+    );
     expect((await db.user.findUnique({ where: { id: user.id } }))?.name).toBe("Ann");
 
     await ctx.internalAdapter.updateUser(user.id, { name: " Bob " });

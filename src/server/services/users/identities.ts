@@ -84,13 +84,6 @@ export async function isFreshSession(createdAt: Date): Promise<boolean> {
 
 export type LinkStartError = "UNAVAILABLE" | "ALREADY_LINKED" | "BAD_ORIGIN" | "FAILED";
 
-type GenericOAuthApi = {
-  oAuth2LinkAccount: (req: {
-    body: { providerId: string; callbackURL: string; errorCallbackURL: string };
-    headers: Headers;
-  }) => Promise<{ url: string }>;
-};
-
 // The HTTP link endpoints stay disabled (#200); auth.api.* bypasses disabledPaths. The state
 // cookie reaches the browser through nextCookies(), and the callback creates the AuthAccount row.
 export async function startIdentityLink(
@@ -111,16 +104,10 @@ export async function startIdentityLink(
   };
   const auth = await getAuth();
   try {
-    const res =
-      provider.kind === "google"
-        ? await auth.api.linkSocialAccount({
-            body: { provider: "google", ...urls, disableRedirect: true },
-            headers,
-          })
-        : await (auth.api as unknown as GenericOAuthApi).oAuth2LinkAccount({
-            body: { providerId: provider.providerId, ...urls },
-            headers,
-          });
+    const res = await auth.api.linkSocialAccount({
+      body: { provider: provider.providerId, ...urls, disableRedirect: true },
+      headers,
+    });
     if (!res.url) return { ok: false, error: "FAILED" };
     return { ok: true, url: res.url };
   } catch (e) {

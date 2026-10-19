@@ -72,6 +72,8 @@ CREATE TABLE `TwoFactor` (
     `userId` VARCHAR(191) NOT NULL,
     `secret` TEXT NOT NULL,
     `backupCodes` TEXT NOT NULL,
+    `failedVerificationCount` INTEGER NOT NULL DEFAULT 0,
+    `lockedUntil` DATETIME(3) NULL,
 
     INDEX `TwoFactor_userId_idx`(`userId`),
     PRIMARY KEY (`id`)

@@ -46,6 +46,7 @@ const provider = (key: string, allowSignUp: boolean): ProviderInput => ({
 function stubIdp(
   profile: { sub: string; email: string; name: string },
   claims: Record<string, unknown> = { email_verified: true },
+  discovery: Record<string, unknown> = {},
 ) {
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input instanceof Request ? input.url : input);
@@ -57,6 +58,7 @@ function stubIdp(
         authorization_endpoint: `${issuer}/authorize`,
         token_endpoint: `${issuer}/token`,
         userinfo_endpoint: `${issuer}/userinfo`,
+        ...discovery,
       });
     }
     if (url === `${issuer}/token`) {
@@ -71,10 +73,10 @@ function stubIdp(
 async function ssoLogin(providerId: string, extra: Record<string, unknown> = {}) {
   const auth = await getAuth();
   const start = await auth.handler(
-    new Request(`${appUrl}/api/auth/sign-in/oauth2`, {
+    new Request(`${appUrl}/api/auth/sign-in/social`, {
       method: "POST",
       headers: { "content-type": "application/json", origin: appUrl },
-      body: JSON.stringify({ providerId, callbackURL: "/fr/dashboard", ...extra }),
+      body: JSON.stringify({ provider: providerId, callbackURL: "/fr/dashboard", ...extra }),
     }),
   );
   expect(start.status).toBe(200);
@@ -85,7 +87,7 @@ async function ssoLogin(providerId: string, extra: Record<string, unknown> = {})
     .map((c) => c.split(";")[0])
     .join("; ");
   const res = await auth.handler(
-    new Request(`${appUrl}/api/auth/oauth2/callback/${providerId}?code=c0de&state=${state}`, {
+    new Request(`${appUrl}/api/auth/callback/${providerId}?code=c0de&state=${state}`, {
       headers: { cookie },
     }),
   );
@@ -231,34 +233,6 @@ describe("registration mode gates SSO sign-up (#204)", () => {
     },
   );
 
-  it("doesn't let the core social callback sign an OIDC identity up", async () => {
-    await setMode("INVITE_ONLY");
-    const email = emailFor("core-callback");
-    stubIdp({ sub: "sub-core-callback", email, name: "Core" });
-    const auth = await getAuth();
-    const start = await auth.handler(
-      new Request(`${appUrl}/api/auth/sign-in/oauth2`, {
-        method: "POST",
-        headers: { "content-type": "application/json", origin: appUrl },
-        body: JSON.stringify({ providerId: openKey, callbackURL: "/fr/dashboard" }),
-      }),
-    );
-    const { url } = (await start.json()) as { url: string };
-    const state = new URL(url).searchParams.get("state")!;
-    const res = await auth.handler(
-      new Request(`${appUrl}/api/auth/callback/${openKey}?code=c0de&state=${state}`, {
-        headers: {
-          cookie: start.headers
-            .getSetCookie()
-            .map((c) => c.split(";")[0])
-            .join("; "),
-        },
-      }),
-    );
-    expect(res.status).toBe(404);
-    expect(await db.user.findUnique({ where: { email } })).toBeNull();
-  });
-
   it("creates the user in OPEN mode", async () => {
     const email = emailFor("mode-open");
     stubIdp({ sub: "sub-mode-open", email, name: "Open" });
@@ -366,39 +340,31 @@ describe("Google sign-up flag (#200)", () => {
       updatedById: null,
     }) satisfies AuthProvider;
 
-  it("refuses POST /sign-in/social with an ID token, even one Google would accept", async () => {
-    const spy = vi.spyOn(providerCache, "get").mockResolvedValue([google(false)]);
+  it("refuses POST /sign-in/social with an ID token, for Google and OIDC providers alike", async () => {
+    const rows = await providerCache.get();
+    const spy = vi.spyOn(providerCache, "get").mockResolvedValue([...rows, google(true)]);
+    const email = emailFor("idtoken");
+    // A JWKS makes Better Auth accept ID tokens for the OIDC provider: only the guard refuses them.
+    stubIdp({ sub: "sub-idtoken", email, name: "Id Token" }, undefined, {
+      jwks_uri: `${issuer}/jwks`,
+      id_token_signing_alg_values_supported: ["RS256"],
+    });
     invalidateAuthCache();
     try {
       const auth = await getAuth();
-      const ctx = await auth.$context;
-      const options = ctx.socialProviders.find((p) => p.id === "google")!.options as Record<
-        string,
-        unknown
-      >;
-      const email = emailFor("idtoken");
-      options.verifyIdToken = async () => true;
-      options.getUserInfo = async () => ({
-        user: { id: "google-sub", email, name: "Id Token", emailVerified: true },
-        data: {},
-      });
-      const signIn = () =>
-        auth.handler(
+      for (const provider of ["google", openKey]) {
+        const res = await auth.handler(
           new Request(`${appUrl}/api/auth/sign-in/social`, {
             method: "POST",
             headers: { "content-type": "application/json", origin: appUrl },
-            body: JSON.stringify({ provider: "google", idToken: { token: "h.p.s" } }),
+            body: JSON.stringify({ provider, idToken: { token: "h.p.s" } }),
           }),
         );
-      const refused = await signIn();
-      expect(refused.status).toBe(401);
-      expect(refused.headers.get("set-cookie")).toBeNull();
+        expect(res.status).toBe(404);
+        expect(await res.json()).toMatchObject({ code: "ID_TOKEN_NOT_SUPPORTED" });
+        expect(res.headers.get("set-cookie")).toBeNull();
+      }
       expect(await db.user.findUnique({ where: { email } })).toBeNull();
-
-      // Control: without the flag, this path creates the user despite disableSignUp.
-      options.disableIdTokenSignIn = false;
-      expect((await signIn()).status).toBe(200);
-      expect(await db.user.findUnique({ where: { email } })).not.toBeNull();
     } finally {
       spy.mockRestore();
       invalidateAuthCache();
@@ -424,5 +390,33 @@ describe("Google sign-up flag (#200)", () => {
       spy.mockRestore();
       await setMode("OPEN");
     }
+  });
+});
+
+describe("OIDC discovery at handler build", () => {
+  const genericKeys = async () => {
+    const plugin = (await buildOptions()).plugins?.find((p) => p.id === "generic-oauth") as
+      | { options: { config: { providerId: string }[] } }
+      | undefined;
+    return plugin?.options.config.map((c) => c.providerId) ?? [];
+  };
+  const discoveryFetch = (onDiscovery: (signal?: AbortSignal | null) => Promise<Response>) =>
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) =>
+      String(input).startsWith(issuer) ? onDiscovery(init?.signal) : realFetch(input, init),
+    );
+
+  it("leaves out a provider whose discovery hangs", async () => {
+    discoveryFetch(
+      (signal) =>
+        new Promise((_, reject) => signal?.addEventListener("abort", () => reject(signal.reason))),
+    );
+    expect(await genericKeys()).not.toContain(openKey);
+  });
+
+  it("keeps a provider whose discovery fails fast, for Better Auth to retry", async () => {
+    discoveryFetch(async () => {
+      throw new TypeError("fetch failed");
+    });
+    expect(await genericKeys()).toContain(openKey);
   });
 });

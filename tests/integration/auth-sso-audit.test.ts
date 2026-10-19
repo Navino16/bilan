@@ -65,10 +65,10 @@ function stubIdp(profile: { sub: string; email: string; name: string }) {
 async function ssoLogin(providerId: string) {
   const auth = await getAuth();
   const start = await auth.handler(
-    new Request(`${appUrl}/api/auth/sign-in/oauth2`, {
+    new Request(`${appUrl}/api/auth/sign-in/social`, {
       method: "POST",
       headers: { "content-type": "application/json", origin: appUrl },
-      body: JSON.stringify({ providerId, callbackURL: "/fr/dashboard" }),
+      body: JSON.stringify({ provider: providerId, callbackURL: "/fr/dashboard" }),
     }),
   );
   const { url } = (await start.json()) as { url: string };
@@ -78,7 +78,7 @@ async function ssoLogin(providerId: string) {
     .map((c) => c.split(";")[0])
     .join("; ");
   const res = await auth.handler(
-    new Request(`${appUrl}/api/auth/oauth2/callback/${providerId}?code=c0de&state=${state}`, {
+    new Request(`${appUrl}/api/auth/callback/${providerId}?code=c0de&state=${state}`, {
       headers: { cookie: `${cookie}; NEXT_LOCALE=en` },
     }),
   );
@@ -220,7 +220,7 @@ describe("SSO sign-in audit and alert (#258)", () => {
     ["a closed sign-up", "signup_disabled", async () => emailFor("closed")],
     [
       "a disabled account",
-      "banned",
+      "BANNED_USER",
       async (sub) => {
         const user = await linkedUser("banned", closedKey, sub);
         await db.user.update({ where: { id: user.id }, data: { banned: true } });
@@ -291,9 +291,9 @@ describe("forged SSO callbacks (#258)", () => {
       expect(await ssoFailures("google")).toEqual([]);
 
       const unknown = "x".repeat(300);
-      for (const path of [`callback/${unknown}`, `oauth2/callback/${unknown}`]) {
-        await auth.handler(new Request(`${appUrl}/api/auth/${path}?error=${unknown}&state=s`));
-      }
+      await auth.handler(
+        new Request(`${appUrl}/api/auth/callback/${unknown}?error=${unknown}&state=s`),
+      );
       expect(await ssoFailures(null)).toEqual([]);
       expect(await ssoFailures(unknown)).toEqual([]);
     } finally {

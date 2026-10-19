@@ -21,7 +21,12 @@ export type LinkError =
 
 // Refused or cancelled at the IdP (RFC 6749 §4.1.2.1, OIDC Core §3.1.2.6).
 const DENIED = ["access_denied", "login_required", "consent_required", "interaction_required"];
-const EXPIRED = ["state_mismatch", "please_restart_the_process"];
+const EXPIRED = [
+  "state_mismatch",
+  "state_not_found",
+  "state_security_mismatch",
+  "please_restart_the_process",
+];
 const NO_EMAIL = ["email_not_found", "email_is_missing"];
 const PROVIDER = [
   "invalid_code",
@@ -33,6 +38,7 @@ const PROVIDER = [
   "name_is_missing",
   "issuer_mismatch",
   "issuer_missing",
+  "nonce_binding_missing",
   "oauth_provider_not_found",
   "invalid_request",
   "unauthorized_client",
@@ -58,7 +64,7 @@ const LOGIN_BY_GROUP = {
 } as const;
 
 const LOGIN_SPECIFIC = new Map<string, SsoError>([
-  ["banned", "disabled"],
+  ["BANNED_USER", "disabled"],
   ["signup_disabled", "ssoSignUpDisabled"],
   ["account_not_linked", "ssoNotLinked"],
 ]);
@@ -76,7 +82,7 @@ export function loginSsoError(code: string): SsoError {
 }
 
 const LINK_SPECIFIC = new Map<string, LinkError>([
-  ["email_doesn't_match", "emailMismatch"],
+  ["email_does_not_match", "emailMismatch"],
   ["account_already_linked_to_different_user", "linkedElsewhere"],
 ]);
 
