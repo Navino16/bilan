@@ -93,7 +93,7 @@ export function decodeCsv(bytes: ArrayBuffer | Uint8Array): string {
 }
 
 // The DB stores amounts as Decimal(12,2).
-export const MAX_ABS_AMOUNT = 9_999_999_999.99;
+const MAX_ABS_AMOUNT = 9_999_999_999.99;
 
 const THOUSANDS = /^\d{1,3}([.,]\d{3})+$/;
 const otherMark = (m: DecimalMark): DecimalMark => (m === "." ? "," : ".");

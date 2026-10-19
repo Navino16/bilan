@@ -12,7 +12,7 @@ import {
   listAssignmentsForTxAction,
 } from "@/server/transport/actions/budgets";
 import { deleteLinkAction, getLinkSummaryAction } from "@/server/transport/actions/links";
-import { type FlatCategory } from "./category-picker";
+import { type FlatCategory } from "./category-tree";
 import type { CategoryMeta } from "./category-tree";
 import { CategoryCombobox } from "./category-combobox";
 import { Pill, overline } from "./bits";

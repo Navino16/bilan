@@ -176,10 +176,6 @@ export async function withCommitClaim<T>(batchId: string, run: () => Promise<T>)
   }
 }
 
-export async function getBatchForUser(batchId: string, userId: string) {
-  return loadBatch(batchId, userId);
-}
-
 // Rows written so far by a running commit (insertRows bumps importedRows per chunk).
 export async function getCommitProgress(batchId: string, userId: string) {
   const batch = await db.importBatch.findUnique({

@@ -19,7 +19,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useOpenFromQuery } from "@/hooks/use-open-from-query";
-import { type FlatCategory } from "./category-picker";
+import { type FlatCategory } from "./category-tree";
 import { CategoryCombobox } from "./category-combobox";
 import { TRANSACTION_LABEL_MAX, TRANSACTION_TYPES } from "@/lib/validation/transaction";
 import {

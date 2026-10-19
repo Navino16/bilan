@@ -566,7 +566,7 @@ export type BudgetDetail = {
   transactionCount: number;
 };
 
-export const BUDGET_TRANSACTIONS_SHOWN = 100;
+const BUDGET_TRANSACTIONS_SHOWN = 100;
 
 export type BudgetTransaction = {
   id: string;

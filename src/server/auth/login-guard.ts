@@ -14,7 +14,7 @@ import { CLIENT_IP_HEADER } from "@/server/http/client-ip";
 
 const TWO_FACTOR_VERIFY = new Set(["/two-factor/verify-totp", "/two-factor/verify-backup-code"]);
 
-export function loginEmail(body: unknown): string {
+function loginEmail(body: unknown): string {
   return String((body as { email?: unknown } | null)?.email ?? "")
     .trim()
     .toLowerCase();

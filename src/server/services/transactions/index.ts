@@ -21,7 +21,7 @@ import {
   type TransactionUpdateInput,
 } from "@/lib/validation/transaction";
 import { recordHits, suggest } from "@/server/services/categorization";
-import { buildSecureFields, computeExternalId } from "./secure-fields";
+import { buildSecureFields } from "./secure-fields";
 
 export class TransactionAccessError extends Error {}
 
@@ -318,5 +318,3 @@ export async function updateTransaction(
   // Best-effort, as on create: a failed counter must not fail a saved edit.
   if (recategorized) await recordHits([recategorized.ruleId]).catch(() => {});
 }
-
-export { computeExternalId };
