@@ -76,3 +76,14 @@ backups/
 
 # Real bank statements dropped locally to develop importers (personal data)
 /samples/
+
+# Bank statement formats are personal data: only test fixtures may be committed
+*.pdf
+*.csv
+*.ofx
+*.qif
+*.qfx
+*.xls
+*.xlsx
+!/tests/fixtures/**
+!/tests/e2e/fixtures/**
