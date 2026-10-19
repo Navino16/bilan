@@ -90,6 +90,5 @@ It needs a `.env` (`npm run setup`) and the test database (`docker compose up -d
 
 ## Design documents
 
-- Design spec: `docs/superpowers/specs/2026-05-26-budget-app-design.md`
-- Roadmap: `PLAN.md`
+- Architecture (stack, data model, key flows, security, deployment): [architecture.md](architecture.md)
 - Visual design reference: `design/`
