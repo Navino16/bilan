@@ -28,7 +28,7 @@ permissions:
 jobs:
   smoke:
     name: Prod smoke
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6

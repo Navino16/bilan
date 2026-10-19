@@ -1291,7 +1291,7 @@ GitHub Actions, Node 24, npm. Four workflows in `.github/workflows/`.
 
 **CodeQL** comes from GitHub's code-scanning default setup (repository settings), not from a workflow file.
 
-Actions are pinned to major versions (`actions/checkout@v6`, `actions/setup-node@v6` with `cache: npm`, `codecov/codecov-action@v5`, `actions/upload-artifact@v7`). Dependabot (`.github/dependabot.yml`) opens weekly grouped PRs against `develop` for npm, GitHub Actions and Docker. They run the same CI.
+Actions are pinned to major versions (`actions/checkout@v6`, `actions/setup-node@v6` with `cache: npm`, `codecov/codecov-action@v7`, `actions/upload-artifact@v7`). Dependabot (`.github/dependabot.yml`) opens weekly grouped PRs against `develop` for npm, GitHub Actions and Docker. They run the same CI.
 
 **Reporting config**: Vitest uses the `default` and JUnit reporters, with Cobertura coverage. Playwright uses `list`, JUnit and HTML (`.reports/playwright-report/`).
 
@@ -1503,7 +1503,7 @@ The project is a **public GitHub repository** (`Navino16/bilan`, AGPL-3.0), usin
 **`build.yml`**: on push to `develop` (except changes limited to `**.md`, `.github/**`, `tests/**`, `scripts/**`), on any tag, and on `workflow_dispatch`:
 
 1. **Lint** and **Test** (unit tests) gate the build.
-2. **Build (linux/amd64 | linux/arm64)**: a matrix on `ubuntu-latest` and `ubuntu-24.04-arm`. Each runner builds the `prod` target with Buildx and the GHA cache, then pushes it by digest to **ghcr.io** (`ghcr.io/navino16/bilan`).
+2. **Build (linux/amd64 | linux/arm64)**: a matrix on `ubuntu-26.04` and `ubuntu-24.04-arm`. Each runner builds the `prod` target with Buildx and the GHA cache, then pushes it by digest to **ghcr.io** (`ghcr.io/navino16/bilan`).
 3. **Merge Manifests**: combines the per-arch digests into a multi-arch manifest, tagged with `docker/metadata-action` (semver `{{version}}` and `{{major}}.{{minor}}`, branch, PR, `sha-` prefix; `latest=auto`).
 4. **Create Release** (tags only): builds the changelog from PR labels with `mikepenz/release-changelog-builder-action` (categories: breaking change, enhancement, bug, security, infra, documentation, dependencies; base branch `develop`), then creates the GitHub Release with `softprops/action-gh-release`.
 5. **Discord Release Notification** (tags only): posts the release and a changelog excerpt to a Discord webhook, mentioning a role.
