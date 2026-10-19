@@ -103,19 +103,12 @@ async function twoFactorAttemptGuard(
   );
 }
 
-// genericOAuth also registers its OIDC configs as social providers, without their
-// disableSignUp: the core social routes would sign them up whatever the gate says (#204).
-function coreSocialRouteGuard(ctx: HookContext): void {
-  const builtIn = Object.keys(ctx.context.options.socialProviders ?? {});
-  const provider =
-    ctx.path === "/sign-in/social"
-      ? (ctx.body as { provider?: unknown } | null)?.provider
-      : ctx.path === "/callback/:id"
-        ? (ctx.params as { id?: string } | undefined)?.id
-        : null;
-  if (provider === null) return;
-  if (typeof provider !== "string" || !builtIn.includes(provider)) {
-    throw new APIError("NOT_FOUND", { code: "PROVIDER_NOT_FOUND" });
+// SSO sign-ins go through the redirect flow only, where the callback is audited (#200).
+// Google sets disableIdTokenSignIn; generic OIDC providers have no such option since 1.7.
+function idTokenSignInGuard(ctx: HookContext): void {
+  if (ctx.path !== "/sign-in/social") return;
+  if ((ctx.body as { idToken?: unknown } | null)?.idToken !== undefined) {
+    throw new APIError("NOT_FOUND", { code: "ID_TOKEN_NOT_SUPPORTED" });
   }
 }
 
@@ -129,7 +122,7 @@ export const authGuardPlugin = {
       {
         matcher: () => true,
         handler: createAuthMiddleware(async (ctx) => {
-          coreSocialRouteGuard(ctx);
+          idTokenSignInGuard(ctx);
           await passwordAttemptGuard(ctx);
           const pending = TWO_FACTOR_VERIFY.has(ctx.path) ? await pendingTwoFactor(ctx) : null;
           await twoFactorAttemptGuard(ctx, pending);

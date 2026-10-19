@@ -25,7 +25,7 @@ const callback = (
 ) =>
   ({
     path,
-    params: { providerId },
+    params: { id: providerId },
     headers: new Headers(headers),
     context: { newSession, responseHeaders: new Headers(location ? { location } : {}) },
   }) as unknown as HookContext;
@@ -46,7 +46,7 @@ describe("SSO sign-in locale (#245)", () => {
   it("stores the NEXT_LOCALE cookie's locale when the callback signs in, ignoring the IdP referer", async () => {
     await auditSsoCallback(
       callback(
-        "/oauth2/callback/:providerId",
+        "/callback/:id",
         { ...fromIdp, cookie: "NEXT_LOCALE=en", "accept-language": "fr" },
         signedIn,
       ),
@@ -71,9 +71,7 @@ describe("SSO sign-in locale (#245)", () => {
 
 describe("SSO sign-in audit and alert (#258)", () => {
   it("audits the sign-in, then mails the alert with the provider's name in the stored locale", async () => {
-    await auditSsoCallback(
-      callback("/oauth2/callback/:providerId", { cookie: "NEXT_LOCALE=en" }, signedIn),
-    );
+    await auditSsoCallback(callback("/callback/:id", { cookie: "NEXT_LOCALE=en" }, signedIn));
     expect(logEvent).toHaveBeenCalledWith({
       userId: "u1",
       action: "auth.login.success",
@@ -91,7 +89,7 @@ describe("SSO sign-in audit and alert (#258)", () => {
   });
 
   it("audits a first sign-in that created the account as a sign-up, without an alert", async () => {
-    const ctx = callback("/oauth2/callback/:providerId", {}, signedIn);
+    const ctx = callback("/callback/:id", {}, signedIn);
     markSsoSignUp(ctx);
     await auditSsoCallback(ctx);
     expect(logEvent).toHaveBeenCalledTimes(1);
@@ -105,7 +103,7 @@ describe("SSO sign-in audit and alert (#258)", () => {
     logEvent.mockRejectedValueOnce(new Error("db down"));
     providers.mockRejectedValueOnce(new Error("db down"));
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
-    await auditSsoCallback(callback("/oauth2/callback/:providerId", {}, signedIn));
+    await auditSsoCallback(callback("/callback/:id", {}, signedIn));
     expect(notify).toHaveBeenCalledWith(
       "new_login",
       expect.objectContaining({ userId: "u1", method: { kind: "sso", provider: "SSO" } }),

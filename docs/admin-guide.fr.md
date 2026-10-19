@@ -27,7 +27,7 @@ Tant que la base ne contient aucun utilisateur, toutes les pages redirigent vers
 1. **Compte administrateur** : nom, adresse e-mail et mot de passe (12 caractères minimum par défaut). Ce compte devient le premier **Super-administrateur**. Son adresse est marquée comme vérifiée, puisque personne d'autre ne pourrait la vérifier.
 2. **E-mail (SMTP)** : facultatif. Renseignez le serveur, ou cliquez sur **Passer** et configurez-le plus tard dans **Administration > SMTP**. Gardez le chiffrement par défaut **STARTTLS (port 587)**, sauf si votre fournisseur en demande un autre. Voir [E-mails (SMTP)](#e-mails-smtp).
 3. **Connexion externe** : facultatif. Ajoute un fournisseur OIDC générique, de clé `oidc`. Un fournisseur Google s'ajoute ensuite, depuis **Fournisseurs d'authentification**.
-   - L'assistant affiche l'**URL de redirection** à déclarer chez votre fournisseur d'identité : `<APP_URL>/api/auth/oauth2/callback/oidc`.
+   - L'assistant affiche l'**URL de redirection** à déclarer chez votre fournisseur d'identité : `<APP_URL>/api/auth/callback/oidc`.
    - **Tester la connexion** vérifie le document de découverte de l'issuer. Le test ne contacte que des adresses `https` publiques, car l'assistant est accessible avant toute connexion. Un fournisseur d'identité sur un réseau privé ou sur `localhost` ne peut pas être testé ici, et le message l'indique, mais il fonctionnera à la connexion : continuez sans tester.
    - Le fournisseur est créé sans autoriser l'inscription. Voir [Autoriser l'inscription](#autoriser-linscription).
 4. **Mode d'inscription** : **Sur invitation** est le choix par défaut et recommandé. Voir [Mode d'inscription](#mode-dinscription).
@@ -208,10 +208,10 @@ Déclarez cette URL comme URI de redirection (callback) autorisée dans le clien
 
 | Type de fournisseur | URL de redirection                         |
 | ------------------- | ------------------------------------------ |
-| OIDC                | `<APP_URL>/api/auth/oauth2/callback/<clé>` |
+| OIDC                | `<APP_URL>/api/auth/callback/<clé>` |
 | Google              | `<APP_URL>/api/auth/callback/google`       |
 
-`<clé>` est la **Clé** du fournisseur dans Bilan. `<APP_URL>` est l'adresse publique exacte du fichier d'environnement, sans barre oblique finale. Exemple : avec `APP_URL=https://bilan.example.com` et la clé `authentik`, l'URL est `https://bilan.example.com/api/auth/oauth2/callback/authentik`.
+`<clé>` est la **Clé** du fournisseur dans Bilan. `<APP_URL>` est l'adresse publique exacte du fichier d'environnement, sans barre oblique finale. Exemple : avec `APP_URL=https://bilan.example.com` et la clé `authentik`, l'URL est `https://bilan.example.com/api/auth/callback/authentik`.
 
 La même URL sert à la connexion et à la liaison d'une identité à un compte existant.
 

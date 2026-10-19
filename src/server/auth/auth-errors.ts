@@ -1,4 +1,4 @@
-import { APIError, isAPIError } from "better-auth/api";
+import { isAPIError } from "better-auth/api";
 
 type DriverCause = { code?: unknown; message?: unknown };
 type DbError = {
@@ -21,14 +21,7 @@ export function isTwoFactorWriteConflict(err: unknown): boolean {
   );
 }
 
-// Better Auth's onAPIError.onError: a thrown APIError becomes the response.
+// Setting onAPIError.onError mutes Better Auth's own logging; the router still logs non-API errors.
 export function onAuthError(err: unknown): void {
-  if (isTwoFactorWriteConflict(err)) {
-    throw new APIError("UNAUTHORIZED", {
-      code: "INVALID_BACKUP_CODE",
-      message: "Invalid backup code",
-    });
-  }
-  // Setting onError mutes Better Auth's own logging; the router still logs non-API errors.
   if (isAPIError(err) && err.status === "INTERNAL_SERVER_ERROR") console.error("[bilan] auth", err);
 }

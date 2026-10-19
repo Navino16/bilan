@@ -4,7 +4,6 @@ import { genericOAuth } from "better-auth/plugins";
 import { nextCookies } from "better-auth/next-js";
 import { getOAuthState } from "better-auth/api";
 import { headers as nextHeaders } from "next/headers";
-import { db } from "@/server/db";
 import { env } from "@/env";
 import { CLIENT_IP_HEADER, requestOrigin } from "@/server/http/client-ip";
 import { processState } from "@/server/process-state";
@@ -28,6 +27,7 @@ import {
 } from "./providers";
 import { authPlugins } from "./plugins";
 import { onAuthError } from "./auth-errors";
+import { authDb } from "./auth-db";
 import { markSsoSignUp } from "./auth-audit";
 import { nameOnCreate, nameOnUpdate } from "./user-name";
 import { RESET_TOKEN_TTL_SEC, sendPasswordResetMail } from "@/server/services/mail/password-reset";
@@ -47,9 +47,9 @@ const CACHE_TTL_MS = 60_000;
 const linkRequests = new WeakSet<object>();
 const ssoVerifications = new WeakSet<object>();
 
-// Better Auth's endpoint path patterns for the Google and generic OIDC callbacks.
+// Better Auth's endpoint path pattern for the Google and generic OIDC callbacks.
 function isSsoCallback(ctx: { path?: string } | null | undefined): boolean {
-  return !!ctx?.path && /^\/(oauth2\/)?callback\//.test(ctx.path);
+  return ctx?.path === "/callback/:id";
 }
 
 function auditSsoVerified(userId: string): Promise<unknown> {
@@ -68,6 +68,10 @@ export function idpVerifiedEmail(profile: Record<string, unknown>): boolean {
   return profile.email_verified === true;
 }
 
+function discoveryUrl(o: ResolvedOidc): string {
+  return `${o.issuer.replace(/\/$/, "")}/.well-known/openid-configuration`;
+}
+
 // Map a resolved OIDC row to a generic-oauth config entry. discoveryUrl is the
 // default; explicit endpoints (when set) override it. A claim mapping lets the
 // admin pick which userinfo claims feed name/email.
@@ -82,18 +86,37 @@ export function toOAuthConfig(o: ResolvedOidc, registrationOpen: boolean) {
 
   return {
     providerId: o.providerId,
-    discoveryUrl: `${o.issuer.replace(/\/$/, "")}/.well-known/openid-configuration`,
+    discoveryUrl: discoveryUrl(o),
     clientId: o.clientId,
     clientSecret: o.clientSecret,
     scopes: o.scopes,
     // Not disableImplicitSignUp: a client lifts that one with `requestSignUp: true` (#200).
     disableSignUp: !o.allowSignUp || !registrationOpen,
-    ...(o.pkce ? { pkce: true } : {}),
+    // Better Auth defaults to PKCE on; the admin form shows it unchecked when unset.
+    pkce: o.pkce ?? false,
     ...(o.authorizationUrl ? { authorizationUrl: o.authorizationUrl } : {}),
     ...(o.tokenUrl ? { tokenUrl: o.tokenUrl } : {}),
     ...(o.userInfoUrl ? { userInfoUrl: o.userInfoUrl } : {}),
+    // Better Auth falls back to `id` when discovery lists no ID-token signing algorithm.
+    accountSubject: ({ profile }: { profile: Record<string, unknown> }) =>
+      typeof profile.sub === "string" ? profile.sub : "",
     mapProfileToUser,
   };
+}
+
+const DISCOVERY_PROBE_MS = 5_000;
+
+// Better Auth fetches discovery documents, without a timeout, while building the handler that
+// every auth call awaits: a hung IdP would stall password sign-ins too. A fast failure is fine,
+// Better Auth retries that provider's discovery on its next sign-in.
+async function discoveryHangs(o: ResolvedOidc): Promise<boolean> {
+  try {
+    const res = await fetch(discoveryUrl(o), { signal: AbortSignal.timeout(DISCOVERY_PROBE_MS) });
+    await res.body?.cancel();
+    return false;
+  } catch (e) {
+    return e instanceof Error && e.name === "TimeoutError";
+  }
 }
 
 // Seed scripts call auth.api outside any request, where next/headers throws.
@@ -153,9 +176,14 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
     if (oidc) oidcProviders.push(oidc);
   }
 
+  const hung = await Promise.all(oidcProviders.map(discoveryHangs));
+  const servedOidc = oidcProviders.filter((o, i) => {
+    if (hung[i]) console.warn(`[bilan] OIDC provider "${o.providerId}" left out: discovery hangs`);
+    return !hung[i];
+  });
   const oidcPlugin =
-    oidcProviders.length > 0
-      ? [genericOAuth({ config: oidcProviders.map((o) => toOAuthConfig(o, registrationOpen)) })]
+    servedOidc.length > 0
+      ? [genericOAuth({ config: servedOidc.map((o) => toOAuthConfig(o, registrationOpen)) })]
       : [];
 
   return {
@@ -192,7 +220,6 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
       "/two-factor/verify-otp",
       // Linking is explicit only: Settings > Security starts it through Server Actions (#200, #204).
       "/link-social",
-      "/oauth2/link",
       // Unused, and they would hand IdP tokens or userinfo to the browser (#204).
       "/get-access-token",
       "/refresh-token",
@@ -209,7 +236,7 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
     ],
     // Rate limits and session IPs use the proxy-resolved IP, never a raw client header.
     advanced: { ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] } },
-    database: prismaAdapter(db, { provider: "mysql" }),
+    database: prismaAdapter(authDb, { provider: "mysql" }),
     // Map Better Auth's "account" model onto our renamed Prisma model
     // `AuthAccount` (delegate `authAccount`) — we keep BankAccount free of the
     // auth namespace. In better-auth >= 1.6 model renaming moved from the

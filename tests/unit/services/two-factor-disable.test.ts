@@ -39,7 +39,6 @@ describe("disableTwoFactor code check (#243)", () => {
     ["an invalid code (401)", new APIError("UNAUTHORIZED", { code: "INVALID_CODE" })],
     ["a missing TOTP setup (400)", new APIError("BAD_REQUEST", { code: "TOTP_NOT_ENABLED" })],
     ["a backup-code conflict (409)", new APIError("CONFLICT")],
-    ["a concurrent backup-code use", { code: "P2025", meta: { modelName: "TwoFactor" } }],
   ])("reports %s as a bad code", async (_label, err) => {
     api.verifyTOTP.mockRejectedValueOnce(err);
     expect(await disable()).toEqual({ ok: false, error: "BAD_CODE" });

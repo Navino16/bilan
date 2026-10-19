@@ -123,8 +123,8 @@ export async function authAuditEvent(
   }
 }
 
-// The Google and generic OIDC callbacks: account links and SSO sign-ins.
-const SSO_CALLBACKS = new Set(["/callback/:id", "/oauth2/callback/:providerId"]);
+// The Google and generic OIDC callback: account links and SSO sign-ins.
+const SSO_CALLBACK = "/callback/:id";
 
 export type SsoCallback = {
   providerId: string | null;
@@ -174,13 +174,13 @@ function redirectError(ctx: HookContext): string | null {
 }
 
 export async function auditSsoCallback(ctx: HookContext): Promise<void> {
-  if (!SSO_CALLBACKS.has(ctx.path)) return;
+  if (ctx.path !== SSO_CALLBACK) return;
   try {
-    const params = (ctx.params ?? {}) as { id?: string; providerId?: string };
+    const params = (ctx.params ?? {}) as { id?: string };
     // Only a configured provider's key reaches the audit log: the path segment is caller-chosen.
     const provider = await providerCache
       .get()
-      .then((rows) => rows.find((p) => p.key === (params.id ?? params.providerId)))
+      .then((rows) => rows.find((p) => p.key === params.id))
       .catch(() => undefined);
     const user = ctx.context.newSession?.user ?? null;
     const event = ssoCallbackEvent({

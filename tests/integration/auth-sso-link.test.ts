@@ -116,7 +116,7 @@ async function completeLink(url: string, key: string) {
   const cookie = await stateCookie(state);
   const auth = await getAuth();
   const res = await auth.handler(
-    new Request(`${appUrl}/api/auth/oauth2/callback/${key}?code=c0de&state=${state}`, {
+    new Request(`${appUrl}/api/auth/callback/${key}?code=c0de&state=${state}`, {
       headers: { cookie },
     }),
   );
@@ -213,15 +213,12 @@ describe("SSO buttons (#204)", () => {
         }),
       );
     stubIdp({ sub: "unused", email: user.email });
-    const signIn = await post("/sign-in/oauth2", { providerId: idpKey, callbackURL: "/fr" });
+    const signIn = await post("/sign-in/social", { provider: idpKey, callbackURL: "/fr" });
     expect(signIn.status).toBe(200);
     expect(((await signIn.json()) as { url: string }).url).toMatch(`${issuer}/authorize`);
-    expect((await post("/oauth2/link", { providerId: idpKey, callbackURL: "/fr" })).status).toBe(
-      404,
-    );
-    expect((await post("/link-social", { provider: "google", callbackURL: "/fr" })).status).toBe(
-      404,
-    );
+    for (const provider of ["google", idpKey]) {
+      expect((await post("/link-social", { provider, callbackURL: "/fr" })).status).toBe(404);
+    }
     expect((await post("/unlink-account", { providerId: idpKey })).status).toBe(404);
     for (const path of ["/get-access-token", "/refresh-token"]) {
       expect((await post(path, { providerId: idpKey })).status).toBe(404);
@@ -230,10 +227,6 @@ describe("SSO buttons (#204)", () => {
       new Request(`${appUrl}/api/auth/account-info`, { headers: { cookie: user.cookie } }),
     );
     expect(info.status).toBe(404);
-    // OIDC configs also sit in the social provider list, without their sign-up gate (#204).
-    expect((await post("/sign-in/social", { provider: idpKey, callbackURL: "/fr" })).status).toBe(
-      404,
-    );
   });
 });
 
@@ -245,7 +238,7 @@ describe("linking an identity from Settings (#204)", () => {
     const url = await startLink(idpKey);
     expect(url).toMatch(`${issuer}/authorize`);
     expect(new URL(url).searchParams.get("redirect_uri")).toBe(
-      `${appUrl}/api/auth/oauth2/callback/${idpKey}`,
+      `${appUrl}/api/auth/callback/${idpKey}`,
     );
 
     const res = await completeLink(url, idpKey);
@@ -281,15 +274,15 @@ describe("linking an identity from Settings (#204)", () => {
     // The linked identity now signs this user in.
     const auth = await getAuth();
     const start = await auth.handler(
-      new Request(`${appUrl}/api/auth/sign-in/oauth2`, {
+      new Request(`${appUrl}/api/auth/sign-in/social`, {
         method: "POST",
         headers: { "content-type": "application/json", origin: appUrl },
-        body: JSON.stringify({ providerId: idpKey, callbackURL: "/fr/dashboard" }),
+        body: JSON.stringify({ provider: idpKey, callbackURL: "/fr/dashboard" }),
       }),
     );
     const state = new URL(((await start.json()) as { url: string }).url).searchParams.get("state");
     const signIn = await auth.handler(
-      new Request(`${appUrl}/api/auth/oauth2/callback/${idpKey}?code=c0de&state=${state}`, {
+      new Request(`${appUrl}/api/auth/callback/${idpKey}?code=c0de&state=${state}`, {
         headers: { cookie: cookiesOf(start) },
       }),
     );
@@ -335,12 +328,12 @@ describe("linking an identity from Settings (#204)", () => {
     actAs(user);
     stubIdp({ sub: "sub-mismatch", email: emailFor("someone-else") });
     const res = await completeLink(await startLink(idpKey), idpKey);
-    expect(res.location).toBe("/fr/settings/security?error=email_doesn't_match");
+    expect(res.location).toBe("/fr/settings/security?error=email_does_not_match");
     expect(await db.authAccount.count({ where: { userId: user.id, providerId: idpKey } })).toBe(0);
     const failed = await db.auditLog.findFirst({
       where: { userId: user.id, action: "auth.identity.link_failed" },
     });
-    expect(failed?.metadata).toEqual({ providerId: idpKey, error: "email_doesn't_match" });
+    expect(failed?.metadata).toEqual({ providerId: idpKey, error: "email_does_not_match" });
   });
 
   it("rejects a link callback without the state cookie of the browser that started it", async () => {
@@ -353,11 +346,11 @@ describe("linking an identity from Settings (#204)", () => {
     const auth = await getAuth();
     for (const cookie of ["", other.cookie]) {
       const res = await auth.handler(
-        new Request(`${appUrl}/api/auth/oauth2/callback/${idpKey}?code=c0de&state=${state}`, {
+        new Request(`${appUrl}/api/auth/callback/${idpKey}?code=c0de&state=${state}`, {
           headers: { cookie },
         }),
       );
-      expect(res.headers.get("location")).toBe(`${appUrl}/login?error=state_mismatch`);
+      expect(res.headers.get("location")).toBe("/fr/settings/security?error=state_mismatch");
     }
     expect(
       await db.authAccount.count({ where: { providerId: idpKey, accountId: "sub-csrf" } }),
@@ -529,7 +522,9 @@ describe("Google link start (#204)", () => {
       expect(url.origin).toBe("https://accounts.google.com");
       expect(url.searchParams.get("redirect_uri")).toBe(`${appUrl}/api/auth/callback/google`);
       const state = url.searchParams.get("state")!;
-      const verification = await db.verification.findFirst({ where: { identifier: state } });
+      const verification = await db.verification.findFirst({
+        where: { identifier: `auth-state:${state}` },
+      });
       expect(JSON.parse(verification!.value)).toMatchObject({
         callbackURL: "/fr/settings/security?linked=google",
         errorURL: "/fr/settings/security",

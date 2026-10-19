@@ -90,13 +90,16 @@ model Verification {
 }
 
 model TwoFactor {
-  id           String  @id
-  userId       String
-  secret       String  @db.Text
-  backupCodes  String  @db.Text
-  verified     Boolean @default(true)
+  id                      String    @id
+  userId                  String
+  secret                  String    @db.Text
+  backupCodes             String    @db.Text
+  verified                Boolean   @default(true)
   // Last accepted TOTP time-step, so a code can't be replayed within its window (#223).
-  lastUsedStep Int?
+  lastUsedStep            Int?
+  // Better Auth's own failed-code lockout (1.7).
+  failedVerificationCount Int       @default(0)
+  lockedUntil             DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

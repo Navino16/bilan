@@ -27,7 +27,7 @@ As long as the database has no user, every page redirects to the setup wizard (`
 1. **Admin account**: name, e-mail address and password (at least 12 characters by default). This account becomes the first **Super administrator**. Its address is marked as verified, since nobody else could verify it.
 2. **Email (SMTP)**: optional. Fill in the server details, or click **Skip** and configure it later under **Administration > SMTP**. Keep the default **STARTTLS (port 587)** encryption unless your provider asks for another one. See [E-mail (SMTP)](#e-mail-smtp).
 3. **External login**: optional. Adds one generic OIDC provider, with the key `oidc`. A Google provider is added later, from **Auth providers**.
-   - The wizard shows the **Redirect URL** to register at your identity provider: `<APP_URL>/api/auth/oauth2/callback/oidc`.
+   - The wizard shows the **Redirect URL** to register at your identity provider: `<APP_URL>/api/auth/callback/oidc`.
    - **Test connection** checks the issuer's discovery document. The test only contacts public `https` addresses, because the wizard is reachable before anyone signs in. An identity provider on a private network or `localhost` cannot be tested here, and the message says so, but it still works at sign-in: continue without testing.
    - The provider is created with sign-up not allowed. See [Allow sign-up](#allow-sign-up).
 4. **Registration mode**: **Invite only** is the default and the recommended choice. See [Registration mode](#registration-mode).
@@ -208,10 +208,10 @@ Declare this URL as an allowed redirect (callback) URI in the client you create 
 
 | Provider type | Redirect URL                               |
 | ------------- | ------------------------------------------ |
-| OIDC          | `<APP_URL>/api/auth/oauth2/callback/<key>` |
+| OIDC          | `<APP_URL>/api/auth/callback/<key>` |
 | Google        | `<APP_URL>/api/auth/callback/google`       |
 
-`<key>` is the provider's **Key** in Bilan. `<APP_URL>` is the exact public address from the environment file, without a trailing slash. Example: with `APP_URL=https://bilan.example.com` and the key `authentik`, the URL is `https://bilan.example.com/api/auth/oauth2/callback/authentik`.
+`<key>` is the provider's **Key** in Bilan. `<APP_URL>` is the exact public address from the environment file, without a trailing slash. Example: with `APP_URL=https://bilan.example.com` and the key `authentik`, the URL is `https://bilan.example.com/api/auth/callback/authentik`.
 
 The same URL is used for sign-in and for linking an identity to an existing account.
 

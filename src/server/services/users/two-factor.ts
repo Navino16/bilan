@@ -1,7 +1,6 @@
 import { isAPIError } from "better-auth/api";
 import { db } from "@/server/db";
 import { getAuth } from "@/server/auth";
-import { isTwoFactorWriteConflict } from "@/server/auth/auth-errors";
 import { logEvent } from "@/server/services/audit";
 import { isCurrentPassword } from "./password";
 
@@ -85,7 +84,6 @@ async function verifyCode(api: TwoFactorApi, headers: Headers, code: string): Pr
     return true;
   } catch (err) {
     if (isAPIError(err) && REFUSED_CODE.has(err.statusCode)) return false;
-    if (isTwoFactorWriteConflict(err)) return false;
     throw err;
   }
 }

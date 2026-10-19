@@ -64,6 +64,10 @@ server already running elsewhere, set `PLAYWRIGHT_BASE_URL` (no server is starte
 `PLAYWRIGHT_BASE_URL=http://localhost:3209 npm run test:e2e`. That server's database must be
 seeded with `scripts/seed-e2e.ts`, and its `APP_URL` must use the same host.
 
+The SSO spec starts a mock identity provider that the app server must reach. When the app runs
+in Docker, set `E2E_IDP_HOST` to the Docker network gateway (for example
+`E2E_IDP_HOST=10.0.1.1`).
+
 ## Logo and icons
 
 The mark is defined once in `src/lib/brand.ts`: the `BilanMark` component draws it in the app,
@@ -87,6 +91,12 @@ It needs a `.env` (`npm run setup`) and the test database (`docker compose up -d
 
 3. `DOCS_BASE_URL=http://localhost:3301 npm run docs:screenshots` captures every page in
    English and French (`scripts/docs-screenshots.ts`).
+
+## Dependency updates
+
+`npx npm-check-updates` follows `.ncurc.cjs` (TypeScript and `@types/node` stay on their major).
+`better-auth` and `@better-auth/passkey` are pinned with `~`, and the `@better-auth/core`
+override must name the same version: bump all three together, or npm fails with ERESOLVE.
 
 ## Releases
 

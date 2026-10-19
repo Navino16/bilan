@@ -36,9 +36,17 @@ const provider = (enabled: boolean): ProviderInput => ({
   clientSecret: "secret",
 });
 
+// The test issuer has no discovery document, so Better Auth keeps the OIDC config pending
+// rather than listing it among the social providers.
 async function handlerProviderIds(route: RouteInstance) {
   const ctx = await (await route.auth.getAuth()).$context;
-  return ctx.socialProviders.map((p) => p.id);
+  const generic = ctx.options.plugins?.find((p) => p.id === "generic-oauth") as
+    | { options: { config: { providerId: string }[] } }
+    | undefined;
+  return [
+    ...ctx.socialProviders.map((p) => p.id),
+    ...(generic?.options.config.map((c) => c.providerId) ?? []),
+  ];
 }
 
 async function cachedProviderKeys(route: RouteInstance) {

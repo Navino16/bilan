@@ -5,7 +5,7 @@ import en from "../../../messages/en.json";
 
 describe("loginSsoError", () => {
   it.each([
-    ["banned", "disabled"],
+    ["BANNED_USER", "disabled"],
     ["signup_disabled", "ssoSignUpDisabled"],
     ["account_not_linked", "ssoNotLinked"],
     ["access_denied", "ssoDenied"],
@@ -28,7 +28,7 @@ describe("loginSsoError", () => {
 
 describe("linkSsoError", () => {
   it.each([
-    ["email_doesn't_match", "emailMismatch"],
+    ["email_does_not_match", "emailMismatch"],
     ["account_already_linked_to_different_user", "linkedElsewhere"],
     ["access_denied", "denied"],
     ["state_mismatch", "expired"],

@@ -1,5 +1,4 @@
 import { describe, it, expect } from "vitest";
-import { isAPIError } from "better-auth/api";
 import { isTwoFactorWriteConflict, onAuthError } from "@/server/auth/auth-errors";
 
 const mariadb1020 = (table: string) => ({
@@ -35,18 +34,8 @@ describe("isTwoFactorWriteConflict (#243 SEC-04)", () => {
 });
 
 describe("onAuthError", () => {
-  it("turns the conflict into a 401 invalid backup code", () => {
-    let thrown: unknown;
-    try {
-      onAuthError(mariadb1020("TwoFactor"));
-    } catch (e) {
-      thrown = e;
-    }
-    expect(isAPIError(thrown)).toBe(true);
-    expect(thrown).toMatchObject({ statusCode: 401, body: { code: "INVALID_BACKUP_CODE" } });
-  });
-
-  it("lets any other error through", () => {
+  it("lets errors through", () => {
+    expect(() => onAuthError(mariadb1020("TwoFactor"))).not.toThrow();
     expect(() => onAuthError(new Error("boom"))).not.toThrow();
   });
 });

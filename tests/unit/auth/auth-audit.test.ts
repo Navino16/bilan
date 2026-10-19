@@ -194,10 +194,10 @@ describe("ssoCallbackEvent (#258)", () => {
 
   it("audits a refused link for the user who started it", () => {
     const state = { link: { userId: "user-1" } };
-    expect(ssoCallbackEvent({ ...base, state, error: "email_doesn't_match" })).toEqual({
+    expect(ssoCallbackEvent({ ...base, state, error: "email_does_not_match" })).toEqual({
       userId: "user-1",
       action: "auth.identity.link_failed",
-      metadata: { providerId: "authentik", error: "email_doesn't_match" },
+      metadata: { providerId: "authentik", error: "email_does_not_match" },
     });
   });
 
