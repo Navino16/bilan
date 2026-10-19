@@ -1,4 +1,9 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+
+const session = vi.hoisted(() => ({ user: { id: "ra_actor" } }));
+vi.mock("@/server/auth/permissions", () => ({
+  requireSession: async () => session.user,
+}));
 import { db } from "@/server/db";
 import { createAccount } from "@/server/services/accounts";
 import { shareAccountWithGroup } from "@/server/services/accounts/sharing";
@@ -11,6 +16,11 @@ import {
   RuleAccessError,
   RuleValidationError,
 } from "@/server/services/categorization";
+import {
+  applyRuleAction,
+  createRuleAction,
+  previewRuleApplicationAction,
+} from "@/server/transport/actions/rules";
 
 const actor = "ra_actor";
 const other = "ra_other";
@@ -184,5 +194,37 @@ describe("previewRuleApplication / applyRule", () => {
     const { id } = await rule(label("GROUP"), groupFood, 100, { groupId });
     await expect(applyRule(id, { id: other })).rejects.toEqual(new RuleAccessError("FORBIDDEN"));
     await db.category.delete({ where: { id: groupFood } });
+  });
+});
+
+describe("rule application actions", () => {
+  const form = (fields: Record<string, string>) => {
+    const fd = new FormData();
+    for (const [k, v] of Object.entries(fields)) fd.set(k, v);
+    return fd;
+  };
+
+  it("createRuleAction returns the new rule's id, which the preview action accepts", async () => {
+    session.user = { id: actor };
+    const l = label("ACTION");
+    await tx(acc.own, l);
+    const res = await createRuleAction(null, form({ pattern: l, categoryId: food }));
+    if (!res?.ok) throw new Error(`create failed: ${res?.error}`);
+    const preview = await previewRuleApplicationAction(res.id);
+    expect(preview).toMatchObject({ ok: true, preview: { matched: 1, moving: 1 } });
+    expect(await applyRuleAction(res.id)).toEqual({ ok: true, reclassified: 1 });
+  });
+
+  it("applyRuleAction reports FORBIDDEN for a rule the session user can't manage", async () => {
+    const { id } = await rule(label("NOTYOURS"), food);
+    session.user = { id: other };
+    expect(await applyRuleAction(id)).toEqual({ ok: false, error: "FORBIDDEN" });
+    expect(await previewRuleApplicationAction(id)).toEqual({ ok: false, error: "FORBIDDEN" });
+    session.user = { id: actor };
+  });
+
+  it("reports NOT_FOUND for an unknown rule", async () => {
+    session.user = { id: actor };
+    expect(await applyRuleAction("missing-rule")).toEqual({ ok: false, error: "NOT_FOUND" });
   });
 });

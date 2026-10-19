@@ -24,7 +24,7 @@ import { RULE_MATCH_TYPES, type RuleMatchType } from "@/lib/validation/rule";
 import {
   createRuleAction,
   updateRuleAction,
-  type RuleActionState,
+  type RuleSaveState,
 } from "@/server/transport/actions/rules";
 import { NativeSelect } from "@/components/ui/native-select";
 import { canManageInGroup } from "@/lib/validation/group";
@@ -116,7 +116,7 @@ function RuleForm({
     if (mode === "create" && groupId) fd.set("groupId", groupId);
     startTransition(async () => {
       const action = mode === "edit" ? updateRuleAction : createRuleAction;
-      const res: RuleActionState = await action(null, fd);
+      const res: RuleSaveState = await action(null, fd);
       if (res?.ok) {
         onClose();
         router.refresh();
