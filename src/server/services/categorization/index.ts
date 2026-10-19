@@ -5,7 +5,7 @@ import { requireGroupRole } from "@/server/services/groups/roles";
 import { assertCategoryAssignable, CategoryAccessError } from "@/server/services/categories";
 import { ruleInputSchema, type RuleInput } from "@/lib/validation/rule";
 import { isValidRulePattern } from "./regex";
-import { pickByPriority, type Rule } from "./match";
+import { compareRules, pickByPriority, type Rule } from "./match";
 import type { RuleMatchType } from "@/lib/validation/rule";
 
 export class RuleAccessError extends Error {}
@@ -51,6 +51,7 @@ async function loadRules(scope: Scope): Promise<Rule[]> {
     matchType: r.matchType as RuleMatchType,
     caseSensitive: r.caseSensitive,
     priority: r.priority,
+    createdAt: r.createdAt.getTime(),
   }));
 }
 
@@ -143,14 +144,15 @@ export async function listRulesForUser(userId: string) {
     select: { groupId: true },
   });
   const groupIds = memberships.map((m) => m.groupId);
-  return db.categorizationRule.findMany({
+  const rules = await db.categorizationRule.findMany({
     where: { OR: [{ userId }, { groupId: { in: groupIds } }] },
-    orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
     include: {
       category: { select: { id: true, name: true, color: true } },
       group: { select: { id: true, name: true } },
     },
   });
+  const key = (r: (typeof rules)[number]) => ({ ...r, createdAt: r.createdAt.getTime() });
+  return rules.sort((a, b) => compareRules(key(a), key(b)));
 }
 
 // Loads a rule and checks the actor may manage it: own rules (userId) or group

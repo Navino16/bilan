@@ -46,6 +46,22 @@ describe("rules management", () => {
     expect(rules[0].category?.name).toBeDefined();
   });
 
+  it("lists equal-priority rules longest pattern first, then newest", async () => {
+    const patterns = ["ab", "abc", "xy", "zz"];
+    for (const [i, pattern] of patterns.entries()) {
+      const { id } = await createRule(
+        { pattern, matchType: "CONTAINS", priority: 7, categoryId: catA },
+        { id: owner },
+      );
+      await db.categorizationRule.update({
+        where: { id },
+        data: { createdAt: new Date(Date.UTC(2026, 0, 1 + i)) },
+      });
+    }
+    const rules = (await listRulesForUser(owner)).filter((r) => r.priority === 7);
+    expect(rules.map((r) => r.pattern)).toEqual(["abc", "zz", "xy", "ab"]);
+  });
+
   it("updates a rule's pattern and category", async () => {
     const { id } = await createRule(
       { pattern: "old", matchType: "CONTAINS", categoryId: catA },

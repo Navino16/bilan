@@ -113,6 +113,37 @@ describe("pickByPriority", () => {
   });
 });
 
+describe("pickByPriority tie-break", () => {
+  const rule = (id: string, pattern: string, priority = 100, createdAt = 0): Rule => ({
+    ...base,
+    id,
+    matchType: "CONTAINS",
+    pattern,
+    priority,
+    createdAt,
+  });
+
+  it("prefers the longer pattern at equal priority", () => {
+    const general = rule("general", "amazon");
+    const specific = rule("specific", "amazon prime");
+    expect(pickByPriority([general, specific], "PRLV AMAZON PRIME FR")?.id).toBe("specific");
+    expect(pickByPriority([specific, general], "PRLV AMAZON PRIME FR")?.id).toBe("specific");
+  });
+
+  it("prefers the newer rule at equal priority and length", () => {
+    const older = rule("older", "netflix", 100, 1000);
+    const newer = rule("newer", "NETFLIX", 100, 2000);
+    expect(pickByPriority([older, newer], "NETFLIX.COM")?.id).toBe("newer");
+    expect(pickByPriority([newer, older], "NETFLIX.COM")?.id).toBe("newer");
+  });
+
+  it("priority still wins over length", () => {
+    const general = rule("general", "amazon", 200);
+    const specific = rule("specific", "amazon prime", 100);
+    expect(pickByPriority([specific, general], "PRLV AMAZON PRIME FR")?.id).toBe("general");
+  });
+});
+
 describe("proposeRule", () => {
   it("proposes the longest distinctive token as a CONTAINS pattern", () => {
     expect(proposeRule("CB CARREFOUR CITY PARIS")).toEqual({
