@@ -277,7 +277,7 @@ A rule gives a category to transactions whose bank label matches a pattern.
 
 1. On the **Rules** tab, click **New rule**.
 2. Enter the **Pattern** and pick the **Match**: **Contains**, **Equals**, **Starts with** or **Regex**.
-3. Pick the **Category** and the **Priority**: when several rules match, the highest number wins (100 by default).
+3. Pick the **Category** and the **Priority**: when several rules match, the highest number wins (100 by default). At equal priority, the longest pattern wins, then the most recent rule.
 4. If you manage a household, choose the **Scope**: **Personal** or the household. Household rules apply to every member's transactions.
 5. Tick **Case-sensitive** if needed. By default, case and accents are ignored.
 6. Click **Save**.
@@ -289,11 +289,21 @@ When rules run:
 - during an import, when **Categorize automatically** is ticked;
 - when you add a transaction by hand without choosing a category.
 
-Rules never change transactions that are already recorded, and never override a category you chose yourself.
+### Apply a rule to existing transactions
+
+After you save a rule that matches transactions already in Bilan, the dialog shows a summary:
+
+- how many transactions **move** to the rule's category, and how many of them are currently in another category;
+- how many **stay** with another rule that has a higher priority (raise this rule's priority to take them over);
+- how many were **categorized by hand**: they never move.
+
+Click **Reclassify** to apply the rule, or **Later** to leave the transactions as they are. To apply a rule later, click the clock icon on its row in the **Rules** tab.
+
+Only transactions on accounts you can edit are reclassified. Rules never override a category you chose yourself.
 
 ### Learn from your choices
 
-When you change a transaction's category, Bilan offers to **Create a rule for similar transactions?**. It suggests a pattern taken from the bank label, which you can edit along with the match type. Click **Create rule** to save a personal rule, or **No thanks**. Existing transactions are not re-categorized.
+When you change a transaction's category, Bilan offers to **Create a rule for similar transactions?**. It suggests a pattern taken from the bank label, which you can edit along with the match type. Click **Create rule** to save a personal rule, or **No thanks**. If other transactions match, you can then [apply the rule to them](#apply-a-rule-to-existing-transactions).
 
 ### Merchants
 

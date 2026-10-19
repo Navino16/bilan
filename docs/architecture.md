@@ -941,7 +941,7 @@ In every mode, an admin can create users from `/admin/users` (`users/create.admi
 `categorization.suggest(rawLabel, { userId })` (`suggestMany` for imports, rules loaded once):
 1. Load enabled rules where `userId = current` OR `groupId IN (user's groups)`, sorted by priority DESC. There are no system rules.
 2. Match by type (EXACT, STARTS_WITH, CONTAINS, REGEX). Case-insensitive by default; case-insensitive non-REGEX rules also ignore accents; REGEX runs on re2js and a bad pattern never matches.
-3. Return `{ categoryId, ruleId }` of the highest-priority match, else `{ categoryId: null, ruleId: null }`. Imports credit the rule's `hits` counter (taken back on undo).
+3. Return `{ categoryId, ruleId }` of the winning match, else `{ categoryId: null, ruleId: null }`. The winner has the highest priority; ties go to the longest pattern, then the newest rule (`compareRules`, also the rules list order). Imports credit the rule's `hits` counter (taken back on undo).
 
 When a user manually changes a category:
 1. Update transaction (`manuallyCategorized = true`, audit `transaction.recategorized`).
@@ -949,8 +949,12 @@ When a user manually changes a category:
    - Pattern proposed: the longest normalized token of the label (`lib/propose-rule`), editable.
    - matchType: CONTAINS by default, selectable.
    - Scope: always a personal rule; group rules are created from `/categories` (group ADMIN+).
-   - Existing transactions are not re-categorized.
-3. On confirm: create `CategorizationRule` (`rule.created`). On decline: nothing.
+3. On confirm: create `CategorizationRule` (`rule.created`), then offer the application summary below. On decline: nothing.
+
+Applying a rule to existing transactions (#287), offered after a create or edit when something would move or a stronger rule keeps rows, and from each rule's row:
+1. `previewRuleApplication(ruleId, actor)`: the actor must manage the rule (owner, or group ADMIN+) and the rule must be enabled. It loads the transactions of every account the actor can write (`writableAccountIds`: owned or shared WRITE, archived included), decrypts their raw labels and runs `planRuleApplication` with the actor's enabled rules. Counts: matched, moving (the applied rule wins and the category differs), moving from another category, already in the category, manual, kept by a stronger rule (per rule).
+2. `applyRule(ruleId, actor)`: recomputes, then sets the category of the moving rows in one DB transaction, guarded by `manuallyCategorized = false` so a row made manual in between stays. Credits `hits`, then audits `rule.applied` (`{ reclassified }`) when at least one row moved.
+3. Manual rows are never written; rows a stronger rule wins are left as they are.
 
 ### 5.7 Budget creation & calculation
 
@@ -1160,7 +1164,7 @@ Over the limit: the Better Auth sign-in and 2FA endpoints answer HTTP 429 + `Ret
 - Groups: `group.created/updated/deleted`, `group.member.removed`, `group.member.role_changed`, `group.invitation.create/resend/accept/decline/revoke`.
 - Transactions & links: `transaction.created/updated/deleted/recategorized`, `link.created/deleted`, `link.suggestionIgnored/suggestionRestored`.
 - Imports: `import.created/committed/discarded/reverted`, `import.purged` (cron).
-- Categories & rules: `category.created/updated/deleted`, `rule.created/updated/deleted/enabled/disabled`.
+- Categories & rules: `category.created/updated/deleted`, `rule.created/updated/deleted/enabled/disabled/applied`.
 - Budgets: `budget.created/updated/archived/unarchived/deleted`, `budget.assignment.create/delete`.
 - Settings: `settings.<key>.update` (app settings, e.g. `settings.registration_mode.update`), `settings.smtp.update/delete/test`, `settings.auth_provider.create/update/delete`.
 - Admin signup tokens: `signup_token.created/revoked/deleted`.
