@@ -16,7 +16,6 @@ export const registerSchema = z
     password: z.string().min(8, { error: "PASSWORD_TOO_SHORT" }),
     confirmPassword: z.string(),
     name: nameSchema,
-    invitationToken: z.string().optional(),
     adminToken: z.string().optional(),
   })
   .refine((d) => d.password === d.confirmPassword, {
