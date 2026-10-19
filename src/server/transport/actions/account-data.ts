@@ -7,6 +7,9 @@ import { db } from "@/server/db";
 import { loginLimiter } from "@/server/auth/rate-limit";
 import { deleteOwnAccount, UserAdminError } from "@/server/services/users/lifecycle";
 import { failureOnField, type FormFailure } from "@/lib/validation/field-errors";
+import { currentStepUpSession } from "@/server/auth/step-up-session";
+import { auditOrigin } from "@/server/http/audit-origin";
+import { confirmStepUp, type StepUpConfirmResult } from "@/server/services/users/step-up";
 
 export type AccountDataState = { ok: true } | FormFailure | null;
 
@@ -56,4 +59,16 @@ export async function deleteAccountAction(
     return { ok: false, error: e instanceof UserAdminError ? e.code : "FAILED" };
   }
   return { ok: true };
+}
+
+// Confirms the password before GET /api/export/data, which then passes for a few minutes.
+export async function confirmDataExportAction(
+  password: unknown,
+): Promise<StepUpConfirmResult | { ok: false; error: "FAILED" }> {
+  await requireSession();
+  const session = await currentStepUpSession();
+  if (!session) return { ok: false, error: "FAILED" };
+  if (typeof password !== "string" || !password) return { ok: false, error: "BAD_PASSWORD" };
+  const target = { action: "user.data.export_failed", entity: "User", entityId: session.userId };
+  return confirmStepUp(session, password, target, await auditOrigin());
 }

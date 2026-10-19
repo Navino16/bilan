@@ -18,7 +18,10 @@ import {
   DialogDescription,
   DialogClose,
 } from "@/components/ui/dialog";
-import { deleteAccountAction } from "@/server/transport/actions/account-data";
+import {
+  confirmDataExportAction,
+  deleteAccountAction,
+} from "@/server/transport/actions/account-data";
 import { useActionForm } from "@/components/forms/use-action-form";
 import { FieldError } from "@/components/forms/field-error";
 import { PageHeader } from "@/components/shell/page-header";
@@ -129,6 +132,7 @@ export function DataControls({
             fallbackFilename="bilan-data-export.json"
             pendingLabel={t("exporting")}
             onError={setExportFailed}
+            stepUp={confirmDataExportAction}
           >
             {t("exportJson")}
           </DownloadButton>

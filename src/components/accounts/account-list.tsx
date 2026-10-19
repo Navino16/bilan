@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Landmark, Plus } from "lucide-react";
 import { AccountForm } from "@/components/accounts/account-form";
 import { EmptyState } from "@/components/shell/empty-state";
@@ -17,8 +16,12 @@ import type { FlatCategory } from "@/components/transactions/category-tree";
 import type { VisibleAccount } from "@/server/services/accounts";
 import { balanceLegend, balanceSegments } from "@/lib/balance-legend";
 import { revealAccountIbanAction } from "@/server/transport/actions/accounts";
-import type { IbanReauthMethod } from "@/server/services/accounts/iban-reveal";
-import { IbanReauthDialog } from "@/components/accounts/iban-reauth-dialog";
+import type { StepUpMethod } from "@/server/services/users/step-up";
+import {
+  StepUpDialog,
+  useStepUpErrorText,
+  type StepUpFailure,
+} from "@/components/auth/step-up-dialog";
 
 const OTHERS_COLOR = "var(--cat-other)";
 
@@ -37,27 +40,39 @@ function useMoney() {
 
 function IbanReveal({ id, masked }: { id: string; masked: string }) {
   const t = useTranslations("accounts");
-  const router = useRouter();
+  const errorText = useStepUpErrorText();
   const [revealed, setRevealed] = useState<string | null>(null);
-  const [reauth, setReauth] = useState<IbanReauthMethod | null>(null);
+  const [reauth, setReauth] = useState<StepUpMethod | null>(null);
+  const [failure, setFailure] = useState<StepUpFailure | null>(null);
   const [pending, startTransition] = useTransition();
   const shown = revealed !== null;
 
+  async function revealWithPassword(password: string): Promise<{ ok: true } | StepUpFailure> {
+    const res = await revealAccountIbanAction(id, password);
+    if (res.ok) setRevealed(res.iban);
+    return res;
+  }
+
   function toggle() {
+    setFailure(null);
     if (shown) {
       setRevealed(null);
       return;
     }
     startTransition(async () => {
-      const res = await revealAccountIbanAction(id);
-      if (res.ok) setRevealed(res.iban);
-      else if (res.error === "REAUTH_REQUIRED") setReauth(res.method);
-      else router.refresh();
+      try {
+        const res = await revealAccountIbanAction(id);
+        if (res.ok) setRevealed(res.iban);
+        else if (res.error === "REAUTH_REQUIRED") setReauth(res.method);
+        else setFailure(res);
+      } catch {
+        setFailure({ ok: false, error: "FAILED" });
+      }
     });
   }
 
   return (
-    <div className="text-muted-foreground flex items-center gap-1.5 font-mono text-xs">
+    <div className="text-muted-foreground flex min-w-0 items-center gap-1.5 font-mono text-xs">
       <span data-slot="account-iban">{shown ? revealed : masked}</span>
       <button
         type="button"
@@ -69,15 +84,18 @@ function IbanReveal({ id, masked }: { id: string; masked: string }) {
       >
         {shown ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
       </button>
+      {failure && (
+        <span role="alert" className="text-destructive truncate font-sans">
+          {errorText(failure)}
+        </span>
+      )}
       {reauth && (
-        <IbanReauthDialog
-          accountId={id}
+        <StepUpDialog
           method={reauth}
+          purpose="iban"
+          confirm={revealWithPassword}
+          onConfirmed={() => setReauth(null)}
           onClose={() => setReauth(null)}
-          onRevealed={(iban) => {
-            setReauth(null);
-            setRevealed(iban);
-          }}
         />
       )}
     </div>

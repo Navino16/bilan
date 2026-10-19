@@ -5,6 +5,13 @@ import { decrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
 import { logEvent } from "@/server/services/audit";
 import { loadAliases } from "@/server/services/merchants";
+import {
+  stepUpMethod,
+  stepUpVia,
+  type AuditOrigin,
+  type StepUpMethod,
+  type StepUpSession,
+} from "@/server/services/users/step-up";
 
 export type UserDataExport = {
   exportedAt: string;
@@ -62,6 +69,25 @@ export type UserDataExport = {
   }[];
   auditLog: unknown[];
 };
+
+// The export carries clear IBANs, so it takes the same step-up as revealing one (#257).
+export async function exportOwnData(
+  session: StepUpSession,
+  origin: AuditOrigin,
+): Promise<{ ok: true; data: UserDataExport } | { ok: false; method: StepUpMethod }> {
+  const via = await stepUpVia(session);
+  if (!via) return { ok: false, method: await stepUpMethod(session.userId) };
+  const data = await exportUserData(session.userId);
+  await logEvent({
+    userId: session.userId,
+    action: "user.data.exported",
+    entity: "User",
+    entityId: session.userId,
+    ...origin,
+    metadata: { via },
+  });
+  return { ok: true, data };
+}
 
 // Gathers the full data graph a user is entitled to under RGPD (owned accounts
 // only), decrypting the IBANs and transaction labels/notes. Read-only.

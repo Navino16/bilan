@@ -116,7 +116,7 @@ The card shows only the last 4 characters. Click the eye button (**Show IBAN**) 
 
 If you signed in less than 10 minutes ago, the IBAN shows right away. Otherwise Bilan first asks you to confirm it's you:
 
-- If you sign in with a password, enter it and click **Show IBAN**. After 5 wrong passwords in 15 minutes, wait before trying again.
+- If you sign in with a password, enter it and click **Show IBAN**. For the next 5 minutes, Bilan doesn't ask again. After 5 wrong passwords in 15 minutes, wait before trying again.
 - If your account has no password (identity provider or passkey only), or password sign-in is turned off, click **Sign in again**: you are signed out, then brought back to the accounts page once signed in. The IBAN then shows right away.
 
 Every display of a full IBAN is recorded in the activity log, without the IBAN itself.
@@ -565,7 +565,7 @@ Go to **Data** in the sidebar.
 ### Export
 
 - **Transactions (CSV)**: the transactions on the accounts you can see, with date, amount, type, label, account and category. By default the file has all of them; to narrow it, set a date range (**From**, **To**) or pick an **Account** above the buttons. The file opens in a spreadsheet and can be imported back into Bilan. In French the file uses a semicolon separator and decimal comma.
-- **All my data (JSON)**: everything that belongs to you, for your records or to move elsewhere: profile, your own accounts (IBAN included), their transactions with notes and original labels, categories, rules, merchant names, budgets, households, links, import history and your recent activity log. Accounts other people share with you are not included.
+- **All my data (JSON)**: everything that belongs to you, for your records or to move elsewhere: profile, your own accounts (IBAN included), their transactions with notes and original labels, categories, rules, merchant names, budgets, households, links, import history and your recent activity log. Accounts other people share with you are not included. Since it contains your full IBANs, it asks you to confirm it's you the same way as [showing an IBAN](#see-the-iban) if you signed in more than 10 minutes ago.
 
 ### Delete your account
 

@@ -1,8 +1,10 @@
 "use server";
 
-import { getCurrentSession, requireSession } from "@/server/auth/permissions";
-import { changePasswordLimiter, withRefund } from "@/server/auth/rate-limit";
-import { logEvent } from "@/server/services/audit";
+import { z } from "zod";
+import { requireSession } from "@/server/auth/permissions";
+import { currentStepUpSession } from "@/server/auth/step-up-session";
+import { auditOrigin } from "@/server/http/audit-origin";
+import { confirmStepUp, type StepUpConfirmResult } from "@/server/services/users/step-up";
 import { accountInputSchema } from "@/lib/validation/account";
 import { AMOUNT_ERRORS } from "@/lib/amount";
 import { issueCode } from "@/lib/validation/amount";
@@ -14,7 +16,11 @@ import {
   unarchiveAccount,
   AccountAccessError,
 } from "@/server/services/accounts";
-import { revealAccountIban, type IbanRevealResult } from "@/server/services/accounts/iban-reveal";
+import {
+  ibanRevealFailure,
+  revealAccountIban,
+  type IbanRevealResult,
+} from "@/server/services/accounts/iban-reveal";
 import {
   deleteAccount,
   getAccountDeleteImpact,
@@ -82,39 +88,26 @@ export async function updateAccountAction(
   return { ok: true };
 }
 
-export type IbanRevealState =
-  | IbanRevealResult
-  | { ok: false; error: "RATE_LIMITED"; retryAfter: number };
+export type IbanRevealState = IbanRevealResult | Exclude<StepUpConfirmResult, { ok: true }>;
 
-// Wrong passwords draw on the per-user bucket shared with password change and 2FA.
+const accountIdSchema = z.string().min(1).max(191);
+
+// A password is only checked when the caller owns the account and the step-up is missing.
 export async function revealAccountIbanAction(
   id: unknown,
   password?: unknown,
 ): Promise<IbanRevealState> {
-  const user = await requireSession();
-  const session = await getCurrentSession();
-  if (!session || typeof id !== "string" || !id) return { ok: false, error: "NOT_FOUND" };
-  const input = {
-    accountId: id,
-    userId: user.id,
-    sessionCreatedAt: new Date(session.session.createdAt),
-  };
-  if (typeof password !== "string" || !password) return revealAccountIban(input);
-  const res = await withRefund(
-    changePasswordLimiter,
-    user.id,
-    () => revealAccountIban({ ...input, password }),
-    (r) => !r.ok && r.error === "BAD_PASSWORD",
-  );
-  if (res.allowed) return res.result;
-  await logEvent({
-    userId: user.id,
-    action: "account.iban.reveal_failed",
-    entity: "BankAccount",
-    entityId: id,
-    metadata: { reason: "rate_limit" },
-  });
-  return { ok: false, error: "RATE_LIMITED", retryAfter: res.retryAfterSec };
+  const accountId = accountIdSchema.safeParse(id);
+  await requireSession();
+  const session = await currentStepUpSession();
+  if (!accountId.success || !session) return { ok: false, error: "NOT_FOUND" };
+  const origin = await auditOrigin();
+  const input = { accountId: accountId.data, session, origin };
+  const res = await revealAccountIban(input);
+  if (res.ok || res.error !== "REAUTH_REQUIRED" || res.method !== "PASSWORD") return res;
+  if (typeof password !== "string" || !password) return res;
+  const step = await confirmStepUp(session, password, ibanRevealFailure(accountId.data), origin);
+  return step.ok ? revealAccountIban(input) : step;
 }
 
 async function setArchived(formData: FormData, archived: boolean): Promise<AccountActionState> {

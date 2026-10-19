@@ -176,7 +176,7 @@ test.describe("IBAN reveal (#257)", () => {
     await expect(iban).toHaveText("•••• 0189");
     await card.getByRole("button", { name: "Afficher l’IBAN" }).click();
     await expect(iban).toHaveText("FR76 3000 6000 0112 3456 7890 189");
-    await expect(page.locator('[data-slot="iban-reauth"]')).toHaveCount(0);
+    await expect(page.locator('[data-slot="step-up"]')).toHaveCount(0);
 
     await card.getByRole("button", { name: "Masquer l’IBAN" }).click();
     await expect(iban).toHaveText("•••• 0189");
