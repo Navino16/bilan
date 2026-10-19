@@ -81,21 +81,23 @@ test.describe("account data", () => {
     await page.goto("/fr/settings/data", { waitUntil: "domcontentloaded", timeout: 90_000 });
     const filters = page.locator('[data-slot="export-filters"]');
     await expect(filters).toBeVisible();
-    await filters.getByLabel("Du").fill("2020-01-01");
-    await filters.getByLabel("Au").fill("2020-12-31");
-    await filters.getByLabel("Compte").selectOption({ label: "E2E Courant" });
-
-    const request = page.waitForRequest((r) => r.url().includes("/api/export/transactions"));
-    const download = page.waitForEvent("download");
-    await page.getByRole("button", { name: /transactions \(csv\)/i }).click();
-    const params = new URL((await request).url()).searchParams;
-    expect(Object.fromEntries(params)).toEqual({
-      locale: "fr",
-      from: "2020-01-01",
-      to: "2020-12-31",
-      accountId: "e2e-owner-account",
-    });
-    await download;
+    // Retried: a fill that lands before hydration never reaches the filter state.
+    await expect(async () => {
+      await filters.getByLabel("Du").fill("2020-01-01");
+      await filters.getByLabel("Au").fill("2020-12-31");
+      await filters.getByLabel("Compte").selectOption({ label: "E2E Courant" });
+      const request = page.waitForRequest((r) => r.url().includes("/api/export/transactions"));
+      const download = page.waitForEvent("download");
+      await page.getByRole("button", { name: /transactions \(csv\)/i }).click();
+      const params = new URL((await request).url()).searchParams;
+      expect(Object.fromEntries(params)).toEqual({
+        locale: "fr",
+        from: "2020-01-01",
+        to: "2020-12-31",
+        accountId: "e2e-owner-account",
+      });
+      await download;
+    }).toPass({ timeout: 20_000 });
 
     // At 320 px the filters stack without overflowing the card.
     await page.setViewportSize({ width: 320, height: 800 });
