@@ -88,6 +88,22 @@ It needs a `.env` (`npm run setup`) and the test database (`docker compose up -d
 3. `DOCS_BASE_URL=http://localhost:3301 npm run docs:screenshots` captures every page in
    English and French (`scripts/docs-screenshots.ts`).
 
+## Releases
+
+Releases are cut by hand with Git Flow:
+
+```bash
+git flow release start <version>   # bump "version" in package.json, commit
+git flow release finish <version>
+git push origin main develop --tags
+```
+
+`git flow release finish` merges into `main` and `develop` with merge commits. The `Main/Develop`
+ruleset (pull request, squash merge, linear history) refuses them, but repository administrators
+bypass it: only an administrator can push a release. Pushing the tag runs `build.yml`, which
+publishes the multi-arch image to `ghcr.io/navino16/bilan`, builds the changelog from the PR
+labels, creates the GitHub Release and posts it to Discord.
+
 ## Design documents
 
 - Architecture (stack, data model, key flows, security, deployment): [architecture.md](architecture.md)

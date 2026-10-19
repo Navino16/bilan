@@ -64,7 +64,6 @@ export function RegisterForm({
   return (
     <div className="space-y-4">
       <form {...form.formProps} className="space-y-4">
-        <input type="hidden" name="invitationToken" value={params.get("invitation") ?? ""} />
         {inviteOnly ? (
           <div className="space-y-2">
             <Label htmlFor="adminToken">{t("token")}</Label>
