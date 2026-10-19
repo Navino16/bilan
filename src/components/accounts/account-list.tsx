@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Landmark, Plus } from "lucide-react";
 import { AccountForm } from "@/components/accounts/account-form";
 import { EmptyState } from "@/components/shell/empty-state";
@@ -16,6 +17,8 @@ import type { FlatCategory } from "@/components/transactions/category-tree";
 import type { VisibleAccount } from "@/server/services/accounts";
 import { balanceLegend, balanceSegments } from "@/lib/balance-legend";
 import { revealAccountIbanAction } from "@/server/transport/actions/accounts";
+import type { IbanReauthMethod } from "@/server/services/accounts/iban-reveal";
+import { IbanReauthDialog } from "@/components/accounts/iban-reauth-dialog";
 
 const OTHERS_COLOR = "var(--cat-other)";
 
@@ -34,7 +37,9 @@ function useMoney() {
 
 function IbanReveal({ id, masked }: { id: string; masked: string }) {
   const t = useTranslations("accounts");
+  const router = useRouter();
   const [revealed, setRevealed] = useState<string | null>(null);
+  const [reauth, setReauth] = useState<IbanReauthMethod | null>(null);
   const [pending, startTransition] = useTransition();
   const shown = revealed !== null;
 
@@ -44,14 +49,16 @@ function IbanReveal({ id, masked }: { id: string; masked: string }) {
       return;
     }
     startTransition(async () => {
-      const full = await revealAccountIbanAction(id);
-      if (full) setRevealed(full);
+      const res = await revealAccountIbanAction(id);
+      if (res.ok) setRevealed(res.iban);
+      else if (res.error === "REAUTH_REQUIRED") setReauth(res.method);
+      else router.refresh();
     });
   }
 
   return (
     <div className="text-muted-foreground flex items-center gap-1.5 font-mono text-xs">
-      <span>{shown ? revealed : masked}</span>
+      <span data-slot="account-iban">{shown ? revealed : masked}</span>
       <button
         type="button"
         onClick={toggle}
@@ -62,6 +69,17 @@ function IbanReveal({ id, masked }: { id: string; masked: string }) {
       >
         {shown ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
       </button>
+      {reauth && (
+        <IbanReauthDialog
+          accountId={id}
+          method={reauth}
+          onClose={() => setReauth(null)}
+          onRevealed={(iban) => {
+            setReauth(null);
+            setRevealed(iban);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -281,6 +281,24 @@
     "owner": "Propriétaire",
     "showIban": "Afficher l’IBAN",
     "hideIban": "Masquer l’IBAN",
+    "ibanReauth": {
+      "title": "Confirmez votre identité",
+      "passwordBody": "Votre connexion date de plus de 10 minutes. Saisissez votre mot de passe pour afficher l’IBAN complet.",
+      "signInBody": "Votre connexion date de plus de 10 minutes. Reconnectez-vous pour afficher l’IBAN complet.",
+      "signInHint": "Votre session actuelle sera fermée, puis vous reviendrez sur cette page après la connexion.",
+      "password": "Mot de passe",
+      "confirm": "Afficher l’IBAN",
+      "checking": "Vérification…",
+      "signInAgain": "Se reconnecter",
+      "cancel": "Annuler",
+      "error": {
+        "BAD_PASSWORD": "Mot de passe incorrect.",
+        "RATE_LIMITED": "Trop de tentatives. Réessayez plus tard.",
+        "rateLimitedFor": "Trop de tentatives. Réessayez dans {minutes, plural, one {# minute} other {# minutes}}.",
+        "NOT_FOUND": "Cet IBAN n’est plus disponible.",
+        "FAILED": "Une erreur est survenue. Veuillez réessayer."
+      }
+    },
     "sharedBy": "Partagé par {name}",
     "share": "Partager",
     "private": "Privé",
@@ -1779,6 +1797,10 @@
           }
         },
         "account": {
+          "iban": {
+            "revealed": "IBAN affiché",
+            "reveal_failed": "Affichage de l’IBAN refusé"
+          },
           "created": "Compte bancaire créé",
           "updated": "Compte bancaire modifié",
           "archived": "Compte bancaire archivé",

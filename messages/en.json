@@ -281,6 +281,24 @@
     "owner": "Owner",
     "showIban": "Show IBAN",
     "hideIban": "Hide IBAN",
+    "ibanReauth": {
+      "title": "Confirm it’s you",
+      "passwordBody": "You signed in more than 10 minutes ago. Enter your password to show the full IBAN.",
+      "signInBody": "You signed in more than 10 minutes ago. Sign in again to show the full IBAN.",
+      "signInHint": "You’ll be signed out, then come back to this page once you sign in again.",
+      "password": "Password",
+      "confirm": "Show IBAN",
+      "checking": "Checking…",
+      "signInAgain": "Sign in again",
+      "cancel": "Cancel",
+      "error": {
+        "BAD_PASSWORD": "Incorrect password.",
+        "RATE_LIMITED": "Too many attempts. Try again later.",
+        "rateLimitedFor": "Too many attempts. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
+        "NOT_FOUND": "This IBAN is no longer available.",
+        "FAILED": "Something went wrong. Please try again."
+      }
+    },
     "sharedBy": "Shared by {name}",
     "share": "Share",
     "private": "Private",
@@ -1779,6 +1797,10 @@
           }
         },
         "account": {
+          "iban": {
+            "revealed": "IBAN revealed",
+            "reveal_failed": "IBAN reveal refused"
+          },
           "created": "Bank account created",
           "updated": "Bank account updated",
           "archived": "Bank account archived",

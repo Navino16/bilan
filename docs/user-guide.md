@@ -114,6 +114,13 @@ A new account is private. To share it, see [Share an account](#share-an-account)
 
 The card shows only the last 4 characters. Click the eye button (**Show IBAN**) to display the full IBAN, and click it again to hide it. Only the account owner can see the IBAN; people you share the account with never do.
 
+If you signed in less than 10 minutes ago, the IBAN shows right away. Otherwise Bilan first asks you to confirm it's you:
+
+- If you sign in with a password, enter it and click **Show IBAN**. After 5 wrong passwords in 15 minutes, wait before trying again.
+- If your account has no password (identity provider or passkey only), or password sign-in is turned off, click **Sign in again**: you are signed out, then brought back to the accounts page once signed in. The IBAN then shows right away.
+
+Every display of a full IBAN is recorded in the activity log, without the IBAN itself.
+
 To change or remove the IBAN, open **Edit** in the card's menu. Leave the field blank to keep the saved one, or tick **Remove the saved IBAN**.
 
 ### Archive or delete an account

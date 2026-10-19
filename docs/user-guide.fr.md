@@ -114,6 +114,13 @@ Un nouveau compte est privé. Pour le partager, voir [Partager un compte](#parta
 
 La carte n’affiche que les 4 derniers caractères. Cliquez sur l’œil (**Afficher l’IBAN**) pour voir l’IBAN complet, puis de nouveau pour le masquer. Seul le propriétaire du compte voit l’IBAN ; les personnes avec qui vous le partagez ne le voient jamais.
 
+Si vous vous êtes connecté il y a moins de 10 minutes, l’IBAN s’affiche aussitôt. Sinon, Bilan vous demande d’abord de confirmer votre identité :
+
+- Si vous vous connectez avec un mot de passe, saisissez-le et cliquez sur **Afficher l’IBAN**. Après 5 mots de passe erronés en 15 minutes, patientez avant de réessayer.
+- Si votre compte n’a pas de mot de passe (fournisseur d’identité ou clé d’accès uniquement), ou si la connexion par mot de passe est désactivée, cliquez sur **Se reconnecter** : votre session est fermée, puis vous revenez sur la page des comptes une fois reconnecté. L’IBAN s’affiche alors aussitôt.
+
+Chaque affichage d’un IBAN complet est enregistré dans le journal d’activité, sans l’IBAN lui-même.
+
 Pour changer ou retirer l’IBAN, ouvrez **Modifier** dans le menu de la carte. Laissez le champ vide pour garder celui enregistré, ou cochez **Retirer l’IBAN enregistré**.
 
 ### Archiver ou supprimer un compte

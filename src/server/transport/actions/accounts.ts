@@ -1,6 +1,8 @@
 "use server";
 
-import { requireSession } from "@/server/auth/permissions";
+import { getCurrentSession, requireSession } from "@/server/auth/permissions";
+import { changePasswordLimiter, withRefund } from "@/server/auth/rate-limit";
+import { logEvent } from "@/server/services/audit";
 import { accountInputSchema } from "@/lib/validation/account";
 import { AMOUNT_ERRORS } from "@/lib/amount";
 import { issueCode } from "@/lib/validation/amount";
@@ -10,9 +12,9 @@ import {
   updateAccount,
   archiveAccount,
   unarchiveAccount,
-  getAccountIban,
   AccountAccessError,
 } from "@/server/services/accounts";
+import { revealAccountIban, type IbanRevealResult } from "@/server/services/accounts/iban-reveal";
 import {
   deleteAccount,
   getAccountDeleteImpact,
@@ -80,10 +82,39 @@ export async function updateAccountAction(
   return { ok: true };
 }
 
-export async function revealAccountIbanAction(id: string): Promise<string | null> {
+export type IbanRevealState =
+  | IbanRevealResult
+  | { ok: false; error: "RATE_LIMITED"; retryAfter: number };
+
+// Wrong passwords draw on the per-user bucket shared with password change and 2FA.
+export async function revealAccountIbanAction(
+  id: unknown,
+  password?: unknown,
+): Promise<IbanRevealState> {
   const user = await requireSession();
-  if (!id) return null;
-  return getAccountIban(id, user.id);
+  const session = await getCurrentSession();
+  if (!session || typeof id !== "string" || !id) return { ok: false, error: "NOT_FOUND" };
+  const input = {
+    accountId: id,
+    userId: user.id,
+    sessionCreatedAt: new Date(session.session.createdAt),
+  };
+  if (typeof password !== "string" || !password) return revealAccountIban(input);
+  const res = await withRefund(
+    changePasswordLimiter,
+    user.id,
+    () => revealAccountIban({ ...input, password }),
+    (r) => !r.ok && r.error === "BAD_PASSWORD",
+  );
+  if (res.allowed) return res.result;
+  await logEvent({
+    userId: user.id,
+    action: "account.iban.reveal_failed",
+    entity: "BankAccount",
+    entityId: id,
+    metadata: { reason: "rate_limit" },
+  });
+  return { ok: false, error: "RATE_LIMITED", retryAfter: res.retryAfterSec };
 }
 
 async function setArchived(formData: FormData, archived: boolean): Promise<AccountActionState> {
