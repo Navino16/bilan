@@ -1,6 +1,6 @@
 import createIntlMiddleware from "next-intl/middleware";
 import { NextRequest } from "next/server";
-import { defaultLocale, locales } from "@/i18n/config";
+import { routing } from "@/i18n/routing";
 import { authedPathLocale } from "@/lib/authed-paths";
 import { loginRedirectPath, REQUEST_PATH_HEADER } from "@/lib/callback-url";
 import { isSetupNeededCached } from "@/server/services/setup-status";
@@ -10,15 +10,7 @@ import { getAppName } from "@/server/services/settings/app-settings";
 import { pageLocale } from "@/server/http/request-locale";
 import { BASE_SECURITY_HEADERS } from "@/lib/security-headers";
 
-// Persistent like the theme cookie: the browsing locale is per browser (spec §3.4).
-const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
-
-const intlMiddleware = createIntlMiddleware({
-  locales: [...locales],
-  defaultLocale,
-  localePrefix: "always",
-  localeCookie: { maxAge: LOCALE_COOKIE_MAX_AGE },
-});
+const intlMiddleware = createIntlMiddleware(routing);
 
 // Spec §6.6 — security headers attached to every page response (static files excluded by
 // the matcher); /api gets its own from next.config.ts.
