@@ -1,6 +1,9 @@
 import { randomBytes, randomInt } from "node:crypto";
 import type { GroupInvitation } from "@prisma/client";
 import { db } from "@/server/db";
+import { decrypt, encrypt } from "@/server/crypto/encryption";
+import { hmacExact } from "@/server/crypto/hmac";
+import { dataKey, searchKey } from "@/server/crypto/keys";
 import { logEvent } from "@/server/services/audit";
 import { sendMail } from "@/server/services/mail/mailer";
 import { invitationMail } from "@/server/services/mail/invitation";
@@ -40,6 +43,25 @@ function makeCode(): string {
   let s = "";
   for (let i = 0; i < 6; i++) s += CODE_ALPHABET[randomInt(CODE_ALPHABET.length)];
   return s;
+}
+
+const tokenHash = (token: string) => hmacExact(token, searchKey);
+const codeHash = (code: string) => hmacExact(code.toUpperCase(), searchKey);
+
+// Fresh link and code, stored encrypted and found back through their HMAC (spec §6.1).
+function newSecrets() {
+  const token = randomBytes(32).toString("base64url");
+  const code = makeCode();
+  return {
+    tokenEnc: encrypt(token, dataKey),
+    tokenHash: tokenHash(token),
+    codeEnc: encrypt(code, dataKey),
+    codeHash: codeHash(code),
+  };
+}
+
+function revealSecrets(inv: Pick<GroupInvitation, "tokenEnc" | "codeEnc">) {
+  return { token: decrypt(inv.tokenEnc, dataKey), code: decrypt(inv.codeEnc, dataKey) };
 }
 
 // The mail goes out in the invitee's preferred locale when they already have an account,
@@ -93,7 +115,7 @@ export async function createInvitation(
         role: input.role,
         invitedById: actor.id,
         expiresAt,
-        ...(expired && { token: randomBytes(32).toString("base64url"), code: makeCode() }),
+        ...(expired && newSecrets()),
       },
     });
     if (count === 1) renewedId = pending.id;
@@ -107,12 +129,11 @@ export async function createInvitation(
           email,
           invitedById: actor.id,
           role: input.role,
-          token: randomBytes(32).toString("base64url"),
-          code: makeCode(),
+          ...newSecrets(),
           expiresAt,
         },
       });
-  const { token, code } = inv;
+  const { token, code } = revealSecrets(inv);
 
   const locale = pickMailLocale(existingUser?.preference?.locale, input.locale ?? defaultLocale);
   const acceptUrl = `${env.APP_URL.replace(/\/$/, "")}/${locale}/groups/join/${token}`;
@@ -162,7 +183,7 @@ export async function acceptInvitation(
 ): Promise<{ groupId: string }> {
   const key = tokenOrCode.trim();
   const inv = await db.groupInvitation.findFirst({
-    where: { OR: [{ token: key }, { code: key.toUpperCase() }] },
+    where: { OR: [{ tokenHash: tokenHash(key) }, { codeHash: codeHash(key) }] },
   });
   return accept(inv, user);
 }
@@ -250,24 +271,29 @@ export async function declineInvitation(invitationId: string, user: Invitee): Pr
 
 export async function listInvitations(groupId: string, actor: { id: string }) {
   await requireGroupRole(groupId, actor.id, "ADMIN");
-  return db.groupInvitation.findMany({
+  const rows = await db.groupInvitation.findMany({
     where: { groupId, acceptedAt: null },
+    omit: { tokenHash: true, codeHash: true },
     orderBy: { createdAt: "desc" },
   });
+  return rows.map(({ tokenEnc, codeEnc, ...r }) => ({
+    ...r,
+    ...revealSecrets({ tokenEnc, codeEnc }),
+  }));
 }
 
 // Public-ish lookup for the join-by-link page: returns just what's needed to
 // render the confirm screen (no membership required — the token is the secret).
 export async function getInvitationByToken(token: string) {
   const inv = await db.groupInvitation.findUnique({
-    where: { token },
+    where: { tokenHash: tokenHash(token) },
     include: { group: true },
   });
   if (!inv) return null;
   return {
     id: inv.id,
     groupId: inv.groupId,
-    token: inv.token,
+    token,
     email: inv.email,
     role: inv.role as GroupRole,
     groupName: inv.group.name,

@@ -89,7 +89,8 @@ CREATE TABLE `AuditLog` (
 -- CreateTable
 CREATE TABLE `AdminSignupToken` (
     `id` VARCHAR(191) NOT NULL,
-    `token` VARCHAR(191) NOT NULL,
+    `tokenEnc` TEXT NOT NULL,
+    `tokenHash` VARCHAR(191) NOT NULL,
     `description` VARCHAR(191) NULL,
     `maxUses` INTEGER NULL,
     `usedCount` INTEGER NOT NULL DEFAULT 0,
@@ -98,7 +99,7 @@ CREATE TABLE `AdminSignupToken` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `revokedAt` DATETIME(3) NULL,
 
-    UNIQUE INDEX `AdminSignupToken_token_key`(`token`),
+    UNIQUE INDEX `AdminSignupToken_tokenHash_key`(`tokenHash`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 

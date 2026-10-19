@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "@/server/db";
+import { decrypt } from "@/server/crypto/encryption";
+import { dataKey } from "@/server/crypto/keys";
 import {
   createSignupToken,
   consumeSignupToken,
@@ -27,6 +29,14 @@ describe("signup tokens", () => {
   it("creates a usable token", async () => {
     const t = await createSignupToken({ description: "test", maxUses: 2, createdById: adminId });
     expect(t.token).toMatch(/^[A-Za-z0-9_-]{16,}$/);
+  });
+
+  it("stores the token encrypted and lists it back in clear", async () => {
+    const t = await createSignupToken({ description: "enc", createdById: adminId });
+    const row = await db.adminSignupToken.findUniqueOrThrow({ where: { id: t.id } });
+    expect(JSON.stringify(row)).not.toContain(t.token);
+    expect(decrypt(row.tokenEnc, dataKey)).toBe(t.token);
+    expect((await listSignupTokens()).find((tk) => tk.id === t.id)?.token).toBe(t.token);
   });
 
   it("consume() returns ok within max-uses, then false", async () => {
@@ -76,7 +86,7 @@ describe("signup tokens", () => {
   it("refund() never drives usedCount below zero", async () => {
     const t = await createSignupToken({ description: "refund0", maxUses: 3, createdById: adminId });
     await refundSignupToken(t.token); // nothing consumed yet
-    const row = await db.adminSignupToken.findUnique({ where: { token: t.token } });
+    const row = await db.adminSignupToken.findUnique({ where: { id: t.id } });
     expect(row?.usedCount).toBe(0);
   });
 

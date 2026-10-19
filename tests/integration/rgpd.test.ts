@@ -97,8 +97,10 @@ beforeAll(async () => {
       groupId,
       email: "invitee@bilan.local",
       invitedById: userId,
-      token: "rgpd-secret-token",
-      code: "RGPD-CODE",
+      tokenEnc: "rgpd-secret-token",
+      tokenHash: "rgpd-token-hash",
+      codeEnc: "RGPD-CODE",
+      codeHash: "rgpd-code-hash",
       expiresAt: new Date("2099-01-01T00:00:00.000Z"),
     },
   });
@@ -303,8 +305,9 @@ describe("rgpd", () => {
     ]);
     expect(data.imports[0]).not.toHaveProperty("metadata");
     expect(data.invitationsSent).toHaveLength(1);
-    expect(data.invitationsSent[0]).not.toHaveProperty("token");
-    expect(data.invitationsSent[0]).not.toHaveProperty("code");
+    for (const secret of ["tokenEnc", "tokenHash", "codeEnc", "codeHash"]) {
+      expect(data.invitationsSent[0]).not.toHaveProperty(secret);
+    }
   });
 
   it("deleteUser cascades owned data, clears FK-less rows, revokes sessions, keeps an anonymous audit entry", async () => {

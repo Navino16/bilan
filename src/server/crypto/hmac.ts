@@ -9,3 +9,8 @@ export function hmacForSearch(input: string, key: Buffer): string {
 export function hmacTokens(input: string, key: Buffer): string[] {
   return searchPrefixes(input).map((t) => hmacForSearch(t, key));
 }
+
+// Exact-match blind index for a secret looked up by its value (signup tokens, invitations).
+export function hmacExact(input: string, key: Buffer): string {
+  return createHmac("sha256", key).update(input).digest("hex");
+}

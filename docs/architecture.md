@@ -464,8 +464,10 @@ model GroupInvitation {
   email         String                                // recipient (may not have an account yet)
   invitedById   String
   role          String   @default("MEMBER")
-  token         String   @unique                      // for invitation link
-  code          String   @unique                      // 6 chars, manual entry
+  tokenEnc      String   @db.Text                     // invitation link token, AES-256-GCM (§6.1)
+  tokenHash     String   @unique                      // HMAC lookup index (§6.2)
+  codeEnc       String   @db.Text                     // 6 chars, manual entry
+  codeHash      String   @unique
   expiresAt     DateTime
   acceptedAt    DateTime?
   acceptedById  String?
@@ -493,7 +495,8 @@ model AccountShare {
 
 model AdminSignupToken {
   id          String    @id @default(cuid())
-  token       String    @unique
+  tokenEnc    String    @db.Text                      // AES-256-GCM (§6.1), shown back to admins
+  tokenHash   String    @unique                       // HMAC lookup index (§6.2)
   description String?
   maxUses     Int?                                    // null = unlimited
   usedCount   Int       @default(0)
@@ -1062,7 +1065,8 @@ Encrypted columns:
 - `BankAccount.ibanEnc`;
 - `MerchantAlias.keyEnc`, `nameEnc` (#125);
 - `SmtpConfig.passwordEnc`;
-- `AuthProvider.clientSecretEnc` (SSO client secrets).
+- `AuthProvider.clientSecretEnc` (SSO client secrets);
+- `AdminSignupToken.tokenEnc`, `GroupInvitation.tokenEnc`, `codeEnc` (#275): kept decryptable so admins can copy the link or code again.
 
 Not app-encrypted (MariaDB's at-rest encryption still covers them, §6.14): amounts, dates, account/category/budget names. An import's parsed rows (CSV text, PDF products) sit in clear in `ImportBatch.metadata` until the commit or revert drops them; uncommitted batches are purged after 24 h by the `purge-imports` cron. Better Auth encrypts the TOTP secret and the backup codes itself, with `AUTH_SECRET` (the `twoFactor` plugin defaults `storeBackupCodes` to `encrypted`).
 
@@ -1080,7 +1084,7 @@ On transaction creation/import: store `labelHash`, `rawLabelHash`, and one `Tran
 
 Search by word beginning: each query word ≥ 3 chars is cut to 12 chars, hashed → indexed lookup on `TransactionSearchToken.tokenHash`; all query words must match (AND). No substring search inside a word. A query made only of words < 3 chars matches nothing.
 
-The same key gives equality lookups elsewhere: `BankAccount.ibanHash` (normalized IBAN) and `MerchantAlias.keyHash` (`HMAC("merchant:" + key)`, unique per user).
+The same key gives equality lookups elsewhere: `BankAccount.ibanHash` (normalized IBAN), `MerchantAlias.keyHash` (`HMAC("merchant:" + key)`, unique per user), and the unique `AdminSignupToken.tokenHash`, `GroupInvitation.tokenHash` and `codeHash` (`hmacExact`: no normalization, the code is uppercased first).
 
 Leakage trade-off: the token count per transaction reveals word lengths, tokens shared by the same transactions reveal prefix chains, and the frequent 3-letter tokens are open to frequency analysis. Accepted for usable search; the labels themselves stay AES-encrypted.
 
