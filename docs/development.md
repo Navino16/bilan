@@ -91,4 +91,4 @@ It needs a `.env` (`npm run setup`) and the test database (`docker compose up -d
 ## Design documents
 
 - Architecture (stack, data model, key flows, security, deployment): [architecture.md](architecture.md)
-- Visual design reference: `design/`
+- Visual design: the theme tokens in `src/app/globals.css`, described in [architecture.md](architecture.md#9-uiux--design-system--bilan)

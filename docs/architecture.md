@@ -1147,20 +1147,13 @@ As shipped (operator guide: `docs/self-hosting.md`):
 
 ## 9. UI/UX & Design System — "Bilan"
 
-A visual design was produced with Claude Design from this spec. The exported bundle lives in **`design/`** at the project root and is the **pixel-perfect source of truth** for the frontend. Coding agents must recreate it faithfully (matching visual output, not copying the prototype's internal React structure).
-
-- `design/project/tokens.css` — design tokens (colors, typography, spacing, radii, light/dark themes)
-- `design/project/ui.jsx` — shared primitives (Button, Card, Pill, CategoryChip, Tabs, Donut, BudgetBar, Sparkline, MiniBars, Input, Switch, Icon set, fmtEUR helpers)
-- `design/project/screens/*.jsx` — dashboard, transactions, data-screens, admin-screens
-- `design/project/forms.jsx` — creation modals / bottom sheets
-- `design/project/chrome.jsx` — app shell (sidebar, topbar, mobile bottom nav, drawer)
-- `design/chats/chat1.md` — the design conversation (intent + iterations)
+The visual design was first mocked up with Claude Design from this spec. That prototype was the reference while the UI was built and has since been removed from the repository: its tokens now live in `src/app/globals.css`, and the shadcn components are themed with them.
 
 ### 9.1 Visual direction
 
 "Bilan" — **editorial × calm × tactile numbers**, private-banking-meets-Notion. Warm paper canvas, forest-green primary, terracotta (not red) for expenses.
 
-### 9.2 Design tokens (from `tokens.css`)
+### 9.2 Design tokens (`src/app/globals.css`)
 
 **Palette (light)**: paper `#F7F4ED`, card `#FFFFFF`, ink `#15130F`, primary forest `#1F4D3A`, income `#2D6B47`, expense terracotta `#B14A3B`, warning `#B6841F`, info `#2F5F8F`. Earthy category palette (groceries `#5E8C5A`, housing `#6E5B8C`, transport `#2F6B8F`, food `#C9763E`, leisure `#A86B9C`, health `#4F8C7B`, savings `#B68F36`, shopping `#8C5A3E`, bills `#4A6675`). Full **dark theme** provided.
 
@@ -1184,11 +1177,10 @@ A visual design was produced with Claude Design from this spec. The exported bun
 
 **The Bilan visual design is unchanged.** It is implemented entirely through **shadcn/ui**, themed with the Bilan tokens — not by hand-rolling a parallel component system.
 
-- **Theming**: map `tokens.css` onto shadcn's CSS variables (`--background`, `--foreground`, `--primary`, `--card`, `--border`, `--radius`, `--font-sans`, etc.) for both light and dark themes. Done once at setup. This reproduces the Bilan look (paper canvas, forest green, terracotta, Newsreader/IBM Plex) across every shadcn component.
+- **Theming**: the Bilan tokens are mapped onto shadcn's CSS variables (`--background`, `--foreground`, `--primary`, `--card`, `--border`, `--radius`, `--font-sans`, etc.) for both light and dark themes. Done once at setup. This reproduces the Bilan look (paper canvas, forest green, terracotta, Newsreader/IBM Plex) across every shadcn component.
 - **All components come from shadcn** (Button, Card, Dialog, Sheet, Combobox, Tabs, Popover, Calendar, Input, Switch, Badge, Progress, Tooltip, Toast…). Accessibility (Radix) is therefore included everywhere by default.
 - **Charts**: use **shadcn Charts (Recharts)** for the donut (category breakdown), bars (budget viz), and sparklines/mini-bars — colored with the Bilan category palette.
 - **Marginal custom pieces**: a few Bilan-specific visuals not covered by shadcn (e.g. the large serif amount display, the category color-dot chip, the over-budget-aware bar) are thin wrappers/compositions on top of shadcn primitives + tokens.
-- `ui.jsx` and the prototype screens remain the **visual reference** (spacing, sizes, hierarchy) — but the implementation target is shadcn-themed, not a copy of the prototype's inline styles.
 
 > Stack note: §2.1 fonts updated — **Newsreader + IBM Plex Sans + IBM Plex Mono** (self-hosted via `next/font`, wired into the shadcn `--font-*` variables).
 

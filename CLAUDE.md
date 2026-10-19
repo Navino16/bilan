@@ -6,7 +6,7 @@ Self-hosted, multi-user personal-finance app. ("Bilan" = French for "balance she
 
 1. **Work**: tracked by **GitHub issues**, one issue per change: `gh issue list --state open`.
 2. **Architecture**: `docs/architecture.md` (stack, data model, key flows, security, deployment). Code comments cite its sections as `spec §N`.
-3. **Visual design (pixel-perfect reference)**: `design/` — the "Bilan" design system. `design/project/tokens.css` is the source for the shadcn theme.
+3. **Visual design**: the "Bilan" design system lives in the theme tokens of `src/app/globals.css` (shadcn components themed with them); `docs/architecture.md` §9 describes it.
 4. **User-facing docs**: `docs/user-guide*.md`, `docs/admin-guide*.md`, `docs/self-hosting*.md` (en + fr). Keep them and their screenshots in sync with UI changes (`npm run docs:screenshots`, see `docs/development.md`).
 
 ## How a change is executed (Git Flow)
