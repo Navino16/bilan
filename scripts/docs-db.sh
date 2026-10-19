@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
-# Rebuilds `budget_docs` on the dev compose `mariadb-test` container: the clean data set
-# the docs screenshots are taken on (e2e users + the dev@bilan.local demo account).
-#
-# Usage:
-#   npm run docs:db
-#   # serve a production build with DATABASE_URL=mysql://app:app_password@localhost:3307/budget_docs, then
-#   DOCS_BASE_URL=http://localhost:<port> npm run docs:screenshots
+# Rebuilds `budget_docs`, the clean data set of the docs screenshots: see docs/development.md.
 set -euo pipefail
 DB=budget_docs
+
+[ -f .env ] || { echo "No .env: run npm run setup first." >&2; exit 1; }
+docker compose ps --status running mariadb-test | grep -q mariadb-test ||
+  { echo "Start the test database first: docker compose up -d mariadb-test" >&2; exit 1; }
 
 docker compose exec -T mariadb-test sh -c \
   "mariadb -uroot -p\"\$MARIADB_ROOT_PASSWORD\" -e 'DROP DATABASE IF EXISTS $DB; CREATE DATABASE $DB; GRANT ALL ON $DB.* TO \`app\`@\`%\`;'"

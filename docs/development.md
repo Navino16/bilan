@@ -72,13 +72,20 @@ the README logo (`docs/images/logo.svg`, `logo-dark.svg`) from it.
 
 ## Documentation screenshots
 
-The images in `docs/images/{en,fr}/` are taken on a clean dataset, not on your dev database:
+The images in `docs/images/{en,fr}/` are taken on a clean dataset, not on your dev database.
+It needs a `.env` (`npm run setup`) and the test database (`docker compose up -d mariadb-test`).
 
 1. `npm run docs:db` rebuilds the `budget_docs` database on the `mariadb-test` container
    (e2e users + the demo account).
-2. Serve a production build on that database, e.g. with
-   `DATABASE_URL=mysql://app:app_password@localhost:3307/budget_docs`.
-3. `DOCS_BASE_URL=http://localhost:<port> npm run docs:screenshots` captures every page in
+2. Serve a production build on that database, with an `APP_URL` on the same host and port:
+
+   ```bash
+   npm run build
+   DATABASE_URL=mysql://app:app_password@localhost:3307/budget_docs \
+     APP_URL=http://localhost:3301 npx next start -p 3301
+   ```
+
+3. `DOCS_BASE_URL=http://localhost:3301 npm run docs:screenshots` captures every page in
    English and French (`scripts/docs-screenshots.ts`).
 
 ## Design documents

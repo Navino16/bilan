@@ -40,6 +40,7 @@ const MOBILE = {
 // The first click on a freshly hydrating page can be dropped: retry until the target shows.
 async function clickUntilVisible(trigger: Locator, target: Locator) {
   for (let attempt = 0; attempt < 5; attempt++) {
+    if (await target.isVisible()) return;
     await trigger.click();
     try {
       await target.waitFor({ state: "visible", timeout: 3_000 });
@@ -56,7 +57,9 @@ async function gotoLink(page: Page, link: Locator) {
 }
 
 function importCsv(): { name: string; mimeType: string; buffer: Buffer } {
+  // Previous month early in the month, so no row is dated in the future.
   const now = new Date();
+  if (now.getDate() < 12) now.setDate(0);
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const monthName = now
     .toLocaleString("fr-FR", { month: "long" })
@@ -224,9 +227,10 @@ async function signOut(context: BrowserContext) {
 
 async function main() {
   const browser = await chromium.launch();
+  let desktop: BrowserContext | undefined;
   try {
     const state = await signIn(browser);
-    const desktop = await newContext(browser, false, state);
+    desktop = await newContext(browser, false, state);
     const mobile = await newContext(browser, true, state);
     for (const locale of LOCALES) {
       console.log(`${locale}:`);
@@ -234,16 +238,19 @@ async function main() {
       await captureLogin(browser, locale);
       for (const shot of SHOTS) {
         const page = await (shot.mobile ? mobile : desktop).newPage();
-        await page.goto(`${BASE_URL}/${locale}${shot.path}`);
-        await settle(page);
-        await shot.prepare?.(page);
-        await capture(page, locale, shot);
-        await shot.cleanup?.(page);
-        await page.close();
+        try {
+          await page.goto(`${BASE_URL}/${locale}${shot.path}`);
+          await settle(page);
+          await shot.prepare?.(page);
+          await capture(page, locale, shot);
+        } finally {
+          await shot.cleanup?.(page).catch((error: unknown) => console.warn(error));
+          await page.close();
+        }
       }
     }
-    await signOut(desktop);
   } finally {
+    if (desktop) await signOut(desktop);
     await browser.close();
   }
 }
