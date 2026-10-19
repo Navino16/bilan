@@ -1843,7 +1843,8 @@
           "updated": "Rule updated",
           "deleted": "Rule deleted",
           "enabled": "Rule enabled",
-          "disabled": "Rule disabled"
+          "disabled": "Rule disabled",
+          "applied": "Rule applied to existing transactions"
         },
         "budget": {
           "created": "Budget created",

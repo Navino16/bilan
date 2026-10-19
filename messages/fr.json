@@ -1843,7 +1843,8 @@
           "updated": "Règle modifiée",
           "deleted": "Règle supprimée",
           "enabled": "Règle activée",
-          "disabled": "Règle désactivée"
+          "disabled": "Règle désactivée",
+          "applied": "Règle appliquée aux transactions existantes"
         },
         "budget": {
           "created": "Budget créé",

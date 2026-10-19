@@ -34,7 +34,7 @@ export type Scope = { userId: string };
 
 // Loads the user's own + their groups' enabled rules once, highest priority
 // first. Shared by suggest (single) and suggestMany (batch import preview).
-async function loadRules(scope: Scope): Promise<Rule[]> {
+export async function loadRules(scope: Scope): Promise<Rule[]> {
   const memberships = await db.groupMember.findMany({
     where: { userId: scope.userId },
     select: { groupId: true },
@@ -157,7 +157,7 @@ export async function listRulesForUser(userId: string) {
 
 // Loads a rule and checks the actor may manage it: own rules (userId) or group
 // rules where the actor is at least ADMIN. Throws RuleAccessError otherwise.
-async function loadManageableRule(id: string, actorId: string) {
+export async function loadManageableRule(id: string, actorId: string) {
   const rule = await db.categorizationRule.findUnique({ where: { id } });
   if (!rule) throw new RuleAccessError("NOT_FOUND");
   if (rule.groupId) {
@@ -226,3 +226,5 @@ export async function toggleRule(
     entityId: id,
   });
 }
+
+export { applyRule, previewRuleApplication, type RuleApplicationPreview } from "./apply";
