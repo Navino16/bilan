@@ -40,7 +40,7 @@ export const WORKSPACE_NAV: NavItem[] = [
 /**
  * Account-level destinations — the "Compte" group in the design. The user
  * preferences page (/settings) is not built yet, so it stays out of the nav
- * until it ships (see PLAN.md); a link to it would 404.
+ * until it ships; a link to it would 404.
  */
 export const ACCOUNT_NAV: NavItem[] = [
   { key: "security", href: "/settings/security", icon: KeyRound },

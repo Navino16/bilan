@@ -12,9 +12,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Project-specific: third-party design bundle + archived prototype + non-source dirs
-    "design/**",
-    "_archive_prototype/**",
+    // Project-specific: non-source dirs
     ".superpowers/**",
     ".reports/**",
     "docs/**",

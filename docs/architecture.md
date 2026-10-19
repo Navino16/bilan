@@ -1,11 +1,8 @@
-# Bilan — Design Spec
+# Bilan — Architecture
 
-> **App name**: **Bilan** (French for "balance sheet / financial overview"). See README for an English note.
-
-> **Status**: Draft — pending user approval
-> **Date**: 2026-05-26
-> **Author**: Brainstorming session (project maintainer + Claude)
-> **Scope**: Full design for a multi-user personal finance tracking application.
+> The original design of Bilan (May 2026), kept as the architecture reference: stack, data model,
+> key flows, security and deployment. Where it and the code differ, the code is right. Code
+> comments cite its sections as `spec §N`.
 
 ---
 
@@ -52,9 +49,9 @@ Decisions consolidated from the clarifying-questions phase.
 | Next.js | 16.2 LTS | App Router stable, full-stack TypeScript |
 | React | 19.2 | Server Components, Compiler |
 | TypeScript | 6.0 | Strict mode + ESM by default |
-| Tailwind CSS | v4 | Styling, driven by Bilan design tokens (see §11) |
+| Tailwind CSS | v4 | Styling, driven by Bilan design tokens (see §9) |
 | shadcn/ui | latest | Accessible primitives (Radix), re-skinned with Bilan tokens |
-| Fonts | Newsreader · IBM Plex Sans · IBM Plex Mono | Self-hosted via `next/font` (see §11.2) |
+| Fonts | Newsreader · IBM Plex Sans · IBM Plex Mono | Self-hosted via `next/font` (see §9.2) |
 | react-hook-form + Zod | latest | Forms + runtime validation |
 | next-intl | latest | i18n fr/en routing |
 | Prisma | 7.x (with `@prisma/adapter-mariadb`) | ORM with MariaDB-native driver |
@@ -65,7 +62,7 @@ Decisions consolidated from the clarifying-questions phase.
 | Playwright | latest | E2E tests |
 | Docker Compose | latest | Local stack (app + mariadb + mariadb-test + adminer) |
 | Package manager | **npm** | Aligned with the `librarr` project (npm ci, package-lock.json) |
-| GitHub Actions | — | CI/CD (`ci.yml` + `build.yml`), aligned on `librarr` — see §7.6 / §12.4 |
+| GitHub Actions | — | CI/CD (`ci.yml` + `build.yml`), aligned on `librarr` — see §7.6 / §10.4 |
 | Codecov | — | Coverage + test results upload |
 | ghcr.io | — | Multi-arch Docker image registry |
 | Dependabot | — | Dependency updates |
@@ -121,7 +118,6 @@ Database-stored settings include: auth providers, SMTP, app branding, security p
 ### 2.6 MVP scope
 
 - **MVP with multi-user from day 1** (decided rather than ship solo-only first).
-- Phased delivery via `PLAN.md`, one scope per PR.
 
 ---
 
@@ -218,9 +214,8 @@ budget/
 │   ├── unit/
 │   ├── integration/
 │   └── e2e/
-├── docs/
-│   └── superpowers/specs/          # this design
-└── PLAN.md                         # scoped roadmap
+└── docs/
+    └── architecture.md             # this document
 ```
 
 ### 3.4 i18n routing
@@ -973,7 +968,7 @@ Dependabot: weekly npm updates, minor/patch grouped, major separate.
 
 ### 6.11 Future security improvements (post-MVP roadmap)
 
-Tracked here for the future. Will move to `PLAN.md` (Phase 8+ "Security hardening") or integrate into existing phases when triggers fire.
+Kept as a list of hardening ideas with their triggers; some have been delivered since.
 
 | Improvement | Priority | Trigger | Effort |
 |---|---|---|---|
@@ -1058,7 +1053,7 @@ Actions pinned to recent majors: `actions/checkout@v6`, `actions/setup-node@v6` 
 
 **Reporting config** (to produce the `.reports/` files): Vitest with cobertura + JUnit reporters; Playwright with `monocart-reporter` + JUnit reporter.
 
-> The Docker build + release workflow (`build.yml`) is described in §12.4.
+> The Docker build + release workflow (`build.yml`) is described in §10.4.
 
 ### 7.7 npm scripts
 
@@ -1150,49 +1145,15 @@ As shipped (operator guide: `docs/self-hosting.md`):
 
 ---
 
-## 9. Open Questions / Decisions Deferred
+## 9. UI/UX & Design System — "Bilan"
 
-- PDF parsing strategy (which bank format, OCR needed?): decided when actually seeing the user's bank PDF (Phase 4.3 spike).
-- OCR for scanned PDFs: only if a real need surfaces.
-- Historical data: no automatic migration — the user will re-import via CSV (Phase 4).
-- Production hosting: out of MVP scope, local Docker only.
+The visual design was first mocked up with Claude Design from this spec. That prototype was the reference while the UI was built and has since been removed from the repository: its tokens now live in `src/app/globals.css`, and the shadcn components are themed with them.
 
----
-
-## 10. Implementation Plan
-
-To be elaborated in `PLAN.md` via the `writing-plans` skill. Expected phases:
-
-- **Phase 0** — Project bootstrap (Next.js + Prisma + MariaDB + Docker Compose + CI scaffold + base tests).
-- **Phase 1** — Authentication & multi-user core (Better Auth setup, RBAC seed, setup wizard, registration modes).
-- **Phase 2** — Accounts & groups (CRUD, invitations, account sharing).
-- **Phase 3** — Categories, rules, manual transactions.
-- **Phase 4** — CSV import (then PDF spike + parser in 4.3).
-- **Phase 5** — Reporting views (monthly, custom periods).
-- **Phase 6** — Transaction links (manual + auto suggestions).
-- **Phase 7** — Budgets (creation, calculation, assignments).
-- **Phase 8** — Polish (charts, export, mobile fine-tuning) and security hardening from §6.11.
-
-Each phase decomposed into scopes — **one scope = one GitHub issue = one branch = one PR** (see §12).
-
----
-
-## 11. UI/UX & Design System — "Bilan"
-
-A visual design was produced with Claude Design from this spec. The exported bundle lives in **`design/`** at the project root and is the **pixel-perfect source of truth** for the frontend. Coding agents must recreate it faithfully (matching visual output, not copying the prototype's internal React structure).
-
-- `design/project/tokens.css` — design tokens (colors, typography, spacing, radii, light/dark themes)
-- `design/project/ui.jsx` — shared primitives (Button, Card, Pill, CategoryChip, Tabs, Donut, BudgetBar, Sparkline, MiniBars, Input, Switch, Icon set, fmtEUR helpers)
-- `design/project/screens/*.jsx` — dashboard, transactions, data-screens, admin-screens
-- `design/project/forms.jsx` — creation modals / bottom sheets
-- `design/project/chrome.jsx` — app shell (sidebar, topbar, mobile bottom nav, drawer)
-- `design/chats/chat1.md` — the design conversation (intent + iterations)
-
-### 11.1 Visual direction
+### 9.1 Visual direction
 
 "Bilan" — **editorial × calm × tactile numbers**, private-banking-meets-Notion. Warm paper canvas, forest-green primary, terracotta (not red) for expenses.
 
-### 11.2 Design tokens (from `tokens.css`)
+### 9.2 Design tokens (`src/app/globals.css`)
 
 **Palette (light)**: paper `#F7F4ED`, card `#FFFFFF`, ink `#15130F`, primary forest `#1F4D3A`, income `#2D6B47`, expense terracotta `#B14A3B`, warning `#B6841F`, info `#2F5F8F`. Earthy category palette (groceries `#5E8C5A`, housing `#6E5B8C`, transport `#2F6B8F`, food `#C9763E`, leisure `#A86B9C`, health `#4F8C7B`, savings `#B68F36`, shopping `#8C5A3E`, bills `#4A6675`). Full **dark theme** provided.
 
@@ -1200,7 +1161,7 @@ A visual design was produced with Claude Design from this spec. The exported bun
 
 **Spacing/radii**: 4–64px scale, radii 4–20px + pill. Density token (`--row-h`): compact 36 / cozy 48 / roomy 60 — **locked to cozy** in-app (not user-exposed).
 
-### 11.3 Confirmed UX decisions (from the design chat)
+### 9.3 Confirmed UX decisions (from the design chat)
 
 - **Native light/dark theme** (toggle), stored per browser in the `bilan-theme` cookie (no cookie = system).
 - **Density locked to cozy** — removed from user/admin settings.
@@ -1212,23 +1173,22 @@ A visual design was produced with Claude Design from this spec. The exported bun
 - **Key interactions**: click a transaction → detail panel (side panel desktop / bottom sheet mobile); change category → "create a rule for similar transactions?" dialog; month prev/next navigation shared; account selector in topbar; "my data" / "household" scope switch.
 - **Flagship screen**: Dashboard — monthly overview.
 
-### 11.4 Component library — all shadcn/ui, themed Bilan
+### 9.4 Component library — all shadcn/ui, themed Bilan
 
 **The Bilan visual design is unchanged.** It is implemented entirely through **shadcn/ui**, themed with the Bilan tokens — not by hand-rolling a parallel component system.
 
-- **Theming**: map `tokens.css` onto shadcn's CSS variables (`--background`, `--foreground`, `--primary`, `--card`, `--border`, `--radius`, `--font-sans`, etc.) for both light and dark themes. Done once at setup. This reproduces the Bilan look (paper canvas, forest green, terracotta, Newsreader/IBM Plex) across every shadcn component.
+- **Theming**: the Bilan tokens are mapped onto shadcn's CSS variables (`--background`, `--foreground`, `--primary`, `--card`, `--border`, `--radius`, `--font-sans`, etc.) for both light and dark themes. Done once at setup. This reproduces the Bilan look (paper canvas, forest green, terracotta, Newsreader/IBM Plex) across every shadcn component.
 - **All components come from shadcn** (Button, Card, Dialog, Sheet, Combobox, Tabs, Popover, Calendar, Input, Switch, Badge, Progress, Tooltip, Toast…). Accessibility (Radix) is therefore included everywhere by default.
 - **Charts**: use **shadcn Charts (Recharts)** for the donut (category breakdown), bars (budget viz), and sparklines/mini-bars — colored with the Bilan category palette.
 - **Marginal custom pieces**: a few Bilan-specific visuals not covered by shadcn (e.g. the large serif amount display, the category color-dot chip, the over-budget-aware bar) are thin wrappers/compositions on top of shadcn primitives + tokens.
-- `ui.jsx` and the prototype screens remain the **visual reference** (spacing, sizes, hierarchy) — but the implementation target is shadcn-themed, not a copy of the prototype's inline styles.
 
-> Stack note: §2.1 fonts updated — **Newsreader + IBM Plex Sans + IBM Plex Mono** (self-hosted via `next/font`, wired into the shadcn `--font-*` variables). The earlier "sober blue" mockups (now in `.superpowers/brainstorm/`) are superseded by this bundle.
+> Stack note: §2.1 fonts updated — **Newsreader + IBM Plex Sans + IBM Plex Mono** (self-hosted via `next/font`, wired into the shadcn `--font-*` variables).
 
 ---
 
-## 12. Development Workflow (GitHub + Git Flow)
+## 10. Development Workflow (GitHub + Git Flow)
 
-### 12.1 Repository & branching — Git Flow
+### 10.1 Repository & branching — Git Flow
 
 The project lives in a **GitHub repository**, using the **Git Flow** model:
 
@@ -1240,21 +1200,20 @@ The project lives in a **GitHub repository**, using the **Git Flow** model:
 
 **Releases are manual**: the user runs the Git Flow commands (`git flow release start/finish`) to cut releases when they decide. The CI does **not** auto-release.
 
-### 12.2 Issues & traceability
+### 10.2 Issues & traceability
 
-- **One issue per scope** of `PLAN.md`. The issue describes the scope's goal and acceptance criteria.
-- Each `feature/<scope>` branch addresses one issue; its PR references it with `Closes #<n>` so merging into `develop` auto-closes the issue.
-- Phases tracked via **GitHub milestones** (one milestone per phase) grouping their scope-issues — fine-grained tracking + phase-level overview.
-- Suggested labels: `phase-0`…`phase-8`, `frontend`, `backend`, `security`, `infra`.
+- One GitHub issue per change, with its goal and acceptance criteria.
+- The PR references it with `Closes #<n>`, so merging into `develop` closes the issue.
+- Labels: a type (`enhancement`, `bug`, `documentation`, `infra`, `security`, `dependencies`), which feeds the release changelog, plus an area (`frontend`, `backend`).
 
-### 12.3 Pull requests
+### 10.3 Pull requests
 
 - PR target: `develop` (features), `main` (releases via Git Flow).
 - PR title in conventional-commit style (`feat: …`, `fix: …`, `refactor: …`) — communicates intent and feeds an eventual CHANGELOG.
 - Merge only when CI is green (lint, typecheck, unit, integration, e2e, audit) — branch protection on `develop` and `main`.
 - Commits stay 1-line English conventional.
 
-### 12.4 CI/CD workflows (aligned on `librarr`)
+### 10.4 CI/CD workflows (aligned on `librarr`)
 
 Two workflows, mirroring the `librarr` project.
 
@@ -1271,7 +1230,7 @@ Two workflows, mirroring the `librarr` project.
 
 **Required secrets/vars**: `CODECOV_TOKEN`, `GITHUB_TOKEN` (auto, for ghcr.io + release), `DISCORD_RELEASES_WEBHOOK`, `DISCORD_RELEASE_ROLE_ID`. Image registry: `ghcr.io`.
 
-### 12.5 Conventions recap
+### 10.5 Conventions recap
 
 - Code, tests, comments, commit messages, issue/PR titles: **English**. UI strings: **French/English** (next-intl).
 - Commits: 1 line, conventional-ish (`feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, `test:`).

@@ -4,19 +4,17 @@ Self-hosted, multi-user personal-finance app. ("Bilan" = French for "balance she
 
 ## Start here when resuming a session
 
-1. **Roadmap & progress**: `PLAN.md` (phases → scopes). Progress is tracked by **GitHub issues**:
-   - `gh issue list --state open` → remaining scopes
-   - `gh issue list --state closed` → done
-2. **Detailed plan for the current phase**: `docs/superpowers/plans/YYYY-MM-DD-phase-N-*.md` (TDD, step-by-step). Phase 0: `2026-05-27-phase-0-bootstrap.md`.
-   - **Before starting a phase that has no detailed plan yet, generate it first** with the `superpowers:writing-plans` skill (input: the spec + that phase's scopes from `PLAN.md`), save it to `docs/superpowers/plans/`, then execute scope by scope. Do not start implementing a new phase without its detailed plan.
-3. **Full design spec**: `docs/superpowers/specs/2026-05-26-budget-app-design.md` (architecture, data model, security, etc.).
-4. **Visual design (pixel-perfect reference)**: `design/` — the "Bilan" design system. `design/project/tokens.css` is the source for the shadcn theme.
+1. **Work**: tracked by **GitHub issues**, one issue per change: `gh issue list --state open`.
+2. **Architecture**: `docs/architecture.md` (stack, data model, key flows, security, deployment). Code comments cite its sections as `spec §N`.
+3. **Visual design**: the "Bilan" design system lives in the theme tokens of `src/app/globals.css` (shadcn components themed with them); `docs/architecture.md` §9 describes it.
+4. **User-facing docs**: `docs/user-guide*.md`, `docs/admin-guide*.md`, `docs/self-hosting*.md` (en + fr). Keep them and their screenshots in sync with UI changes (`npm run docs:screenshots`, see `docs/development.md`).
 
-## How a scope is executed (Git Flow)
+## How a change is executed (Git Flow)
 
-- One scope = one GitHub issue = one branch `feature/<scope>` = one PR → `develop`.
-- When the user says **"scope X.Y"**: cleanup (`git checkout develop && git pull`, delete merged branches), create `feature/X.Y-...`, implement per the detailed plan, run `npm run ci`, commit, push, open PR with `Closes #<issue>` in the body.
-- When the user says **"c'est mergé"**: confirm the issue auto-closed, propose the next scope.
+- One issue = one branch `feature/<n>-<slug>` = one PR → `develop`.
+- Larger work is designed and planned before coding (superpowers brainstorming / writing-plans); those plans stay out of the repo, the issue holds the goal and acceptance criteria.
+- Cleanup (`git checkout develop && git pull`, delete merged branches), create the branch, implement, run `npm run ci`, commit, push, open the PR with `Closes #<n>` and a type label.
+- The `Main/Develop` ruleset requires green CI + CodeQL before merging. When the user says **"c'est mergé"**: confirm the issue auto-closed, propose the next one.
 - Releases are **manual** (`git flow release`, user-driven). `main` = default branch; auto-close handled by `.github/workflows/close-issues-on-develop.yml`.
 
 ## Conventions
@@ -25,7 +23,7 @@ Self-hosted, multi-user personal-finance app. ("Bilan" = French for "balance she
 - Commits are **GPG-signed**; if signing fails, ask the user to unlock GPG (per their global CLAUDE.md).
 - Code/tests/comments in **English**; UI strings in **fr/en** (next-intl).
 - Business logic in `src/server/services/*` (pure, tested). Server Actions / Route Handlers are thin wrappers.
-- Tests: Vitest (unit + integration) + Playwright (e2e). CI mirrors the `librarr` project (added in scope 0.6).
+- Tests: Vitest (unit + integration) + Playwright (e2e). CI mirrors the `librarr` project (`docs/architecture.md` §7.6).
 
 ## Key commands
 
@@ -33,7 +31,7 @@ Self-hosted, multi-user personal-finance app. ("Bilan" = French for "balance she
 npm run dev          # dev server
 npm run ci           # lint + typecheck + test (run before every PR)
 npm run test:e2e     # Playwright
-npm run setup        # generate .env, boot MariaDB, migrate + seed (after scope 0.2/0.3)
+npm run setup        # generate .env, boot MariaDB, migrate + seed
 npm run db:seed-dev  # demo user dev@bilan.local / dev-password-123, 12 months of data (-- --reset to rebuild)
 ```
 
