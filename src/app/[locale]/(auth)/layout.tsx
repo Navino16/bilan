@@ -1,4 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { BilanMark } from "@/components/brand/bilan-mark";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { SkipLink } from "@/components/shell/skip-link";
 import { MAIN_ID } from "@/lib/landmarks";
@@ -33,7 +34,8 @@ export default async function AuthLayout({
         className="flex flex-1 flex-col items-center justify-center px-6 py-12 outline-none"
       >
         <div className="w-full max-w-sm space-y-6">
-          <div className="text-center">
+          <div className="flex flex-col items-center text-center">
+            <BilanMark className="mb-3 size-11" />
             <div className="font-display text-3xl leading-none">{appName}</div>
             <p className="text-muted-foreground mt-1 text-sm">{t("tagline")}</p>
           </div>

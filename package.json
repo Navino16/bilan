@@ -27,7 +27,8 @@
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio",
     "db:seed-dev": "tsx --env-file=.env scripts/seed-dev-user.ts",
-    "db:reindex-search": "tsx --env-file=.env scripts/reindex-search-tokens.ts"
+    "db:reindex-search": "tsx --env-file=.env scripts/reindex-search-tokens.ts",
+    "icons": "tsx scripts/generate-icons.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
@@ -70,6 +71,7 @@
     "prettier": "^3",
     "prettier-plugin-tailwindcss": "^0.8.0",
     "prisma": "^7.8.0",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4",
     "tsx": "^4.22.3",
     "typescript": "^6.0.0",
