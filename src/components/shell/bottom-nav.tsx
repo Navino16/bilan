@@ -8,7 +8,6 @@ import { usePendingNavigation } from "./navigation-pending";
 
 export function BottomNav({ className }: { className?: string }) {
   const t = useTranslations("shell.tabs");
-  const tFull = useTranslations("shell.nav");
   const tShell = useTranslations("shell");
   const locale = useLocale();
   const { pathname, targetPathname, onNavigateTo } = usePendingNavigation();
@@ -38,7 +37,6 @@ export function BottomNav({ className }: { className?: string }) {
             aria-current={current ? "page" : undefined}
             data-pending={shown && !current ? "" : undefined}
             onNavigate={onNavigateTo(href)}
-            aria-label={tFull(item.key)}
             className={cn(
               "flex min-w-0 flex-col items-center gap-1 px-0.5 py-2.5 text-[10px] transition-colors",
               shown ? "text-primary font-medium" : "text-muted-foreground",
