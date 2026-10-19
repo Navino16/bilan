@@ -1,40 +1,126 @@
-**English** · [Français](README.fr.md)
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo-dark.svg">
+    <img src="docs/images/logo.svg" alt="Bilan" width="300">
+  </picture>
+</p>
 
-# Bilan
+<p align="center">
+  A self-hosted, multi-user personal-finance app.<br/>
+  Import your bank statements, categorize them automatically, follow your budgets<br/>
+  and share accounts with your household, on your own server.
+</p>
 
-> **About the name**: _Bilan_ is French for "balance sheet" / "financial overview".
+<p align="center">
+  <a href="https://github.com/Navino16/bilan/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Navino16/bilan/ci.yml?label=CI&style=flat-square" alt="CI"></a>
+  <a href="https://github.com/Navino16/bilan/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/Navino16/bilan/build.yml?label=Build&style=flat-square&logo=docker" alt="Build"></a>
+</p>
 
-A self-hosted, multi-user personal-finance app. Import your bank statements, categorize them
-automatically, follow your budgets and share accounts with your household, on your own server.
-Available in English and French.
+<p align="center">
+  <a href="https://github.com/Navino16/bilan/pkgs/container/bilan"><img src="https://img.shields.io/badge/ghcr.io-bilan-blue?style=flat-square&logo=docker" alt="Docker"></a>
+  <a href="https://github.com/Navino16/bilan"><img src="https://img.shields.io/github/stars/Navino16/bilan?style=flat-square" alt="Stars"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/Navino16/bilan?style=flat-square" alt="License"></a>
+</p>
 
-![Bilan dashboard](docs/images/en/dashboard.png)
+<p align="center">
+  <a href="docs/user-guide.md">User guide</a> &bull;
+  <a href="docs/admin-guide.md">Administrator guide</a> &bull;
+  <a href="docs/self-hosting.md">Self-hosting</a> &bull;
+  <a href="docs/development.md">Development</a>
+</p>
+
+<p align="center">
+  <strong>English</strong> &bull; <a href="README.fr.md">Français</a>
+</p>
+
+---
+
+_Bilan_ is French for "balance sheet" / "financial overview". Available in English and French.
+
+Built with Next.js 16, React 19, Prisma 7 and MariaDB 11.
+
+## Screenshots
+
+![Dashboard](docs/images/en/dashboard.png)
+
+<table>
+  <tr>
+    <th width="50%">Transactions</th>
+    <th width="50%">Import</th>
+  </tr>
+  <tr>
+    <td><img src="docs/images/en/transactions.png" alt="Transactions"></td>
+    <td><img src="docs/images/en/import-preview.png" alt="Import"></td>
+  </tr>
+  <tr>
+    <th>Transaction details</th>
+    <th>Budget</th>
+  </tr>
+  <tr>
+    <td><img src="docs/images/en/transaction-detail.png" alt="Transaction details"></td>
+    <td><img src="docs/images/en/budget-detail.png" alt="Budget"></td>
+  </tr>
+</table>
 
 ## Features
 
-- **Accounts and transactions**: checking, savings and other accounts, manual entry, search,
-  filters, notes, bulk actions.
-- **Import**: CSV (column mapping, decimal mark, date order, duplicate detection) and PDF
-  statements, with a preview before anything is saved and a one-click undo.
-- **Categorization**: custom categories, rules learned from your corrections, suggestions.
-- **Transaction links**: internal transfers and refunds paired so they don't count twice.
-- **Budgets**: one-off or recurring, per-category lines, personal or household.
-- **Households**: invite people by e-mail, link or code, share accounts read-only or with
-  write access.
-- **Insights**: dashboard and period comparisons.
-- **Security**: encryption at rest (database and application level), two-factor
-  authentication, passkeys, SSO (OIDC, Google), audit log, per-user data export and deletion.
-- **Installable** on mobile as a web app (PWA), light and dark themes.
+### Accounts and transactions
 
-## Documentation
+- Checking, savings and other accounts, with an encrypted IBAN shown only after a recent sign-in
+- Search, filters and sorting, notes, manual entry and bulk actions
+- **Transaction links** — internal transfers and refunds paired so they don't count twice,
+  with suggestions
 
-| Guide                                      | For                                                     |
-| ------------------------------------------ | ------------------------------------------------------- |
-| [User guide](docs/user-guide.md)           | Everyday use: import, categorize, budgets, households   |
-| [Administrator guide](docs/admin-guide.md) | Users, roles, registration, SSO, SMTP, audit log        |
-| [Self-hosting](docs/self-hosting.md)       | Install with Docker, reverse proxy, backups, operations |
+### Import
 
-## Quick start (self-hosting)
+- **CSV** statements — column mapping, decimal mark, date order
+- **PDF** statements
+- Duplicate detection, a preview before anything is saved, one-click undo
+
+### Categorization
+
+- Custom categories and sub-categories, merchants
+- **Rules** with priorities and hit counts, learned from your corrections
+
+### Budgets
+
+- One-off or recurring, renewed each period
+- Per-category lines, include or exclude single transactions
+- Personal or household budgets
+
+### Households
+
+- Invite people by e-mail, link or code
+- Share accounts read-only or with write access
+
+### Dashboard and insights
+
+- Income, expenses and balance for any period, compared with the previous one
+- Spending by category, day by day, and what changed the most
+
+### Security and privacy
+
+- **Encryption at rest** — encrypted database (MariaDB keyring) and application-level
+  encryption of labels, notes, IBANs and secrets
+- **Two-factor authentication** (TOTP, backup codes, trusted devices) and **passkeys**
+- **SSO** — OpenID Connect and Google
+- Sign-in alerts by e-mail, signed-in devices, sign-in rate limits
+- Per-user data export (CSV, full JSON) and account deletion
+
+### Administration
+
+- Setup wizard for the first administrator account
+- Roles — User, Administrator, Super administrator
+- Registration modes — open, invite only (invitation tokens) or disabled
+- SMTP, e-mail verification, mandatory two-factor authentication for administrators
+- **Audit log** with filters, kept 12 months
+
+### UI
+
+- English and French, light and dark themes
+- Responsive, installable on mobile as a web app (PWA)
+
+## Quick start
 
 Bilan runs from published Docker images with MariaDB, behind an HTTPS reverse proxy. See the
 [self-hosting guide](docs/self-hosting.md) for the files to create and the commands to run.
@@ -47,71 +133,8 @@ IBANs and stored secrets, `AUTH_SECRET` encrypts two-factor secrets and backup c
 
 ## Development
 
-Requirements: Node 24, Docker.
-
-```bash
-npm ci
-npm run setup        # generates .env and the MariaDB keyring, starts MariaDB, migrates and seeds
-npm run dev          # http://localhost:3000 (or: docker compose up -d app)
-npm run db:seed-dev  # optional demo user, see below
-```
-
-Stack: Next.js 16 (App Router) · React 19 · TypeScript · Tailwind v4 · shadcn/ui · next-intl ·
-Prisma 7 + MariaDB 11 · Better Auth · Vitest · Playwright.
-
-### Demo data
-
-`npm run db:seed-dev` creates a fictional user with a realistic dataset for local
-development and demos (`scripts/seed-dev-user.ts`). It refuses to run if the user
-already exists; `npm run db:seed-dev -- --reset` wipes and re-seeds it.
-
-- **Login**: `dev@bilan.local` / `dev-password-123` (super admin: sees the whole admin area)
-- **Accounts**: Compte courant, Livret A, Compte joint
-- **Transactions**: ~450 over the 12 months ending today (recomputed on each run,
-  deterministic for a given day), categorized with the default categories; ~15% left
-  uncategorized on purpose (ATM withdrawals, PayPal…)
-- **Links**: monthly internal transfers (→ joint, → Livret A) + a refunded purchase
-- **Rules**: 3 categorization rules (Carrefour, Netflix, SNCF)
-- **Household**: "Foyer Martin" with `member@e2e.local` (if the e2e users are seeded),
-  the joint account shared with write access
-- **Budgets**: a recurring monthly budget (last month, rolled into this month) and a
-  household budget that goes over
-
-### Scripts
-
-| Script                               | Purpose                         |
-| ------------------------------------ | ------------------------------- |
-| `npm run dev`                        | Dev server                      |
-| `npm run build` / `npm start`        | Production build / serve        |
-| `npm run lint` / `npm run format`    | ESLint + Prettier               |
-| `npm run typecheck`                  | `tsc --noEmit`                  |
-| `npm test` / `npm run test:coverage` | Unit + integration (Vitest)     |
-| `npm run test:e2e`                   | E2E (Playwright)                |
-| `npm run ci`                         | lint + typecheck + test         |
-| `npm run db:seed-dev`                | Seed the demo user (above)      |
-| `npm run db:reindex-search`          | Rebuild the search index        |
-| `npm run db:backup-dev`              | Encrypted dump of the dev DB    |
-| `bash scripts/prod-smoke.sh`         | Boot and check the prod compose |
-
-`npm run db:reindex-search` decrypts every transaction label and rewrites its search tokens
-(batches of 500, `-- --batch=N` to change). Run it once after an upgrade that changes the
-search tokenization (e.g. #192, word-prefix search); it is safe to re-run. It first checks
-each stored `labelHash` against `SEARCH_TOKEN_KEY` and stops on a mismatch (wrong key); after a
-change to the text normalization, add `-- --rehash` to rewrite `labelHash`/`rawLabelHash` too.
-It runs from a source checkout (`npm ci`) whose `.env` points at the target database with the
-same `DATA_ENCRYPTION_KEY`/`SEARCH_TOKEN_KEY`: the Docker runtime image ships neither the
-scripts nor `tsx`.
-
-`npm run test:e2e` reuses (or starts) the server on `http://localhost:3000`. To target a
-server already running elsewhere, set `PLAYWRIGHT_BASE_URL` (no server is started then):
-`PLAYWRIGHT_BASE_URL=http://localhost:3209 npm run test:e2e`. That server's database must be
-seeded with `scripts/seed-e2e.ts`, and its `APP_URL` must use the same host.
-
-### Design documents
-
-- Design spec: `docs/superpowers/specs/2026-05-26-budget-app-design.md`
-- Roadmap: `PLAN.md`
-- Visual design reference: `design/`
+See [docs/development.md](docs/development.md) for the development setup, the demo data and the
+scripts.
 
 ## License
 

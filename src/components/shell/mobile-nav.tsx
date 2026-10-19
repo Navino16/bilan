@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { LogOut, Menu } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { BilanMark } from "@/components/brand/bilan-mark";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -48,13 +49,16 @@ export function MobileNav({
         <Menu className="h-5 w-5" />
       </SheetTrigger>
       <SheetContent side="left" className="bg-sidebar flex w-72 flex-col gap-0 p-0">
-        <SheetHeader className="shrink-0 py-6 pr-14 pl-5 text-left">
-          <SheetTitle className="font-display line-clamp-2 text-2xl tracking-tight wrap-anywhere">
-            {appName}
-          </SheetTitle>
-          <SheetDescription className="text-[10px] tracking-[0.12em] uppercase">
-            {t("tagline", { year: String(year) })}
-          </SheetDescription>
+        <SheetHeader className="shrink-0 flex-row items-center gap-3 py-6 pr-14 pl-5 text-left">
+          <BilanMark className="size-11" />
+          <div className="min-w-0">
+            <SheetTitle className="font-display line-clamp-2 text-2xl tracking-tight wrap-anywhere">
+              {appName}
+            </SheetTitle>
+            <SheetDescription className="text-[10px] tracking-[0.12em] uppercase">
+              {t("tagline", { year: String(year) })}
+            </SheetDescription>
+          </div>
         </SheetHeader>
 
         <nav

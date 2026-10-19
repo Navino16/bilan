@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
+import { BilanMark } from "@/components/brand/bilan-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { Theme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
@@ -35,17 +36,20 @@ export function Sidebar({
         className,
       )}
     >
-      <div className="px-5 py-6">
-        <Link
-          href={`/${locale}/dashboard`}
-          title={appName}
-          className="font-display line-clamp-2 text-2xl tracking-tight wrap-anywhere"
-        >
-          {appName}
-        </Link>
-        <p className="text-muted-foreground mt-0.5 text-[10px] tracking-[0.12em] uppercase">
-          {t("tagline", { year: String(year) })}
-        </p>
+      <div className="flex items-center gap-3 px-5 py-6">
+        <BilanMark className="size-11" />
+        <div className="min-w-0">
+          <Link
+            href={`/${locale}/dashboard`}
+            title={appName}
+            className="font-display line-clamp-2 text-2xl tracking-tight wrap-anywhere"
+          >
+            {appName}
+          </Link>
+          <p className="text-muted-foreground mt-0.5 text-[10px] tracking-[0.12em] uppercase">
+            {t("tagline", { year: String(year) })}
+          </p>
+        </div>
       </div>
 
       <nav aria-label={t("mainNav")} className="min-h-0 flex-1 space-y-6 overflow-y-auto px-3">
