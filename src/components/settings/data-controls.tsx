@@ -51,6 +51,8 @@ export function DataControls({
   const [exportFilter, setExportFilter] = useState({ from: "", to: "", accountId: "" });
   const form = useActionForm(deleteAccountAction, {
     resetOnSuccess: false,
+    // Full reload on purpose: the session is gone, so no client state may survive.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     onSuccess: () => window.location.assign(`/${locale}/login?deleted=1`),
   });
   const consequences = impact
