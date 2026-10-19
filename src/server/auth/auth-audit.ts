@@ -15,6 +15,7 @@ import {
   type SignInMethod,
 } from "@/server/services/mail/security-notifications";
 import { providerCache } from "./providers";
+import { auditedSsoError } from "@/lib/sso-errors";
 
 type AuditInput = Parameters<typeof logEvent>[0];
 
@@ -127,18 +128,16 @@ const SSO_CALLBACKS = new Set(["/callback/:id", "/oauth2/callback/:providerId"])
 
 export type SsoCallback = {
   providerId: string | null;
-  // The user of the session the callback opened, if any.
   user: { id: string; email: string } | null;
   signedUp: boolean;
-  // The OAuth state, once Better Auth has read it.
+  // Null until Better Auth has read it.
   state: { link?: { userId: string } } | null;
-  // The `?error=` of the callback's redirect.
   error: string | null;
 };
 
 // A first SSO sign-in is audited as the sign-up alone, like a password sign-up (#258).
 // Failures before the state is read (forged or expired callbacks, generic-oauth IdP refusals)
-// can't be told from a link, so they aren't audited.
+// can't be told from a link, so they aren't audited. A sign-in cancelled at the IdP isn't a failure.
 export function ssoCallbackEvent(cb: SsoCallback): AuditInput | null {
   const { providerId, user } = cb;
   if (user) {
@@ -149,7 +148,7 @@ export function ssoCallbackEvent(cb: SsoCallback): AuditInput | null {
     };
   }
   if (!cb.state || !cb.error) return null;
-  const error = cb.error.slice(0, 64);
+  const error = auditedSsoError(cb.error);
   if (cb.state.link) {
     return {
       userId: cb.state.link.userId,
@@ -157,6 +156,7 @@ export function ssoCallbackEvent(cb: SsoCallback): AuditInput | null {
       metadata: { providerId, error },
     };
   }
+  if (error === "access_denied") return null;
   return { action: "auth.login.failed", metadata: { method: "sso", providerId, reason: error } };
 }
 
@@ -177,10 +177,14 @@ export async function auditSsoCallback(ctx: HookContext): Promise<void> {
   if (!SSO_CALLBACKS.has(ctx.path)) return;
   try {
     const params = (ctx.params ?? {}) as { id?: string; providerId?: string };
-    const providerId = params.id ?? params.providerId ?? null;
+    // Only a configured provider's key reaches the audit log: the path segment is caller-chosen.
+    const provider = await providerCache
+      .get()
+      .then((rows) => rows.find((p) => p.key === (params.id ?? params.providerId)))
+      .catch(() => undefined);
     const user = ctx.context.newSession?.user ?? null;
     const event = ssoCallbackEvent({
-      providerId,
+      providerId: provider?.key ?? null,
       user,
       signedUp: ssoSignUps.has(ctx.context),
       state: user ? null : await getOAuthState(),
@@ -188,24 +192,19 @@ export async function auditSsoCallback(ctx: HookContext): Promise<void> {
     });
     if (user) await syncSignInLocale(user.id, ctx.headers);
     if (!event) return;
-    await logEvent(event);
+    await logEvent(event).catch((e) => console.error("[bilan] SSO sign-in audit failed", e));
     if (event.action === "auth.login.success" && event.userId) {
       void notifySecurityEvent("new_login", {
         userId: event.userId,
         at: new Date(),
         origin: requestOrigin(ctx.headers),
         pageLocale: requestLocaleHint(ctx.headers),
-        method: { kind: "sso", provider: await providerName(providerId) },
+        method: { kind: "sso", provider: provider?.displayName ?? "SSO" },
       });
     }
   } catch {
     // best-effort: an audit failure must not fail the auth request
   }
-}
-
-async function providerName(key: string | null): Promise<string> {
-  const row = (await providerCache.get()).find((p) => p.key === key);
-  return row?.displayName ?? key ?? "SSO";
 }
 
 const NOTIFIED_EVENTS = new Map<string, SecurityEvent>([

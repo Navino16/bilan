@@ -361,7 +361,7 @@ Every change of state is logged, reads are not. This includes:
 - users' financial activity: bank accounts and shares, transactions, imports, categories, rules, budgets, links;
 - failed security e-mails and audit purges.
 
-An SSO sign-in is logged as `auth.login.success` with `method: sso` and the provider key. The first SSO sign-in of an identity that creates an account is logged as the sign-up only (`auth.register.success`). A refused SSO sign-in (identity not linked, sign-up closed, account disabled, provider error) is logged as `auth.login.failed` with Better Auth's error code; one refused before Bilan reads the sign-in request, such as a cancellation at an OpenID Connect provider, is not logged.
+An SSO sign-in is logged as `auth.login.success` with `method: sso` and the provider key. The first SSO sign-in of an identity that creates an account is logged as the sign-up only (`auth.register.success`). A refused SSO sign-in (identity not linked, sign-up closed, account disabled, provider error) is logged as `auth.login.failed` with Better Auth's error code (`other` for an unexpected one). A sign-in cancelled at the provider is not logged, nor is one refused before Bilan reads the sign-in request.
 
 ### Filter
 

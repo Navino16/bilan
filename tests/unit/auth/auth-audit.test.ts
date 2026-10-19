@@ -201,13 +201,24 @@ describe("ssoCallbackEvent (#258)", () => {
     });
   });
 
-  it("truncates the error code", () => {
-    const event = ssoCallbackEvent({ ...base, state: {}, error: "x".repeat(200) });
-    expect(event?.metadata?.reason).toHaveLength(64);
+  it("records an error code it doesn't know as other", () => {
+    const forged = "<script>alert(1)</script> call +33 6 12 34 56 78";
+    expect(ssoCallbackEvent({ ...base, state: {}, error: forged })?.metadata?.reason).toBe("other");
+    const state = { link: { userId: "user-1" } };
+    expect(ssoCallbackEvent({ ...base, state, error: forged })?.metadata?.error).toBe("other");
+  });
+
+  it("doesn't count a sign-in cancelled at the IdP as failed, but still audits a cancelled link", () => {
+    expect(ssoCallbackEvent({ ...base, state: {}, error: "access_denied" })).toBeNull();
+    const state = { link: { userId: "user-1" } };
+    expect(ssoCallbackEvent({ ...base, state, error: "access_denied" })?.metadata).toEqual({
+      providerId: "authentik",
+      error: "access_denied",
+    });
   });
 
   it("ignores a completed link, and a failure whose state was never read", () => {
     expect(ssoCallbackEvent({ ...base, state: { link: { userId: "user-1" } } })).toBeNull();
-    expect(ssoCallbackEvent({ ...base, error: "access_denied" })).toBeNull();
+    expect(ssoCallbackEvent({ ...base, error: "signup_disabled" })).toBeNull();
   });
 });

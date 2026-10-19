@@ -9,9 +9,12 @@ vi.mock("@/server/services/mail/security-notifications", () => ({
   notifySecurityEvent: notify,
 }));
 
+import { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
 import { env } from "@/env";
 import { getAuth, invalidateAuthCache } from "@/server/auth";
+import { encrypt } from "@/server/crypto/encryption";
+import { dataKey } from "@/server/crypto/keys";
 import { appSettings } from "@/server/services/settings/app-settings";
 import { createAuthProvider, type ProviderInput } from "@/server/services/settings/auth-providers";
 import { snapshotSetting } from "./support/app-setting-snapshot";
@@ -104,7 +107,7 @@ const auditsOf = (userId: string) =>
 // Failed SSO sign-ins carry no user: find them by provider among this run's rows.
 let since: Date;
 const failureIds: string[] = [];
-async function ssoFailures(providerId: string) {
+async function ssoFailures(providerId: string | null) {
   const rows = await db.auditLog.findMany({
     where: {
       action: "auth.login.failed",
@@ -113,6 +116,7 @@ async function ssoFailures(providerId: string) {
       id: { notIn: failureIds },
     },
   });
+  failureIds.push(...rows.map((r) => r.id));
   return rows.filter((r) => (r.metadata as { providerId?: string }).providerId === providerId);
 }
 
@@ -231,10 +235,73 @@ describe("SSO sign-in audit and alert (#258)", () => {
 
     expect(await ssoLogin(closedKey)).toMatch(`${appUrl}/login?error=${reason}`);
     const failures = await ssoFailures(closedKey);
-    failureIds.push(...failures.map((f) => f.id));
     expect(failures.map((f) => f.metadata)).toEqual([
       { method: "sso", providerId: closedKey, reason },
     ]);
     expect(notify).not.toHaveBeenCalled();
+  });
+});
+
+describe("forged SSO callbacks (#258)", () => {
+  it("keeps a forged error and an unknown provider id out of the audit log", async () => {
+    // Only one Google row may exist: set any aside and put it back afterwards.
+    const prior = await db.authProvider.findMany({ where: { type: "google" } });
+    await db.authProvider.deleteMany({ where: { id: { in: prior.map((r) => r.id) } } });
+    await db.authProvider.create({
+      data: {
+        key: "google",
+        type: "google",
+        displayName: "Google",
+        enabled: true,
+        clientId: "gid",
+        clientSecretEnc: encrypt("gsecret", dataKey),
+      },
+    });
+    invalidateAuthCache();
+    try {
+      const auth = await getAuth();
+      const googleCallback = async (error: string) => {
+        const start = await auth.handler(
+          new Request(`${appUrl}/api/auth/sign-in/social`, {
+            method: "POST",
+            headers: { "content-type": "application/json", origin: appUrl },
+            body: JSON.stringify({ provider: "google", callbackURL: "/fr/dashboard" }),
+          }),
+        );
+        const { url } = (await start.json()) as { url: string };
+        const state = new URL(url).searchParams.get("state")!;
+        const cookie = start.headers
+          .getSetCookie()
+          .map((c) => c.split(";")[0])
+          .join("; ");
+        const query = new URLSearchParams({ error, state });
+        return auth.handler(
+          new Request(`${appUrl}/api/auth/callback/google?${query}`, { headers: { cookie } }),
+        );
+      };
+
+      const forged = "Your account is locked, call +33 6 12 34 56 78";
+      expect((await googleCallback(forged)).status).toBe(302);
+      expect((await ssoFailures("google")).map((f) => f.metadata)).toEqual([
+        { method: "sso", providerId: "google", reason: "other" },
+      ]);
+
+      // A sign-in cancelled at the IdP is not a failed sign-in.
+      await googleCallback("access_denied");
+      expect(await ssoFailures("google")).toEqual([]);
+
+      const unknown = "x".repeat(300);
+      for (const path of [`callback/${unknown}`, `oauth2/callback/${unknown}`]) {
+        await auth.handler(new Request(`${appUrl}/api/auth/${path}?error=${unknown}&state=s`));
+      }
+      expect(await ssoFailures(null)).toEqual([]);
+      expect(await ssoFailures(unknown)).toEqual([]);
+    } finally {
+      await db.authProvider.deleteMany({ where: { type: "google" } });
+      for (const r of prior) {
+        await db.authProvider.create({ data: { ...r, config: r.config ?? Prisma.DbNull } });
+      }
+      invalidateAuthCache();
+    }
   });
 });

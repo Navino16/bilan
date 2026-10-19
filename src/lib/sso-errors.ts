@@ -80,6 +80,23 @@ const LINK_SPECIFIC = new Map<string, LinkError>([
   ["account_already_linked_to_different_user", "linkedElsewhere"],
 ]);
 
+// Every code Better Auth or an IdP is expected to send back; anything else is audited as "other".
+const KNOWN = new Set([
+  ...DENIED,
+  ...EXPIRED,
+  ...NO_EMAIL,
+  ...PROVIDER,
+  ...LOGIN_SPECIFIC.keys(),
+  ...LINK_SPECIFIC.keys(),
+  "unable_to_link_account",
+  "no_callback_url",
+  "invalid_callback_request",
+]);
+
+export function auditedSsoError(code: string): string {
+  return KNOWN.has(code) ? code : "other";
+}
+
 export function linkSsoError(code: string): LinkError {
   return LINK_SPECIFIC.get(code) ?? groupOf(code) ?? "failed";
 }

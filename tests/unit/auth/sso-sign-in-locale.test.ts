@@ -7,8 +7,12 @@ const notify = vi.hoisted(() => vi.fn(async () => void calls.push("notify")));
 vi.mock("@/server/services/users/preferences", () => ({ syncPreferredLocale: sync }));
 vi.mock("@/server/services/audit", () => ({ logEvent }));
 vi.mock("@/server/services/mail/security-notifications", () => ({ notifySecurityEvent: notify }));
-vi.mock("@/server/auth/providers", () => ({
-  providerCache: { get: async () => [{ key: "authentik", displayName: "Authentik" }] },
+const providers = vi.hoisted(() => vi.fn());
+vi.mock("@/server/auth/providers", () => ({ providerCache: { get: providers } }));
+const oauthState = vi.hoisted(() => vi.fn(async (): Promise<object | null> => null));
+vi.mock("better-auth/api", async (original) => ({
+  ...(await original<typeof import("better-auth/api")>()),
+  getOAuthState: oauthState,
 }));
 
 import { auditSsoCallback, markSsoSignUp, type HookContext } from "@/server/auth/auth-audit";
@@ -17,12 +21,13 @@ const callback = (
   path: string,
   headers: Record<string, string>,
   newSession: { user: { id: string; email: string } } | null,
+  { providerId = "authentik", location }: { providerId?: string; location?: string } = {},
 ) =>
   ({
     path,
-    params: { providerId: "authentik" },
+    params: { providerId },
     headers: new Headers(headers),
-    context: { newSession },
+    context: { newSession, responseHeaders: new Headers(location ? { location } : {}) },
   }) as unknown as HookContext;
 
 const signedIn = { user: { id: "u1", email: "u1@bilan.local" } };
@@ -33,6 +38,8 @@ beforeEach(() => {
   sync.mockClear();
   logEvent.mockClear();
   notify.mockClear();
+  providers.mockReset().mockResolvedValue([{ key: "authentik", displayName: "Authentik" }]);
+  oauthState.mockReset().mockResolvedValue(null);
 });
 
 describe("SSO sign-in locale (#245)", () => {
@@ -92,5 +99,32 @@ describe("SSO sign-in audit and alert (#258)", () => {
       expect.objectContaining({ userId: "u1", action: "auth.register.success" }),
     );
     expect(notify).not.toHaveBeenCalled();
+  });
+
+  it("still mails the alert when the audit write or the provider lookup fails", async () => {
+    logEvent.mockRejectedValueOnce(new Error("db down"));
+    providers.mockRejectedValueOnce(new Error("db down"));
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    await auditSsoCallback(callback("/oauth2/callback/:providerId", {}, signedIn));
+    expect(notify).toHaveBeenCalledWith(
+      "new_login",
+      expect.objectContaining({ userId: "u1", method: { kind: "sso", provider: "SSO" } }),
+    );
+    expect(error).toHaveBeenCalled();
+    error.mockRestore();
+  });
+
+  it("keeps an unknown provider id out of the audit log", async () => {
+    oauthState.mockResolvedValue({});
+    await auditSsoCallback(
+      callback("/callback/:id", {}, null, {
+        providerId: "x".repeat(500),
+        location: "http://localhost:3000/login?error=please_restart_the_process",
+      }),
+    );
+    expect(logEvent).toHaveBeenCalledWith({
+      action: "auth.login.failed",
+      metadata: { method: "sso", providerId: null, reason: "please_restart_the_process" },
+    });
   });
 });
