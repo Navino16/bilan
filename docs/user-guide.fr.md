@@ -294,7 +294,7 @@ Quand les règles s’appliquent :
 Quand vous enregistrez une règle qui correspond à des transactions déjà présentes, la fenêtre affiche un bilan :
 
 - combien de transactions **passent** dans la catégorie de la règle, et combien d’entre elles sont aujourd’hui dans une autre catégorie ;
-- combien **restent** avec une autre règle plus prioritaire (montez la priorité de cette règle pour les reprendre) ;
+- combien **restent** avec une autre règle qui l’emporte (montez la priorité de cette règle pour les reprendre) ;
 - combien ont été **catégorisées à la main** : elles ne bougent jamais.
 
 Cliquez sur **Reclasser** pour appliquer la règle, ou sur **Plus tard** pour laisser les transactions telles quelles. Pour appliquer une règle plus tard, cliquez sur l’icône horloge de sa ligne dans l’onglet **Règles**.

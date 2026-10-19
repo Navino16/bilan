@@ -401,7 +401,7 @@
       "loading": "Recherche des transactions concernées…",
       "moving": "{count, plural, one {passe} other {passent}} dans <chip>{category}</chip>",
       "movingFromOther": "dont {count} actuellement dans une autre catégorie",
-      "kept": "{count, plural, one {reste} other {restent}} avec « {pattern} », plus prioritaire",
+      "kept": "{count, plural, one {reste} other {restent}} avec « {pattern} », qui l’emporte",
       "keptHint": "Montez la priorité de cette règle pour les reprendre.",
       "manual": "{count, plural, one {catégorisée} other {catégorisées}} à la main : {count, plural, one {elle ne bouge pas} other {elles ne bougent pas}}",
       "none": "Aucune transaction existante n’est à reclasser.",

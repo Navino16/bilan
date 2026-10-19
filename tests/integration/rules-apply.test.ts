@@ -197,6 +197,24 @@ describe("previewRuleApplication / applyRule", () => {
   });
 });
 
+describe("applyRule category check", () => {
+  it("refuses a rule whose category the actor can no longer use", async () => {
+    const otherGroup = (await createGroup({ name: "ra_group" }, other)).id;
+    await db.groupMember.create({ data: { groupId: otherGroup, userId: actor, role: "MEMBER" } });
+    const foreign = (await db.category.create({ data: { name: "Household", groupId: otherGroup } }))
+      .id;
+    const l = label("LEFT");
+    const row = await tx(acc.own, l);
+    const { id } = await rule(l, foreign);
+    await db.groupMember.deleteMany({ where: { groupId: otherGroup, userId: actor } });
+
+    await expect(applyRule(id, { id: actor })).rejects.toBeInstanceOf(RuleAccessError);
+    expect(await categoryOf(row)).toBeNull();
+    await db.categorizationRule.delete({ where: { id } });
+    await db.category.delete({ where: { id: foreign } });
+  });
+});
+
 describe("rule application actions", () => {
   const form = (fields: Record<string, string>) => {
     const fd = new FormData();

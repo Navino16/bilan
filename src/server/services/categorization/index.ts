@@ -20,7 +20,7 @@ function assertValidPattern(data: { pattern: string; matchType: string }): void 
 // Rejects a rule categoryId the actor cannot see (a forged id pointing at another
 // user's private category). The category must be one the actor can see — their
 // own or one of their groups'. Surfaced as RuleAccessError.
-async function assertRuleCategory(categoryId: string, actorId: string): Promise<void> {
+export async function assertRuleCategory(categoryId: string, actorId: string): Promise<void> {
   try {
     await assertCategoryAssignable(categoryId, actorId);
   } catch (e) {

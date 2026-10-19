@@ -4,6 +4,7 @@ import { dataKey } from "@/server/crypto/keys";
 import { logEvent } from "@/server/services/audit";
 import { writableAccountIds } from "@/server/services/accounts/sharing";
 import {
+  assertRuleCategory,
   loadManageableRule,
   loadRules,
   recordHits,
@@ -21,6 +22,8 @@ const WRITE_CHUNK = 500;
 async function planFor(ruleId: string, actor: { id: string }) {
   const rule = await loadManageableRule(ruleId, actor.id);
   if (!rule.enabled) throw new RuleValidationError("DISABLED");
+  // A rule can outlive the actor's access to its category (e.g. after leaving a household).
+  await assertRuleCategory(rule.categoryId, actor.id);
   const rules = await loadRules({ userId: actor.id });
   const applied = rules.find((r) => r.id === ruleId);
   if (!applied) throw new RuleAccessError("NOT_FOUND");

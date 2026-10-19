@@ -294,7 +294,7 @@ When rules run:
 After you save a rule that matches transactions already in Bilan, the dialog shows a summary:
 
 - how many transactions **move** to the rule's category, and how many of them are currently in another category;
-- how many **stay** with another rule that has a higher priority (raise this rule's priority to take them over);
+- how many **stay** with another rule that takes precedence (raise this rule's priority to take them over);
 - how many were **categorized by hand**: they never move.
 
 Click **Reclassify** to apply the rule, or **Later** to leave the transactions as they are. To apply a rule later, click the clock icon on its row in the **Rules** tab.

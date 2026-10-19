@@ -401,7 +401,7 @@
       "loading": "Finding the matching transactions…",
       "moving": "{count, plural, one {moves} other {move}} to <chip>{category}</chip>",
       "movingFromOther": "{count} of them currently in another category",
-      "kept": "{count, plural, one {stays} other {stay}} with “{pattern}”, which has a higher priority",
+      "kept": "{count, plural, one {stays} other {stay}} with “{pattern}”, which takes precedence",
       "keptHint": "Raise this rule’s priority to take them over.",
       "manual": "categorized by hand: {count, plural, one {it stays as is} other {they stay as they are}}",
       "none": "No existing transaction needs reclassifying.",
