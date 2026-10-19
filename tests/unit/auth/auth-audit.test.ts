@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { APIError } from "better-auth/api";
-import { authAuditEvent, type AuditContext } from "@/server/auth/auth-audit";
+import { authAuditEvent, ssoCallbackEvent, type AuditContext } from "@/server/auth/auth-audit";
 
 const none = async () => null;
 const user1 = async () => "user-1";
@@ -162,5 +162,63 @@ describe("authAuditEvent", () => {
         metadata: { method: "password", email: "a@b.c", reason: "INVALID_EMAIL_OR_PASSWORD" },
       });
     });
+  });
+});
+
+describe("ssoCallbackEvent (#258)", () => {
+  const user = { id: "user-1", email: "a@b.c" };
+  const base = { providerId: "authentik", user: null, signedUp: false, state: null, error: null };
+
+  it("audits a session opened by the callback as an SSO sign-in", () => {
+    expect(ssoCallbackEvent({ ...base, user })).toEqual({
+      userId: "user-1",
+      action: "auth.login.success",
+      metadata: { method: "sso", providerId: "authentik", email: "a@b.c" },
+    });
+  });
+
+  it("audits a first SSO sign-in that created the account as a sign-up only", () => {
+    expect(ssoCallbackEvent({ ...base, user, signedUp: true })).toEqual({
+      userId: "user-1",
+      action: "auth.register.success",
+      metadata: { method: "sso", providerId: "authentik", email: "a@b.c" },
+    });
+  });
+
+  it("audits a refused SSO sign-in with Better Auth's error code", () => {
+    expect(ssoCallbackEvent({ ...base, state: {}, error: "account_not_linked" })).toEqual({
+      action: "auth.login.failed",
+      metadata: { method: "sso", providerId: "authentik", reason: "account_not_linked" },
+    });
+  });
+
+  it("audits a refused link for the user who started it", () => {
+    const state = { link: { userId: "user-1" } };
+    expect(ssoCallbackEvent({ ...base, state, error: "email_doesn't_match" })).toEqual({
+      userId: "user-1",
+      action: "auth.identity.link_failed",
+      metadata: { providerId: "authentik", error: "email_doesn't_match" },
+    });
+  });
+
+  it("records an error code it doesn't know as other", () => {
+    const forged = "<script>alert(1)</script> call +33 6 12 34 56 78";
+    expect(ssoCallbackEvent({ ...base, state: {}, error: forged })?.metadata?.reason).toBe("other");
+    const state = { link: { userId: "user-1" } };
+    expect(ssoCallbackEvent({ ...base, state, error: forged })?.metadata?.error).toBe("other");
+  });
+
+  it("doesn't count a sign-in cancelled at the IdP as failed, but still audits a cancelled link", () => {
+    expect(ssoCallbackEvent({ ...base, state: {}, error: "access_denied" })).toBeNull();
+    const state = { link: { userId: "user-1" } };
+    expect(ssoCallbackEvent({ ...base, state, error: "access_denied" })?.metadata).toEqual({
+      providerId: "authentik",
+      error: "access_denied",
+    });
+  });
+
+  it("ignores a completed link, and a failure whose state was never read", () => {
+    expect(ssoCallbackEvent({ ...base, state: { link: { userId: "user-1" } } })).toBeNull();
+    expect(ssoCallbackEvent({ ...base, error: "signup_disabled" })).toBeNull();
   });
 });

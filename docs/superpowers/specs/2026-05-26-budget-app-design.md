@@ -957,6 +957,8 @@ Auth (`auth.login.success/failed`, `auth.logout`, `auth.session.revoked`, `auth.
 
 Rule: every state-mutating event is logged. Reads are not (volume control). Retention: 12 months, cron purge.
 
+Sign-ins are audited alike whatever the method (#258): `auth.login.success` / `auth.login.failed` carry `method` (`password`, `totp`, `backup_code`, `passkey`, `sso` + `providerId`), and every successful one sends the "new sign-in" security e-mail, which names the method (an SSO one by the provider's display name). A first SSO sign-in that creates the account is audited as `auth.register.success` (`method: sso`) only, without the e-mail, like a password sign-up; linking an identity is `auth.identity.linked` only. A refused SSO callback is audited with Better Auth's error code once the OAuth state is read, mapped through an allow-list (`other` otherwise) since the IdP-side `?error=` is caller-controlled, and with the provider key only when it is a configured one; `access_denied` (cancelled at the IdP) isn't a failed sign-in. Earlier refusals (forged/expired state, an OIDC IdP's own refusal) can't be told from a link and aren't audited.
+
 ### 6.9 Env validation at boot
 
 `src/env.ts` uses `envalid`. Validates `NODE_ENV`, `DATABASE_URL`, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY` (base64 length check), `SEARCH_TOKEN_KEY`, `APP_URL`. App refuses to start if any are missing or malformed.

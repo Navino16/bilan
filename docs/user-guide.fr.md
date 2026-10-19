@@ -542,12 +542,12 @@ Si votre administrateur a configuré Google ou un autre fournisseur d’identit�
 
 Quand l’instance peut envoyer des e-mails, Bilan vous écrit après :
 
-- une nouvelle connexion avec votre mot de passe, une clé d’accès ou un code de secours ;
+- une nouvelle connexion avec votre mot de passe, une clé d’accès, un code de secours ou un fournisseur d’identité ;
 - un changement ou une réinitialisation du mot de passe ;
 - l’ajout d’une clé d’accès ;
 - la désactivation de la double authentification.
 
-L’alerte indique la date, l’adresse IP et l’appareil. Si ce n’était pas vous, changez votre mot de passe tout de suite. Ces alertes ne peuvent pas être désactivées.
+L’alerte indique la date, la méthode de connexion, l’adresse IP et l’appareil. Si ce n’était pas vous, changez votre mot de passe tout de suite. Ces alertes ne peuvent pas être désactivées.
 
 ## Vos données
 

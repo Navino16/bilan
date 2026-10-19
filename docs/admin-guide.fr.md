@@ -309,14 +309,14 @@ Cliquez sur **Envoyer un e-mail de test**. Le test utilise la configuration enre
 
 ### Ce que Bilan envoie
 
-| E-mail                           | Quand                                                                                                     |
-| -------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Vérification de l'adresse        | Après l'inscription, et quand l'utilisateur clique sur **Renvoyer l'e-mail** dans le bandeau              |
-| Réinitialisation du mot de passe | **Mot de passe oublié ?** sur la page de connexion (lien valable 1 heure)                                 |
-| Compte créé                      | Un administrateur crée le compte (lien de définition du mot de passe, valable 1 heure)                    |
-| Mot de passe modifié             | Après un changement ou une réinitialisation du mot de passe                                               |
-| Invitation dans un foyer         | Un administrateur du foyer invite quelqu'un (lien et code)                                                |
-| Alertes de sécurité              | Nouvelle connexion (mot de passe ou clé d'accès), clé d'accès ajoutée, double authentification désactivée |
+| E-mail                           | Quand                                                                                                          |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Vérification de l'adresse        | Après l'inscription, et quand l'utilisateur clique sur **Renvoyer l'e-mail** dans le bandeau                   |
+| Réinitialisation du mot de passe | **Mot de passe oublié ?** sur la page de connexion (lien valable 1 heure)                                      |
+| Compte créé                      | Un administrateur crée le compte (lien de définition du mot de passe, valable 1 heure)                         |
+| Mot de passe modifié             | Après un changement ou une réinitialisation du mot de passe                                                    |
+| Invitation dans un foyer         | Un administrateur du foyer invite quelqu'un (lien et code)                                                     |
+| Alertes de sécurité              | Nouvelle connexion (mot de passe, clé d'accès ou SSO), clé d'accès ajoutée, double authentification désactivée |
 
 Les e-mails sont rédigés dans la langue du destinataire.
 
@@ -354,14 +354,14 @@ Les utilisateurs ne peuvent pas changer d'adresse e-mail après l'inscription.
 
 Chaque changement d'état est journalisé, les lectures ne le sont pas. Cela comprend :
 
-- l'authentification : connexions (mot de passe, clé d'accès, étape de double authentification) et échecs de connexion, inscriptions, changements et réinitialisations de mot de passe, double authentification, régénérations de codes de secours, appareils de confiance oubliés, clés d'accès, sessions révoquées, identités SSO liées et déliées, vérifications d'adresse ;
+- l'authentification : connexions (mot de passe, clé d'accès, étape de double authentification, SSO) et échecs de connexion, inscriptions, changements et réinitialisations de mot de passe, double authentification, régénérations de codes de secours, appareils de confiance oubliés, clés d'accès, sessions révoquées, identités SSO liées et déliées, vérifications d'adresse ;
 - les utilisateurs : création par un administrateur, changements de rôle, désactivation, réactivation, adresse marquée comme vérifiée, suppression ;
 - les paramètres : chaque paramètre de l'application, les modifications et tests SMTP, les fournisseurs d'authentification ;
 - les jetons d'invitation, les foyers et leurs invitations ;
 - l'activité financière des utilisateurs : comptes bancaires et partages, transactions, imports, catégories, règles, budgets, liaisons ;
 - les échecs d'envoi d'e-mails de sécurité et les purges du journal.
 
-Les connexions SSO elles-mêmes ne sont pas journalisées comme connexions.
+Une connexion SSO est journalisée en `auth.login.success` avec `method: sso` et la clé du fournisseur. La première connexion SSO d'une identité qui crée un compte n'est journalisée que comme inscription (`auth.register.success`). Une connexion SSO refusée (identité non liée, inscription fermée, compte désactivé, erreur du fournisseur) est journalisée en `auth.login.failed` avec le code d'erreur de Better Auth (`other` pour un code inattendu). Une connexion annulée chez le fournisseur ne l'est pas, ni un refus survenu avant que Bilan lise la demande de connexion.
 
 ### Filtrer
 

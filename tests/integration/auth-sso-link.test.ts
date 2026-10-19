@@ -263,6 +263,12 @@ describe("linking an identity from Settings (#204)", () => {
     expect(
       await db.auditLog.count({ where: { userId: user.id, action: "auth.identity.link_failed" } }),
     ).toBe(0);
+    // A link opens no session: it isn't a sign-in (#258).
+    expect(
+      await db.auditLog.count({
+        where: { userId: user.id, action: { in: ["auth.login.success", "auth.register.success"] } },
+      }),
+    ).toBe(0);
 
     const view = await listIdentities(user.id);
     expect(view.linked.map((i) => [i.providerId, i.displayName, i.canUnlink])).toEqual([
@@ -292,6 +298,10 @@ describe("linking an identity from Settings (#204)", () => {
       headers: new Headers({ cookie: cookiesOf(signIn) }),
     });
     expect(session?.user.id).toBe(user.id);
+    const signInAudit = await db.auditLog.findFirst({
+      where: { userId: user.id, action: "auth.login.success" },
+    });
+    expect(signInAudit?.metadata).toEqual({ method: "sso", providerId: idpKey, email: user.email });
   });
 
   it("refuses an identity already linked to another user", async () => {

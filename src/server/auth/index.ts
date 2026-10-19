@@ -28,6 +28,7 @@ import {
 } from "./providers";
 import { authPlugins } from "./plugins";
 import { onAuthError } from "./auth-errors";
+import { markSsoSignUp } from "./auth-audit";
 import { nameOnCreate, nameOnUpdate } from "./user-name";
 import { RESET_TOKEN_TTL_SEC, sendPasswordResetMail } from "@/server/services/mail/password-reset";
 import {
@@ -243,6 +244,7 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
           // never block signup. No request context = adminCreateUser, which uses the admin's pick.
           after: async (user, ctx) => {
             if (!ctx) return;
+            if (isSsoCallback(ctx)) markSsoSignUp(ctx);
             if (user.emailVerified === true && isSsoCallback(ctx)) await auditSsoVerified(user.id);
             const locale = requestLocale(ctx.headers);
             await Promise.allSettled([

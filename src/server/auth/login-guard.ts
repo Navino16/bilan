@@ -4,9 +4,8 @@ import { z } from "zod";
 import { logEvent } from "@/server/services/audit";
 import {
   auditAuthRequest,
-  auditLinkFailure,
+  auditSsoCallback,
   pendingTwoFactor,
-  syncSsoSignInLocale,
   type HookContext,
 } from "./auth-audit";
 import { loginAccountLimiter, loginLimiter, twoFactorLimiter } from "./rate-limit";
@@ -144,8 +143,7 @@ export const authGuardPlugin = {
         handler: createAuthMiddleware(async (ctx) => {
           clearOnCompletedSignIn(ctx);
           await auditAuthRequest(ctx);
-          await auditLinkFailure(ctx);
-          await syncSsoSignInLocale(ctx);
+          await auditSsoCallback(ctx);
         }),
       },
     ],

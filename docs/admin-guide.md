@@ -316,7 +316,7 @@ Click **Send a test email**. The test uses the saved configuration, even when it
 | Account created      | An administrator creates the user (password-setup link, valid 1 hour)      |
 | Password changed     | After a password change or reset                                           |
 | Household invitation | A household administrator invites someone (link and code)                  |
-| Security alerts      | New sign-in (password or passkey), passkey added, two-factor disabled      |
+| Security alerts      | New sign-in (password, passkey or SSO), passkey added, two-factor disabled |
 
 E-mails are written in the recipient's language.
 
@@ -354,14 +354,14 @@ Users cannot change their e-mail address after sign-up.
 
 Every change of state is logged, reads are not. This includes:
 
-- authentication: sign-ins (password, passkey, 2FA step) and failed sign-ins, sign-ups, password changes and resets, two-factor changes, backup code regenerations, forgotten trusted devices, passkeys, revoked sessions, linked and unlinked SSO identities, address verifications;
+- authentication: sign-ins (password, passkey, 2FA step, SSO) and failed sign-ins, sign-ups, password changes and resets, two-factor changes, backup code regenerations, forgotten trusted devices, passkeys, revoked sessions, linked and unlinked SSO identities, address verifications;
 - users: creation by an administrator, role changes, disabling, re-enabling, address marked verified, deletion;
 - settings: every app setting, SMTP changes and tests, auth providers;
 - invitation tokens, households and their invitations;
 - users' financial activity: bank accounts and shares, transactions, imports, categories, rules, budgets, links;
 - failed security e-mails and audit purges.
 
-SSO sign-ins themselves are not logged as sign-in events.
+An SSO sign-in is logged as `auth.login.success` with `method: sso` and the provider key. The first SSO sign-in of an identity that creates an account is logged as the sign-up only (`auth.register.success`). A refused SSO sign-in (identity not linked, sign-up closed, account disabled, provider error) is logged as `auth.login.failed` with Better Auth's error code (`other` for an unexpected one). A sign-in cancelled at the provider is not logged, nor is one refused before Bilan reads the sign-in request.
 
 ### Filter
 
