@@ -127,6 +127,20 @@ export async function canWriteAccount(userId: string, accountId: string): Promis
   return access === "OWNER" || access === "WRITE";
 }
 
+// Same rule as canWriteAccount, for every account at once. Archived accounts included.
+export async function writableAccountIds(userId: string): Promise<string[]> {
+  const rows = await db.bankAccount.findMany({
+    where: {
+      OR: [
+        { ownerId: userId },
+        { shares: { some: { permission: "WRITE", group: { members: { some: { userId } } } } } },
+      ],
+    },
+    select: { id: true },
+  });
+  return rows.map((r) => r.id);
+}
+
 export async function canReadAccount(userId: string, accountId: string): Promise<boolean> {
   return (await getEffectiveAccess(userId, accountId)) !== null;
 }

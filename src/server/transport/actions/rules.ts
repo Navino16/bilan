@@ -3,21 +3,26 @@
 import { requireSession } from "@/server/auth/permissions";
 import { ruleInputSchema } from "@/lib/validation/rule";
 import {
+  applyRule,
   createRule,
   updateRule,
   deleteRule,
   toggleRule,
+  previewRuleApplication,
   RuleAccessError,
   RuleValidationError,
+  type RuleApplicationPreview,
 } from "@/server/services/categorization";
 
 function ruleError(e: unknown): string {
-  if (e instanceof RuleAccessError) return "FORBIDDEN";
+  if (e instanceof RuleAccessError) return e.message === "NOT_FOUND" ? "NOT_FOUND" : "FORBIDDEN";
   if (e instanceof RuleValidationError) return e.message;
   return "FAILED";
 }
 
 export type RuleActionState = { ok: true } | { ok: false; error: string } | null;
+// Create and edit return the rule id so the dialog can go on to the "apply to existing" step.
+export type RuleSaveState = { ok: true; id: string } | { ok: false; error: string } | null;
 
 function parseRule(formData: FormData) {
   return ruleInputSchema.safeParse({
@@ -31,24 +36,24 @@ function parseRule(formData: FormData) {
 }
 
 export async function createRuleAction(
-  _prev: RuleActionState,
+  _prev: RuleSaveState,
   formData: FormData,
-): Promise<RuleActionState> {
+): Promise<RuleSaveState> {
   const user = await requireSession();
   const parsed = parseRule(formData);
   if (!parsed.success) return { ok: false, error: "INVALID" };
   try {
-    await createRule(parsed.data, { id: user.id });
+    const { id } = await createRule(parsed.data, { id: user.id });
+    return { ok: true, id };
   } catch (e) {
     return { ok: false, error: ruleError(e) };
   }
-  return { ok: true };
 }
 
 export async function updateRuleAction(
-  _prev: RuleActionState,
+  _prev: RuleSaveState,
   formData: FormData,
-): Promise<RuleActionState> {
+): Promise<RuleSaveState> {
   const user = await requireSession();
   const id = String(formData.get("id") ?? "");
   const parsed = parseRule(formData);
@@ -58,7 +63,7 @@ export async function updateRuleAction(
   } catch (e) {
     return { ok: false, error: ruleError(e) };
   }
-  return { ok: true };
+  return { ok: true, id };
 }
 
 export async function deleteRuleAction(
@@ -85,4 +90,26 @@ export async function toggleRuleAction(id: string, enabled: boolean): Promise<Ru
     return { ok: false, error: e instanceof RuleAccessError ? "FORBIDDEN" : "FAILED" };
   }
   return { ok: true };
+}
+
+export async function previewRuleApplicationAction(
+  ruleId: string,
+): Promise<{ ok: true; preview: RuleApplicationPreview } | { ok: false; error: string }> {
+  const user = await requireSession();
+  try {
+    return { ok: true, preview: await previewRuleApplication(ruleId, { id: user.id }) };
+  } catch (e) {
+    return { ok: false, error: ruleError(e) };
+  }
+}
+
+export async function applyRuleAction(
+  ruleId: string,
+): Promise<{ ok: true; reclassified: number } | { ok: false; error: string }> {
+  const user = await requireSession();
+  try {
+    return { ok: true, ...(await applyRule(ruleId, { id: user.id })) };
+  } catch (e) {
+    return { ok: false, error: ruleError(e) };
+  }
 }

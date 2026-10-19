@@ -387,9 +387,29 @@
       "INVALID": "Check the fields.",
       "INVALID_REGEX": "Invalid or unsupported regular expression (backreferences and lookarounds are not allowed).",
       "FORBIDDEN": "Not allowed.",
-      "FAILED": "Failed. Try again."
+      "FAILED": "Failed. Try again.",
+      "NOT_FOUND": "This rule no longer exists.",
+      "DISABLED": "This rule is disabled."
     },
-    "deleteFailed": "Deleting failed. Try again."
+    "deleteFailed": "Deleting failed. Try again.",
+    "apply": {
+      "overlineCreated": "Rule created",
+      "overlineUpdated": "Rule updated",
+      "overlineStandalone": "Rule",
+      "title": "Apply to existing transactions?",
+      "intro": "The rule “{pattern}” → <chip>{category}</chip> matches {matched, plural, one {# existing transaction} other {# existing transactions}}.",
+      "loading": "Finding the matching transactions…",
+      "moving": "{count, plural, one {moves} other {move}} to <chip>{category}</chip>",
+      "movingFromOther": "{count} of them currently in another category",
+      "kept": "{count, plural, one {stays} other {stay}} with “{pattern}”, which takes precedence",
+      "keptHint": "Raise this rule’s priority to take them over.",
+      "manual": "categorized by hand: {count, plural, one {it stays as is} other {they stay as they are}}",
+      "none": "No existing transaction needs reclassifying.",
+      "later": "Later",
+      "close": "Close",
+      "apply": "Reclassify {count, plural, one {# transaction} other {# transactions}}",
+      "button": "Apply “{pattern}” to existing transactions"
+    }
   },
   "budgets": {
     "overline": "Planning",
@@ -673,7 +693,7 @@
         "EXACT": "Equals",
         "REGEX": "Regex"
       },
-      "existingNote": "Existing transactions will not be re-categorized automatically.",
+      "existingNote": "In the next step, you’ll see the existing transactions concerned before reclassifying them.",
       "decline": "No thanks",
       "confirm": "Create rule"
     },
@@ -1843,7 +1863,8 @@
           "updated": "Rule updated",
           "deleted": "Rule deleted",
           "enabled": "Rule enabled",
-          "disabled": "Rule disabled"
+          "disabled": "Rule disabled",
+          "applied": "Rule applied to existing transactions"
         },
         "budget": {
           "created": "Budget created",

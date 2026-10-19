@@ -16,7 +16,13 @@ import {
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useFrozenWhileOpen } from "@/hooks/use-frozen-while-open";
-import { createRuleAction } from "@/server/transport/actions/rules";
+import { createRuleAction, previewRuleApplicationAction } from "@/server/transport/actions/rules";
+import type { RuleApplicationPreview } from "@/server/services/categorization";
+import {
+  RuleApplyStep,
+  shouldOfferApply,
+  type RuleApplyTarget,
+} from "@/components/categories/rule-apply-step";
 import { RULE_MATCH_TYPES, type RuleMatchType } from "@/lib/validation/rule";
 import { CategoryChip, SegmentedTabs, overline } from "./bits";
 
@@ -45,6 +51,10 @@ export function CreateRuleDialog({
   const [pat, setPat] = useState(pattern);
   const [matchType, setMatchType] = useState<RuleMatchType>("CONTAINS");
   const [pending, startTransition] = useTransition();
+  const [applying, setApplying] = useState<{
+    target: RuleApplyTarget;
+    preview: RuleApplicationPreview;
+  } | null>(null);
   const isMobile = useFrozenWhileOpen(open, useIsMobile());
 
   // Keep the proposed pattern in sync when the dialog reopens for another tx.
@@ -59,13 +69,21 @@ export function CreateRuleDialog({
     startTransition(async () => {
       const res = await createRuleAction(null, fd);
       if (!res?.ok) return setError(res?.error ?? "FAILED");
-      onOpenChange(false);
       router.refresh();
+      const preview = await previewRuleApplicationAction(res.id);
+      if (!preview.ok || !shouldOfferApply(preview.preview)) return handleOpenChange(false);
+      setApplying({
+        target: { id: res.id, pattern: pat, categoryName, categoryColor },
+        preview: preview.preview,
+      });
     });
   }
 
   const handleOpenChange = (n: boolean) => {
-    if (!n) setPat("");
+    if (!n) {
+      setPat("");
+      setApplying(null);
+    }
     setError(null);
     onOpenChange(n);
   };
@@ -131,18 +149,29 @@ export function CreateRuleDialog({
     </>
   );
 
+  const content = applying ? (
+    <RuleApplyStep
+      rule={applying.target}
+      mode="created"
+      initialPreview={applying.preview}
+      onDone={() => handleOpenChange(false)}
+    />
+  ) : (
+    body
+  );
+
   return isMobile ? (
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
         side="bottom"
         className="flex max-h-[92dvh] flex-col gap-0 overflow-y-auto rounded-t-2xl p-0"
       >
-        {body}
+        {content}
       </SheetContent>
     </Sheet>
   ) : (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">{body}</DialogContent>
+      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">{content}</DialogContent>
     </Dialog>
   );
 }

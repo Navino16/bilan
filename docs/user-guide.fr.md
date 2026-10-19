@@ -277,7 +277,7 @@ Une règle attribue une catégorie aux transactions dont le libellé bancaire co
 
 1. Dans l’onglet **Règles**, cliquez sur **Nouvelle règle**.
 2. Saisissez le **Motif** et choisissez la **Correspondance** : **Contient**, **Égal**, **Commence par** ou **Regex**.
-3. Choisissez la **Catégorie** et la **Priorité** : quand plusieurs règles correspondent, le nombre le plus élevé l’emporte (100 par défaut).
+3. Choisissez la **Catégorie** et la **Priorité** : quand plusieurs règles correspondent, le nombre le plus élevé l’emporte (100 par défaut). À priorité égale, le motif le plus long l’emporte, puis la règle la plus récente.
 4. Si vous gérez un foyer, choisissez la **Portée** : **Personnelle** ou le foyer. Les règles d’un foyer s’appliquent aux transactions de tous ses membres.
 5. Cochez **Sensible à la casse** si besoin. Par défaut, majuscules et accents sont ignorés.
 6. Cliquez sur **Enregistrer**.
@@ -289,11 +289,21 @@ Quand les règles s’appliquent :
 - pendant un import, si **Catégoriser automatiquement** est coché ;
 - quand vous saisissez une transaction à la main sans choisir de catégorie.
 
-Les règles ne modifient jamais les transactions déjà enregistrées, et ne remplacent jamais une catégorie que vous avez choisie vous-même.
+### Appliquer une règle aux transactions existantes
+
+Quand vous enregistrez une règle qui correspond à des transactions déjà présentes, la fenêtre affiche un bilan :
+
+- combien de transactions **passent** dans la catégorie de la règle, et combien d’entre elles sont aujourd’hui dans une autre catégorie ;
+- combien **restent** avec une autre règle qui l’emporte (montez la priorité de cette règle pour les reprendre) ;
+- combien ont été **catégorisées à la main** : elles ne bougent jamais.
+
+Cliquez sur **Reclasser** pour appliquer la règle, ou sur **Plus tard** pour laisser les transactions telles quelles. Pour appliquer une règle plus tard, cliquez sur l’icône horloge de sa ligne dans l’onglet **Règles**.
+
+Seules les transactions des comptes que vous pouvez modifier sont reclassées. Les règles ne remplacent jamais une catégorie que vous avez choisie vous-même.
 
 ### Apprendre de vos choix
 
-Quand vous changez la catégorie d’une transaction, Bilan propose **Créer une règle pour les transactions similaires ?**. Il suggère un motif tiré du libellé bancaire, modifiable, ainsi que le type de correspondance. Cliquez sur **Créer la règle** pour enregistrer une règle personnelle, ou sur **Non merci**. Les transactions existantes ne sont pas reclassées.
+Quand vous changez la catégorie d’une transaction, Bilan propose **Créer une règle pour les transactions similaires ?**. Il suggère un motif tiré du libellé bancaire, modifiable, ainsi que le type de correspondance. Cliquez sur **Créer la règle** pour enregistrer une règle personnelle, ou sur **Non merci**. Si d’autres transactions correspondent, vous pouvez ensuite [leur appliquer la règle](#appliquer-une-règle-aux-transactions-existantes).
 
 ### Marchands
 

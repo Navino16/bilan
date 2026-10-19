@@ -9,6 +9,7 @@ export type Rule = {
   matchType: RuleMatchType;
   caseSensitive: boolean;
   priority?: number;
+  createdAt?: number;
 };
 
 // Case-insensitive non-REGEX rules also ignore accents: bank labels are often
@@ -36,12 +37,24 @@ export function matchRule(rule: Rule, label: string): boolean {
   }
 }
 
-// Highest-priority matching rule (ties broken by array order, callers pre-sort).
+// Negative when `a` wins: higher priority, then the longer (more specific) pattern, then the
+// newer rule, so equal priorities never depend on database order (#287).
+export function compareRules(
+  a: Pick<Rule, "priority" | "pattern" | "createdAt">,
+  b: Pick<Rule, "priority" | "pattern" | "createdAt">,
+): number {
+  return (
+    (b.priority ?? 100) - (a.priority ?? 100) ||
+    b.pattern.length - a.pattern.length ||
+    (b.createdAt ?? 0) - (a.createdAt ?? 0)
+  );
+}
+
 export function pickByPriority(rules: Rule[], label: string): Rule | null {
   let best: Rule | null = null;
   for (const r of rules) {
     if (!matchRule(r, label)) continue;
-    if (!best || (r.priority ?? 100) > (best.priority ?? 100)) best = r;
+    if (!best || compareRules(r, best) < 0) best = r;
   }
   return best;
 }

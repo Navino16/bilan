@@ -23,9 +23,12 @@ import type { FlatCategory } from "@/components/transactions/category-tree";
 import { RULE_MATCH_TYPES, type RuleMatchType } from "@/lib/validation/rule";
 import {
   createRuleAction,
+  previewRuleApplicationAction,
   updateRuleAction,
-  type RuleActionState,
+  type RuleSaveState,
 } from "@/server/transport/actions/rules";
+import type { RuleApplicationPreview } from "@/server/services/categorization";
+import { RuleApplyStep, shouldOfferApply, type RuleApplyTarget } from "./rule-apply-step";
 import { NativeSelect } from "@/components/ui/native-select";
 import { canManageInGroup } from "@/lib/validation/group";
 import type { ScopeGroup } from "./category-form";
@@ -54,15 +57,35 @@ export function RuleDialog({
 }: RuleFormProps & { open: boolean; onOpenChange: (open: boolean) => void }) {
   // Lifted so the dialog can't close (then reopen) under an in-flight save.
   const [pending, startTransition] = useTransition();
+  const [applying, setApplying] = useState<{
+    target: RuleApplyTarget;
+    preview: RuleApplicationPreview;
+  } | null>(null);
   const isMobile = useFrozenWhileOpen(open, useIsMobile());
-  const handleOpenChange = (o: boolean) => !pending && onOpenChange(o);
+  const close = () => {
+    setApplying(null);
+    onOpenChange(false);
+  };
+  const handleOpenChange = (o: boolean) => {
+    if (pending) return;
+    if (!o) setApplying(null);
+    onOpenChange(o);
+  };
   // The form lives inside the popup, which unmounts on close: each opening starts from `rule`.
-  const form = (
+  const form = applying ? (
+    <RuleApplyStep
+      rule={applying.target}
+      mode={props.mode === "edit" ? "updated" : "created"}
+      initialPreview={applying.preview}
+      onDone={close}
+    />
+  ) : (
     <RuleForm
       {...props}
       pending={pending}
       startTransition={startTransition}
-      onClose={() => onOpenChange(false)}
+      onClose={close}
+      onSaved={(target, preview) => setApplying({ target, preview })}
     />
   );
   return isMobile ? (
@@ -89,10 +112,12 @@ function RuleForm({
   pending,
   startTransition,
   onClose,
+  onSaved,
 }: RuleFormProps & {
   pending: boolean;
   startTransition: TransitionStartFunction;
   onClose: () => void;
+  onSaved: (target: RuleApplyTarget, preview: RuleApplicationPreview) => void;
 }) {
   const t = useTranslations("rules");
   const router = useRouter();
@@ -116,13 +141,21 @@ function RuleForm({
     if (mode === "create" && groupId) fd.set("groupId", groupId);
     startTransition(async () => {
       const action = mode === "edit" ? updateRuleAction : createRuleAction;
-      const res: RuleActionState = await action(null, fd);
-      if (res?.ok) {
-        onClose();
-        router.refresh();
-      } else {
-        setError(res?.error ?? "FAILED");
-      }
+      const res: RuleSaveState = await action(null, fd);
+      if (!res?.ok) return setError(res?.error ?? "FAILED");
+      router.refresh();
+      const preview = await previewRuleApplicationAction(res.id);
+      if (!preview.ok || !shouldOfferApply(preview.preview)) return onClose();
+      const category = categories.find((c) => c.id === categoryId);
+      onSaved(
+        {
+          id: res.id,
+          pattern,
+          categoryName: category?.name ?? "",
+          categoryColor: category?.color ?? null,
+        },
+        preview.preview,
+      );
     });
   }
 

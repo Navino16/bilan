@@ -47,6 +47,43 @@ test.describe("categorization rules", () => {
     );
   });
 
+  test("applies a rule to existing transactions later, from the rules list", async ({ page }) => {
+    const pattern = `LATER${Date.now()}`;
+    await page.goto(`/fr/transactions?search=${pattern}`);
+    await page.getByRole("button", { name: /nouvelle transaction/i }).click();
+    await page.fill('input[name="date"]', "2026-02-18");
+    await page.fill('input[name="amount"]', "-9");
+    await page.fill('input[name="label"]', `CB ${pattern}`);
+    await page.getByRole("button", { name: /^ajouter$/i }).click();
+    const txRow = page.locator('[data-slot="transaction-row"]').filter({ hasText: pattern });
+    await expect(txRow).toHaveCount(1, { timeout: 15_000 });
+
+    await page.goto("/fr/categories");
+    await page.getByRole("button", { name: /^Règles/ }).click();
+    await page.getByRole("button", { name: /nouvelle règle/i }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel(/motif/i).fill(pattern);
+    await dialog.locator('[data-slot="category-combobox"]').click();
+    const choice = page.getByRole("menuitem").nth(1);
+    const category = (await choice.innerText()).trim();
+    await choice.click();
+    await dialog.getByRole("button", { name: /enregistrer/i }).click();
+
+    await expect(dialog.getByText("Appliquer aux transactions existantes ?")).toBeVisible();
+    await dialog.getByRole("button", { name: /plus tard/i }).click();
+    await expect(dialog).toBeHidden();
+
+    const ruleRow = page.locator('[data-slot="rule-row"]').filter({ hasText: pattern });
+    await ruleRow
+      .getByRole("button", { name: `Appliquer « ${pattern} » aux transactions existantes` })
+      .click();
+    await page.getByRole("button", { name: /reclasser 1 transaction/i }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+
+    await page.goto(`/fr/transactions?search=${pattern}`);
+    await expect(txRow).toContainText(category, { timeout: 15_000 });
+  });
+
   test("« Nouvelle règle » opens blank after a cancel or a save (#227)", async ({ page }) => {
     const pattern = `BLANK${Date.now()}`;
     await page.goto("/fr/categories");

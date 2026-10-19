@@ -30,4 +30,38 @@ test.describe("categorization learning", () => {
     await page.getByRole("button", { name: /créer la règle/i }).click();
     await expect(page.getByText(/créer une règle pour les transactions/i)).toHaveCount(0);
   });
+
+  test("applies a new rule to existing transactions from the learning dialog", async ({ page }) => {
+    const stamp = Date.now();
+    const label = `Biocoop ${stamp}`;
+    await page.goto(`/fr/transactions?search=${stamp}`);
+    for (const amount of ["-21", "-22"]) {
+      await page.getByRole("button", { name: /nouvelle transaction/i }).click();
+      await page.fill('input[name="date"]', "2026-02-17");
+      await page.fill('input[name="amount"]', amount);
+      await page.fill('input[name="label"]', label);
+      await page.getByRole("button", { name: /^ajouter$/i }).click();
+      await expect(page.locator('input[name="label"]')).toHaveCount(0);
+    }
+    const rows = page.locator('[data-slot="transaction-row"]').filter({ hasText: label });
+    await expect(rows).toHaveCount(2, { timeout: 15_000 });
+
+    await rows.first().click();
+    await page.locator('[data-slot="category-combobox"]').click();
+    const choice = page.getByRole("menuitem").nth(1);
+    const category = (await choice.innerText()).trim();
+    await choice.click();
+
+    await page.getByRole("button", { name: /créer la règle/i }).click();
+    await expect(page.getByText("Appliquer aux transactions existantes ?")).toBeVisible();
+    await expect(page.locator('[data-slot="rule-apply-manual"]')).toContainText(
+      /1\s*catégorisée à la main/,
+    );
+    await page.getByRole("button", { name: /reclasser 1 transaction/i }).click();
+    await expect(page.getByText("Appliquer aux transactions existantes ?")).toHaveCount(0);
+
+    await page.goto(`/fr/transactions?search=${stamp}`);
+    await expect(rows).toHaveCount(2, { timeout: 15_000 });
+    for (const row of await rows.all()) await expect(row).toContainText(category);
+  });
 });

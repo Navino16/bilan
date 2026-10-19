@@ -5,7 +5,7 @@ import { requireGroupRole } from "@/server/services/groups/roles";
 import { assertCategoryAssignable, CategoryAccessError } from "@/server/services/categories";
 import { ruleInputSchema, type RuleInput } from "@/lib/validation/rule";
 import { isValidRulePattern } from "./regex";
-import { pickByPriority, type Rule } from "./match";
+import { compareRules, pickByPriority, type Rule } from "./match";
 import type { RuleMatchType } from "@/lib/validation/rule";
 
 export class RuleAccessError extends Error {}
@@ -20,7 +20,7 @@ function assertValidPattern(data: { pattern: string; matchType: string }): void 
 // Rejects a rule categoryId the actor cannot see (a forged id pointing at another
 // user's private category). The category must be one the actor can see — their
 // own or one of their groups'. Surfaced as RuleAccessError.
-async function assertRuleCategory(categoryId: string, actorId: string): Promise<void> {
+export async function assertRuleCategory(categoryId: string, actorId: string): Promise<void> {
   try {
     await assertCategoryAssignable(categoryId, actorId);
   } catch (e) {
@@ -34,7 +34,7 @@ export type Scope = { userId: string };
 
 // Loads the user's own + their groups' enabled rules once, highest priority
 // first. Shared by suggest (single) and suggestMany (batch import preview).
-async function loadRules(scope: Scope): Promise<Rule[]> {
+export async function loadRules(scope: Scope): Promise<Rule[]> {
   const memberships = await db.groupMember.findMany({
     where: { userId: scope.userId },
     select: { groupId: true },
@@ -51,6 +51,7 @@ async function loadRules(scope: Scope): Promise<Rule[]> {
     matchType: r.matchType as RuleMatchType,
     caseSensitive: r.caseSensitive,
     priority: r.priority,
+    createdAt: r.createdAt.getTime(),
   }));
 }
 
@@ -143,19 +144,20 @@ export async function listRulesForUser(userId: string) {
     select: { groupId: true },
   });
   const groupIds = memberships.map((m) => m.groupId);
-  return db.categorizationRule.findMany({
+  const rules = await db.categorizationRule.findMany({
     where: { OR: [{ userId }, { groupId: { in: groupIds } }] },
-    orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
     include: {
       category: { select: { id: true, name: true, color: true } },
       group: { select: { id: true, name: true } },
     },
   });
+  const key = (r: (typeof rules)[number]) => ({ ...r, createdAt: r.createdAt.getTime() });
+  return rules.sort((a, b) => compareRules(key(a), key(b)));
 }
 
 // Loads a rule and checks the actor may manage it: own rules (userId) or group
 // rules where the actor is at least ADMIN. Throws RuleAccessError otherwise.
-async function loadManageableRule(id: string, actorId: string) {
+export async function loadManageableRule(id: string, actorId: string) {
   const rule = await db.categorizationRule.findUnique({ where: { id } });
   if (!rule) throw new RuleAccessError("NOT_FOUND");
   if (rule.groupId) {
@@ -224,3 +226,5 @@ export async function toggleRule(
     entityId: id,
   });
 }
+
+export { applyRule, previewRuleApplication, type RuleApplicationPreview } from "./apply";
