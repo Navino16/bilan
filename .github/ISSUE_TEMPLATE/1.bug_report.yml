@@ -41,7 +41,7 @@ body:
     id: logs
     attributes:
       label: Logs
-      description: Relevant log output (set LOG_LEVEL=debug for more details)
+      description: Relevant log output (docker compose logs app)
       render: shell
     validations:
       required: false

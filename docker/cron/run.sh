@@ -1,5 +1,5 @@
 #!/bin/sh
-# Calls one cron route on the app (spec §7). Non-zero exit on any HTTP error.
+# Calls one cron route on the app. Non-zero exit on any HTTP error.
 set -u
 route="$1"
 if body="$(wget -q -T 60 -O - --post-data "" \

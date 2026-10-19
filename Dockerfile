@@ -36,7 +36,7 @@ COPY . .
 RUN npx prisma generate || true
 RUN npm run build
 
-# Prisma CLI for `migrate deploy` at boot (spec §4), with its own pinned lockfile.
+# Prisma CLI for `migrate deploy` at boot, with its own pinned lockfile.
 FROM base AS migrator
 WORKDIR /opt/migrate
 COPY docker/migrate/package.json docker/migrate/package-lock.json ./

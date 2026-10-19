@@ -139,7 +139,7 @@ export function currentUtcYear(now: Date = new Date()): number {
 }
 
 // True while `now` falls inside the period: its comparison with the full previous
-// period is then partial (spec §7).
+// period is then partial.
 export function periodInProgress(p: Period, now: Date = new Date()): boolean {
   return p.from.getTime() <= now.getTime() && now.getTime() <= p.to.getTime();
 }

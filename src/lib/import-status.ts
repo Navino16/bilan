@@ -11,7 +11,7 @@ export type TrimmedMetadata = {
 };
 
 // Once committed, the raw payload (CSV text / parsed PDF rows) is plaintext bank
-// data with no further use: only what the history needs is kept (spec §4).
+// data with no further use: only what the history needs is kept (spec §4.7).
 export function trimBatchMetadata(meta: unknown, accountIds: string[]): TrimmedMetadata {
   const m = meta as { fileSizeBytes?: number; bank?: string | null } | null;
   return {

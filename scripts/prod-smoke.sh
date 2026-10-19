@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# End-to-end check of the prod image and compose (spec §9). Runs from a temp directory
+# End-to-end check of the prod image and compose. Runs from a temp directory
 # holding only the runtime files (no checkout needed), with its own project and port.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
