@@ -1064,7 +1064,7 @@ Encrypted columns:
 - `SmtpConfig.passwordEnc`;
 - `AuthProvider.clientSecretEnc` (SSO client secrets).
 
-Not app-encrypted (MariaDB's at-rest encryption still covers them, §6.14): amounts, dates, account/category/budget names. An import's parsed rows (CSV text, PDF products) sit in clear in `ImportBatch.metadata` until the commit or revert drops them; uncommitted batches are purged after 24 h by the `purge-imports` cron. Better Auth encrypts the TOTP secret itself, with `AUTH_SECRET`. 2FA backup codes are stored as plain JSON in `twoFactor.backupCodes` (the plugin's default, `storeBackupCodes` is not set).
+Not app-encrypted (MariaDB's at-rest encryption still covers them, §6.14): amounts, dates, account/category/budget names. An import's parsed rows (CSV text, PDF products) sit in clear in `ImportBatch.metadata` until the commit or revert drops them; uncommitted batches are purged after 24 h by the `purge-imports` cron. Better Auth encrypts the TOTP secret and the backup codes itself, with `AUTH_SECRET` (the `twoFactor` plugin defaults `storeBackupCodes` to `encrypted`).
 
 Key rotation (post-MVP, not implemented): CLI script reads all rows, decrypts with old key, re-encrypts with new key, updates with new version prefix.
 
