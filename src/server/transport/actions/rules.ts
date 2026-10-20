@@ -127,15 +127,17 @@ export async function applyRuleAction(
   }
 }
 
-const validRuleIds = (ids: string[]) => ids.length > 0 && ids.length <= RULES_FILE_MAX_RULES;
+const ruleIdsSchema = z.array(z.string().min(1)).min(1).max(RULES_FILE_MAX_RULES);
+const groupIdSchema = z.string().min(1).nullable();
 
 export async function previewRulesApplicationAction(
   ruleIds: string[],
 ): Promise<{ ok: true; preview: RuleApplicationPreview } | { ok: false; error: string }> {
   const user = await requireSession();
-  if (!validRuleIds(ruleIds)) return { ok: false, error: "INVALID" };
+  const ids = ruleIdsSchema.safeParse(ruleIds);
+  if (!ids.success) return { ok: false, error: "INVALID" };
   try {
-    return { ok: true, preview: await previewRulesApplication(ruleIds, { id: user.id }) };
+    return { ok: true, preview: await previewRulesApplication(ids.data, { id: user.id }) };
   } catch (e) {
     return { ok: false, error: ruleError(e) };
   }
@@ -145,9 +147,10 @@ export async function applyRulesAction(
   ruleIds: string[],
 ): Promise<{ ok: true; reclassified: number } | { ok: false; error: string }> {
   const user = await requireSession();
-  if (!validRuleIds(ruleIds)) return { ok: false, error: "INVALID" };
+  const ids = ruleIdsSchema.safeParse(ruleIds);
+  if (!ids.success) return { ok: false, error: "INVALID" };
   try {
-    return { ok: true, ...(await applyRules(ruleIds, { id: user.id })) };
+    return { ok: true, ...(await applyRules(ids.data, { id: user.id })) };
   } catch (e) {
     return { ok: false, error: ruleError(e) };
   }
@@ -177,8 +180,13 @@ export async function previewRulesImportAction(
   const user = await requireSession();
   const error = rulesFileError(text);
   if (error) return { ok: false, error };
+  const target = groupIdSchema.safeParse(groupId);
+  if (!target.success) return { ok: false, error: "INVALID" };
   try {
-    return { ok: true, preview: await previewRulesImport(text, { groupId }, { id: user.id }) };
+    return {
+      ok: true,
+      preview: await previewRulesImport(text, { groupId: target.data }, { id: user.id }),
+    };
   } catch (e) {
     return { ok: false, error: ruleError(e) };
   }
@@ -192,12 +200,13 @@ export async function importRulesAction(
   const user = await requireSession();
   const error = rulesFileError(text);
   if (error) return { ok: false, error };
+  const target = groupIdSchema.safeParse(groupId);
   const parsed = importDecisionsSchema.safeParse(decisions);
-  if (!parsed.success) return { ok: false, error: "INVALID" };
+  if (!target.success || !parsed.success) return { ok: false, error: "INVALID" };
   try {
     return {
       ok: true,
-      ...(await commitRulesImport(text, { groupId }, parsed.data, { id: user.id })),
+      ...(await commitRulesImport(text, { groupId: target.data }, parsed.data, { id: user.id })),
     };
   } catch (e) {
     return { ok: false, error: ruleError(e) };

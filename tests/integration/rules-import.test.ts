@@ -496,6 +496,23 @@ describe("rules import", () => {
     expect(done).toMatchObject({ ok: true, movedRuleIds: [], summary: { created: 1 } });
   });
 
+  it("the actions reject an empty or malformed groupId", async () => {
+    const text = fileOf([fileRule("bakery", [{ name: "Bread" }])]);
+    const decisions = { categories: {}, moves: [] };
+    for (const bad of ["", 42, undefined]) {
+      const groupId = bad as unknown as string | null;
+      expect(await previewRulesImportAction(text, groupId)).toEqual({
+        ok: false,
+        error: "INVALID",
+      });
+      expect(await importRulesAction(text, groupId, decisions)).toEqual({
+        ok: false,
+        error: "INVALID",
+      });
+    }
+    expect(await counts()).toEqual({ categories: 0, rules: 0 });
+  });
+
   it("logs rule.imported", async () => {
     const text = fileOf([fileRule("bakery", [{ name: "Bread" }])]);
     const { decisions } = await createAll(text, { groupId }, actor);

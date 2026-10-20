@@ -410,6 +410,15 @@ describe("rule application actions", () => {
     expect(await previewRulesApplicationAction([])).toEqual({ ok: false, error: "INVALID" });
   });
 
+  it("applyRulesAction and previewRulesApplicationAction reject malformed rule ids", async () => {
+    session.user = { id: actor };
+    for (const bad of ["rule-id", null, [""], [42], { 0: "rule-id" }]) {
+      const ruleIds = bad as unknown as string[];
+      expect(await applyRulesAction(ruleIds)).toEqual({ ok: false, error: "INVALID" });
+      expect(await previewRulesApplicationAction(ruleIds)).toEqual({ ok: false, error: "INVALID" });
+    }
+  });
+
   it("applyRulesAction applies a set of rules", async () => {
     session.user = { id: actor };
     const l = label("BACTION");
