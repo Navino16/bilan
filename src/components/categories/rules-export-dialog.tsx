@@ -72,7 +72,10 @@ function RulesExportForm({ groups, onClose }: { groups: ScopeGroup[]; onClose: (
           <NativeSelect
             id="rules-export-scope"
             value={groupId}
-            onChange={(e) => setGroupId(e.target.value)}
+            onChange={(e) => {
+              setGroupId(e.target.value);
+              setFailed(false);
+            }}
           >
             <option value="">{t("personal")}</option>
             {groups.map((g) => (

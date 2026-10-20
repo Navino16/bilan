@@ -56,6 +56,18 @@ test.describe("rules import and export (#291)", () => {
     await expect(row).toHaveCount(0);
   }
 
+  test("a failed export alert clears when the scope changes", async ({ page }) => {
+    await page.route("**/api/export/rules**", (route) => route.fulfill({ status: 500 }));
+    await openRules(page);
+    await page.getByRole("button", { name: "Exporter", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Télécharger" }).click();
+    const alert = dialog.getByRole("alert");
+    await expect(alert).toBeVisible();
+    await dialog.locator("#rules-export-scope").selectOption({ label: "E2E Shared" });
+    await expect(alert).toBeHidden();
+  });
+
   test("export then import rules with a Create, a Map and a conflict, then reclassify", async ({
     page,
   }) => {
