@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import ts from "typescript";
 import { AUDIT_ENTITIES, AUDIT_FAMILIES, SETTING_LABELS, auditActionMessage } from "@/lib/audit";
 import fr from "../../../messages/fr.json";
 import en from "../../../messages/en.json";
@@ -19,11 +20,34 @@ function lookup(messages: unknown, key: string): unknown {
   }, messages);
 }
 
-const sources = sourceFiles(join(__dirname, "../../../src")).map((f) => readFileSync(f, "utf8"));
-// Audit codes are always "<family>.<event>": the dot keeps other `action:` literals out (#291).
-const loggedActions = new Set(
-  sources.flatMap((s) => [...s.matchAll(/action: "([a-z0-9_]+\.[a-z0-9_.]+)"/g)].map((m) => m[1])),
-);
+const files = sourceFiles(join(__dirname, "../../../src"));
+const sources = files.map((f) => readFileSync(f, "utf8"));
+
+// String values of `action:` in object literals (type members excluded), conditional branches
+// included: audit events are built as such objects, before or inside logEvent(...).
+function actionLiterals(file: string, text: string): string[] {
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest);
+  const found: string[] = [];
+  const collect = (e: ts.Expression): void => {
+    if (ts.isStringLiteralLike(e)) found.push(e.text);
+    else if (ts.isConditionalExpression(e)) [e.whenTrue, e.whenFalse].forEach(collect);
+    else if (ts.isParenthesizedExpression(e)) collect(e.expression);
+  };
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isPropertyAssignment(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === "action"
+    ) {
+      collect(node.initializer);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return found;
+}
+
+const loggedActions = new Set(files.flatMap((f, i) => actionLiterals(f, sources[i])));
 const loggedEntities = new Set(
   sources.flatMap((s) => [...s.matchAll(/entity: "([A-Za-z]+)"/g)].map((m) => m[1])),
 );
@@ -54,7 +78,9 @@ describe.each([
 ])("audit labels (%s)", (_locale, messages) => {
   it("label every action code the app logs", () => {
     expect(loggedActions.size).toBeGreaterThan(30);
+    expect(loggedActions).toContain("auth.register.success");
     for (const code of loggedActions) {
+      expect(code).toMatch(/^[a-z0-9_]+(\.[a-zA-Z0-9_]+)+$/);
       const { key } = auditActionMessage(code);
       expect(typeof lookup(messages, `admin.audit.actions.${key}`), code).toBe("string");
     }
