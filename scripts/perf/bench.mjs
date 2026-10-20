@@ -213,8 +213,10 @@ class Build {
     throw new Error(`Server on ${this.port} did not start: see server-${this.port}.log`);
   }
 
+  // The data export needs a sign-in under 10 minutes old (#257); sign-in allows 5 per 15 minutes.
   async login(profile) {
-    if (this.cookies.has(profile)) return this.cookies.get(profile);
+    const cached = this.cookies.get(profile);
+    if (cached && Date.now() - cached.at < 4 * 60_000) return cached.cookie;
     const res = await fetch(`${this.base}/api/auth/sign-in/email`, {
       method: "POST",
       headers: { "content-type": "application/json", origin: this.origin },
@@ -225,7 +227,7 @@ class Build {
       .getSetCookie()
       .map((c) => c.split(";")[0])
       .join("; ");
-    this.cookies.set(profile, cookie);
+    this.cookies.set(profile, { cookie, at: Date.now() });
     return cookie;
   }
 
@@ -427,6 +429,7 @@ for (const profile of opts.profile) {
 
   for (const scenario of selected) {
     try {
+      for (const ctx of ctxs) ctx.cookie = await ctx.build.login(profile);
       if (scenario.kind === "flow") {
         const workers = await Promise.all(builds.map((b) => b.flows()));
         if (workers.some((w) => !w?.flows.has(scenario.name))) {
