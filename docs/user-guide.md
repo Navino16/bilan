@@ -301,6 +301,25 @@ Click **Reclassify** to apply the rule, or **Later** to leave the transactions a
 
 Only transactions on accounts you can edit are reclassified. Rules never override a category you chose yourself.
 
+### Import and export rules
+
+On the **Rules** tab, **Export** saves your rules to a `bilan-rules-YYYY-MM-DD.json` file and **Import** reads one back. Use them to back up your rules, to move them to another Bilan instance or to share them with a household.
+
+**Export.** If you belong to a household, choose **Rules to export**: **Personal rules** or a household, then click **Download**. The file contains the patterns, match types, priorities and category names, never your transactions.
+
+**Import.**
+
+1. Click **Import**, choose the file and, if you manage a household, **Import into**: **Personal rules** or the household. Click **Continue**. Nothing is saved yet.
+2. In **Categories to resolve**, each category of the file that doesn't exist yet in the destination offers three choices: **Create** it (with its parent categories), **Map to** one of your existing categories, or **Ignore** its rules. A category that already exists, even under another parent, is found by its name and needs no choice.
+3. In **Conflicts**, a rule that already exists with another category shows the change. Choose **Keep** the current category or **Move** the rule to the one in the file. Rules that already exist with the same category are skipped.
+4. Check the counts of rules to create, to move and skipped, then click **Import**. Invalid rules in the file are listed and skipped; the others are still imported.
+
+![Reviewing a rules import](images/en/rules-import.png)
+
+Imported categories and rules are always created in the destination you chose. When it is done, click **Reclassify existing transactions** to [apply the imported rules](#apply-a-rule-to-existing-transactions) to transactions already in Bilan, or **Close** to leave them as they are.
+
+Importing into a household requires being an administrator or owner of it.
+
 ### Learn from your choices
 
 When you change a transaction's category, Bilan offers to **Create a rule for similar transactions?**. It suggests a pattern taken from the bank label, which you can edit along with the match type. Click **Create rule** to save a personal rule, or **No thanks**. If other transactions match, you can then [apply the rule to them](#apply-a-rule-to-existing-transactions).

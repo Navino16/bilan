@@ -588,6 +588,32 @@ model CategorizationRule {
 }
 ```
 
+#### Rules file (#291)
+
+Rules are exported to and imported from a JSON file, `bilan-rules-YYYY-MM-DD.json`. It carries no id, hit counter, owner, group or timestamp, so it moves between instances and scopes:
+
+```json
+{
+  "format": "bilan-rules",
+  "version": 1,
+  "exportedAt": "2026-10-20T08:00:00.000Z",
+  "rules": [
+    {
+      "pattern": "NETFLIX",
+      "matchType": "CONTAINS",
+      "caseSensitive": false,
+      "priority": 100,
+      "enabled": true,
+      "category": [{ "name": "Leisure" }, { "name": "Streaming", "color": "var(--cat-groceries)" }]
+    }
+  ]
+}
+```
+
+- `category` is the category's path, root first, each level with `name` and an optional `color` and `icon`. A category is matched by name, folded with `normalizeText` (case, accents, whitespace).
+- Limits (`src/lib/validation/rules-file.ts`): 512 KiB (under the 1 MB server-action body limit), 2000 rules, 10 levels of category depth. An unreadable file, an unknown `format` or `version` or more than 2000 rules is refused as a whole (`BAD_FILE`, `TOO_MANY`); a file over 512 KiB is refused by the dialog before it is sent. A single invalid rule (schema, depth, regex RE2 can't compile) is rejected on its own and reported in the review.
+- Scope and privacy: an export covers one scope, the user's personal rules or a household the user belongs to. When a household rule points to a category outside the exporter's tree (another member's personal one), the file only discloses its name and color, as a single-level path. An import only creates categories and rules in its target scope, personal or a household where the user is ADMIN+.
+
 ### 4.5 Group E — Transactions, Search Tokens, Merchant Aliases, Links
 
 ```prisma
@@ -956,6 +982,15 @@ Applying a rule to existing transactions (#287), offered after a create or edit 
 2. `applyRule(ruleId, actor)`: recomputes, then sets the category of the moving rows in one DB transaction, guarded by `manuallyCategorized = false` so a row made manual in between stays. Credits `hits`, then audits `rule.applied` (`{ reclassified }`) when at least one row moved. The dialog shows the actual count when it differs from the preview, and can't be closed while applying.
 3. Manual rows are never written; rows a stronger rule wins are left as they are.
 
+Applying several rules at once (#291) reuses the same planner: `previewRulesApplication(ruleIds, actor)` and `applyRules(ruleIds, actor)` run `planRulesApplication` over the same pages with every given rule, each of which the actor must manage. The single-rule dialog and the batch step after an import share one `ApplyStep` component.
+
+Rules import and export (#291), from the Rules tab:
+1. Export: `GET /api/export/rules?groupId=` (`exportRules`) returns the file described in §4.4 for the personal scope, or for a household the actor belongs to (`rule.exported`, with the rule count). With no household the tab shows a plain download button; with households a dialog first asks for the scope.
+2. Preview: `previewRulesImport(text, target, actor)` parses the file (`parseRulesFile`) and resolves each distinct category path (`resolveCategoryPaths`, pure, in `src/lib/rules-import.ts`). A path resolves to a category anchored at the root of the target scope first, then to the single category among everything the actor can assign whose names end with the path (several candidates stay unresolved). An unresolved path lists the levels that are missing under the deepest existing ancestor. Nothing is written. A target household needs ADMIN+.
+3. Decisions: the user picks Create, Map to an existing category or Ignore for each unresolved path, and Keep or Move for each conflict, a rule that already exists in the target scope (same pattern, match type and case sensitivity) with another category. An identical rule, a duplicate in the file and a rule under an ignored path are skipped. `planRulesImport` is pure and also runs in the browser, so the summary counts update live; the import stays disabled while a Map row has no category.
+4. Commit: `commitRulesImport(text, target, decisions, actor)` re-parses the file and recomputes the resolution and the plan inside one `db.$transaction`, so a stale review cannot write. It refuses decisions that don't match the plan (`INVALID_DECISION`: an undecided path, a Map to a category the actor can't assign, a Move on a rule that is not a conflict). Missing category levels are created once, under the target scope, then the rules are created and the moved rules re-pointed. Audited as `rule.imported` with the summary counts.
+5. Reclassify: the result step lists the created and moved rules and offers "Reclassify existing transactions", which opens the batch apply step above for those rule ids.
+
 ### 5.7 Budget creation & calculation
 
 Creation (form dialog on `/budgets`):
@@ -1164,7 +1199,7 @@ Over the limit: the Better Auth sign-in and 2FA endpoints answer HTTP 429 + `Ret
 - Groups: `group.created/updated/deleted`, `group.member.removed`, `group.member.role_changed`, `group.invitation.create/resend/accept/decline/revoke`.
 - Transactions & links: `transaction.created/updated/deleted/recategorized`, `link.created/deleted`, `link.suggestionIgnored/suggestionRestored`.
 - Imports: `import.created/committed/discarded/reverted`, `import.purged` (cron).
-- Categories & rules: `category.created/updated/deleted`, `rule.created/updated/deleted/enabled/disabled/applied`.
+- Categories & rules: `category.created/updated/deleted`, `rule.created/updated/deleted/enabled/disabled/applied/exported/imported`.
 - Budgets: `budget.created/updated/archived/unarchived/deleted`, `budget.assignment.create/delete`.
 - Settings: `settings.<key>.update` (app settings, e.g. `settings.registration_mode.update`), `settings.smtp.update/delete/test`, `settings.auth_provider.create/update/delete`.
 - Admin signup tokens: `signup_token.created/revoked/deleted`.
