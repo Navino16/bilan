@@ -46,6 +46,7 @@ already exists; `npm run db:seed-dev -- --reset` wipes and re-seeds it.
 | `npm run db:backup-dev`              | Encrypted dump of the dev DB                |
 | `npm run icons`                      | Regenerate the favicon, PWA icons and logo  |
 | `npm run docs:db` / `docs:screenshots` | Regenerate the documentation screenshots  |
+| `npm run perf:db` / `perf:build` / `perf:bench` | Performance benchmark (below) |
 | `bash scripts/prod-smoke.sh`         | Boot and check the prod compose             |
 
 `npm run db:reindex-search` decrypts every transaction label and rewrites its search tokens
@@ -91,6 +92,61 @@ It needs a `.env` (`npm run setup`) and the test database (`docker compose up -d
 
 3. `DOCS_BASE_URL=http://localhost:3301 npm run docs:screenshots` captures every page in
    English and French (`scripts/docs-screenshots.ts`).
+
+## Performance benchmark
+
+`scripts/perf/` measures pages, API routes and server-action flows on a synthetic data set,
+against production builds. It is not part of `npm run ci`: run it by hand to measure a
+performance change or check a release. Builds, secrets and results live outside the repo, in
+`~/.cache/bilan-perf` (`BILAN_PERF_DIR` to change).
+
+1. `npm run perf:db` rebuilds the `budget_perf` database on the `mariadb-test` container
+   (`-- realistic` or `-- stress` for one profile only). Both profiles share it, as users of
+   one instance would:
+
+   | Profile     | History   | Transactions | Search tokens | Rules |
+   | ----------- | --------- | ------------ | ------------- | ----- |
+   | `realistic` | 72 months | ~29k         | ~410k         | 300   |
+   | `stress`    | 72 months | ~150k        | ~2.2M         | 1 000 |
+
+   Each user has 5 accounts (one shared with a household), about 80 categories, 20 budgets
+   and transfer links. The same profile always yields the same rows, ending at the current
+   month. The labels are encrypted with keys generated once into `~/.cache/bilan-perf/perf.env`:
+   delete that file and you must rebuild the database.
+
+2. `npm run perf:build -- <ref>` makes a production build of a commit (`.` for the working
+   tree, uncommitted changes included) and prints its directory. A commit already built is
+   reused.
+
+3. `npm run perf:bench -- [options] <build> [<build>]` serves each build on its own port
+   (3410, 3411), signs in through the real auth flow, then times every scenario: warm-up runs
+   first, then the measured runs.
+
+   ```bash
+   A=$(npm run -s perf:build -- develop | tail -1)
+   B=$(npm run -s perf:build -- . | tail -1)
+   npm run perf:bench -- --issue 297 --profile stress "$A" "$B"
+   ```
+
+   | Option                         | Default     |                                       |
+   | ------------------------------ | ----------- | ------------------------------------- |
+   | `--profile realistic\|stress`  | `realistic` | Repeat it to run both                 |
+   | `--runs N` / `--warmup N`      | 10 / 2      | Measured and discarded runs           |
+   | `--only <regex>`               |             | Scenario names                        |
+   | `--issue <n>`                  |             | Scenarios tied to an issue            |
+   | `--label <name>`               |             | Suffix of the results file            |
+
+   With two builds, the runs alternate between them (A/B), so machine noise hits both alike.
+   Each scenario prints p50/p95 (and the spread `cv` with one build), the SQL queries of one
+   request (the server's `Questions` counter), the worst event-loop stall and, for pages, the
+   HTML, RSC and JavaScript bytes. The raw samples go to `~/.cache/bilan-perf/results/`.
+   Server-action flows (reclassify, rules import, link suggestions) run through
+   `scripts/perf/flows.ts` of each build, so they are skipped on builds that predate it.
+
+Measure on a quiet machine: nothing else on `mariadb-test` (tests, e2e), one benchmark at a
+time. `budget_perf` sits on the container's tmpfs: about 1.2 GB of RAM with both profiles
+(`perf:db` takes about 6 minutes). A server grows to about 1.3 GB on `realistic` and 1.7 GB
+on `stress`, so an A/B run needs 3 to 4 GB free on top of the database.
 
 ## Dependency updates
 
