@@ -45,6 +45,42 @@ test.describe("rules import and export (#291)", () => {
     return row;
   }
 
+  async function deleteTransactions(page: Page, pattern: string) {
+    await page.goto(`/fr/transactions?search=${pattern}`);
+    const rows = page.locator('[data-slot="transaction-row"]').filter({ hasText: pattern });
+    while (await rows.count()) {
+      const count = await rows.count();
+      await rows.first().click();
+      await page.getByRole("button", { name: /supprimer la transaction/i }).click();
+      await page
+        .locator('[data-slot="delete-transactions-dialog"]')
+        .getByRole("button", { name: /^supprimer$/i })
+        .click();
+      await expect(rows).toHaveCount(count - 1, { timeout: 15_000 });
+    }
+  }
+
+  // With a household, Export opens the scope dialog; without one it downloads directly.
+  async function downloadExport(page: Page) {
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Exporter", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    const viaDialog = await Promise.race([
+      download.then(() => false),
+      dialog.waitFor().then(
+        () => true,
+        () => false,
+      ),
+    ]);
+    if (viaDialog) await dialog.getByRole("button", { name: "Télécharger" }).click();
+    const file = await download;
+    if (viaDialog) {
+      await dialog.getByRole("button", { name: "Fermer", exact: true }).first().click();
+      await expect(dialog).toBeHidden();
+    }
+    return file;
+  }
+
   async function deleteRule(page: Page, pattern: string) {
     const row = ruleRow(page, pattern);
     if (!(await row.count())) return;
@@ -71,6 +107,7 @@ test.describe("rules import and export (#291)", () => {
   test("export then import rules with a Create, a Map and a conflict, then reclassify", async ({
     page,
   }) => {
+    test.slow();
     const stamp = Date.now();
     const [kept, conflict, mapped, created] = [
       `XKEEP${stamp}`,
@@ -80,6 +117,8 @@ test.describe("rules import and export (#291)", () => {
     ];
     const unknownPath = `Inconnue ${stamp}`;
     const newCategory = `Nouvelle ${stamp}`;
+    // A default category of the seeded e2e owner.
+    const mapCategory = "Voyages";
     const patterns = [kept, conflict, mapped, created];
 
     await openRules(page);
@@ -92,20 +131,13 @@ test.describe("rules import and export (#291)", () => {
       const mappedTx = await addTransaction(page, mapped, "2026-02-21");
 
       await openRules(page);
-      await page.getByRole("button", { name: "Exporter", exact: true }).click();
-      const exportDialog = page.getByRole("dialog");
-      const [download] = await Promise.all([
-        page.waitForEvent("download"),
-        exportDialog.getByRole("button", { name: "Télécharger" }).click(),
-      ]);
+      const download = await downloadExport(page);
       expect(download.suggestedFilename()).toMatch(/^bilan-rules-\d{4}-\d{2}-\d{2}\.json$/);
       const exported = JSON.parse(await readFile((await download.path())!, "utf8")) as {
         format: string;
         rules: FileRule[];
       };
       expect(exported.format).toBe("bilan-rules");
-      await exportDialog.getByRole("button", { name: "Fermer", exact: true }).first().click();
-      await expect(exportDialog).toBeHidden();
 
       const keptRule = exported.rules.find((r) => r.pattern === kept)!;
       const conflictRule = exported.rules.find((r) => r.pattern === conflict)!;
@@ -144,9 +176,7 @@ test.describe("rules import and export (#291)", () => {
       await expect(dialog.getByText(/Choisissez une catégorie/)).toBeVisible();
       await expect(importButton).toBeDisabled();
       await mapRow.locator('[data-slot="category-combobox"]').click();
-      const target = page.getByRole("menuitem").nth(2);
-      const mapCategory = (await target.innerText()).trim();
-      await target.click();
+      await page.getByRole("menuitem", { name: mapCategory, exact: true }).first().click();
       await expect(importButton).toBeEnabled();
 
       const conflictRow = dialog
@@ -192,6 +222,7 @@ test.describe("rules import and export (#291)", () => {
       await expect(mappedTx).toContainText(mapCategory, { timeout: 15_000 });
     } finally {
       await page.keyboard.press("Escape");
+      for (const pattern of [conflict, mapped]) await deleteTransactions(page, pattern);
       await openRules(page);
       for (const pattern of patterns) await deleteRule(page, pattern);
       await page.getByRole("button", { name: /^Catégories/ }).click();
