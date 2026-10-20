@@ -301,6 +301,25 @@ Cliquez sur **Reclasser** pour appliquer la règle, ou sur **Plus tard** pour la
 
 Seules les transactions des comptes que vous pouvez modifier sont reclassées. Les règles ne remplacent jamais une catégorie que vous avez choisie vous-même.
 
+### Importer et exporter des règles
+
+Dans l’onglet **Règles**, **Exporter** enregistre vos règles dans un fichier `bilan-rules-AAAA-MM-JJ.json` et **Importer** en relit un. Servez-vous-en pour sauvegarder vos règles, les transférer vers une autre instance de Bilan ou les partager avec un foyer.
+
+**Export.** Si vous appartenez à un foyer, choisissez les **Règles à exporter** : **Règles personnelles** ou un foyer, puis cliquez sur **Télécharger**. Le fichier contient les motifs, les types de correspondance, les priorités et les noms de catégories, jamais vos transactions.
+
+**Import.**
+
+1. Cliquez sur **Importer**, choisissez le fichier et, si vous gérez un foyer, **Importer dans** : **Règles personnelles** ou le foyer. Cliquez sur **Continuer**. Rien n’est encore enregistré.
+2. Dans **Catégories à résoudre**, chaque catégorie du fichier qui n’existe pas encore dans la destination propose trois choix : la **Créer** (c’est le choix par défaut ; seuls les niveaux manquants sont créés, les catégories parentes existantes sont réutilisées), l’**Associer à** l’une de vos catégories existantes, ou **Ignorer** ses règles. Bilan cherche d’abord le même chemin dans la destination (par exemple *Alimentation > Courses*), sans tenir compte des majuscules ni des accents : *epargne* correspond à *Épargne*. À défaut, il réutilise une catégorie dont le chemin se termine par celui du fichier, s’il n’y en a qu’une. Les autres sont créées, sauf si vous les associez ou les ignorez.
+3. Dans **Conflits**, une règle qui existe déjà avec une autre catégorie affiche le changement. Choisissez de **Laisser** la catégorie actuelle (par défaut) ou de **Déplacer** la règle vers celle du fichier ; un déplacement ne change que la catégorie, pas le motif, la priorité ni les autres réglages. Les règles qui existent déjà avec la même catégorie sont ignorées.
+4. Vérifiez les nombres de règles à créer, à déplacer et ignorées, puis cliquez sur **Importer**. Les règles invalides du fichier sont listées et ignorées ; les autres sont quand même importées. L’import lui-même est tout ou rien : s’il échoue, aucune règle ni catégorie n’est enregistrée.
+
+![Vérification d’un import de règles](images/fr/rules-import.png)
+
+Les catégories et les règles importées sont toujours créées dans la destination choisie. Une fois l’import terminé, cliquez sur **Reclasser les transactions existantes** pour [appliquer les règles importées](#appliquer-une-règle-aux-transactions-existantes) aux transactions déjà présentes dans Bilan, ou sur **Fermer** pour les laisser telles quelles. Les règles désactivées sont écartées : elles ne reclassent rien tant que vous ne les activez pas.
+
+Importer dans un foyer demande d’en être administrateur ou propriétaire.
+
 ### Apprendre de vos choix
 
 Quand vous changez la catégorie d’une transaction, Bilan propose **Créer une règle pour les transactions similaires ?**. Il suggère un motif tiré du libellé bancaire, modifiable, ainsi que le type de correspondance. Cliquez sur **Créer la règle** pour enregistrer une règle personnelle, ou sur **Non merci**. Si d’autres transactions correspondent, vous pouvez ensuite [leur appliquer la règle](#appliquer-une-règle-aux-transactions-existantes).

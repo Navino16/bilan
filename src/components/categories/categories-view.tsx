@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Plus } from "lucide-react";
+import { Download, Plus, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SegmentedTabs } from "@/components/transactions/bits";
 import { ScrollFade } from "@/components/ui/scroll-fade";
@@ -12,6 +12,9 @@ import { CategoryList } from "./category-list";
 import { categoryOptions } from "./category-options";
 import { RulesList, type RuleRow } from "./rules-list";
 import { RuleDialog } from "./rule-dialog";
+import { RULES_EXPORT_FILENAME, RulesExportDialog, rulesExportHref } from "./rules-export-dialog";
+import { RulesImportDialog } from "./rules-import-dialog";
+import { DownloadButton } from "@/components/settings/download-button";
 import { MerchantDirectory } from "@/components/merchants/merchant-directory";
 import type { MerchantDirectory as Directory } from "@/lib/insights";
 import type { CategoryNode } from "@/server/services/categories";
@@ -33,8 +36,12 @@ export function CategoriesView({
   const t = useTranslations("rules");
   const tc = useTranslations("categories");
   const tm = useTranslations("merchants");
+  const tt = useTranslations("rules.transfer");
   const [tab, setTab] = useState<"cats" | "rules" | "merchants">("cats");
   const [ruleOpen, setRuleOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportFailed, setExportFailed] = useState(false);
   const options = categoryOptions(tree);
 
   return (
@@ -56,10 +63,31 @@ export function CategoriesView({
               }
             />
           ) : tab === "rules" ? (
-            <Button onClick={() => setRuleOpen(true)}>
-              <Plus />
-              {t("new")}
-            </Button>
+            <>
+              <Button variant="outline" onClick={() => setImportOpen(true)}>
+                <Upload />
+                {tt("import")}
+              </Button>
+              {groups.length > 0 ? (
+                <Button variant="outline" onClick={() => setExportOpen(true)}>
+                  <Download />
+                  {tt("export")}
+                </Button>
+              ) : (
+                <DownloadButton
+                  href={rulesExportHref(null)}
+                  fallbackFilename={RULES_EXPORT_FILENAME}
+                  pendingLabel={tt("exporting")}
+                  onError={setExportFailed}
+                >
+                  {tt("export")}
+                </DownloadButton>
+              )}
+              <Button onClick={() => setRuleOpen(true)}>
+                <Plus />
+                {t("new")}
+              </Button>
+            </>
           ) : null
         }
       />
@@ -83,10 +111,21 @@ export function CategoriesView({
         </ScrollFade>
       </div>
 
+      {tab === "rules" && exportFailed && (
+        <p role="alert" className="text-destructive text-sm">
+          {tt("exportFailed")}
+        </p>
+      )}
+
       {tab === "cats" ? (
         <CategoryList tree={tree} groups={groups} />
       ) : tab === "rules" ? (
-        <RulesList rules={rules} categories={flatCategories} groups={groups} />
+        <RulesList
+          rules={rules}
+          categories={flatCategories}
+          groups={groups}
+          onImport={() => setImportOpen(true)}
+        />
       ) : (
         <MerchantDirectory directory={merchants} categories={flatCategories} />
       )}
@@ -98,6 +137,13 @@ export function CategoriesView({
         open={ruleOpen}
         onOpenChange={setRuleOpen}
       />
+      <RulesImportDialog
+        categories={flatCategories}
+        groups={groups}
+        open={importOpen}
+        onOpenChange={setImportOpen}
+      />
+      <RulesExportDialog groups={groups} open={exportOpen} onOpenChange={setExportOpen} />
     </div>
   );
 }

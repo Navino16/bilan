@@ -5,16 +5,25 @@ vi.mock("@/server/auth/permissions", () => ({
   requireSession: async () => session.user,
 }));
 import { db } from "@/server/db";
+import { LONG_TX_TIMEOUT } from "@/server/db/timeouts";
+import { RULES_FILE_MAX_RULES } from "@/lib/validation/rules-file";
 import { createAccount } from "@/server/services/accounts";
 import { shareAccountWithGroup } from "@/server/services/accounts/sharing";
 import { createGroup } from "@/server/services/groups";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
 import { createRule, RuleAccessError, RuleValidationError } from "@/server/services/categorization";
-import { applyRule, previewRuleApplication } from "@/server/services/categorization/apply";
+import {
+  applyRule,
+  applyRules,
+  previewRuleApplication,
+  previewRulesApplication,
+} from "@/server/services/categorization/apply";
 import {
   applyRuleAction,
+  applyRulesAction,
   createRuleAction,
   previewRuleApplicationAction,
+  previewRulesApplicationAction,
 } from "@/server/transport/actions/rules";
 
 const actor = "ra_actor";
@@ -214,6 +223,144 @@ describe("previewRuleApplication / applyRule", () => {
   });
 });
 
+describe("previewRulesApplication / applyRules", () => {
+  it("applyRules reclassifies with each rule's category and skips manual rows", async () => {
+    const l = label("BATCH");
+    const [a, b, manual] = await Promise.all([
+      tx(acc.own, `${l}A`),
+      tx(acc.write, `${l}B`),
+      tx(acc.own, `${l}A`, shops, true),
+    ]);
+    const ra = await rule(`${l}A`, food);
+    const rb = await rule(`${l}B`, shops);
+
+    const preview = await previewRulesApplication([ra.id, rb.id], { id: actor });
+    expect(preview).toMatchObject({ matched: 3, moving: 2, manual: 1 });
+    expect(await applyRules([ra.id, rb.id], { id: actor })).toEqual({ reclassified: 2 });
+
+    expect(await categoryOf(a)).toBe(food);
+    expect(await categoryOf(b)).toBe(shops);
+    expect(await categoryOf(manual)).toBe(shops);
+    for (const id of [ra.id, rb.id]) {
+      expect((await db.categorizationRule.findUniqueOrThrow({ where: { id } })).hits).toBe(1);
+      const events = await db.auditLog.findMany({
+        where: { action: "rule.applied", entityId: id },
+      });
+      expect(events.map((e) => e.metadata)).toEqual([{ reclassified: 1 }]);
+    }
+  });
+
+  it("applyRules attributes each moved row to its rule when rules share a category", async () => {
+    const l = label("SHARED");
+    const [a1, a2, b1, b2] = await Promise.all([
+      tx(acc.own, `${l}A1`),
+      tx(acc.own, `${l}A2`),
+      tx(acc.own, `${l}B1`),
+      tx(acc.write, `${l}B2`),
+    ]);
+    const ra = await rule(`${l}A`, food);
+    const rb = await rule(`${l}B`, food);
+    // A row made manual between the plan and the write must stay, and not count for its rule.
+    const original = db.$transaction.bind(db) as (...args: unknown[]) => Promise<unknown>;
+    const spy = vi.spyOn(db, "$transaction").mockImplementationOnce(async (...args: unknown[]) => {
+      await db.transaction.update({ where: { id: b2 }, data: { manuallyCategorized: true } });
+      return original(...args);
+    });
+    try {
+      expect(await applyRules([ra.id, rb.id], { id: actor })).toEqual({ reclassified: 3 });
+      expect(spy).toHaveBeenCalledWith(expect.any(Function), LONG_TX_TIMEOUT);
+    } finally {
+      spy.mockRestore();
+    }
+
+    for (const row of [a1, a2, b1]) expect(await categoryOf(row)).toBe(food);
+    expect(await categoryOf(b2)).toBeNull();
+    for (const [id, count] of [
+      [ra.id, 2],
+      [rb.id, 1],
+    ] as const) {
+      expect((await db.categorizationRule.findUniqueOrThrow({ where: { id } })).hits).toBe(count);
+      const events = await db.auditLog.findMany({
+        where: { action: "rule.applied", entityId: id },
+      });
+      expect(events.map((e) => e.metadata)).toEqual([{ reclassified: count }]);
+    }
+  });
+
+  it("applyRules drops disabled rules", async () => {
+    const l = label("BATCHOFF");
+    const on = await tx(acc.own, `${l}ON`);
+    const off = await tx(acc.own, `${l}OFF`);
+    const ron = await rule(`${l}ON`, food);
+    const roff = await rule(`${l}OFF`, shops);
+    await db.categorizationRule.update({ where: { id: roff.id }, data: { enabled: false } });
+
+    expect(await applyRules([ron.id, roff.id], { id: actor })).toEqual({ reclassified: 1 });
+    expect(await categoryOf(on)).toBe(food);
+    expect(await categoryOf(off)).toBeNull();
+    expect(await applyRules([roff.id], { id: actor })).toEqual({ reclassified: 0 });
+  });
+
+  it("applyRules lets a household ADMIN apply a household rule", async () => {
+    const groupFood = (await db.category.create({ data: { name: "Group food", groupId } })).id;
+    const l = label("BGROUPADMIN");
+    const row = await tx(acc.write, l);
+    const { id } = await rule(l, groupFood, 100, { groupId });
+    const where = { groupId_userId: { groupId, userId: other } };
+    await db.groupMember.update({ where, data: { role: "ADMIN" } });
+    try {
+      expect(await applyRules([id], { id: other })).toEqual({ reclassified: 1 });
+      expect(await categoryOf(row)).toBe(groupFood);
+    } finally {
+      await db.groupMember.update({ where, data: { role: "MEMBER" } });
+      await db.transaction.delete({ where: { id: row } });
+      await db.categorizationRule.delete({ where: { id } });
+      await db.category.delete({ where: { id: groupFood } });
+    }
+  });
+
+  it("applyRules refuses a household rule for a plain member", async () => {
+    const groupFood = (await db.category.create({ data: { name: "Group food", groupId } })).id;
+    const { id } = await rule(label("BGROUP"), groupFood, 100, { groupId });
+    await expect(applyRules([id], { id: other })).rejects.toEqual(new RuleAccessError("FORBIDDEN"));
+    await expect(applyRules([id, "missing-rule"], { id: actor })).rejects.toEqual(
+      new RuleAccessError("NOT_FOUND"),
+    );
+    await db.categorizationRule.delete({ where: { id } });
+    await db.category.delete({ where: { id: groupFood } });
+  });
+
+  it("previewRulesApplication counts equal the sum of applying the rules one by one in priority order", async () => {
+    const l = label("EQ");
+    const makeRows = () =>
+      Promise.all([
+        tx(acc.own, `${l}A1`),
+        tx(acc.own, `${l}AB1`, food),
+        tx(acc.write, `${l}Z`),
+        tx(acc.own, `${l}Z`, food),
+        tx(acc.own, `${l}A2`, shops, true),
+      ]);
+    const r1 = await rule(`${l}A`, food);
+    const r2 = await rule(l, shops, 50);
+    const r3 = await rule(`${l}AB`, shops);
+    const ordered = [r3, r1, r2].map((r) => r.id);
+
+    const batchRows = await makeRows();
+    const preview = await previewRulesApplication(ordered, { id: actor });
+    const batch = await applyRules(ordered, { id: actor });
+    expect(preview.moving).toBe(batch.reclassified);
+    const batchState = await Promise.all(batchRows.map(categoryOf));
+
+    const seqRows = await makeRows();
+    let sequential = 0;
+    for (const id of ordered) sequential += (await applyRule(id, { id: actor })).reclassified;
+
+    expect(batch.reclassified).toBeGreaterThan(0);
+    expect(sequential).toBe(batch.reclassified);
+    expect(await Promise.all(seqRows.map(categoryOf))).toEqual(batchState);
+  });
+});
+
 describe("applyRule category check", () => {
   it("refuses a rule whose category the actor can no longer use", async () => {
     const otherGroup = (await createGroup({ name: "ra_group" }, other)).id;
@@ -256,6 +403,40 @@ describe("rule application actions", () => {
     expect(await applyRuleAction(id)).toEqual({ ok: false, error: "FORBIDDEN" });
     expect(await previewRuleApplicationAction(id)).toEqual({ ok: false, error: "FORBIDDEN" });
     session.user = { id: actor };
+  });
+
+  it("applyRulesAction and previewRulesApplicationAction reject an empty list", async () => {
+    session.user = { id: actor };
+    expect(await applyRulesAction([])).toEqual({ ok: false, error: "INVALID" });
+    expect(await previewRulesApplicationAction([])).toEqual({ ok: false, error: "INVALID" });
+  });
+
+  it("applyRulesAction and previewRulesApplicationAction reject more ids than a rules file holds", async () => {
+    session.user = { id: actor };
+    const tooMany = Array.from({ length: RULES_FILE_MAX_RULES + 1 }, (_, i) => `rule-${i}`);
+    expect(await applyRulesAction(tooMany)).toEqual({ ok: false, error: "INVALID" });
+    expect(await previewRulesApplicationAction(tooMany)).toEqual({ ok: false, error: "INVALID" });
+  });
+
+  it("applyRulesAction and previewRulesApplicationAction reject malformed rule ids", async () => {
+    session.user = { id: actor };
+    for (const bad of ["rule-id", null, [""], [42], { 0: "rule-id" }]) {
+      const ruleIds = bad as unknown as string[];
+      expect(await applyRulesAction(ruleIds)).toEqual({ ok: false, error: "INVALID" });
+      expect(await previewRulesApplicationAction(ruleIds)).toEqual({ ok: false, error: "INVALID" });
+    }
+  });
+
+  it("applyRulesAction applies a set of rules", async () => {
+    session.user = { id: actor };
+    const l = label("BACTION");
+    await tx(acc.own, l);
+    const { id } = await rule(l, food);
+    expect(await previewRulesApplicationAction([id])).toMatchObject({
+      ok: true,
+      preview: { matched: 1, moving: 1 },
+    });
+    expect(await applyRulesAction([id])).toEqual({ ok: true, reclassified: 1 });
   });
 
   it("reports NOT_FOUND for an unknown rule", async () => {

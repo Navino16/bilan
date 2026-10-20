@@ -1,11 +1,19 @@
-import type { Prisma } from "@prisma/client";
+import type { CategorizationRule, Prisma } from "@prisma/client";
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
-import { requireGroupRole } from "@/server/services/groups/roles";
+import { requireGroupRole, type GroupRole } from "@/server/services/groups/roles";
 import { assertCategoryAssignable, CategoryAccessError } from "@/server/services/categories";
+import { canManageInGroup } from "@/lib/validation/group";
 import { ruleInputSchema, type RuleInput } from "@/lib/validation/rule";
 import { isValidRulePattern } from "./regex";
-import { compareRules, pickByPriority, type Rule } from "./match";
+import {
+  compareRules,
+  pickByPriority,
+  pickPrepared,
+  prepareLabel,
+  prepareRules,
+  type Rule,
+} from "./match";
 import type { RuleMatchType } from "@/lib/validation/rule";
 
 export class RuleAccessError extends Error {}
@@ -55,22 +63,21 @@ export async function loadRules(scope: Scope): Promise<Rule[]> {
   }));
 }
 
-function match(rules: Rule[], rawLabel: string): Suggestion {
-  const hit = pickByPriority(rules, rawLabel);
+function toSuggestion(hit: Rule | null): Suggestion {
   return hit ? { categoryId: hit.categoryId, ruleId: hit.id } : { categoryId: null, ruleId: null };
 }
 
 // Suggests a category for a label by matching the user's own + their groups'
 // enabled rules, highest priority first. Used by manual entry (3.4).
 export async function suggest(rawLabel: string, scope: Scope): Promise<Suggestion> {
-  return match(await loadRules(scope), rawLabel);
+  return toSuggestion(pickByPriority(await loadRules(scope), rawLabel));
 }
 
 // Batch variant: loads the rules ONCE then matches every label. Used by the
 // import preview and commit so N rows don't trigger N rule loads.
 export async function suggestMany(rawLabels: string[], scope: Scope): Promise<Suggestion[]> {
-  const rules = await loadRules(scope);
-  return rawLabels.map((label) => match(rules, label));
+  const prepared = prepareRules(await loadRules(scope));
+  return rawLabels.map((label) => toSuggestion(pickPrepared(prepared, prepareLabel(label))));
 }
 
 // Takes back hits credited by an import that is being reverted, never below zero.
@@ -170,6 +177,33 @@ export async function loadManageableRule(id: string, actorId: string) {
     throw new RuleAccessError("FORBIDDEN");
   }
   return rule;
+}
+
+// Batch variant of loadManageableRule: one rule query and one membership query, whatever the
+// number of rules. Any missing rule is NOT_FOUND, any rule the actor cannot manage is FORBIDDEN.
+export async function loadManageableRules(
+  ids: string[],
+  actorId: string,
+): Promise<CategorizationRule[]> {
+  const unique = [...new Set(ids)];
+  const rules = await db.categorizationRule.findMany({ where: { id: { in: unique } } });
+  if (rules.length !== unique.length) throw new RuleAccessError("NOT_FOUND");
+  const groupIds = [...new Set(rules.flatMap((r) => (r.groupId ? [r.groupId] : [])))];
+  const adminOf = new Set<string>();
+  if (groupIds.length > 0) {
+    const memberships = await db.groupMember.findMany({
+      where: { userId: actorId, groupId: { in: groupIds } },
+      select: { groupId: true, role: true },
+    });
+    for (const m of memberships) {
+      if (canManageInGroup(m.role as GroupRole)) adminOf.add(m.groupId);
+    }
+  }
+  for (const r of rules) {
+    const manageable = r.groupId ? adminOf.has(r.groupId) : r.userId === actorId;
+    if (!manageable) throw new RuleAccessError("FORBIDDEN");
+  }
+  return rules;
 }
 
 // Updates a rule's pattern/match/priority/category. Scope (user vs group) is

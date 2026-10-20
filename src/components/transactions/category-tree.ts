@@ -50,6 +50,23 @@ export function categoryIndex(flat: FlatCategory[]): Record<string, CategoryMeta
   return index;
 }
 
+export const PATH_SEPARATOR = " > ";
+
+// Root-first "A > B" for a category of a depth-first flattened list: its ancestors are the
+// nearest earlier entries one level up.
+export function categoryPathLabel(flat: FlatCategory[], id: string): string | null {
+  const index = flat.findIndex((c) => c.id === id);
+  if (index < 0) return null;
+  const names = [flat[index].name];
+  for (let i = index - 1, depth = flat[index].depth; i >= 0 && depth > 0; i--) {
+    if (flat[i].depth === depth - 1) {
+      names.unshift(flat[i].name);
+      depth--;
+    }
+  }
+  return names.join(PATH_SEPARATOR);
+}
+
 // Indents a name for a native <option>, where leading spaces would be collapsed.
 export function indentedName(name: string, depth: number): string {
   return `${"   ".repeat(depth)}${name}`;

@@ -86,6 +86,34 @@ function importCsv(): { name: string; mimeType: string; buffer: Buffer } {
   };
 }
 
+function rulesFile(): { name: string; mimeType: string; buffer: Buffer } {
+  const rule = (pattern: string, ...category: string[]) => ({
+    pattern,
+    matchType: "CONTAINS",
+    caseSensitive: false,
+    priority: 100,
+    enabled: true,
+    category: category.map((name) => ({ name })),
+  });
+  const file = {
+    format: "bilan-rules",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    rules: [
+      rule("CARREFOUR", "Alimentation", "Courses"),
+      rule("SNCF", "Transport", "Transports en commun"),
+      rule("PHARMACIE", "Santé", "Pharmacie"),
+      rule("VETERINAIRE", "Animaux", "Vétérinaire"),
+      rule("DECATHLON", "Loisirs", "Sport"),
+    ],
+  };
+  return {
+    name: "bilan-rules.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(file), "utf8"),
+  };
+}
+
 const SHOTS: Shot[] = [
   { name: "dashboard", path: "/dashboard", fullPage: true },
   { name: "insights", path: "/insights", fullPage: true },
@@ -132,6 +160,35 @@ const SHOTS: Shot[] = [
         page.getByRole("button", { name: /^(Rules|Règles)/ }),
         page.getByRole("button", { name: /^(New rule|Nouvelle règle)$/ }),
       ),
+  },
+  {
+    name: "rules-import",
+    path: "/categories",
+    prepare: async (page) => {
+      await clickUntilVisible(
+        page.getByRole("button", { name: /^(Rules|Règles)/ }),
+        page.getByRole("button", { name: /^(New rule|Nouvelle règle)$/ }),
+      );
+      await clickUntilVisible(
+        page.getByRole("button", { name: /^(Import|Importer)$/ }),
+        page.getByRole("dialog"),
+      );
+      const dialog = page.getByRole("dialog");
+      await dialog.locator("#rules-import-file").setInputFiles(rulesFile());
+      await dialog.getByRole("button", { name: /^(Continue|Continuer)$/ }).click();
+      const rows = dialog.locator('[data-slot="rules-import-category"]');
+      await rows.first().waitFor({ state: "visible", timeout: 15_000 });
+      const mapped = rows.filter({ hasText: /Vétérinaire/ });
+      await mapped.getByRole("button", { name: /^(Map to|Associer à)$/ }).click();
+      await mapped.locator('[data-slot="category-combobox"]').click();
+      await page.getByRole("menuitem", { name: /Divers/ }).click();
+      await dialog
+        .locator('[data-slot="rules-import-conflict"]')
+        .getByRole("button", { name: /^(Move|Déplacer)$/ })
+        .click();
+    },
+    // The review step wrote nothing: closing it leaves the data set untouched.
+    cleanup: (page) => page.keyboard.press("Escape"),
   },
   { name: "budgets", path: "/budgets" },
   {
