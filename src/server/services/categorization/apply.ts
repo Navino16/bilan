@@ -19,6 +19,7 @@ import {
   prepareApplication,
   type RuleApplicationPlan,
 } from "./apply-plan";
+import { mapInSlices } from "./cooperative";
 
 export type RuleApplicationPreview = Omit<RuleApplicationPlan, "moves"> & { moving: number };
 
@@ -56,7 +57,7 @@ async function planFor(manageable: CategorizationRule[], actor: { id: string }) 
       categoryId: t.categoryId,
       manual: t.manuallyCategorized,
     }));
-    plans.push(planPreparedApplication(prepared, rows));
+    plans.push(...(await mapInSlices(rows, (slice) => planPreparedApplication(prepared, slice))));
     if (page.length < PAGE) break;
     cursor = page[page.length - 1].id;
   }

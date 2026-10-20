@@ -6,6 +6,7 @@ import { assertCategoryAssignable, CategoryAccessError } from "@/server/services
 import { canManageInGroup } from "@/lib/validation/group";
 import { ruleInputSchema, type RuleInput } from "@/lib/validation/rule";
 import { isValidRulePattern } from "./regex";
+import { mapInSlices } from "./cooperative";
 import {
   compareRules,
   pickByPriority,
@@ -77,7 +78,10 @@ export async function suggest(rawLabel: string, scope: Scope): Promise<Suggestio
 // import preview and commit so N rows don't trigger N rule loads.
 export async function suggestMany(rawLabels: string[], scope: Scope): Promise<Suggestion[]> {
   const prepared = prepareRules(await loadRules(scope));
-  return rawLabels.map((label) => toSuggestion(pickPrepared(prepared, prepareLabel(label))));
+  const slices = await mapInSlices(rawLabels, (slice) =>
+    slice.map((label) => toSuggestion(pickPrepared(prepared, prepareLabel(label)))),
+  );
+  return slices.flat();
 }
 
 // Takes back hits credited by an import that is being reverted, never below zero.
