@@ -470,6 +470,7 @@
       "resultOverline": "Import complete",
       "resultTitle": "Rules imported",
       "resultCreated": "{count, plural, one {rule created} other {rules created}}",
+      "resultCategoriesCreated": "{count, plural, one {category created} other {categories created}}",
       "resultMoved": "{count, plural, one {existing rule moved} other {existing rules moved}}",
       "resultSkipped": "skipped (identical, duplicate, ignored or invalid)",
       "reclassify": "Reclassify existing transactions",

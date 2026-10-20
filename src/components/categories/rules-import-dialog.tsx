@@ -566,6 +566,11 @@ function ResultStep({
         <Block slot="rules-import-created" count={summary.created}>
           {t("resultCreated", { count: summary.created })}
         </Block>
+        {summary.categoriesCreated > 0 && (
+          <Block slot="rules-import-categories" count={summary.categoriesCreated}>
+            {t("resultCategoriesCreated", { count: summary.categoriesCreated })}
+          </Block>
+        )}
         {summary.moved > 0 && (
           <Block slot="rules-import-moved" count={summary.moved}>
             {t("resultMoved", { count: summary.moved })}

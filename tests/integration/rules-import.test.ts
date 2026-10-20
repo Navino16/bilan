@@ -120,6 +120,7 @@ describe("rules import", () => {
 
     expect(result.summary).toEqual({
       created: 3,
+      categoriesCreated: 4,
       moved: 0,
       identical: 0,
       duplicates: 0,
@@ -232,7 +233,8 @@ describe("rules import", () => {
       fileRule("cantine", [{ name: "enfants" }, { name: "Cantine" }]),
     ]);
     const { decisions } = await createAll(text, { groupId: null }, fresh);
-    await commitRulesImport(text, { groupId: null }, decisions, { id: fresh });
+    const first = await commitRulesImport(text, { groupId: null }, decisions, { id: fresh });
+    expect(first.summary.categoriesCreated).toBe(3);
 
     const roots = await db.category.findMany({ where: { userId: fresh, parentId: null } });
     expect(roots.map((c) => c.name)).toEqual(["Enfants"]);
@@ -502,9 +504,10 @@ describe("rules import", () => {
       where: { userId: actor, action: "rule.imported" },
     });
     expect(events).toHaveLength(1);
+    expect(summary.categoriesCreated).toBe(1);
     expect(events[0]).toMatchObject({
       entity: "CategorizationRule",
-      metadata: { ...summary, groupId },
+      metadata: { ...summary, categoriesCreated: 1, groupId },
     });
   });
 });

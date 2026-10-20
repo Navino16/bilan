@@ -153,6 +153,9 @@ test.describe("rules import and export (#291)", () => {
       await expect(dialog.locator('[data-slot="rules-import-created"]')).toContainText(
         /2\s*règles créées/,
       );
+      await expect(dialog.locator('[data-slot="rules-import-categories"]')).toContainText(
+        /1\s*catégorie créée/,
+      );
       await expect(dialog.locator('[data-slot="rules-import-moved"]')).toContainText(
         /1\s*règle existante déplacée/,
       );

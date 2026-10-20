@@ -31,6 +31,7 @@ export type RulesImportPreview = {
 
 export type RulesImportSummary = {
   created: number;
+  categoriesCreated: number;
   moved: number;
   identical: number;
   duplicates: number;
@@ -176,7 +177,7 @@ function categoryResolver(
   const byKey = new Map(resolutions.map((r) => [r.key, r]));
   const createdLevels = new Map<string, string>();
 
-  return async (pathKey: string): Promise<string> => {
+  const resolve = async (pathKey: string): Promise<string> => {
     const resolution = byKey.get(pathKey)!;
     if (resolution.categoryId) return resolution.categoryId;
     const decision = decisionOf(decisions, pathKey);
@@ -209,6 +210,7 @@ function categoryResolver(
     }
     return parentId!;
   };
+  return { resolve, createdCount: () => createdLevels.size };
 }
 
 export async function commitRulesImport(
@@ -228,7 +230,7 @@ export async function commitRulesImport(
     const plan = planRulesImport(rules, resolutions, existing, decisions);
     assertDecisions(plan, resolutions, categories, decisions);
 
-    const categoryOf = categoryResolver(tx, resolutions, decisions, owner);
+    const resolver = categoryResolver(tx, resolutions, decisions, owner);
     const createdRuleIds: string[] = [];
     // The file lists rules winner-first; the first one is created newest so ties keep their
     // order under the createdAt tie-break of compareRules (#291).
@@ -242,7 +244,7 @@ export async function commitRulesImport(
           caseSensitive: rule.caseSensitive,
           priority: rule.priority,
           enabled: rule.enabled,
-          categoryId: await categoryOf(rule.pathKey),
+          categoryId: await resolver.resolve(rule.pathKey),
           ...owner,
         },
         select: { id: true },
@@ -252,7 +254,7 @@ export async function commitRulesImport(
     for (const move of plan.move) {
       await tx.categorizationRule.update({
         where: { id: move.ruleId },
-        data: { categoryId: await categoryOf(move.pathKey) },
+        data: { categoryId: await resolver.resolve(move.pathKey) },
       });
     }
     return {
@@ -260,6 +262,7 @@ export async function commitRulesImport(
       movedRuleIds: plan.move.map((m) => m.ruleId),
       summary: {
         created: plan.create.length,
+        categoriesCreated: resolver.createdCount(),
         moved: plan.move.length,
         identical: plan.identical,
         duplicates: plan.duplicates,

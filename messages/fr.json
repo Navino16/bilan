@@ -470,6 +470,7 @@
       "resultOverline": "Import terminé",
       "resultTitle": "Règles importées",
       "resultCreated": "{count, plural, one {règle créée} other {règles créées}}",
+      "resultCategoriesCreated": "{count, plural, one {catégorie créée} other {catégories créées}}",
       "resultMoved": "{count, plural, one {règle existante déplacée} other {règles existantes déplacées}}",
       "resultSkipped": "{count, plural, one {ignorée} other {ignorées}} (identique, doublon, catégorie ignorée ou invalide)",
       "reclassify": "Reclasser les transactions existantes",
