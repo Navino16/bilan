@@ -22,7 +22,7 @@ export function shouldOfferApply(preview: RuleApplicationPreview): boolean {
   return preview.moving > 0 || preview.keptBy.length > 0;
 }
 
-function Block({
+export function Block({
   slot,
   count,
   tone = "default",

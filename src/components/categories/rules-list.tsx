@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { History, Pencil, Trash2 } from "lucide-react";
+import { History, Pencil, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CategoryChip, Pill, SegmentedTabs } from "@/components/transactions/bits";
 import type { FlatCategory } from "@/components/transactions/category-tree";
@@ -38,10 +38,12 @@ export function RulesList({
   rules,
   categories,
   groups,
+  onImport,
 }: {
   rules: RuleRow[];
   categories: FlatCategory[];
   groups: ScopeGroup[];
+  onImport: () => void;
 }) {
   const t = useTranslations("rules");
   const router = useRouter();
@@ -76,8 +78,12 @@ export function RulesList({
 
   if (rules.length === 0) {
     return (
-      <div className="text-muted-foreground border-border rounded-lg border border-dashed px-4 py-10 text-center text-sm">
+      <div className="text-muted-foreground border-border flex flex-col items-center gap-3 rounded-lg border border-dashed px-4 py-10 text-center text-sm">
         {t("empty")}
+        <Button variant="outline" onClick={onImport}>
+          <Upload />
+          {t("transfer.importRules")}
+        </Button>
       </div>
     );
   }
