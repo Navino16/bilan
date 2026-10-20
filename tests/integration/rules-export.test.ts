@@ -121,10 +121,10 @@ describe("exportRules", () => {
     ]);
   });
 
-  it("logs rules.exported", async () => {
+  it("logs rule.exported", async () => {
     await exportRules({ groupId }, { id: actor });
     const events = await db.auditLog.findMany({
-      where: { userId: actor, action: "rules.exported" },
+      where: { userId: actor, action: "rule.exported" },
     });
     expect(events.at(-1)?.metadata).toEqual({ count: 2, groupId });
   });

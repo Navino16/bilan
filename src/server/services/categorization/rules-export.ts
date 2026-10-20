@@ -76,7 +76,7 @@ export async function exportRules(
 
   await logEvent({
     userId: actor.id,
-    action: "rules.exported",
+    action: "rule.exported",
     entity: "CategorizationRule",
     metadata: { count: rules.length, groupId: target.groupId },
   });

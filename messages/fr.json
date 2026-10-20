@@ -1865,7 +1865,9 @@
           "deleted": "Règle supprimée",
           "enabled": "Règle activée",
           "disabled": "Règle désactivée",
-          "applied": "Règle appliquée aux transactions existantes"
+          "applied": "Règle appliquée aux transactions existantes",
+          "exported": "Règles exportées",
+          "imported": "Règles importées"
         },
         "budget": {
           "created": "Budget créé",

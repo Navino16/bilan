@@ -244,7 +244,7 @@ export async function commitRulesImport(
 
   await logEvent({
     userId: actor.id,
-    action: "rules.imported",
+    action: "rule.imported",
     entity: "CategorizationRule",
     metadata: { ...result.summary, groupId: target.groupId },
   });

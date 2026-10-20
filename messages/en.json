@@ -1865,7 +1865,9 @@
           "deleted": "Rule deleted",
           "enabled": "Rule enabled",
           "disabled": "Rule disabled",
-          "applied": "Rule applied to existing transactions"
+          "applied": "Rule applied to existing transactions",
+          "exported": "Rules exported",
+          "imported": "Rules imported"
         },
         "budget": {
           "created": "Budget created",

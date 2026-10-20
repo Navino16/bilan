@@ -443,12 +443,12 @@ describe("rules import", () => {
     expect(done).toMatchObject({ ok: true, movedRuleIds: [], summary: { created: 1 } });
   });
 
-  it("logs rules.imported", async () => {
+  it("logs rule.imported", async () => {
     const text = fileOf([fileRule("bakery", [{ name: "Bread" }])]);
     const { decisions } = await createAll(text, { groupId }, actor);
     const { summary } = await commitRulesImport(text, { groupId }, decisions, { id: actor });
     const events = await db.auditLog.findMany({
-      where: { userId: actor, action: "rules.imported" },
+      where: { userId: actor, action: "rule.imported" },
     });
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({

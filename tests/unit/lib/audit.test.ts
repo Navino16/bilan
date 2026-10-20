@@ -20,8 +20,9 @@ function lookup(messages: unknown, key: string): unknown {
 }
 
 const sources = sourceFiles(join(__dirname, "../../../src")).map((f) => readFileSync(f, "utf8"));
+// Audit codes are always "<family>.<event>": the dot keeps other `action:` literals out (#291).
 const loggedActions = new Set(
-  sources.flatMap((s) => [...s.matchAll(/action: "([a-z0-9_.]+)"/g)].map((m) => m[1])),
+  sources.flatMap((s) => [...s.matchAll(/action: "([a-z0-9_]+\.[a-z0-9_.]+)"/g)].map((m) => m[1])),
 );
 const loggedEntities = new Set(
   sources.flatMap((s) => [...s.matchAll(/entity: "([A-Za-z]+)"/g)].map((m) => m[1])),
