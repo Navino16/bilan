@@ -28,6 +28,8 @@ export type RuleRow = {
   groupId: string | null;
   groupName: string | null;
   hits: number;
+  // Household rules need a household admin; a plain member only sees them.
+  canManage: boolean;
 };
 
 const COLS = "grid-cols-[32px_64px_1fr_minmax(0,108px)_minmax(0,140px)_72px_96px_92px]";
@@ -112,7 +114,7 @@ export function RulesList({
         </div>
 
         {sorted.map((r) => {
-          const actions = (
+          const actions = r.canManage && (
             <span className="flex items-center justify-end gap-0.5">
               {r.enabled && (
                 <Button
@@ -173,7 +175,7 @@ export function RulesList({
               type="checkbox"
               aria-label={r.pattern}
               checked={r.enabled}
-              disabled={pending}
+              disabled={pending || !r.canManage}
               onChange={(e) => toggle(r.id, e.target.checked)}
               className="size-4 shrink-0 cursor-pointer"
               style={{ accentColor: "var(--primary)" }}

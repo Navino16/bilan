@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { planRuleApplication, type PlanRow } from "@/server/services/categorization/apply-plan";
+import {
+  mergePlans,
+  planRuleApplication,
+  type PlanRow,
+} from "@/server/services/categorization/apply-plan";
 import type { Rule } from "@/server/services/categorization/match";
 
 const rule = (id: string, pattern: string, categoryId: string, priority = 100): Rule => ({
@@ -75,5 +79,35 @@ describe("planRuleApplication", () => {
       ["prime", 2],
       ["amazon", 1],
     ]);
+  });
+});
+
+describe("mergePlans", () => {
+  it("matches planning every row at once", () => {
+    const rules = [prime, amazon];
+    const rows = [
+      row("t1", "AMAZON PRIME", null),
+      row("t2", "AMAZON PRIME", "food"),
+      row("t3", "AMAZON PRIME", "subs"),
+      row("t4", "AMAZON PRIME", "food", true),
+      row("t5", "AMAZON", null),
+    ];
+    const whole = planRuleApplication(amazon, rules, rows);
+    const paged = mergePlans([
+      planRuleApplication(amazon, rules, rows.slice(0, 2)),
+      planRuleApplication(amazon, rules, rows.slice(2)),
+    ]);
+    expect(paged).toEqual(whole);
+  });
+
+  it("returns an empty plan for no pages", () => {
+    expect(mergePlans([])).toEqual({
+      matched: 0,
+      moveIds: [],
+      movingFromOther: 0,
+      alreadyInCategory: 0,
+      manual: 0,
+      keptBy: [],
+    });
   });
 });

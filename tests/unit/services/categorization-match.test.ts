@@ -142,6 +142,13 @@ describe("pickByPriority tie-break", () => {
     const specific = rule("specific", "amazon prime", 100);
     expect(pickByPriority([specific, general], "PRLV AMAZON PRIME FR")?.id).toBe("general");
   });
+
+  it("falls back to the id when priority, length and creation time are equal", () => {
+    const a = rule("rule-a", "netflix", 100, 5);
+    const b = rule("rule-b", "netflix", 100, 5);
+    expect(pickByPriority([a, b], "NETFLIX.COM")?.id).toBe("rule-a");
+    expect(pickByPriority([b, a], "NETFLIX.COM")?.id).toBe("rule-a");
+  });
 });
 
 describe("proposeRule", () => {

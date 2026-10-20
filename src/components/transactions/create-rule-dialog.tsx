@@ -17,7 +17,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useFrozenWhileOpen } from "@/hooks/use-frozen-while-open";
 import { createRuleAction, previewRuleApplicationAction } from "@/server/transport/actions/rules";
-import type { RuleApplicationPreview } from "@/server/services/categorization";
+import type { RuleApplicationPreview } from "@/server/services/categorization/apply";
 import {
   RuleApplyStep,
   shouldOfferApply,
@@ -80,6 +80,7 @@ export function CreateRuleDialog({
   }
 
   const handleOpenChange = (n: boolean) => {
+    if (pending) return;
     if (!n) {
       setPat("");
       setApplying(null);
@@ -154,6 +155,8 @@ export function CreateRuleDialog({
       rule={applying.target}
       mode="created"
       initialPreview={applying.preview}
+      pending={pending}
+      startTransition={startTransition}
       onDone={() => handleOpenChange(false)}
     />
   ) : (

@@ -9,13 +9,8 @@ import { createAccount } from "@/server/services/accounts";
 import { shareAccountWithGroup } from "@/server/services/accounts/sharing";
 import { createGroup } from "@/server/services/groups";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
-import {
-  applyRule,
-  createRule,
-  previewRuleApplication,
-  RuleAccessError,
-  RuleValidationError,
-} from "@/server/services/categorization";
+import { createRule, RuleAccessError, RuleValidationError } from "@/server/services/categorization";
+import { applyRule, previewRuleApplication } from "@/server/services/categorization/apply";
 import {
   applyRuleAction,
   createRuleAction,
@@ -194,6 +189,28 @@ describe("previewRuleApplication / applyRule", () => {
     const { id } = await rule(label("GROUP"), groupFood, 100, { groupId });
     await expect(applyRule(id, { id: other })).rejects.toEqual(new RuleAccessError("FORBIDDEN"));
     await db.category.delete({ where: { id: groupFood } });
+  });
+
+  it("lets a household ADMIN apply a household rule on the accounts they can write", async () => {
+    const groupFood = (await db.category.create({ data: { name: "Group food", groupId } })).id;
+    const l = label("GROUPADMIN");
+    const [mine, theirWrite, theirRead] = await Promise.all(
+      [acc.own, acc.write, acc.read].map((a) => tx(a, l)),
+    );
+    const { id } = await rule(l, groupFood, 100, { groupId });
+    const where = { groupId_userId: { groupId, userId: other } };
+    await db.groupMember.update({ where, data: { role: "ADMIN" } });
+    try {
+      expect(await applyRule(id, { id: other })).toEqual({ reclassified: 2 });
+      expect(await categoryOf(theirWrite)).toBe(groupFood);
+      expect(await categoryOf(theirRead)).toBe(groupFood);
+      expect(await categoryOf(mine)).toBeNull();
+    } finally {
+      await db.groupMember.update({ where, data: { role: "MEMBER" } });
+      await db.transaction.deleteMany({ where: { id: { in: [mine, theirWrite, theirRead] } } });
+      await db.categorizationRule.delete({ where: { id } });
+      await db.category.delete({ where: { id: groupFood } });
+    }
   });
 });
 

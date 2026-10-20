@@ -27,7 +27,7 @@ import {
   updateRuleAction,
   type RuleSaveState,
 } from "@/server/transport/actions/rules";
-import type { RuleApplicationPreview } from "@/server/services/categorization";
+import type { RuleApplicationPreview } from "@/server/services/categorization/apply";
 import { RuleApplyStep, shouldOfferApply, type RuleApplyTarget } from "./rule-apply-step";
 import { NativeSelect } from "@/components/ui/native-select";
 import { canManageInGroup } from "@/lib/validation/group";
@@ -77,6 +77,8 @@ export function RuleDialog({
       rule={applying.target}
       mode={props.mode === "edit" ? "updated" : "created"}
       initialPreview={applying.preview}
+      pending={pending}
+      startTransition={startTransition}
       onDone={close}
     />
   ) : (
