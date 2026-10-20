@@ -175,6 +175,12 @@ describe("planRulesImport", () => {
     expect(p.create.map((r) => r.pattern)).toEqual(["c"]);
   });
 
+  it("inherited object keys are not decisions", () => {
+    const p = plan([rule("a", ["Constructor"]), rule("b", ["__proto__"])], []);
+    expect(p.undecided).toEqual(["constructor", "__proto__"]);
+    expect(p.create).toEqual([]);
+  });
+
   it("later duplicates in the file are counted, the first wins", () => {
     const p = plan([rule("lidl", ["Food"]), rule("lidl", ["Transport"])], []);
     expect(p.duplicates).toBe(1);

@@ -180,7 +180,9 @@ export function planRulesImport(
     const resolvedId = resolutionByKey.get(pathKey)?.categoryId ?? null;
     let effectiveId: string | null = resolvedId;
     if (resolvedId === null) {
-      const decision = decisions.categories[pathKey];
+      const decision = Object.hasOwn(decisions.categories, pathKey)
+        ? decisions.categories[pathKey]
+        : undefined;
       if (decision?.action === "ignore") {
         plan.ignored++;
         continue;
