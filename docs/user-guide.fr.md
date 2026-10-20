@@ -310,13 +310,13 @@ Dans l’onglet **Règles**, **Exporter** enregistre vos règles dans un fichier
 **Import.**
 
 1. Cliquez sur **Importer**, choisissez le fichier et, si vous gérez un foyer, **Importer dans** : **Règles personnelles** ou le foyer. Cliquez sur **Continuer**. Rien n’est encore enregistré.
-2. Dans **Catégories à résoudre**, chaque catégorie du fichier qui n’existe pas encore dans la destination propose trois choix : la **Créer** (avec ses catégories parentes), l’**Associer à** l’une de vos catégories existantes, ou **Ignorer** ses règles. Une catégorie qui existe déjà, même sous un autre parent, est retrouvée par son nom et ne demande aucun choix.
-3. Dans **Conflits**, une règle qui existe déjà avec une autre catégorie affiche le changement. Choisissez de **Laisser** la catégorie actuelle ou de **Déplacer** la règle vers celle du fichier. Les règles qui existent déjà avec la même catégorie sont ignorées.
+2. Dans **Catégories à résoudre**, chaque catégorie du fichier qui n’existe pas encore dans la destination propose trois choix : la **Créer** (avec ses catégories parentes, c’est le choix par défaut), l’**Associer à** l’une de vos catégories existantes, ou **Ignorer** ses règles. Une catégorie dont le nom correspond déjà à la fin du chemin du fichier est réutilisée quand elle est unique ; les autres demandent un choix.
+3. Dans **Conflits**, une règle qui existe déjà avec une autre catégorie affiche le changement. Choisissez de **Laisser** la catégorie actuelle (par défaut) ou de **Déplacer** la règle vers celle du fichier ; un déplacement ne change que la catégorie, pas le motif, la priorité ni les autres réglages. Les règles qui existent déjà avec la même catégorie sont ignorées.
 4. Vérifiez les nombres de règles à créer, à déplacer et ignorées, puis cliquez sur **Importer**. Les règles invalides du fichier sont listées et ignorées ; les autres sont quand même importées.
 
 ![Vérification d’un import de règles](images/fr/rules-import.png)
 
-Les catégories et les règles importées sont toujours créées dans la destination choisie. Une fois l’import terminé, cliquez sur **Reclasser les transactions existantes** pour [appliquer les règles importées](#appliquer-une-règle-aux-transactions-existantes) aux transactions déjà présentes dans Bilan, ou sur **Fermer** pour les laisser telles quelles.
+Les catégories et les règles importées sont toujours créées dans la destination choisie. Une fois l’import terminé, cliquez sur **Reclasser les transactions existantes** pour [appliquer les règles importées](#appliquer-une-règle-aux-transactions-existantes) aux transactions déjà présentes dans Bilan, ou sur **Fermer** pour les laisser telles quelles. Les règles désactivées sont écartées : elles ne reclassent rien tant que vous ne les activez pas.
 
 Importer dans un foyer demande d’en être administrateur ou propriétaire.
 

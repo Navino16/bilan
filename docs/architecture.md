@@ -982,7 +982,7 @@ Applying a rule to existing transactions (#287), offered after a create or edit 
 2. `applyRule(ruleId, actor)`: recomputes, then sets the category of the moving rows in one DB transaction, guarded by `manuallyCategorized = false` so a row made manual in between stays. Credits `hits`, then audits `rule.applied` (`{ reclassified }`) when at least one row moved. The dialog shows the actual count when it differs from the preview, and can't be closed while applying.
 3. Manual rows are never written; rows a stronger rule wins are left as they are.
 
-Applying several rules at once (#291) reuses the same planner: `previewRulesApplication(ruleIds, actor)` and `applyRules(ruleIds, actor)` run `planRulesApplication` over the same pages with every given rule, each of which the actor must manage. The single-rule dialog and the batch step after an import share one `ApplyStep` component.
+Applying several rules at once (#291) reuses the same planner: `previewRulesApplication(ruleIds, actor)` and `applyRules(ruleIds, actor)` run `planRulesApplication` over the same pages with every given rule, each of which the actor must manage. Unlike the single-rule path (`DISABLED` error), disabled rules are dropped from the plan and don't take part in the winner computation, so imported disabled rules reclassify nothing. The single-rule dialog and the batch step after an import share one `ApplyStep` component.
 
 Rules import and export (#291), from the Rules tab:
 1. Export: `GET /api/export/rules?groupId=` (`exportRules`) returns the file described in §4.4 for the personal scope, or for a household the actor belongs to (`rule.exported`, with the rule count). With no household the tab shows a plain download button; with households a dialog first asks for the scope.

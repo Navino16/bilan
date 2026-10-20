@@ -310,13 +310,13 @@ On the **Rules** tab, **Export** saves your rules to a `bilan-rules-YYYY-MM-DD.j
 **Import.**
 
 1. Click **Import**, choose the file and, if you manage a household, **Import into**: **Personal rules** or the household. Click **Continue**. Nothing is saved yet.
-2. In **Categories to resolve**, each category of the file that doesn't exist yet in the destination offers three choices: **Create** it (with its parent categories), **Map to** one of your existing categories, or **Ignore** its rules. A category that already exists, even under another parent, is found by its name and needs no choice.
-3. In **Conflicts**, a rule that already exists with another category shows the change. Choose **Keep** the current category or **Move** the rule to the one in the file. Rules that already exist with the same category are skipped.
+2. In **Categories to resolve**, each category of the file that doesn't exist yet in the destination offers three choices: **Create** it (with its parent categories, the default), **Map to** one of your existing categories, or **Ignore** its rules. A category whose names already match the end of the file's path is reused when there is a single match; the others need a choice.
+3. In **Conflicts**, a rule that already exists with another category shows the change. Choose **Keep** the current category (the default) or **Move** the rule to the one in the file; a move changes only the category, not the pattern, priority or other settings. Rules that already exist with the same category are skipped.
 4. Check the counts of rules to create, to move and skipped, then click **Import**. Invalid rules in the file are listed and skipped; the others are still imported.
 
 ![Reviewing a rules import](images/en/rules-import.png)
 
-Imported categories and rules are always created in the destination you chose. When it is done, click **Reclassify existing transactions** to [apply the imported rules](#apply-a-rule-to-existing-transactions) to transactions already in Bilan, or **Close** to leave them as they are.
+Imported categories and rules are always created in the destination you chose. When it is done, click **Reclassify existing transactions** to [apply the imported rules](#apply-a-rule-to-existing-transactions) to transactions already in Bilan, or **Close** to leave them as they are. Disabled rules are left out: they don't reclassify anything until you enable them.
 
 Importing into a household requires being an administrator or owner of it.
 
