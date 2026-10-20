@@ -25,7 +25,8 @@ export type ExistingRule = {
   caseSensitive: boolean;
   categoryId: string;
   categoryPath: string[];
-  categoryPathKey: string;
+  // null when the category is outside the actor's categories: its path is unknown.
+  categoryPathKey: string | null;
 };
 
 export type CategoryDecision =
@@ -50,8 +51,11 @@ export type ImportPlan = {
 
 const KEY_SEPARATOR = "\u001f";
 
+const levelKeys = (path: { name: string }[]): string[] =>
+  path.map((level) => normalizeText(level.name));
+
 export function categoryPathKey(path: { name: string }[]): string {
-  return path.map((level) => normalizeText(level.name)).join(KEY_SEPARATOR);
+  return levelKeys(path).join(KEY_SEPARATOR);
 }
 
 type Chained = { category: ImportCategory; chain: string[]; rooted: boolean };
@@ -77,11 +81,18 @@ function buildChains(categories: ImportCategory[]): Chained[] {
   });
 }
 
+function compareCodePoints(a: string, b: string): number {
+  if (a === b) return 0;
+  return a < b ? -1 : 1;
+}
+
+// Code-point order, so the pick does not depend on the runtime's ICU data.
 function pickFirst(candidates: Chained[]): ImportCategory | null {
   if (candidates.length === 0) return null;
   const sorted = [...candidates].sort(
     (a, b) =>
-      a.category.name.localeCompare(b.category.name) || a.category.id.localeCompare(b.category.id),
+      compareCodePoints(a.category.name, b.category.name) ||
+      compareCodePoints(a.category.id, b.category.id),
   );
   return sorted[0].category;
 }
@@ -105,13 +116,13 @@ export function resolveCategoryPaths(
   const resolutions = new Map<string, PathResolution>();
 
   for (const rule of rules) {
-    const key = categoryPathKey(rule.category);
+    const keys = levelKeys(rule.category);
+    const key = keys.join(KEY_SEPARATOR);
     const known = resolutions.get(key);
     if (known) {
       known.ruleCount++;
       continue;
     }
-    const keys = key.split(KEY_SEPARATOR);
     const anchored = pickFirst(targetRooted.filter((c) => sameChain(c.chain, keys)));
     let categoryId = anchored?.id ?? null;
     if (categoryId === null) {
@@ -151,10 +162,12 @@ export function planRulesImport(
   decisions: ImportDecisions,
 ): ImportPlan {
   const resolutionByKey = new Map(resolutions.map((r) => [r.key, r]));
-  const existingByIdentity = new Map<string, ExistingRule>();
+  const existingByIdentity = new Map<string, ExistingRule[]>();
   for (const rule of existing) {
     const identity = identityOf(rule);
-    if (!existingByIdentity.has(identity)) existingByIdentity.set(identity, rule);
+    const same = existingByIdentity.get(identity);
+    if (same) same.push(rule);
+    else existingByIdentity.set(identity, [rule]);
   }
   const moves = new Set(decisions.moves);
   const seen = new Set<string>();
@@ -195,14 +208,17 @@ export function planRulesImport(
       effectiveId = decision.action === "map" ? decision.categoryId : null;
     }
 
-    const current = existingByIdentity.get(identity);
-    if (!current) {
+    const matches = existingByIdentity.get(identity);
+    // Same path, other category: re-importing one's own export resolves a household path to the
+    // target's same-named category, which is not a change. Only for an automatic resolution (#291).
+    const isIdentical = (r: ExistingRule) =>
+      r.categoryId === effectiveId || (resolvedId !== null && r.categoryPathKey === pathKey);
+    if (!matches) {
       plan.create.push({ ...rule, pathKey });
-    } else if (effectiveId === current.categoryId || current.categoryPathKey === pathKey) {
-      // Same path, other category: re-importing one's own export resolves a household path
-      // to the target's same-named category, which is not a change.
+    } else if (matches.some(isIdentical)) {
       plan.identical++;
     } else {
+      const current = matches[0];
       plan.conflicts.push({
         ruleId: current.id,
         pattern: current.pattern,

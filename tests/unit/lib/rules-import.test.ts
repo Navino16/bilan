@@ -82,14 +82,38 @@ describe("resolveCategoryPaths", () => {
     expect(res.missing.map((l) => l.name)).toEqual(["Bio", "Fruit"]);
   });
 
-  it("same-name siblings resolve deterministically", () => {
-    const categories = [cat("z", "food", null), cat("y", "Food", null), cat("x", "Food", null)];
+  it("same-name siblings resolve deterministically, by code point then id", () => {
+    const categories = [cat("a", "food", null), cat("y", "Food", null), cat("x", "Food", null)];
     const [res] = resolveCategoryPaths([rule("x", ["FOOD"])], categories);
-    expect(res.categoryId).toBe("z");
+    expect(res.categoryId).toBe("x");
     const [reversed] = resolveCategoryPaths([rule("x", ["FOOD"])], [...categories].reverse());
-    expect(reversed.categoryId).toBe("z");
-    const ties = [cat("y", "Food", null), cat("x", "Food", null)];
-    expect(resolveCategoryPaths([rule("x", ["FOOD"])], ties)[0].categoryId).toBe("x");
+    expect(reversed.categoryId).toBe("x");
+    const accented = [cat("a", "École", null), cat("b", "Ecole", null)];
+    expect(resolveCategoryPaths([rule("x", ["ecole"])], accented)[0].categoryId).toBe("b");
+  });
+
+  it("a level name containing the key separator is matched whole", () => {
+    const categories = [cat("a", "A\u001fB", null)];
+    const [res] = resolveCategoryPaths([rule("x", ["a\u001fb"])], categories);
+    expect(res.categoryId).toBe("a");
+  });
+
+  it("an anchored match beats other suffix matches", () => {
+    const categories = [cat("h", "Home", null), cat("hf", "Food", "h"), cat("f", "Food", null)];
+    const [res] = resolveCategoryPaths([rule("x", ["Food"])], categories);
+    expect(res.categoryId).toBe("f");
+  });
+
+  it("an unrooted or cyclic chain does not anchor a path and does not loop", () => {
+    const categories = [
+      cat("c1", "Food", "c2"),
+      cat("c2", "Loop", "c1"),
+      cat("o", "Food", "ghost"),
+    ];
+    const [res] = resolveCategoryPaths([rule("x", ["Food", "New"])], categories);
+    expect(res.categoryId).toBeNull();
+    expect(res.anchorId).toBeNull();
+    expect(res.missing.map((l) => l.name)).toEqual(["Food", "New"]);
   });
 
   it("keeps the first path and counts every rule using the key", () => {
@@ -152,6 +176,68 @@ describe("planRulesImport", () => {
     expect(plan([rule("lidl", ["Food"])], [nested]).conflicts).toEqual([
       { ruleId: "r1", pattern: "lidl", currentCategoryPath: ["Home", "Food"], pathKey: "food" },
     ]);
+  });
+
+  it("an existing rule on an unreachable category with the same name is a conflict", () => {
+    const foreign = existingRule({ categoryId: "foreign", categoryPathKey: null });
+    expect(plan([rule("lidl", ["Food"])], [foreign]).conflicts).toEqual([
+      { ruleId: "r1", pattern: "lidl", currentCategoryPath: ["Food"], pathKey: "food" },
+    ]);
+  });
+
+  it("a mapped path compares the mapped category only, not the path", () => {
+    const rules = [rule("lidl", ["Unknown"])];
+    const samePath = existingRule({
+      categoryId: "x",
+      categoryPath: ["Unknown"],
+      categoryPathKey: "unknown",
+    });
+    const mapped = plan(rules, [samePath], {
+      categories: { unknown: { action: "map", categoryId: "b" } },
+      moves: ["r1"],
+    });
+    expect(mapped.identical).toBe(0);
+    expect(mapped.move).toEqual([{ ruleId: "r1", pathKey: "unknown" }]);
+  });
+
+  it("several existing rules share an identity: identical if any matches, else a conflict on the first", () => {
+    const onTransport = existingRule({
+      id: "r1",
+      categoryId: "b",
+      categoryPath: ["Transport"],
+      categoryPathKey: "transport",
+    });
+    const onFood = existingRule({ id: "r2" });
+    const p = plan([rule("lidl", ["Food"])], [onTransport, onFood]);
+    expect(p.identical).toBe(1);
+    expect(p.conflicts).toEqual([]);
+
+    const onOther = existingRule({
+      id: "r3",
+      categoryId: "c",
+      categoryPath: ["Other"],
+      categoryPathKey: "other",
+    });
+    const q = plan([rule("lidl", ["Food"])], [onTransport, onOther]);
+    expect(q.conflicts.map((c) => c.ruleId)).toEqual(["r1"]);
+  });
+
+  it("a Create decision without an existing rule creates the rule", () => {
+    const rules = [rule("lidl", ["Food", "New"])];
+    const pathKey = categoryPathKey(rules[0].category);
+    const p = plan(rules, [], { categories: { [pathKey]: { action: "create" } }, moves: [] });
+    expect(p.create).toEqual([{ ...rules[0], pathKey }]);
+    expect(p.undecided).toEqual([]);
+  });
+
+  it("a later duplicate on an ignored path counts as a duplicate, not ignored", () => {
+    const p = plan([rule("lidl", ["Food"]), rule("lidl", ["Unknown"])], [], {
+      categories: { unknown: { action: "ignore" } },
+      moves: [],
+    });
+    expect(p.duplicates).toBe(1);
+    expect(p.ignored).toBe(0);
+    expect(p.create).toHaveLength(1);
   });
 
   it("map onto the existing rule's category makes it identical", () => {

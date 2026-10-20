@@ -87,8 +87,8 @@ async function loadCategories(
   }));
 }
 
-// Root-first names; a category outside the actor's categories only gives its own name, as on export.
-function categoryPath(id: string, fallback: string, byId: Map<string, ImportCategory>): string[] {
+// Root-first names; empty for a category outside the actor's categories.
+function categoryPath(id: string, byId: Map<string, ImportCategory>): string[] {
   const names: string[] = [];
   const seen = new Set<string>();
   for (
@@ -99,7 +99,7 @@ function categoryPath(id: string, fallback: string, byId: Map<string, ImportCate
     seen.add(c.id);
     names.unshift(c.name);
   }
-  return names.length > 0 ? names : [fallback];
+  return names;
 }
 
 async function loadExisting(
@@ -111,18 +111,20 @@ async function loadExisting(
   const rows = await client.categorizationRule.findMany({
     where: target.groupId ? { groupId: target.groupId } : { userId: actorId, groupId: null },
     include: { category: { select: { name: true } } },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
   });
   const byId = new Map(categories.map((c) => [c.id, c]));
   return rows.map((r): ExistingRule => {
-    const path = categoryPath(r.categoryId, r.category.name, byId);
+    const path = categoryPath(r.categoryId, byId);
+    // An unreachable category only shows its own name, as on export.
     return {
       id: r.id,
       pattern: r.pattern,
       matchType: r.matchType as RuleMatchType,
       caseSensitive: r.caseSensitive,
       categoryId: r.categoryId,
-      categoryPath: path,
-      categoryPathKey: categoryPathKey(path.map((name) => ({ name }))),
+      categoryPath: path.length > 0 ? path : [r.category.name],
+      categoryPathKey: path.length > 0 ? categoryPathKey(path.map((name) => ({ name }))) : null,
     };
   });
 }

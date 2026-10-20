@@ -227,17 +227,40 @@ describe("rules import", () => {
     expect(result.summary).toMatchObject({ created: 0, moved: 0, identical: 2 });
   });
 
-  it("Create builds a shared missing parent once", async () => {
+  it("an existing rule on an unreachable same-named category is a conflict that can be moved", async () => {
+    const foreign = await category("Food", { userId: stranger });
+    const food = await category("Food", { userId: actor });
+    const lidl = await addRule("lidl", foreign.id, { userId: actor });
+    const text = fileOf([fileRule("lidl", [{ name: "Food" }])]);
+
+    const preview = await previewRulesImport(text, { groupId: null }, { id: actor });
+    expect(preview.existing).toMatchObject([{ categoryPath: ["Food"], categoryPathKey: null }]);
+    const result = await commitRulesImport(
+      text,
+      { groupId: null },
+      { categories: {}, moves: [lidl.id] },
+      { id: actor },
+    );
+    expect(result.summary).toMatchObject({ identical: 0, moved: 1 });
+    expect(
+      (await db.categorizationRule.findUniqueOrThrow({ where: { id: lidl.id } })).categoryId,
+    ).toBe(food.id);
+  });
+
+  it("Create builds a shared missing parent once, styled by the first path using it", async () => {
     const text = fileOf([
-      fileRule("creche", [{ name: "Enfants", color: "#00ff00" }, { name: "Crèche" }]),
-      fileRule("cantine", [{ name: "enfants" }, { name: "Cantine" }]),
+      fileRule("creche", [{ name: "Enfants", color: "#00ff00", icon: "baby" }, { name: "Crèche" }]),
+      fileRule("cantine", [
+        { name: "enfants", color: "#0000ff", icon: "food" },
+        { name: "Cantine" },
+      ]),
     ]);
     const { decisions } = await createAll(text, { groupId: null }, fresh);
     const first = await commitRulesImport(text, { groupId: null }, decisions, { id: fresh });
     expect(first.summary.categoriesCreated).toBe(3);
 
     const roots = await db.category.findMany({ where: { userId: fresh, parentId: null } });
-    expect(roots.map((c) => c.name)).toEqual(["Enfants"]);
+    expect(roots.map((c) => [c.name, c.color, c.icon])).toEqual([["Enfants", "#00ff00", "baby"]]);
     const children = await db.category.findMany({ where: { parentId: roots[0].id } });
     expect(children.map((c) => c.name).sort()).toEqual(["Cantine", "Crèche"]);
 
@@ -267,6 +290,46 @@ describe("rules import", () => {
     const rules = await db.categorizationRule.findMany({ where: { userId: actor } });
     expect(rules.every((r) => r.categoryId === food.id)).toBe(true);
     expect(await db.category.count({ where: { userId: actor } })).toBe(1);
+  });
+
+  it("a Map decision combines with a Move on the same path", async () => {
+    const leisure = await category("Leisure", { userId: actor });
+    const subscriptions = await category("Subscriptions", { userId: actor });
+    const netflix = await addRule("netflix", leisure.id, { userId: actor });
+    const text = fileOf([
+      fileRule("netflix", [{ name: "Unknown" }]),
+      fileRule("hulu", [{ name: "Unknown" }]),
+    ]);
+    const result = await commitRulesImport(
+      text,
+      { groupId: null },
+      {
+        categories: { unknown: { action: "map", categoryId: subscriptions.id } },
+        moves: [netflix.id],
+      },
+      { id: actor },
+    );
+    expect(result.summary).toMatchObject({ created: 1, moved: 1, categoriesCreated: 0 });
+    const rules = await db.categorizationRule.findMany({ where: { userId: actor } });
+    expect(rules.map((r) => [r.pattern, r.categoryId]).sort()).toEqual([
+      ["hulu", subscriptions.id],
+      ["netflix", subscriptions.id],
+    ]);
+  });
+
+  it("a decision for a key absent from the file is ignored", async () => {
+    const food = await category("Food", { userId: actor });
+    const text = fileOf([fileRule("bakery", [{ name: "Food" }])]);
+    const result = await commitRulesImport(
+      text,
+      { groupId: null },
+      { categories: { nowhere: { action: "map", categoryId: "not-a-category" } }, moves: [] },
+      { id: actor },
+    );
+    expect(result.summary).toMatchObject({ created: 1, categoriesCreated: 0 });
+    expect(
+      (await db.categorizationRule.findFirstOrThrow({ where: { userId: actor } })).categoryId,
+    ).toBe(food.id);
   });
 
   it("Ignore imports nothing for that path", async () => {
