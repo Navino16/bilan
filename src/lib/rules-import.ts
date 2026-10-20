@@ -81,18 +81,18 @@ function buildChains(categories: ImportCategory[]): Chained[] {
   });
 }
 
-function compareCodePoints(a: string, b: string): number {
+function compareCodeUnits(a: string, b: string): number {
   if (a === b) return 0;
   return a < b ? -1 : 1;
 }
 
-// Code-point order, so the pick does not depend on the runtime's ICU data.
+// Locale-independent order, so the pick does not depend on the runtime's ICU data.
 function pickFirst(candidates: Chained[]): ImportCategory | null {
   if (candidates.length === 0) return null;
   const sorted = [...candidates].sort(
     (a, b) =>
-      compareCodePoints(a.category.name, b.category.name) ||
-      compareCodePoints(a.category.id, b.category.id),
+      compareCodeUnits(a.category.name, b.category.name) ||
+      compareCodeUnits(a.category.id, b.category.id),
   );
   return sorted[0].category;
 }

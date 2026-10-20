@@ -109,13 +109,13 @@ async function loadExisting(
   const byId = new Map(categories.map((c) => [c.id, c]));
   return rows.map((r): ExistingRule => {
     const path = categoryPath(r.categoryId, byId);
-    // An unreachable category only shows its own name, as on export.
     return {
       id: r.id,
       pattern: r.pattern,
       matchType: r.matchType as RuleMatchType,
       caseSensitive: r.caseSensitive,
       categoryId: r.categoryId,
+      // An unreachable category only shows its own name, as on export.
       categoryPath: path.length > 0 ? path : [r.category.name],
       categoryPathKey: path.length > 0 ? categoryPathKey(path.map((name) => ({ name }))) : null,
     };
