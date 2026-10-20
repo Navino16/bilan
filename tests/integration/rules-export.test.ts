@@ -125,6 +125,7 @@ describe("exportRules", () => {
     await exportRules({ groupId }, { id: actor });
     const events = await db.auditLog.findMany({
       where: { userId: actor, action: "rule.exported" },
+      orderBy: { createdAt: "asc" },
     });
     expect(events.at(-1)?.metadata).toEqual({ count: 2, groupId });
   });
