@@ -71,6 +71,22 @@ describe("parseRulesFile", () => {
     if (res.ok) expect(res.rules).toHaveLength(1);
   });
 
+  it("rejects a level name with a control character, which would collide in path keys", () => {
+    const res = parseRulesFile(
+      file([
+        rule({ category: [{ name: "A\u001fB" }] }),
+        rule({ category: [{ name: "Food" }, { name: "Tab\there" }] }),
+        rule({ category: [{ name: "Del\u007f" }] }),
+        rule({ category: [{ name: "A" }, { name: "B" }] }),
+      ]),
+    );
+    expect(res).toMatchObject({
+      ok: true,
+      rejected: [0, 1, 2].map((index) => ({ index, reason: "INVALID" })),
+    });
+    if (res.ok) expect(res.rules).toHaveLength(1);
+  });
+
   it("accepts only an integer priority, defaulting to 100", () => {
     const missing: Record<string, unknown> = rule();
     delete missing.priority;

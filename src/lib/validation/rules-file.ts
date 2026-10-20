@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { isCategoryColor } from "@/lib/category-appearance";
-import { CATEGORY_ICON_MAX, CATEGORY_NAME_MAX } from "@/lib/validation/category";
+import { CATEGORY_ICON_MAX, categoryNameSchema } from "@/lib/validation/category";
 import { ruleInputSchema, type RuleMatchType } from "@/lib/validation/rule";
 
 export const RULES_FILE_FORMAT = "bilan-rules";
@@ -11,7 +11,7 @@ export const RULES_FILE_MAX_RULES = 2000;
 export const RULES_FILE_MAX_DEPTH = 10;
 
 export const categoryLevelSchema = z.object({
-  name: z.string().trim().min(1).max(CATEGORY_NAME_MAX),
+  name: categoryNameSchema,
   color: z.string().refine(isCategoryColor).optional(),
   icon: z.string().trim().min(1).max(CATEGORY_ICON_MAX).optional(),
 });

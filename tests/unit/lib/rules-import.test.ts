@@ -92,12 +92,6 @@ describe("resolveCategoryPaths", () => {
     expect(resolveCategoryPaths([rule("x", ["ecole"])], accented)[0].categoryId).toBe("b");
   });
 
-  it("a level name containing the key separator is matched whole", () => {
-    const categories = [cat("a", "A\u001fB", null)];
-    const [res] = resolveCategoryPaths([rule("x", ["a\u001fb"])], categories);
-    expect(res.categoryId).toBe("a");
-  });
-
   it("an anchored match beats other suffix matches", () => {
     const categories = [cat("h", "Home", null), cat("hf", "Food", "h"), cat("f", "Food", null)];
     const [res] = resolveCategoryPaths([rule("x", ["Food"])], categories);

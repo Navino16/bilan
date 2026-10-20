@@ -33,6 +33,13 @@ describe("categoryInputSchema", () => {
     );
   });
 
+  it("rejects a name with a control character", () => {
+    for (const name of ["A\u001fB", "Tab\there", "Nul\u0000", "Del\u007f"]) {
+      expect(categoryInputSchema.safeParse({ name }).success, JSON.stringify(name)).toBe(false);
+    }
+    expect(categoryInputSchema.safeParse({ name: "Café & snacks" }).success).toBe(true);
+  });
+
   it("rejects a malformed color", () => {
     expect(categoryInputSchema.safeParse({ name: "X", color: "red" }).success).toBe(false);
     expect(categoryInputSchema.safeParse({ name: "X", color: "#abcdef" }).success).toBe(true);
