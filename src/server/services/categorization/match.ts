@@ -91,7 +91,7 @@ function matcher(rule: Rule, compile: ReturnType<typeof createRegexCompiler>) {
       return (l: PreparedLabel) => l[side].full.includes(needle);
     case "REGEX": {
       const re = compile(rule.pattern, rule.caseSensitive);
-      return re ? (l: PreparedLabel) => re.matcher(l.raw).find() : () => false;
+      return re ? (l: PreparedLabel) => re.test(l.raw) : () => false;
     }
     default:
       return () => false;

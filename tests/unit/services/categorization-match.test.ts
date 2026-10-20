@@ -157,7 +157,23 @@ describe("pickByPriority tie-break", () => {
 
 describe("prepareRules / pickPrepared", () => {
   const MATCH_TYPES: RuleMatchType[] = ["EXACT", "STARTS_WITH", "CONTAINS", "REGEX"];
-  const PATTERNS = ["ab", "Ab", "a", "é", "E", " ab ", "b", "ab|é", "^a", "(", "a.", "B$", ""];
+  const PATTERNS = [
+    "ab",
+    "Ab",
+    "a",
+    "é",
+    "E",
+    " ab ",
+    "b",
+    "ab|é",
+    "^a",
+    "(",
+    "a.",
+    "B$",
+    "",
+    "\\bab\\b",
+    "^\\s*ab$",
+  ];
   const LABELS = ["ab", "AB", " ab", "abé", "É", "e", "ba", "a b", "Ab ", "", "xyz", "éAB", "b"];
 
   // Deterministic generator: few patterns, priorities and timestamps, so ties are frequent.
