@@ -310,7 +310,7 @@ On the **Rules** tab, **Export** saves your rules to a `bilan-rules-YYYY-MM-DD.j
 **Import.**
 
 1. Click **Import**, choose the file and, if you manage a household, **Import into**: **Personal rules** or the household. Click **Continue**. Nothing is saved yet.
-2. In **Categories to resolve**, each category of the file that doesn't exist yet in the destination offers three choices: **Create** it (with its parent categories, the default), **Map to** one of your existing categories, or **Ignore** its rules. A category whose names already match the end of the file's path is reused when there is a single match; the others need a choice.
+2. In **Categories to resolve**, each category of the file that doesn't exist yet in the destination offers three choices: **Create** it (with any missing parent categories; this is the default), **Map to** one of your existing categories, or **Ignore** its rules. Bilan first looks for the same path in the destination (for example *Alimentation > Courses*). Otherwise it reuses a category whose path ends with the file's path, if there is exactly one. The others need a choice.
 3. In **Conflicts**, a rule that already exists with another category shows the change. Choose **Keep** the current category (the default) or **Move** the rule to the one in the file; a move changes only the category, not the pattern, priority or other settings. Rules that already exist with the same category are skipped.
 4. Check the counts of rules to create, to move and skipped, then click **Import**. Invalid rules in the file are listed and skipped; the others are still imported.
 
