@@ -30,7 +30,10 @@
     "db:reindex-search": "tsx --env-file=.env scripts/reindex-search-tokens.ts",
     "icons": "tsx scripts/generate-icons.ts",
     "docs:db": "bash scripts/docs-db.sh",
-    "docs:screenshots": "tsx scripts/docs-screenshots.ts"
+    "docs:screenshots": "tsx scripts/docs-screenshots.ts",
+    "perf:db": "bash scripts/perf/db.sh",
+    "perf:build": "bash scripts/perf/build.sh",
+    "perf:bench": "node scripts/perf/bench.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
