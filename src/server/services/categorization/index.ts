@@ -6,7 +6,14 @@ import { assertCategoryAssignable, CategoryAccessError } from "@/server/services
 import { GROUP_ROLE_RANK } from "@/lib/validation/group";
 import { ruleInputSchema, type RuleInput } from "@/lib/validation/rule";
 import { isValidRulePattern } from "./regex";
-import { compareRules, pickByPriority, type Rule } from "./match";
+import {
+  compareRules,
+  pickByPriority,
+  pickPrepared,
+  prepareLabel,
+  prepareRules,
+  type Rule,
+} from "./match";
 import type { RuleMatchType } from "@/lib/validation/rule";
 
 export class RuleAccessError extends Error {}
@@ -56,22 +63,21 @@ export async function loadRules(scope: Scope): Promise<Rule[]> {
   }));
 }
 
-function match(rules: Rule[], rawLabel: string): Suggestion {
-  const hit = pickByPriority(rules, rawLabel);
+function toSuggestion(hit: Rule | null): Suggestion {
   return hit ? { categoryId: hit.categoryId, ruleId: hit.id } : { categoryId: null, ruleId: null };
 }
 
 // Suggests a category for a label by matching the user's own + their groups'
 // enabled rules, highest priority first. Used by manual entry (3.4).
 export async function suggest(rawLabel: string, scope: Scope): Promise<Suggestion> {
-  return match(await loadRules(scope), rawLabel);
+  return toSuggestion(pickByPriority(await loadRules(scope), rawLabel));
 }
 
 // Batch variant: loads the rules ONCE then matches every label. Used by the
 // import preview and commit so N rows don't trigger N rule loads.
 export async function suggestMany(rawLabels: string[], scope: Scope): Promise<Suggestion[]> {
-  const rules = await loadRules(scope);
-  return rawLabels.map((label) => match(rules, label));
+  const prepared = prepareRules(await loadRules(scope));
+  return rawLabels.map((label) => toSuggestion(pickPrepared(prepared, prepareLabel(label))));
 }
 
 // Takes back hits credited by an import that is being reverted, never below zero.

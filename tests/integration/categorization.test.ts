@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "@/server/db";
-import { suggest, createRule, recordHits, RuleAccessError } from "@/server/services/categorization";
+import {
+  suggest,
+  suggestMany,
+  createRule,
+  recordHits,
+  RuleAccessError,
+} from "@/server/services/categorization";
 
 const userId = "rule_user";
 const stranger = "rule_stranger";
@@ -68,6 +74,17 @@ describe("categorization suggest", () => {
     );
     await db.categorizationRule.update({ where: { id: r.id }, data: { enabled: false } });
     expect((await suggest("UBER EATS", { userId })).ruleId).toBeNull();
+  });
+
+  it("suggestMany gives each label the same suggestion as suggest", async () => {
+    await createRule(
+      { pattern: "^cb .*city", matchType: "REGEX", priority: 500, categoryId: catA },
+      { id: userId },
+    );
+    const labels = ["CB CARREFOUR CITY PARIS", "PRLV EDF ENERGIE", "UBER EATS", "cb city", "NONE"];
+    const one = await Promise.all(labels.map((l) => suggest(l, { userId })));
+    expect(await suggestMany(labels, { userId })).toEqual(one);
+    expect(one.filter((s) => s.ruleId !== null)).toHaveLength(3);
   });
 });
 

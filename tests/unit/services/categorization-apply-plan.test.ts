@@ -1,10 +1,13 @@
 import { describe, it, expect } from "vitest";
 import {
   mergePlans,
+  planPreparedApplication,
   planRulesApplication,
+  prepareApplication,
   type PlanRow,
+  type RuleApplicationPlan,
 } from "@/server/services/categorization/apply-plan";
-import type { Rule } from "@/server/services/categorization/match";
+import { matchRule, pickByPriority, type Rule } from "@/server/services/categorization/match";
 
 const rule = (id: string, pattern: string, categoryId: string, priority = 100): Rule => ({
   id,
@@ -109,6 +112,93 @@ describe("planRulesApplication (batch)", () => {
     );
     expect(plan.matched).toBe(1);
     expect(plan.moves).toEqual([{ id: "t1", ruleId: "prime", categoryId: "subs" }]);
+  });
+});
+
+describe("planRulesApplication (prepared matching)", () => {
+  // The planner as it was before rules were prepared: matchRule + pickByPriority per row.
+  function reference(applied: Rule[], rules: Rule[], rows: PlanRow[]) {
+    const appliedIds = new Set(applied.map((r) => r.id));
+    const plan = { matched: 0, moves: [] as RuleApplicationPlan["moves"], manual: 0, kept: 0 };
+    for (const r of rows) {
+      if (!applied.some((a) => matchRule(a, r.rawLabel))) continue;
+      plan.matched++;
+      if (r.manual) {
+        plan.manual++;
+        continue;
+      }
+      const winner = pickByPriority(rules, r.rawLabel);
+      if (!winner) continue;
+      if (!appliedIds.has(winner.id)) plan.kept++;
+      else if (r.categoryId !== winner.categoryId) {
+        plan.moves.push({ id: r.id, ruleId: winner.id, categoryId: winner.categoryId });
+      }
+    }
+    return plan;
+  }
+
+  it("plans exactly like matchRule + pickByPriority over mixed rules", () => {
+    const types = ["EXACT", "STARTS_WITH", "CONTAINS", "REGEX"] as const;
+    const patterns = ["amazon", "AMAZON PRIME", "Crème", "^cb ", "prime$", " leclerc", "(", "é"];
+    const rules: Rule[] = patterns.flatMap((pattern, p) =>
+      types.flatMap((matchType, t) =>
+        [true, false].map((caseSensitive) => ({
+          id: `r${p}${t}${caseSensitive ? "s" : "i"}`,
+          categoryId: `c${(p + t) % 3}`,
+          pattern,
+          matchType,
+          caseSensitive,
+          priority: [100, 100, 200][(p * t) % 3],
+          createdAt: p % 2,
+        })),
+      ),
+    );
+    const labels = [
+      "AMAZON PRIME",
+      "cb amazon",
+      "CREME brûlée",
+      "Crème",
+      " LECLERC",
+      "x prime",
+      "é",
+    ];
+    const rows = labels.flatMap((l, i) => [
+      row(`t${i}a`, l, null),
+      row(`t${i}b`, l, "c1"),
+      row(`t${i}c`, l, "c2", true),
+    ]);
+    for (const applied of [rules.slice(0, 20), rules.filter((_, i) => i % 3 === 0), rules]) {
+      const plan = planRulesApplication(applied, rules, rows);
+      const ref = reference(applied, rules, rows);
+      expect(plan.matched).toBe(ref.matched);
+      expect(plan.manual).toBe(ref.manual);
+      expect(plan.moves).toEqual(ref.moves);
+      expect(plan.keptBy.reduce((n, k) => n + k.count, 0)).toBe(ref.kept);
+    }
+  });
+
+  it("a prepared application plans every page like the unprepared planner", () => {
+    const rows = [row("t1", "AMAZON PRIME", null), row("t2", "AMAZON", "food")];
+    const prepared = prepareApplication([amazon], [prime, amazon]);
+    expect(planPreparedApplication(prepared, rows)).toEqual(
+      planRulesApplication([amazon], [prime, amazon], rows),
+    );
+  });
+
+  it("plans a batch of more REGEX rules than the global regex cache holds", () => {
+    const rules: Rule[] = Array.from({ length: 600 }, (_, i) => ({
+      id: `re${i}`,
+      categoryId: `c${i}`,
+      pattern: `^ref-${i}$`,
+      matchType: "REGEX",
+      caseSensitive: false,
+    }));
+    const rows = rules.map((_, i) => row(`t${i}`, `REF-${i}`, null));
+    const plan = planRulesApplication(rules, rules, rows);
+    expect(plan.matched).toBe(600);
+    expect(plan.moves).toEqual(
+      rows.map((_, i) => ({ id: `t${i}`, ruleId: `re${i}`, categoryId: `c${i}` })),
+    );
   });
 });
 

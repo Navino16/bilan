@@ -1,4 +1,5 @@
-import { matchRule, pickByPriority, type Rule } from "./match";
+import { pickPrepared, prepareLabel, prepareRules, type PreparedRule, type Rule } from "./match";
+import { createRegexCompiler } from "./regex";
 
 export type PlanRow = { id: string; rawLabel: string; categoryId: string | null; manual: boolean };
 
@@ -11,14 +12,37 @@ export type RuleApplicationPlan = {
   keptBy: { ruleId: string; pattern: string; count: number }[];
 };
 
-// Applying rules to the past runs the same engine as an import (spec §5.6): only the rows an
-// applied rule wins move; manual rows and rows a rule outside the set wins stay as they are.
+export type PreparedApplication = {
+  applied: PreparedRule[];
+  appliedIds: Set<string>;
+  rules: PreparedRule[];
+};
+
+// Prepared once per apply and reused for every page: folding and regex compilation are the
+// hot path at thousands of rules (#291).
+export function prepareApplication(applied: Rule[], rules: Rule[]): PreparedApplication {
+  const compile = createRegexCompiler();
+  return {
+    applied: prepareRules(applied, compile),
+    appliedIds: new Set(applied.map((r) => r.id)),
+    rules: prepareRules(rules, compile),
+  };
+}
+
 export function planRulesApplication(
   applied: Rule[],
   rules: Rule[],
   rows: PlanRow[],
 ): RuleApplicationPlan {
-  const appliedIds = new Set(applied.map((r) => r.id));
+  return planPreparedApplication(prepareApplication(applied, rules), rows);
+}
+
+// Applying rules to the past runs the same engine as an import (spec §5.6): only the rows an
+// applied rule wins move; manual rows and rows a rule outside the set wins stay as they are.
+export function planPreparedApplication(
+  prepared: PreparedApplication,
+  rows: PlanRow[],
+): RuleApplicationPlan {
   const plan: RuleApplicationPlan = {
     matched: 0,
     moves: [],
@@ -29,15 +53,16 @@ export function planRulesApplication(
   };
   const kept = new Map<string, { ruleId: string; pattern: string; count: number }>();
   for (const row of rows) {
-    if (!applied.some((r) => matchRule(r, row.rawLabel))) continue;
+    const label = prepareLabel(row.rawLabel);
+    if (!prepared.applied.some((r) => r.test(label))) continue;
     plan.matched++;
     if (row.manual) {
       plan.manual++;
       continue;
     }
-    const winner = pickByPriority(rules, row.rawLabel);
+    const winner = pickPrepared(prepared.rules, label);
     if (!winner) continue;
-    if (!appliedIds.has(winner.id)) {
+    if (!prepared.appliedIds.has(winner.id)) {
       const entry = kept.get(winner.id) ?? { ruleId: winner.id, pattern: winner.pattern, count: 0 };
       entry.count++;
       kept.set(winner.id, entry);

@@ -12,7 +12,12 @@ import {
   recordHits,
   RuleValidationError,
 } from "./index";
-import { mergePlans, planRulesApplication, type RuleApplicationPlan } from "./apply-plan";
+import {
+  mergePlans,
+  planPreparedApplication,
+  prepareApplication,
+  type RuleApplicationPlan,
+} from "./apply-plan";
 
 export type RuleApplicationPreview = Omit<RuleApplicationPlan, "moves"> & { moving: number };
 
@@ -33,6 +38,7 @@ async function planFor(manageable: CategorizationRule[], actor: { id: string }) 
   const plans: RuleApplicationPlan[] = [];
   if (applied.length === 0) return mergePlans(plans);
   const accountIds = await writableAccountIds(actor.id);
+  const prepared = prepareApplication(applied, rules);
 
   let cursor: string | undefined;
   for (;;) {
@@ -49,7 +55,7 @@ async function planFor(manageable: CategorizationRule[], actor: { id: string }) 
       categoryId: t.categoryId,
       manual: t.manuallyCategorized,
     }));
-    plans.push(planRulesApplication(applied, rules, rows));
+    plans.push(planPreparedApplication(prepared, rows));
     if (page.length < PAGE) break;
     cursor = page[page.length - 1].id;
   }

@@ -1,6 +1,6 @@
 import { foldDiacritics } from "@/lib/text";
 import type { RuleMatchType } from "@/lib/validation/rule";
-import { compileRulePattern } from "./regex";
+import { compileRulePattern, createRegexCompiler } from "./regex";
 
 export type Rule = {
   id: string;
@@ -58,6 +58,55 @@ export function pickByPriority(rules: Rule[], label: string): Rule | null {
     if (!best || compareRules(r, best) < 0) best = r;
   }
   return best;
+}
+
+type Hay = { full: string; trimmed: string; trimmedStart: string };
+
+// A label folded once for every rule: `sensitive` is the raw label, `insensitive` the form
+// case-insensitive non-REGEX rules compare against (see `prep`).
+export type PreparedLabel = { raw: string; sensitive: Hay; insensitive: Hay };
+
+const hay = (s: string): Hay => ({ full: s, trimmed: s.trim(), trimmedStart: s.trimStart() });
+
+export function prepareLabel(label: string): PreparedLabel {
+  return { raw: label, sensitive: hay(label), insensitive: hay(prep(label, false)) };
+}
+
+export type PreparedRule = { rule: Rule; test: (label: PreparedLabel) => boolean };
+
+// Same semantics as `matchRule`, with the pattern folded and the regex compiled up front.
+function matcher(rule: Rule, compile: ReturnType<typeof createRegexCompiler>) {
+  const needle = prep(rule.pattern, rule.caseSensitive);
+  const side = rule.caseSensitive ? "sensitive" : "insensitive";
+  switch (rule.matchType) {
+    case "EXACT": {
+      const trimmed = needle.trim();
+      return (l: PreparedLabel) => l[side].trimmed === trimmed;
+    }
+    case "STARTS_WITH": {
+      const trimmed = needle.trim();
+      return (l: PreparedLabel) => l[side].trimmedStart.startsWith(trimmed);
+    }
+    case "CONTAINS":
+      return (l: PreparedLabel) => l[side].full.includes(needle);
+    case "REGEX": {
+      const re = compile(rule.pattern, rule.caseSensitive);
+      return re ? (l: PreparedLabel) => re.matcher(l.raw).find() : () => false;
+    }
+    default:
+      return () => false;
+  }
+}
+
+// Sorted with `compareRules` (stable sort), so the first rule matching a label is the one
+// `pickByPriority` returns. For matching many labels against the same rules (#291).
+export function prepareRules(rules: Rule[], compile = createRegexCompiler()): PreparedRule[] {
+  return [...rules].sort(compareRules).map((rule) => ({ rule, test: matcher(rule, compile) }));
+}
+
+export function pickPrepared(prepared: PreparedRule[], label: PreparedLabel): Rule | null {
+  for (const p of prepared) if (p.test(label)) return p.rule;
+  return null;
 }
 
 // Lives in lib so the client list can use it without bundling re2js.
