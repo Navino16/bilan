@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
 import { LONG_TX_TIMEOUT } from "@/server/db/timeouts";
 import { logEvent } from "@/server/services/audit";
+import { loadAssignableCategories } from "@/server/services/categories";
 import { requireGroupRole } from "@/server/services/groups/roles";
 import {
   categoryPathKey,
@@ -63,20 +64,12 @@ function parseOrThrow(text: string) {
 const targetOwner = (target: Target, actorId: string) =>
   target.groupId ? { userId: null, groupId: target.groupId } : { userId: actorId, groupId: null };
 
-// Same set as `listForUser`, read through `client` so the commit sees it inside its transaction.
 async function loadCategories(
   client: Client,
   target: Target,
   actorId: string,
 ): Promise<ImportCategory[]> {
-  const memberships = await client.groupMember.findMany({
-    where: { userId: actorId },
-    select: { groupId: true },
-  });
-  const rows = await client.category.findMany({
-    where: { OR: [{ userId: actorId }, { groupId: { in: memberships.map((m) => m.groupId) } }] },
-    select: { id: true, name: true, parentId: true, userId: true, groupId: true },
-  });
+  const rows = await loadAssignableCategories(client, actorId);
   return rows.map((c) => ({
     id: c.id,
     name: c.name,

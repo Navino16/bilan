@@ -322,20 +322,25 @@ function buildTree(
 }
 
 // All categories the user can use: their personal ones + every category owned
-// by a group they belong to. Returned as a parent/child forest. Memoized per
-// server render: pages also reach it through listForeignCategories.
-export const listForUser = cache(async (userId: string): Promise<CategoryNode[]> => {
-  const memberships = await db.groupMember.findMany({
+// by a group they belong to. `client` lets a transaction read the same set.
+export async function loadAssignableCategories(client: Prisma.TransactionClient, userId: string) {
+  const memberships = await client.groupMember.findMany({
     where: { userId },
     select: { groupId: true },
   });
   const groupIds = memberships.map((m) => m.groupId);
-  const rows = await db.category.findMany({
+  return client.category.findMany({
     where: { OR: [{ userId }, { groupId: { in: groupIds } }] },
     orderBy: { name: "asc" },
   });
-  return buildTree(rows);
-});
+}
+
+// `loadAssignableCategories` as a parent/child forest. Memoized per server
+// render: pages also reach it through listForeignCategories.
+export const listForUser = cache(
+  async (userId: string): Promise<CategoryNode[]> =>
+    buildTree(await loadAssignableCategories(db, userId)),
+);
 
 // Categories the user can't use but meets on the transactions they can see
 // (an owner's personal ones on a shared account), plus their ancestors for
