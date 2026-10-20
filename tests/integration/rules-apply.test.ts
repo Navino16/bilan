@@ -300,6 +300,24 @@ describe("previewRulesApplication / applyRules", () => {
     expect(await applyRules([roff.id], { id: actor })).toEqual({ reclassified: 0 });
   });
 
+  it("applyRules lets a household ADMIN apply a household rule", async () => {
+    const groupFood = (await db.category.create({ data: { name: "Group food", groupId } })).id;
+    const l = label("BGROUPADMIN");
+    const row = await tx(acc.write, l);
+    const { id } = await rule(l, groupFood, 100, { groupId });
+    const where = { groupId_userId: { groupId, userId: other } };
+    await db.groupMember.update({ where, data: { role: "ADMIN" } });
+    try {
+      expect(await applyRules([id], { id: other })).toEqual({ reclassified: 1 });
+      expect(await categoryOf(row)).toBe(groupFood);
+    } finally {
+      await db.groupMember.update({ where, data: { role: "MEMBER" } });
+      await db.transaction.delete({ where: { id: row } });
+      await db.categorizationRule.delete({ where: { id } });
+      await db.category.delete({ where: { id: groupFood } });
+    }
+  });
+
   it("applyRules refuses a household rule for a plain member", async () => {
     const groupFood = (await db.category.create({ data: { name: "Group food", groupId } })).id;
     const { id } = await rule(label("BGROUP"), groupFood, 100, { groupId });
@@ -336,6 +354,7 @@ describe("previewRulesApplication / applyRules", () => {
     let sequential = 0;
     for (const id of ordered) sequential += (await applyRule(id, { id: actor })).reclassified;
 
+    expect(batch.reclassified).toBeGreaterThan(0);
     expect(sequential).toBe(batch.reclassified);
     expect(await Promise.all(seqRows.map(categoryOf))).toEqual(batchState);
   });

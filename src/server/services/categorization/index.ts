@@ -3,7 +3,7 @@ import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import { requireGroupRole, type GroupRole } from "@/server/services/groups/roles";
 import { assertCategoryAssignable, CategoryAccessError } from "@/server/services/categories";
-import { GROUP_ROLE_RANK } from "@/lib/validation/group";
+import { canManageInGroup } from "@/lib/validation/group";
 import { ruleInputSchema, type RuleInput } from "@/lib/validation/rule";
 import { isValidRulePattern } from "./regex";
 import {
@@ -196,7 +196,7 @@ export async function loadManageableRules(
       select: { groupId: true, role: true },
     });
     for (const m of memberships) {
-      if (GROUP_ROLE_RANK[m.role as GroupRole] >= GROUP_ROLE_RANK.ADMIN) adminOf.add(m.groupId);
+      if (canManageInGroup(m.role as GroupRole)) adminOf.add(m.groupId);
     }
   }
   for (const r of rules) {
