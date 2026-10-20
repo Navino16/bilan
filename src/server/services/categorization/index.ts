@@ -1,8 +1,9 @@
-import type { Prisma } from "@prisma/client";
+import type { CategorizationRule, Prisma } from "@prisma/client";
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
-import { requireGroupRole } from "@/server/services/groups/roles";
+import { requireGroupRole, type GroupRole } from "@/server/services/groups/roles";
 import { assertCategoryAssignable, CategoryAccessError } from "@/server/services/categories";
+import { GROUP_ROLE_RANK } from "@/lib/validation/group";
 import { ruleInputSchema, type RuleInput } from "@/lib/validation/rule";
 import { isValidRulePattern } from "./regex";
 import { compareRules, pickByPriority, type Rule } from "./match";
@@ -170,6 +171,33 @@ export async function loadManageableRule(id: string, actorId: string) {
     throw new RuleAccessError("FORBIDDEN");
   }
   return rule;
+}
+
+// Batch variant of loadManageableRule: one rule query and one membership query, whatever the
+// number of rules. Any missing rule is NOT_FOUND, any rule the actor cannot manage is FORBIDDEN.
+export async function loadManageableRules(
+  ids: string[],
+  actorId: string,
+): Promise<CategorizationRule[]> {
+  const unique = [...new Set(ids)];
+  const rules = await db.categorizationRule.findMany({ where: { id: { in: unique } } });
+  if (rules.length !== unique.length) throw new RuleAccessError("NOT_FOUND");
+  const groupIds = [...new Set(rules.flatMap((r) => (r.groupId ? [r.groupId] : [])))];
+  const adminOf = new Set<string>();
+  if (groupIds.length > 0) {
+    const memberships = await db.groupMember.findMany({
+      where: { userId: actorId, groupId: { in: groupIds } },
+      select: { groupId: true, role: true },
+    });
+    for (const m of memberships) {
+      if (GROUP_ROLE_RANK[m.role as GroupRole] >= GROUP_ROLE_RANK.ADMIN) adminOf.add(m.groupId);
+    }
+  }
+  for (const r of rules) {
+    const manageable = r.groupId ? adminOf.has(r.groupId) : r.userId === actorId;
+    if (!manageable) throw new RuleAccessError("FORBIDDEN");
+  }
+  return rules;
 }
 
 // Updates a rule's pattern/match/priority/category. Scope (user vs group) is

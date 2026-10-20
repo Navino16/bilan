@@ -2,6 +2,7 @@
 
 import { requireSession } from "@/server/auth/permissions";
 import { ruleInputSchema } from "@/lib/validation/rule";
+import { RULES_FILE_MAX_RULES } from "@/lib/validation/rules-file";
 import {
   createRule,
   updateRule,
@@ -12,7 +13,9 @@ import {
 } from "@/server/services/categorization";
 import {
   applyRule,
+  applyRules,
   previewRuleApplication,
+  previewRulesApplication,
   type RuleApplicationPreview,
 } from "@/server/services/categorization/apply";
 
@@ -111,6 +114,32 @@ export async function applyRuleAction(
   const user = await requireSession();
   try {
     return { ok: true, ...(await applyRule(ruleId, { id: user.id })) };
+  } catch (e) {
+    return { ok: false, error: ruleError(e) };
+  }
+}
+
+const validRuleIds = (ids: string[]) => ids.length > 0 && ids.length <= RULES_FILE_MAX_RULES;
+
+export async function previewRulesApplicationAction(
+  ruleIds: string[],
+): Promise<{ ok: true; preview: RuleApplicationPreview } | { ok: false; error: string }> {
+  const user = await requireSession();
+  if (!validRuleIds(ruleIds)) return { ok: false, error: "INVALID" };
+  try {
+    return { ok: true, preview: await previewRulesApplication(ruleIds, { id: user.id }) };
+  } catch (e) {
+    return { ok: false, error: ruleError(e) };
+  }
+}
+
+export async function applyRulesAction(
+  ruleIds: string[],
+): Promise<{ ok: true; reclassified: number } | { ok: false; error: string }> {
+  const user = await requireSession();
+  if (!validRuleIds(ruleIds)) return { ok: false, error: "INVALID" };
+  try {
+    return { ok: true, ...(await applyRules(ruleIds, { id: user.id })) };
   } catch (e) {
     return { ok: false, error: ruleError(e) };
   }

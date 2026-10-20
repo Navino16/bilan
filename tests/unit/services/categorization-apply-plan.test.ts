@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   mergePlans,
-  planRuleApplication,
+  planRulesApplication,
   type PlanRow,
 } from "@/server/services/categorization/apply-plan";
 import type { Rule } from "@/server/services/categorization/match";
@@ -24,46 +24,46 @@ const row = (id: string, rawLabel: string, categoryId: string | null, manual = f
 const prime = rule("prime", "amazon prime", "subs");
 const amazon = rule("amazon", "amazon", "shops");
 
-describe("planRuleApplication", () => {
+describe("planRulesApplication", () => {
   it("ignores rows the applied rule does not match", () => {
-    const plan = planRuleApplication(prime, [prime], [row("t1", "CB LECLERC", null)]);
+    const plan = planRulesApplication([prime], [prime], [row("t1", "CB LECLERC", null)]);
     expect(plan.matched).toBe(0);
-    expect(plan.moveIds).toEqual([]);
+    expect(plan.moves).toEqual([]);
   });
 
   it("never moves a manual row", () => {
-    const plan = planRuleApplication(prime, [prime], [row("t1", "AMAZON PRIME", "food", true)]);
+    const plan = planRulesApplication([prime], [prime], [row("t1", "AMAZON PRIME", "food", true)]);
     expect(plan.manual).toBe(1);
-    expect(plan.moveIds).toEqual([]);
+    expect(plan.moves).toEqual([]);
   });
 
   it("moves an uncategorized row", () => {
-    const plan = planRuleApplication(prime, [prime], [row("t1", "AMAZON PRIME", null)]);
-    expect(plan.moveIds).toEqual(["t1"]);
+    const plan = planRulesApplication([prime], [prime], [row("t1", "AMAZON PRIME", null)]);
+    expect(plan.moves).toEqual([{ id: "t1", ruleId: "prime", categoryId: "subs" }]);
     expect(plan.movingFromOther).toBe(0);
   });
 
   it("takes a row from a more general rule", () => {
-    const plan = planRuleApplication(
-      prime,
+    const plan = planRulesApplication(
+      [prime],
       [amazon, prime],
       [row("t1", "AMAZON PRIME FR", "shops")],
     );
-    expect(plan.moveIds).toEqual(["t1"]);
+    expect(plan.moves).toEqual([{ id: "t1", ruleId: "prime", categoryId: "subs" }]);
     expect(plan.movingFromOther).toBe(1);
   });
 
   it("leaves rows a higher-priority rule wins", () => {
     const strong = rule("strong", "amazon", "shops", 200);
-    const plan = planRuleApplication(prime, [strong, prime], [row("t1", "AMAZON PRIME", null)]);
-    expect(plan.moveIds).toEqual([]);
+    const plan = planRulesApplication([prime], [strong, prime], [row("t1", "AMAZON PRIME", null)]);
+    expect(plan.moves).toEqual([]);
     expect(plan.keptBy).toEqual([{ ruleId: "strong", pattern: "amazon", count: 1 }]);
   });
 
   it("does not count a row already in the target category", () => {
-    const plan = planRuleApplication(prime, [prime], [row("t1", "AMAZON PRIME", "subs")]);
+    const plan = planRulesApplication([prime], [prime], [row("t1", "AMAZON PRIME", "subs")]);
     expect(plan.alreadyInCategory).toBe(1);
-    expect(plan.moveIds).toEqual([]);
+    expect(plan.moves).toEqual([]);
   });
 
   it("sorts keptBy by count, then pattern", () => {
@@ -74,11 +74,41 @@ describe("planRuleApplication", () => {
       row("t2", "PRIME APP", null),
       row("t3", "AMAZON", null),
     ];
-    const plan = planRuleApplication(rule("all", "a", "z"), [a, b, rule("all", "a", "z")], rows);
+    const plan = planRulesApplication([rule("all", "a", "z")], [a, b, rule("all", "a", "z")], rows);
     expect(plan.keptBy.map((k) => [k.pattern, k.count])).toEqual([
       ["prime", 2],
       ["amazon", 1],
     ]);
+  });
+});
+
+describe("planRulesApplication (batch)", () => {
+  it("batch: a row won by a batch rule moves to that rule's category", () => {
+    const rows = [row("t1", "AMAZON PRIME", null), row("t2", "LECLERC", null)];
+    const leclerc = rule("leclerc", "leclerc", "food");
+    const plan = planRulesApplication([prime, leclerc], [prime, leclerc, amazon], rows);
+    expect(plan.matched).toBe(2);
+    expect(plan.moves).toEqual([
+      { id: "t1", ruleId: "prime", categoryId: "subs" },
+      { id: "t2", ruleId: "leclerc", categoryId: "food" },
+    ]);
+  });
+
+  it("batch: a row won by a non-batch rule is kept", () => {
+    const strong = rule("strong", "amazon", "shops", 200);
+    const plan = planRulesApplication([prime], [strong, prime], [row("t1", "AMAZON PRIME", null)]);
+    expect(plan.moves).toEqual([]);
+    expect(plan.keptBy).toEqual([{ ruleId: "strong", pattern: "amazon", count: 1 }]);
+  });
+
+  it("batch: a row matched by two batch rules moves once, to the stronger", () => {
+    const plan = planRulesApplication(
+      [prime, amazon],
+      [prime, amazon],
+      [row("t1", "AMAZON PRIME", null)],
+    );
+    expect(plan.matched).toBe(1);
+    expect(plan.moves).toEqual([{ id: "t1", ruleId: "prime", categoryId: "subs" }]);
   });
 });
 
@@ -92,10 +122,10 @@ describe("mergePlans", () => {
       row("t4", "AMAZON PRIME", "food", true),
       row("t5", "AMAZON", null),
     ];
-    const whole = planRuleApplication(amazon, rules, rows);
+    const whole = planRulesApplication([amazon], rules, rows);
     const paged = mergePlans([
-      planRuleApplication(amazon, rules, rows.slice(0, 2)),
-      planRuleApplication(amazon, rules, rows.slice(2)),
+      planRulesApplication([amazon], rules, rows.slice(0, 2)),
+      planRulesApplication([amazon], rules, rows.slice(2)),
     ]);
     expect(paged).toEqual(whole);
   });
@@ -103,7 +133,7 @@ describe("mergePlans", () => {
   it("returns an empty plan for no pages", () => {
     expect(mergePlans([])).toEqual({
       matched: 0,
-      moveIds: [],
+      moves: [],
       movingFromOther: 0,
       alreadyInCategory: 0,
       manual: 0,
