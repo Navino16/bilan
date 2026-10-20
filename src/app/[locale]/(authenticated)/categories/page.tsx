@@ -7,6 +7,7 @@ import { getMerchantDirectory } from "@/server/services/merchants";
 import { flattenCategories } from "@/components/transactions/category-tree";
 import { CategoriesView } from "@/components/categories/categories-view";
 import type { RuleMatchType } from "@/lib/validation/rule";
+import { canManageInGroup } from "@/lib/validation/group";
 import { pageTitle } from "@/i18n/metadata";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +28,7 @@ export default async function CategoriesPage({ params }: { params: Promise<{ loc
     role: g.role,
   }));
   const merchants = await getMerchantDirectory(user.id);
+  const roleByGroup = new Map(groups.map((g) => [g.id, g.role]));
 
   const rules = ruleRows.map((r) => ({
     id: r.id,
@@ -41,6 +43,7 @@ export default async function CategoriesPage({ params }: { params: Promise<{ loc
     groupId: r.groupId,
     groupName: r.group?.name ?? null,
     hits: r.hits,
+    canManage: r.groupId === null || canManageInGroup(roleByGroup.get(r.groupId) ?? "MEMBER"),
   }));
 
   return (

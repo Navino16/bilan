@@ -84,6 +84,56 @@ test.describe("categorization rules", () => {
     await expect(txRow).toContainText(category, { timeout: 15_000 });
   });
 
+  test("shows a definitive apply error and stops offering to reclassify (#289)", async ({
+    page,
+  }) => {
+    const pattern = `GONE${Date.now()}`;
+    await page.goto(`/fr/transactions?search=${pattern}`);
+    await page.getByRole("button", { name: /nouvelle transaction/i }).click();
+    await page.fill('input[name="date"]', "2026-02-19");
+    await page.fill('input[name="amount"]', "-7");
+    await page.fill('input[name="label"]', `CB ${pattern}`);
+    await page.getByRole("button", { name: /^ajouter$/i }).click();
+    await expect(
+      page.locator('[data-slot="transaction-row"]').filter({ hasText: pattern }),
+    ).toHaveCount(1, { timeout: 15_000 });
+
+    await page.goto("/fr/categories");
+    await page.getByRole("button", { name: /^Règles/ }).click();
+    await page.getByRole("button", { name: /nouvelle règle/i }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel(/motif/i).fill(pattern);
+    await dialog.locator('[data-slot="category-combobox"]').click();
+    await page.getByRole("menuitem").nth(1).click();
+    await dialog.getByRole("button", { name: /enregistrer/i }).click();
+    const reclassify = dialog.getByRole("button", { name: /reclasser 1 transaction/i });
+    await expect(reclassify).toBeVisible();
+
+    // Delete the rule from another tab while the summary is still open.
+    const other = await page.context().newPage();
+    await other.goto("/fr/categories");
+    await other.getByRole("button", { name: /^Règles/ }).click();
+    await other
+      .locator('[data-slot="rule-row"]')
+      .filter({ hasText: pattern })
+      .getByRole("button", { name: /supprimer/i })
+      .click();
+    await other
+      .locator('[data-slot="confirm-dialog"]')
+      .getByRole("button", { name: /^supprimer$/i })
+      .click();
+    await expect(other.locator('[data-slot="rule-row"]').filter({ hasText: pattern })).toHaveCount(
+      0,
+    );
+    await other.close();
+
+    await reclassify.click();
+    await expect(dialog.getByRole("alert")).toHaveText("Cette règle n’existe plus.");
+    await expect(reclassify).toBeHidden();
+    await dialog.getByRole("button", { name: "Fermer", exact: true }).first().click();
+    await expect(dialog).toBeHidden();
+  });
+
   test("« Nouvelle règle » opens blank after a cancel or a save (#227)", async ({ page }) => {
     const pattern = `BLANK${Date.now()}`;
     await page.goto("/fr/categories");
@@ -155,6 +205,48 @@ test.describe("categorization rules", () => {
         .click();
       await expect(row).toHaveCount(0);
     });
+  });
+
+  test("a plain household member can't act on a household rule (#289)", async ({
+    page,
+    browser,
+    baseURL,
+  }) => {
+    const pattern = `FOYER${Date.now()}`;
+    await page.goto("/fr/categories");
+    await page.getByRole("button", { name: /^Règles/ }).click();
+    await page.getByRole("button", { name: /nouvelle règle/i }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel(/motif/i).fill(pattern);
+    await dialog.locator("#rule-scope").selectOption({ label: "E2E Shared" });
+    await dialog.locator('[data-slot="category-combobox"]').click();
+    await page.getByRole("menuitem").nth(1).click();
+    await dialog.getByRole("button", { name: /enregistrer/i }).click();
+    await expect(dialog).toBeHidden();
+    const ownerRow = page.locator('[data-slot="rule-row"]').filter({ hasText: pattern });
+    await expect(ownerRow.getByRole("button", { name: /modifier la règle/i })).toBeVisible();
+
+    const memberCtx = await browser.newContext({
+      storageState: "tests/e2e/.auth/member.json",
+      baseURL,
+    });
+    try {
+      const mp = await memberCtx.newPage();
+      await mp.goto("/fr/categories");
+      await mp.getByRole("button", { name: /^Règles/ }).click();
+      const row = mp.locator('[data-slot="rule-row"]').filter({ hasText: pattern });
+      await expect(row).toHaveCount(1);
+      await expect(row.getByRole("button")).toHaveCount(0);
+      await expect(row.getByRole("checkbox", { name: pattern }).first()).toBeDisabled();
+    } finally {
+      await memberCtx.close();
+      await ownerRow.getByRole("button", { name: /supprimer/i }).click();
+      await page
+        .locator('[data-slot="confirm-dialog"]')
+        .getByRole("button", { name: /^supprimer$/i })
+        .click();
+      await expect(ownerRow).toHaveCount(0);
+    }
   });
 
   test("the scope list only offers foyers where the user may create rules (#223)", async ({

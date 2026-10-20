@@ -38,15 +38,16 @@ export function matchRule(rule: Rule, label: string): boolean {
 }
 
 // Negative when `a` wins: higher priority, then the longer (more specific) pattern, then the
-// newer rule, so equal priorities never depend on database order (#287).
+// newer rule, then the id, so the winner never depends on database order (#287).
 export function compareRules(
-  a: Pick<Rule, "priority" | "pattern" | "createdAt">,
-  b: Pick<Rule, "priority" | "pattern" | "createdAt">,
+  a: Pick<Rule, "id" | "priority" | "pattern" | "createdAt">,
+  b: Pick<Rule, "id" | "priority" | "pattern" | "createdAt">,
 ): number {
   return (
     (b.priority ?? 100) - (a.priority ?? 100) ||
     b.pattern.length - a.pattern.length ||
-    (b.createdAt ?? 0) - (a.createdAt ?? 0)
+    (b.createdAt ?? 0) - (a.createdAt ?? 0) ||
+    (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
   );
 }
 

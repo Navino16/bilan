@@ -941,7 +941,7 @@ In every mode, an admin can create users from `/admin/users` (`users/create.admi
 `categorization.suggest(rawLabel, { userId })` (`suggestMany` for imports, rules loaded once):
 1. Load enabled rules where `userId = current` OR `groupId IN (user's groups)`, sorted by priority DESC. There are no system rules.
 2. Match by type (EXACT, STARTS_WITH, CONTAINS, REGEX). Case-insensitive by default; case-insensitive non-REGEX rules also ignore accents; REGEX runs on re2js and a bad pattern never matches.
-3. Return `{ categoryId, ruleId }` of the winning match, else `{ categoryId: null, ruleId: null }`. The winner has the highest priority; ties go to the longest pattern, then the newest rule (`compareRules`, also the rules list order). Imports credit the rule's `hits` counter (taken back on undo).
+3. Return `{ categoryId, ruleId }` of the winning match, else `{ categoryId: null, ruleId: null }`. The winner has the highest priority; ties go to the longest pattern, then the newest rule, then the id (`compareRules`, also the rules list order). Imports credit the rule's `hits` counter (taken back on undo).
 
 When a user manually changes a category:
 1. Update transaction (`manuallyCategorized = true`, audit `transaction.recategorized`).
@@ -952,8 +952,8 @@ When a user manually changes a category:
 3. On confirm: create `CategorizationRule` (`rule.created`), then offer the application summary below. On decline: nothing.
 
 Applying a rule to existing transactions (#287), offered after a create or edit when something would move or a stronger rule keeps rows, and from each rule's row:
-1. `previewRuleApplication(ruleId, actor)`: the actor must manage the rule (owner, or group ADMIN+) and the rule must be enabled. It loads the transactions of every account the actor can write (`writableAccountIds`: owned or shared WRITE, archived included), decrypts their raw labels and runs `planRuleApplication` with the actor's enabled rules. Counts: matched, moving (the applied rule wins and the category differs), moving from another category, already in the category, manual, kept by a stronger rule (per rule).
-2. `applyRule(ruleId, actor)`: recomputes, then sets the category of the moving rows in one DB transaction, guarded by `manuallyCategorized = false` so a row made manual in between stays. Credits `hits`, then audits `rule.applied` (`{ reclassified }`) when at least one row moved.
+1. `previewRuleApplication(ruleId, actor)`: the actor must manage the rule (owner, or group ADMIN+) and the rule must be enabled. It loads the transactions of every account the actor can write (`writableAccountIds`: owned or shared WRITE, archived included), decrypts their raw labels a page at a time and runs `planRuleApplication` on each page with the actor's enabled rules (`mergePlans` sums the pages). Counts: matched, moving (the applied rule wins and the category differs), moving from another category, already in the category, manual, kept by a stronger rule (per rule).
+2. `applyRule(ruleId, actor)`: recomputes, then sets the category of the moving rows in one DB transaction, guarded by `manuallyCategorized = false` so a row made manual in between stays. Credits `hits`, then audits `rule.applied` (`{ reclassified }`) when at least one row moved. The dialog shows the actual count when it differs from the preview, and can't be closed while applying.
 3. Manual rows are never written; rows a stronger rule wins are left as they are.
 
 ### 5.7 Budget creation & calculation

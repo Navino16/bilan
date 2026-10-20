@@ -3,16 +3,18 @@
 import { requireSession } from "@/server/auth/permissions";
 import { ruleInputSchema } from "@/lib/validation/rule";
 import {
-  applyRule,
   createRule,
   updateRule,
   deleteRule,
   toggleRule,
-  previewRuleApplication,
   RuleAccessError,
   RuleValidationError,
-  type RuleApplicationPreview,
 } from "@/server/services/categorization";
+import {
+  applyRule,
+  previewRuleApplication,
+  type RuleApplicationPreview,
+} from "@/server/services/categorization/apply";
 
 function ruleError(e: unknown): string {
   if (e instanceof RuleAccessError) return e.message === "NOT_FOUND" ? "NOT_FOUND" : "FORBIDDEN";

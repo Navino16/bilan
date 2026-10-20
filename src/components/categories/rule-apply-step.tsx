@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode, type TransitionStartFunction } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Check, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CategoryChip, overline } from "@/components/transactions/bits";
-import type { RuleApplicationPreview } from "@/server/services/categorization";
+import type { RuleApplicationPreview } from "@/server/services/categorization/apply";
 import { applyRuleAction, previewRuleApplicationAction } from "@/server/transport/actions/rules";
 
 export type RuleApplyTarget = {
@@ -54,11 +54,16 @@ export function RuleApplyStep({
   rule,
   mode,
   initialPreview,
+  pending,
+  startTransition,
   onDone,
 }: {
   rule: RuleApplyTarget;
   mode: "created" | "updated" | "standalone";
   initialPreview?: RuleApplicationPreview;
+  // Lifted so the host dialog can't close under an in-flight apply.
+  pending: boolean;
+  startTransition: TransitionStartFunction;
   onDone: () => void;
 }) {
   const t = useTranslations("rules.apply");
@@ -66,7 +71,7 @@ export function RuleApplyStep({
   const router = useRouter();
   const [preview, setPreview] = useState<RuleApplicationPreview | null>(initialPreview ?? null);
   const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [reclassified, setReclassified] = useState<number | null>(null);
 
   useEffect(() => {
     if (initialPreview) return;
@@ -87,7 +92,8 @@ export function RuleApplyStep({
       const res = await applyRuleAction(rule.id);
       if (!res.ok) return setError(res.error);
       router.refresh();
-      onDone();
+      if (res.reclassified === preview?.moving) onDone();
+      else setReclassified(res.reclassified);
     });
   }
 
@@ -96,6 +102,9 @@ export function RuleApplyStep({
       <CategoryChip name={rule.categoryName} color={rule.categoryColor} />
     </span>
   );
+  // Only a transient failure is worth retrying; the others won't change on a second click.
+  const canApply =
+    !!preview && preview.moving > 0 && reclassified === null && (!error || error === "FAILED");
   const overlineKey =
     mode === "created"
       ? "overlineCreated"
@@ -148,6 +157,11 @@ export function RuleApplyStep({
         {preview && preview.moving === 0 && (
           <p className="text-muted-foreground text-sm">{t("none")}</p>
         )}
+        {reclassified !== null && preview && (
+          <p role="status" className="text-sm">
+            {t("partial", { count: reclassified, expected: preview.moving })}
+          </p>
+        )}
         {error && (
           <p role="alert" className="text-destructive text-sm">
             {tErrors(error)}
@@ -155,7 +169,7 @@ export function RuleApplyStep({
         )}
       </div>
       <DialogFooter className="bg-muted/40 border-border border-t px-6 py-3 max-md:px-5">
-        {preview && preview.moving > 0 ? (
+        {canApply && preview ? (
           <>
             <Button type="button" variant="ghost" onClick={onDone} disabled={pending}>
               {t("later")}

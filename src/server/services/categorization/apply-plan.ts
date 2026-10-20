@@ -46,8 +46,37 @@ export function planRuleApplication(
       if (row.categoryId !== null) plan.movingFromOther++;
     }
   }
-  plan.keptBy = [...kept.values()].sort(
-    (a, b) => b.count - a.count || a.pattern.localeCompare(b.pattern),
-  );
+  plan.keptBy = sortKept([...kept.values()]);
   return plan;
+}
+
+function sortKept(kept: RuleApplicationPlan["keptBy"]): RuleApplicationPlan["keptBy"] {
+  return kept.sort((a, b) => b.count - a.count || a.pattern.localeCompare(b.pattern));
+}
+
+// Sums per-page plans, so the caller only holds one page of decrypted labels at a time.
+export function mergePlans(plans: RuleApplicationPlan[]): RuleApplicationPlan {
+  const merged: RuleApplicationPlan = {
+    matched: 0,
+    moveIds: [],
+    movingFromOther: 0,
+    alreadyInCategory: 0,
+    manual: 0,
+    keptBy: [],
+  };
+  const kept = new Map<string, { ruleId: string; pattern: string; count: number }>();
+  for (const p of plans) {
+    merged.matched += p.matched;
+    merged.movingFromOther += p.movingFromOther;
+    merged.alreadyInCategory += p.alreadyInCategory;
+    merged.manual += p.manual;
+    for (const id of p.moveIds) merged.moveIds.push(id);
+    for (const k of p.keptBy) {
+      const entry = kept.get(k.ruleId);
+      if (entry) entry.count += k.count;
+      else kept.set(k.ruleId, { ...k });
+    }
+  }
+  merged.keptBy = sortKept([...kept.values()]);
+  return merged;
 }

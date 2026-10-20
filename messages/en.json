@@ -408,7 +408,8 @@
       "later": "Later",
       "close": "Close",
       "apply": "Reclassify {count, plural, one {# transaction} other {# transactions}}",
-      "button": "Apply “{pattern}” to existing transactions"
+      "button": "Apply “{pattern}” to existing transactions",
+      "partial": "{count, plural, =0 {No transaction} one {# transaction} other {# transactions}} reclassified out of {expected}: the others changed in the meantime."
     }
   },
   "budgets": {

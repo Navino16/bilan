@@ -11,7 +11,7 @@ import {
   RuleAccessError,
   RuleValidationError,
 } from "./index";
-import { planRuleApplication, type PlanRow, type RuleApplicationPlan } from "./apply-plan";
+import { mergePlans, planRuleApplication, type RuleApplicationPlan } from "./apply-plan";
 
 export type RuleApplicationPreview = Omit<RuleApplicationPlan, "moveIds"> & { moving: number };
 
@@ -29,7 +29,7 @@ async function planFor(ruleId: string, actor: { id: string }) {
   if (!applied) throw new RuleAccessError("NOT_FOUND");
   const accountIds = await writableAccountIds(actor.id);
 
-  const rows: PlanRow[] = [];
+  const plans: RuleApplicationPlan[] = [];
   let cursor: string | undefined;
   for (;;) {
     const page = await db.transaction.findMany({
@@ -39,18 +39,17 @@ async function planFor(ruleId: string, actor: { id: string }) {
       take: PAGE,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     });
-    for (const t of page) {
-      rows.push({
-        id: t.id,
-        rawLabel: decrypt(t.rawLabelEnc, dataKey),
-        categoryId: t.categoryId,
-        manual: t.manuallyCategorized,
-      });
-    }
+    const rows = page.map((t) => ({
+      id: t.id,
+      rawLabel: decrypt(t.rawLabelEnc, dataKey),
+      categoryId: t.categoryId,
+      manual: t.manuallyCategorized,
+    }));
+    plans.push(planRuleApplication(applied, rules, rows));
     if (page.length < PAGE) break;
     cursor = page[page.length - 1].id;
   }
-  return { applied, plan: planRuleApplication(applied, rules, rows) };
+  return { applied, plan: mergePlans(plans) };
 }
 
 export async function previewRuleApplication(
