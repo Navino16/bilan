@@ -81,6 +81,28 @@ test.describe("rules import and export (#291)", () => {
     return file;
   }
 
+  async function deleteCategory(page: Page, name: string) {
+    await page.goto("/fr/categories");
+    const row = page.locator('[data-slot="category-row"]').filter({ hasText: name });
+    if (!(await row.count())) return;
+    await row.getByRole("button", { name: /actions pour/i }).click();
+    await page.getByRole("menuitem", { name: /supprimer/i }).click();
+    await page
+      .locator('[data-slot="category-delete-dialog"]')
+      .getByRole("button", { name: /^supprimer$/i })
+      .click();
+    await expect(row).toHaveCount(0);
+  }
+
+  // Each cleanup step runs on its own so one failure neither skips the others nor masks the test's.
+  async function cleanup(step: string, run: () => Promise<unknown>) {
+    try {
+      await run();
+    } catch (e) {
+      console.error(`[rules-transfer] cleanup of ${step} failed`, e);
+    }
+  }
+
   async function deleteRule(page: Page, pattern: string) {
     const row = ruleRow(page, pattern);
     if (!(await row.count())) return;
@@ -222,22 +244,16 @@ test.describe("rules import and export (#291)", () => {
       await expect(mappedTx).toContainText(mapCategory, { timeout: 15_000 });
     } finally {
       await page.keyboard.press("Escape");
-      for (const pattern of [conflict, mapped]) await deleteTransactions(page, pattern);
-      await openRules(page);
-      for (const pattern of patterns) await deleteRule(page, pattern);
-      await page.getByRole("button", { name: /^Catégories/ }).click();
-      const categoryRow = page.locator('[data-slot="category-row"]').filter({
-        hasText: newCategory,
-      });
-      if (await categoryRow.count()) {
-        await categoryRow.getByRole("button", { name: /actions pour/i }).click();
-        await page.getByRole("menuitem", { name: /supprimer/i }).click();
-        await page
-          .locator('[data-slot="category-delete-dialog"]')
-          .getByRole("button", { name: /^supprimer$/i })
-          .click();
-        await expect(categoryRow).toHaveCount(0);
+      for (const pattern of [conflict, mapped]) {
+        await cleanup(`transactions ${pattern}`, () => deleteTransactions(page, pattern));
       }
+      for (const pattern of patterns) {
+        await cleanup(`rule ${pattern}`, async () => {
+          await openRules(page);
+          await deleteRule(page, pattern);
+        });
+      }
+      await cleanup(`category ${newCategory}`, () => deleteCategory(page, newCategory));
     }
   });
 });
