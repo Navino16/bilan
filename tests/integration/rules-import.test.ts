@@ -6,7 +6,11 @@ vi.mock("@/server/auth/permissions", () => ({
 }));
 import { db } from "@/server/db";
 import { createGroup } from "@/server/services/groups";
-import { RuleAccessError, RuleValidationError } from "@/server/services/categorization";
+import {
+  listRulesForUser,
+  RuleAccessError,
+  RuleValidationError,
+} from "@/server/services/categorization";
 import { exportRules } from "@/server/services/categorization/rules-export";
 import {
   commitRulesImport,
@@ -150,6 +154,30 @@ describe("rules import", () => {
     expect(ruleOf("rent")?.category.name).toBe("Rent");
     expect(ruleOf("landlord")).toMatchObject({ priority: 200, enabled: false });
     expect(ruleOf("edf")?.category.name).toBe("Power");
+  });
+
+  it("tied rules keep their source order after an import (#291)", async () => {
+    const food = await category("Food", { userId: actor });
+    const patterns = ["aaaa", "bbbb", "cccc", "dddd"];
+    for (const [i, pattern] of patterns.entries()) {
+      const createdAt = new Date(Date.UTC(2026, 0, 1 + i));
+      await db.categorizationRule.create({
+        data: { pattern, matchType: "CONTAINS", categoryId: food.id, userId: actor, createdAt },
+      });
+    }
+    const order = async (userId: string) => (await listRulesForUser(userId)).map((r) => r.pattern);
+    const source = await order(actor);
+    expect(source).toEqual([...patterns].reverse());
+
+    const text = JSON.stringify(await exportRules({ groupId: null }, { id: actor }));
+    const { decisions } = await createAll(text, { groupId: null }, fresh);
+    const { createdRuleIds } = await commitRulesImport(text, { groupId: null }, decisions, {
+      id: fresh,
+    });
+    expect(await order(fresh)).toEqual(source);
+    const created = await db.categorizationRule.findMany({ where: { id: { in: createdRuleIds } } });
+    const times = createdRuleIds.map((id) => created.find((r) => r.id === id)!.createdAt.getTime());
+    expect(times.every((t, i) => i === 0 || t < times[i - 1])).toBe(true);
   });
 
   it("re-importing one's own export creates nothing", async () => {
