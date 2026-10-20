@@ -1,9 +1,15 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+
+const session = vi.hoisted(() => ({ user: null as { id: string } | null }));
+vi.mock("@/server/auth/permissions", () => ({
+  getCurrentUser: async () => session.user,
+}));
 import { db } from "@/server/db";
 import { createGroup } from "@/server/services/groups";
 import { RuleAccessError } from "@/server/services/categorization";
 import { exportRules } from "@/server/services/categorization/rules-export";
 import { parseRulesFile } from "@/server/services/categorization/rules-file";
+import { GET } from "@/app/api/export/rules/route";
 
 const actor = "re_actor";
 const member = "re_member";
@@ -134,5 +140,38 @@ describe("exportRules", () => {
     const file = await exportRules({ groupId: null }, { id: actor });
     const parsed = parseRulesFile(JSON.stringify(file));
     expect(parsed).toEqual({ ok: true, rules: file.rules, rejected: [] });
+  });
+});
+
+describe("GET /api/export/rules", () => {
+  const get = (query = "") => GET(new Request(`http://localhost/api/export/rules${query}`));
+
+  it("answers 401 without a session", async () => {
+    session.user = null;
+    const res = await get();
+    expect(res.status).toBe(401);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("answers 403 for a household the user is not in", async () => {
+    session.user = { id: stranger };
+    const res = await get(`?groupId=${groupId}`);
+    expect(res.status).toBe(403);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("downloads the rules file as an uncached JSON attachment", async () => {
+    session.user = { id: member };
+    const res = await get(`?groupId=${groupId}`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Disposition")).toMatch(
+      /^attachment; filename="bilan-rules-\d{4}-\d{2}-\d{2}\.json"$/,
+    );
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    const body = await res.json();
+    expect(body.rules.map((r: { pattern: string }) => r.pattern).sort()).toEqual([
+      "market",
+      "secret",
+    ]);
   });
 });
