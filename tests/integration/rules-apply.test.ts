@@ -5,6 +5,7 @@ vi.mock("@/server/auth/permissions", () => ({
   requireSession: async () => session.user,
 }));
 import { db } from "@/server/db";
+import { LONG_TX_TIMEOUT } from "@/server/db/timeouts";
 import { createAccount } from "@/server/services/accounts";
 import { shareAccountWithGroup } from "@/server/services/accounts/sharing";
 import { createGroup } from "@/server/services/groups";
@@ -245,6 +246,43 @@ describe("previewRulesApplication / applyRules", () => {
         where: { action: "rule.applied", entityId: id },
       });
       expect(events.map((e) => e.metadata)).toEqual([{ reclassified: 1 }]);
+    }
+  });
+
+  it("applyRules attributes each moved row to its rule when rules share a category", async () => {
+    const l = label("SHARED");
+    const [a1, a2, b1, b2] = await Promise.all([
+      tx(acc.own, `${l}A1`),
+      tx(acc.own, `${l}A2`),
+      tx(acc.own, `${l}B1`),
+      tx(acc.write, `${l}B2`),
+    ]);
+    const ra = await rule(`${l}A`, food);
+    const rb = await rule(`${l}B`, food);
+    // A row made manual between the plan and the write must stay, and not count for its rule.
+    const original = db.$transaction.bind(db) as (...args: unknown[]) => Promise<unknown>;
+    const spy = vi.spyOn(db, "$transaction").mockImplementationOnce(async (...args: unknown[]) => {
+      await db.transaction.update({ where: { id: b2 }, data: { manuallyCategorized: true } });
+      return original(...args);
+    });
+    try {
+      expect(await applyRules([ra.id, rb.id], { id: actor })).toEqual({ reclassified: 3 });
+      expect(spy).toHaveBeenCalledWith(expect.any(Function), LONG_TX_TIMEOUT);
+    } finally {
+      spy.mockRestore();
+    }
+
+    for (const row of [a1, a2, b1]) expect(await categoryOf(row)).toBe(food);
+    expect(await categoryOf(b2)).toBeNull();
+    for (const [id, count] of [
+      [ra.id, 2],
+      [rb.id, 1],
+    ] as const) {
+      expect((await db.categorizationRule.findUniqueOrThrow({ where: { id } })).hits).toBe(count);
+      const events = await db.auditLog.findMany({
+        where: { action: "rule.applied", entityId: id },
+      });
+      expect(events.map((e) => e.metadata)).toEqual([{ reclassified: count }]);
     }
   });
 

@@ -1,5 +1,6 @@
 import type { CategorizationRule } from "@prisma/client";
 import { db } from "@/server/db";
+import { LONG_TX_TIMEOUT } from "@/server/db/timeouts";
 import { decrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
 import { logEvent } from "@/server/services/audit";
@@ -68,39 +69,48 @@ async function previewFrom(manageable: CategorizationRule[], actor: { id: string
   return { ...counts, moving: moves.length };
 }
 
+// Writes are grouped by target category, so a category several rules point at is one chunked
+// updateMany. The manual guard can skip rows (made manual since the plan); only then is the chunk
+// re-read to attribute the moved rows to their rules for the hits and the `rule.applied` counts.
 async function applyFrom(
   manageable: CategorizationRule[],
   actor: { id: string },
 ): Promise<{ reclassified: number }> {
   const plan = await planFor(manageable, actor);
-  const byRule = new Map<string, { categoryId: string; ids: string[] }>();
+  const byCategory = new Map<string, { id: string; ruleId: string }[]>();
   for (const m of plan.moves) {
-    const entry = byRule.get(m.ruleId) ?? { categoryId: m.categoryId, ids: [] };
-    entry.ids.push(m.id);
-    byRule.set(m.ruleId, entry);
+    const rows = byCategory.get(m.categoryId) ?? [];
+    rows.push({ id: m.id, ruleId: m.ruleId });
+    byCategory.set(m.categoryId, rows);
   }
-  const counts = await db.$transaction(async (tx) => {
-    const done = new Map<string, number>();
-    for (const [ruleId, { categoryId, ids }] of byRule) {
-      let count = 0;
-      for (let i = 0; i < ids.length; i += WRITE_CHUNK) {
-        // A row made manual since the plan was computed must stay as the user set it.
-        const res = await tx.transaction.updateMany({
-          where: { id: { in: ids.slice(i, i + WRITE_CHUNK) }, manuallyCategorized: false },
+  const movedRuleIds = await db.$transaction(async (tx) => {
+    const moved: string[] = [];
+    for (const [categoryId, rows] of byCategory) {
+      for (let i = 0; i < rows.length; i += WRITE_CHUNK) {
+        const chunk = rows.slice(i, i + WRITE_CHUNK);
+        const ids = chunk.map((r) => r.id);
+        const { count } = await tx.transaction.updateMany({
+          where: { id: { in: ids }, manuallyCategorized: false },
           data: { categoryId },
         });
-        count += res.count;
-      }
-      if (count > 0) {
-        await recordHits(Array<string>(count).fill(ruleId), tx);
-        done.set(ruleId, count);
+        let done = chunk;
+        if (count < chunk.length) {
+          const still = await tx.transaction.findMany({
+            where: { id: { in: ids }, categoryId, manuallyCategorized: false },
+            select: { id: true },
+          });
+          const ok = new Set(still.map((r) => r.id));
+          done = chunk.filter((r) => ok.has(r.id));
+        }
+        for (const r of done) moved.push(r.ruleId);
       }
     }
-    return done;
-  });
-  let reclassified = 0;
+    await recordHits(moved, tx);
+    return moved;
+  }, LONG_TX_TIMEOUT);
+  const counts = new Map<string, number>();
+  for (const ruleId of movedRuleIds) counts.set(ruleId, (counts.get(ruleId) ?? 0) + 1);
   for (const [ruleId, count] of counts) {
-    reclassified += count;
     await logEvent({
       userId: actor.id,
       action: "rule.applied",
@@ -109,7 +119,7 @@ async function applyFrom(
       metadata: { reclassified: count },
     });
   }
-  return { reclassified };
+  return { reclassified: movedRuleIds.length };
 }
 
 async function loadEnabledRule(ruleId: string, actor: { id: string }) {
