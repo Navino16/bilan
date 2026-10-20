@@ -203,6 +203,29 @@ describe("rules import", () => {
     expect(await counts()).toEqual(before);
   });
 
+  it("re-importing a rule on a household category whose path matches a personal one is identical", async () => {
+    await category("Courses", { userId: actor });
+    const shared = await category("Courses", { groupId });
+    const parent = await category("Maison", { groupId });
+    const nested = await category("Courses", { groupId }, parent.id);
+    await addRule("market", shared.id, { userId: actor });
+    await addRule("bakery", nested.id, { userId: actor });
+
+    const text = JSON.stringify(await exportRules({ groupId: null }, { id: actor }));
+    const preview = await previewRulesImport(text, { groupId: null }, { id: actor });
+    expect(preview.existing.map((r) => [r.categoryPath, r.categoryPathKey]).sort()).toEqual([
+      [["Courses"], "courses"],
+      [["Maison", "Courses"], "maison\u001fcourses"],
+    ]);
+    const result = await commitRulesImport(
+      text,
+      { groupId: null },
+      { categories: {}, moves: [] },
+      { id: actor },
+    );
+    expect(result.summary).toMatchObject({ created: 0, moved: 0, identical: 2 });
+  });
+
   it("Create builds a shared missing parent once", async () => {
     const text = fileOf([
       fileRule("creche", [{ name: "Enfants", color: "#00ff00" }, { name: "Crèche" }]),

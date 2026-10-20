@@ -24,7 +24,8 @@ export type ExistingRule = {
   matchType: RuleMatchType;
   caseSensitive: boolean;
   categoryId: string;
-  categoryName: string;
+  categoryPath: string[];
+  categoryPathKey: string;
 };
 
 export type CategoryDecision =
@@ -39,7 +40,7 @@ export type ImportDecisions = {
 
 export type ImportPlan = {
   create: (FileRule & { pathKey: string })[];
-  conflicts: { ruleId: string; pattern: string; currentCategoryName: string; pathKey: string }[];
+  conflicts: { ruleId: string; pattern: string; currentCategoryPath: string[]; pathKey: string }[];
   move: { ruleId: string; pathKey: string }[];
   identical: number;
   duplicates: number;
@@ -197,13 +198,15 @@ export function planRulesImport(
     const current = existingByIdentity.get(identity);
     if (!current) {
       plan.create.push({ ...rule, pathKey });
-    } else if (effectiveId === current.categoryId) {
+    } else if (effectiveId === current.categoryId || current.categoryPathKey === pathKey) {
+      // Same path, other category: re-importing one's own export resolves a household path
+      // to the target's same-named category, which is not a change.
       plan.identical++;
     } else {
       plan.conflicts.push({
         ruleId: current.id,
         pattern: current.pattern,
-        currentCategoryName: current.categoryName,
+        currentCategoryPath: current.categoryPath,
         pathKey,
       });
       if (moves.has(current.id)) plan.move.push({ ruleId: current.id, pathKey });

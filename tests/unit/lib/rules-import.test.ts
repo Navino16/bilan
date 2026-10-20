@@ -112,7 +112,8 @@ describe("planRulesImport", () => {
     matchType: "CONTAINS",
     caseSensitive: false,
     categoryId: "a",
-    categoryName: "Food",
+    categoryPath: ["Food"],
+    categoryPathKey: "food",
     ...over,
   });
   const plan = (rules: FileRule[], existing: ExistingRule[], decisions = noDecisions) =>
@@ -129,13 +130,28 @@ describe("planRulesImport", () => {
     const rules = [rule("lidl", ["Transport"])];
     const kept = plan(rules, [existingRule()]);
     expect(kept.conflicts).toEqual([
-      { ruleId: "r1", pattern: "lidl", currentCategoryName: "Food", pathKey: "transport" },
+      { ruleId: "r1", pattern: "lidl", currentCategoryPath: ["Food"], pathKey: "transport" },
     ]);
     expect(kept.move).toEqual([]);
     expect(kept.create).toEqual([]);
     const moved = plan(rules, [existingRule()], { categories: {}, moves: ["r1"] });
     expect(moved.move).toEqual([{ ruleId: "r1", pathKey: "transport" }]);
     expect(moved.create).toEqual([]);
+  });
+
+  it("an existing rule on another category with the same path is identical, not a conflict", () => {
+    const elsewhere = existingRule({ categoryId: "household-food", categoryPath: ["FOOD"] });
+    const p = plan([rule("lidl", ["Food"])], [elsewhere]);
+    expect(p.identical).toBe(1);
+    expect(p.conflicts).toEqual([]);
+    const nested = existingRule({
+      categoryId: "x",
+      categoryPath: ["Home", "Food"],
+      categoryPathKey: "home\u001ffood",
+    });
+    expect(plan([rule("lidl", ["Food"])], [nested]).conflicts).toEqual([
+      { ruleId: "r1", pattern: "lidl", currentCategoryPath: ["Home", "Food"], pathKey: "food" },
+    ]);
   });
 
   it("map onto the existing rule's category makes it identical", () => {

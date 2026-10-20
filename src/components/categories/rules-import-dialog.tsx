@@ -20,7 +20,11 @@ import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useFrozenWhileOpen } from "@/hooks/use-frozen-while-open";
 import { SegmentedTabs, overline } from "@/components/transactions/bits";
 import { CategoryCombobox } from "@/components/transactions/category-combobox";
-import type { FlatCategory } from "@/components/transactions/category-tree";
+import {
+  categoryPathLabel,
+  PATH_SEPARATOR,
+  type FlatCategory,
+} from "@/components/transactions/category-tree";
 import { formatBytes, formatCount } from "@/lib/format";
 import { canManageInGroup } from "@/lib/validation/group";
 import { RULES_FILE_MAX_BYTES, RULES_FILE_MAX_RULES } from "@/lib/validation/rules-file";
@@ -56,7 +60,8 @@ type Choice = { mode: "create" | "map" | "ignore"; mapId: string };
 
 type StepProps = { pending: boolean; startTransition: TransitionStartFunction };
 
-const pathLabel = (path: { name: string }[]) => path.map((level) => level.name).join(" > ");
+const pathLabel = (path: { name: string }[]) =>
+  path.map((level) => level.name).join(PATH_SEPARATOR);
 
 const headerClass = "space-y-2 px-6 pt-5 pb-3 text-left max-md:px-5";
 const bodyClass = "flex flex-col gap-3 px-6 pb-4 max-md:px-5";
@@ -314,12 +319,11 @@ function ReviewStep({
   const canImport = !pending && plan.undecided.length === 0 && !nothing;
 
   const resolutionByKey = new Map(preview.resolutions.map((r) => [r.key, r]));
-  const categoryName = (id: string) => categories.find((c) => c.id === id)?.name;
   const targetLabel = (pathKey: string) => {
     const resolution = resolutionByKey.get(pathKey)!;
     const choice = choices.get(pathKey);
     const id = resolution.categoryId ?? (choice?.mode === "map" ? choice.mapId : null);
-    return (id && categoryName(id)) || pathLabel(resolution.path);
+    return (id && categoryPathLabel(categories, id)) || pathLabel(resolution.path);
   };
   const scopeName = loaded.groupId
     ? (groups.find((g) => g.id === loaded.groupId)?.name ?? "")
@@ -395,7 +399,7 @@ function ReviewStep({
                   <div className="truncate font-mono text-[12.5px]">{c.pattern}</div>
                   <div className="text-muted-foreground text-xs wrap-anywhere">
                     {t("conflictChange", {
-                      current: c.currentCategoryName,
+                      current: c.currentCategoryPath.join(PATH_SEPARATOR),
                       next: targetLabel(c.pathKey),
                     })}
                   </div>

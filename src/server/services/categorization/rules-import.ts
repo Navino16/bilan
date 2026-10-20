@@ -86,21 +86,44 @@ async function loadCategories(
   }));
 }
 
-async function loadExisting(client: Client, target: Target, actorId: string) {
+// Root-first names; a category outside the actor's categories only gives its own name, as on export.
+function categoryPath(id: string, fallback: string, byId: Map<string, ImportCategory>): string[] {
+  const names: string[] = [];
+  const seen = new Set<string>();
+  for (
+    let c = byId.get(id);
+    c && !seen.has(c.id);
+    c = c.parentId ? byId.get(c.parentId) : undefined
+  ) {
+    seen.add(c.id);
+    names.unshift(c.name);
+  }
+  return names.length > 0 ? names : [fallback];
+}
+
+async function loadExisting(
+  client: Client,
+  target: Target,
+  actorId: string,
+  categories: ImportCategory[],
+) {
   const rows = await client.categorizationRule.findMany({
     where: target.groupId ? { groupId: target.groupId } : { userId: actorId, groupId: null },
     include: { category: { select: { name: true } } },
   });
-  return rows.map(
-    (r): ExistingRule => ({
+  const byId = new Map(categories.map((c) => [c.id, c]));
+  return rows.map((r): ExistingRule => {
+    const path = categoryPath(r.categoryId, r.category.name, byId);
+    return {
       id: r.id,
       pattern: r.pattern,
       matchType: r.matchType as RuleMatchType,
       caseSensitive: r.caseSensitive,
       categoryId: r.categoryId,
-      categoryName: r.category.name,
-    }),
-  );
+      categoryPath: path,
+      categoryPathKey: categoryPathKey(path.map((name) => ({ name }))),
+    };
+  });
 }
 
 export async function previewRulesImport(
@@ -115,7 +138,7 @@ export async function previewRulesImport(
     rules,
     rejected,
     resolutions: resolveCategoryPaths(rules, categories),
-    existing: await loadExisting(db, target, actor.id),
+    existing: await loadExisting(db, target, actor.id, categories),
   };
 }
 
@@ -201,7 +224,7 @@ export async function commitRulesImport(
   const result = await db.$transaction(async (tx) => {
     const categories = await loadCategories(tx, target, actor.id);
     const resolutions = resolveCategoryPaths(rules, categories);
-    const existing = await loadExisting(tx, target, actor.id);
+    const existing = await loadExisting(tx, target, actor.id, categories);
     const plan = planRulesImport(rules, resolutions, existing, decisions);
     assertDecisions(plan, resolutions, categories, decisions);
 
