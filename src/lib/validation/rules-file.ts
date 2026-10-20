@@ -17,8 +17,9 @@ export const categoryLevelSchema = z.object({
 });
 
 export const fileRuleSchema = ruleInputSchema
-  .pick({ pattern: true, matchType: true, caseSensitive: true, priority: true })
+  .pick({ pattern: true, matchType: true, caseSensitive: true })
   .extend({
+    priority: z.number().int().min(0).max(10000).default(100),
     enabled: z.boolean().default(true),
     category: z.array(categoryLevelSchema).min(1).max(RULES_FILE_MAX_DEPTH),
   });

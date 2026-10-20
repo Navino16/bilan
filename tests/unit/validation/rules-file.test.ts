@@ -71,6 +71,27 @@ describe("parseRulesFile", () => {
     if (res.ok) expect(res.rules).toHaveLength(1);
   });
 
+  it("accepts only an integer priority, defaulting to 100", () => {
+    const missing: Record<string, unknown> = rule();
+    delete missing.priority;
+    const res = parseRulesFile(
+      file([
+        rule({ priority: null }),
+        rule({ priority: "" }),
+        rule({ priority: true }),
+        rule({ priority: "50" }),
+        rule({ priority: 1.5 }),
+        missing,
+        rule({ priority: 0 }),
+      ]),
+    );
+    expect(res).toMatchObject({
+      ok: true,
+      rejected: [0, 1, 2, 3, 4].map((index) => ({ index, reason: "INVALID" })),
+    });
+    if (res.ok) expect(res.rules.map((r) => r.priority)).toEqual([100, 0]);
+  });
+
   it("strips unknown fields and defaults enabled to true", () => {
     const bare: Record<string, unknown> = rule({
       id: "x",
