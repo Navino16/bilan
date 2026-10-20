@@ -30,7 +30,12 @@ npx prisma generate >&2
 set -a
 . "$PERF_ENV"
 set +a
-NODE_ENV=production npx next build >&2
+# next/font downloads the Google fonts at build time: retry a flaky network.
+for attempt in 1 2 3; do
+  NODE_ENV=production npx next build >&2 && break
+  [ "$attempt" -lt 3 ] || exit 1
+  echo "next build failed, retrying ($attempt/3)" >&2
+done
 cp -r .next/static .next/standalone/.next/static
 cp -r public .next/standalone/public
 rm -f .next/standalone/.env
