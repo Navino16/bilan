@@ -6,6 +6,7 @@ vi.mock("@/server/auth/permissions", () => ({
 }));
 import { db } from "@/server/db";
 import { LONG_TX_TIMEOUT } from "@/server/db/timeouts";
+import { RULES_FILE_MAX_RULES } from "@/lib/validation/rules-file";
 import { createAccount } from "@/server/services/accounts";
 import { shareAccountWithGroup } from "@/server/services/accounts/sharing";
 import { createGroup } from "@/server/services/groups";
@@ -408,6 +409,13 @@ describe("rule application actions", () => {
     session.user = { id: actor };
     expect(await applyRulesAction([])).toEqual({ ok: false, error: "INVALID" });
     expect(await previewRulesApplicationAction([])).toEqual({ ok: false, error: "INVALID" });
+  });
+
+  it("applyRulesAction and previewRulesApplicationAction reject more ids than a rules file holds", async () => {
+    session.user = { id: actor };
+    const tooMany = Array.from({ length: RULES_FILE_MAX_RULES + 1 }, (_, i) => `rule-${i}`);
+    expect(await applyRulesAction(tooMany)).toEqual({ ok: false, error: "INVALID" });
+    expect(await previewRulesApplicationAction(tooMany)).toEqual({ ok: false, error: "INVALID" });
   });
 
   it("applyRulesAction and previewRulesApplicationAction reject malformed rule ids", async () => {
