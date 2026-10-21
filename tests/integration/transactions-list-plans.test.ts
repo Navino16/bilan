@@ -89,8 +89,16 @@ afterAll(async () => {
   await db.$disconnect();
 });
 
-describe("transaction search plans (#297)", () => {
+describe("transaction list plans (#297, #300)", () => {
   const cases: [string, Partial<ListQuery> & { search: string }][] = [
+    ["no search", { search: "" }],
+    ["no search, oldest first", { search: "", sort: "date-asc" }],
+    ["no search, a later page", { search: "", take: 7, skip: 11 }],
+    ["no search, by amount", { search: "", sort: "amount-desc" }],
+    [
+      "no search, a period",
+      { search: "", from: new Date("2026-03-04"), to: new Date("2026-03-06T23:59:59Z") },
+    ],
     ["a common prefix", { search: "car" }],
     ["one word", { search: "carrefour" }],
     ["several words", { search: "paiement carte monoprix" }],
