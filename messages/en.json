@@ -725,8 +725,8 @@
     "allAccounts": "All accounts",
     "allCategories": "All categories",
     "allTypes": "All types",
-    "opCount": "{count, plural, one {# transaction} other {# transactions}}",
-    "shownOf": "Showing {shown, number} of {total, plural, one {# transaction} other {# transactions}}",
+    "opCount": "{capped, select, true {{count, number}+ transactions} other {{count, plural, one {# transaction} other {# transactions}}}}",
+    "shownOf": "Showing {shown, number} of {capped, select, true {{total, number}+ transactions} other {{total, plural, one {# transaction} other {# transactions}}}}",
     "loadMore": "Show {count, number} more",
     "refineToSeeMore": "Narrow the filters to see older ones.",
     "tab": {
@@ -833,7 +833,7 @@
     "filterSheet": {
       "reset": "Reset",
       "period": "Period",
-      "show": "{count, plural, =0 {No transactions} one {Show # transaction} other {Show # transactions}}"
+      "show": "{capped, select, true {Show {count, number}+ transactions} other {{count, plural, =0 {No transactions} one {Show # transaction} other {Show # transactions}}}}"
     },
     "selection": {
       "mode": "Select",

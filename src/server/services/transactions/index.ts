@@ -22,6 +22,7 @@ import {
 } from "@/lib/validation/transaction";
 import { recordHits, suggest } from "@/server/services/categorization";
 import { buildSecureFields } from "./secure-fields";
+import { queryTransactionPage } from "./list-query";
 
 export class TransactionAccessError extends Error {}
 
@@ -135,81 +136,53 @@ export type TransactionFilters = {
   sort?: TransactionSort;
   from?: Date;
   to?: Date;
-  search?: string; // single normalized word → token match
+  search?: string; // every word must match a token prefix
   take?: number;
   skip?: number;
 };
 
-const ORDER_BY: Record<TransactionSort, Record<string, "asc" | "desc">[]> = {
-  "date-desc": [{ date: "desc" }, { createdAt: "desc" }, { id: "desc" }],
-  "date-asc": [{ date: "asc" }, { createdAt: "asc" }, { id: "asc" }],
-  "amount-asc": [{ amount: "asc" }, { date: "desc" }, { createdAt: "desc" }, { id: "desc" }],
-  "amount-desc": [{ amount: "desc" }, { date: "desc" }, { createdAt: "desc" }, { id: "desc" }],
-};
-
 // Lists transactions across every account visible to the user (owned + shared),
-// decrypted, newest first. `search` matches one normalized word via the HMAC
-// token index (no plaintext ever touches the query).
+// decrypted, newest first. `search` matches normalized word prefixes via the HMAC
+// token index (no plaintext ever touches the query); its count is capped (`capped`).
 export async function listTransactions(
   userId: string,
   filters: TransactionFilters,
-): Promise<{ items: TransactionListItem[]; total: number }> {
+): Promise<{ items: TransactionListItem[]; total: number; capped: boolean }> {
   const visible = await visibleAccountRefs(userId);
   const visibleIds = visible.map((a) => a.id);
   const accountName = new Map(visible.map((a) => [a.id, a.name]));
   const accountIds = filters.accountId
     ? visibleIds.filter((id) => id === filters.accountId)
     : visibleIds;
-  if (accountIds.length === 0) return { items: [], total: 0 };
+  if (accountIds.length === 0) return { items: [], total: 0, capped: false };
 
-  const where: Record<string, unknown> = { accountId: { in: accountIds } };
-  const and: Record<string, unknown>[] = [];
+  let categoryIds: string[] | null | undefined;
   if (filters.categoryId === UNCATEGORIZED) {
-    where.categoryId = null;
+    categoryIds = null;
   } else if (filters.categoryId) {
-    const subtree = (await withDescendants([filters.categoryId])).get(filters.categoryId)!;
-    where.categoryId = { in: [...subtree] };
+    categoryIds = [...(await withDescendants([filters.categoryId])).get(filters.categoryId)!];
   }
-  if (filters.type) where.type = filters.type;
-  if (filters.direction) and.push({ amount: filters.direction === "in" ? { gt: 0 } : { lt: 0 } });
-  if (filters.amountMin !== undefined) {
-    const min = filters.amountMin;
-    and.push({ OR: [{ amount: { gte: min } }, { amount: { lte: -min } }] });
-  }
-  if (filters.amountMax !== undefined) {
-    and.push({ amount: { gte: -filters.amountMax, lte: filters.amountMax } });
-  }
-  if (filters.from || filters.to) {
-    where.date = {
-      ...(filters.from ? { gte: filters.from } : {}),
-      ...(filters.to ? { lte: filters.to } : {}),
-    };
-  }
+  // Multi-word AND: the row must carry a prefix token for every query word
+  // (words < 3 chars are dropped, as at indexing). A query made only of
+  // too-short words matches nothing rather than everything.
   const query = filters.search?.trim();
-  if (query) {
-    // Multi-word AND: the row must carry a prefix token for every query word
-    // (words < 3 chars are dropped, as at indexing). A query made only of
-    // too-short words matches nothing rather than everything.
-    const words = searchQueryTerms(query);
-    if (words.length === 0) {
-      where.id = "__no_searchable_word__";
-    } else {
-      for (const w of words) {
-        and.push({ searchTokens: { some: { tokenHash: hmacForSearch(w, searchKey) } } });
-      }
-    }
-  }
-  if (and.length > 0) where.AND = and;
+  const words = query ? searchQueryTerms(query) : [];
+  if (query && words.length === 0) return { items: [], total: 0, capped: false };
 
-  const [rows, total] = await Promise.all([
-    db.transaction.findMany({
-      where,
-      orderBy: ORDER_BY[filters.sort ?? DEFAULT_SORT],
-      take: filters.take ?? 100,
-      skip: filters.skip ?? 0,
-    }),
-    db.transaction.count({ where }),
-  ]);
+  const { rows, total, capped } = await queryTransactionPage({
+    accountIds,
+    categoryIds,
+    type: filters.type,
+    direction: filters.direction,
+    amountMin: filters.amountMin,
+    amountMax: filters.amountMax,
+    from: filters.from,
+    to: filters.to,
+    tokenHashes: words.map((w) => hmacForSearch(w, searchKey)),
+    sort: filters.sort ?? DEFAULT_SORT,
+    take: filters.take ?? 100,
+    skip: filters.skip ?? 0,
+  });
 
   const items: TransactionListItem[] = rows.map((row) => ({
     id: row.id,
@@ -221,11 +194,11 @@ export async function listTransactions(
     rawLabel: decrypt(row.rawLabelEnc, dataKey),
     note: row.noteEnc ? decrypt(row.noteEnc, dataKey) : null,
     categoryId: row.categoryId,
-    manuallyCategorized: row.manuallyCategorized,
+    manuallyCategorized: Boolean(row.manuallyCategorized),
     imported: row.externalId !== null,
     accountName: accountName.get(row.accountId) ?? "",
   }));
-  return { items, total };
+  return { items, total, capped };
 }
 
 // Sets a transaction's category (manual override). Requires WRITE on the account.

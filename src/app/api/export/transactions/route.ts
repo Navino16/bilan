@@ -29,13 +29,13 @@ export async function GET(req: Request): Promise<Response> {
   };
 
   // Paginate through the full result set so the export is never silently
-  // truncated (RGPD/portability must be complete). `total` bounds the loop.
+  // truncated (RGPD/portability must be complete). A search's `total` is capped: a short page ends it.
   const PAGE = 10_000;
   const items: Awaited<ReturnType<typeof listTransactions>>["items"] = [];
   for (let skip = 0; ; skip += PAGE) {
     const page = await listTransactions(user.id, { ...filters, take: PAGE, skip });
     items.push(...page.items);
-    if (items.length >= page.total || page.items.length === 0) break;
+    if (page.items.length < PAGE) break;
   }
   const [tree, foreign] = await Promise.all([listForUser(user.id), listForeignCategories(user.id)]);
 

@@ -132,12 +132,14 @@ export function TransactionFilters({
   from,
   to,
   total,
+  capped,
 }: {
   categories: FlatCategory[];
   accounts: { id: string; name: string }[];
   from?: string;
   to?: string;
   total: number;
+  capped: boolean;
 }) {
   const t = useTranslations("transactions");
   const tSheet = useTranslations("transactions.filterSheet");
@@ -476,7 +478,7 @@ export function TransactionFilters({
 
           <SheetFooter className="bg-popover sticky bottom-0 -mx-5 mt-0 px-5 pt-2 pb-5">
             <Button size="lg" onClick={() => setSheetOpen(false)}>
-              {tSheet("show", { count: total })}
+              {tSheet("show", { count: total, capped: String(capped) })}
             </Button>
           </SheetFooter>
         </SheetContent>
