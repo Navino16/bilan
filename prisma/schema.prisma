@@ -415,7 +415,8 @@ model Transaction {
   budgetAssignments BudgetAssignment[]
 
   @@unique([accountId, externalId])
-  @@index([accountId, date])
+  // Per-account newest-first walk of the transaction list (#297).
+  @@index([accountId, date, createdAt])
   @@index([categoryId, date])
   @@index([labelHash])
   @@index([rawLabelHash])
@@ -431,7 +432,7 @@ model TransactionSearchToken {
   tokenHash     String
   transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
 
-  @@index([tokenHash])
+  @@unique([tokenHash, transactionId])
   @@index([transactionId])
 }
 

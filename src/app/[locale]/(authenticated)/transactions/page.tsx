@@ -54,7 +54,7 @@ export default async function TransactionsPage({
   const limit = parseListLimit(sp.limit);
   const groupByDay = filters.sort.startsWith("date");
 
-  const [{ items, total }, tree, foreignTree, accounts, linkedIds, budgets, onboarding] =
+  const [{ items, total, capped }, tree, foreignTree, accounts, linkedIds, budgets, onboarding] =
     await Promise.all([
       listTransactions(user.id, {
         ...filters,
@@ -96,7 +96,7 @@ export default async function TransactionsPage({
     linked: linkedIds.has(i.id),
     imported: i.imported,
   }));
-  const truncated = items.length < total;
+  const truncated = capped || items.length < total;
   const { items: listItems, partialLastDay } = groupByDay
     ? trimToDayBoundary(allItems, truncated)
     : { items: allItems, partialLastDay: false };
@@ -109,7 +109,7 @@ export default async function TransactionsPage({
   return (
     <div className="space-y-5">
       <PageHeader
-        overline={t("opCount", { count: total })}
+        overline={t("opCount", { count: total, capped: String(capped) })}
         title={t("title")}
         actions={
           <>
@@ -178,6 +178,7 @@ export default async function TransactionsPage({
               from={from}
               to={to}
               total={total}
+              capped={capped}
             />
             <TransactionList
               items={listItems}
@@ -199,7 +200,7 @@ export default async function TransactionsPage({
           className="flex flex-col items-center gap-3 py-2 text-sm"
         >
           <span className="text-muted-foreground">
-            {t("shownOf", { shown: listItems.length, total })}
+            {t("shownOf", { shown: listItems.length, total, capped: String(capped) })}
           </span>
           {limit < LIST_MAX_LIMIT ? (
             <Link

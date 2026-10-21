@@ -725,8 +725,8 @@
     "allAccounts": "Tous les comptes",
     "allCategories": "Toutes les catégories",
     "allTypes": "Tous les types",
-    "opCount": "{count, plural, one {# transaction} other {# transactions}}",
-    "shownOf": "{shown, number} sur {total, plural, one {# transaction affichée} other {# transactions affichées}}",
+    "opCount": "{capped, select, true {{count, number}+ transactions} other {{count, plural, one {# transaction} other {# transactions}}}}",
+    "shownOf": "{shown, number} sur {capped, select, true {{total, number}+ transactions affichées} other {{total, plural, one {# transaction affichée} other {# transactions affichées}}}}",
     "loadMore": "Afficher {count, number} de plus",
     "refineToSeeMore": "Affinez les filtres pour voir les plus anciennes.",
     "tab": {
@@ -833,7 +833,7 @@
     "filterSheet": {
       "reset": "Réinitialiser",
       "period": "Période",
-      "show": "{count, plural, =0 {Aucune transaction} one {Voir # transaction} other {Voir # transactions}}"
+      "show": "{capped, select, true {Voir {count, number}+ transactions} other {{count, plural, =0 {Aucune transaction} one {Voir # transaction} other {Voir # transactions}}}}"
     },
     "selection": {
       "mode": "Sélectionner",

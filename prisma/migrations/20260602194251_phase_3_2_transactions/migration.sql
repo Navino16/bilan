@@ -18,7 +18,7 @@ CREATE TABLE `Transaction` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
-    INDEX `Transaction_accountId_date_idx`(`accountId`, `date`),
+    INDEX `Transaction_accountId_date_createdAt_idx`(`accountId`, `date`, `createdAt`),
     INDEX `Transaction_categoryId_date_idx`(`categoryId`, `date`),
     INDEX `Transaction_labelHash_idx`(`labelHash`),
     INDEX `Transaction_rawLabelHash_idx`(`rawLabelHash`),
@@ -34,8 +34,8 @@ CREATE TABLE `TransactionSearchToken` (
     `transactionId` VARCHAR(191) NOT NULL,
     `tokenHash` VARCHAR(191) NOT NULL,
 
-    INDEX `TransactionSearchToken_tokenHash_idx`(`tokenHash`),
     INDEX `TransactionSearchToken_transactionId_idx`(`transactionId`),
+    UNIQUE INDEX `TransactionSearchToken_tokenHash_transactionId_key`(`tokenHash`, `transactionId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
