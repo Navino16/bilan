@@ -1,4 +1,4 @@
-import type { Budget } from "@prisma/client";
+import type { Budget, Prisma } from "@prisma/client";
 import { db } from "@/server/db";
 import { decrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
@@ -16,6 +16,7 @@ import {
   withDescendants,
 } from "@/server/services/categories";
 import { collapseLinkedRows } from "@/lib/links";
+import { linkIdsWhere } from "@/server/services/links/members";
 import {
   budgetPlannedTotal,
   lineStatus,
@@ -303,20 +304,23 @@ export async function listBudgetsForUser(
     },
     orderBy: { periodStart: "desc" },
   });
-  const accountCache: AccountScopeCache = new Map();
-  const subtrees = await withDescendants(lineCategoryIds(rows));
-  const spends = await Promise.all(rows.map((b) => computeBudgetSpend(b, accountCache, subtrees)));
   const now = Date.now();
-  const rollable = await Promise.all(
-    rows.map(
-      async (b) =>
-        b.recurring &&
-        !b.archived &&
-        b.periodEnd.getTime() < now &&
-        canManageBudget(b.groupId, roleByGroup) &&
-        !(await nextInstanceExists(b)),
-    ),
+  const ended = rows.filter(
+    (b) =>
+      b.recurring &&
+      !b.archived &&
+      b.periodEnd.getTime() < now &&
+      canManageBudget(b.groupId, roleByGroup),
   );
+  const [loaded, subtrees, rolled] = await Promise.all([
+    loadBudgetRows(rows),
+    withDescendants(lineCategoryIds(rows)),
+    withNextInstance(ended),
+  ]);
+  const spends = await Promise.all(
+    rows.map((b) => computeBudgetSpend(b, loaded.get(b.id)!, subtrees)),
+  );
+  const rollable = rows.map((b) => ended.includes(b) && !rolled.has(b.id));
   return rows.map((b, i) => {
     const plannedTotal = budgetPlannedTotal(
       b.lines.map((l) => ({ plannedAmount: Number(l.plannedAmount) })),
@@ -423,81 +427,114 @@ export async function listBudgetAccountOptions(userId: string): Promise<BudgetAc
   }));
 }
 
-type AccountScopeCache = Map<string, Promise<string[]>>;
+type BudgetRef = {
+  id: string;
+  userId: string | null;
+  groupId: string | null;
+  periodStart: Date;
+  periodEnd: Date;
+};
 
-// Loads the budget's candidate rows once: transactions on the budget's account
-// scope within its period, PLUS any transaction explicitly assigned to this
-// budget regardless of account or period — so an INCLUDE can pull in an
-// out-of-period or personal-into-shared transaction, and an EXCLUDE always
-// resolves.
-async function loadBudgetRows(
-  budget: {
-    id: string;
-    userId: string | null;
-    groupId: string | null;
-    periodStart: Date;
-    periodEnd: Date;
-  },
-  accountCache?: AccountScopeCache,
-): Promise<{
+type LoadedBudgetRows = {
   rows: BudgetRow[];
   excluded: Set<string>;
   includedIds: Set<string>;
-}> {
-  const assignments = await db.budgetAssignment.findMany({
-    where: { budgetId: budget.id },
-    select: { transactionId: true, mode: true },
-  });
-  const excluded = new Set(
-    assignments.filter((a) => a.mode === "EXCLUDE").map((a) => a.transactionId),
-  );
-  const includedIds = new Set(
-    assignments.filter((a) => a.mode === "INCLUDE").map((a) => a.transactionId),
-  );
+};
 
-  const scopeKey = budget.groupId ? `g:${budget.groupId}` : `u:${budget.userId}`;
-  let accountIdsPromise = accountCache?.get(scopeKey);
-  if (!accountIdsPromise) {
-    accountIdsPromise = budgetAccountIds(budget);
-    accountCache?.set(scopeKey, accountIdsPromise);
+const scopeKey = (b: { userId: string | null; groupId: string | null }) =>
+  b.groupId ? `g:${b.groupId}` : `u:${b.userId}`;
+
+// The account ids of each budget scope, in one query for every group scope.
+async function budgetScopeAccounts(budgets: BudgetRef[]): Promise<Map<string, Set<string>>> {
+  const groupIds = [...new Set(budgets.flatMap((b) => (b.groupId ? [b.groupId] : [])))];
+  const userIds = [...new Set(budgets.flatMap((b) => (!b.groupId && b.userId ? [b.userId] : [])))];
+  const [shares, userAccounts] = await Promise.all([
+    groupIds.length === 0
+      ? []
+      : db.accountShare.findMany({
+          where: { groupId: { in: groupIds } },
+          select: { groupId: true, accountId: true },
+        }),
+    Promise.all(userIds.map(visibleAccountIds)),
+  ]);
+  const scopes = new Map<string, Set<string>>(groupIds.map((g) => [`g:${g}`, new Set()]));
+  for (const s of shares) scopes.get(`g:${s.groupId}`)!.add(s.accountId);
+  userIds.forEach((u, i) => scopes.set(`u:${u}`, new Set(userAccounts[i])));
+  return scopes;
+}
+
+// Loads every budget's candidate rows in a constant number of queries (#299): transactions on
+// the budget's account scope within its period, PLUS any transaction explicitly assigned to
+// it regardless of account or period, so an INCLUDE can pull in an out-of-period or
+// personal-into-shared transaction, and an EXCLUDE always resolves.
+async function loadBudgetRows(budgets: BudgetRef[]): Promise<Map<string, LoadedBudgetRows>> {
+  if (budgets.length === 0) return new Map();
+  const [assignments, scopes] = await Promise.all([
+    db.budgetAssignment.findMany({
+      where: { budgetId: { in: budgets.map((b) => b.id) } },
+      select: { budgetId: true, transactionId: true, mode: true },
+    }),
+    budgetScopeAccounts(budgets),
+  ]);
+
+  const periodsByScope = new Map<string, { gte: Date; lte: Date }[]>();
+  for (const b of budgets) {
+    const periods = periodsByScope.get(scopeKey(b)) ?? [];
+    periods.push({ gte: b.periodStart, lte: b.periodEnd });
+    periodsByScope.set(scopeKey(b), periods);
   }
-  const accountIds = await accountIdsPromise;
-  const assignedIds = [...includedIds, ...excluded];
-
-  const orClauses: object[] = [];
-  if (accountIds.length > 0) {
+  const orClauses: Prisma.TransactionWhereInput[] = [];
+  for (const [key, periods] of periodsByScope) {
+    const accountIds = [...scopes.get(key)!];
+    if (accountIds.length === 0) continue;
     orClauses.push({
       accountId: { in: accountIds },
-      date: { gte: budget.periodStart, lte: budget.periodEnd },
+      OR: periods.map((date) => ({ date })),
     });
   }
+  const assignedIds = [...new Set(assignments.map((a) => a.transactionId))];
   if (assignedIds.length > 0) orClauses.push({ id: { in: assignedIds } });
 
-  const rows: BudgetRow[] =
-    orClauses.length === 0
-      ? []
-      : (
-          await db.transaction.findMany({
-            where: { OR: orClauses },
-            select: {
-              id: true,
-              amount: true,
-              date: true,
-              categoryId: true,
-              accountId: true,
-              linkMembership: { select: { linkId: true } },
-            },
-          })
-        ).map((r) => ({
-          id: r.id,
-          amount: Number(r.amount),
-          date: r.date,
-          categoryId: r.categoryId,
-          accountId: r.accountId,
-          linkId: r.linkMembership?.linkId ?? null,
-        }));
+  let rows: BudgetRow[] = [];
+  if (orClauses.length > 0) {
+    const where = { OR: orClauses };
+    const [txs, linkIds] = await Promise.all([
+      db.transaction.findMany({
+        where,
+        select: { id: true, amount: true, date: true, categoryId: true, accountId: true },
+      }),
+      linkIdsWhere(where),
+    ]);
+    rows = txs.map((r) => ({
+      id: r.id,
+      amount: Number(r.amount),
+      date: r.date,
+      categoryId: r.categoryId,
+      accountId: r.accountId,
+      linkId: linkIds.get(r.id) ?? null,
+    }));
+  }
 
-  return { rows, excluded, includedIds };
+  const loaded = new Map<string, LoadedBudgetRows>(
+    budgets.map((b) => [b.id, { rows: [], excluded: new Set(), includedIds: new Set() }]),
+  );
+  for (const a of assignments) {
+    const l = loaded.get(a.budgetId)!;
+    (a.mode === "EXCLUDE" ? l.excluded : l.includedIds).add(a.transactionId);
+  }
+  for (const b of budgets) {
+    const l = loaded.get(b.id)!;
+    const accounts = scopes.get(scopeKey(b))!;
+    const from = b.periodStart.getTime();
+    const to = b.periodEnd.getTime();
+    l.rows = rows.filter(
+      (r) =>
+        (accounts.has(r.accountId) && r.date.getTime() >= from && r.date.getTime() <= to) ||
+        l.includedIds.has(r.id) ||
+        l.excluded.has(r.id),
+    );
+  }
+  return loaded;
 }
 
 type LineFilter = { categoryId: string | null; accountId: string | null };
@@ -581,19 +618,10 @@ export type BudgetTransaction = {
 // matches several lines is counted once in the total; an INCLUDE'd tx that
 // matches no line is attributed to the first line for display.
 async function computeBudgetSpend(
-  b: {
-    id: string;
-    userId: string | null;
-    groupId: string | null;
-    periodStart: Date;
-    periodEnd: Date;
-    lines: LineFilter[];
-  },
-  accountCache?: AccountScopeCache,
+  b: { lines: LineFilter[] },
+  { rows, excluded, includedIds }: LoadedBudgetRows,
   subtrees?: Map<string, Set<string>>,
 ): Promise<{ lineSums: number[]; totalSum: number; counted: BudgetRow[] }> {
-  const { rows, excluded, includedIds } = await loadBudgetRows(b, accountCache);
-
   // Collapse links across the WHOLE loaded scope first, so a linked group split
   // across categories nets correctly (the offsetting member is not dropped by a
   // per-line filter). Each surviving row carries its primary's category/account.
@@ -709,7 +737,10 @@ export async function getBudgetDetail(
   { withTransactions = true }: { withTransactions?: boolean } = {},
 ): Promise<BudgetDetail> {
   const b = await readableOrThrow(id, viewerId);
-  const { lineSums, totalSum, counted } = await computeBudgetSpend(b);
+  const { lineSums, totalSum, counted } = await computeBudgetSpend(
+    b,
+    (await loadBudgetRows([b])).get(b.id)!,
+  );
   const { roleByGroup } = await budgetScopeForUser(viewerId);
 
   const lines = b.lines.map((l, i) => ({
@@ -919,13 +950,15 @@ export async function listAssignmentsForTx(
   return rows.map((r) => ({ budgetId: r.budgetId, mode: r.mode, budget: toAssignable(r.budget) }));
 }
 
-async function nextInstanceExists(b: {
+type SeriesRef = {
   id: string;
   parentBudgetId: string | null;
   periodType: string;
   periodStart: Date;
   periodEnd: Date;
-}): Promise<boolean> {
+};
+
+async function nextInstanceExists(b: SeriesRef): Promise<boolean> {
   // Any later period of the series counts, so a deleted middle period isn't recreated.
   const period = nextPeriod(b.periodType as BudgetPeriodType, b.periodStart, b.periodEnd);
   const template = b.parentBudgetId ?? b.id;
@@ -937,6 +970,31 @@ async function nextInstanceExists(b: {
     select: { id: true },
   });
   return existing != null;
+}
+
+// The budgets of `budgets` whose series already has a later period, in one query.
+async function withNextInstance(budgets: SeriesRef[]): Promise<Set<string>> {
+  if (budgets.length === 0) return new Set();
+  const templates = [...new Set(budgets.map((b) => b.parentBudgetId ?? b.id))];
+  const series = await db.budget.findMany({
+    where: { OR: [{ id: { in: templates } }, { parentBudgetId: { in: templates } }] },
+    select: { id: true, parentBudgetId: true, periodStart: true },
+  });
+  const starts = new Map<string, number[]>();
+  for (const s of series) {
+    for (const key of [s.id, s.parentBudgetId]) {
+      if (key) starts.set(key, [...(starts.get(key) ?? []), s.periodStart.getTime()]);
+    }
+  }
+  return new Set(
+    budgets
+      .filter((b) => {
+        const next = nextPeriod(b.periodType as BudgetPeriodType, b.periodStart, b.periodEnd);
+        const later = starts.get(b.parentBudgetId ?? b.id) ?? [];
+        return later.some((t) => t >= next.start.getTime());
+      })
+      .map((b) => b.id),
+  );
 }
 
 // Core roll: create the next-period instance of a recurring budget if it doesn't
@@ -1015,9 +1073,6 @@ export async function listRollableTemplates(now: Date): Promise<{ id: string }[]
       periodEnd: true,
     },
   });
-  const rollable: { id: string }[] = [];
-  for (const b of ended) {
-    if (!(await nextInstanceExists(b))) rollable.push({ id: b.id });
-  }
-  return rollable;
+  const rolled = await withNextInstance(ended);
+  return ended.filter((b) => !rolled.has(b.id)).map((b) => ({ id: b.id }));
 }

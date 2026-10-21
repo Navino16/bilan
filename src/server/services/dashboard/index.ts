@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { cache } from "react";
 import { db } from "@/server/db";
 import { visibleAccountIds } from "@/server/services/accounts";
+import { linkIdsWhere } from "@/server/services/links/members";
 import { listTransactions, type TransactionListItem } from "@/server/services/transactions";
 import { collapseLinkedRows, type CollapsibleRow } from "@/lib/links";
 import { averageMonthRows, type AmountRow } from "@/lib/insights";
@@ -138,23 +139,26 @@ export async function loadRows(
 ): Promise<{ rows: AggRow[]; count: number }> {
   const withLabels = opts.withLabels ?? false;
   if (accountIds.length === 0) return { rows: [], count: 0 };
-  const rows = await db.transaction.findMany({
-    where: {
-      accountId: { in: accountIds },
-      date: { gte: period.from, lte: period.to },
-      ...opts.where,
-    },
-    select: {
-      id: true,
-      amount: true,
-      date: true,
-      categoryId: true,
-      accountId: true,
-      type: true,
-      labelEnc: withLabels,
-      linkMembership: { select: { linkId: true } },
-    },
-  });
+  const where: Prisma.TransactionWhereInput = {
+    accountId: { in: accountIds },
+    date: { gte: period.from, lte: period.to },
+    ...opts.where,
+  };
+  const [rows, linkIds] = await Promise.all([
+    db.transaction.findMany({
+      where,
+      select: {
+        id: true,
+        amount: true,
+        date: true,
+        categoryId: true,
+        accountId: true,
+        type: true,
+        labelEnc: withLabels,
+      },
+    }),
+    linkIdsWhere(where),
+  ]);
   const collapsed = collapseLinkedRows(
     rows.map((r) => ({
       id: r.id,
@@ -164,7 +168,7 @@ export async function loadRows(
       accountId: r.accountId,
       type: r.type,
       labelEnc: withLabels ? r.labelEnc : null,
-      linkId: r.linkMembership?.linkId ?? null,
+      linkId: linkIds.get(r.id) ?? null,
     })),
   );
   return { rows: collapsed, count: rows.length };

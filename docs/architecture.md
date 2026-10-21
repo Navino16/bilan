@@ -1008,7 +1008,7 @@ Creation (form dialog on `/budgets`):
 Archive (#260): a budget manager can archive/unarchive (`budgets.service.archiveBudget` / `unarchiveBudget`, audit `budget.archived` / `budget.unarchived`). Archived budgets leave the list (shown in a collapsed "Archived budgets" section), the dashboard, the assignment menu and the roll cron; their detail stays readable and their menu only offers unarchive/delete. An archived budget takes no new assignment (`ARCHIVED`) and is never rolled, even by a direct call; existing assignments stay listed (marked archived) and removable in the transaction panel.
 
 `budgets.computeBudgetSpend(budget)` (all lines at once):
-1. Load the candidate transactions: a personal budget draws from the owner's visible accounts (own + shared via groups), a group budget from the accounts shared with that group, within `[periodStart, periodEnd]`; plus every transaction assigned to this budget, whatever its account or date.
+1. Load the candidate transactions: a personal budget draws from the owner's visible accounts (own + shared via groups), a group budget from the accounts shared with that group, within `[periodStart, periodEnd]`; plus every transaction assigned to this budget, whatever its account or date. The budget list loads every budget's candidates in one query (`loadBudgetRows`, #299) and reads link membership from `TransactionLinkMember` joined to its transaction (`links/members.linkIdsWhere`), so its query count doesn't grow with the number of budgets.
 2. Apply link logic over that whole set first:
    - Balanced groups (`|sum| < 0.005`): all members excluded.
    - Unbalanced groups: only the primary (largest absolute amount) counts, with the net sum as its effective amount.
