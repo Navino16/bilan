@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import { requireGroupRole } from "@/server/services/groups/roles";
+import { groupMemberships } from "@/server/services/groups/memberships";
 import { visibleAccountIds } from "@/server/services/accounts";
 import { categoryInputSchema, type CategoryInput } from "@/lib/validation/category";
 
@@ -324,12 +325,15 @@ function buildTree(
 
 // All categories the user can use: their personal ones + every category owned
 // by a group they belong to. `client` lets a transaction read the same set.
-export async function loadAssignableCategories(client: Prisma.TransactionClient, userId: string) {
-  const memberships = await client.groupMember.findMany({
-    where: { userId },
-    select: { groupId: true },
-  });
-  const groupIds = memberships.map((m) => m.groupId);
+export async function loadAssignableCategories(
+  client: Prisma.TransactionClient,
+  userId: string,
+  memberships?: readonly { groupId: string }[],
+) {
+  const groupIds = (
+    memberships ??
+    (await client.groupMember.findMany({ where: { userId }, select: { groupId: true } }))
+  ).map((m) => m.groupId);
   return client.category.findMany({
     where: { OR: [{ userId }, { groupId: { in: groupIds } }] },
     orderBy: { name: "asc" },
@@ -340,7 +344,7 @@ export async function loadAssignableCategories(client: Prisma.TransactionClient,
 // render: pages also reach it through listForeignCategories.
 export const listForUser = cache(
   async (userId: string): Promise<CategoryNode[]> =>
-    buildTree(await loadAssignableCategories(db, userId)),
+    buildTree(await loadAssignableCategories(db, userId, await groupMemberships(userId))),
 );
 
 // Categories the user can't use but meets on the transactions they can see

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
 import { LONG_TX_TIMEOUT } from "@/server/db/timeouts";
@@ -19,6 +20,8 @@ import type { FileRule, RejectedRule } from "@/lib/validation/rules-file";
 import type { RuleMatchType } from "@/lib/validation/rule";
 import { RuleAccessError, RuleValidationError } from "./index";
 import { parseRulesFile } from "./rules-file";
+
+const CREATE_CHUNK = 500;
 
 type Target = { groupId: string | null };
 type Client = Prisma.TransactionClient;
@@ -226,31 +229,35 @@ export async function commitRulesImport(
     assertDecisions(plan, resolutions, categories, decisions);
 
     const resolver = categoryResolver(tx, resolutions, decisions, owner);
-    const createdRuleIds: string[] = [];
     // The file lists rules winner-first; the first one is created newest so ties keep their
-    // order under the createdAt tie-break of compareRules (#291).
+    // order under the createdAt tie-break of compareRules (#291). Ids are set here so the
+    // rules go in bulk inserts (#304).
     const base = Date.now();
+    const data: Prisma.CategorizationRuleCreateManyInput[] = [];
     for (const [index, rule] of plan.create.entries()) {
-      const created = await tx.categorizationRule.create({
-        data: {
-          createdAt: new Date(base - index),
-          pattern: rule.pattern,
-          matchType: rule.matchType,
-          caseSensitive: rule.caseSensitive,
-          priority: rule.priority,
-          enabled: rule.enabled,
-          categoryId: await resolver.resolve(rule.pathKey),
-          ...owner,
-        },
-        select: { id: true },
+      data.push({
+        id: randomUUID(),
+        createdAt: new Date(base - index),
+        pattern: rule.pattern,
+        matchType: rule.matchType,
+        caseSensitive: rule.caseSensitive,
+        priority: rule.priority,
+        enabled: rule.enabled,
+        categoryId: await resolver.resolve(rule.pathKey),
+        ...owner,
       });
-      createdRuleIds.push(created.id);
     }
+    for (let i = 0; i < data.length; i += CREATE_CHUNK) {
+      await tx.categorizationRule.createMany({ data: data.slice(i, i + CREATE_CHUNK) });
+    }
+    const createdRuleIds = data.map((r) => r.id!);
+    const movesTo = new Map<string, string[]>();
     for (const move of plan.move) {
-      await tx.categorizationRule.update({
-        where: { id: move.ruleId },
-        data: { categoryId: await resolver.resolve(move.pathKey) },
-      });
+      const categoryId = await resolver.resolve(move.pathKey);
+      movesTo.set(categoryId, [...(movesTo.get(categoryId) ?? []), move.ruleId]);
+    }
+    for (const [categoryId, ids] of movesTo) {
+      await tx.categorizationRule.updateMany({ where: { id: { in: ids } }, data: { categoryId } });
     }
     return {
       createdRuleIds,
