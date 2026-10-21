@@ -21,6 +21,8 @@ export type ListQuery = {
   sort: TransactionSort;
   take: number;
   skip: number;
+  // Keyset pagination for "date-desc": only rows sorting after this one.
+  after?: { date: Date; createdAt: Date; id: string };
 };
 
 export type ListTuning = { commonTokenRows?: number; countCap?: number };
@@ -51,6 +53,11 @@ function filterConditions(q: ListQuery): Prisma.Sql[] {
   }
   if (q.from) conds.push(Prisma.sql`t.date >= ${q.from}`);
   if (q.to) conds.push(Prisma.sql`t.date <= ${q.to}`);
+  if (q.after) {
+    const { date, createdAt, id } = q.after;
+    conds.push(Prisma.sql`(t.date < ${date} OR (t.date = ${date} AND (t.createdAt < ${createdAt}
+      OR (t.createdAt = ${createdAt} AND t.id < ${id}))))`);
+  }
   return conds;
 }
 
@@ -87,6 +94,8 @@ export type ListRow = {
   id: string;
   accountId: string;
   date: Date;
+  createdAt: Date;
+  updatedAt: Date;
   amount: Prisma.Decimal;
   type: string;
   labelEnc: string;
@@ -95,17 +104,18 @@ export type ListRow = {
   categoryId: string | null;
   manuallyCategorized: boolean | number; // tinyint(1) over raw SQL
   externalId: string | null;
+  importBatchId: string | null;
 };
 
 const COLUMNS = Prisma.raw(
-  "t.id, t.accountId, t.date, t.createdAt, t.amount, t.type, t.labelEnc, t.rawLabelEnc, " +
-    "t.noteEnc, t.categoryId, t.manuallyCategorized, t.externalId",
+  "t.id, t.accountId, t.date, t.createdAt, t.updatedAt, t.amount, t.type, t.labelEnc, " +
+    "t.rawLabelEnc, t.noteEnc, t.categoryId, t.manuallyCategorized, t.externalId, t.importBatchId",
 );
 
 // One page, in order. A rare search word drives the query from the token index. Otherwise a
 // date sort takes each account's top rows from its (accountId, date, createdAt) index and
 // merges them: a multi-account IN would sort every row (#300), a common word every match.
-async function pageRows(q: ListQuery, tuning: ListTuning): Promise<ListRow[]> {
+export async function pageRows(q: ListQuery, tuning: ListTuning = {}): Promise<ListRow[]> {
   const conds = filterConditions(q);
   const searching = q.tokenHashes.length > 0;
   const common =

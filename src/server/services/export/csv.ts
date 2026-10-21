@@ -50,20 +50,34 @@ export function transactionsToCsv(
   locale: Locale,
   typeLabels: Partial<Record<string, string>> = {},
 ): string {
-  const { delimiter, decimal, headers } = DIALECTS[locale];
+  return csvHeader(locale) + csvLines(rows, locale, typeLabels);
+}
+
+// The BOM and the header line, without a trailing newline: a streamed export appends
+// `csvLines` page by page.
+export function csvHeader(locale: Locale): string {
+  const { delimiter, headers } = DIALECTS[locale];
+  return UTF8_BOM + Papa.unparse([headers], { newline: "\n", delimiter });
+}
+
+// Rows, each preceded by a newline.
+export function csvLines(
+  rows: CsvRow[],
+  locale: Locale,
+  typeLabels: Partial<Record<string, string>> = {},
+): string {
+  if (rows.length === 0) return "";
+  const { delimiter, decimal } = DIALECTS[locale];
   const body = Papa.unparse(
-    {
-      fields: headers,
-      data: rows.map((r) => [
-        r.date,
-        formatAmount(r.amount, decimal),
-        typeLabels[r.type] ?? r.type,
-        sanitizeCell(r.label),
-        sanitizeCell(r.accountName),
-        sanitizeCell(r.categoryName ?? ""),
-      ]),
-    },
+    rows.map((r) => [
+      r.date,
+      formatAmount(r.amount, decimal),
+      typeLabels[r.type] ?? r.type,
+      sanitizeCell(r.label),
+      sanitizeCell(r.accountName),
+      sanitizeCell(r.categoryName ?? ""),
+    ]),
     { newline: "\n", delimiter },
   );
-  return UTF8_BOM + body;
+  return "\n" + body;
 }

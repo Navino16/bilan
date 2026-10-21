@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { transactionsToCsv, type CsvRow } from "@/server/services/export/csv";
+import { csvHeader, csvLines, transactionsToCsv, type CsvRow } from "@/server/services/export/csv";
 import { normalizeType } from "@/server/services/imports/csv-parse";
 import { TRANSACTION_TYPES } from "@/lib/validation/transaction";
 import fr from "../../../messages/fr.json";
@@ -32,6 +32,15 @@ function lines(csv: string): string[] {
 }
 
 describe("transactionsToCsv", () => {
+  it("writes the same file streamed page by page (#301)", () => {
+    for (const locale of ["fr", "en"] as const) {
+      const pages = [rows.slice(0, 1), [], rows.slice(1)];
+      const streamed = csvHeader(locale) + pages.map((p) => csvLines(p, locale)).join("");
+      expect(streamed).toBe(transactionsToCsv(rows, locale));
+      expect(csvHeader(locale)).toBe(transactionsToCsv([], locale));
+    }
+  });
+
   it("starts with a UTF-8 BOM so Excel decodes accents", () => {
     expect(transactionsToCsv(rows, "fr").startsWith("\uFEFF")).toBe(true);
     expect(transactionsToCsv(rows, "en").startsWith("\uFEFF")).toBe(true);

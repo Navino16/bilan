@@ -6,6 +6,7 @@ import {
   computeExternalIds,
 } from "@/server/services/transactions/secure-fields";
 import { recordHits, suggestMany } from "@/server/services/categorization";
+import { mapInSlices } from "@/server/services/categorization/cooperative";
 import { trimBatchMetadata } from "@/lib/import-status";
 import { deriveType } from "./derive-type";
 import { ImportAccessError } from "./errors";
@@ -75,22 +76,28 @@ export async function insertRows(
     : null;
 
   let skipped = 0;
-  const pending: {
-    data: Prisma.TransactionCreateManyInput;
-    externalId: string;
-    tokens: string[];
-    ruleId: string | null;
-  }[] = [];
-  for (const [i, row] of rows.entries()) {
-    const externalId = externalIds[i];
+  const kept: number[] = [];
+  for (const [i, externalId] of externalIds.entries()) {
     if (excluded.has(externalId)) continue; // user unchecked this row in the preview
     if (seen.has(externalId)) {
       skipped++;
       continue;
     }
     seen.add(externalId);
+    kept.push(i);
+  }
+  // Encryption + token hashing is synchronous CPU work: sliced so a large file doesn't
+  // stall every other request (#301).
+  const secures = (
+    await mapInSlices(kept, (slice) =>
+      slice.map((i) => buildSecureFields({ label: rows[i].rawLabel, rawLabel: rows[i].rawLabel })),
+    )
+  ).flat();
 
-    const secure = buildSecureFields({ label: row.rawLabel, rawLabel: row.rawLabel });
+  const pending = kept.map((i, k) => {
+    const row = rows[i];
+    const externalId = externalIds[i];
+    const secure = secures[k];
     const rawOverride = overrides[externalId];
     // "" is an explicit "Sans catégorie" pick; a foreign category id is dropped.
     const override =
@@ -98,29 +105,25 @@ export async function insertRows(
         ? rawOverride
         : undefined;
     const suggestion = override === undefined ? suggestions?.[i] : null;
-    pending.push({
-      data: {
-        accountId: target.accountId,
-        date: row.date,
-        amount: row.amount,
-        type: row.type ?? deriveType(row.rawLabel),
-        labelEnc: secure.labelEnc,
-        labelHash: secure.labelHash,
-        rawLabelEnc: secure.rawLabelEnc,
-        rawLabelHash: secure.rawLabelHash,
-        merchantKeyHash: secure.merchantKeyHash,
-        noteEnc: null,
-        categoryId: override || suggestion?.categoryId || null,
-        manuallyCategorized: override !== undefined,
-        externalId,
-        importBatchId: target.batchId,
-        createdById: actor.id,
-      },
+    const data: Prisma.TransactionCreateManyInput = {
+      accountId: target.accountId,
+      date: row.date,
+      amount: row.amount,
+      type: row.type ?? deriveType(row.rawLabel),
+      labelEnc: secure.labelEnc,
+      labelHash: secure.labelHash,
+      rawLabelEnc: secure.rawLabelEnc,
+      rawLabelHash: secure.rawLabelHash,
+      merchantKeyHash: secure.merchantKeyHash,
+      noteEnc: null,
+      categoryId: override || suggestion?.categoryId || null,
+      manuallyCategorized: override !== undefined,
       externalId,
-      tokens: secure.tokens,
-      ruleId: suggestion?.ruleId ?? null,
-    });
-  }
+      importBatchId: target.batchId,
+      createdById: actor.id,
+    };
+    return { data, externalId, tokens: secure.tokens, ruleId: suggestion?.ruleId ?? null };
+  });
 
   // createMany returns no ids, so each chunk's ids are read back through the
   // (accountId, externalId) unique key to attach the search tokens.

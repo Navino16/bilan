@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "@/server/db";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
-import { exportUserData, deleteUser } from "@/server/services/rgpd";
+import { exportParts, exportUserData, deleteUser, userDataJson } from "@/server/services/rgpd";
 import { renameMerchant } from "@/server/services/merchants";
 import { encrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
@@ -266,6 +266,16 @@ describe("rgpd export with another user's shared account", () => {
 });
 
 describe("rgpd", () => {
+  it("streams the same JSON document as the whole export (#301)", async () => {
+    let streamed = "";
+    for await (const chunk of userDataJson(await exportParts(userId))) streamed += chunk;
+    const whole = JSON.parse(JSON.stringify(await exportUserData(userId)));
+    const parsed = JSON.parse(streamed);
+    expect(Object.keys(parsed)).toEqual(Object.keys(whole));
+    expect({ ...parsed, exportedAt: null }).toEqual({ ...whole, exportedAt: null });
+    expect(parsed.transactions.length).toBeGreaterThan(0);
+  });
+
   it("exportUserData returns the user's accounts, decrypted transactions, categories, budgets", async () => {
     const data = await exportUserData(userId);
     expect(data.user.id).toBe(userId);

@@ -1,8 +1,9 @@
 import { getCurrentUser } from "@/server/auth/permissions";
-import { listTransactions } from "@/server/services/transactions";
+import { transactionPages, type TransactionListItem } from "@/server/services/transactions";
 import { listForUser, listForeignCategories } from "@/server/services/categories";
 import { flattenCategories } from "@/components/transactions/category-tree";
-import { transactionsToCsv, type CsvRow } from "@/server/services/export/csv";
+import { csvHeader, csvLines, type CsvRow } from "@/server/services/export/csv";
+import { streamOf } from "@/server/http/stream";
 import { dayEnd, dayStart, toIsoDay } from "@/lib/period";
 import { parseTransactionFilters } from "@/lib/transaction-filters";
 import { defaultLocale, locales, type Locale } from "@/i18n/config";
@@ -23,38 +24,33 @@ export async function GET(req: Request): Promise<Response> {
   const { from, to, ...rest } = parseTransactionFilters(Object.fromEntries(q));
   const filters = {
     ...rest,
-    sort: undefined,
     from: from ? dayStart(from) : undefined,
     to: to ? dayEnd(to) : undefined,
   };
 
-  // Paginate through the full result set so the export is never silently
-  // truncated (RGPD/portability must be complete). A search's `total` is capped: a short page ends it.
-  const PAGE = 10_000;
-  const items: Awaited<ReturnType<typeof listTransactions>>["items"] = [];
-  for (let skip = 0; ; skip += PAGE) {
-    const page = await listTransactions(user.id, { ...filters, take: PAGE, skip });
-    items.push(...page.items);
-    if (page.items.length < PAGE) break;
-  }
   const [tree, foreign] = await Promise.all([listForUser(user.id), listForeignCategories(user.id)]);
-
   const catName = new Map(
     [...flattenCategories(tree), ...flattenCategories(foreign)].map((c) => [c.id, c.name]),
   );
-  const rows: CsvRow[] = items.map((i) => ({
+  const tType = await getTranslations({ locale, namespace: "transactions.types" });
+  const typeLabels = Object.fromEntries(TRANSACTION_TYPES.map((type) => [type, tType(type)]));
+  const toRow = (i: TransactionListItem): CsvRow => ({
     date: toIsoDay(i.date),
     amount: i.amount,
     type: i.type,
     label: i.label,
     accountName: i.accountName,
     categoryName: i.categoryId ? (catName.get(i.categoryId) ?? null) : null,
-  }));
+  });
 
-  const tType = await getTranslations({ locale, namespace: "transactions.types" });
-  const typeLabels = Object.fromEntries(TRANSACTION_TYPES.map((type) => [type, tType(type)]));
-  const csv = transactionsToCsv(rows, locale, typeLabels);
-  return new Response(csv, {
+  // Every matching row, never silently truncated (RGPD/portability must be complete).
+  async function* csv() {
+    yield csvHeader(locale);
+    for await (const page of transactionPages(user!.id, filters)) {
+      yield csvLines(page.map(toRow), locale, typeLabels);
+    }
+  }
+  return new Response(streamOf(csv()), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="bilan-transactions-${toIsoDay(new Date())}.csv"`,
