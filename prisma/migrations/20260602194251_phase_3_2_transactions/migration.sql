@@ -9,6 +9,7 @@ CREATE TABLE `Transaction` (
     `labelHash` VARCHAR(191) NOT NULL,
     `rawLabelEnc` TEXT NOT NULL,
     `rawLabelHash` VARCHAR(191) NOT NULL,
+    `merchantKeyHash` VARCHAR(191) NULL,
     `noteEnc` TEXT NULL,
     `categoryId` VARCHAR(191) NULL,
     `manuallyCategorized` BOOLEAN NOT NULL DEFAULT false,
@@ -21,6 +22,7 @@ CREATE TABLE `Transaction` (
     INDEX `Transaction_categoryId_date_idx`(`categoryId`, `date`),
     INDEX `Transaction_labelHash_idx`(`labelHash`),
     INDEX `Transaction_rawLabelHash_idx`(`rawLabelHash`),
+    INDEX `Transaction_merchant_directory_idx`(`accountId`, `merchantKeyHash`, `categoryId`, `type`, `amount`, `date`),
     INDEX `Transaction_date_idx`(`date`),
     UNIQUE INDEX `Transaction_accountId_externalId_key`(`accountId`, `externalId`),
     PRIMARY KEY (`id`)

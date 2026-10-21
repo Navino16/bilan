@@ -2,12 +2,14 @@ import { createHash, randomInt } from "node:crypto";
 import { encrypt } from "@/server/crypto/encryption";
 import { hmacForSearch, hmacTokens } from "@/server/crypto/hmac";
 import { dataKey, searchKey } from "@/server/crypto/keys";
+import { merchantKey } from "@/lib/merchant";
 
 export type SecureFields = {
   labelEnc: string;
   labelHash: string;
   rawLabelEnc: string;
   rawLabelHash: string;
+  merchantKeyHash: string;
   noteEnc: string | null;
   tokens: string[]; // HMAC of each word prefix ≥ 3 chars (label + rawLabel), see searchPrefixes
 };
@@ -25,6 +27,11 @@ export function buildSearchTokens(label: string, rawLabel: string): string[] {
   return tokens;
 }
 
+// Prefixed so a one-word merchant's hash can't be matched against transaction search tokens.
+export function hashMerchantKey(key: string): string {
+  return hmacForSearch(`merchant:${key}`, searchKey);
+}
+
 // Encrypts the human + raw labels and the optional note, derives equality
 // HMAC hashes for both labels, and builds the search-token set used by
 // TransactionSearchToken rows.
@@ -40,6 +47,7 @@ export function buildSecureFields(input: {
     labelHash: hmacForSearch(input.label, searchKey),
     rawLabelEnc: encrypt(input.rawLabel, dataKey),
     rawLabelHash: hmacForSearch(input.rawLabel, searchKey),
+    merchantKeyHash: hashMerchantKey(merchantKey(input.label)),
     noteEnc: note ? encrypt(note, dataKey) : null,
     tokens,
   };

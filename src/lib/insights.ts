@@ -143,12 +143,23 @@ export function historyRows(
   return { months: history.months.slice(start), rows };
 }
 
+// One merchant's spending over some rows: a single row, or rows summed in SQL (#296).
+// `label` and `date` are those of the part's latest row.
+export type MerchantPart = {
+  key: string;
+  label: string;
+  date: Date;
+  categoryId: string | null;
+  count: number;
+  total: number;
+};
+
 type MerchantGroup = {
   alias: string | null;
   keys: Set<string>;
   total: number;
   count: number;
-  latest: MerchantRow;
+  latest: MerchantPart;
   byCategory: Map<string | null, { count: number; total: number }>;
 };
 
@@ -159,30 +170,53 @@ export function topMerchants(
   limit: number,
   aliases: ReadonlyMap<string, string> = new Map(),
 ): MerchantTotal[] {
-  const groups = new Map<string, MerchantGroup>();
+  return mergeMerchantParts(merchantParts(rows), limit, aliases);
+}
+
+export function merchantParts(rows: MerchantRow[]): MerchantPart[] {
+  const parts: MerchantPart[] = [];
   for (const r of rows) {
     if (r.amount >= 0 || r.type === "TRANSFER") continue;
     const key = merchantKey(r.label);
-    if (!key) continue;
-    const alias = aliases.get(key) ?? null;
-    const id = alias === null ? `k:${key}` : `a:${alias.toLocaleLowerCase()}`;
-    const spend = -r.amount;
+    if (key) {
+      parts.push({
+        key,
+        label: r.label,
+        date: r.date,
+        categoryId: r.categoryId,
+        count: 1,
+        total: -r.amount,
+      });
+    }
+  }
+  return parts;
+}
+
+export function mergeMerchantParts(
+  parts: MerchantPart[],
+  limit: number,
+  aliases: ReadonlyMap<string, string> = new Map(),
+): MerchantTotal[] {
+  const groups = new Map<string, MerchantGroup>();
+  for (const p of parts) {
+    const alias = aliases.get(p.key) ?? null;
+    const id = alias === null ? `k:${p.key}` : `a:${alias.toLocaleLowerCase()}`;
     const g: MerchantGroup = groups.get(id) ?? {
       alias,
       keys: new Set<string>(),
       total: 0,
       count: 0,
-      latest: r,
+      latest: p,
       byCategory: new Map(),
     };
-    g.keys.add(key);
-    g.total += spend;
-    g.count += 1;
-    if (r.date > g.latest.date) g.latest = r;
-    const c = g.byCategory.get(r.categoryId) ?? { count: 0, total: 0 };
-    c.count += 1;
-    c.total += spend;
-    g.byCategory.set(r.categoryId, c);
+    g.keys.add(p.key);
+    g.total += p.total;
+    g.count += p.count;
+    if (p.date > g.latest.date) g.latest = p;
+    const c = g.byCategory.get(p.categoryId) ?? { count: 0, total: 0 };
+    c.count += p.count;
+    c.total += p.total;
+    g.byCategory.set(p.categoryId, c);
     groups.set(id, g);
   }
   return [...groups.values()]

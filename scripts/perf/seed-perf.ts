@@ -910,6 +910,7 @@ async function main(): Promise<void> {
         labelHash: secure.labelHash,
         rawLabelEnc: secure.rawLabelEnc,
         rawLabelHash: secure.rawLabelHash,
+        merchantKeyHash: secure.merchantKeyHash,
         noteEnc: secure.noteEnc,
         categoryId: t.category ? catId(t.category) : null,
         manuallyCategorized: t.manual && t.category !== null,

@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { cache } from "react";
 import { db } from "@/server/db";
 import { visibleAccountIds } from "@/server/services/accounts";
@@ -133,12 +134,16 @@ export type AggRow = CollapsibleRow & { accountId: string; type: string; labelEn
 export async function loadRows(
   accountIds: string[],
   period: Period,
-  opts: { withLabels?: boolean } = {},
+  opts: { withLabels?: boolean; where?: Prisma.TransactionWhereInput } = {},
 ): Promise<{ rows: AggRow[]; count: number }> {
   const withLabels = opts.withLabels ?? false;
   if (accountIds.length === 0) return { rows: [], count: 0 };
   const rows = await db.transaction.findMany({
-    where: { accountId: { in: accountIds }, date: { gte: period.from, lte: period.to } },
+    where: {
+      accountId: { in: accountIds },
+      date: { gte: period.from, lte: period.to },
+      ...opts.where,
+    },
     select: {
       id: true,
       amount: true,

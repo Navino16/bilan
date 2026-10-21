@@ -1,15 +1,18 @@
+import { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
 import { decrypt, encrypt } from "@/server/crypto/encryption";
-import { hmacForSearch } from "@/server/crypto/hmac";
-import { dataKey, searchKey } from "@/server/crypto/keys";
+import { dataKey } from "@/server/crypto/keys";
+import { hashMerchantKey } from "@/server/services/transactions/secure-fields";
 import { visibleAccountIds } from "@/server/services/accounts";
 import { loadRows, type AggRow } from "@/server/services/dashboard";
 import { merchantKeySchema, merchantNameSchema } from "@/lib/validation/merchant";
 import { merchantKey } from "@/lib/merchant";
 import {
-  topMerchants,
+  merchantParts,
+  mergeMerchantParts,
   type MerchantAliasGroup,
   type MerchantDirectory,
+  type MerchantPart,
   type MerchantRow,
 } from "@/lib/insights";
 import type { Period } from "@/lib/period";
@@ -19,8 +22,6 @@ export class MerchantAliasError extends Error {}
 type Alias = { id: string; key: string; name: string };
 
 const sameName = (a: string, b: string) => a.toLocaleLowerCase() === b.toLocaleLowerCase();
-// Prefixed so a one-word merchant's hash can't be matched against transaction search tokens.
-const hashKey = (key: string) => hmacForSearch(`merchant:${key}`, searchKey);
 
 const ALL_TIME: Period = {
   from: new Date(0),
@@ -42,9 +43,61 @@ export function merchantRowsOf(rows: AggRow[]): MerchantRow[] {
     }));
 }
 
-async function allMerchantRows(userId: string): Promise<MerchantRow[]> {
+type SummedPart = {
+  hash: string;
+  categoryId: string | null;
+  total: Prisma.Decimal;
+  count: bigint;
+  last: Date;
+  // "<date>|<id>" of the part's latest row: the covering index holds both.
+  latest: string;
+};
+
+// The whole history, without decrypting it (#296): unlinked rows are summed in SQL by
+// merchant key hash and only each merchant's latest label is decrypted. Linked rows (links
+// collapse) and rows without a hash take the row-by-row path.
+async function allMerchantParts(userId: string): Promise<MerchantPart[]> {
   const accountIds = await visibleAccountIds(userId);
-  return merchantRowsOf((await loadRows(accountIds, ALL_TIME, { withLabels: true })).rows);
+  if (accountIds.length === 0) return [];
+  const [sums, linked, unhashed] = await Promise.all([
+    db.$queryRaw<SummedPart[]>`
+      SELECT t.merchantKeyHash AS hash, t.categoryId, SUM(-t.amount) AS total,
+             COUNT(*) AS count, MAX(t.date) AS last, MAX(CONCAT(t.date, '|', t.id)) AS latest
+      FROM \`Transaction\` t
+      WHERE t.accountId IN (${Prisma.join(accountIds)}) AND t.amount < 0
+        AND t.type <> 'TRANSFER' AND t.merchantKeyHash IS NOT NULL
+        AND t.merchantKeyHash <> ${hashMerchantKey("")}
+        AND NOT EXISTS (SELECT 1 FROM TransactionLinkMember m WHERE m.transactionId = t.id)
+      GROUP BY t.merchantKeyHash, t.categoryId`,
+    loadRows(accountIds, ALL_TIME, {
+      withLabels: true,
+      where: { linkMembership: { isNot: null } },
+    }),
+    loadRows(accountIds, ALL_TIME, {
+      withLabels: true,
+      where: { merchantKeyHash: null, linkMembership: { is: null } },
+    }),
+  ]);
+  const latest = new Map<string, string>();
+  for (const s of sums) if (s.latest > (latest.get(s.hash) ?? "")) latest.set(s.hash, s.latest);
+  const idOf = (latestRow: string) => latestRow.slice(latestRow.lastIndexOf("|") + 1);
+  const rows = await db.transaction.findMany({
+    where: { id: { in: [...latest.values()].map(idOf) } },
+    select: { id: true, labelEnc: true },
+  });
+  const labelOf = new Map(rows.map((r) => [r.id, decrypt(r.labelEnc, dataKey)]));
+  const summed = sums.map((s) => {
+    const label = labelOf.get(idOf(latest.get(s.hash)!))!;
+    return {
+      key: merchantKey(label),
+      label,
+      date: s.last,
+      categoryId: s.categoryId,
+      count: Number(s.count),
+      total: Number(s.total),
+    };
+  });
+  return [...summed, ...merchantParts(merchantRowsOf([...linked.rows, ...unhashed.rows]))];
 }
 
 export function aliasMap(groups: MerchantAliasGroup[]): Map<string, string> {
@@ -99,8 +152,8 @@ export async function listAliasGroups(userId: string): Promise<MerchantAliasGrou
 // Every merchant over the whole history, renamed groups apart (they keep all their keys,
 // even those without spending).
 export async function getMerchantDirectory(userId: string): Promise<MerchantDirectory> {
-  const [rows, groups] = await Promise.all([allMerchantRows(userId), listAliasGroups(userId)]);
-  const all = topMerchants(rows, Infinity, aliasMap(groups));
+  const [parts, groups] = await Promise.all([allMerchantParts(userId), listAliasGroups(userId)]);
+  const all = mergeMerchantParts(parts, Infinity, aliasMap(groups));
   const spent = new Map(all.filter((m) => m.alias).map((m) => [m.alias, m]));
   const renamed = groups
     .map((g) => ({
@@ -122,12 +175,12 @@ async function absorbNamesake(
   const parsed = merchantKeySchema.safeParse(name);
   if (!parsed.success || aliasedKeys.has(parsed.data)) return;
   const key = parsed.data;
-  const keys = new Set((await allMerchantRows(userId)).map((r) => merchantKey(r.label)));
+  const keys = new Set((await allMerchantParts(userId)).map((p) => p.key));
   if (!keys.has(key)) return;
   await db.merchantAlias.create({
     data: {
       userId,
-      keyHash: hashKey(key),
+      keyHash: hashMerchantKey(key),
       keyEnc: encrypt(key, dataKey),
       nameEnc: encrypt(name, dataKey),
     },
@@ -142,8 +195,8 @@ export async function renameMerchant(userId: string, key: string, name: string):
   const keyEnc = encrypt(k, dataKey);
   const nameEnc = encrypt(final, dataKey);
   await db.merchantAlias.upsert({
-    where: { userId_keyHash: { userId, keyHash: hashKey(k) } },
-    create: { userId, keyHash: hashKey(k), keyEnc, nameEnc },
+    where: { userId_keyHash: { userId, keyHash: hashMerchantKey(k) } },
+    create: { userId, keyHash: hashMerchantKey(k), keyEnc, nameEnc },
     update: { keyEnc, nameEnc },
   });
   await absorbNamesake(userId, final, new Set([k, ...others.map((a) => a.key)]));
@@ -175,7 +228,7 @@ export async function deleteAliasGroup(userId: string, name: string): Promise<vo
 }
 
 export async function removeMerchantAlias(userId: string, key: string): Promise<void> {
-  const keyHash = hashKey(merchantKeySchema.parse(key));
+  const keyHash = hashMerchantKey(merchantKeySchema.parse(key));
   const { count } = await db.merchantAlias.deleteMany({ where: { userId, keyHash } });
   if (count === 0) throw new MerchantAliasError("NOT_FOUND");
 }

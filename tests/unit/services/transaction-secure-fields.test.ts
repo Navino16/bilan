@@ -2,7 +2,11 @@ import { describe, it, expect } from "vitest";
 import { decrypt } from "@/server/crypto/encryption";
 import { hmacForSearch } from "@/server/crypto/hmac";
 import { dataKey, searchKey } from "@/server/crypto/keys";
-import { buildSecureFields, computeExternalId } from "@/server/services/transactions/secure-fields";
+import {
+  buildSecureFields,
+  computeExternalId,
+  hashMerchantKey,
+} from "@/server/services/transactions/secure-fields";
 
 describe("buildSecureFields", () => {
   it("encrypts label/rawLabel and stores matching HMAC hashes + per-word tokens", () => {
@@ -22,6 +26,13 @@ describe("buildSecureFields", () => {
     expect(f.tokens).toContain(hmacForSearch("paris", searchKey));
     // "cb" (2 chars) is below the 3-char threshold
     expect(f.tokens).not.toContain(hmacForSearch("cb", searchKey));
+  });
+
+  // The merchant directory groups rows on it (#296): it follows the label, not the raw label.
+  it("hashes the merchant key of the label", () => {
+    const f = buildSecureFields({ label: "CB Crème 12/03", rawLabel: "PRLV OTHER" });
+    expect(f.merchantKeyHash).toBe(hashMerchantKey("CREME"));
+    expect(f.merchantKeyHash).not.toBe(hmacForSearch("CREME", searchKey));
   });
 
   it("leaves noteEnc null when no note is given", () => {

@@ -108,6 +108,7 @@ export async function insertRows(
         labelHash: secure.labelHash,
         rawLabelEnc: secure.rawLabelEnc,
         rawLabelHash: secure.rawLabelHash,
+        merchantKeyHash: secure.merchantKeyHash,
         noteEnc: null,
         categoryId: override || suggestion?.categoryId || null,
         manuallyCategorized: override !== undefined,

@@ -50,7 +50,7 @@ already exists; `npm run db:seed-dev -- --reset` wipes and re-seeds it.
 | `bash scripts/prod-smoke.sh`         | Boot and check the prod compose             |
 
 `npm run db:reindex-search` decrypts every transaction label and rewrites its search tokens
-(batches of 500, `-- --batch=N` to change). Run it once after an upgrade that changes the
+and merchant key hash (batches of 500, `-- --batch=N` to change). Run it once after an upgrade that changes the
 search tokenization (e.g. #192, word-prefix search); it is safe to re-run. It first checks
 each stored `labelHash` against `SEARCH_TOKEN_KEY` and stops on a mismatch (wrong key); after a
 change to the text normalization, add `-- --rehash` to rewrite `labelHash`/`rawLabelHash` too.
