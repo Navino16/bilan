@@ -22,7 +22,14 @@ import {
 } from "@/lib/validation/transaction";
 import { recordHits, suggest } from "@/server/services/categorization";
 import { buildSecureFields } from "./secure-fields";
-import { pageRows, queryTransactionPage, type ListQuery, type ListRow } from "./list-query";
+import {
+  EXPORT_COLUMNS,
+  pageRows,
+  queryTransactionPage,
+  type ExportRow,
+  type ListQuery,
+  type ListRow,
+} from "./list-query";
 
 export class TransactionAccessError extends Error {}
 
@@ -154,19 +161,38 @@ export async function listTransactions(
   return { items: rows.map(resolved.toItem), total, capped };
 }
 
-// Every row matching `filters`, newest first, page by page: keyset pagination and no count,
-// so an export's memory and time don't grow with how far it has read (#301).
+export type ExportItem = Pick<
+  TransactionListItem,
+  "id" | "date" | "amount" | "type" | "label" | "accountName" | "categoryId"
+>;
+
+// Every row matching `filters`, newest first, page by page: keyset pagination, no count and
+// only the exported columns, so an export's memory and time stay bounded (#301).
 export async function* transactionPages(
   userId: string,
   filters: Omit<TransactionFilters, "sort" | "take" | "skip">,
-  pageSize = 2000,
-): AsyncGenerator<TransactionListItem[]> {
+  pageSize = 5000,
+): AsyncGenerator<ExportItem[]> {
   const resolved = await resolveListQuery(userId, { ...filters, sort: "date-desc" });
   if (!resolved) return;
-  let after: ListRow | undefined;
+  let after: ExportRow | undefined;
   for (;;) {
-    const rows = await pageRows({ ...resolved.query, take: pageSize, skip: 0, after });
-    if (rows.length > 0) yield rows.map(resolved.toItem);
+    const rows = await pageRows<ExportRow>(
+      { ...resolved.query, take: pageSize, skip: 0, after },
+      {},
+      EXPORT_COLUMNS,
+    );
+    if (rows.length > 0) {
+      yield rows.map((r) => ({
+        id: r.id,
+        date: r.date,
+        amount: Number(r.amount),
+        type: r.type,
+        label: decrypt(r.labelEnc, dataKey),
+        accountName: resolved.accountName.get(r.accountId) ?? "",
+        categoryId: r.categoryId,
+      }));
+    }
     if (rows.length < pageSize) return;
     after = rows[rows.length - 1];
   }
@@ -175,7 +201,11 @@ export async function* transactionPages(
 async function resolveListQuery(
   userId: string,
   filters: TransactionFilters,
-): Promise<{ query: ListQuery; toItem: (row: ListRow) => TransactionListItem } | null> {
+): Promise<{
+  query: ListQuery;
+  accountName: Map<string, string>;
+  toItem: (row: ListRow) => TransactionListItem;
+} | null> {
   const visible = await visibleAccountRefs(userId);
   const visibleIds = visible.map((a) => a.id);
   const accountName = new Map(visible.map((a) => [a.id, a.name]));
@@ -198,6 +228,7 @@ async function resolveListQuery(
   if (query && words.length === 0) return null;
 
   return {
+    accountName,
     query: {
       accountIds,
       categoryIds,

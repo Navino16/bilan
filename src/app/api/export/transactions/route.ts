@@ -1,5 +1,5 @@
 import { getCurrentUser } from "@/server/auth/permissions";
-import { transactionPages, type TransactionListItem } from "@/server/services/transactions";
+import { transactionPages, type ExportItem } from "@/server/services/transactions";
 import { listForUser, listForeignCategories } from "@/server/services/categories";
 import { flattenCategories } from "@/components/transactions/category-tree";
 import { csvHeader, csvLines, type CsvRow } from "@/server/services/export/csv";
@@ -34,7 +34,7 @@ export async function GET(req: Request): Promise<Response> {
   );
   const tType = await getTranslations({ locale, namespace: "transactions.types" });
   const typeLabels = Object.fromEntries(TRANSACTION_TYPES.map((type) => [type, tType(type)]));
-  const toRow = (i: TransactionListItem): CsvRow => ({
+  const toRow = (i: ExportItem): CsvRow => ({
     date: toIsoDay(i.date),
     amount: i.amount,
     type: i.type,

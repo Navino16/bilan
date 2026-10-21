@@ -32,7 +32,10 @@ export type InsertTotals = {
   hitRuleIds: string[];
 };
 
-const INSERT_CHUNK = 500;
+// Prisma serializes a createMany synchronously: 250 rows (~6k tokens) keeps each insert's
+// event-loop stall around 35 ms (#301).
+const INSERT_CHUNK = 250;
+const TOKEN_CHUNK = 1000;
 
 export async function insertRows(
   target: { batchId: string; accountId: string; progressOffset?: number },
@@ -136,11 +139,12 @@ export async function insertRows(
       select: { id: true, externalId: true },
     });
     const idOf = new Map(created.map((c) => [c.externalId, c.id]));
-    await db.transactionSearchToken.createMany({
-      data: chunk.flatMap((p) =>
-        p.tokens.map((tokenHash) => ({ transactionId: idOf.get(p.externalId)!, tokenHash })),
-      ),
-    });
+    const tokens = chunk.flatMap((p) =>
+      p.tokens.map((tokenHash) => ({ transactionId: idOf.get(p.externalId)!, tokenHash })),
+    );
+    for (let t = 0; t < tokens.length; t += TOKEN_CHUNK) {
+      await db.transactionSearchToken.createMany({ data: tokens.slice(t, t + TOKEN_CHUNK) });
+    }
     imported += chunk.length;
     await db.importBatch.update({
       where: { id: target.batchId },
