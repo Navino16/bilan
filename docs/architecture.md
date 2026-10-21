@@ -649,7 +649,7 @@ model Transaction {
   budgetAssignments BudgetAssignment[]
 
   @@unique([accountId, externalId])
-  @@index([accountId, date])
+  @@index([accountId, date, createdAt])                // per-account newest-first walk (§6.2)
   @@index([categoryId, date])
   @@index([labelHash])
   @@index([rawLabelHash])
@@ -663,7 +663,7 @@ model TransactionSearchToken {
   transactionId String
   tokenHash     String                                // HMAC-SHA256 of one normalized word prefix
   transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  @@index([tokenHash])
+  @@unique([tokenHash, transactionId])
   @@index([transactionId])
 }
 
@@ -897,7 +897,7 @@ model UserPreference {
 | Cascade deletes | User → accounts → transactions → tokens/link memberships/assignments; User → categories, rules, budgets, merchant aliases, memberships, sent invitations, preference, auth tables. Group → members/invitations/shares/categories/rules/budgets. Budget → lines/assignments. Category → rules. |
 | SetNull | Deleting a category un-categorizes transactions, detaches children and budget lines; deleting an account detaches budget lines; deleting an import batch detaches its transactions; deleting a budget detaches its instances. |
 | FK-less columns | `Group.createdById`, `TransactionLink.createdById`, `IgnoredLinkSuggestion.userId`, `AuditLog.userId`: handled explicitly on user erasure (`services/rgpd`) — group ownership passed on (or group deleted), links and ignored pairs deleted, audit rows anonymised. |
-| Indexes | All hashes (`labelHash`, `rawLabelHash`, `tokenHash`, `ibanHash`, `(accountId, merchantKeyHash, categoryId, type, amount, date)`), `(accountId, date)`, `(categoryId, date)`, `(userId/groupId, periodStart)`, audit `(action/entity/userId, createdAt)`. |
+| Indexes | All hashes (`labelHash`, `rawLabelHash`, `tokenHash`, `ibanHash`, `(accountId, merchantKeyHash, categoryId, type, amount, date)`), `(tokenHash, transactionId)` unique, `(accountId, date, createdAt)`, `(categoryId, date)`, `(userId/groupId, periodStart)`, audit `(action/entity/userId, createdAt)`. |
 | No soft delete | Hard deletes only (simpler for RGPD). `archived` flag for non-deleted but inactive entities (accounts, groups, budgets). Imports are undone by revert, which deletes their transactions. |
 | Grants in `Verification` | Password-reset tokens (hashed), trusted devices and step-up grants are `Verification` rows keyed by identifier prefix — no dedicated tables. |
 
@@ -1126,6 +1126,8 @@ Tokenization: split on non-alphanumeric, keep words ≥ 3 chars, index every pre
 On transaction creation/import: store `labelHash`, `rawLabelHash`, `merchantKeyHash`, and one `TransactionSearchToken` per distinct prefix of the label and raw label, inserted in shuffled order.
 
 Search by word beginning: each query word ≥ 3 chars is cut to 12 chars, hashed → indexed lookup on `TransactionSearchToken.tokenHash`; all query words must match (AND). No substring search inside a word. A query made only of words < 3 chars matches nothing.
+
+The list query is raw SQL (`transactions/list-query.ts`, #297) because Prisma's relation filter becomes a per-row dependent subquery. A capped count of each word's token rows picks the plan: when one word is rare (≤ 25,000 rows instance-wide) the query joins from `(tokenHash, transactionId)`; when all are common, a date sort walks each account's `(accountId, date, createdAt)` index newest-first, probes the token index, and merges the per-account top rows. The search count stops at 1,000 (shown "1 000+").
 
 The same key gives equality lookups elsewhere: `BankAccount.ibanHash` (normalized IBAN), `MerchantAlias.keyHash` (`HMAC("merchant:" + key)`, unique per user), `Transaction.merchantKeyHash` (same hash of the label's merchant key: the merchant directory sums spending by it in SQL and decrypts one label per merchant, #296; linked rows, which links collapse, still go row by row), and the unique `AdminSignupToken.tokenHash`, `GroupInvitation.tokenHash` and `codeHash` (`hmacExact`: no normalization, the code is uppercased first).
 
