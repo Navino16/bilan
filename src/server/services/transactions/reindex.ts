@@ -4,12 +4,19 @@ import { LONG_TX_TIMEOUT } from "@/server/db/timeouts";
 import { decrypt } from "@/server/crypto/encryption";
 import { hmacForSearch } from "@/server/crypto/hmac";
 import { dataKey, searchKey } from "@/server/crypto/keys";
-import { buildSearchTokens } from "./secure-fields";
+import { merchantKey } from "@/lib/merchant";
+import { buildSearchTokens, hashMerchantKey } from "./secure-fields";
 
 export type ReindexResult = { transactions: number; tokensBefore: number; tokensAfter: number };
 
 type LabelRow = { id: string; labelEnc: string; labelHash: string; rawLabelEnc: string };
-type Reindexed = { id: string; tokens: string[]; labelHash: string; rawLabelHash: string };
+type Reindexed = {
+  id: string;
+  tokens: string[];
+  labelHash: string;
+  rawLabelHash: string;
+  merchantKeyHash: string;
+};
 
 // Without rehash, a stored labelHash that doesn't match proves a wrong SEARCH_TOKEN_KEY, which
 // would silently rebuild an index no query can hit. After a normalizeText change every row
@@ -28,10 +35,16 @@ function reindexRow(row: LabelRow, rehash: boolean): Reindexed {
     tokens: buildSearchTokens(label, rawLabel),
     labelHash,
     rawLabelHash: hmacForSearch(rawLabel, searchKey),
+    merchantKeyHash: hashMerchantKey(merchantKey(label)),
   };
 }
 
-async function rewriteHashes(tx: Prisma.TransactionClient, rows: Reindexed[]): Promise<void> {
+// The merchant key hash is always rewritten: it also changes with the merchant key rules.
+async function rewriteHashes(
+  tx: Prisma.TransactionClient,
+  rows: Reindexed[],
+  rehash: boolean,
+): Promise<void> {
   const caseOf = (pick: (r: Reindexed) => string) =>
     Prisma.join(
       rows.map((r) => Prisma.sql`WHEN ${r.id} THEN ${pick(r)}`),
@@ -39,8 +52,13 @@ async function rewriteHashes(tx: Prisma.TransactionClient, rows: Reindexed[]): P
     );
   await tx.$executeRaw`
     UPDATE \`Transaction\`
-    SET labelHash = CASE id ${caseOf((r) => r.labelHash)} END,
-        rawLabelHash = CASE id ${caseOf((r) => r.rawLabelHash)} END
+    SET merchantKeyHash = CASE id ${caseOf((r) => r.merchantKeyHash)} END
+    ${
+      rehash
+        ? Prisma.sql`, labelHash = CASE id ${caseOf((r) => r.labelHash)} END,
+        rawLabelHash = CASE id ${caseOf((r) => r.rawLabelHash)} END`
+        : Prisma.empty
+    }
     WHERE id IN (${Prisma.join(rows.map((r) => r.id))})`;
 }
 
@@ -84,7 +102,7 @@ export async function reindexSearchTokens(
           r.tokens.map((tokenHash) => ({ transactionId: r.id, tokenHash })),
         ),
       });
-      if (rehash) await rewriteHashes(tx, rows);
+      await rewriteHashes(tx, rows, rehash);
       return rows.map((r) => r.id);
     }, LONG_TX_TIMEOUT);
     if (ids.length === 0) break;

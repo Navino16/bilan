@@ -628,6 +628,7 @@ model Transaction {
   labelHash     String                                // HMAC-SHA256 of normalized label
   rawLabelEnc   String   @db.Text                     // ENCRYPTED (raw import label)
   rawLabelHash  String                                // HMAC-SHA256
+  merchantKeyHash String?                             // HMAC("merchant:" + merchant key of label), #296
   noteEnc       String?  @db.Text                     // ENCRYPTED (user note)
 
   categoryId          String?
@@ -652,6 +653,7 @@ model Transaction {
   @@index([categoryId, date])
   @@index([labelHash])
   @@index([rawLabelHash])
+  @@index([accountId, merchantKeyHash])
   @@index([date])
   @@index([importBatchId])
 }
@@ -895,7 +897,7 @@ model UserPreference {
 | Cascade deletes | User → accounts → transactions → tokens/link memberships/assignments; User → categories, rules, budgets, merchant aliases, memberships, sent invitations, preference, auth tables. Group → members/invitations/shares/categories/rules/budgets. Budget → lines/assignments. Category → rules. |
 | SetNull | Deleting a category un-categorizes transactions, detaches children and budget lines; deleting an account detaches budget lines; deleting an import batch detaches its transactions; deleting a budget detaches its instances. |
 | FK-less columns | `Group.createdById`, `TransactionLink.createdById`, `IgnoredLinkSuggestion.userId`, `AuditLog.userId`: handled explicitly on user erasure (`services/rgpd`) — group ownership passed on (or group deleted), links and ignored pairs deleted, audit rows anonymised. |
-| Indexes | All hashes (`labelHash`, `rawLabelHash`, `tokenHash`, `ibanHash`), `(accountId, date)`, `(categoryId, date)`, `(userId/groupId, periodStart)`, audit `(action/entity/userId, createdAt)`. |
+| Indexes | All hashes (`labelHash`, `rawLabelHash`, `tokenHash`, `ibanHash`, `(accountId, merchantKeyHash)`), `(accountId, date)`, `(categoryId, date)`, `(userId/groupId, periodStart)`, audit `(action/entity/userId, createdAt)`. |
 | No soft delete | Hard deletes only (simpler for RGPD). `archived` flag for non-deleted but inactive entities (accounts, groups, budgets). Imports are undone by revert, which deletes their transactions. |
 | Grants in `Verification` | Password-reset tokens (hashed), trusted devices and step-up grants are `Verification` rows keyed by identifier prefix — no dedicated tables. |
 
@@ -1121,15 +1123,15 @@ Normalization: strip accents (NFD), lowercase, collapse whitespace.
 
 Tokenization: split on non-alphanumeric, keep words ≥ 3 chars, index every prefix of 3 to 12 chars of each word (#192): "lidl" → `lid`, `lidl`.
 
-On transaction creation/import: store `labelHash`, `rawLabelHash`, and one `TransactionSearchToken` per distinct prefix of the label and raw label, inserted in shuffled order.
+On transaction creation/import: store `labelHash`, `rawLabelHash`, `merchantKeyHash`, and one `TransactionSearchToken` per distinct prefix of the label and raw label, inserted in shuffled order.
 
 Search by word beginning: each query word ≥ 3 chars is cut to 12 chars, hashed → indexed lookup on `TransactionSearchToken.tokenHash`; all query words must match (AND). No substring search inside a word. A query made only of words < 3 chars matches nothing.
 
-The same key gives equality lookups elsewhere: `BankAccount.ibanHash` (normalized IBAN), `MerchantAlias.keyHash` (`HMAC("merchant:" + key)`, unique per user), and the unique `AdminSignupToken.tokenHash`, `GroupInvitation.tokenHash` and `codeHash` (`hmacExact`: no normalization, the code is uppercased first).
+The same key gives equality lookups elsewhere: `BankAccount.ibanHash` (normalized IBAN), `MerchantAlias.keyHash` (`HMAC("merchant:" + key)`, unique per user), `Transaction.merchantKeyHash` (same hash of the label's merchant key: the merchant directory sums spending by it in SQL and decrypts one label per merchant, #296; linked rows, which links collapse, still go row by row), and the unique `AdminSignupToken.tokenHash`, `GroupInvitation.tokenHash` and `codeHash` (`hmacExact`: no normalization, the code is uppercased first).
 
 Leakage trade-off: the token count per transaction reveals word lengths, tokens shared by the same transactions reveal prefix chains, and the frequent 3-letter tokens are open to frequency analysis. Accepted for usable search; the labels themselves stay AES-encrypted.
 
-A tokenization or normalization change makes stored tokens stale: rebuild them with `npm run db:reindex-search` (add `--rehash` when `normalizeText` changes, so `labelHash`/`rawLabelHash` are rewritten too). Without `--rehash`, a `labelHash` mismatch aborts the run (wrong `SEARCH_TOKEN_KEY`).
+A tokenization or normalization change makes stored tokens stale: rebuild them with `npm run db:reindex-search`, which also rewrites `merchantKeyHash` (add `--rehash` when `normalizeText` changes, so `labelHash`/`rawLabelHash` are rewritten too). Without `--rehash`, a `labelHash` mismatch aborts the run (wrong `SEARCH_TOKEN_KEY`).
 
 ### 6.3 Password hashing — scrypt
 

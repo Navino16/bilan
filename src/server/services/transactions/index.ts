@@ -82,6 +82,7 @@ export async function createTransaction(
       labelHash: secure.labelHash,
       rawLabelEnc: secure.rawLabelEnc,
       rawLabelHash: secure.rawLabelHash,
+      merchantKeyHash: secure.merchantKeyHash,
       noteEnc: secure.noteEnc,
       categoryId: data.categoryId ?? null,
       manuallyCategorized: opts.manuallyCategorized ?? Boolean(data.categoryId),
@@ -301,6 +302,7 @@ export async function updateTransaction(
       labelHash: secure.labelHash,
       rawLabelEnc: secure.rawLabelEnc,
       rawLabelHash: secure.rawLabelHash,
+      merchantKeyHash: secure.merchantKeyHash,
       noteEnc: secure.noteEnc,
       searchTokens: {
         deleteMany: {},

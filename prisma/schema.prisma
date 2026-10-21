@@ -389,11 +389,13 @@ model Transaction {
   amount    Decimal  @db.Decimal(12, 2)
   type      String // CARD | TRANSFER | DIRECT_DEBIT | CHEQUE | ATM | OTHER
 
-  labelEnc     String  @db.Text
-  labelHash    String
-  rawLabelEnc  String  @db.Text
-  rawLabelHash String
-  noteEnc      String? @db.Text
+  labelEnc        String  @db.Text
+  labelHash       String
+  rawLabelEnc     String  @db.Text
+  rawLabelHash    String
+  // HMAC of the merchant key of `label`: the merchant directory groups on it (#296).
+  merchantKeyHash String?
+  noteEnc         String? @db.Text
 
   categoryId          String?
   category            Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
@@ -417,6 +419,7 @@ model Transaction {
   @@index([categoryId, date])
   @@index([labelHash])
   @@index([rawLabelHash])
+  @@index([accountId, merchantKeyHash])
   @@index([date])
   @@index([importBatchId])
 }
