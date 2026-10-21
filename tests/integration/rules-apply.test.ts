@@ -41,7 +41,7 @@ async function tx(
   categoryId: string | null = null,
   manual = false,
 ) {
-  const { labelEnc, labelHash, rawLabelEnc, rawLabelHash } = buildSecureFields({
+  const { labelEnc, labelHash, rawLabelEnc, rawLabelHash, tokens } = buildSecureFields({
     label: rawLabel,
     rawLabel,
   });
@@ -57,6 +57,7 @@ async function tx(
       rawLabelHash,
       categoryId,
       manuallyCategorized: manual,
+      searchTokens: { create: tokens.map((tokenHash) => ({ tokenHash })) },
     },
   });
   return row.id;
@@ -358,6 +359,45 @@ describe("previewRulesApplication / applyRules", () => {
     expect(batch.reclassified).toBeGreaterThan(0);
     expect(sequential).toBe(batch.reclassified);
     expect(await Promise.all(seqRows.map(categoryOf))).toEqual(batchState);
+  });
+});
+
+describe("search-token pre-filter (#302)", () => {
+  it("previews exactly what a full scan previews", async () => {
+    const tag = label("");
+    const rows: [string, string, string | null, boolean][] = [
+      [acc.own, `CB ${tag}CARREFOUR MARKET PARIS`, null, false],
+      [acc.own, `CB ${tag}CARREFOUR CITY`, shops, false],
+      [acc.write, `PRLV ${tag}CARREFOUR BANQUE`, food, false],
+      [acc.archived, `X${tag}CARREFOUR MARKET`, null, false],
+      [acc.own, `CB ${tag}CARREFOUR MARKET LYON`, null, true],
+      [acc.read, `CB ${tag}CARREFOUR MARKET`, null, false],
+      [acc.own, `${tag}MONOPRIX Crème`, null, false],
+      [acc.own, `  ${tag}monoprix creme`, null, false],
+    ];
+    for (const [accountId, rawLabel, categoryId, manual] of rows) {
+      await tx(accountId, rawLabel, categoryId, manual);
+    }
+    const create = (pattern: string, matchType: string, categoryId: string, priority = 100) =>
+      createRule({ pattern, matchType, priority, categoryId } as never, { id: actor });
+    const created = [
+      await create(`${tag}CARREFOUR MARKET`, "CONTAINS", food),
+      await create(` ${tag}carrefour`, "CONTAINS", shops, 50),
+      await create(`CB ${tag}CARREFOUR`, "STARTS_WITH", shops, 200),
+      await create(`${tag}monoprix creme`, "EXACT", food),
+      await create(`${tag}CARREFOUR`, "CONTAINS", food, 10),
+    ];
+    for (const r of created) {
+      const fast = await previewRulesApplication([r.id], { id: actor });
+      const full = await previewRulesApplication([r.id], { id: actor }, { fullScan: true });
+      expect(fast).toEqual(full);
+    }
+    const all = created.map((r) => r.id);
+    expect(await previewRulesApplication(all, { id: actor })).toEqual(
+      await previewRulesApplication(all, { id: actor }, { fullScan: true }),
+    );
+    const one = await previewRulesApplication([created[0].id], { id: actor });
+    expect(one.matched).toBe(3);
   });
 });
 
