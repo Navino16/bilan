@@ -20,6 +20,7 @@ CREATE TABLE `Transaction` (
 
     INDEX `Transaction_accountId_date_createdAt_idx`(`accountId`, `date`, `createdAt`),
     INDEX `Transaction_categoryId_date_idx`(`categoryId`, `date`),
+    INDEX `Transaction_accountId_categoryId_idx`(`accountId`, `categoryId`),
     INDEX `Transaction_labelHash_idx`(`labelHash`),
     INDEX `Transaction_rawLabelHash_idx`(`rawLabelHash`),
     INDEX `Transaction_merchant_directory_idx`(`accountId`, `merchantKeyHash`, `categoryId`, `type`, `amount`, `date`),
