@@ -653,7 +653,7 @@ model Transaction {
   @@index([categoryId, date])
   @@index([labelHash])
   @@index([rawLabelHash])
-  @@index([accountId, merchantKeyHash])
+  @@index([accountId, merchantKeyHash, categoryId, type, amount, date]) // covers the merchant directory sums
   @@index([date])
   @@index([importBatchId])
 }
@@ -897,7 +897,7 @@ model UserPreference {
 | Cascade deletes | User → accounts → transactions → tokens/link memberships/assignments; User → categories, rules, budgets, merchant aliases, memberships, sent invitations, preference, auth tables. Group → members/invitations/shares/categories/rules/budgets. Budget → lines/assignments. Category → rules. |
 | SetNull | Deleting a category un-categorizes transactions, detaches children and budget lines; deleting an account detaches budget lines; deleting an import batch detaches its transactions; deleting a budget detaches its instances. |
 | FK-less columns | `Group.createdById`, `TransactionLink.createdById`, `IgnoredLinkSuggestion.userId`, `AuditLog.userId`: handled explicitly on user erasure (`services/rgpd`) — group ownership passed on (or group deleted), links and ignored pairs deleted, audit rows anonymised. |
-| Indexes | All hashes (`labelHash`, `rawLabelHash`, `tokenHash`, `ibanHash`, `(accountId, merchantKeyHash)`), `(accountId, date)`, `(categoryId, date)`, `(userId/groupId, periodStart)`, audit `(action/entity/userId, createdAt)`. |
+| Indexes | All hashes (`labelHash`, `rawLabelHash`, `tokenHash`, `ibanHash`, `(accountId, merchantKeyHash, categoryId, type, amount, date)`), `(accountId, date)`, `(categoryId, date)`, `(userId/groupId, periodStart)`, audit `(action/entity/userId, createdAt)`. |
 | No soft delete | Hard deletes only (simpler for RGPD). `archived` flag for non-deleted but inactive entities (accounts, groups, budgets). Imports are undone by revert, which deletes their transactions. |
 | Grants in `Verification` | Password-reset tokens (hashed), trusted devices and step-up grants are `Verification` rows keyed by identifier prefix — no dedicated tables. |
 
