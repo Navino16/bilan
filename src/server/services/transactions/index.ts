@@ -22,7 +22,7 @@ import {
 } from "@/lib/validation/transaction";
 import { recordHits, suggest } from "@/server/services/categorization";
 import { buildSecureFields } from "./secure-fields";
-import { queryTransactionIds } from "./list-query";
+import { queryTransactionPage } from "./list-query";
 
 export class TransactionAccessError extends Error {}
 
@@ -169,7 +169,7 @@ export async function listTransactions(
   const words = query ? searchQueryTerms(query) : [];
   if (query && words.length === 0) return { items: [], total: 0, capped: false };
 
-  const { ids, total, capped } = await queryTransactionIds({
+  const { rows, total, capped } = await queryTransactionPage({
     accountIds,
     categoryIds,
     type: filters.type,
@@ -183,10 +183,6 @@ export async function listTransactions(
     take: filters.take ?? 100,
     skip: filters.skip ?? 0,
   });
-  const byId = new Map(
-    (await db.transaction.findMany({ where: { id: { in: ids } } })).map((r) => [r.id, r]),
-  );
-  const rows = ids.map((id) => byId.get(id)).filter((r) => r !== undefined);
 
   const items: TransactionListItem[] = rows.map((row) => ({
     id: row.id,
@@ -198,7 +194,7 @@ export async function listTransactions(
     rawLabel: decrypt(row.rawLabelEnc, dataKey),
     note: row.noteEnc ? decrypt(row.noteEnc, dataKey) : null,
     categoryId: row.categoryId,
-    manuallyCategorized: row.manuallyCategorized,
+    manuallyCategorized: Boolean(row.manuallyCategorized),
     imported: row.externalId !== null,
     accountName: accountName.get(row.accountId) ?? "",
   }));

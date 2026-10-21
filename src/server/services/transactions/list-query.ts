@@ -83,41 +83,57 @@ async function allCommon(hashes: string[], threshold: number): Promise<boolean> 
   return counts.every(([c]) => Number(c.n) > threshold);
 }
 
-// The ids of one page, in order. A rare search word drives the query from the token index;
-// otherwise a date sort takes each account's top rows from its (accountId, date, createdAt)
-// index and merges them, so a common word stops after a page instead of sorting every match.
-async function pageIds(q: ListQuery, tuning: ListTuning): Promise<string[]> {
+export type ListRow = {
+  id: string;
+  accountId: string;
+  date: Date;
+  amount: Prisma.Decimal;
+  type: string;
+  labelEnc: string;
+  rawLabelEnc: string;
+  noteEnc: string | null;
+  categoryId: string | null;
+  manuallyCategorized: boolean | number; // tinyint(1) over raw SQL
+  externalId: string | null;
+};
+
+const COLUMNS = Prisma.raw(
+  "t.id, t.accountId, t.date, t.createdAt, t.amount, t.type, t.labelEnc, t.rawLabelEnc, " +
+    "t.noteEnc, t.categoryId, t.manuallyCategorized, t.externalId",
+);
+
+// One page, in order. A rare search word drives the query from the token index; otherwise
+// a date sort takes each account's top rows from its (accountId, date, createdAt) index and
+// merges them, so a common word stops after a page instead of sorting every match.
+async function pageRows(q: ListQuery, tuning: ListTuning): Promise<ListRow[]> {
   const conds = filterConditions(q);
   const searching = q.tokenHashes.length > 0;
   const common =
     searching && (await allCommon(q.tokenHashes, tuning.commonTokenRows ?? COMMON_TOKEN_ROWS));
-  let rows: { id: string }[];
   if (common && q.sort.startsWith("date")) {
     const perAccount = (accountId: string) => {
       const where = Prisma.join(
         [Prisma.sql`t.accountId = ${accountId}`, ...conds, ...tokenExists(q.tokenHashes)],
         " AND ",
       );
-      return Prisma.sql`(SELECT t.id, t.date, t.createdAt FROM \`Transaction\` t WHERE ${where}
+      return Prisma.sql`(SELECT ${COLUMNS} FROM \`Transaction\` t WHERE ${where}
         ORDER BY ${orderBy(q.sort, "t")} LIMIT ${q.skip + q.take})`;
     };
-    rows = await db.$queryRaw`
-      SELECT u.id FROM (${Prisma.join(q.accountIds.map(perAccount), " UNION ALL ")}) u
+    return db.$queryRaw<ListRow[]>`
+      SELECT u.* FROM (${Prisma.join(q.accountIds.map(perAccount), " UNION ALL ")}) u
       ORDER BY ${orderBy(q.sort, "u")} LIMIT ${q.take} OFFSET ${q.skip}`;
-  } else {
-    const where = Prisma.join(
-      [
-        Prisma.sql`t.accountId IN (${Prisma.join(q.accountIds)})`,
-        ...conds,
-        ...(common ? tokenExists(q.tokenHashes) : []),
-      ],
-      " AND ",
-    );
-    rows = await db.$queryRaw`
-      SELECT t.id FROM \`Transaction\` t ${common ? Prisma.empty : tokenJoins(q.tokenHashes)}
-      WHERE ${where} ORDER BY ${orderBy(q.sort, "t")} LIMIT ${q.take} OFFSET ${q.skip}`;
   }
-  return rows.map((r) => r.id);
+  const where = Prisma.join(
+    [
+      Prisma.sql`t.accountId IN (${Prisma.join(q.accountIds)})`,
+      ...conds,
+      ...(common ? tokenExists(q.tokenHashes) : []),
+    ],
+    " AND ",
+  );
+  return db.$queryRaw<ListRow[]>`
+    SELECT ${COLUMNS} FROM \`Transaction\` t ${common ? Prisma.empty : tokenJoins(q.tokenHashes)}
+    WHERE ${where} ORDER BY ${orderBy(q.sort, "t")} LIMIT ${q.take} OFFSET ${q.skip}`;
 }
 
 // A search count stops at the cap. The token joins can't duplicate a row: (tokenHash,
@@ -143,10 +159,10 @@ async function countRows(
   return Number(n) > cap ? { total: cap, capped: true } : { total: Number(n), capped: false };
 }
 
-export async function queryTransactionIds(
+export async function queryTransactionPage(
   q: ListQuery,
   tuning: ListTuning = {},
-): Promise<{ ids: string[]; total: number; capped: boolean }> {
-  const [ids, count] = await Promise.all([pageIds(q, tuning), countRows(q, tuning)]);
-  return { ids, ...count };
+): Promise<{ rows: ListRow[]; total: number; capped: boolean }> {
+  const [rows, count] = await Promise.all([pageRows(q, tuning), countRows(q, tuning)]);
+  return { rows, ...count };
 }

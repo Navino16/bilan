@@ -5,7 +5,7 @@ import { searchKey } from "@/server/crypto/keys";
 import { searchQueryTerms } from "@/lib/text";
 import type { TransactionSort } from "@/lib/transaction-filters";
 import { createTransaction, listTransactions } from "@/server/services/transactions";
-import { queryTransactionIds, type ListQuery } from "@/server/services/transactions/list-query";
+import { queryTransactionPage, type ListQuery } from "@/server/services/transactions/list-query";
 
 const owner = "splan_owner";
 const accounts: string[] = [];
@@ -128,10 +128,10 @@ describe("transaction search plans (#297)", () => {
     if (q.categoryIds?.length === 0) q.categoryIds = [food];
     if (q.accountIds.length === 0) q.accountIds = [accounts[1]];
     const expected = await prismaIds(q);
-    const byTokens = await queryTransactionIds(q, { commonTokenRows: Number.MAX_SAFE_INTEGER });
-    const byAccount = await queryTransactionIds(q, { commonTokenRows: 0 });
-    expect(byTokens.ids).toEqual(expected);
-    expect(byAccount.ids).toEqual(expected);
+    const byTokens = await queryTransactionPage(q, { commonTokenRows: Number.MAX_SAFE_INTEGER });
+    const byAccount = await queryTransactionPage(q, { commonTokenRows: 0 });
+    expect(byTokens.rows.map((r) => r.id)).toEqual(expected);
+    expect(byAccount.rows.map((r) => r.id)).toEqual(expected);
     expect(byTokens.total).toBe(byAccount.total);
   });
 
@@ -143,17 +143,17 @@ describe("transaction search plans (#297)", () => {
       take: 10,
       skip: 0,
     };
-    const all = await queryTransactionIds(q);
+    const all = await queryTransactionPage(q);
     expect(all).toMatchObject({ total: 30, capped: false });
-    expect(await queryTransactionIds(q, { countCap: 30 })).toMatchObject({
+    expect(await queryTransactionPage(q, { countCap: 30 })).toMatchObject({
       total: 30,
       capped: false,
     });
-    expect(await queryTransactionIds(q, { countCap: 29 })).toMatchObject({
+    expect(await queryTransactionPage(q, { countCap: 29 })).toMatchObject({
       total: 29,
       capped: true,
     });
-    const plain = await queryTransactionIds({ ...q, tokenHashes: [] }, { countCap: 1 });
+    const plain = await queryTransactionPage({ ...q, tokenHashes: [] }, { countCap: 1 });
     expect(plain).toMatchObject({ total: 48, capped: false });
   });
 
@@ -163,6 +163,13 @@ describe("transaction search plans (#297)", () => {
     expect(items.map((i) => i.label)).toEqual(
       expect.arrayContaining(["Monoprix Paris", "Paiement carte Monoprix"]),
     );
+    expect(items[0]).toMatchObject({
+      date: expect.any(Date),
+      amount: expect.any(Number),
+      manuallyCategorized: false,
+      imported: false,
+      accountName: expect.any(String),
+    });
     const dates = items.map((i) => i.date.getTime());
     expect(dates).toEqual([...dates].sort((a, b) => b - a));
   });
