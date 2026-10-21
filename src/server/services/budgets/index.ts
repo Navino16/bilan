@@ -1,8 +1,10 @@
+import { randomUUID } from "node:crypto";
 import type { Budget, Prisma } from "@prisma/client";
 import { db } from "@/server/db";
 import { decrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
 import { requireGroupRole } from "@/server/services/groups/roles";
+import { groupMemberships } from "@/server/services/groups/memberships";
 import { logEvent } from "@/server/services/audit";
 import {
   listVisibleForUser,
@@ -42,10 +44,7 @@ export type BudgetScope = "USER" | "GROUP";
 async function budgetScopeForUser(
   userId: string,
 ): Promise<{ groupIds: string[]; roleByGroup: Map<string, string> }> {
-  const memberships = await db.groupMember.findMany({
-    where: { userId },
-    select: { groupId: true, role: true },
-  });
+  const memberships = await groupMemberships(userId);
   const roleByGroup = new Map(memberships.map((m) => [m.groupId, m.role]));
   return { groupIds: memberships.map((m) => m.groupId), roleByGroup };
 }
@@ -1052,27 +1051,69 @@ export async function rollRecurring(
   return rollFrom(b, actor.id, actor.id);
 }
 
-// System (cron) roll: no actor/permission check; the new instance inherits the
-// template's creator and the audit entry is anonymous.
-export async function rollRecurringSystem(id: string): Promise<{ created: boolean; id?: string }> {
-  const b = await db.budget.findUnique({ where: { id } });
-  if (!b) throw new BudgetAccessError("NOT_FOUND");
-  return rollFrom(b, b.createdById, null);
-}
-
-// Recurring budgets whose period has ended and whose next-period instance doesn't
-// exist yet — the work list for the roll cron (each roll is independently idempotent).
-export async function listRollableTemplates(now: Date): Promise<{ id: string }[]> {
+// Recurring budgets whose period has ended and whose series has no later period yet.
+async function dueBudgets(now: Date) {
   const ended = await db.budget.findMany({
     where: { recurring: true, archived: false, periodEnd: { lt: now } },
-    select: {
-      id: true,
-      parentBudgetId: true,
-      periodType: true,
-      periodStart: true,
-      periodEnd: true,
-    },
+    include: { lines: true },
   });
   const rolled = await withNextInstance(ended);
-  return ended.filter((b) => !rolled.has(b.id)).map((b) => ({ id: b.id }));
+  return ended.filter((b) => !rolled.has(b.id));
+}
+
+export async function listRollableTemplates(now: Date): Promise<{ id: string }[]> {
+  return (await dueBudgets(now)).map((b) => ({ id: b.id }));
+}
+
+// The roll cron in a constant number of queries (#304): each due budget's next instance, its
+// lines and its anonymous audit row go in three bulk inserts. The new instance inherits the
+// template's creator.
+export async function rollRecurringBudgets(
+  now: Date,
+): Promise<{ checked: number; rolled: number }> {
+  const due = await dueBudgets(now);
+  if (due.length === 0) return { checked: 0, rolled: 0 };
+  const instances = due.map((b) => ({
+    b,
+    id: randomUUID(),
+    period: nextPeriod(b.periodType as BudgetPeriodType, b.periodStart, b.periodEnd),
+  }));
+  await db.$transaction([
+    db.budget.createMany({
+      data: instances.map(({ b, id, period }) => ({
+        id,
+        name: b.name,
+        description: b.description,
+        userId: b.userId,
+        groupId: b.groupId,
+        periodType: b.periodType,
+        periodStart: period.start,
+        periodEnd: period.end,
+        recurring: true,
+        parentBudgetId: b.parentBudgetId ?? b.id,
+        createdById: b.createdById,
+      })),
+    }),
+    db.budgetLine.createMany({
+      data: instances.flatMap(({ b, id }) =>
+        b.lines.map((l) => ({
+          budgetId: id,
+          categoryId: l.categoryId,
+          accountId: l.accountId,
+          label: l.label,
+          plannedAmount: l.plannedAmount,
+        })),
+      ),
+    }),
+    db.auditLog.createMany({
+      data: instances.map(({ b, id }) => ({
+        userId: null,
+        action: "budget.created",
+        entity: "Budget",
+        entityId: id,
+        metadata: { rolledFrom: b.id, system: true },
+      })),
+    }),
+  ]);
+  return { checked: due.length, rolled: due.length };
 }

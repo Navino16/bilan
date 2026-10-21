@@ -1090,7 +1090,7 @@ An uncommitted batch (`PARSING`, `REVIEW`, `FAILED`) is discarded when the user 
 ### 5.14 Scheduled jobs
 
 The `cron` container calls `POST /api/cron/<job>` with `Authorization: Bearer $CRON_SECRET` (unset → the routes 404, wrong token → 401). Schedule (UTC, `docker/cron/crontab`):
-- `roll-budgets`, daily 00:05: creates the next instance of every ended, non-archived recurring budget that has none yet (idempotent; audit `budget.created` with `system: true`).
+- `roll-budgets`, daily 00:05: creates the next instance of every ended, non-archived recurring budget that has none yet, in bulk inserts (`rollRecurringBudgets`, a constant number of queries, #304; idempotent; audit `budget.created` with `system: true`).
 - `purge-audit`, daily 03:00: deletes audit entries older than 12 months (`audit.purged`).
 - `purge-imports`, hourly: deletes uncommitted batches, and batches stuck in `COMMITTING`, older than 24 h with their partial rows (`import.purged`).
 

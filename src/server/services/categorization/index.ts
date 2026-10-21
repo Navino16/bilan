@@ -1,5 +1,6 @@
 import type { CategorizationRule, Prisma } from "@prisma/client";
 import { db } from "@/server/db";
+import { groupMemberships } from "@/server/services/groups/memberships";
 import { logEvent } from "@/server/services/audit";
 import { requireGroupRole, type GroupRole } from "@/server/services/groups/roles";
 import { assertCategoryAssignable, CategoryAccessError } from "@/server/services/categories";
@@ -44,11 +45,7 @@ export type Scope = { userId: string };
 // Loads the user's own + their groups' enabled rules once, highest priority
 // first. Shared by suggest (single) and suggestMany (batch import preview).
 export async function loadRules(scope: Scope): Promise<Rule[]> {
-  const memberships = await db.groupMember.findMany({
-    where: { userId: scope.userId },
-    select: { groupId: true },
-  });
-  const groupIds = memberships.map((m) => m.groupId);
+  const groupIds = (await groupMemberships(scope.userId)).map((m) => m.groupId);
   const rows = await db.categorizationRule.findMany({
     where: { enabled: true, OR: [{ userId: scope.userId }, { groupId: { in: groupIds } }] },
     orderBy: { priority: "desc" },
@@ -150,11 +147,7 @@ export async function createRule(input: RuleInput, actor: { id: string }): Promi
 }
 
 export async function listRulesForUser(userId: string) {
-  const memberships = await db.groupMember.findMany({
-    where: { userId },
-    select: { groupId: true },
-  });
-  const groupIds = memberships.map((m) => m.groupId);
+  const groupIds = (await groupMemberships(userId)).map((m) => m.groupId);
   const rules = await db.categorizationRule.findMany({
     where: { OR: [{ userId }, { groupId: { in: groupIds } }] },
     include: {

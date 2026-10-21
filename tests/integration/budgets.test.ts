@@ -13,7 +13,7 @@ import {
   listAssignableBudgets,
   listAssignmentsForTx,
   rollRecurring,
-  rollRecurringSystem,
+  rollRecurringBudgets,
   getCurrentBudget,
   listRollableTemplates,
   BudgetAccessError,
@@ -916,7 +916,7 @@ describe("archive / description / line labels", () => {
     const { id } = await createBudget({ ...baseInput, recurring: true }, { id: owner });
     await archiveBudget(id, { id: owner });
     expect(await rollRecurring(id, { id: owner })).toEqual({ created: false });
-    expect(await rollRecurringSystem(id)).toEqual({ created: false });
+    await rollRecurringBudgets(new Date("2026-05-01T00:00:00.000Z"));
     expect(await db.budget.count({ where: { parentBudgetId: id } })).toBe(0);
   });
 

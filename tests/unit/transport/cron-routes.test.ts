@@ -3,8 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const env = vi.hoisted(() => ({ CRON_SECRET: "" }));
 vi.mock("@/env", () => ({ env }));
 const jobs = vi.hoisted(() => ({
-  listRollableTemplates: vi.fn(async () => []),
-  rollRecurringSystem: vi.fn(),
+  rollRecurringBudgets: vi.fn(async () => ({ checked: 0, rolled: 0 })),
   purgeAuditOlderThan: vi.fn(async () => 0),
   purgeStaleImports: vi.fn(async () => 0),
   logEvent: vi.fn(),
