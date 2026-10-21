@@ -10,6 +10,7 @@ let childId: string;
 let hiddenId: string;
 let memberCatId: string;
 let archivedCatId: string;
+let sharedId: string;
 
 beforeAll(async () => {
   await db.user.deleteMany({ where: { id: { in: [owner, member] } } });
@@ -27,6 +28,7 @@ beforeAll(async () => {
   const mine = await db.bankAccount.create({
     data: { ownerId: member, name: "Mien", type: "CHECKING" },
   });
+  sharedId = shared.id;
   groupId = (await db.group.create({ data: { name: "Foyer FC", createdById: owner } })).id;
   await db.groupMember.createMany({
     data: [
@@ -98,6 +100,27 @@ describe("listForeignCategories", () => {
     expect(ids).not.toContain(hiddenId);
     expect(ids).not.toContain(memberCatId);
     expect(await listForeignCategories(owner)).toEqual([]);
+  });
+
+  it("returns a member's category met on the user's own shared account", async () => {
+    const row = await db.transaction.create({
+      data: {
+        accountId: sharedId,
+        categoryId: memberCatId,
+        date: new Date("2026-02-02"),
+        amount: -5,
+        type: "CARD",
+        labelEnc: "e",
+        labelHash: "e",
+        rawLabelEnc: "e",
+        rawLabelHash: "e",
+      },
+    });
+    try {
+      expect((await listForeignCategories(owner)).map((n) => n.id)).toEqual([memberCatId]);
+    } finally {
+      await db.transaction.delete({ where: { id: row.id } });
+    }
   });
 
   it("adds the requested extra categories, never the user's own", async () => {

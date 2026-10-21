@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import { requireGroupRole } from "@/server/services/groups/roles";
+import { visibleAccountIds } from "@/server/services/accounts";
 import { categoryInputSchema, type CategoryInput } from "@/lib/validation/category";
 
 export class CategoryAccessError extends Error {}
@@ -364,12 +365,7 @@ export async function listForeignCategories(
     by: ["categoryId"],
     where: {
       categoryId: { not: null, notIn: [...known] },
-      account: {
-        OR: [
-          { ownerId: userId },
-          { shares: { some: { group: { members: { some: { userId } } } } } },
-        ],
-      },
+      accountId: { in: await visibleAccountIds(userId) },
     },
   });
   let missing = [
