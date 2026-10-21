@@ -266,7 +266,7 @@ When `User.count() === 0`:
 
 ## 4. Data Model
 
-Prisma schema (`prisma/schema.prisma`), grouped logically. Owner XOR constraints (User XOR Group) are enforced at the service layer only: MariaDB rejects a CHECK on a column that is part of a FK with a referential action (error 1901), as noted in the categories and rules migrations.
+Prisma schema (`prisma/schema.prisma`), grouped logically. Owner XOR constraints (User XOR Group) are enforced at the service layer only: MariaDB rejects a CHECK on a column that is part of a FK with a referential action (error 1901), as noted in the init migration.
 
 ### 4.1 Group A — Identity & Access
 

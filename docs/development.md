@@ -58,6 +58,21 @@ It runs from a source checkout (`npm ci`) whose `.env` points at the target data
 same `DATA_ENCRYPTION_KEY`/`SEARCH_TOKEN_KEY`: the Docker runtime image ships neither the
 scripts nor `tsx`.
 
+## Schema changes
+
+No instance runs in production yet, so there is a single migration,
+`prisma/migrations/*_init`: change `prisma/schema.prisma`, then regenerate it instead of adding
+a migration (`npm run db:migrate` would create one).
+
+```bash
+npx prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script \
+  > prisma/migrations/*_init/migration.sql
+```
+
+Put back the note at its end (no owner-XOR CHECK: MariaDB error 1901). Databases built from an
+older migration must be rebuilt: `npm run db:reset` for the dev one, a drop and
+`npx prisma migrate deploy` for `budget_test`, `npm run docs:db` and `npm run perf:db`.
+
 ## End-to-end tests
 
 `npm run test:e2e` reuses (or starts) the server on `http://localhost:3000`. To target a
