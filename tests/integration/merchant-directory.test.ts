@@ -56,7 +56,7 @@ beforeAll(async () => {
 
   await tx("CB LIDL 10/01/25", -40, "2025-01-10", { categoryId: food });
   await tx("CB LIDL 05/03/26", -60, "2026-03-05", { categoryId: food });
-  await tx("CB Lidl 05/03/26", -12.5, "2026-03-05", { categoryId: shops });
+  await tx("CB Lidl 04/03/26", -12.5, "2026-03-04", { categoryId: shops });
   await tx("CARTE 07/03/26 MONOPRIX CB*4521", -25, "2026-03-07", { categoryId: food });
   await tx("CB MONOPRIX", -15, "2026-03-09", { hashed: false });
   await tx("CB Crème Brûlée", -8, "2026-02-01");
