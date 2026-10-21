@@ -1053,7 +1053,7 @@ App settings (`admin.settings.write`; the security keys — registration mode, p
 
 ### 5.10 RGPD: export & deletion
 
-**Export JSON**: `/settings/data` → "Download" → `GET /api/export/data`, behind the step-up (§6.4: a session under 10 minutes old, else the password confirmed via `confirmDataExportAction`, else "sign in again"; until then `403 REAUTH_REQUIRED`) → `rgpd.exportOwnData` → `exportUserData(userId)` returns:
+**Export JSON**: `/settings/data` → "Download" → `GET /api/export/data`, behind the step-up (§6.4: a session under 10 minutes old, else the password confirmed via `confirmDataExportAction`, else "sign in again"; until then `403 REAUTH_REQUIRED`) → `rgpd.exportOwnData` → `userDataJson` streams:
 - User + UserPreference.
 - All owned `BankAccount` (clear IBAN) + their decrypted `Transaction[]` + own categories, rules and merchant aliases.
 - Group memberships + sent invitations (without token/code).
@@ -1062,9 +1062,9 @@ App settings (`admin.settings.write`; the security keys — registration mode, p
 - Import batches (history fields only).
 - The user's own audit log entries (latest 5 000).
 
-Downloaded as a JSON attachment; audit `user.data.exported` (`via`).
+Downloaded as a compact JSON attachment, streamed: the transactions are read newest first in keyset-paginated pages (`transactions/list-query.pageRows`), so memory stays bounded whatever the history (#301); audit `user.data.exported` (`via`).
 
-**Export CSV**: `/api/export/transactions` takes the transaction-list filters; the `/settings/data` UI exposes `from` / `to` and `accountId` (any account the user can read, archived ones included). An unreadable `accountId` yields an empty file.
+**Export CSV**: `/api/export/transactions` takes the transaction-list filters; the `/settings/data` UI exposes `from` / `to` and `accountId` (any account the user can read, archived ones included). An unreadable `accountId` yields an empty file. The file is streamed page by page (`transactionPages`: keyset pagination, no count, #301).
 
 **Account deletion**: `/settings/data` → shows the impact (accounts, transactions, groups handed over or deleted) → re-auth (current password, rate-limited; SSO-only accounts type their e-mail instead) → `deleteAccountAction` → `users/lifecycle.deleteOwnAccount(userId)` (refused for the last active super admin) → `rgpd.eraseUser`:
 - Delete the links the user created and their ignored suggestions; anonymize their audit rows (`userId` nulled).

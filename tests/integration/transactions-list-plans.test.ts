@@ -4,7 +4,11 @@ import { hmacForSearch } from "@/server/crypto/hmac";
 import { searchKey } from "@/server/crypto/keys";
 import { searchQueryTerms } from "@/lib/text";
 import type { TransactionSort } from "@/lib/transaction-filters";
-import { createTransaction, listTransactions } from "@/server/services/transactions";
+import {
+  createTransaction,
+  listTransactions,
+  transactionPages,
+} from "@/server/services/transactions";
 import { queryTransactionPage, type ListQuery } from "@/server/services/transactions/list-query";
 
 const owner = "splan_owner";
@@ -180,5 +184,20 @@ describe("transaction list plans (#297, #300)", () => {
     });
     const dates = items.map((i) => i.date.getTime());
     expect(dates).toEqual([...dates].sort((a, b) => b - a));
+  });
+
+  it.each<{ search?: string; accountId?: string; type?: "CARD" }>([
+    {},
+    { search: "car" },
+    { search: "monoprix" },
+    { accountId: "second", type: "CARD" },
+  ])("pages through every row with a keyset, as one list would (#301): %o", async (filters) => {
+    const f = { ...filters, accountId: filters.accountId && accounts[1] };
+    const whole = await listTransactions(owner, { ...f, take: 1000 });
+    const paged = [];
+    for await (const page of transactionPages(owner, f, 7)) paged.push(...page);
+    expect(paged.map((i) => i.id)).toEqual(whole.items.map((i) => i.id));
+    const { id, date, amount, type, label, accountName, categoryId } = whole.items[0];
+    expect(paged[0]).toEqual({ id, date, amount, type, label, accountName, categoryId });
   });
 });

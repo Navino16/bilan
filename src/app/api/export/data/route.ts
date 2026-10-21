@@ -2,6 +2,7 @@ import { currentStepUpSession } from "@/server/auth/step-up-session";
 import { auditOrigin } from "@/server/http/audit-origin";
 import { exportOwnData } from "@/server/services/rgpd";
 import { toIsoDay } from "@/lib/period";
+import { streamOf } from "@/server/http/stream";
 
 export const runtime = "nodejs";
 
@@ -18,7 +19,7 @@ export async function GET(): Promise<Response> {
       { status: 403, headers: NO_STORE },
     );
   }
-  return new Response(JSON.stringify(res.data, null, 2), {
+  return new Response(streamOf(res.json), {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Content-Disposition": `attachment; filename="bilan-data-export-${toIsoDay(new Date())}.json"`,

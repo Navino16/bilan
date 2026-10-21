@@ -5,6 +5,7 @@ import { decrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
 import { logEvent } from "@/server/services/audit";
 import { loadAliases } from "@/server/services/merchants";
+import { pageRows, type ListQuery, type ListRow } from "@/server/services/transactions/list-query";
 import {
   stepUpMethod,
   stepUpVia,
@@ -12,6 +13,24 @@ import {
   type StepUpMethod,
   type StepUpSession,
 } from "@/server/services/users/step-up";
+
+type ExportedTransaction = {
+  id: string;
+  date: Date;
+  amount: number;
+  type: string;
+  label: string;
+  rawLabel: string;
+  note: string | null;
+  categoryId: string | null;
+  manuallyCategorized: boolean;
+  accountId: string;
+  importBatchId: string | null;
+  linkId: string | null;
+  externalId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 export type UserDataExport = {
   exportedAt: string;
@@ -29,23 +48,7 @@ export type UserDataExport = {
     archived: boolean;
     createdAt: Date;
   }[];
-  transactions: {
-    id: string;
-    date: Date;
-    amount: number;
-    type: string;
-    label: string;
-    rawLabel: string;
-    note: string | null;
-    categoryId: string | null;
-    manuallyCategorized: boolean;
-    accountId: string;
-    importBatchId: string | null;
-    linkId: string | null;
-    externalId: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-  }[];
+  transactions: ExportedTransaction[];
   categories: unknown[];
   rules: unknown[];
   merchantAliases: { merchant: string; name: string }[];
@@ -74,10 +77,10 @@ export type UserDataExport = {
 export async function exportOwnData(
   session: StepUpSession,
   origin: AuditOrigin,
-): Promise<{ ok: true; data: UserDataExport } | { ok: false; method: StepUpMethod }> {
+): Promise<{ ok: true; json: AsyncGenerator<string> } | { ok: false; method: StepUpMethod }> {
   const via = await stepUpVia(session);
   if (!via) return { ok: false, method: await stepUpMethod(session.userId) };
-  const data = await exportUserData(session.userId);
+  const parts = await exportParts(session.userId);
   await logEvent({
     userId: session.userId,
     action: "user.data.exported",
@@ -86,12 +89,15 @@ export async function exportOwnData(
     ...origin,
     metadata: { via },
   });
-  return { ok: true, data };
+  return { ok: true, json: userDataJson(parts) };
 }
 
 // Gathers the full data graph a user is entitled to under RGPD (owned accounts
 // only), decrypting the IBANs and transaction labels/notes. Read-only.
-export async function exportUserData(userId: string): Promise<UserDataExport> {
+export async function exportParts(userId: string): Promise<{
+  head: Omit<UserDataExport, "transactions">;
+  transactionPages: () => AsyncGenerator<ExportedTransaction[]>;
+}> {
   const [
     user,
     preference,
@@ -141,14 +147,8 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
   }));
 
   const accountIds = accounts.map((a) => a.id);
-  const [txRows, linkRows, batchRows] = await Promise.all([
-    accountIds.length
-      ? db.transaction.findMany({
-          where: { accountId: { in: accountIds } },
-          orderBy: { date: "desc" },
-          include: { linkMembership: { select: { linkId: true } } },
-        })
-      : [],
+  const pairIds = [...new Set(ignoredRows.flatMap((r) => r.pairKey.split("|")))];
+  const [linkRows, batchRows, ownedPairRows] = await Promise.all([
     db.transactionLink.findMany({
       where: { members: { some: { transaction: { accountId: { in: accountIds } } } } },
       include: {
@@ -169,25 +169,13 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
       },
       orderBy: { createdAt: "desc" },
     }),
+    pairIds.length && accountIds.length
+      ? db.transaction.findMany({
+          where: { id: { in: pairIds }, accountId: { in: accountIds } },
+          select: { id: true },
+        })
+      : [],
   ]);
-
-  const transactions = txRows.map((r) => ({
-    id: r.id,
-    date: r.date,
-    amount: Number(r.amount),
-    type: r.type,
-    label: decrypt(r.labelEnc, dataKey),
-    rawLabel: decrypt(r.rawLabelEnc, dataKey),
-    note: r.noteEnc ? decrypt(r.noteEnc, dataKey) : null,
-    categoryId: r.categoryId,
-    manuallyCategorized: r.manuallyCategorized,
-    accountId: r.accountId,
-    importBatchId: r.importBatchId,
-    linkId: r.linkMembership?.linkId ?? null,
-    externalId: r.externalId,
-    createdAt: r.createdAt,
-    updatedAt: r.updatedAt,
-  }));
 
   // Links, ignored suggestions and imports can span other users' shared accounts:
   // only ids belonging to the exported (owned) accounts are kept (#171).
@@ -197,8 +185,8 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
     createdAt: l.createdAt,
     transactionIds: l.members.map((m) => m.transactionId),
   }));
-
-  const txIds = new Set(transactions.map((t) => t.id));
+  const linkOf = new Map(links.flatMap((l) => l.transactionIds.map((t) => [t, l.id] as const)));
+  const txIds = new Set(ownedPairRows.map((t) => t.id));
   const ignoredLinkSuggestions = ignoredRows.flatMap(({ pairKey, ignoredAt }) => {
     const transactionIds = pairKey.split("|").filter((id) => txIds.has(id));
     return transactionIds.length ? [{ transactionIds, ignoredAt }] : [];
@@ -223,22 +211,87 @@ export async function exportUserData(userId: string): Promise<UserDataExport> {
   }));
 
   return {
-    exportedAt: new Date().toISOString(),
-    user,
-    preference,
-    accounts,
-    transactions,
-    categories,
-    rules,
-    merchantAliases: [...aliases].map(([merchant, name]) => ({ merchant, name })),
-    budgets,
-    groups: memberships,
-    invitationsSent,
-    links,
-    ignoredLinkSuggestions,
-    imports,
-    auditLog,
+    head: {
+      exportedAt: new Date().toISOString(),
+      user,
+      preference,
+      accounts,
+      categories,
+      rules,
+      merchantAliases: [...aliases].map(([merchant, name]) => ({ merchant, name })),
+      budgets,
+      groups: memberships,
+      invitationsSent,
+      links,
+      ignoredLinkSuggestions,
+      imports,
+      auditLog,
+    },
+    transactionPages: () => ownedTransactionPages(accountIds, linkOf),
   };
+}
+
+// Newest first, keyset-paginated so the export never holds the whole history (#301).
+async function* ownedTransactionPages(
+  accountIds: string[],
+  linkOf: Map<string, string>,
+): AsyncGenerator<ExportedTransaction[]> {
+  if (accountIds.length === 0) return;
+  const query: ListQuery = { accountIds, tokenHashes: [], sort: "date-desc", take: 2000, skip: 0 };
+  let after: ListRow | undefined;
+  for (;;) {
+    const rows = await pageRows({ ...query, after });
+    if (rows.length > 0) {
+      yield rows.map((r) => ({
+        id: r.id,
+        date: r.date,
+        amount: Number(r.amount),
+        type: r.type,
+        label: decrypt(r.labelEnc, dataKey),
+        rawLabel: decrypt(r.rawLabelEnc, dataKey),
+        note: r.noteEnc ? decrypt(r.noteEnc, dataKey) : null,
+        categoryId: r.categoryId,
+        manuallyCategorized: Boolean(r.manuallyCategorized),
+        accountId: r.accountId,
+        importBatchId: r.importBatchId,
+        linkId: linkOf.get(r.id) ?? null,
+        externalId: r.externalId,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+      }));
+    }
+    if (rows.length < query.take) return;
+    after = rows[rows.length - 1];
+  }
+}
+
+export async function exportUserData(userId: string): Promise<UserDataExport> {
+  return collectUserData(await exportParts(userId));
+}
+
+async function collectUserData({ head, transactionPages }: ExportParts): Promise<UserDataExport> {
+  const transactions: ExportedTransaction[] = [];
+  for await (const page of transactionPages()) transactions.push(...page);
+  const { exportedAt, user, preference, accounts, ...rest } = head;
+  return { exportedAt, user, preference, accounts, transactions, ...rest };
+}
+
+type ExportParts = Awaited<ReturnType<typeof exportParts>>;
+
+// The same document as JSON.stringify(exportUserData(userId)), produced page by page.
+export async function* userDataJson({
+  head,
+  transactionPages,
+}: ExportParts): AsyncGenerator<string> {
+  const { exportedAt, user, preference, accounts, ...rest } = head;
+  yield JSON.stringify({ exportedAt, user, preference, accounts }).slice(0, -1) +
+    ',"transactions":[';
+  let first = true;
+  for await (const page of transactionPages()) {
+    yield (first ? "" : ",") + page.map((t) => JSON.stringify(t)).join(",");
+    first = false;
+  }
+  yield "]," + JSON.stringify(rest).slice(1);
 }
 
 type Client = Prisma.TransactionClient | PrismaClient;

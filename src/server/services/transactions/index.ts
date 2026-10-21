@@ -22,7 +22,14 @@ import {
 } from "@/lib/validation/transaction";
 import { recordHits, suggest } from "@/server/services/categorization";
 import { buildSecureFields } from "./secure-fields";
-import { queryTransactionPage } from "./list-query";
+import {
+  EXPORT_COLUMNS,
+  pageRows,
+  queryTransactionPage,
+  type ExportRow,
+  type ListQuery,
+  type ListRow,
+} from "./list-query";
 
 export class TransactionAccessError extends Error {}
 
@@ -148,13 +155,64 @@ export async function listTransactions(
   userId: string,
   filters: TransactionFilters,
 ): Promise<{ items: TransactionListItem[]; total: number; capped: boolean }> {
+  const resolved = await resolveListQuery(userId, filters);
+  if (!resolved) return { items: [], total: 0, capped: false };
+  const { rows, total, capped } = await queryTransactionPage(resolved.query);
+  return { items: rows.map(resolved.toItem), total, capped };
+}
+
+export type ExportItem = Pick<
+  TransactionListItem,
+  "id" | "date" | "amount" | "type" | "label" | "accountName" | "categoryId"
+>;
+
+// Every row matching `filters`, newest first, page by page: keyset pagination, no count and
+// only the exported columns, so an export's memory and time stay bounded (#301).
+export async function* transactionPages(
+  userId: string,
+  filters: Omit<TransactionFilters, "sort" | "take" | "skip">,
+  pageSize = 5000,
+): AsyncGenerator<ExportItem[]> {
+  const resolved = await resolveListQuery(userId, { ...filters, sort: "date-desc" });
+  if (!resolved) return;
+  let after: ExportRow | undefined;
+  for (;;) {
+    const rows = await pageRows<ExportRow>(
+      { ...resolved.query, take: pageSize, skip: 0, after },
+      {},
+      EXPORT_COLUMNS,
+    );
+    if (rows.length > 0) {
+      yield rows.map((r) => ({
+        id: r.id,
+        date: r.date,
+        amount: Number(r.amount),
+        type: r.type,
+        label: decrypt(r.labelEnc, dataKey),
+        accountName: resolved.accountName.get(r.accountId) ?? "",
+        categoryId: r.categoryId,
+      }));
+    }
+    if (rows.length < pageSize) return;
+    after = rows[rows.length - 1];
+  }
+}
+
+async function resolveListQuery(
+  userId: string,
+  filters: TransactionFilters,
+): Promise<{
+  query: ListQuery;
+  accountName: Map<string, string>;
+  toItem: (row: ListRow) => TransactionListItem;
+} | null> {
   const visible = await visibleAccountRefs(userId);
   const visibleIds = visible.map((a) => a.id);
   const accountName = new Map(visible.map((a) => [a.id, a.name]));
   const accountIds = filters.accountId
     ? visibleIds.filter((id) => id === filters.accountId)
     : visibleIds;
-  if (accountIds.length === 0) return { items: [], total: 0, capped: false };
+  if (accountIds.length === 0) return null;
 
   let categoryIds: string[] | null | undefined;
   if (filters.categoryId === UNCATEGORIZED) {
@@ -167,38 +225,39 @@ export async function listTransactions(
   // too-short words matches nothing rather than everything.
   const query = filters.search?.trim();
   const words = query ? searchQueryTerms(query) : [];
-  if (query && words.length === 0) return { items: [], total: 0, capped: false };
+  if (query && words.length === 0) return null;
 
-  const { rows, total, capped } = await queryTransactionPage({
-    accountIds,
-    categoryIds,
-    type: filters.type,
-    direction: filters.direction,
-    amountMin: filters.amountMin,
-    amountMax: filters.amountMax,
-    from: filters.from,
-    to: filters.to,
-    tokenHashes: words.map((w) => hmacForSearch(w, searchKey)),
-    sort: filters.sort ?? DEFAULT_SORT,
-    take: filters.take ?? 100,
-    skip: filters.skip ?? 0,
-  });
-
-  const items: TransactionListItem[] = rows.map((row) => ({
-    id: row.id,
-    accountId: row.accountId,
-    date: row.date,
-    amount: Number(row.amount),
-    type: row.type,
-    label: decrypt(row.labelEnc, dataKey),
-    rawLabel: decrypt(row.rawLabelEnc, dataKey),
-    note: row.noteEnc ? decrypt(row.noteEnc, dataKey) : null,
-    categoryId: row.categoryId,
-    manuallyCategorized: Boolean(row.manuallyCategorized),
-    imported: row.externalId !== null,
-    accountName: accountName.get(row.accountId) ?? "",
-  }));
-  return { items, total, capped };
+  return {
+    accountName,
+    query: {
+      accountIds,
+      categoryIds,
+      type: filters.type,
+      direction: filters.direction,
+      amountMin: filters.amountMin,
+      amountMax: filters.amountMax,
+      from: filters.from,
+      to: filters.to,
+      tokenHashes: words.map((w) => hmacForSearch(w, searchKey)),
+      sort: filters.sort ?? DEFAULT_SORT,
+      take: filters.take ?? 100,
+      skip: filters.skip ?? 0,
+    },
+    toItem: (row) => ({
+      id: row.id,
+      accountId: row.accountId,
+      date: row.date,
+      amount: Number(row.amount),
+      type: row.type,
+      label: decrypt(row.labelEnc, dataKey),
+      rawLabel: decrypt(row.rawLabelEnc, dataKey),
+      note: row.noteEnc ? decrypt(row.noteEnc, dataKey) : null,
+      categoryId: row.categoryId,
+      manuallyCategorized: Boolean(row.manuallyCategorized),
+      imported: row.externalId !== null,
+      accountName: accountName.get(row.accountId) ?? "",
+    }),
+  };
 }
 
 // Sets a transaction's category (manual override). Requires WRITE on the account.
