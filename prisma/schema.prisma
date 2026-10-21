@@ -419,7 +419,8 @@ model Transaction {
   @@index([categoryId, date])
   @@index([labelHash])
   @@index([rawLabelHash])
-  @@index([accountId, merchantKeyHash])
+  // Covers the merchant directory's sums: they read no table row.
+  @@index([accountId, merchantKeyHash, categoryId, type, amount, date], map: "Transaction_merchant_directory_idx")
   @@index([date])
   @@index([importBatchId])
 }

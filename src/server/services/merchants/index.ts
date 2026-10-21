@@ -51,6 +51,29 @@ type SummedPart = {
   last: Date;
 };
 
+// Each merchant's latest row (the first id on a tie) gives its displayed label.
+async function latestLabels(
+  spending: Prisma.Sql,
+  sums: SummedPart[],
+): Promise<Map<string, string>> {
+  const last = new Map<string, Date>();
+  for (const s of sums) {
+    const prev = last.get(s.hash);
+    if (!prev || s.last > prev) last.set(s.hash, s.last);
+  }
+  if (last.size === 0) return new Map();
+  const pairs = [...last].map(([hash, date]) => Prisma.sql`(${hash}, ${date})`);
+  const rows = await db.$queryRaw<{ hash: string; id: string; labelEnc: string }[]>`
+    SELECT t.merchantKeyHash AS hash, t.id, t.labelEnc FROM \`Transaction\` t
+    WHERE ${spending} AND (t.merchantKeyHash, t.date) IN (${Prisma.join(pairs)})`;
+  const first = new Map<string, { id: string; labelEnc: string }>();
+  for (const r of rows) {
+    const seen = first.get(r.hash);
+    if (!seen || r.id < seen.id) first.set(r.hash, r);
+  }
+  return new Map([...first].map(([hash, r]) => [hash, decrypt(r.labelEnc, dataKey)]));
+}
+
 // The whole history, without decrypting it (#296): unlinked rows are summed in SQL by
 // merchant key hash and only each merchant's latest label is decrypted. Linked rows (links
 // collapse) and rows without a hash take the row-by-row path.
@@ -61,24 +84,18 @@ async function allMerchantParts(userId: string): Promise<MerchantPart[]> {
     t.accountId IN (${Prisma.join(accountIds)}) AND t.amount < 0 AND t.type <> 'TRANSFER'
     AND t.merchantKeyHash IS NOT NULL AND t.merchantKeyHash <> ${hashMerchantKey("")}
     AND NOT EXISTS (SELECT 1 FROM TransactionLinkMember m WHERE m.transactionId = t.id)`;
-  const [sums, latest, others] = await Promise.all([
+  const [sums, others] = await Promise.all([
     db.$queryRaw<SummedPart[]>`
       SELECT t.merchantKeyHash AS hash, t.categoryId, SUM(-t.amount) AS total,
              COUNT(*) AS count, MAX(t.date) AS last
       FROM \`Transaction\` t WHERE ${spending}
       GROUP BY t.merchantKeyHash, t.categoryId`,
-    db.$queryRaw<{ hash: string; labelEnc: string }[]>`
-      SELECT hash, labelEnc FROM (
-        SELECT t.merchantKeyHash AS hash, t.labelEnc,
-               ROW_NUMBER() OVER (PARTITION BY t.merchantKeyHash ORDER BY t.date DESC, t.id) AS n
-        FROM \`Transaction\` t WHERE ${spending}
-      ) latest WHERE n = 1`,
     loadRows(accountIds, ALL_TIME, {
       withLabels: true,
       where: { OR: [{ linkMembership: { isNot: null } }, { merchantKeyHash: null }] },
     }),
   ]);
-  const labels = new Map(latest.map((r) => [r.hash, decrypt(r.labelEnc, dataKey)]));
+  const labels = await latestLabels(spending, sums);
   const summed = sums.map((s) => {
     const label = labels.get(s.hash)!;
     return {

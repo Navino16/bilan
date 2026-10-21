@@ -22,7 +22,7 @@ CREATE TABLE `Transaction` (
     INDEX `Transaction_categoryId_date_idx`(`categoryId`, `date`),
     INDEX `Transaction_labelHash_idx`(`labelHash`),
     INDEX `Transaction_rawLabelHash_idx`(`rawLabelHash`),
-    INDEX `Transaction_accountId_merchantKeyHash_idx`(`accountId`, `merchantKeyHash`),
+    INDEX `Transaction_merchant_directory_idx`(`accountId`, `merchantKeyHash`, `categoryId`, `type`, `amount`, `date`),
     INDEX `Transaction_date_idx`(`date`),
     UNIQUE INDEX `Transaction_accountId_externalId_key`(`accountId`, `externalId`),
     PRIMARY KEY (`id`)
