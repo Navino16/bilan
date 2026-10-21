@@ -11,7 +11,7 @@ import {
   GroupAccessError,
 } from "@/server/services/groups";
 import { GROUP_ROLES, type GroupRole } from "@/server/services/groups/roles";
-import { groupInputSchema } from "@/lib/validation/group";
+import { groupInputSchema } from "@/lib/schemas/group";
 import { invalidInput, type FormFailure } from "@/lib/validation/field-errors";
 
 export type GroupActionState = { ok: true } | FormFailure | null;

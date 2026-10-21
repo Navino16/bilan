@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import { failureOnField, fieldErrorsFromZod, invalidInput } from "@/lib/validation/field-errors";
-import { groupInputSchema, invitationInputSchema } from "@/lib/validation/group";
-import { accountInputSchema } from "@/lib/validation/account";
-import { budgetInputSchema } from "@/lib/validation/budget";
+import { groupInputSchema, invitationInputSchema } from "@/lib/schemas/group";
+import { accountInputSchema } from "@/lib/schemas/account";
+import { budgetInputSchema } from "@/lib/schemas/budget";
 import { registerSchema } from "@/server/transport/actions/auth-schemas";
 import { NAME_MAX } from "@/lib/validation/name";
 

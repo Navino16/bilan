@@ -1,4 +1,4 @@
-import type { TransactionInput } from "@/lib/validation/transaction";
+import type { TransactionInput } from "@/lib/schemas/transaction";
 import type { DateOrder } from "@/lib/validation/import";
 import type { DecimalMark, RejectedRow } from "./csv-parse";
 

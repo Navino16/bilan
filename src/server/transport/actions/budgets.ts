@@ -16,9 +16,9 @@ import {
   BudgetAccessError,
   type TxAssignment,
 } from "@/server/services/budgets";
-import { budgetInputSchema } from "@/lib/validation/budget";
+import { budgetInputSchema } from "@/lib/schemas/budget";
 import { AMOUNT_ERRORS } from "@/lib/amount";
-import { issueCode } from "@/lib/validation/amount";
+import { issueCode } from "@/lib/schemas/amount";
 import { invalidInput, type FormFailure } from "@/lib/validation/field-errors";
 
 export type BudgetActionState = { ok: true; id?: string } | FormFailure | null;

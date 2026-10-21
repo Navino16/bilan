@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
-import { NextIntlClientProvider } from "next-intl";
-import { getMessages, setRequestLocale } from "next-intl/server";
+import { setRequestLocale } from "next-intl/server";
 import { hasLocale } from "next-intl";
 import { locales } from "@/i18n/config";
+import { ClientMessages } from "@/i18n/client-messages";
 import { DocumentShell } from "@/components/shell/document-shell";
 import { SYSTEM_THEME_COLORS, THEME_COLOR } from "@/lib/theme";
 import { currentTheme } from "@/server/theme";
@@ -45,13 +45,12 @@ export default async function LocaleLayout({
   if (!hasLocale(locales, locale)) notFound();
 
   setRequestLocale(locale);
-  const messages = await getMessages();
 
   return (
     <DocumentShell lang={locale}>
-      <NextIntlClientProvider locale={locale} messages={messages}>
+      <ClientMessages scope="root" locale={locale}>
         {children}
-      </NextIntlClientProvider>
+      </ClientMessages>
     </DocumentShell>
   );
 }

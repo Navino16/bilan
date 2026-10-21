@@ -28,11 +28,8 @@ import {
   type BudgetStatus,
   type LineStatus,
 } from "@/lib/budgets";
-import {
-  budgetInputSchema,
-  type BudgetInput,
-  type BudgetPeriodType,
-} from "@/lib/validation/budget";
+import { type BudgetPeriodType } from "@/lib/validation/budget";
+import { budgetInputSchema, type BudgetInput } from "@/lib/schemas/budget";
 
 export class BudgetAccessError extends Error {}
 

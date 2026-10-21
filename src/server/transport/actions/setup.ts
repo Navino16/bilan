@@ -9,7 +9,7 @@ import { appSettings, getMinPasswordLength } from "@/server/services/settings/ap
 import { upsertSmtp, smtpSchema } from "@/server/services/settings/smtp";
 import { createAuthProvider, providerSchema } from "@/server/services/settings/auth-providers";
 import { getCurrentUser, hasEnforcedPermission } from "@/server/auth/permissions";
-import { nameSchema } from "@/lib/validation/name";
+import { nameSchema } from "@/lib/schemas/name";
 
 export type ActionState = { ok: true } | { ok: false; error: string } | null;
 

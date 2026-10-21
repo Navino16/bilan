@@ -5,7 +5,7 @@ import { logEvent } from "@/server/services/audit";
 import { requireGroupRole } from "@/server/services/groups/roles";
 import { groupMemberships } from "@/server/services/groups/memberships";
 import { visibleAccountIds } from "@/server/services/accounts";
-import { categoryInputSchema, type CategoryInput } from "@/lib/validation/category";
+import { categoryInputSchema, type CategoryInput } from "@/lib/schemas/category";
 
 export class CategoryAccessError extends Error {}
 

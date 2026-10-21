@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { categoryInputSchema, CATEGORY_NAME_MAX } from "@/lib/validation/category";
+import { CATEGORY_NAME_MAX } from "@/lib/validation/category";
+import { categoryInputSchema } from "@/lib/schemas/category";
 
 describe("categoryInputSchema", () => {
   it("accepts a minimal personal category", () => {

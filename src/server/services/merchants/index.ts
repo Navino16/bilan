@@ -5,7 +5,7 @@ import { dataKey } from "@/server/crypto/keys";
 import { hashMerchantKey } from "@/server/services/transactions/secure-fields";
 import { visibleAccountIds } from "@/server/services/accounts";
 import { loadRows, type AggRow } from "@/server/services/dashboard";
-import { merchantKeySchema, merchantNameSchema } from "@/lib/validation/merchant";
+import { merchantKeySchema, merchantNameSchema } from "@/lib/schemas/merchant";
 import { merchantKey } from "@/lib/merchant";
 import {
   merchantParts,

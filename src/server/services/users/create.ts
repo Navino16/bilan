@@ -9,7 +9,7 @@ import { logEvent } from "@/server/services/audit";
 import { isSmtpEnabled } from "@/server/services/settings/smtp";
 import { env } from "@/env";
 import { defaultLocale, locales } from "@/i18n/config";
-import { nameSchema } from "@/lib/validation/name";
+import { nameSchema } from "@/lib/schemas/name";
 import { CREATABLE_ROLES, mayHandleRole } from "@/lib/instance-roles";
 
 export const adminCreateUserSchema = z.object({

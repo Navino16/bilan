@@ -1,12 +1,12 @@
 import type { PrismaClient } from "@prisma/client";
 import { db as defaultDb } from "@/server/db";
 import type { Locale } from "@/i18n/config";
+import { LINK_WINDOW_DAYS_DEFAULT } from "@/lib/validation/link-settings";
 import {
-  LINK_WINDOW_DAYS_DEFAULT,
   linkSettingsSchema,
   type LinkSettings,
   type LinkSettingsInput,
-} from "@/lib/validation/link-settings";
+} from "@/lib/schemas/link-settings";
 import { fieldErrorsFromZod, type FieldErrors } from "@/lib/validation/field-errors";
 
 // Never overwrites: an existing row holds a locale the user already chose.

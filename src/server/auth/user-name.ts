@@ -1,5 +1,6 @@
 import { APIError } from "better-auth/api";
-import { NAME_MAX, nameSchema } from "@/lib/validation/name";
+import { NAME_MAX } from "@/lib/validation/name";
+import { nameSchema } from "@/lib/schemas/name";
 
 // OIDC profiles may carry no usable name: fall back to the email rather than failing the login.
 export function nameOnCreate(user: { name?: unknown; email?: unknown }): { name: string } {

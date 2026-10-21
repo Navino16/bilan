@@ -13,7 +13,8 @@ import {
   deleteSignupToken,
   revokeSignupToken,
 } from "@/server/services/signup-tokens";
-import { createSignupTokenSchema, signupTokenExpiry } from "@/lib/validation/signup-token";
+import { signupTokenExpiry } from "@/lib/validation/signup-token";
+import { createSignupTokenSchema } from "@/lib/schemas/signup-token";
 import { logEvent } from "@/server/services/audit";
 import { failureOnField, invalidInput, type FormFailure } from "@/lib/validation/field-errors";
 import {

@@ -30,8 +30,10 @@ npx prisma generate >&2
 set -a
 . "$PERF_ENV"
 set +a
-# next/font downloads the Google fonts at build time: retry a flaky network.
+# next/font downloads the Google fonts at build time: retry a flaky network, from a clean
+# .next (retries on top of a failed build kept failing).
 for attempt in 1 2 3; do
+  rm -rf .next
   NODE_ENV=production npx next build >&2 && break
   [ "$attempt" -lt 3 ] || exit 1
   echo "next build failed, retrying ($attempt/3)" >&2

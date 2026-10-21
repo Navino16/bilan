@@ -23,7 +23,8 @@ import { useFrozenWhileOpen } from "@/hooks/use-frozen-while-open";
 import { useActionForm } from "@/components/forms/use-action-form";
 import { FieldError } from "@/components/forms/field-error";
 import { updateLinkSettingsAction } from "@/server/transport/actions/links";
-import { LINK_WINDOW_DAYS_RANGE, type LinkSettings } from "@/lib/validation/link-settings";
+import { LINK_WINDOW_DAYS_RANGE } from "@/lib/validation/link-settings";
+import type { LinkSettings } from "@/lib/schemas/link-settings";
 import { readAmount } from "@/lib/amount";
 import { formatAmountInput } from "@/lib/format";
 

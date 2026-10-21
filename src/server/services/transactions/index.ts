@@ -13,13 +13,13 @@ import {
   CategoryAccessError,
   withDescendants,
 } from "@/server/services/categories";
+import { type TransactionType } from "@/lib/validation/transaction";
 import {
   transactionInputSchema,
   transactionUpdateSchema,
   type TransactionInput,
-  type TransactionType,
   type TransactionUpdateInput,
-} from "@/lib/validation/transaction";
+} from "@/lib/schemas/transaction";
 import { recordHits, suggest } from "@/server/services/categorization";
 import { buildSecureFields } from "./secure-fields";
 import {

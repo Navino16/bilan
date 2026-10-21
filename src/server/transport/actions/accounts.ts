@@ -5,9 +5,9 @@ import { requireSession } from "@/server/auth/permissions";
 import { currentStepUpSession } from "@/server/auth/step-up-session";
 import { auditOrigin } from "@/server/http/audit-origin";
 import { confirmStepUp, type StepUpConfirmResult } from "@/server/services/users/step-up";
-import { accountInputSchema } from "@/lib/validation/account";
+import { accountInputSchema } from "@/lib/schemas/account";
 import { AMOUNT_ERRORS } from "@/lib/amount";
-import { issueCode } from "@/lib/validation/amount";
+import { issueCode } from "@/lib/schemas/amount";
 import { invalidInput, type FormFailure } from "@/lib/validation/field-errors";
 import {
   createAccount,

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { APP_NAME_MAX, appNameSchema } from "@/lib/validation/app-name";
+import { APP_NAME_MAX } from "@/lib/validation/app-name";
+import { appNameSchema } from "@/lib/schemas/app-name";
 
 describe("appNameSchema (#224)", () => {
   it("trims and accepts names up to the maximum length", () => {

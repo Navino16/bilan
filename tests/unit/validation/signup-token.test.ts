@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { createSignupTokenSchema, signupTokenExpiry } from "@/lib/validation/signup-token";
+import { signupTokenExpiry } from "@/lib/validation/signup-token";
+import { createSignupTokenSchema } from "@/lib/schemas/signup-token";
 import { fieldErrorsFromZod } from "@/lib/validation/field-errors";
 
 describe("signupTokenExpiry", () => {

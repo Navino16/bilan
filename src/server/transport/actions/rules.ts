@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { requireSession } from "@/server/auth/permissions";
-import { ruleInputSchema } from "@/lib/validation/rule";
+import { ruleInputSchema } from "@/lib/schemas/rule";
 import { RULES_FILE_MAX_BYTES, RULES_FILE_MAX_RULES } from "@/lib/validation/rules-file";
 import type { ImportDecisions } from "@/lib/rules-import";
 import {

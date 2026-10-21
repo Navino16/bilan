@@ -7,7 +7,7 @@ import {
   periodEndFor,
 } from "@/lib/budgets";
 import { parseAmount } from "@/lib/amount";
-import { budgetLineSchema } from "@/lib/validation/budget";
+import { budgetLineSchema } from "@/lib/schemas/budget";
 
 describe("budgetPlannedTotal", () => {
   it("sums line planned amounts, rounded to cents", () => {
