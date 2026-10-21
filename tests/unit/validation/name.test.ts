@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { NAME_MAX, displayName, nameSchema } from "@/lib/validation/name";
+import { NAME_MAX, displayName } from "@/lib/validation/name";
+import { nameSchema } from "@/lib/schemas/name";
 import { canRemoveMember } from "@/lib/validation/group";
 
 describe("nameSchema", () => {

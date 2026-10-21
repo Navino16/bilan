@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { parseAmount, readAmount } from "@/lib/amount";
-import { transactionInputSchema } from "@/lib/validation/transaction";
-import { budgetLineSchema } from "@/lib/validation/budget";
-import { accountInputSchema } from "@/lib/validation/account";
+import { transactionInputSchema } from "@/lib/schemas/transaction";
+import { budgetLineSchema } from "@/lib/schemas/budget";
+import { accountInputSchema } from "@/lib/schemas/account";
 
 describe("parseAmount", () => {
   it("reads either decimal mark and thousands groups", () => {

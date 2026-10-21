@@ -1,6 +1,3 @@
-import { z } from "zod";
-import { nameSchema } from "./name";
-
 // Client-safe group role constants/types — kept out of `server/services/groups`
 // (which imports the DB) so client components can use them without pulling
 // server-only modules into the browser bundle.
@@ -21,16 +18,6 @@ export function canManageInGroup(role: GroupRole): boolean {
 }
 
 export const GROUP_DESCRIPTION_MAX = 191;
-
-export const groupInputSchema = z.object({
-  name: nameSchema,
-  description: z.string().trim().max(GROUP_DESCRIPTION_MAX),
-});
-
-export const invitationInputSchema = z.object({
-  email: z.email(),
-  role: z.enum(GROUP_ROLES),
-});
 
 // The last-owner guard is enforced separately, in the service.
 export function canRemoveMember(actor: GroupRole, target: GroupRole): boolean {

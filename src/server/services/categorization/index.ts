@@ -5,7 +5,7 @@ import { logEvent } from "@/server/services/audit";
 import { requireGroupRole, type GroupRole } from "@/server/services/groups/roles";
 import { assertCategoryAssignable, CategoryAccessError } from "@/server/services/categories";
 import { canManageInGroup } from "@/lib/validation/group";
-import { ruleInputSchema, type RuleInput } from "@/lib/validation/rule";
+import { ruleInputSchema, type RuleInput } from "@/lib/schemas/rule";
 import { isValidRulePattern } from "./regex";
 import { mapInSlices } from "./cooperative";
 import {

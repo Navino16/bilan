@@ -48,7 +48,7 @@ Self-hosted personal-finance application. A full web app with multi-user support
 | Tailwind CSS | v4 | Styling, driven by Bilan design tokens (see §9) |
 | shadcn/ui | 4.x (`base-nova` style) | Accessible primitives (Base UI, `@base-ui/react`), re-skinned with Bilan tokens |
 | Fonts | Newsreader · IBM Plex Sans · IBM Plex Mono | Self-hosted via `next/font` (see §9.2) |
-| Zod | 4.x | Runtime validation; forms post to Server Actions through `useActionState` (`src/components/forms/use-action-form.ts`) |
+| Zod | 4.x | Runtime validation, server-side only (`src/lib/schemas/`); forms post to Server Actions through `useActionState` (`src/components/forms/use-action-form.ts`) |
 | next-intl | 4.x | i18n fr/en routing |
 | Prisma | 7.x (with `@prisma/adapter-mariadb`) | ORM with MariaDB-native driver |
 | MariaDB | 11 | Database |
@@ -218,7 +218,7 @@ budget/
 │   │       └── [...path]/          # JSON 404 for unknown API routes
 │   ├── components/                 # feature components + ui/ (shadcn)
 │   ├── hooks/
-│   ├── i18n/                       # next-intl config
+│   ├── i18n/                       # next-intl config, client message scopes
 │   ├── server/
 │   │   ├── services/               # incl. settings/ (TTL-cached DB reads)
 │   │   ├── transport/              # actions/ + http/
@@ -226,7 +226,7 @@ budget/
 │   │   ├── crypto/
 │   │   ├── db/
 │   │   └── http/                   # client IP, request locale, 404 response
-│   ├── lib/                        # utils, Zod schemas, shared types
+│   ├── lib/                        # utils, shared types; schemas/ (Zod, server-only), validation/ (client-safe limits)
 │   ├── proxy.ts                    # setup gate + session fast-path + next-intl + security headers
 │   ├── instrumentation.ts          # seeds roles/permissions/settings at server start
 │   └── env.ts                      # envalid validation
@@ -1298,7 +1298,7 @@ Business logic lives in services, so most behaviour is tested there. Server Acti
 
 ### 7.2 Unit test domains
 
-`tests/unit/` is split by area: `auth` (permissions, rate limiter, provider cache, OIDC resolution, 2FA enforcement, TOTP replay), `crypto` (encryption round-trip, HMAC), `services` (categorization matching, CSV parsing, PDF statement parsers, IBAN, mailer, app settings, export), `lib` (budgets, links, periods, formatting, insights, theme), `validation` (Zod schemas), `server` (proxy and its matcher, client IP, request locale), `transport` (Server Action and route wrappers), `components`, `i18n`, `docker` (migrate toolkit, prod-smoke workflow) and `env.test.ts`.
+`tests/unit/` is split by area: `auth` (permissions, rate limiter, provider cache, OIDC resolution, 2FA enforcement, TOTP replay), `crypto` (encryption round-trip, HMAC), `services` (categorization matching, CSV parsing, PDF statement parsers, IBAN, mailer, app settings, export), `lib` (budgets, links, periods, formatting, insights, theme), `validation` (Zod schemas), `bundle` (client message scopes, no zod in the browser), `server` (proxy and its matcher, client IP, request locale), `transport` (Server Action and route wrappers), `components`, `i18n`, `docker` (migrate toolkit, prod-smoke workflow) and `env.test.ts`.
 
 ### 7.3 Integration test domains
 
@@ -1420,6 +1420,8 @@ Everything else (SSO providers, SMTP, registration mode, password policy, app na
 5. Security headers, including the CSP.
 
 `/api/*` gets its own headers from `next.config.ts`.
+
+Client components only receive the namespaces they use: each route section wraps its subtree in `<ClientMessages scope>` (`src/i18n/client-messages.tsx`), and `src/i18n/client-scopes.ts` lists the namespaces per scope. A nested provider replaces its parent's messages, so a scope lists everything its subtree needs. `tests/unit/bundle/client-bundle.test.ts` walks the import graph of each section's routes and fails when a scope misses a namespace or carries an unused one. The same test keeps zod out of the browser: Zod schemas live in `src/lib/schemas/`, and the constants client components share with them in `src/lib/validation/`, which never imports zod.
 
 ### 8.6 Prisma + MariaDB adapter
 

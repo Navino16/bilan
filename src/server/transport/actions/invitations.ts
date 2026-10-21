@@ -5,7 +5,7 @@ import { requireSession } from "@/server/auth/permissions";
 import { requestLocale } from "@/server/http/request-locale";
 import { invitationAcceptLimiter } from "@/server/auth/rate-limit";
 import { GroupAccessError } from "@/server/services/groups";
-import { invitationInputSchema } from "@/lib/validation/group";
+import { invitationInputSchema } from "@/lib/schemas/group";
 import { invalidInput, type FormFailure } from "@/lib/validation/field-errors";
 import {
   createInvitation,

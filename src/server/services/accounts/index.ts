@@ -4,7 +4,7 @@ import { encrypt, decrypt } from "@/server/crypto/encryption";
 import { hmacForSearch } from "@/server/crypto/hmac";
 import { dataKey, searchKey } from "@/server/crypto/keys";
 import { logEvent } from "@/server/services/audit";
-import { accountInputSchema, type AccountInput } from "@/lib/validation/account";
+import { accountInputSchema, type AccountInput } from "@/lib/schemas/account";
 import { isValidIban, normalizeIban, maskIban } from "./iban";
 import { displayName } from "@/lib/validation/name";
 

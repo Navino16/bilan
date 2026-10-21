@@ -1,10 +1,9 @@
 import {
   RULES_FILE_MAX_RULES,
-  fileRuleSchema,
-  rulesEnvelopeSchema,
   type FileRule,
   type RejectedRule,
 } from "@/lib/validation/rules-file";
+import { fileRuleSchema, rulesEnvelopeSchema } from "@/lib/schemas/rules-file";
 import { isValidRulePattern } from "./regex";
 
 export type ParsedRulesFile =

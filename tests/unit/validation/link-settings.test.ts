@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { linkSettingsSchema } from "@/lib/validation/link-settings";
+import { linkSettingsSchema } from "@/lib/schemas/link-settings";
 import { fieldErrorsFromZod } from "@/lib/validation/field-errors";
 
 const parse = (input: { windowDays?: string | number; minAmount?: string | number }) =>

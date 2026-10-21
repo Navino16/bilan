@@ -1,14 +1,13 @@
 "use server";
 
 import { requireSession } from "@/server/auth/permissions";
+import { TRANSACTION_INPUT_ERRORS, TRANSACTION_UPDATE_ERRORS } from "@/lib/validation/transaction";
 import {
-  TRANSACTION_INPUT_ERRORS,
-  TRANSACTION_UPDATE_ERRORS,
   transactionInputSchema,
   transactionUpdateSchema,
   type TransactionUpdateInput,
-} from "@/lib/validation/transaction";
-import { issueCode } from "@/lib/validation/amount";
+} from "@/lib/schemas/transaction";
+import { issueCode } from "@/lib/schemas/amount";
 import {
   createTransaction,
   recategorizeTransaction,

@@ -14,9 +14,9 @@ import {
   PreferenceInputError,
   updateLinkSuggestionSettings,
 } from "@/server/services/users/preferences";
-import { linkSettingsSchema } from "@/lib/validation/link-settings";
+import { linkSettingsSchema } from "@/lib/schemas/link-settings";
 import { AMOUNT_ERRORS } from "@/lib/amount";
-import { issueCode } from "@/lib/validation/amount";
+import { issueCode } from "@/lib/schemas/amount";
 import { invalidInput, type FormFailure } from "@/lib/validation/field-errors";
 import { isLocale } from "@/lib/locale-negotiation";
 import { defaultLocale } from "@/i18n/config";

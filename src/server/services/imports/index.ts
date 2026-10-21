@@ -7,7 +7,7 @@ import {
   csvCommitMappingSchema,
   csvMappingSchema,
   type CsvMappingInput,
-} from "@/lib/validation/import";
+} from "@/lib/schemas/import";
 import {
   parseCsv,
   detectMapping,

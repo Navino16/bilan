@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { defaultLocale, locales } from "@/i18n/config";
-import { nameSchema } from "@/lib/validation/name";
+import { nameSchema } from "@/lib/schemas/name";
 
 // Kept out of the "use server" action file, which may only export async functions.
 

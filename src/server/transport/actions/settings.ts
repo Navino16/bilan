@@ -9,7 +9,7 @@ import {
   getAppName,
   SECURITY_SETTING_KEYS,
 } from "@/server/services/settings/app-settings";
-import { appNameSchema } from "@/lib/validation/app-name";
+import { appNameSchema } from "@/lib/schemas/app-name";
 import {
   deleteSmtpConfig,
   sendSmtpTest,

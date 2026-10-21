@@ -1,5 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { hasPermission, requirePermission } from "@/server/auth/permissions";
+import { ClientMessages } from "@/i18n/client-messages";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { PageHeader } from "@/components/shell/page-header";
 
@@ -34,12 +35,14 @@ export default async function AdminLayout({
     .map((tab) => ({ href: `/${locale}/admin/${tab.path}`, label: t(`nav.${tab.key}`) }));
 
   return (
-    <div className="space-y-8">
-      <div className="space-y-4">
-        <PageHeader overline={t("overline")} title={t("title")} />
-        <AdminNav items={items} />
+    <ClientMessages scope="admin" locale={locale}>
+      <div className="space-y-8">
+        <div className="space-y-4">
+          <PageHeader overline={t("overline")} title={t("title")} />
+          <AdminNav items={items} />
+        </div>
+        {children}
       </div>
-      {children}
-    </div>
+    </ClientMessages>
   );
 }

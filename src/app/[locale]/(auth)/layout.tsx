@@ -1,4 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { ClientMessages } from "@/i18n/client-messages";
 import { BilanMark } from "@/components/brand/bilan-mark";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { SkipLink } from "@/components/shell/skip-link";
@@ -22,26 +23,28 @@ export default async function AuthLayout({
     currentTheme(),
   ]);
   return (
-    <div className="bg-background flex min-h-screen w-full flex-col">
-      <SkipLink />
-      <div className="flex items-center justify-end gap-3 px-4 pt-4">
-        <ThemeToggle theme={theme} />
-        <LanguageSwitcher />
-      </div>
-      <main
-        id={MAIN_ID}
-        tabIndex={-1}
-        className="flex flex-1 flex-col items-center justify-center px-6 py-12 outline-none"
-      >
-        <div className="w-full max-w-sm space-y-6">
-          <div className="flex flex-col items-center text-center">
-            <BilanMark className="mb-3 size-11" />
-            <div className="font-display text-3xl leading-none">{appName}</div>
-            <p className="text-muted-foreground mt-1 text-sm">{t("tagline")}</p>
-          </div>
-          <div className="bg-card rounded-xl border p-6 shadow-sm">{children}</div>
+    <ClientMessages scope="auth" locale={locale}>
+      <div className="bg-background flex min-h-screen w-full flex-col">
+        <SkipLink />
+        <div className="flex items-center justify-end gap-3 px-4 pt-4">
+          <ThemeToggle theme={theme} />
+          <LanguageSwitcher />
         </div>
-      </main>
-    </div>
+        <main
+          id={MAIN_ID}
+          tabIndex={-1}
+          className="flex flex-1 flex-col items-center justify-center px-6 py-12 outline-none"
+        >
+          <div className="w-full max-w-sm space-y-6">
+            <div className="flex flex-col items-center text-center">
+              <BilanMark className="mb-3 size-11" />
+              <div className="font-display text-3xl leading-none">{appName}</div>
+              <p className="text-muted-foreground mt-1 text-sm">{t("tagline")}</p>
+            </div>
+            <div className="bg-card rounded-xl border p-6 shadow-sm">{children}</div>
+          </div>
+        </main>
+      </div>
+    </ClientMessages>
   );
 }

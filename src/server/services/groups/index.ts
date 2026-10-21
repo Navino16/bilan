@@ -1,6 +1,6 @@
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
-import { nameSchema } from "@/lib/validation/name";
+import { nameSchema } from "@/lib/schemas/name";
 import { GROUP_DESCRIPTION_MAX, canManageInGroup, canRemoveMember } from "@/lib/validation/group";
 import {
   GROUP_ROLES,

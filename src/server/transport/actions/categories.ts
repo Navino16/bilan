@@ -1,7 +1,7 @@
 "use server";
 
 import { requireSession } from "@/server/auth/permissions";
-import { categoryInputSchema } from "@/lib/validation/category";
+import { categoryInputSchema } from "@/lib/schemas/category";
 import { invalidInput, type FormFailure } from "@/lib/validation/field-errors";
 import {
   createCategory,
