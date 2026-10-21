@@ -102,15 +102,15 @@ const COLUMNS = Prisma.raw(
     "t.noteEnc, t.categoryId, t.manuallyCategorized, t.externalId",
 );
 
-// One page, in order. A rare search word drives the query from the token index; otherwise
-// a date sort takes each account's top rows from its (accountId, date, createdAt) index and
-// merges them, so a common word stops after a page instead of sorting every match.
+// One page, in order. A rare search word drives the query from the token index. Otherwise a
+// date sort takes each account's top rows from its (accountId, date, createdAt) index and
+// merges them: a multi-account IN would sort every row (#300), a common word every match.
 async function pageRows(q: ListQuery, tuning: ListTuning): Promise<ListRow[]> {
   const conds = filterConditions(q);
   const searching = q.tokenHashes.length > 0;
   const common =
     searching && (await allCommon(q.tokenHashes, tuning.commonTokenRows ?? COMMON_TOKEN_ROWS));
-  if (common && q.sort.startsWith("date")) {
+  if ((common || !searching) && q.sort.startsWith("date")) {
     const perAccount = (accountId: string) => {
       const where = Prisma.join(
         [Prisma.sql`t.accountId = ${accountId}`, ...conds, ...tokenExists(q.tokenHashes)],
