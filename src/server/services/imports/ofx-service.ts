@@ -138,11 +138,22 @@ async function sumUpTo(accountId: string, asOf: Date): Promise<number> {
 }
 
 // The file starts the account's history: adjusting a later one would hide missing operations.
-async function startsHistory(accountId: string, rows: NormalizedRow[]): Promise<boolean> {
+// `excludeBatchId`: at commit, rows this import already inserted are not prior history.
+async function startsHistory(
+  accountId: string,
+  rows: NormalizedRow[],
+  excludeBatchId?: string,
+): Promise<boolean> {
   if (rows.length === 0) return false;
   const first = rows.reduce((min, r) => (r.date < min ? r.date : min), rows[0].date);
   const earlier = await db.transaction.findFirst({
-    where: { accountId, date: { lt: first } },
+    where: {
+      accountId,
+      date: { lt: first },
+      ...(excludeBatchId && {
+        OR: [{ importBatchId: null }, { importBatchId: { not: excludeBatchId } }],
+      }),
+    },
     select: { id: true },
   });
   return !earlier;
@@ -264,13 +275,14 @@ async function openingAdjustment(
   rows: NormalizedRow[],
   accountId: string,
   userId: string,
+  batchId: string,
 ): Promise<BalanceAdjustment | null> {
   if (product.kind !== "BANK" || !product.ledger) return null;
   const account = await db.bankAccount.findUniqueOrThrow({
     where: { id: accountId },
     select: { ownerId: true, initialBalance: true },
   });
-  if (account.ownerId !== userId || !(await startsHistory(accountId, rows))) return null;
+  if (account.ownerId !== userId || !(await startsHistory(accountId, rows, batchId))) return null;
   const sum = await sumUpTo(accountId, new Date(product.ledger.asOf));
   return {
     accountId,
@@ -319,7 +331,7 @@ export async function commitOfxBatch(
     // Second pass: sibling products mapped to the same account must be inserted first.
     const balanceAdjustments: BalanceAdjustment[] = [];
     for (const { product, rows, accountId } of toAdjust) {
-      const adjustment = await openingAdjustment(product, rows, accountId, actor.id);
+      const adjustment = await openingAdjustment(product, rows, accountId, actor.id, batch.id);
       if (adjustment) balanceAdjustments.push(adjustment);
     }
     return finalizeBatch(batch.id, totals, actor, accountIds, { balanceAdjustments });

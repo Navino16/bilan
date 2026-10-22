@@ -343,6 +343,37 @@ describe("OFX import service", () => {
     expect((await initialBalanceOf(accountId)) + Number(_sum.amount)).toBeCloseTo(90, 2);
   });
 
+  it("still adjusts when a sibling statement of the same file has earlier rows", async () => {
+    const accountId = await newAccount();
+    const first = ofxFile({
+      trns: [{ date: "20310810", amount: "-10", name: "CB FIRST" }],
+      ledger: { amount: "90", asOf: "20310815" },
+    }).toString();
+    const second = ofxFile({
+      trns: [{ date: "20310803", amount: "-20", name: "CB SECOND" }],
+      ledger: { amount: "500", asOf: "20310831" },
+    }).toString();
+    const body = (f: string) => f.slice(f.indexOf("<OFX>") + 5, f.indexOf("</OFX>"));
+    const id = await upload(
+      accountId,
+      Buffer.from(first.replace("</OFX>", `${body(second)}</OFX>`)),
+    );
+    const { products } = await previewOfxBatch(id, owner);
+    expect(products[0].balance?.canAdjust).toBe(true);
+    await commitOfxBatch(
+      id,
+      { [products[0].key]: accountId, [products[1].key]: accountId },
+      { id: owner },
+      { adjustBalance: [products[0].key] },
+    );
+    const { _sum } = await db.transaction.aggregate({
+      where: { accountId, date: { lte: new Date("2031-08-15T00:00:00.000Z") } },
+      _sum: { amount: true },
+    });
+    expect((await initialBalanceOf(accountId)) + Number(_sum.amount)).toBeCloseTo(90, 2);
+    expect(await initialBalanceOf(accountId)).toBe(120);
+  });
+
   it("ignores adjustBalance when it no longer qualifies", async () => {
     const accountId = await newAccount();
     const id = await upload(
