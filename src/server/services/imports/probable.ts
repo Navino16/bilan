@@ -7,10 +7,9 @@ const DAY_MS = 86_400_000;
 const bucketKey = (date: Date, amount: number) =>
   `${date.toISOString().slice(0, 10)}|${amount.toFixed(2)}`;
 
-// Row index → raw label of the existing transaction it probably duplicates: same UTC day
-// and amount, no exact key match. Each existing row backs at most one incoming row, in
-// file order; rows already claimed by a certain duplicate (`externalIds`) are left out.
-// `excludeBatchId` ignores what the running commit inserted itself (one batch, several products).
+// Row index → raw label of the existing transaction it probably duplicates (same UTC day and
+// amount). Each existing row backs at most one incoming row, in file order, and never one a
+// certain duplicate claimed. `excludeBatchId` skips rows the running commit inserted itself.
 export async function findProbableDuplicates(
   accountId: string,
   rows: { date: Date; amount: number }[],
