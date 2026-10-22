@@ -171,8 +171,13 @@ jobs:
   e2e:
     name: E2E
     runs-on: ubuntu-26.04
+    # Browsers and their system deps come preinstalled: `playwright install --with-deps` hung on
+    # slow Ubuntu mirrors (#330). Keep the tag on the @playwright/test version.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --ipc=host
     env:
-      DATABASE_URL: mysql://app:app_password@localhost:3306/budget
+      DATABASE_URL: mysql://app:app_password@mariadb:3306/budget
     services:
       mariadb:
         image: mariadb:11
@@ -181,8 +186,6 @@ jobs:
           MARIADB_DATABASE: budget
           MARIADB_USER: app
           MARIADB_PASSWORD: app_password
-        ports:
-          - 3306:3306
         options: >-
           --health-cmd="healthcheck.sh --connect --innodb_initialized"
           --health-interval=5s
@@ -209,9 +212,6 @@ jobs:
         run: npx tsx scripts/seed-e2e.ts
         env:
           NODE_ENV: test
-
-      - name: Install Playwright browsers
-        run: npx playwright install chromium webkit --with-deps
 
       - name: Build (production server for stable E2E)
         run: npm run build
