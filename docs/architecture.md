@@ -47,7 +47,7 @@ Self-hosted personal-finance application. A full web app with multi-user support
 | TypeScript | 6.0 | Strict mode |
 | Tailwind CSS | v4 | Styling, driven by Bilan design tokens (see §9) |
 | shadcn/ui | 4.x (`base-nova` style) | Accessible primitives (Base UI, `@base-ui/react`), re-skinned with Bilan tokens |
-| Fonts | Newsreader · IBM Plex Sans · IBM Plex Mono | Self-hosted via `next/font` (see §9.2) |
+| Fonts | Newsreader · IBM Plex Sans · IBM Plex Mono | Self-hosted from `@fontsource` via `next/font/local` (see §9.2) |
 | Zod | 4.x | Runtime validation, server-side only (`src/lib/schemas/`); forms post to Server Actions through `useActionState` (`src/components/forms/use-action-form.ts`) |
 | next-intl | 4.x | i18n fr/en routing |
 | Prisma | 7.x (with `@prisma/adapter-mariadb`) | ORM with MariaDB-native driver |
@@ -1477,7 +1477,7 @@ The visual design was first mocked up with Claude Design from this spec. That pr
 
 Text-contrast tokens (`--ink-3`, `--warning-text`, `--expense-text`) are darker than the fill colours so that text reaches WCAG AA (4.5:1). `--warning` and `--expense` stay for fills. `--category-glyph` switches to the paper colour in dark mode, where white glyphs fall under 3:1 on the pastel palette.
 
-**Typography** (`src/lib/fonts.ts`, `next/font/google`, served by the app): display serif **Newsreader** (`--font-display`, also `--font-heading`), UI sans **IBM Plex Sans** (`--font-sans`), numbers **IBM Plex Mono** (`--font-mono`). Amounts use tabular figures (`tabular-nums`). Sizes are Tailwind utilities, not tokens.
+**Typography** (`src/lib/fonts.ts`, `next/font/local` on the `@fontsource` latin files, served by the app, no build-time download): display serif **Newsreader** (`--font-display`, also `--font-heading`), UI sans **IBM Plex Sans** (`--font-sans`), numbers **IBM Plex Mono** (`--font-mono`). Amounts use tabular figures (`tabular-nums`). Sizes are Tailwind utilities, not tokens.
 
 **Radii**: one `--radius` (0.625rem), from which `--radius-sm` to `--radius-4xl` are derived. Spacing is Tailwind's default scale. Density is fixed at the "cozy" row height: there is no density token or setting.
 

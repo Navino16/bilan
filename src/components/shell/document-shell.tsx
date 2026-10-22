@@ -1,4 +1,4 @@
-import { mono, sans, serif } from "@/lib/fonts";
+import { ibmPlexMono, ibmPlexSans, newsreader } from "@/lib/fonts";
 import { currentTheme } from "@/server/theme";
 
 export async function DocumentShell({
@@ -13,7 +13,7 @@ export async function DocumentShell({
     <html
       lang={lang}
       suppressHydrationWarning
-      className={`${sans.variable} ${serif.variable} ${mono.variable} h-full antialiased ${
+      className={`${ibmPlexSans.variable} ${newsreader.variable} ${ibmPlexMono.variable} h-full antialiased ${
         theme === "system" ? "" : theme
       }`}
     >
