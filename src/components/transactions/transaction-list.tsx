@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { ListChecks } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { CategoryAvatar, CategoryChip, Pill } from "./bits";
 import { type FlatCategory } from "./category-tree";
@@ -96,9 +97,13 @@ export function TransactionList({
   const tLink = useTranslations("transactions.link");
   const linkErrorMessage = useLinkErrorMessage();
   const tSel = useTranslations("transactions.selection");
-  const { selecting, picked, setSelecting, togglePicked } = useSelectionMode();
-  // Picks survive filter changes (the provider sits above the list): act on visible rows only.
-  const pickedIds = items.filter((i) => picked.has(i.id)).map((i) => i.id);
+  const { selecting, picked, anchor, setSelecting, startFrom, togglePicked } = useSelectionMode();
+  // Picks survive filter changes (the provider sits above the list): act on visible rows only,
+  // plus the anchor, which the selection bar names while it is hidden.
+  const visiblePicked = items.filter((i) => picked.has(i.id)).map((i) => i.id);
+  const hiddenAnchor =
+    anchor && picked.has(anchor.id) && !visiblePicked.includes(anchor.id) ? anchor : null;
+  const pickedIds = hiddenAnchor ? [hiddenAnchor.id, ...visiblePicked] : visiblePicked;
   const [linkPending, startLinkTransition] = useTransition();
   // Tied to the picks it was raised for, so changing the selection clears it.
   const [linkError, setLinkError] = useState<{ ids: string; message: string } | null>(null);
@@ -143,6 +148,10 @@ export function TransactionList({
   const selectionBar = selecting && (
     <SelectionBar
       count={pickedIds.length}
+      hiddenAnchor={
+        hiddenAnchor &&
+        `${hiddenAnchor.label} · ${new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" }).format(hiddenAnchor.amount)}`
+      }
       linkPending={linkPending}
       error={linkError?.ids === pickedIds.join(",") ? linkError.message : null}
       onExit={() => setSelecting(false)}
@@ -225,16 +234,17 @@ export function TransactionList({
 
   return (
     <div className={`space-y-5 ${selecting ? "pb-20" : ""}`}>
-      {/* On mobile, selection mode is entered from the filter sheet. */}
       {!selecting && (
-        <div className="hidden lg:flex">
+        <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => setSelecting(true)}
-            className="border-border text-muted-foreground hover:text-foreground inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[0.8rem]"
+            className="border-border bg-card hover:bg-muted inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium"
           >
+            <ListChecks className="size-4" />
             {tSel("mode")}
           </button>
+          <span className="text-muted-foreground text-xs">{tSel("hint")}</span>
         </div>
       )}
 
@@ -367,6 +377,11 @@ export function TransactionList({
         }}
         onRecategorize={(categoryId) => selected && recategorize(selected, categoryId)}
         onDelete={() => selected && setDeleteIds([selected.id])}
+        onLinkFrom={() => {
+          if (!selected) return;
+          setSelectedId(null);
+          startFrom({ id: selected.id, label: selected.label, amount: selected.amount });
+        }}
       />
 
       {selectionBar}

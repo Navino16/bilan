@@ -807,7 +807,9 @@
       "hiddenMembers": "{count, plural, one {+ # transaction sur un compte que vous ne voyez pas} other {+ # transactions sur des comptes que vous ne voyez pas}}",
       "unlinkFailed": "Impossible de délier. Réessayez.",
       "unlinkGone": "Cette liaison n’existe plus.",
-      "unlinkNeedsWrite": "Délier demande un accès en écriture à chaque compte de la liaison."
+      "unlinkNeedsWrite": "Délier demande un accès en écriture à chaque compte de la liaison.",
+      "field": "Lien",
+      "startFrom": "Lier à d’autres transactions"
     },
     "suggestions": {
       "title": "Suggestions de liens",
@@ -848,7 +850,8 @@
       "mode": "Sélectionner",
       "exit": "Quitter la sélection",
       "selected": "{count, plural, =0 {Aucune sélection} one {# sélectionnée} other {# sélectionnées}}",
-      "hint": "Lier ou supprimer plusieurs transactions."
+      "hint": "Lier ou supprimer plusieurs transactions.",
+      "with": "Avec : {label}"
     },
     "delete": {
       "action": "Supprimer",

@@ -191,7 +191,7 @@ Si vous laissez la catégorie vide, vos [règles](#règles) essaient d’en trou
 
 ### Sélectionner plusieurs transactions
 
-1. Cliquez sur **Sélectionner** au-dessus de la liste (sur téléphone, c’est un interrupteur dans **Filtres**).
+1. Cliquez sur **Sélectionner** au-dessus de la liste (sur téléphone, l’interrupteur dans **Filtres** marche aussi).
 2. Cochez les transactions. Celles des comptes que vous pouvez seulement consulter ne sont pas sélectionnables.
 3. Cliquez sur **Lier** (2 transactions ou plus) ou **Supprimer** dans la barre qui apparaît.
 
@@ -378,7 +378,7 @@ Les transactions liées restent dans la liste avec l’étiquette **Liée**.
 ![Suggestions de liens](images/fr/suggestions.png)
 
 - **Depuis les suggestions** : sur **Transactions**, cliquez sur **Suggestions**. Bilan propose des paires de même montant et de sens opposé, à 30 jours d’écart au plus. Cliquez sur **Lier** pour accepter une paire ou **Ignorer** pour l’écarter. Les paires ignorées sont listées plus bas, et **Restaurer** permet de les suggérer de nouveau. **Réglages** modifie, pour vous seul, l’**Écart maximal (jours)** entre les deux opérations (0 pour le même jour, jusqu’à 365) et le **Montant minimum** en dessous duquel aucune paire n’est suggérée.
-- **À la main** : [sélectionnez](#sélectionner-plusieurs-transactions) deux transactions ou plus et cliquez sur **Lier**.
+- **À la main** : [sélectionnez](#sélectionner-plusieurs-transactions) deux transactions ou plus et cliquez sur **Lier**. Vous pouvez aussi ouvrir une transaction et cliquer sur **Lier à d’autres transactions** : elle est sélectionnée, et le reste pendant que vous cherchez ou filtrez les autres (la barre de sélection la rappelle).
 
 Rien n’est lié automatiquement. Il faut un accès en écriture à chaque compte concerné.
 

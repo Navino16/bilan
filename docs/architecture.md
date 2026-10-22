@@ -1032,7 +1032,7 @@ The budget detail lists the latest 100 counted transactions in full to everyone 
 
 **Manual mode**:
 1. `/transactions`: selection mode (local state, also used for bulk delete).
-2. Click transactions to select (2+; none already in a link).
+2. Click transactions to select (2+; none already in a link). Picks survive filter changes, but only visible ones are acted on, except the transaction a selection was started from (detail panel "Link to other transactions"), which stays included and is named in the selection bar while hidden.
 3. Confirm: `createLinkAction` → `links.createLink({ transactionIds, userId })` → requires WRITE on every account involved → creates `TransactionLink` + `TransactionLinkMember[]` (audit `link.created`). Unlinking (`deleteLink`) also needs WRITE on every member's account.
 
 **Auto suggestions**: `links.suggestPairs(userId)`:

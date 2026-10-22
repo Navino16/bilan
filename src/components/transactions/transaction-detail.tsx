@@ -19,7 +19,7 @@ import { Pill, overline } from "./bits";
 import { TransactionEditForm } from "./transaction-edit-form";
 import { useLinkErrorMessage } from "./link-error";
 import { NativeSelect } from "@/components/ui/native-select";
-import { Pencil, Trash2, Unlink } from "lucide-react";
+import { Link2, Pencil, Trash2, Unlink } from "lucide-react";
 import { formatPeriodLabel } from "@/lib/period";
 import { formatDate, formatLongDay } from "@/lib/format";
 import { editScope } from "@/lib/transaction-edit";
@@ -70,6 +70,7 @@ export function TransactionDetail({
   onClose,
   onRecategorize,
   onDelete,
+  onLinkFrom,
 }: {
   item: DetailItem | null;
   accounts: Record<string, AccountMeta>;
@@ -84,6 +85,7 @@ export function TransactionDetail({
   onClose: () => void;
   onRecategorize: (categoryId: string) => void;
   onDelete: () => void;
+  onLinkFrom?: () => void;
 }) {
   const t = useTranslations("transactions");
   const tBudgets = useTranslations("budgets");
@@ -327,6 +329,14 @@ export function TransactionDetail({
                   </div>
                 </Field>
 
+                {!item.linked && acc?.writable && onLinkFrom && (
+                  <Field label={tLink("field")}>
+                    <Button type="button" variant="outline" className="w-full" onClick={onLinkFrom}>
+                      <Link2 />
+                      {tLink("startFrom")}
+                    </Button>
+                  </Field>
+                )}
                 {linkSummary && (
                   <Field label={tLink("linkedTo")}>
                     <div data-slot="link-summary" className="space-y-2">
