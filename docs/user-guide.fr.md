@@ -246,7 +246,7 @@ Déposez ensuite le fichier sur la page **Importer** comme un CSV. Bilan lit l�
 
 - **Libellé** : le nom de l’opération donné par la banque. S’il est vide, Bilan prend le mémo, et pour un chèque sans nom, **CHEQUE** suivi de son numéro. Quand un nom et un mémo différent existent, le mémo va dans la **note** de la transaction.
 - **Type** (carte, virement, prélèvement, chèque…) : Bilan le lit d’abord dans le libellé, puis dans le type donné par la banque.
-- **Plusieurs comptes dans un fichier** : chaque relevé est listé avec son type de compte et les 4 derniers chiffres de son numéro (par exemple **Compte courant ••1234**). Choisissez un **Compte de destination** pour chacun, ou **Ne pas importer** pour l’ignorer, comme pour un PDF Revolut.
+- **Plusieurs comptes dans un fichier** : chaque relevé est listé avec son type de compte et les 4 derniers caractères de son numéro (par exemple **Compte courant ••1234**). Choisissez un **Compte de destination** pour chacun, ou **Ne pas importer** pour l’ignorer, comme pour un PDF Revolut.
 - **Doublons** : les doublons certains et probables fonctionnent comme pour les CSV. C’est ce qui permet d’importer sans risque des exports réguliers qui se chevauchent, ou un OFX qui chevauche un relevé PDF du même compte : ce qui existe déjà est ignoré, et une quasi-correspondance est laissée à votre relecture.
 - **Lignes illisibles** : les transactions dont la date ou le montant n’est pas lisible sont ignorées et listées, comme pour les CSV.
 

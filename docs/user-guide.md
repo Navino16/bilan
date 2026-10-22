@@ -246,7 +246,7 @@ Then drop the file on the **Import** page like a CSV. Bilan reads both the old O
 
 - **Label**: the bank's name for the operation. When it is empty, Bilan uses the memo, and for a cheque without a name, **CHEQUE** followed by its number. When both a name and a different memo exist, the memo goes into the transaction's **note**.
 - **Type** (card, transfer, direct debit, cheque...): Bilan reads it from the label first, then from the type the bank gives.
-- **Several accounts in one file**: each statement is listed with its account type and the last 4 digits of its account number (for example **Current account ••1234**). Pick a **Target account** for each one, or **Don't import** to skip it, as for a Revolut PDF.
+- **Several accounts in one file**: each statement is listed with its account type and the last 4 characters of its account number (for example **Current account ••1234**). Pick a **Target account** for each one, or **Don't import** to skip it, as for a Revolut PDF.
 - **Duplicates**: certain and probable duplicates work as for CSV files. This is what makes regular exports that overlap each other, or an OFX that overlaps a PDF statement of the same account, safe to import: what is already there is skipped, and a near match is left for you to review.
 - **Unreadable rows**: transactions with an unreadable date or amount are skipped and listed, as for CSV files.
 
