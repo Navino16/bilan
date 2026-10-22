@@ -20,7 +20,7 @@ type OfxMetaRow = {
   date: string;
   amount: number;
   rawLabel: string;
-  type: TransactionInput["type"];
+  type?: TransactionInput["type"];
   note?: string;
 };
 type OfxMetaProduct = Pick<OfxStatement, "key" | "kind" | "accountType" | "accountLast4"> & {
@@ -71,7 +71,7 @@ export async function createOfxBatch(
       date: r.date.toISOString(),
       amount: r.amount,
       rawLabel: r.rawLabel,
-      type: r.type ?? "OTHER",
+      type: r.type,
       ...(r.note ? { note: r.note } : {}),
     })),
     ledger: s.ledger ? { amount: s.ledger.amount, asOf: s.ledger.asOf.toISOString() } : null,
@@ -295,10 +295,10 @@ export async function commitOfxBatch(
   const summary = await withCommitClaim(batch.id, async () => {
     const totals: InsertTotals = { imported: 0, skipped: 0, total: 0, hitRuleIds: [] };
     const accountIds: string[] = [];
-    const balanceAdjustments: BalanceAdjustment[] = [];
+    const toAdjust: { product: OfxMetaProduct; rows: NormalizedRow[]; accountId: string }[] = [];
     for (const product of products) {
       const accountId = mapping[product.key];
-      if (!accountId) continue; // ignored
+      if (!accountId) continue;
       await assertImportTarget(actor.id, accountId);
       const rows = toRows(product);
       const r = await insertRows(
@@ -312,10 +312,15 @@ export async function commitOfxBatch(
       totals.total += r.total;
       totals.hitRuleIds.push(...r.hitRuleIds);
       if (!accountIds.includes(accountId)) accountIds.push(accountId);
-      if (adjust.has(product.key) && !balanceAdjustments.some((a) => a.accountId === accountId)) {
-        const adjustment = await openingAdjustment(product, rows, accountId, actor.id);
-        if (adjustment) balanceAdjustments.push(adjustment);
+      if (adjust.has(product.key) && !toAdjust.some((a) => a.accountId === accountId)) {
+        toAdjust.push({ product, rows, accountId });
       }
+    }
+    // Second pass: sibling products mapped to the same account must be inserted first.
+    const balanceAdjustments: BalanceAdjustment[] = [];
+    for (const { product, rows, accountId } of toAdjust) {
+      const adjustment = await openingAdjustment(product, rows, accountId, actor.id);
+      if (adjustment) balanceAdjustments.push(adjustment);
     }
     return finalizeBatch(batch.id, totals, actor, accountIds, { balanceAdjustments });
   });
