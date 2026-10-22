@@ -36,7 +36,8 @@ export type ResolvedCsvMapping = CsvMapping & { decimal: DecimalMark };
 
 // Enriched row shown in the import preview (date serialized to ISO over the wire).
 // `externalId` is the stable dedup key; the client uses it to key per-row edits
-// (category override / exclusion) sent back at commit.
+// (category override / exclusion) sent back at commit. `probableOf` is the label of the
+// existing transaction this row probably duplicates (same day + amount, no key match).
 export type PreviewRow = {
   externalId: string;
   date: string;
@@ -45,6 +46,7 @@ export type PreviewRow = {
   type: TxType;
   suggestedCategoryId: string | null;
   isDuplicate: boolean;
+  probableOf: string | null;
 };
 
 export type ImportPreview = {

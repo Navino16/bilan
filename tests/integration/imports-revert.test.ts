@@ -12,6 +12,7 @@ import {
 } from "@/server/services/imports/revert";
 import { createLink } from "@/server/services/links";
 import { createTransaction } from "@/server/services/transactions";
+import { computeExternalIds } from "@/server/services/transactions/secure-fields";
 
 const owner = "rev_owner";
 const other = "rev_other";
@@ -42,9 +43,8 @@ async function committedBatch(
       { batchId: batch.id, accountId: t.accountId },
       rows,
       { id: actor },
-      {
-        autoCategorize: false,
-      },
+      // Batches reuse the same days and amounts: tick them all so none is held as a probable duplicate.
+      { autoCategorize: false, includedProbableIds: computeExternalIds(rows) },
     );
     totals.imported += r.imported;
     totals.total += r.total;
