@@ -353,6 +353,10 @@ export function ImportWizard({
   function onProductAccountChange(productKey: string, account: string) {
     const next = { ...productAccount, [productKey]: account };
     setProductAccount(next);
+    // A tick means "import anyway" against the previous account's transaction.
+    setIncludedProbable((m) =>
+      Object.fromEntries(Object.entries(m).filter(([, k]) => k !== productKey)),
+    );
     const pages = Object.fromEntries(products.map((p) => [p.key, p.page]));
     void refresh(pdfBody(pages, next));
   }

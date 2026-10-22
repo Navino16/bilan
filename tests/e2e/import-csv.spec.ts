@@ -300,13 +300,11 @@ bad;LIGNE ${stamp};1,00;;B`;
     const filtered = page.waitForResponse((r) => r.url().endsWith("/preview"), {
       timeout: 30_000,
     });
-    await expect(async () => {
-      await probable
-        .getByRole("button", { name: "Afficher uniquement les doublons probables" })
-        .click({ timeout: 2_000 });
-      await expect(rows).toHaveCount(1, { timeout: 2_000 });
-    }).toPass({ timeout: 20_000 });
+    await probable
+      .getByRole("button", { name: "Afficher uniquement les doublons probables" })
+      .click();
     expect((await filtered).request().postDataJSON().probableOnly).toBe(true);
+    await expect(rows).toHaveCount(1);
     await box(`CB SHOP TWO ${stamp}`).check();
     await probable.getByRole("button", { name: "Afficher toutes les lignes" }).click();
     await expect(rows).toHaveCount(3);
