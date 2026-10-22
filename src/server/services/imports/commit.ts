@@ -101,7 +101,13 @@ export async function insertRows(
   // stall every other request (#301).
   const secures = (
     await mapInSlices(kept, (slice) =>
-      slice.map((i) => buildSecureFields({ label: rows[i].rawLabel, rawLabel: rows[i].rawLabel })),
+      slice.map((i) =>
+        buildSecureFields({
+          label: rows[i].rawLabel,
+          rawLabel: rows[i].rawLabel,
+          note: rows[i].note,
+        }),
+      ),
     )
   ).flat();
 
@@ -126,7 +132,7 @@ export async function insertRows(
       rawLabelEnc: secure.rawLabelEnc,
       rawLabelHash: secure.rawLabelHash,
       merchantKeyHash: secure.merchantKeyHash,
-      noteEnc: null,
+      noteEnc: secure.noteEnc,
       categoryId: override || suggestion?.categoryId || null,
       manuallyCategorized: override !== undefined,
       externalId,
