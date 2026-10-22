@@ -20,6 +20,7 @@ import {
   PDF_MAX_BYTES,
   type DateOrder,
   type DecimalMark,
+  type PreviewFilter,
 } from "@/lib/validation/import";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import { TransactionForm } from "@/components/transactions/transaction-form";
@@ -53,6 +54,7 @@ type Product = {
   probableCount: number;
   viewRows: number;
   autoCategorizedCount: number;
+  uncategorizedCount: number;
   preview: PreviewRow[];
   page: number;
   pageSize: number;
@@ -75,6 +77,7 @@ type Preview = {
   probableCount?: number;
   viewRows?: number;
   autoCategorizedCount?: number;
+  uncategorizedCount?: number;
   rejectedCount?: number;
   rejected?: { row: number; reason: string; value: string }[];
   decimalGuessed?: boolean;
@@ -170,7 +173,7 @@ export function ImportWizard({
   const [includedProbable, setIncludedProbable] = useState<Record<string, RowEdit>>({});
   // OFX products whose opening balance the commit should adjust.
   const [adjustBalance, setAdjustBalance] = useState<string[]>([]);
-  const [probableOnly, setProbableOnly] = useState(false);
+  const [filter, setFilter] = useState<PreviewFilter>("all");
   // Bumped when per-row edits reset, to remount the (uncontrolled) row category pickers.
   const [editsEpoch, setEditsEpoch] = useState(0);
   const [autoCategorize, setAutoCategorize] = useState(true);
@@ -227,7 +230,7 @@ export function ImportWizard({
       setExcluded({});
       setIncludedProbable({});
       setAdjustBalance([]);
-      setProbableOnly(false);
+      setFilter("all");
       setSettingsOpen(false);
       setColumns(columnsOf(data.mapping));
       setDecimalChoice(null);
@@ -243,13 +246,13 @@ export function ImportWizard({
 
   // Re-fetches the preview (another page, or a CSV mapping edit). Only the latest
   // request may land, so quick successive clicks can't show a stale page.
-  // The current probable-only filter carries over unless the body sets it.
+  // The current filter carries over unless the body sets it.
   async function refresh(
-    body: { probableOnly?: boolean } & Record<string, unknown>,
+    body: { filter?: PreviewFilter } & Record<string, unknown>,
     opts: { resetEdits?: boolean; mapping?: boolean; onFail?: () => void } = {},
   ) {
     if (!preview) return;
-    const sent = { probableOnly, ...body };
+    const sent = { filter, ...body };
     const url = `${apiBase(preview.source)}/${preview.batchId}/preview`;
     const seq = ++refreshSeq.current;
     setRefreshing(true);
@@ -265,7 +268,7 @@ export function ImportWizard({
       setError(null);
       setMappingError(null);
       setPreview(data);
-      setProbableOnly(sent.probableOnly);
+      setFilter(sent.filter);
       if (opts.resetEdits) {
         setOverrides({});
         setExcluded({});
@@ -354,17 +357,16 @@ export function ImportWizard({
     previewTop.current?.scrollIntoView({ block: "start" });
   }
 
-  async function toggleProbableOnly() {
+  async function changeFilter(next: PreviewFilter) {
     if (!preview) return;
-    const next = !probableOnly;
     await refresh(
       preview.source === "CSV"
         ? {
             mapping: csvMappingBody(columns, decimalChoice, dateOrderChoice),
             page: 0,
-            probableOnly: next,
+            filter: next,
           }
-        : { ...pdfBody({}, productAccount), probableOnly: next },
+        : { ...pdfBody({}, productAccount), filter: next },
     );
     previewTop.current?.scrollIntoView({ block: "start" });
   }
@@ -404,7 +406,7 @@ export function ImportWizard({
     setExcluded({});
     setIncludedProbable({});
     setAdjustBalance([]);
-    setProbableOnly(false);
+    setFilter("all");
     setError(null);
     setMappingError(null);
     setSummary(null);
@@ -484,6 +486,7 @@ export function ImportWizard({
             probableCount: preview.probableCount ?? 0,
             viewRows: preview.viewRows ?? 0,
             autoCategorizedCount: preview.autoCategorizedCount ?? 0,
+            uncategorizedCount: preview.uncategorizedCount ?? 0,
             preview: preview.preview ?? [],
             page: preview.page ?? 0,
             pageSize: preview.pageSize ?? 50,
@@ -495,6 +498,15 @@ export function ImportWizard({
   const dupCount = products.reduce((n, p) => n + p.duplicateCount, 0);
   const catCount = products.reduce((n, p) => n + p.autoCategorizedCount, 0);
   const probableTotal = products.reduce((n, p) => n + p.probableCount, 0);
+  const uncategorizedTotal = products.reduce((n, p) => n + p.uncategorizedCount, 0);
+  // Without auto-categorization every row is uncategorized, so that filter is moot.
+  const filters: { id: PreviewFilter; count: number }[] = [
+    { id: "all", count: total },
+    ...(autoCategorize ? [{ id: "uncategorized" as const, count: uncategorizedTotal }] : []),
+    ...(probableTotal > 0 || filter === "probable"
+      ? [{ id: "probable" as const, count: probableTotal }]
+      : []),
+  ];
   const countIn = (edits: Record<string, RowEdit>, key: string) =>
     Object.values(edits).filter((e) => e.product === key).length;
   // Rows a commit would write: duplicates are always skipped, and so are unticked
@@ -1010,7 +1022,10 @@ export function ImportWizard({
                 <CheckRow
                   label={t("optCategorize")}
                   checked={autoCategorize}
-                  onChange={setAutoCategorize}
+                  onChange={(on) => {
+                    setAutoCategorize(on);
+                    if (!on && filter === "uncategorized") void changeFilter("all");
+                  }}
                 />
                 <p className="text-muted-foreground py-1.5 text-xs leading-snug">
                   {t("duplicatesNote")}
@@ -1033,25 +1048,28 @@ export function ImportWizard({
                     ? t("previewMeta", { dup: dupCount, cat: catCount })
                     : t("previewMetaNoCat", { dup: dupCount })}
                 </div>
-                {(probableTotal > 0 || probableOnly) && (
-                  <div className="mt-2 space-y-2" data-slot="import-probable">
-                    <p
-                      role="status"
-                      className="text-xs font-medium"
-                      style={{ color: "var(--warning-text)" }}
-                    >
-                      {t("probable.count", { count: probableTotal })}
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="max-md:h-10"
-                      disabled={busy}
-                      onClick={() => void toggleProbableOnly()}
-                    >
-                      {probableOnly ? t("probable.showAll") : t("probable.showOnly")}
-                    </Button>
-                  </div>
+                {probableTotal > 0 && (
+                  <p
+                    role="status"
+                    data-slot="import-probable"
+                    className="mt-2 text-xs font-medium"
+                    style={{ color: "var(--warning-text)" }}
+                  >
+                    {t("probable.count", { count: probableTotal })}
+                  </p>
+                )}
+                {filters.length > 1 && (
+                  <SegmentedTabs<PreviewFilter>
+                    aria-label={t("filter.label")}
+                    items={filters.map((f) => ({
+                      id: f.id,
+                      label: t(`filter.${f.id}`, { count: formatCount(f.count, locale) }),
+                    }))}
+                    value={filter}
+                    onChange={(f) => void changeFilter(f)}
+                    disabled={busy}
+                    className="mt-2 max-w-full overflow-x-auto"
+                  />
                 )}
                 {preview.source === "CSV" && preview.decimalGuessed && guessedMark && (
                   <div className="mt-2 space-y-2" data-slot="import-decimal-guessed">

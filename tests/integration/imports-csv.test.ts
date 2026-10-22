@@ -136,7 +136,7 @@ describe("CSV import pipeline", () => {
     expect(preview.preview[0].probableOf).toBe("CB SHOP ONE");
 
     const only = await previewCsvBatch(batch.id, owner, preview.mapping, 0, {
-      probableOnly: true,
+      filter: "probable",
     });
     expect(only.viewRows).toBe(1);
     expect(only.totalRows).toBe(2);

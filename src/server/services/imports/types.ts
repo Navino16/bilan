@@ -60,8 +60,9 @@ export type ImportPreview = {
   totalRows: number;
   duplicateCount: number;
   probableCount: number;
-  viewRows: number; // rows the pages walk: the whole file, or only the probable ones
+  viewRows: number; // rows the pages walk: the whole file, or the ones the filter keeps
   autoCategorizedCount: number;
+  uncategorizedCount: number;
   rejectedCount: number; // rows of the file that couldn't be read with this mapping
   rejected: RejectedRow[]; // a few examples
   decimalGuessed: boolean; // no amount settled mapping.decimal: it came from a fallback

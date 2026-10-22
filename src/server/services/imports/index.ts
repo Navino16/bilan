@@ -8,6 +8,7 @@ import {
   csvMappingSchema,
   type CsvMappingInput,
 } from "@/lib/schemas/import";
+import type { PreviewFilter } from "@/lib/validation/import";
 import {
   parseCsv,
   detectMapping,
@@ -82,7 +83,7 @@ export async function previewCsvBatch(
   userId: string,
   mapping?: CsvMappingInput,
   page = 0,
-  opts: { probableOnly?: boolean } = {},
+  opts: { filter?: PreviewFilter } = {},
 ): Promise<ImportPreview> {
   const batch = await loadBatch(batchId, userId);
   if (batch.source !== "CSV" || (batch.status !== "PARSING" && batch.status !== "REVIEW")) {
@@ -128,6 +129,7 @@ export async function previewCsvBatch(
     probableCount: p.probableCount,
     viewRows: p.viewRows,
     autoCategorizedCount: p.autoCategorizedCount,
+    uncategorizedCount: p.uncategorizedCount,
     rejectedCount: rejected.length,
     rejected: rejected.slice(0, REJECTED_SHOWN),
     decimalGuessed: detected.guessed,

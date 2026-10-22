@@ -908,9 +908,13 @@
     "probableOf": "Already in the account: {label}",
     "probableInclude": "Import anyway",
     "probable": {
-      "count": "{count, plural, one {# probable duplicate to review} other {# probable duplicates to review}}",
-      "showOnly": "Show probable duplicates only",
-      "showAll": "Show all rows"
+      "count": "{count, plural, one {# probable duplicate to review} other {# probable duplicates to review}}"
+    },
+    "filter": {
+      "label": "Filter the preview",
+      "all": "All ({count})",
+      "uncategorized": "Uncategorized ({count})",
+      "probable": "Probable duplicates ({count})"
     },
     "noCategory": "Uncategorized",
     "colRawLabel": "Raw label",

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { getCurrentUser } from "@/server/auth/permissions";
+import { PREVIEW_FILTERS } from "@/lib/validation/import";
 import { previewPdfBatch } from "@/server/services/imports/pdf-service";
 import { importErrorResponse } from "@/server/transport/http/import-errors";
 
@@ -8,7 +9,7 @@ export const runtime = "nodejs";
 const bodySchema = z.object({
   pages: z.record(z.string(), z.number().int().min(0)).default({}),
   accounts: z.record(z.string(), z.string()).default({}),
-  probableOnly: z.boolean().default(false),
+  filter: z.enum(PREVIEW_FILTERS).default("all"),
 });
 
 export async function POST(

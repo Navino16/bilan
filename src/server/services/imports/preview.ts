@@ -4,6 +4,7 @@ import { suggestMany } from "@/server/services/categorization";
 import { deriveType } from "./derive-type";
 import { findProbableDuplicates } from "./probable";
 import type { NormalizedRow, PreviewRow } from "./types";
+import type { PreviewFilter } from "@/lib/validation/import";
 
 export const PREVIEW_PAGE_SIZE = 50;
 
@@ -11,10 +12,11 @@ export type PreviewResult = {
   rows: PreviewRow[]; // one page of enriched rows
   page: number;
   totalRows: number;
-  viewRows: number; // rows the pages walk: the whole file, or the probable ones with probableOnly
+  viewRows: number; // rows the pages walk: the whole file, or the ones `filter` keeps
   duplicateCount: number; // over ALL rows: already present in the destination account
   probableCount: number; // over ALL rows: see findProbableDuplicates
   autoCategorizedCount: number; // over ALL rows: a rule matched
+  uncategorizedCount: number; // over ALL rows: no rule matched and not already imported
 };
 
 // Enriches parsed rows for the import preview against a destination account:
@@ -26,7 +28,7 @@ export async function buildPreview(
   rows: NormalizedRow[],
   userId: string,
   page = 0,
-  opts: { probableOnly?: boolean } = {},
+  opts: { filter?: PreviewFilter } = {},
 ): Promise<PreviewResult> {
   const externalIds = computeExternalIds(rows);
   const existing = externalIds.length
@@ -46,12 +48,20 @@ export async function buildPreview(
 
   let duplicateCount = 0;
   let autoCategorizedCount = 0;
+  const uncategorized: number[] = [];
   for (let i = 0; i < rows.length; i++) {
-    if (dupSet.has(externalIds[i])) duplicateCount++;
+    const duplicate = dupSet.has(externalIds[i]);
+    if (duplicate) duplicateCount++;
     if (suggestions[i].categoryId) autoCategorizedCount++;
+    else if (!duplicate) uncategorized.push(i);
   }
 
-  const view = opts.probableOnly ? [...probable.keys()] : null;
+  const view =
+    opts.filter === "probable"
+      ? [...probable.keys()]
+      : opts.filter === "uncategorized"
+        ? uncategorized
+        : null;
   const viewRows = view ? view.length : rows.length;
   const lastPage = Math.max(0, Math.ceil(viewRows / PREVIEW_PAGE_SIZE) - 1);
   const current = Math.min(Math.max(0, Math.trunc(page) || 0), lastPage);
@@ -81,5 +91,6 @@ export async function buildPreview(
     duplicateCount,
     probableCount: probable.size,
     autoCategorizedCount,
+    uncategorizedCount: uncategorized.length,
   };
 }
