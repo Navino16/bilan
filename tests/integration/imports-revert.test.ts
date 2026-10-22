@@ -494,4 +494,44 @@ describe("opening balance on revert", () => {
       1,
     );
   });
+
+  it("reverts when an adjusted secondary account was deleted since the import", async () => {
+    const gone = await db.bankAccount.create({
+      data: { ownerId: owner, name: "Gone", type: "SAVINGS" },
+    });
+    await db.bankAccount.update({ where: { id: accC }, data: { initialBalance: "1234.56" } });
+    const batch = await db.importBatch.create({
+      data: {
+        accountId: accC,
+        source: "OFX",
+        status: "COMPLETED",
+        createdById: owner,
+        completedAt: new Date(),
+        metadata: {
+          fileSizeBytes: 1,
+          accountIds: [accC, gone.id],
+          balanceAdjustments: [
+            { accountId: accC, previous: 100, set: 1234.56 },
+            { accountId: gone.id, previous: 0, set: 50 },
+          ],
+        },
+      },
+    });
+    await insertRows(
+      { batchId: batch.id, accountId: accC },
+      [{ date: d(20), amount: -4, rawLabel: "KEPT ROW" }],
+      { id: owner },
+      { autoCategorize: false },
+    );
+    await db.bankAccount.delete({ where: { id: gone.id } });
+
+    const impact = await getRevertImpact(owner, batch.id);
+    expect(impact.balances.map((b) => b.accountName)).toEqual(["C"]);
+    expect(await revertImport(owner, batch.id)).toMatchObject({
+      deleted: 1,
+      balancesRestored: 1,
+      balancesKept: 0,
+    });
+    expect(await balanceOfC()).toBe("100");
+  });
 });

@@ -985,7 +985,7 @@
       "budgeted": "{count, plural, one {# est affectée à un budget} other {# sont affectées à un budget}}",
       "edited": "{count, plural, one {# a été modifiée depuis l’import} other {# ont été modifiées depuis l’import}}",
       "balanceRestore": "Le solde initial de {account} reviendra à {amount}.",
-      "balanceKept": "Le solde initial de {account} a été modifié depuis l'import : il restera inchangé.",
+      "balanceKept": "Le solde initial de {account} a été modifié depuis l’import : il restera inchangé.",
       "irreversible": "Cette action est définitive.",
       "keep": "Garder",
       "confirm": "Supprimer les transactions",

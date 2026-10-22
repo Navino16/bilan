@@ -39,22 +39,28 @@ async function loadRevertable(actorId: string, batchId: string) {
     select: { accountId: true },
     distinct: ["accountId"],
   });
+  // An adjusted account deleted since the import has nothing left to restore or to check.
+  const adjusted = await db.bankAccount.findMany({
+    where: { id: { in: adjustmentsOf(batch.metadata).map((a) => a.accountId) } },
+    select: { id: true, name: true, initialBalance: true },
+  });
   const accountIds = [
-    ...new Set([
-      batch.accountId,
-      ...rows.map((r) => r.accountId),
-      ...adjustmentsOf(batch.metadata).map((a) => a.accountId),
-    ]),
+    ...new Set([batch.accountId, ...rows.map((r) => r.accountId), ...adjusted.map((a) => a.id)]),
   ];
   for (const id of accountIds) {
     if (!(await canWriteAccount(actorId, id))) throw new ImportAccessError("FORBIDDEN");
   }
   if (!canRevert(batch.status)) throw new ImportAccessError("NOT_REVERTIBLE");
-  return batch;
+  const byId = new Map(adjusted.map((a) => [a.id, a]));
+  const adjustments = adjustmentsOf(batch.metadata).flatMap((a) => {
+    const account = byId.get(a.accountId);
+    return account ? [{ ...a, account }] : [];
+  });
+  return { batch, adjustments };
 }
 
 export async function getRevertImpact(actorId: string, batchId: string): Promise<RevertImpact> {
-  const batch = await loadRevertable(actorId, batchId);
+  const { batch, adjustments } = await loadRevertable(actorId, batchId);
   const where = { importBatchId: batchId };
   const [transactions, linked, budgeted, edited] = await Promise.all([
     db.transaction.count({ where }),
@@ -64,24 +70,12 @@ export async function getRevertImpact(actorId: string, batchId: string): Promise
       where: { ...where, updatedAt: { gt: batch.completedAt ?? batch.createdAt } },
     }),
   ]);
-  const adjustments = adjustmentsOf(batch.metadata);
-  const accounts = await db.bankAccount.findMany({
-    where: { id: { in: adjustments.map((a) => a.accountId) } },
-    select: { id: true, name: true, initialBalance: true },
-  });
-  const byId = new Map(accounts.map((a) => [a.id, a]));
-  const balances = adjustments.flatMap((a) => {
-    const account = byId.get(a.accountId);
-    if (!account) return [];
-    return [
-      {
-        accountName: account.name,
-        previous: a.previous,
-        set: a.set,
-        restore: account.initialBalance.equals(cents(a.set)),
-      },
-    ];
-  });
+  const balances = adjustments.map((a) => ({
+    accountName: a.account.name,
+    previous: a.previous,
+    set: a.set,
+    restore: a.account.initialBalance.equals(cents(a.set)),
+  }));
   return { transactions, linked, budgeted, edited, balances };
 }
 
@@ -94,7 +88,7 @@ export async function revertImport(
   balancesRestored: number;
   balancesKept: number;
 }> {
-  const batch = await loadRevertable(actorId, batchId);
+  const { batch, adjustments } = await loadRevertable(actorId, batchId);
   const accountIds = (batch.metadata as { accountIds?: string[] } | null)?.accountIds ?? [
     batch.accountId,
   ];
@@ -121,8 +115,8 @@ export async function revertImport(
     const linksDissolved = await dissolveUndersizedLinks(tx, linkIds);
 
     // Conditional on the value the import set: a hand edit since then wins.
-    const restored: BalanceAdjustment[] = [];
-    for (const a of adjustmentsOf(batch.metadata)) {
+    const restored: typeof adjustments = [];
+    for (const a of adjustments) {
       const { count } = await tx.bankAccount.updateMany({
         where: { id: a.accountId, initialBalance: cents(a.set) },
         data: { initialBalance: cents(a.previous) },
@@ -133,7 +127,7 @@ export async function revertImport(
       deleted,
       linksDissolved,
       restored,
-      kept: adjustmentsOf(batch.metadata).length - restored.length,
+      kept: adjustments.length - restored.length,
     };
   }, LONG_TX_TIMEOUT);
   const { restored, kept, ...counts } = result;

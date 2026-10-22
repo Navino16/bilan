@@ -76,8 +76,8 @@ export function RevertImportDialog({
         </DialogHeader>
         {impact && impact.balances.length > 0 && (
           <ul className="space-y-1.5 text-sm">
-            {impact.balances.map((b) => (
-              <li key={b.accountName}>
+            {impact.balances.map((b, i) => (
+              <li key={i}>
                 {b.restore
                   ? t("balanceRestore", {
                       account: b.accountName,
