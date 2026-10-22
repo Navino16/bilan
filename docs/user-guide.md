@@ -201,7 +201,7 @@ Before deleting, Bilan lists the side effects: links that will be dissolved and 
 
 ![Import page](images/en/import.png)
 
-Bilan imports CSV files (up to 5 MB) and PDF statements (up to 10 MB) exported from your bank.
+Bilan imports CSV files (up to 5 MB), PDF statements (up to 10 MB) and OFX files (up to 5 MB) exported from your bank. OFX is the most reliable of the three: it is a structured format, so there is no column to map and no decimal mark or date order to guess.
 
 ### Import a CSV file
 
@@ -238,6 +238,35 @@ A Revolut statement can contain several sections (current account, deposit). Eac
 
 There is no decimal mark or date order to set for PDFs. Duplicates (certain and probable), categories and the preview work as for CSV files.
 
+### Import an OFX file
+
+Most banks let you download your history as an **OFX** file (sometimes called "Money" or "Microsoft Money"), next to the CSV and PDF options. Look for it in the export or download menu of your account history, choose a period (a long one the first time, for instance two years), and pick the OFX format.
+
+Then drop the file on the **Import** page like a CSV. Bilan reads both the old OFX 1.x and the newer 2.x formats, in UTF-8 or Windows-1252.
+
+- **Label**: the bank's name for the operation. When it is empty, Bilan uses the memo, and for a cheque without a name, **CHEQUE** followed by its number. When both a name and a different memo exist, the memo goes into the transaction's **note**.
+- **Type** (card, transfer, direct debit, cheque...): Bilan reads it from the label first, then from the type the bank gives.
+- **Several accounts in one file**: each statement is listed with its account type and the last 4 digits of its account number (for example **Current account ••1234**). Pick a **Target account** for each one, or **Don't import** to skip it, as for a Revolut PDF.
+- **Duplicates**: certain and probable duplicates work as for CSV files. This is what makes regular exports that overlap each other, or an OFX that overlaps a PDF statement of the same account, safe to import: what is already there is skipped, and a near match is left for you to review.
+- **Unreadable rows**: transactions with an unreadable date or amount are skipped and listed, as for CSV files.
+
+#### Check the balance
+
+When the file gives the bank's balance (most bank statements do, credit-card statements don't), the preview shows a **balance check**:
+
+- **Bank balance on** *date*: the balance the bank reports at the end of the file.
+- **Balance after import**: what Bilan would show for the account at that date: the opening balance, plus the account's transactions, plus the rows that will be imported.
+- **Gap**, or **Balances match**.
+
+The balance after import follows your changes: unticking a row, or ticking a probable duplicate, updates the gap on the spot. A gap usually means operations are missing from the account, or that the account's opening balance is wrong.
+
+#### Set the opening balance
+
+When the file starts the history of the account (the account has no transaction before the file's first day) and there is a gap, a checkbox offers to **Set the opening balance so the balance matches the bank's**. Tick it and Bilan changes the account's [opening balance](#accounts) at the same time as the import, so the balance matches the bank's. This is how you load a bank history into a new account without computing the opening balance by hand.
+
+- Only the **owner** of the account sees the checkbox, because only the owner can change the opening balance. With write access only, you see the gap but can't adjust it.
+- It isn't offered on an account that already has older transactions: there, a gap points to missing operations, and adjusting would hide them.
+
 ### Undo an import
 
 You imported the wrong file or picked the wrong account? Undo the whole import:
@@ -245,7 +274,7 @@ You imported the wrong file or picked the wrong account? Undo the whole import:
 - right after importing, click **Undo import** on the summary, or
 - later, open the **⋯** menu of the import in **Recent imports** on the **Import** page and choose **Undo import**.
 
-Bilan shows how many transactions will be deleted, and warns you if some are linked to other transactions, assigned to a budget, or were edited since the import. Click **Delete the transactions** to confirm.
+Bilan shows how many transactions will be deleted, and warns you if some are linked to other transactions, assigned to a budget, or were edited since the import. If the import adjusted an account's opening balance, the dialog says it will go back to its previous value. If you changed that opening balance yourself since, it is left as it is and the dialog tells you so. Click **Delete the transactions** to confirm.
 
 All of that import's transactions are deleted, edited ones included. The import stays in the history as **Undone**, and you can import the same file again afterwards. There is no time limit, but you need write access to every account the import went into.
 
