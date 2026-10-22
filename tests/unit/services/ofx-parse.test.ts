@@ -213,6 +213,12 @@ describe("parseOfx", () => {
     expect(() => parseOfx("Date;Libelle;Montant\n01/01/2026;X;1")).toThrow("PARSE_FAILED");
   });
 
+  it("parses unterminated tags in linear time", () => {
+    const started = performance.now();
+    expect(parseOfx("<OFX>" + "<A".repeat(200_000))).toEqual([]);
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+
   it("returns [] for an OFX without statements", () => {
     expect(parseOfx("OFXHEADER:100\n\n<OFX>\n<SIGNONMSGSRSV1>\n</SIGNONMSGSRSV1>\n</OFX>")).toEqual(
       [],
