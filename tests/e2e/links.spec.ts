@@ -7,6 +7,55 @@ test.describe("transaction links", () => {
     "Mobile click-driven link flow deferred to Phase 8.3",
   );
 
+  test("a link started from a transaction keeps it while searching its counterpart (#335)", async ({
+    page,
+  }) => {
+    const stamp = Date.now();
+    const fee = `FRAISTENUE${stamp}`;
+    const rebate = `REMISE${stamp}`;
+    for (const [label, amount] of [
+      [fee, "-6"],
+      [rebate, "2"],
+    ] as const) {
+      await page.goto(`/fr/transactions?search=${label}`);
+      await expect(async () => {
+        await page.getByRole("button", { name: /nouvelle transaction/i }).click();
+        await expect(page.locator('input[name="date"]')).toBeVisible();
+      }).toPass();
+      await page.fill('input[name="date"]', "2026-03-02");
+      await page.fill('input[name="amount"]', amount);
+      await page.fill('input[name="label"]', label);
+      await page.getByRole("button", { name: /^ajouter$/i }).click();
+      await expect(
+        page.locator('[data-slot="transaction-row"]').filter({ hasText: label }).first(),
+      ).toBeVisible({ timeout: 15_000 });
+    }
+
+    // Now on the rebate's search: look the fee up, then start the link from its detail.
+    const search = page.locator('input[type="search"]:visible');
+    await search.fill(fee);
+    const feeRow = page.locator('[data-slot="transaction-row"]').filter({ hasText: fee }).first();
+    await feeRow.click();
+    await page.getByRole("button", { name: "Lier à d’autres transactions" }).click();
+    const bar = page.locator('[data-slot="selection-bar"]');
+    await expect(bar).toContainText("1 sélectionnée");
+
+    await search.fill(rebate);
+    await expect(feeRow).toBeHidden({ timeout: 15_000 });
+    await expect(bar.locator('[data-slot="selection-anchor"]')).toContainText(fee);
+    const rebateRow = page
+      .locator('[data-slot="transaction-row"]')
+      .filter({ hasText: rebate })
+      .first();
+    await rebateRow.click();
+    await expect(bar).toContainText("2 sélectionnées");
+    await bar.getByRole("button", { name: /^lier$/i }).click();
+    await expect(bar).toBeHidden({ timeout: 15_000 });
+
+    await rebateRow.click();
+    await expect(page.locator('[data-slot="link-summary"]')).toContainText(fee);
+  });
+
   test("link two transactions via selection mode and see them badged", async ({ page }) => {
     const stamp = Date.now();
     const expense = `Achat ${stamp}`;

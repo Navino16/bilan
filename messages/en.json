@@ -807,7 +807,9 @@
       "hiddenMembers": "{count, plural, one {+ # transaction on an account you can’t see} other {+ # transactions on accounts you can’t see}}",
       "unlinkFailed": "Couldn’t unlink. Try again.",
       "unlinkGone": "This link no longer exists.",
-      "unlinkNeedsWrite": "Unlinking needs write access to every account in the link."
+      "unlinkNeedsWrite": "Unlinking needs write access to every account in the link.",
+      "field": "Link",
+      "startFrom": "Link to other transactions"
     },
     "suggestions": {
       "title": "Link suggestions",
@@ -848,7 +850,8 @@
       "mode": "Select",
       "exit": "Exit selection",
       "selected": "{count, plural, =0 {Nothing selected} one {# selected} other {# selected}}",
-      "hint": "Link or delete several transactions."
+      "hint": "Link or delete several transactions.",
+      "with": "With: {label}"
     },
     "delete": {
       "action": "Delete",

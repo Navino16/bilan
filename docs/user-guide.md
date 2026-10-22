@@ -191,7 +191,7 @@ If you leave the category empty, your [rules](#rules) try to find one from the l
 
 ### Select several transactions
 
-1. Click **Select** above the list (on a phone, it's a switch in **Filters**).
+1. Click **Select** above the list (on a phone, the switch in **Filters** works too).
 2. Tick the transactions. Those on accounts you can only read can't be selected.
 3. Click **Link** (2 or more transactions) or **Delete** in the bar that appears.
 
@@ -378,7 +378,7 @@ Linked transactions stay in the list with a **Linked** tag.
 ![Link suggestions](images/en/suggestions.png)
 
 - **From suggestions**: on **Transactions**, click **Suggestions**. Bilan suggests pairs with the same amount and opposite signs, at most 30 days apart. Click **Link** to accept a pair or **Ignore** to dismiss it. Ignored pairs are listed further down, and **Restore** makes a pair eligible again. **Settings** changes, for you only, the **Maximum gap (days)** between the two transactions (0 for the same day, up to 365) and the **Minimum amount** below which pairs aren't suggested.
-- **By hand**: [select](#select-several-transactions) two or more transactions and click **Link**.
+- **By hand**: [select](#select-several-transactions) two or more transactions and click **Link**. You can also open a transaction and click **Link to other transactions**: it is selected, and stays selected while you search or filter for the others (the selection bar names it).
 
 Nothing is linked automatically. Linking requires write access to every account involved.
 
