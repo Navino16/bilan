@@ -17,7 +17,8 @@ import {
 
 const owner = "ofx_owner";
 const writer = "ofx_writer";
-const ids = [owner, writer];
+const stranger = "ofx_stranger";
+const ids = [owner, writer, stranger];
 const GROUP = "ofx_group";
 
 type Trn = { date: string; amount: string; name: string; type?: string; memo?: string };
@@ -416,5 +417,35 @@ describe("OFX import service", () => {
     expect(product.balance).toMatchObject({ base: -9.99, defaultImport: -5 });
     const summary = await commitOfxBatch(id, { [product.key]: accountId }, { id: owner });
     expect(summary).toMatchObject({ importedRows: 1, skippedRows: 1 });
+  });
+
+  it("forbids a user who cannot write the account to create, preview or commit a batch", async () => {
+    const accountId = await newAccount();
+    const file = ofxFile({ trns: [{ date: "20310801", amount: "-4", name: "CB STRANGER" }] });
+    await expect(
+      createOfxBatch({ accountId, filename: "x.ofx", buffer: file }, { id: stranger }),
+    ).rejects.toThrow("FORBIDDEN");
+    const id = await upload(accountId, file);
+    await expect(previewOfxBatch(id, stranger)).rejects.toThrow("FORBIDDEN");
+    await expect(commitOfxBatch(id, { "stmt-0": accountId }, { id: stranger })).rejects.toThrow(
+      "FORBIDDEN",
+    );
+    expect(await db.transaction.count({ where: { accountId } })).toBe(0);
+  });
+
+  it("refuses to preview or commit a product mapped to an account the actor cannot write", async () => {
+    const accountId = await newAccount();
+    const foreignId = await newAccount(stranger);
+    const id = await upload(
+      accountId,
+      ofxFile({ trns: [{ date: "20310802", amount: "-4", name: "CB FOREIGN" }] }),
+    );
+    await expect(previewOfxBatch(id, owner, { accounts: { "stmt-0": foreignId } })).rejects.toThrow(
+      "FORBIDDEN",
+    );
+    await expect(commitOfxBatch(id, { "stmt-0": foreignId }, { id: owner })).rejects.toThrow(
+      "FORBIDDEN",
+    );
+    expect(await db.transaction.count({ where: { accountId: foreignId } })).toBe(0);
   });
 });
