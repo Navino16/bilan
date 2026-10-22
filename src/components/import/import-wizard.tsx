@@ -528,6 +528,14 @@ export function ImportWizard({
       else delete next[r.externalId];
       return next;
     };
+    // externalId doesn't depend on the account, so a PDF account switch can leave the
+    // row in the other map: the maps stay exclusive, the server checks `excluded` first.
+    const forget = (edits: Record<string, string>) => {
+      if (!(r.externalId in edits)) return edits;
+      const next = { ...edits };
+      delete next[r.externalId];
+      return next;
+    };
     return (
       <input
         type="checkbox"
@@ -536,7 +544,10 @@ export function ImportWizard({
         }
         checked={checked}
         disabled={r.isDuplicate || busy}
-        onChange={() => (probable ? setIncludedProbable(toggle) : setExcluded(toggle))}
+        onChange={() => {
+          (probable ? setIncludedProbable : setExcluded)(toggle);
+          (probable ? setExcluded : setIncludedProbable)(forget);
+        }}
         className="size-5 shrink-0 cursor-pointer disabled:cursor-not-allowed md:size-4"
         style={{ accentColor: "var(--primary)" }}
       />
