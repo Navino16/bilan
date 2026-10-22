@@ -767,7 +767,15 @@
       },
       "existingNote": "À l’étape suivante, vous verrez les transactions existantes concernées avant de les reclasser.",
       "decline": "Non merci",
-      "confirm": "Créer la règle"
+      "confirm": "Créer la règle",
+      "titleRetarget": "Corriger la règle existante ?",
+      "bodyRetarget": "Modifier la règle « {pattern} » pour qu’elle classe désormais ses transactions dans <chip>{category}</chip> ?",
+      "target": {
+        "new": "Nouvelle règle",
+        "existing": "Modifier l’existante"
+      },
+      "outranks": "Elle passera avant la règle « {pattern} ».",
+      "confirmRetarget": "Modifier la règle"
     },
     "error": {
       "INVALID": "Vérifiez les champs.",
@@ -1031,6 +1039,8 @@
       "next": "Suivantes"
     },
     "rowCategory": "Catégorie pour {label}",
+    "ruleOffer": "Créer une règle",
+    "ruleOfferLabel": "Créer une règle pour {label}",
     "dateOrder": {
       "label": "Ordre des dates",
       "DMY": "JJ/MM",

@@ -232,6 +232,63 @@ export async function updateRule(
   });
 }
 
+// Points a rule at another category, keeping its pattern, match and priority.
+export async function retargetRule(
+  id: string,
+  categoryId: string,
+  actor: { id: string },
+): Promise<void> {
+  const rule = await loadManageableRule(id, actor.id);
+  await updateRule(
+    id,
+    {
+      pattern: rule.pattern,
+      matchType: rule.matchType as RuleMatchType,
+      caseSensitive: rule.caseSensitive,
+      priority: rule.priority,
+      categoryId,
+    },
+    actor,
+  );
+}
+
+export type RuleSummary = { id: string; pattern: string; priority: number; canManage: boolean };
+
+// What the import preview shows of the rules behind its suggestions; ids of
+// deleted rules are skipped.
+export async function describeRules(
+  ids: string[],
+  actorId: string,
+): Promise<Map<string, RuleSummary>> {
+  const unique = [...new Set(ids)];
+  if (unique.length === 0) return new Map();
+  const rules = await db.categorizationRule.findMany({
+    where: { id: { in: unique } },
+    select: { id: true, pattern: true, priority: true, userId: true, groupId: true },
+  });
+  const groupIds = [...new Set(rules.flatMap((r) => (r.groupId ? [r.groupId] : [])))];
+  const memberships = groupIds.length
+    ? await db.groupMember.findMany({
+        where: { userId: actorId, groupId: { in: groupIds } },
+        select: { groupId: true, role: true },
+      })
+    : [];
+  const adminOf = new Set(
+    memberships.filter((m) => canManageInGroup(m.role as GroupRole)).map((m) => m.groupId),
+  );
+  return new Map(
+    rules.map((r) => [
+      r.id,
+      {
+        id: r.id,
+        pattern: r.pattern,
+        priority: r.priority,
+        canManage: r.groupId ? adminOf.has(r.groupId) : r.userId === actorId,
+      },
+    ]),
+  );
+}
+
 export async function deleteRule(id: string, actor: { id: string }): Promise<void> {
   await loadManageableRule(id, actor.id);
   await db.categorizationRule.delete({ where: { id } });

@@ -16,7 +16,11 @@ import {
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useFrozenWhileOpen } from "@/hooks/use-frozen-while-open";
-import { createRuleAction, previewRuleApplicationAction } from "@/server/transport/actions/rules";
+import {
+  createRuleAction,
+  previewRuleApplicationAction,
+  retargetRuleAction,
+} from "@/server/transport/actions/rules";
 import type { RuleApplicationPreview } from "@/server/services/categorization/apply";
 import {
   RuleApplyStep,
@@ -26,9 +30,18 @@ import {
 import { RULE_MATCH_TYPES, type RuleMatchType } from "@/lib/validation/rule";
 import { CategoryChip, SegmentedTabs, overline } from "./bits";
 
+// The rule that suggested another category; the dialog offers to retarget it when manageable.
+export type SupersededRule = {
+  id: string;
+  pattern: string;
+  priority: number;
+  canManage: boolean;
+};
+
 // Learning dialog shown after a manual recategorization. Pre-filled with a
 // proposed pattern (most distinctive token) and the chosen category; lets the
-// user tune the match type before creating a personal rule.
+// user tune the match type before creating a personal rule, or retarget the
+// rule that suggested another category.
 export function CreateRuleDialog({
   open,
   onOpenChange,
@@ -36,6 +49,8 @@ export function CreateRuleDialog({
   categoryId,
   categoryName,
   categoryColor,
+  superseded,
+  onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -43,6 +58,8 @@ export function CreateRuleDialog({
   categoryId: string;
   categoryName: string;
   categoryColor: string | null;
+  superseded?: SupersededRule | null;
+  onSaved?: () => void;
 }) {
   const t = useTranslations("transactions");
   const tRules = useTranslations("rules");
@@ -50,6 +67,8 @@ export function CreateRuleDialog({
   const router = useRouter();
   const [pat, setPat] = useState(pattern);
   const [matchType, setMatchType] = useState<RuleMatchType>("CONTAINS");
+  const [target, setTarget] = useState<"new" | "existing">("new");
+  const retarget = target === "existing" && !!superseded?.canManage;
   const [pending, startTransition] = useTransition();
   const [applying, setApplying] = useState<{
     target: RuleApplyTarget;
@@ -60,20 +79,33 @@ export function CreateRuleDialog({
   // Keep the proposed pattern in sync when the dialog reopens for another tx.
   if (open && pat === "" && pattern) setPat(pattern);
 
-  function submit() {
+  function save() {
+    if (retarget) return retargetRuleAction(superseded.id, categoryId);
     const fd = new FormData();
     fd.set("pattern", pat);
     fd.set("matchType", matchType);
     fd.set("categoryId", categoryId);
+    // Same pattern length as the superseded rule would leave the tie to the older rule.
+    if (superseded) fd.set("priority", String(Math.min(superseded.priority + 1, 10000)));
+    return createRuleAction(null, fd);
+  }
+
+  function submit() {
     setError(null);
     startTransition(async () => {
-      const res = await createRuleAction(null, fd);
+      const res = await save();
       if (!res?.ok) return setError(res?.error ?? "FAILED");
       router.refresh();
+      onSaved?.();
       const preview = await previewRuleApplicationAction(res.id);
       if (!preview.ok || !shouldOfferApply(preview.preview)) return handleOpenChange(false);
       setApplying({
-        target: { id: res.id, pattern: pat, categoryName, categoryColor },
+        target: {
+          id: res.id,
+          pattern: retarget ? superseded.pattern : pat,
+          categoryName,
+          categoryColor,
+        },
         preview: preview.preview,
       });
     });
@@ -83,6 +115,7 @@ export function CreateRuleDialog({
     if (pending) return;
     if (!n) {
       setPat("");
+      setTarget("new");
       setApplying(null);
     }
     setError(null);
@@ -94,11 +127,11 @@ export function CreateRuleDialog({
       <DialogHeader className="space-y-2 px-6 pt-5 pb-3 text-left max-md:px-5">
         <span className={overline}>{t("rulePrompt.learning")}</span>
         <DialogTitle className="font-display text-2xl leading-tight">
-          {t("rulePrompt.title")}
+          {t(retarget ? "rulePrompt.titleRetarget" : "rulePrompt.title")}
         </DialogTitle>
         <p className="text-muted-foreground text-sm leading-relaxed">
-          {t.rich("rulePrompt.body", {
-            pattern: pat,
+          {t.rich(retarget ? "rulePrompt.bodyRetarget" : "rulePrompt.body", {
+            pattern: retarget ? superseded.pattern : pat,
             category: categoryName,
             chip: () => (
               <span className="mx-0.5 inline-flex align-middle">
@@ -110,23 +143,46 @@ export function CreateRuleDialog({
       </DialogHeader>
 
       <div className="flex flex-col gap-4 px-6 pb-4 max-md:px-5">
-        <div className="space-y-1.5">
-          <span className={overline}>{t("rulePrompt.pattern")}</span>
-          <Input
-            value={pat}
-            onChange={(e) => setPat(e.target.value)}
-            className="border-hairline-2 bg-muted border-dashed font-mono"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <span className={overline}>{t("rulePrompt.matchType")}</span>
+        {superseded?.canManage && (
           <SegmentedTabs
-            items={RULE_MATCH_TYPES.map((m) => ({ id: m, label: t(`rulePrompt.match.${m}`) }))}
-            value={matchType}
-            onChange={setMatchType}
+            items={[
+              { id: "new" as const, label: t("rulePrompt.target.new") },
+              { id: "existing" as const, label: t("rulePrompt.target.existing") },
+            ]}
+            value={target}
+            onChange={setTarget}
             fullWidth
           />
-        </div>
+        )}
+        {!retarget && (
+          <>
+            <div className="space-y-1.5">
+              <span className={overline}>{t("rulePrompt.pattern")}</span>
+              <Input
+                value={pat}
+                onChange={(e) => setPat(e.target.value)}
+                className="border-hairline-2 bg-muted border-dashed font-mono"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <span className={overline}>{t("rulePrompt.matchType")}</span>
+              <SegmentedTabs
+                items={RULE_MATCH_TYPES.map((m) => ({
+                  id: m,
+                  label: t(`rulePrompt.match.${m}`),
+                }))}
+                value={matchType}
+                onChange={setMatchType}
+                fullWidth
+              />
+            </div>
+            {superseded && (
+              <p className="text-muted-foreground text-xs">
+                {t("rulePrompt.outranks", { pattern: superseded.pattern })}
+              </p>
+            )}
+          </>
+        )}
         <div className="flex items-start gap-2 rounded-lg bg-[var(--info-bg)] px-3 py-2.5 text-xs text-[var(--info)]">
           <Info className="mt-px size-3.5 shrink-0" />
           <span>{t("rulePrompt.existingNote")}</span>
@@ -142,9 +198,9 @@ export function CreateRuleDialog({
         <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
           {t("rulePrompt.decline")}
         </Button>
-        <Button type="button" disabled={pending || !pat.trim()} onClick={submit}>
+        <Button type="button" disabled={pending || (!retarget && !pat.trim())} onClick={submit}>
           <Check />
-          {t("rulePrompt.confirm")}
+          {t(retarget ? "rulePrompt.confirmRetarget" : "rulePrompt.confirm")}
         </Button>
       </DialogFooter>
     </>
@@ -153,7 +209,7 @@ export function CreateRuleDialog({
   const content = applying ? (
     <RuleApplyStep
       rule={applying.target}
-      mode="created"
+      mode={retarget ? "updated" : "created"}
       initialPreview={applying.preview}
       pending={pending}
       startTransition={startTransition}

@@ -8,6 +8,7 @@ import type { ImportDecisions } from "@/lib/rules-import";
 import {
   createRule,
   updateRule,
+  retargetRule,
   deleteRule,
   toggleRule,
   RuleAccessError,
@@ -77,6 +78,20 @@ export async function updateRuleAction(
     return { ok: false, error: ruleError(e) };
   }
   return { ok: true, id };
+}
+
+export async function retargetRuleAction(
+  ruleId: string,
+  categoryId: string,
+): Promise<RuleSaveState> {
+  const user = await requireSession();
+  if (!ruleId || !categoryId) return { ok: false, error: "INVALID" };
+  try {
+    await retargetRule(ruleId, categoryId, { id: user.id });
+  } catch (e) {
+    return { ok: false, error: ruleError(e) };
+  }
+  return { ok: true, id: ruleId };
 }
 
 export async function deleteRuleAction(

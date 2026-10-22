@@ -4,11 +4,24 @@ import { useRef, useState, useTransition, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Upload, ChevronRight, ChevronLeft, ChevronDown, PenLine, Check } from "lucide-react";
+import {
+  Upload,
+  ChevronRight,
+  ChevronLeft,
+  ChevronDown,
+  PenLine,
+  Check,
+  WandSparkles,
+} from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SegmentedTabs, overline } from "@/components/transactions/bits";
 import { CategoryCombobox } from "@/components/transactions/category-combobox";
+import {
+  CreateRuleDialog,
+  type SupersededRule,
+} from "@/components/transactions/create-rule-dialog";
+import { proposeRule } from "@/lib/propose-rule";
 import { Stepper, FieldMap, CheckRow } from "./wizard-bits";
 import {
   CSV_FIELDS,
@@ -44,6 +57,7 @@ type PreviewRow = {
   rawLabel: string;
   type: string;
   suggestedCategoryId: string | null;
+  rule: SupersededRule | null;
   isDuplicate: boolean;
   probableOf: string | null;
 };
@@ -177,6 +191,7 @@ export function ImportWizard({
   // Bumped when per-row edits reset, to remount the (uncontrolled) row category pickers.
   const [editsEpoch, setEditsEpoch] = useState(0);
   const [autoCategorize, setAutoCategorize] = useState(true);
+  const [ruleOffer, setRuleOffer] = useState<{ row: PreviewRow; categoryId: string } | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [reverting, setReverting] = useState(false);
   const [reverted, setReverted] = useState<number | null>(null);
@@ -355,6 +370,21 @@ export function ImportWizard({
         : pdfBody({ ...pages, [productKey]: page }, productAccount),
     );
     previewTop.current?.scrollIntoView({ block: "start" });
+  }
+
+  // A rule saved from a row re-categorizes the other rows; the pickers remount to show it.
+  async function reapplyRules() {
+    if (!preview) return;
+    const pages = Object.fromEntries(products.map((p) => [p.key, p.page]));
+    await refresh(
+      preview.source === "CSV"
+        ? {
+            mapping: csvMappingBody(columns, decimalChoice, dateOrderChoice),
+            page: pages[CSV_PRODUCT],
+          }
+        : pdfBody(pages, productAccount),
+    );
+    setEditsEpoch((n) => n + 1);
   }
 
   async function changeFilter(next: PreviewFilter) {
@@ -544,17 +574,37 @@ export function ImportWizard({
 
   // Editable category per row (overrides the suggestion), using the same combobox
   // as the transactions screen.
+  // A category picked by hand that no rule gives yet can become one (#327).
   function categorySelect(r: PreviewRow) {
+    const picked = overrides[r.externalId];
+    const offer = !!picked && picked !== r.suggestedCategoryId && !!proposeRule(r.rawLabel);
     return (
-      <CategoryCombobox
-        key={`${autoCategorize}-${editsEpoch}`}
-        aria-label={t("rowCategory", { label: r.rawLabel })}
-        categories={categories}
-        defaultValue={previewCategoryId(r, overrides, autoCategorize)}
-        onChange={(id) => setOverrides((o) => ({ ...o, [r.externalId]: id }))}
-      />
+      <span className="flex min-w-0 flex-col items-start gap-1">
+        <CategoryCombobox
+          key={`${autoCategorize}-${editsEpoch}`}
+          aria-label={t("rowCategory", { label: r.rawLabel })}
+          categories={categories}
+          defaultValue={previewCategoryId(r, overrides, autoCategorize)}
+          onChange={(id) => setOverrides((o) => ({ ...o, [r.externalId]: id }))}
+        />
+        {offer && (
+          <button
+            type="button"
+            data-slot="import-rule-offer"
+            aria-label={t("ruleOfferLabel", { label: r.rawLabel })}
+            disabled={busy}
+            onClick={() => setRuleOffer({ row: r, categoryId: picked })}
+            className="text-primary inline-flex items-center gap-1 px-1 text-[11px] font-medium hover:underline disabled:opacity-50"
+          >
+            <WandSparkles className="size-3" aria-hidden />
+            {t("ruleOffer")}
+          </button>
+        )}
+      </span>
     );
   }
+
+  const offeredCategory = ruleOffer && categories.find((c) => c.id === ruleOffer.categoryId);
 
   const isIncluded = (r: PreviewRow) =>
     !r.isDuplicate &&
@@ -1379,6 +1429,19 @@ export function ImportWizard({
             ))}
           </Card>
         </div>
+      )}
+
+      {ruleOffer && offeredCategory && (
+        <CreateRuleDialog
+          open
+          onOpenChange={(o) => !o && setRuleOffer(null)}
+          pattern={proposeRule(ruleOffer.row.rawLabel)?.pattern ?? ""}
+          categoryId={offeredCategory.id}
+          categoryName={offeredCategory.name}
+          categoryColor={offeredCategory.color}
+          superseded={ruleOffer.row.rule}
+          onSaved={() => void reapplyRules()}
+        />
       )}
     </div>
   );

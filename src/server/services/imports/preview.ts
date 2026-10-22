@@ -1,6 +1,6 @@
 import { db } from "@/server/db";
 import { computeExternalIds } from "@/server/services/transactions/secure-fields";
-import { suggestMany } from "@/server/services/categorization";
+import { describeRules, suggestMany } from "@/server/services/categorization";
 import { deriveType } from "./derive-type";
 import { findProbableDuplicates } from "./probable";
 import type { NormalizedRow, PreviewRow } from "./types";
@@ -67,9 +67,15 @@ export async function buildPreview(
   const current = Math.min(Math.max(0, Math.trunc(page) || 0), lastPage);
   const start = current * PREVIEW_PAGE_SIZE;
   const end = Math.min(start + PREVIEW_PAGE_SIZE, viewRows);
+  const pageIdx = Array.from({ length: end - start }, (_, k) =>
+    view ? view[start + k] : start + k,
+  );
+  const rules = await describeRules(
+    pageIdx.flatMap((i) => suggestions[i].ruleId ?? []),
+    userId,
+  );
   const previewRows: PreviewRow[] = [];
-  for (let k = start; k < end; k++) {
-    const i = view ? view[k] : k;
+  for (const i of pageIdx) {
     const r = rows[i];
     previewRows.push({
       externalId: externalIds[i],
@@ -78,6 +84,7 @@ export async function buildPreview(
       rawLabel: r.rawLabel,
       type: r.type ?? deriveType(r.rawLabel),
       suggestedCategoryId: suggestions[i].categoryId,
+      rule: rules.get(suggestions[i].ruleId ?? "") ?? null,
       isDuplicate: dupSet.has(externalIds[i]),
       probableOf: probable.get(i) ?? null,
     });

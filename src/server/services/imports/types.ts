@@ -1,6 +1,7 @@
 import type { TransactionInput } from "@/lib/schemas/transaction";
 import type { DateOrder } from "@/lib/validation/import";
 import type { DecimalMark, RejectedRow } from "./csv-parse";
+import type { RuleSummary } from "@/server/services/categorization";
 
 type TxType = TransactionInput["type"];
 
@@ -39,6 +40,7 @@ export type ResolvedCsvMapping = CsvMapping & { decimal: DecimalMark };
 // `externalId` is the stable dedup key; the client uses it to key per-row edits
 // (category override / exclusion) sent back at commit. `probableOf` is the label of the
 // existing transaction this row probably duplicates (same day + amount, no key match).
+// `rule` is the rule behind `suggestedCategoryId`, so the preview can offer to retarget it.
 export type PreviewRow = {
   externalId: string;
   date: string;
@@ -46,6 +48,7 @@ export type PreviewRow = {
   rawLabel: string;
   type: TxType;
   suggestedCategoryId: string | null;
+  rule: RuleSummary | null;
   isDuplicate: boolean;
   probableOf: string | null;
 };

@@ -767,7 +767,15 @@
       },
       "existingNote": "In the next step, you’ll see the existing transactions concerned before reclassifying them.",
       "decline": "No thanks",
-      "confirm": "Create rule"
+      "confirm": "Create rule",
+      "titleRetarget": "Fix the existing rule?",
+      "bodyRetarget": "Change the rule “{pattern}” so it categorizes its transactions as <chip>{category}</chip> from now on?",
+      "target": {
+        "new": "New rule",
+        "existing": "Edit the existing one"
+      },
+      "outranks": "It will take precedence over the rule “{pattern}”.",
+      "confirmRetarget": "Update rule"
     },
     "error": {
       "INVALID": "Check the fields.",
@@ -1031,6 +1039,8 @@
       "next": "Next"
     },
     "rowCategory": "Category for {label}",
+    "ruleOffer": "Create a rule",
+    "ruleOfferLabel": "Create a rule for {label}",
     "dateOrder": {
       "label": "Date order",
       "DMY": "DD/MM",
