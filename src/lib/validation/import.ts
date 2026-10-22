@@ -1,5 +1,6 @@
 export const CSV_MAX_BYTES = 5 * 1024 * 1024;
 export const PDF_MAX_BYTES = 10 * 1024 * 1024;
+export const OFX_MAX_BYTES = 5 * 1024 * 1024;
 
 export const CSV_FIELDS = ["date", "label", "amount", "debit", "credit", "type"] as const;
 
