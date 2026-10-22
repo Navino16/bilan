@@ -30,7 +30,7 @@ const ENTITIES: Record<string, string> = {
 };
 const decodeEntities = (s: string) => s.replace(/&(amp|lt|gt|quot|apos);/g, (_, e) => ENTITIES[e]);
 
-const TOKEN = /<(\/?)([A-Za-z][\w.]*)[^<>]*>|([^<]+)/g;
+const TOKEN = /<(\/?)([A-Za-z][\w.]*)(?:[^<>\w.][^<>]*)?>|([^<]+)/g;
 
 // OFX 1.x leaves have no closing tag, so a tag followed by text is a leaf and a tag
 // followed by another tag is an aggregate; closing tags only pop the aggregates.

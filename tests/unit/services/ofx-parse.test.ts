@@ -213,9 +213,13 @@ describe("parseOfx", () => {
     expect(() => parseOfx("Date;Libelle;Montant\n01/01/2026;X;1")).toThrow("PARSE_FAILED");
   });
 
-  it("parses unterminated tags in linear time", () => {
+  it.each([
+    ["repeated tags", "<OFX>" + "<A".repeat(200_000)],
+    ["a long tag name", "<OFX><" + "A".repeat(200_000)],
+    ["a long dotted tag name", "<OFX><A" + ".".repeat(200_000)],
+  ])("parses unterminated tags in linear time (%s)", (_, input) => {
     const started = performance.now();
-    expect(parseOfx("<OFX>" + "<A".repeat(200_000))).toEqual([]);
+    expect(parseOfx(input)).toEqual([]);
     expect(performance.now() - started).toBeLessThan(1000);
   });
 
