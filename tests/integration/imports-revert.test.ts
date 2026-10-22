@@ -17,6 +17,7 @@ import { computeExternalIds } from "@/server/services/transactions/secure-fields
 const owner = "rev_owner";
 const other = "rev_other";
 let accA: string;
+let accC: string; // opening-balance restore tests
 let accB: string; // owned by `other`, shared READ with `owner`
 let groupId: string;
 
@@ -85,6 +86,8 @@ beforeAll(async () => {
     .id;
   accB = (await db.bankAccount.create({ data: { ownerId: other, name: "B", type: "CHECKING" } }))
     .id;
+  accC = (await db.bankAccount.create({ data: { ownerId: owner, name: "C", type: "CHECKING" } }))
+    .id;
   groupId = (await db.group.create({ data: { name: "Rev", createdById: other } })).id;
   await db.groupMember.createMany({
     data: [
@@ -100,12 +103,12 @@ beforeAll(async () => {
 afterAll(async () => {
   await db.transactionLink.deleteMany({ where: { createdById: { in: [owner, other] } } });
   await db.budget.deleteMany({ where: { userId: owner } });
-  await db.transaction.deleteMany({ where: { accountId: { in: [accA, accB] } } });
-  await db.importBatch.deleteMany({ where: { accountId: { in: [accA, accB] } } });
+  await db.transaction.deleteMany({ where: { accountId: { in: [accA, accB, accC] } } });
+  await db.importBatch.deleteMany({ where: { accountId: { in: [accA, accB, accC] } } });
   await db.accountShare.deleteMany({ where: { groupId } });
   await db.groupMember.deleteMany({ where: { groupId } });
   await db.group.deleteMany({ where: { id: groupId } });
-  await db.bankAccount.deleteMany({ where: { id: { in: [accA, accB] } } });
+  await db.bankAccount.deleteMany({ where: { id: { in: [accA, accB, accC] } } });
   await db.auditLog.deleteMany({ where: { userId: { in: [owner, other] } } });
   await db.user.deleteMany({ where: { id: { in: [owner, other] } } });
   await db.$disconnect();
@@ -138,6 +141,7 @@ describe("revertImport", () => {
       linked: 1,
       budgeted: 1,
       edited: 1,
+      balances: [],
     });
   });
 
@@ -153,7 +157,12 @@ describe("revertImport", () => {
       userId: owner,
     });
 
-    expect(await revertImport(owner, batchId)).toEqual({ deleted: 2, linksDissolved: 1 });
+    expect(await revertImport(owner, batchId)).toEqual({
+      deleted: 2,
+      linksDissolved: 1,
+      balancesRestored: 0,
+      balancesKept: 0,
+    });
     expect(await db.transaction.count({ where: { importBatchId: batchId } })).toBe(0);
     expect(await db.transactionLink.findUnique({ where: { id: small.id } })).toBeNull();
     expect(await db.transactionLinkMember.count({ where: { linkId: large.id } })).toBe(2);
@@ -164,7 +173,12 @@ describe("revertImport", () => {
     const audit = await db.auditLog.findFirst({
       where: { action: "import.reverted", entityId: batchId },
     });
-    expect(audit?.metadata).toEqual({ deleted: 2, linksDissolved: 1 });
+    expect(audit?.metadata).toEqual({
+      deleted: 2,
+      linksDissolved: 1,
+      balancesRestored: 0,
+      balancesKept: 0,
+    });
   });
 
   it("dissolves a link whose members were all in the batch", async () => {
@@ -408,5 +422,76 @@ describe("commit claim", () => {
         where: { accountId: accA, externalId: { not: null }, importBatchId: null },
       }),
     ).toBe(0);
+  });
+});
+
+describe("opening balance on revert", () => {
+  // A COMPLETED batch that adjusted accC's opening balance, as finalizeBatch records it.
+  async function adjustedBatch(previous: number, set: number, current: string): Promise<string> {
+    await db.bankAccount.update({ where: { id: accC }, data: { initialBalance: current } });
+    const batch = await db.importBatch.create({
+      data: {
+        accountId: accC,
+        source: "OFX",
+        filename: "test.ofx",
+        status: "COMPLETED",
+        createdById: owner,
+        completedAt: new Date(),
+        metadata: {
+          fileSizeBytes: 1,
+          accountIds: [accC],
+          balanceAdjustments: [{ accountId: accC, previous, set }],
+        },
+      },
+    });
+    return batch.id;
+  }
+  const balanceOfC = async () =>
+    (await db.bankAccount.findUniqueOrThrow({ where: { id: accC } })).initialBalance.toString();
+
+  it("getRevertImpact lists the balance change", async () => {
+    const id = await adjustedBatch(100, 1234.56, "1234.56");
+    expect((await getRevertImpact(owner, id)).balances).toEqual([
+      { accountName: "C", previous: 100, set: 1234.56, restore: true },
+    ]);
+  });
+
+  it("flags a balance edited since the import as not restorable", async () => {
+    const id = await adjustedBatch(100, 1234.56, "999.00");
+    expect((await getRevertImpact(owner, id)).balances[0]).toMatchObject({ restore: false });
+  });
+
+  it("restores the opening balance on revert", async () => {
+    const id = await adjustedBatch(100, 1234.56, "1234.56");
+    const res = await revertImport(owner, id);
+    expect(res).toMatchObject({ balancesRestored: 1, balancesKept: 0 });
+    expect(await balanceOfC()).toBe("100");
+    const logged = await db.auditLog.findMany({
+      where: { action: "account.initial_balance_restored", entityId: accC },
+    });
+    expect(logged).toHaveLength(1);
+  });
+
+  it("compares at cent precision (float artefact in the stored number)", async () => {
+    const id = await adjustedBatch(0, 0.1 + 0.2, "0.30");
+    expect((await getRevertImpact(owner, id)).balances[0].restore).toBe(true);
+    expect(await revertImport(owner, id)).toMatchObject({ balancesRestored: 1, balancesKept: 0 });
+    expect(await balanceOfC()).toBe("0");
+  });
+
+  it("keeps a hand-edited opening balance", async () => {
+    const id = await adjustedBatch(100, 1234.56, "777.77");
+    const res = await revertImport(owner, id);
+    expect(res).toMatchObject({ balancesRestored: 0, balancesKept: 1 });
+    expect(await balanceOfC()).toBe("777.77");
+  });
+
+  it("keeps the adjustments in the metadata once reverted", async () => {
+    const id = await adjustedBatch(100, 1234.56, "1234.56");
+    await revertImport(owner, id);
+    const batch = await db.importBatch.findUniqueOrThrow({ where: { id } });
+    expect((batch.metadata as { balanceAdjustments: unknown[] }).balanceAdjustments).toHaveLength(
+      1,
+    );
   });
 });

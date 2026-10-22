@@ -984,6 +984,8 @@
       "linked": "{count, plural, one {# is linked to other transactions and will leave its link} other {# are linked to other transactions and will leave their links}}",
       "budgeted": "{count, plural, one {# is assigned to a budget} other {# are assigned to a budget}}",
       "edited": "{count, plural, one {# was edited since the import} other {# were edited since the import}}",
+      "balanceRestore": "The opening balance of {account} will go back to {amount}.",
+      "balanceKept": "The opening balance of {account} was changed since the import: it will stay as is.",
       "irreversible": "This can’t be undone.",
       "keep": "Keep",
       "confirm": "Delete the transactions",
@@ -1918,7 +1920,8 @@
           },
           "deleted": "Bank account deleted",
           "unarchived": "Bank account unarchived",
-          "initial_balance_adjusted": "Opening balance adjusted by an import"
+          "initial_balance_adjusted": "Opening balance adjusted by an import",
+          "initial_balance_restored": "Opening balance restored by an import revert"
         },
         "transaction": {
           "created": "Transaction created",

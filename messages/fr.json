@@ -984,6 +984,8 @@
       "linked": "{count, plural, one {# est liée à d’autres transactions : elle sortira de son lien} other {# sont liées à d’autres transactions : elles sortiront de leur lien}}",
       "budgeted": "{count, plural, one {# est affectée à un budget} other {# sont affectées à un budget}}",
       "edited": "{count, plural, one {# a été modifiée depuis l’import} other {# ont été modifiées depuis l’import}}",
+      "balanceRestore": "Le solde initial de {account} reviendra à {amount}.",
+      "balanceKept": "Le solde initial de {account} a été modifié depuis l'import : il restera inchangé.",
       "irreversible": "Cette action est définitive.",
       "keep": "Garder",
       "confirm": "Supprimer les transactions",
@@ -1918,7 +1920,8 @@
           },
           "deleted": "Compte bancaire supprimé",
           "unarchived": "Compte bancaire désarchivé",
-          "initial_balance_adjusted": "Solde initial ajusté par un import"
+          "initial_balance_adjusted": "Solde initial ajusté par un import",
+          "initial_balance_restored": "Solde initial restauré par l’annulation d’un import"
         },
         "transaction": {
           "created": "Transaction créée",
