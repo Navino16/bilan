@@ -17,8 +17,10 @@ let accountId: string;
 const CSV = `Date;Libellé;Débit;Crédit
 05/03/2026;CB CARREFOUR CITY;82,37;
 06/03/2026;VIR SEPA SALAIRE;;2450,00`;
-// Same shape as CSV with rows of its own, so a test isn't refused as a re-import.
-const freshCsv = (tag: string) => CSV.replace(/(CARREFOUR CITY|SALAIRE)/g, `$1 ${tag}`);
+// Same shape as CSV with rows of its own, so a test isn't refused as a re-import. A committed
+// copy also needs its own year: same day + amount is a probable duplicate.
+const freshCsv = (tag: string, year = 2026) =>
+  CSV.replace(/(CARREFOUR CITY|SALAIRE)/g, `$1 ${tag}`).replace(/2026/g, String(year));
 
 beforeAll(async () => {
   await db.user.deleteMany({ where: { id: { in: [owner, stranger] } } });
@@ -114,6 +116,58 @@ describe("CSV import pipeline", () => {
         { excludedIds: preview.preview.map((r) => r.externalId) },
       ),
     ).rejects.toThrow("NOTHING_TO_IMPORT");
+  });
+
+  it("flags a probable duplicate and imports it once ticked", async () => {
+    const head = "Date;Libellé;Débit;Crédit\n";
+    const first = await createCsvBatch(
+      { accountId, filename: "p1.csv", text: `${head}10/06/2031;CB SHOP ONE;5,00;` },
+      { id: owner },
+    );
+    await commitCsvBatch(first.id, (await previewCsvBatch(first.id, owner)).mapping, {
+      id: owner,
+    });
+
+    const text = `${head}10/06/2031;CB SHOP ONE 10/06;5,00;\n11/06/2031;CB METRO;2,00;`;
+    const batch = await createCsvBatch({ accountId, filename: "p2.csv", text }, { id: owner });
+    const preview = await previewCsvBatch(batch.id, owner);
+    expect(preview.probableCount).toBe(1);
+    expect(preview.viewRows).toBe(2);
+    expect(preview.preview[0].probableOf).toBe("CB SHOP ONE");
+
+    const only = await previewCsvBatch(batch.id, owner, preview.mapping, 0, {
+      probableOnly: true,
+    });
+    expect(only.viewRows).toBe(1);
+    expect(only.totalRows).toBe(2);
+    expect(only.preview.map((r) => r.rawLabel)).toEqual(["CB SHOP ONE 10/06"]);
+
+    const probableId = preview.preview[0].externalId;
+    const ticked = await commitCsvBatch(
+      batch.id,
+      preview.mapping,
+      { id: owner },
+      { includedProbableIds: [probableId] },
+    );
+    expect(ticked.importedRows).toBe(2);
+  });
+
+  it("skips a probable duplicate at commit when it isn't ticked", async () => {
+    const head = "Date;Libellé;Débit;Crédit\n";
+    const seed = await createCsvBatch(
+      { accountId, filename: "q1.csv", text: `${head}10/06/2033;CB SHOP TWO;5,00;` },
+      { id: owner },
+    );
+    await commitCsvBatch(seed.id, (await previewCsvBatch(seed.id, owner)).mapping, {
+      id: owner,
+    });
+    const text = `${head}10/06/2033;CB SHOP TWO 10/06;5,00;\n11/06/2033;CB METRO;2,00;`;
+    const batch = await createCsvBatch({ accountId, filename: "q2.csv", text }, { id: owner });
+    const preview = await previewCsvBatch(batch.id, owner);
+    expect(preview.probableCount).toBe(1);
+    const summary = await commitCsvBatch(batch.id, preview.mapping, { id: owner });
+    expect(summary.importedRows).toBe(1);
+    expect(summary.skippedRows).toBe(1);
   });
 
   it("pages the preview, counting over every row", async () => {
@@ -439,21 +493,21 @@ pas une date;X;-1,00;Carte`;
 
   it("trims the raw CSV text from metadata once committed", async () => {
     const batch = await createCsvBatch(
-      { accountId, filename: "trim.csv", text: freshCsv("TRIM") },
+      { accountId, filename: "trim.csv", text: freshCsv("TRIM", 2031) },
       { id: owner },
     );
     const preview = await previewCsvBatch(batch.id, owner);
     await commitCsvBatch(batch.id, preview.mapping, { id: owner });
     const row = await db.importBatch.findUniqueOrThrow({ where: { id: batch.id } });
     expect(row.metadata).toEqual({
-      fileSizeBytes: Buffer.byteLength(freshCsv("TRIM")),
+      fileSizeBytes: Buffer.byteLength(freshCsv("TRIM", 2031)),
       accountIds: [accountId],
     });
   });
 
   it("refuses to commit a batch twice", async () => {
     const batch = await createCsvBatch(
-      { accountId, filename: "twice.csv", text: freshCsv("TWICE") },
+      { accountId, filename: "twice.csv", text: freshCsv("TWICE", 2032) },
       { id: owner },
     );
     const preview = await previewCsvBatch(batch.id, owner);

@@ -141,6 +141,71 @@ describe("PDF import pipeline", () => {
     await expect(previewPdfBatch(id, owner)).rejects.toThrow("NOT_COMMITTABLE");
   });
 
+  it("flags a probable duplicate per product and skips it unless ticked", async () => {
+    const own = [
+      {
+        key: "compte",
+        rows: [{ date: "2027-03-10T00:00:00.000Z", amount: -9, rawLabel: "CB PDF SHOP" }],
+      },
+      {
+        key: "depot",
+        rows: [
+          { date: "2027-03-11T00:00:00.000Z", amount: 20, rawLabel: "VERSEMENT PROB" },
+          { date: "2027-03-12T00:00:00.000Z", amount: 21, rawLabel: "VERSEMENT FRESH" },
+        ],
+      },
+    ];
+    await commitPdfBatch(
+      await seedBatch(own),
+      { compte: courantId, depot: depotId },
+      { id: owner },
+    );
+
+    const again = [
+      {
+        key: "compte",
+        rows: [{ date: "2027-03-10T00:00:00.000Z", amount: -9, rawLabel: "CB PDF SHOP 10/03" }],
+      },
+      {
+        key: "depot",
+        rows: [
+          { date: "2027-03-11T00:00:00.000Z", amount: 20, rawLabel: "VERSEMENT PROB 11/03" },
+          { date: "2027-03-13T00:00:00.000Z", amount: 22, rawLabel: "VERSEMENT NEW" },
+        ],
+      },
+    ];
+    const accounts = { compte: courantId, depot: depotId };
+    const id = await seedBatch(again);
+    const p = await previewPdfBatch(id, owner, { accounts });
+    expect(p.products.map((x) => x.probableCount)).toEqual([1, 1]);
+    expect(p.products[1].viewRows).toBe(2);
+    expect(p.products[1].preview[0].probableOf).toBe("VERSEMENT PROB");
+
+    const only = await previewPdfBatch(id, owner, { accounts, probableOnly: true });
+    expect(only.products.map((x) => x.viewRows)).toEqual([1, 1]);
+    expect(only.products[1].totalRows).toBe(2);
+    expect(only.products[1].preview.map((r) => r.rawLabel)).toEqual(["VERSEMENT PROB 11/03"]);
+
+    const summary = await commitPdfBatch(id, accounts, { id: owner });
+    expect(summary.importedRows).toBe(1);
+    expect(summary.skippedRows).toBe(2);
+  });
+
+  it("doesn't skip a row as probable because another product of the batch just inserted it", async () => {
+    const same = { date: "2027-04-10T00:00:00.000Z", amount: -5 };
+    const id = await seedBatch([
+      { key: "compte", rows: [{ ...same, rawLabel: "CB PDF ALPHA" }] },
+      { key: "depot", rows: [{ ...same, rawLabel: "CB PDF BETA" }] },
+    ]);
+    const summary = await commitPdfBatch(
+      id,
+      { compte: courantId, depot: courantId },
+      { id: owner },
+    );
+    expect(summary.importedRows).toBe(2);
+    expect(summary.skippedRows).toBe(0);
+  });
+
   it("refuses a preview mapped to an account the actor cannot write", async () => {
     const foreign = await db.bankAccount.create({
       data: { ownerId: stranger, name: "Autre", type: "CHECKING" },

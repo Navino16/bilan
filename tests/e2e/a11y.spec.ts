@@ -39,7 +39,7 @@ async function seriousViolations(page: Page, rules?: string[]): Promise<string[]
     .map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`);
 }
 
-const DUP_ROW = "15/01/2020;A11Y DUPLICATE;1,00;";
+const DUP_ROW = "15/01/2020;A11Y DUPLICATE;1,37;";
 
 async function uploadCsv(page: Page, csv: string) {
   await page.goto("/fr/import");

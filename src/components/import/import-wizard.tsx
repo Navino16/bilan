@@ -42,11 +42,14 @@ type PreviewRow = {
   type: string;
   suggestedCategoryId: string | null;
   isDuplicate: boolean;
+  probableOf: string | null;
 };
 type Product = {
   key: string;
   totalRows: number;
   duplicateCount: number;
+  probableCount: number;
+  viewRows: number;
   autoCategorizedCount: number;
   preview: PreviewRow[];
   page: number;
@@ -62,6 +65,8 @@ type Preview = {
   mapping?: Record<string, string | undefined>;
   totalRows?: number;
   duplicateCount?: number;
+  probableCount?: number;
+  viewRows?: number;
   autoCategorizedCount?: number;
   rejectedCount?: number;
   rejected?: { row: number; reason: string; value: string }[];
@@ -138,6 +143,9 @@ export function ImportWizard({
   // value is the row's product, so ignored products don't count their exclusions).
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [excluded, setExcluded] = useState<Record<string, string>>({});
+  // Probable duplicates are skipped unless ticked: externalId → product, like `excluded`.
+  const [includedProbable, setIncludedProbable] = useState<Record<string, string>>({});
+  const [probableOnly, setProbableOnly] = useState(false);
   // Bumped when per-row edits reset, to remount the (uncontrolled) row category pickers.
   const [editsEpoch, setEditsEpoch] = useState(0);
   const [autoCategorize, setAutoCategorize] = useState(true);
@@ -195,6 +203,8 @@ export function ImportWizard({
       setPreview(data);
       setOverrides({});
       setExcluded({});
+      setIncludedProbable({});
+      setProbableOnly(false);
       setSettingsOpen(false);
       setColumns(columnsOf(data.mapping));
       setDecimalChoice(null);
@@ -210,11 +220,13 @@ export function ImportWizard({
 
   // Re-fetches the preview (another page, or a CSV mapping edit). Only the latest
   // request may land, so quick successive clicks can't show a stale page.
+  // The current probable-only filter carries over unless the body sets it.
   async function refresh(
-    body: object,
+    body: { probableOnly?: boolean } & Record<string, unknown>,
     opts: { resetEdits?: boolean; mapping?: boolean; onFail?: () => void } = {},
   ) {
     if (!preview) return;
+    const sent = { probableOnly, ...body };
     const url =
       preview.source === "PDF"
         ? `/api/import/pdf/${preview.batchId}/preview`
@@ -225,7 +237,7 @@ export function ImportWizard({
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify(sent),
       });
       const data = (await res.json().catch(() => ({}))) as Preview;
       if (seq !== refreshSeq.current) return;
@@ -233,9 +245,11 @@ export function ImportWizard({
       setError(null);
       setMappingError(null);
       setPreview(data);
+      setProbableOnly(sent.probableOnly);
       if (opts.resetEdits) {
         setOverrides({});
         setExcluded({});
+        setIncludedProbable({});
         setEditsEpoch((n) => n + 1);
       }
     } catch (e) {
@@ -320,10 +334,29 @@ export function ImportWizard({
     previewTop.current?.scrollIntoView({ block: "start" });
   }
 
+  async function toggleProbableOnly() {
+    if (!preview) return;
+    const next = !probableOnly;
+    await refresh(
+      preview.source === "CSV"
+        ? {
+            mapping: csvMappingBody(columns, decimalChoice, dateOrderChoice),
+            page: 0,
+            probableOnly: next,
+          }
+        : { ...pdfBody({}, productAccount), probableOnly: next },
+    );
+    previewTop.current?.scrollIntoView({ block: "start" });
+  }
+
   // Duplicates depend on the target account, so the product's rows are re-checked.
   function onProductAccountChange(productKey: string, account: string) {
     const next = { ...productAccount, [productKey]: account };
     setProductAccount(next);
+    // A tick means "import anyway" against the previous account's transaction.
+    setIncludedProbable((m) =>
+      Object.fromEntries(Object.entries(m).filter(([, k]) => k !== productKey)),
+    );
     const pages = Object.fromEntries(products.map((p) => [p.key, p.page]));
     void refresh(pdfBody(pages, next));
   }
@@ -347,6 +380,8 @@ export function ImportWizard({
     setProductAccount({});
     setOverrides({});
     setExcluded({});
+    setIncludedProbable({});
+    setProbableOnly(false);
     setError(null);
     setMappingError(null);
     setSummary(null);
@@ -371,7 +406,12 @@ export function ImportWizard({
       const url = isPdf
         ? `/api/import/pdf/${preview.batchId}/commit`
         : `/api/import/csv/${preview.batchId}/commit`;
-      const edits = { autoCategorize, overrides, excludedIds: Object.keys(excluded) };
+      const edits = {
+        autoCategorize,
+        overrides,
+        excludedIds: Object.keys(excluded),
+        includedProbableIds: Object.keys(includedProbable),
+      };
       const body = isPdf
         ? {
             mapping: Object.fromEntries(Object.entries(productAccount).filter(([, v]) => v)),
@@ -414,6 +454,8 @@ export function ImportWizard({
             key: CSV_PRODUCT,
             totalRows: preview.totalRows ?? 0,
             duplicateCount: preview.duplicateCount ?? 0,
+            probableCount: preview.probableCount ?? 0,
+            viewRows: preview.viewRows ?? 0,
             autoCategorizedCount: preview.autoCategorizedCount ?? 0,
             preview: preview.preview ?? [],
             page: preview.page ?? 0,
@@ -425,12 +467,25 @@ export function ImportWizard({
   const invalidFields = rejectedFields(preview?.rejected);
   const dupCount = products.reduce((n, p) => n + p.duplicateCount, 0);
   const catCount = products.reduce((n, p) => n + p.autoCategorizedCount, 0);
-  const excludedIn = (key: string) => Object.values(excluded).filter((k) => k === key).length;
-  // Rows a commit would write: duplicates are always skipped, and so are
-  // unchecked rows and products mapped to no account.
+  const probableTotal = products.reduce((n, p) => n + p.probableCount, 0);
+  const countIn = (edits: Record<string, string>, key: string) =>
+    Object.values(edits).filter((k) => k === key).length;
+  // Rows a commit would write: duplicates are always skipped, and so are unticked
+  // probable duplicates, unchecked rows and products mapped to no account.
   const importable = products
     .filter((p) => productAccount[p.key])
-    .reduce((n, p) => n + Math.max(0, p.totalRows - p.duplicateCount - excludedIn(p.key)), 0);
+    .reduce(
+      (n, p) =>
+        n +
+        Math.max(
+          0,
+          p.totalRows -
+            p.duplicateCount -
+            Math.max(0, p.probableCount - countIn(includedProbable, p.key)) -
+            countIn(excluded, p.key),
+        ),
+      0,
+    );
   const sourceBadge = preview?.source ?? (file && isPdfFile(file) ? "PDF" : "CSV");
   const accountName = accounts.find((a) => a.id === accountId)?.name ?? "";
   const fieldLabel = (field: string) => t(`col${field[0].toUpperCase()}${field.slice(1)}`);
@@ -462,24 +517,41 @@ export function ImportWizard({
     );
   }
 
+  const isIncluded = (r: PreviewRow) =>
+    !r.isDuplicate &&
+    (r.probableOf !== null ? !!includedProbable[r.externalId] : !excluded[r.externalId]);
+
   // Include/exclude checkbox per row (checked = will be imported). A duplicate
-  // is never imported, so its box stays unchecked and locked.
+  // is never imported, so its box stays unchecked and locked; a probable one is opt-in.
   function includeCheckbox(r: PreviewRow, productKey: string) {
-    const checked = !r.isDuplicate && !excluded[r.externalId];
+    const checked = isIncluded(r);
+    const probable = r.probableOf !== null;
+    const toggle = (edits: Record<string, string>) => {
+      const next = { ...edits };
+      if (probable ? !checked : checked) next[r.externalId] = productKey;
+      else delete next[r.externalId];
+      return next;
+    };
+    // externalId doesn't depend on the account, so a PDF account switch can leave the
+    // row in the other map: the maps stay exclusive, the server checks `excluded` first.
+    const forget = (edits: Record<string, string>) => {
+      if (!(r.externalId in edits)) return edits;
+      const next = { ...edits };
+      delete next[r.externalId];
+      return next;
+    };
     return (
       <input
         type="checkbox"
-        aria-label={r.isDuplicate ? t("duplicateSkipped") : t("include")}
+        aria-label={
+          r.isDuplicate ? t("duplicateSkipped") : probable ? t("probableInclude") : t("include")
+        }
         checked={checked}
         disabled={r.isDuplicate || busy}
-        onChange={() =>
-          setExcluded((x) => {
-            const next = { ...x };
-            if (checked) next[r.externalId] = productKey;
-            else delete next[r.externalId];
-            return next;
-          })
-        }
+        onChange={() => {
+          (probable ? setIncludedProbable : setExcluded)(toggle);
+          (probable ? setExcluded : setIncludedProbable)(forget);
+        }}
         className="size-5 shrink-0 cursor-pointer disabled:cursor-not-allowed md:size-4"
         style={{ accentColor: "var(--primary)" }}
       />
@@ -487,10 +559,10 @@ export function ImportWizard({
   }
 
   function pager(product: Product) {
-    if (product.totalRows <= product.pageSize) return null;
+    if (product.viewRows <= product.pageSize) return null;
     const from = product.page * product.pageSize + 1;
-    const to = Math.min(product.totalRows, from + product.pageSize - 1);
-    const last = Math.ceil(product.totalRows / product.pageSize) - 1;
+    const to = Math.min(product.viewRows, from + product.pageSize - 1);
+    const last = Math.ceil(product.viewRows / product.pageSize) - 1;
     return (
       <div
         data-slot="import-pager"
@@ -500,7 +572,7 @@ export function ImportWizard({
           {t("pager.range", {
             from: formatCount(from, locale),
             to: formatCount(to, locale),
-            total: formatCount(product.totalRows, locale),
+            total: formatCount(product.viewRows, locale),
           })}
         </span>
         <span className="flex gap-2">
@@ -859,6 +931,26 @@ export function ImportWizard({
                     ? t("previewMeta", { dup: dupCount, cat: catCount })
                     : t("previewMetaNoCat", { dup: dupCount })}
                 </div>
+                {(probableTotal > 0 || probableOnly) && (
+                  <div className="mt-2 space-y-2" data-slot="import-probable">
+                    <p
+                      role="status"
+                      className="text-xs font-medium"
+                      style={{ color: "var(--warning-text)" }}
+                    >
+                      {t("probable.count", { count: probableTotal })}
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="max-md:h-10"
+                      disabled={busy}
+                      onClick={() => void toggleProbableOnly()}
+                    >
+                      {probableOnly ? t("probable.showAll") : t("probable.showOnly")}
+                    </Button>
+                  </div>
+                )}
                 {preview.source === "CSV" && preview.decimalGuessed && guessedMark && (
                   <div className="mt-2 space-y-2" data-slot="import-decimal-guessed">
                     <p
@@ -1060,9 +1152,29 @@ export function ImportWizard({
                       />
                       {t("duplicate")}
                     </span>
+                  ) : r.probableOf !== null ? (
+                    <span
+                      className="inline-flex h-5 shrink-0 items-center gap-1 rounded-full border px-2 text-[0.65rem] font-medium"
+                      style={{ color: "var(--warning-text)", borderColor: "var(--warning)" }}
+                    >
+                      <span
+                        className="size-1.5 rounded-full border"
+                        style={{ borderColor: "var(--warning)" }}
+                      />
+                      {t("probableDuplicate")}
+                    </span>
                   ) : null;
+                  const probableLine = r.probableOf !== null && (
+                    <span
+                      data-slot="import-row-probable"
+                      className="text-muted-foreground truncate font-mono text-[11px]"
+                      title={r.probableOf}
+                    >
+                      {t("probableOf", { label: r.probableOf })}
+                    </span>
+                  );
                   // Muted color keeps dimmed rows at AA contrast.
-                  const dimmed = r.isDuplicate || excluded[r.externalId];
+                  const dimmed = !isIncluded(r);
                   return (
                     <div
                       key={r.externalId}
@@ -1088,6 +1200,7 @@ export function ImportWizard({
                           >
                             {r.rawLabel}
                           </span>
+                          {probableLine}
                           <span className="text-muted-foreground flex items-center gap-2 text-[11px]">
                             {tType(`types.${r.type}`)}
                             {dupBadge}
@@ -1129,6 +1242,7 @@ export function ImportWizard({
                               {money.format(r.amount)}
                             </span>
                           </div>
+                          {probableLine}
                           <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
                             <span className="tabular-nums">{formatDate(r.date, locale)}</span>
                             <span aria-hidden>·</span>

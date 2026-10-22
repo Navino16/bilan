@@ -222,7 +222,8 @@ Points à vérifier dans l’aperçu :
 
 - **Décimales** : quand Bilan a dû deviner, un avertissement vous demande de vérifier les montants. Cliquez sur **C’est correct**, ou sur le bouton qui passe à l’autre séparateur.
 - **Ordre des dates** : Bilan ne choisit MM/JJ que lorsque le fichier ne peut pas se lire en JJ/MM (par exemple 12/25). Quand toutes les dates conviennent aux deux ordres, il retient JJ/MM et un avertissement vous demande de vérifier les dates. Cliquez sur **Les dates sont correctes**, ou sur **Utiliser MM/JJ**. Les dates écrites 2026-10-15 ne sont jamais ambiguës.
-- **Doublons** : une ligne de même date, même montant et même libellé bancaire qu’une transaction déjà importée sur ce compte est marquée **doublon** et ignorée. Impossible de la forcer. Les transactions saisies à la main ne sont jamais considérées comme des doublons. Les lignes identiques d’un même fichier sont toutes conservées.
+- **Doublons** : une ligne de même date, même montant et même libellé bancaire (espaces superflus ignorés) qu’une transaction déjà importée sur ce compte est marquée **doublon** et ignorée. Impossible de la forcer. Les transactions saisies à la main ne sont jamais considérées comme des doublons certains. Les lignes identiques d’un même fichier sont toutes conservées.
+- **Doublons probables** : une ligne qui n’est pas un doublon certain, mais dont le compte contient déjà une transaction (importée ou saisie à la main) le même jour pour le même montant, est signalée **Doublon probable**, avec la transaction correspondante sous « Déjà dans le compte ». Elle est décochée : elle est donc ignorée sauf si vous la cochez (**Importer quand même**). Cela couvre le même achat saisi à la main, ou libellé autrement par la banque. Le compteur en haut indique leur nombre, et **Afficher uniquement les doublons probables** filtre l’aperçu pour les passer en revue.
 - **Lignes illisibles** : les lignes avec une date ou un montant non reconnus, un montant hors limites ou un libellé vide sont ignorées. Bilan indique leur nombre et jusqu’à 5 exemples avec leur numéro de ligne. Si toute une colonne pose problème, elle est signalée à gauche : essayez une autre correspondance.
 
 Changer la correspondance, le compte, le séparateur décimal ou l’ordre des dates recalcule l’aperçu, et vous perdez les lignes décochées et les catégories choisies.
@@ -235,7 +236,7 @@ Déposez le PDF sur la même page. Bilan lit les relevés **LCL** et **Revolut**
 
 Un relevé Revolut peut contenir plusieurs sections (compte courant, dépôt). Chaque section a son propre choix de **Compte de destination**. Choisissez **Ne pas importer** pour en ignorer une.
 
-Pas de séparateur décimal ni d’ordre des dates à régler pour les PDF. Les doublons, les catégories et l’aperçu fonctionnent comme pour les CSV.
+Pas de séparateur décimal ni d’ordre des dates à régler pour les PDF. Les doublons (certains et probables), les catégories et l’aperçu fonctionnent comme pour les CSV.
 
 ### Annuler un import
 

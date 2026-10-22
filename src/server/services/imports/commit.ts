@@ -10,10 +10,12 @@ import { mapInSlices } from "@/server/services/categorization/cooperative";
 import { trimBatchMetadata } from "@/lib/import-status";
 import { deriveType } from "./derive-type";
 import { ImportAccessError } from "./errors";
+import { findProbableDuplicates } from "./probable";
 import type { CommitSummary, NormalizedRow } from "./types";
 
-// Dedups against existing `(accountId, externalId)` rows (and in-file dupes),
-// encrypts labels, writes per-word search tokens, auto-categorizes, and inserts.
+// Dedups against existing `(accountId, externalId)` rows (and in-file dupes), skips
+// unticked probable duplicates, encrypts labels, writes per-word search tokens,
+// auto-categorizes, and inserts.
 // Does NOT touch the ImportBatch row — callers finalize counters/status. Reused
 // by CSV (one account) and PDF (one call per mapped product/account).
 export type CommitOptions = {
@@ -22,6 +24,8 @@ export type CommitOptions = {
   overrides?: Record<string, string>;
   // externalIds the user unchecked in the preview — skipped entirely.
   excludedIds?: string[];
+  // Probable duplicates the user ticked; every other one is skipped, seen or not (paged preview).
+  includedProbableIds?: string[];
 };
 
 export type InsertTotals = {
@@ -46,6 +50,7 @@ export async function insertRows(
   const autoCategorize = opts.autoCategorize ?? true;
   const overrides = opts.overrides ?? {};
   const excluded = new Set(opts.excludedIds ?? []);
+  const includedProbable = new Set(opts.includedProbableIds ?? []);
 
   // Validate client-supplied override category IDs against the categories the
   // actor can actually use (own + their groups') — never trust them blindly
@@ -70,7 +75,10 @@ export async function insertRows(
     where: { accountId: target.accountId, externalId: { in: externalIds } },
     select: { externalId: true },
   });
-  const seen = new Set(existing.map((e) => e.externalId));
+  const seen = new Set(existing.map((e) => e.externalId!));
+  const probable = await findProbableDuplicates(target.accountId, rows, externalIds, seen, {
+    excludeBatchId: target.batchId,
+  });
   const suggestions = autoCategorize
     ? await suggestMany(
         rows.map((r) => r.rawLabel),
@@ -82,7 +90,7 @@ export async function insertRows(
   const kept: number[] = [];
   for (const [i, externalId] of externalIds.entries()) {
     if (excluded.has(externalId)) continue; // user unchecked this row in the preview
-    if (seen.has(externalId)) {
+    if (seen.has(externalId) || (probable.has(i) && !includedProbable.has(externalId))) {
       skipped++;
       continue;
     }

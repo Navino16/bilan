@@ -17,6 +17,8 @@ export type PdfPreviewProduct = {
   key: string;
   totalRows: number;
   duplicateCount: number;
+  probableCount: number;
+  viewRows: number;
   autoCategorizedCount: number;
   preview: PreviewRow[];
   page: number;
@@ -90,7 +92,11 @@ function readPdfMeta(meta: unknown): {
 export async function previewPdfBatch(
   batchId: string,
   userId: string,
-  opts: { pages?: Record<string, number>; accounts?: Record<string, string> } = {},
+  opts: {
+    pages?: Record<string, number>;
+    accounts?: Record<string, string>;
+    probableOnly?: boolean;
+  } = {},
 ): Promise<PdfPreview> {
   const batch = await loadBatch(batchId, userId);
   if (batch.source !== "PDF" || batch.status !== "REVIEW") {
@@ -112,11 +118,14 @@ export async function previewPdfBatch(
         rows,
         userId,
         opts.pages?.[p.key] ?? 0,
+        { probableOnly: opts.probableOnly },
       );
       return {
         key: p.key,
         totalRows: built.totalRows,
         duplicateCount: built.duplicateCount,
+        probableCount: built.probableCount,
+        viewRows: built.viewRows,
         autoCategorizedCount: built.autoCategorizedCount,
         preview: built.rows,
         page: built.page,

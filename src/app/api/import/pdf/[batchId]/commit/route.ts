@@ -15,6 +15,13 @@ export async function POST(
   if (!body?.mapping || typeof body.mapping !== "object") {
     return Response.json({ error: "INVALID" }, { status: 400 });
   }
+  const includedProbableIds: unknown = body.includedProbableIds ?? [];
+  if (
+    !Array.isArray(includedProbableIds) ||
+    includedProbableIds.some((i) => typeof i !== "string")
+  ) {
+    return Response.json({ error: "INVALID" }, { status: 400 });
+  }
   try {
     const summary = await commitPdfBatch(
       batchId,
@@ -24,6 +31,7 @@ export async function POST(
         autoCategorize: body.autoCategorize ?? true,
         overrides: body.overrides ?? {},
         excludedIds: body.excludedIds ?? [],
+        includedProbableIds,
       },
     );
     return Response.json(summary);

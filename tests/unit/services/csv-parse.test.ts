@@ -407,6 +407,22 @@ describe("computeExternalIds", () => {
     expect(ids[0]).toBe(computeExternalId(coffee.date, coffee.amount, coffee.rawLabel));
     expect(computeExternalIds([coffee, coffee])).toEqual(ids.slice(0, 2));
   });
+
+  it("treats whitespace variants in one file as twins", () => {
+    const d = new Date("2026-01-15");
+    const ids = computeExternalIds([
+      { date: d, amount: -2.5, rawLabel: "CB  CAFE" },
+      { date: d, amount: -2.5, rawLabel: "CB CAFE " },
+    ]);
+    expect(ids[0]).toBe(computeExternalId(d, -2.5, "CB CAFE"));
+    expect(ids[1]).not.toBe(ids[0]);
+    expect(
+      computeExternalIds([
+        { date: d, amount: -2.5, rawLabel: "CB CAFE" },
+        { date: d, amount: -2.5, rawLabel: "CB CAFE" },
+      ]),
+    ).toEqual(ids);
+  });
 });
 
 describe("looksBinary", () => {

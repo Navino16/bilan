@@ -15,7 +15,9 @@ export async function POST(
   if (!body?.mapping) return Response.json({ error: "INVALID" }, { status: 400 });
   try {
     return Response.json(
-      await previewCsvBatch(batchId, user.id, body.mapping, Number(body.page) || 0),
+      await previewCsvBatch(batchId, user.id, body.mapping, Number(body.page) || 0, {
+        probableOnly: body.probableOnly === true,
+      }),
     );
   } catch (e) {
     return importErrorResponse(e, "PARSE_FAILED");
