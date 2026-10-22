@@ -1917,7 +1917,8 @@
             "revoke": "Account share removed"
           },
           "deleted": "Bank account deleted",
-          "unarchived": "Bank account unarchived"
+          "unarchived": "Bank account unarchived",
+          "initial_balance_adjusted": "Opening balance adjusted by an import"
         },
         "transaction": {
           "created": "Transaction created",

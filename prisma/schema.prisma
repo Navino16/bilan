@@ -441,7 +441,7 @@ model TransactionSearchToken {
 model ImportBatch {
   id           String    @id @default(cuid())
   accountId    String
-  source       String // CSV | PDF
+  source       String // CSV | PDF | OFX
   filename     String?
   filenameHash String?
   status       String // PARSING | REVIEW | COMMITTING | COMPLETED | REVERTED (FAILED is never set)

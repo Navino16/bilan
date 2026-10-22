@@ -1917,7 +1917,8 @@
             "revoke": "Partage de compte retiré"
           },
           "deleted": "Compte bancaire supprimé",
-          "unarchived": "Compte bancaire désarchivé"
+          "unarchived": "Compte bancaire désarchivé",
+          "initial_balance_adjusted": "Solde initial ajusté par un import"
         },
         "transaction": {
           "created": "Transaction créée",
