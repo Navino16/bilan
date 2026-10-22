@@ -50,4 +50,11 @@ describe("computeExternalId", () => {
     expect(a).not.toBe(c);
     expect(a).toHaveLength(64); // sha256 hex
   });
+
+  it("ignores whitespace differences in the label", () => {
+    const d = new Date("2026-01-15");
+    expect(computeExternalId(d, -12.5, "CB  SHOP 12/01")).toBe(
+      computeExternalId(d, -12.5, " CB SHOP\t12/01 "),
+    );
+  });
 });

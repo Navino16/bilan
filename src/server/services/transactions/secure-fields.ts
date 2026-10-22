@@ -53,12 +53,17 @@ export function buildSecureFields(input: {
   };
 }
 
-// Stable dedup key for imported rows: sha256 of date(ISO day) + amount + rawLabel.
-// Manual entries pass no externalId (no auto-dedup) — this is for CSV/PDF (Phase 4).
+// Whitespace-insensitive label for the dedup key (OFX exports double spaces).
+export function normalizeKeyLabel(rawLabel: string): string {
+  return rawLabel.replace(/\s+/g, " ").trim();
+}
+
+// Stable dedup key for imported rows: sha256 of date(ISO day) + amount + normalized rawLabel.
+// Manual entries pass no externalId (no auto-dedup).
 export function computeExternalId(date: Date, amount: number, rawLabel: string): string {
   const day = date.toISOString().slice(0, 10);
   return createHash("sha256")
-    .update(`${day}|${amount.toFixed(2)}|${rawLabel}`)
+    .update(`${day}|${amount.toFixed(2)}|${normalizeKeyLabel(rawLabel)}`)
     .digest("hex");
 }
 
@@ -73,6 +78,8 @@ export function computeExternalIds(
     const base = computeExternalId(r.date, r.amount, r.rawLabel);
     const n = seen.get(base) ?? 0;
     seen.set(base, n + 1);
-    return n === 0 ? base : computeExternalId(r.date, r.amount, `${r.rawLabel}\u0000${n}`);
+    return n === 0
+      ? base
+      : computeExternalId(r.date, r.amount, `${normalizeKeyLabel(r.rawLabel)}\u0000${n}`);
   });
 }
