@@ -373,10 +373,11 @@ export function ImportWizard({
   function onProductAccountChange(productKey: string, account: string) {
     const next = { ...productAccount, [productKey]: account };
     setProductAccount(next);
-    // Both ticks were given against the previous account: its transaction, its balance.
-    setIncludedProbable((m) =>
-      Object.fromEntries(Object.entries(m).filter(([, e]) => e.product !== productKey)),
-    );
+    // Row ticks and the adjustment were chosen against the previous account's history.
+    const drop = (m: Record<string, RowEdit>) =>
+      Object.fromEntries(Object.entries(m).filter(([, e]) => e.product !== productKey));
+    setExcluded(drop);
+    setIncludedProbable(drop);
     setAdjustBalance((keys) => keys.filter((k) => k !== productKey));
     const pages = Object.fromEntries(products.map((p) => [p.key, p.page]));
     void refresh(pdfBody(pages, next));
@@ -440,9 +441,9 @@ export function ImportWizard({
             : {
                 mapping,
                 ...edits,
-                adjustBalance: adjustBalance.filter(
-                  (k) => mapping[k] && products.find((p) => p.key === k)?.balance?.canAdjust,
-                ),
+                adjustBalance: products
+                  .filter((p) => adjustBalance.includes(p.key) && liveBalance(p)?.adjustable)
+                  .map((p) => p.key),
               };
       setProgress(0);
       // A poll answered after the commit settled must not bring the bar back.
@@ -559,8 +560,7 @@ export function ImportWizard({
       } else delete next[r.externalId];
       return next;
     };
-    // externalId doesn't depend on the account, so a PDF account switch can leave the
-    // row in the other map: the maps stay exclusive, the server checks `excluded` first.
+    // The maps stay exclusive: the server checks `excluded` first.
     const forget = (edits: Record<string, RowEdit>) => {
       if (!(r.externalId in edits)) return edits;
       const next = { ...edits };
@@ -636,7 +636,7 @@ export function ImportWizard({
   }
 
   // Server figures plus the rows the user toggled since: what the commit would produce (spec §5.5).
-  function balanceBlock(product: Product) {
+  function liveBalance(product: Product) {
     const b = product.balance;
     if (!b || !productAccount[product.key]) return null;
     const upToAsOf = (edits: Record<string, RowEdit>) =>
@@ -647,6 +647,13 @@ export function ImportWizard({
       b.base + b.defaultImport - upToAsOf(excluded) + upToAsOf(includedProbable),
     );
     const gap = round2(b.ledger - after);
+    return { b, after, gap, adjustable: b.canAdjust && gap !== 0 };
+  }
+
+  function balanceBlock(product: Product) {
+    const live = liveBalance(product);
+    if (!live) return null;
+    const { b, after, gap } = live;
     return (
       <div
         data-slot="import-ofx-balance"
@@ -672,7 +679,7 @@ export function ImportWizard({
             {t("balance.gap", { amount: money.format(gap) })}
           </p>
         )}
-        {b.canAdjust && (
+        {live.adjustable && (
           <label className="flex w-full cursor-pointer items-center gap-2 max-md:min-h-10">
             <input
               type="checkbox"

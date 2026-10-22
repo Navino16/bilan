@@ -100,6 +100,13 @@ test.describe("OFX import (wizard)", () => {
     "Playwright WebKit doesn't deliver taps in this env (project-wide skip)",
   );
 
+  // Also runs after a failed test.
+  let created: string | null = null;
+  test.afterEach(async ({ page }) => {
+    if (created) await deleteAccount(page, created);
+    created = null;
+  });
+
   const rows = (page: Page) => page.locator('[data-slot="import-preview-row"]');
   const balance = (page: Page) => page.locator('[data-slot="import-ofx-balance"]');
 
@@ -120,6 +127,7 @@ test.describe("OFX import (wizard)", () => {
   }) => {
     const stamp = Date.now();
     const account = `OFX ${stamp}`;
+    created = account;
     await createAccount(page, account);
 
     const res = await upload(
@@ -162,12 +170,12 @@ test.describe("OFX import (wizard)", () => {
     await probable.locator('input[type="checkbox"]:visible').check();
     await expect(balance(page)).toContainText("Écart\u00a0: 12,34");
     await page.getByRole("button", { name: "Annuler", exact: true }).click();
-    await deleteAccount(page, account);
   });
 
   test("an opening-balance gap can be adjusted at commit", async ({ page }) => {
     const stamp = Date.now();
     const account = `OFX gap ${stamp}`;
+    created = account;
     await createAccount(page, account);
 
     await upload(
@@ -200,6 +208,5 @@ test.describe("OFX import (wizard)", () => {
         .last()
         .locator('[data-slot="account-balance"]'),
     ).toContainText("130,00");
-    await deleteAccount(page, account);
   });
 });
