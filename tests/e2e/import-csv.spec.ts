@@ -549,6 +549,55 @@ bad;LIGNE ${stamp};1,00;;B`;
     await expect(rule).toHaveCount(0);
   });
 
+  test("a category picked by hand becomes a rule that categorizes the other rows (#327)", async ({
+    page,
+  }) => {
+    const token = `RULEOFFER${Date.now()}`;
+    await page.goto("/fr/import");
+    const uploaded = page.waitForResponse((r) => r.url().endsWith("/api/import/csv"), {
+      timeout: 30_000,
+    });
+    await page.locator('input[type="file"]').setInputFiles({
+      name: `${token}.csv`,
+      mimeType: "text/csv",
+      buffer: Buffer.from(
+        `Date;Libellé;Montant\n14/03/2026;CB ${token} PARIS;-9,00\n15/03/2026;PRLV ${token} LYON;-8,00`,
+        "utf8",
+      ),
+    });
+    await uploaded;
+
+    const rows = page.locator('[data-slot="import-preview-row"]');
+    const picker = (i: number) => rows.nth(i).locator('[data-slot="category-combobox"]:visible');
+    await expect(picker(1)).toContainText("Sans catégorie", { timeout: 15_000 });
+    await picker(0).click();
+    await page.getByRole("menuitem").nth(1).click();
+    const chosen = (await picker(0).innerText()).trim();
+
+    await page.getByRole("button", { name: `Créer une règle pour CB ${token} PARIS` }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByRole("textbox")).toHaveValue(token.toLowerCase());
+    const refreshed = page.waitForResponse((r) => r.url().endsWith("/preview"), {
+      timeout: 30_000,
+    });
+    await dialog.getByRole("button", { name: "Créer la règle" }).click();
+    await refreshed;
+    await expect(dialog).toHaveCount(0);
+    await expect(picker(1)).toContainText(chosen);
+    await expect(page.locator('[data-slot="import-rule-offer"]:visible')).toHaveCount(0);
+    await page.getByRole("button", { name: "Annuler", exact: true }).click();
+
+    await page.goto("/fr/categories");
+    await page.getByRole("button", { name: /^Règles/ }).click();
+    const rule = page.locator('[data-slot="rule-row"]').filter({ hasText: token.toLowerCase() });
+    await rule.getByRole("button", { name: /supprimer/i }).click();
+    await page
+      .locator('[data-slot="confirm-dialog"]')
+      .getByRole("button", { name: /^supprimer$/i })
+      .click();
+    await expect(rule).toHaveCount(0);
+  });
+
   test("preview rows stay readable from 320 to 1440 px (#224)", async ({ page }) => {
     const stamp = Date.now();
     await page.goto("/fr/import");

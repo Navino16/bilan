@@ -45,7 +45,7 @@ export const CLIENT_SCOPES = {
   ],
   dashboard: ["dashboard", "shell.period"],
   groups: ["forms.fieldError", "groups", "invitations", "shell"],
-  import: ["import", "onboarding", "shell", "transactions"],
+  import: ["import", "onboarding", "rules", "shell", "transactions"],
   insights: ["dashboard", "insights", "merchants", "shell"],
   settings: ["forms.fieldError", "settings.data", "settings.security", "shell", "stepUp"],
   transactions: ["budgets", "dashboard", "forms.fieldError", "rules", "shell", "transactions"],
