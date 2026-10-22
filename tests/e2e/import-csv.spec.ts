@@ -1,5 +1,13 @@
 import { test, expect } from "@playwright/test";
 
+// A committed row with the same day + amount as an earlier one is a probable duplicate,
+// skipped by default: amounts derive from the run's stamp so the persistent e2e DB's
+// rows from earlier runs never match.
+function runAmount(stamp: number): string {
+  const cents = 100 + (stamp % 9_000_000);
+  return `${Math.floor(cents / 100)},${String(cents % 100).padStart(2, "0")}`;
+}
+
 test.describe("CSV import (wizard)", () => {
   test.use({ storageState: "tests/e2e/.auth/owner.json" });
   test.skip(
@@ -44,7 +52,7 @@ bad;LIGNE ${stamp};1,00;;B`;
   test("upload → preview → validate → see imported transactions", async ({ page }) => {
     const stamp = Date.now();
     const csv = `Date;Libellé;Débit;Crédit
-07/03/2026;CB IMPORT ${stamp};19,99;
+07/03/2026;CB IMPORT ${stamp};${runAmount(stamp)};
 08/03/2026;VIR IMPORT ${stamp};;100,00`;
 
     await page.goto("/fr/import");
@@ -191,7 +199,10 @@ bad;LIGNE ${stamp};1,00;;B`;
     const file = {
       name: `dup-${stamp}.csv`,
       mimeType: "text/csv",
-      buffer: Buffer.from(`Date;Libellé;Débit;Crédit\n03/06/2019;CB DUP ${stamp};4,00;`, "utf8"),
+      buffer: Buffer.from(
+        `Date;Libellé;Débit;Crédit\n03/06/2019;CB DUP ${stamp};${runAmount(stamp)};`,
+        "utf8",
+      ),
     };
     const upload = async () => {
       await page.goto("/fr/import");
@@ -223,13 +234,99 @@ bad;LIGNE ${stamp};1,00;;B`;
     await page.getByRole("button", { name: "Annuler", exact: true }).click();
   });
 
+  test("probable duplicates are flagged, skipped by default and imported once ticked", async ({
+    page,
+  }) => {
+    const stamp = Date.now();
+    const amount = runAmount(stamp);
+    const rows = page.locator('[data-slot="import-preview-row"]');
+    const box = (label: string) =>
+      rows.filter({ hasText: label }).locator('input[type="checkbox"]:visible');
+    const upload = async (name: string, lines: string[]) => {
+      await page.goto("/fr/import");
+      const uploaded = page.waitForResponse((r) => r.url().endsWith("/api/import/csv"), {
+        timeout: 30_000,
+      });
+      await page.locator('input[type="file"]').setInputFiles({
+        name,
+        mimeType: "text/csv",
+        buffer: Buffer.from(`Date;Libellé;Montant\n${lines.join("\n")}`, "utf8"),
+      });
+      await uploaded;
+      await expect(rows.first()).toBeVisible({ timeout: 15_000 });
+    };
+    const validate = async () => {
+      const committed = page.waitForResponse((r) => r.url().includes("/commit"), {
+        timeout: 30_000,
+      });
+      await page.getByRole("button", { name: /valider l’import/i }).click();
+      const sent = (await committed).request().postDataJSON();
+      await expect(page.getByRole("link", { name: /voir les transactions/i })).toBeVisible();
+      return sent;
+    };
+    const listed = async (label: string) => {
+      await page.goto(`/fr/transactions?search=${stamp}`);
+      await expect(page.getByRole("heading", { level: 1, name: /transactions/i })).toBeVisible();
+      return page.locator('[data-slot="transaction-row"]').filter({ hasText: label });
+    };
+
+    await upload(`probable-a-${stamp}.csv`, [
+      `02/03/2026;CB SHOP ONE ${stamp};-${amount}`,
+      `02/03/2026;PRLV OTHER ${stamp};-${amount}`,
+    ]);
+    await validate();
+
+    const second = [
+      `02/03/2026;CB  SHOP ONE ${stamp};-${amount}`,
+      `02/03/2026;CB SHOP TWO ${stamp};-${amount}`,
+      `02/03/2026;VIR FRESH ${stamp};${amount}`,
+    ];
+    await upload(`probable-b-${stamp}.csv`, second);
+    const probable = page.locator('[data-slot="import-probable"]');
+    await expect(probable).toContainText("1 doublon probable à vérifier");
+    const two = rows.filter({ hasText: `CB SHOP TWO ${stamp}` });
+    await expect(two.getByText("Doublon probable").first()).toBeVisible();
+    await expect(
+      two.getByText(`Déjà dans le compte : PRLV OTHER ${stamp}`, { exact: true }).first(),
+    ).toBeVisible();
+    await expect(box(`CB SHOP TWO ${stamp}`)).not.toBeChecked();
+    await expect(box(`CB SHOP TWO ${stamp}`)).toBeEnabled();
+    expect((await validate()).includedProbableIds).toEqual([]);
+    await expect((await listed(`VIR FRESH ${stamp}`)).first()).toBeVisible();
+    await expect(await listed(`CB SHOP TWO ${stamp}`)).toHaveCount(0);
+
+    await upload(`probable-c-${stamp}.csv`, second);
+    await expect(rows).toHaveCount(3);
+    const filtered = page.waitForResponse((r) => r.url().endsWith("/preview"), {
+      timeout: 30_000,
+    });
+    await expect(async () => {
+      await probable
+        .getByRole("button", { name: "Afficher uniquement les doublons probables" })
+        .click({ timeout: 2_000 });
+      await expect(rows).toHaveCount(1, { timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
+    expect((await filtered).request().postDataJSON().probableOnly).toBe(true);
+    await box(`CB SHOP TWO ${stamp}`).check();
+    await probable.getByRole("button", { name: "Afficher toutes les lignes" }).click();
+    await expect(rows).toHaveCount(3);
+    await expect(box(`CB SHOP TWO ${stamp}`)).toBeChecked();
+    expect((await validate()).includedProbableIds).toHaveLength(1);
+    await expect((await listed(`CB SHOP TWO ${stamp}`)).first()).toBeVisible();
+  });
+
   test("a guessed decimal mark is flagged, switchable, and committed as previewed (#187)", async ({
     page,
   }) => {
     const stamp = Date.now();
+    // Both mark readings must stay plausible ("n.234", "m,500"): the integer parts and
+    // the year vary per run instead (see runAmount).
+    const n = 1 + (stamp % 999);
+    const m = 1 + (Math.floor(stamp / 1000) % 999);
+    const year = 2000 + (Math.floor(stamp / 1_000_000) % 26);
     const csv = `Date;Libellé;Montant
-11/03/2026;CB DECIMAL ${stamp};-1.234
-12/03/2026;VIR DECIMAL ${stamp};45,500`;
+11/03/${year};CB DECIMAL ${stamp};-${n}.234
+12/03/${year};VIR DECIMAL ${stamp};${m},500`;
     await page.goto("/fr/import");
     const uploaded = page.waitForResponse((r) => r.url().endsWith("/api/import/csv"), {
       timeout: 30_000,
@@ -252,8 +349,8 @@ bad;LIGNE ${stamp};1,00;;B`;
       .first();
     const warning = page.locator('[data-slot="import-decimal-guessed"]');
     await expect(warning).toContainText("Séparateur décimal deviné (virgule)", { timeout: 15_000 });
-    await expect(card).toContainText(/-1\s234,00\s€/);
-    await expect(vir).toContainText(/45,50\s€/);
+    await expect(card).toContainText(new RegExp(`-${n}\\s234,00\\s€`));
+    await expect(vir).toContainText(new RegExp(`${m},50\\s€`));
 
     const dot = page
       .getByRole("group", { name: "Décimales" })
@@ -262,8 +359,8 @@ bad;LIGNE ${stamp};1,00;;B`;
       await page.getByRole("button", { name: "Utiliser le point" }).click({ timeout: 2_000 });
       await expect(dot).toHaveAttribute("aria-pressed", "true", { timeout: 2_000 });
     }).toPass({ timeout: 20_000 });
-    await expect(card).toContainText(/-1,23\s€/, { timeout: 15_000 });
-    await expect(vir).toContainText(/45\s500,00\s€/);
+    await expect(card).toContainText(new RegExp(`-${n},23\\s€`), { timeout: 15_000 });
+    await expect(vir).toContainText(new RegExp(`${m}\\s500,00\\s€`));
     await expect(warning).toHaveCount(0);
 
     const committed = page.waitForResponse((r) => r.url().includes("/commit"), {
@@ -277,10 +374,10 @@ bad;LIGNE ${stamp};1,00;;B`;
     await page.goto(`/fr/transactions?search=${stamp}`);
     const txRows = page.locator('[data-slot="transaction-row"]');
     await expect(txRows.filter({ hasText: `CB DECIMAL ${stamp}` }).first()).toContainText(
-      /1,23\s€/,
+      new RegExp(`${n},23\\s€`),
     );
     await expect(txRows.filter({ hasText: `VIR DECIMAL ${stamp}` }).first()).toContainText(
-      /45\s500,00\s€/,
+      new RegExp(`${m}\\s500,00\\s€`),
     );
   });
 

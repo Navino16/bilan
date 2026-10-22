@@ -903,6 +903,14 @@
     "cancel": "Cancel",
     "include": "Include this row",
     "duplicate": "duplicate",
+    "probableDuplicate": "Probable duplicate",
+    "probableOf": "Already in the account: {label}",
+    "probableInclude": "Import anyway",
+    "probable": {
+      "count": "{count, plural, one {# probable duplicate to review} other {# probable duplicates to review}}",
+      "showOnly": "Show probable duplicates only",
+      "showAll": "Show all rows"
+    },
     "noCategory": "Uncategorized",
     "colRawLabel": "Raw label",
     "colCategory": "Suggested category",

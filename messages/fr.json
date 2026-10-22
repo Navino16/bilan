@@ -903,6 +903,14 @@
     "cancel": "Annuler",
     "include": "Inclure cette ligne",
     "duplicate": "doublon",
+    "probableDuplicate": "Doublon probable",
+    "probableOf": "Déjà dans le compte : {label}",
+    "probableInclude": "Importer quand même",
+    "probable": {
+      "count": "{count, plural, one {# doublon probable à vérifier} other {# doublons probables à vérifier}}",
+      "showOnly": "Afficher uniquement les doublons probables",
+      "showAll": "Afficher toutes les lignes"
+    },
     "noCategory": "Sans catégorie",
     "colRawLabel": "Libellé brut",
     "colCategory": "Catégorie suggérée",
