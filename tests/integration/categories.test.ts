@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "@/server/db";
 import { seedDefaultCategories } from "@/server/services/categories/seed-defaults";
+import { DEFAULT_RULES } from "@/server/services/categories/default-sets";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
 import {
   createCategory,
@@ -39,11 +40,28 @@ describe("seedDefaultCategories", () => {
     expect(salaire.parentId).toBe(revenus.id);
   });
 
+  it("seeds the default rules on the user's own default categories", async () => {
+    const rules = await db.categorizationRule.findMany({
+      where: { userId },
+      include: { category: { include: { parent: true } } },
+    });
+    expect(rules).toHaveLength(DEFAULT_RULES.length);
+    expect(rules.every((r) => r.category.userId === userId && r.groupId === null)).toBe(true);
+    const voirie = rules.find((r) => r.pattern === "STATION VOIRIE")!;
+    expect([voirie.category.parent?.name, voirie.category.name]).toEqual([
+      "Transport",
+      "Péages & parking",
+    ]);
+    expect(rules.find((r) => r.pattern === "\\bTER\\b")?.matchType).toBe("REGEX");
+  });
+
   it("is idempotent-safe: a second seed does not duplicate when categories already exist", async () => {
     const before = await db.category.count({ where: { userId } });
+    const rulesBefore = await db.categorizationRule.count({ where: { userId } });
     await seedDefaultCategories(userId, "fr");
     const after = await db.category.count({ where: { userId } });
     expect(after).toBe(before); // skips when the user already has categories
+    expect(await db.categorizationRule.count({ where: { userId } })).toBe(rulesBefore);
   });
 });
 

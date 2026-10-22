@@ -64,6 +64,7 @@ export const CATEGORY_SYMBOLS = [
   { key: "pets", glyph: "🐾" },
   { key: "kids", glyph: "🧸" },
   { key: "bank", glyph: "🏦" },
+  { key: "piggy", glyph: "🐷" },
   { key: "work", glyph: "💼" },
   { key: "receipt", glyph: "🧾" },
   { key: "tools", glyph: "🔧" },

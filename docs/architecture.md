@@ -180,7 +180,7 @@ budget/
 │   ├── schema.prisma               # adapter mariadb
 │   ├── migrations/
 │   ├── seed.ts                     # roles + permissions + default app settings
-│   └── seed-data/                  # default categories (fr, en)
+│   └── seed-data/                  # default categories (fr, en) and rules
 ├── messages/                       # i18n
 │   ├── fr.json
 │   └── en.json
@@ -247,6 +247,7 @@ budget/
 - `UserPreference.locale` drives e-mails only. It is written at sign-up, at every sign-in (locale of the sign-in page) and by the language switcher.
 - E-mail locale (one rule for every sender): the recipient's `UserPreference.locale` when the recipient is a known user, otherwise the locale of the page that triggered the send. Mails carry a `Content-Language` header.
 - Default categories: two fixture sets (`prisma/seed-data/categories-fr.json` and `categories-en.json`) are bundled. At user signup, the set matching the sign-up page's locale is copied into `Category` rows owned by that user with `isDefault = true`. Users can rename, add, delete freely.
+- Default rules: `prisma/seed-data/rules.json` is created with the default categories, as the user's personal rules. Each rule names its category by a key path (`transport.tolls`) shared by both locales. Only national brands and generic bank wording, never people or local businesses; short tokens are word-bounded `REGEX` rules (`\bTER\b`) so they don't match inside longer words.
 - Language switcher in the header.
 - All dates/numbers formatted via `Intl.DateTimeFormat` / `Intl.NumberFormat` based on locale.
 
@@ -914,7 +915,7 @@ If `User.count() === 0`, every page (except `/setup`) redirects to `/{locale}/se
 3. Optional: OIDC provider config, with a "Test connection" probe of the issuer's discovery document (`testOidcConnectionAction`: HTTPS only, private/loopback/metadata addresses refused, connection pinned to the checked IP).
 4. Choose registration mode (default `INVITE_ONLY`).
 
-Submitting step 4 runs one Server Action, `completeSetupAction`, gated by `isSetupNeeded()`: `bootstrap.completeSetup` signs the user up (and in) through Better Auth, grants `SUPER_ADMIN`, marks the address verified (`via: setup`), creates `UserPreference` with the wizard's locale, seeds the default categories in that locale and audits `auth.signup` (`via: setup`); then the registration mode is saved and SMTP / the OIDC provider are stored only if filled in. The browser lands on `/{locale}/dashboard`.
+Submitting step 4 runs one Server Action, `completeSetupAction`, gated by `isSetupNeeded()`: `bootstrap.completeSetup` signs the user up (and in) through Better Auth, grants `SUPER_ADMIN`, marks the address verified (`via: setup`), creates `UserPreference` with the wizard's locale, seeds the default categories and rules in that locale and audits `auth.signup` (`via: setup`); then the registration mode is saved and SMTP / the OIDC provider are stored only if filled in. The browser lands on `/{locale}/dashboard`.
 
 `/setup` is permanently disabled (404) as soon as one user exists: the proxy caches "setup done" for the life of the process, and the page itself redirects home if reached anyway.
 

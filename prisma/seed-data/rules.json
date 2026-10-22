@@ -1,0 +1,920 @@
+[
+  {
+    "category": "food.groceries",
+    "pattern": "LECLERC"
+  },
+  {
+    "category": "food.groceries",
+    "pattern": "INTERMARCHE"
+  },
+  {
+    "category": "food.groceries",
+    "pattern": "CARREFOUR"
+  },
+  {
+    "category": "food.groceries",
+    "pattern": "AUCHAN"
+  },
+  {
+    "category": "food.groceries",
+    "pattern": "MONOPRIX"
+  },
+  {
+    "category": "food.groceries",
+    "pattern": "FRANPRIX"
+  },
+  {
+    "category": "food.groceries",
+    "pattern": "GRAND FRAIS"
+  },
+  {
+    "category": "food.groceries",
+    "pattern": "BIOCOOP"
+  },
+  {
+    "category": "food.groceries",
+    "pattern": "NATURALIA"
+  },
+  {
+    "category": "food.groceries",
+    "pattern": "BOULANGERIE"
+  },
+  {
+    "category": "food.groceries",
+    "pattern": "\\bSUPER U\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "food.groceries",
+    "pattern": "\\bHYPER U\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "food.groceries",
+    "pattern": "\\bU EXPRESS\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "food.groceries",
+    "pattern": "\\bLIDL\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "food.groceries",
+    "pattern": "\\bALDI\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "food.groceries",
+    "pattern": "\\bSPAR\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "food.restaurants",
+    "pattern": "SWILE"
+  },
+  {
+    "category": "food.restaurants",
+    "pattern": "DELIVEROO"
+  },
+  {
+    "category": "food.restaurants",
+    "pattern": "BURGER KING"
+  },
+  {
+    "category": "food.restaurants",
+    "pattern": "BUFFALO GRILL"
+  },
+  {
+    "category": "food.restaurants",
+    "pattern": "COURTEPAILLE"
+  },
+  {
+    "category": "food.restaurants",
+    "pattern": "HIPPOPOTAMUS"
+  },
+  {
+    "category": "food.restaurants",
+    "pattern": "UBER.{0,3}EATS",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "food.restaurants",
+    "pattern": "\\bMCDONALD",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "food.restaurants",
+    "pattern": "\\bKFC\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "food.restaurants",
+    "pattern": "\\bDOMINO",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "food.restaurants",
+    "pattern": "\\bQUICK\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "food.coffee",
+    "pattern": "STARBUCKS"
+  },
+  {
+    "category": "food.coffee",
+    "pattern": "MAXICOFFEE"
+  },
+  {
+    "category": "food.coffee",
+    "pattern": "SELECTA"
+  },
+  {
+    "category": "food.coffee",
+    "pattern": "\\bNYX\\*",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "housing.charges",
+    "pattern": "\\bVEOLIA\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "housing.charges",
+    "pattern": "\\bSUEZ\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "housing.energy",
+    "pattern": "TOTALENERGIES ELEC",
+    "priority": 110
+  },
+  {
+    "category": "housing.energy",
+    "pattern": "\\bEDF\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "housing.energy",
+    "pattern": "\\bENGIE\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "housing.energy",
+    "pattern": "\\bEKWATEUR\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "housing.internet",
+    "pattern": "FREE MOBILE"
+  },
+  {
+    "category": "housing.internet",
+    "pattern": "FREE TELECOM"
+  },
+  {
+    "category": "housing.internet",
+    "pattern": "BOUYGUES TEL"
+  },
+  {
+    "category": "housing.internet",
+    "pattern": "\\bORANGE\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "housing.internet",
+    "pattern": "\\bSFR\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "housing.internet",
+    "pattern": "\\bSOSH\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "transport.fuel",
+    "pattern": "\\bTOTAL\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "transport.fuel",
+    "pattern": "\\bTOTALENERGIES\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "transport.fuel",
+    "pattern": "\\bESSO\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "transport.fuel",
+    "pattern": "\\bSHELL\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "transport.fuel",
+    "pattern": "\\bAVIA\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "transport.fuel",
+    "pattern": "\\bAGIP\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "transport.fuel",
+    "pattern": "\\bIONITY\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "transport.fuel",
+    "pattern": "\\bTESLA\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "transport.tolls",
+    "pattern": "COFIROUTE"
+  },
+  {
+    "category": "transport.tolls",
+    "pattern": "AUTOROUTES DU SUD"
+  },
+  {
+    "category": "transport.tolls",
+    "pattern": "VINCI AUTOROUTES"
+  },
+  {
+    "category": "transport.tolls",
+    "pattern": "PARKING"
+  },
+  {
+    "category": "transport.tolls",
+    "pattern": "STATION VOIRIE"
+  },
+  {
+    "category": "transport.tolls",
+    "pattern": "\\bASF\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "transport.tolls",
+    "pattern": "\\bAPRR\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "transport.tolls",
+    "pattern": "\\bSANEF\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "transport.tolls",
+    "pattern": "\\bINDIGO\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "transport.tolls",
+    "pattern": "\\bPKG\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "transport.tolls",
+    "pattern": "\\bEFFIA\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "transport.tolls",
+    "pattern": "\\bULYS\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "transport.transit",
+    "pattern": "NAVIGO"
+  },
+  {
+    "category": "transport.transit",
+    "pattern": "BLABLACAR"
+  },
+  {
+    "category": "transport.transit",
+    "pattern": "\\bSNCF\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "transport.transit",
+    "pattern": "\\bTER\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "transport.transit",
+    "pattern": "\\bRATP\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "transport.transit",
+    "pattern": "\\bOUIGO\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "transport.transit",
+    "pattern": "\\bTRAINLINE\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "transport.transit",
+    "pattern": "\\bUBER\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "transport.maintenance",
+    "pattern": "NORAUTO"
+  },
+  {
+    "category": "transport.maintenance",
+    "pattern": "FEU VERT"
+  },
+  {
+    "category": "transport.maintenance",
+    "pattern": "\\bSPEEDY\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "transport.maintenance",
+    "pattern": "\\bMIDAS\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "leisure.outings",
+    "pattern": "\\bUGC\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "leisure.outings",
+    "pattern": "\\bCGR\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "leisure.outings",
+    "pattern": "\\bKINEPOLIS\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "leisure.subscriptions",
+    "pattern": "NETFLIX"
+  },
+  {
+    "category": "leisure.subscriptions",
+    "pattern": "SPOTIFY"
+  },
+  {
+    "category": "leisure.subscriptions",
+    "pattern": "DISNEY PLUS"
+  },
+  {
+    "category": "leisure.subscriptions",
+    "pattern": "DISNEYPLUS"
+  },
+  {
+    "category": "leisure.subscriptions",
+    "pattern": "AMAZON PRIME"
+  },
+  {
+    "category": "leisure.subscriptions",
+    "pattern": "PRIME VIDEO"
+  },
+  {
+    "category": "leisure.subscriptions",
+    "pattern": "APPLE.COM/BILL"
+  },
+  {
+    "category": "leisure.subscriptions",
+    "pattern": "AMZ DIGITAL"
+  },
+  {
+    "category": "leisure.subscriptions",
+    "pattern": "\\bCANAL ?\\+",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "leisure.subscriptions",
+    "pattern": "\\bCANALPLUS\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "leisure.subscriptions",
+    "pattern": "\\bDEEZER\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "leisure.subscriptions",
+    "pattern": "\\bYOUTUBE",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "leisure.subscriptions",
+    "pattern": "\\bAUDIBLE\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "leisure.travel",
+    "pattern": "BOOKING.COM"
+  },
+  {
+    "category": "leisure.travel",
+    "pattern": "EASYJET"
+  },
+  {
+    "category": "leisure.travel",
+    "pattern": "RYANAIR"
+  },
+  {
+    "category": "leisure.travel",
+    "pattern": "\\bAIRBNB\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "leisure.travel",
+    "pattern": "\\bAIR FRANCE\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "leisure.travel",
+    "pattern": "\\bTRANSAVIA\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "leisure.games",
+    "pattern": "GOOGLE PLAY"
+  },
+  {
+    "category": "leisure.games",
+    "pattern": "SUPERCELL"
+  },
+  {
+    "category": "leisure.games",
+    "pattern": "PLAYSTATION"
+  },
+  {
+    "category": "leisure.games",
+    "pattern": "NINTENDO"
+  },
+  {
+    "category": "leisure.games",
+    "pattern": "EPIC GAMES"
+  },
+  {
+    "category": "leisure.games",
+    "pattern": "\\bSTEAM",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "leisure.games",
+    "pattern": "\\bXBOX\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "leisure.games",
+    "pattern": "\\bBLIZZARD\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "health",
+    "pattern": "OPTICIEN"
+  },
+  {
+    "category": "health",
+    "pattern": "OPTIQUE"
+  },
+  {
+    "category": "health",
+    "pattern": "AFFLELOU"
+  },
+  {
+    "category": "health",
+    "pattern": "\\bKRYS\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "health",
+    "pattern": "\\bOPTIC 2000\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "health.doctor",
+    "pattern": "DOCTOLIB"
+  },
+  {
+    "category": "health.doctor",
+    "pattern": "\\bDR\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "health.pharmacy",
+    "pattern": "\\bPHARM",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "health.pharmacy",
+    "pattern": "\\bPHCIE\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "health.insurance",
+    "pattern": "MUTUELLE",
+    "priority": 110
+  },
+  {
+    "category": "health.insurance",
+    "pattern": "SIDECARE",
+    "priority": 110
+  },
+  {
+    "category": "health.insurance",
+    "pattern": "\\bHENNER\\b",
+    "matchType": "REGEX",
+    "priority": 110
+  },
+  {
+    "category": "health.insurance",
+    "pattern": "\\bHELIUM\\b",
+    "matchType": "REGEX",
+    "priority": 110
+  },
+  {
+    "category": "health.insurance",
+    "pattern": "\\bMGEN\\b",
+    "matchType": "REGEX",
+    "priority": 110
+  },
+  {
+    "category": "income.reimbursements",
+    "pattern": "\\bCPAM\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "income.reimbursements",
+    "pattern": "\\bCAF\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "income.reimbursements",
+    "pattern": "\\bAMELI\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "income.other",
+    "pattern": "LBC FRANCE"
+  },
+  {
+    "category": "income.other",
+    "pattern": "ADEVINTA"
+  },
+  {
+    "category": "shopping.clothes",
+    "pattern": "PRIMARK"
+  },
+  {
+    "category": "shopping.clothes",
+    "pattern": "DECATHLON"
+  },
+  {
+    "category": "shopping.clothes",
+    "pattern": "CHAUSSEA"
+  },
+  {
+    "category": "shopping.clothes",
+    "pattern": "\\bKIABI\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "shopping.clothes",
+    "pattern": "\\bH ?& ?M\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "shopping.clothes",
+    "pattern": "\\bCELIO\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "shopping.clothes",
+    "pattern": "\\bGEMO\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "shopping.home",
+    "pattern": "LEROY MERLIN"
+  },
+  {
+    "category": "shopping.home",
+    "pattern": "CASTORAMA"
+  },
+  {
+    "category": "shopping.home",
+    "pattern": "BRICOMARCHE"
+  },
+  {
+    "category": "shopping.home",
+    "pattern": "BRICO DEPOT"
+  },
+  {
+    "category": "shopping.home",
+    "pattern": "CONFORAMA"
+  },
+  {
+    "category": "shopping.home",
+    "pattern": "MAISONS DU MONDE"
+  },
+  {
+    "category": "shopping.home",
+    "pattern": "\\bIKEA\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "shopping.tech",
+    "pattern": "APPLE STORE"
+  },
+  {
+    "category": "shopping.tech",
+    "pattern": "\\bDELL\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "shopping.tech",
+    "pattern": "\\bFNAC\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "shopping.tech",
+    "pattern": "\\bDARTY\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "shopping.tech",
+    "pattern": "\\bLDLC\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "shopping.tech",
+    "pattern": "\\bBACK ?MARKET\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "shopping",
+    "pattern": "AMAZON"
+  },
+  {
+    "category": "shopping",
+    "pattern": "LEBONCOIN"
+  },
+  {
+    "category": "shopping",
+    "pattern": "VINTED"
+  },
+  {
+    "category": "shopping",
+    "pattern": "CDISCOUNT"
+  },
+  {
+    "category": "shopping",
+    "pattern": "PAYPAL"
+  },
+  {
+    "category": "shopping",
+    "pattern": "MONDIAL RELAY"
+  },
+  {
+    "category": "shopping",
+    "pattern": "PACKLINK"
+  },
+  {
+    "category": "shopping",
+    "pattern": "INTERFLORA"
+  },
+  {
+    "category": "shopping",
+    "pattern": "ALIEXPRESS"
+  },
+  {
+    "category": "shopping",
+    "pattern": "\\bEBAY\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "shopping",
+    "pattern": "\\bLA ?POSTE\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "shopping",
+    "pattern": "\\bTEMU\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "shopping",
+    "pattern": "\\bSHEIN\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "bank.fees",
+    "pattern": "TENUE DE COMPTE"
+  },
+  {
+    "category": "bank.fees",
+    "pattern": "INTERETS DEBITEURS"
+  },
+  {
+    "category": "bank.fees",
+    "pattern": "\\bAGIOS?\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "bank.loans",
+    "pattern": "ECHEANCE PRET"
+  },
+  {
+    "category": "bank.loans",
+    "pattern": "PRET PERSONNEL"
+  },
+  {
+    "category": "bank.loans",
+    "pattern": "PRET IMMO"
+  },
+  {
+    "category": "taxes.taxes",
+    "pattern": "FINANCES PUBLIQU"
+  },
+  {
+    "category": "taxes.taxes",
+    "pattern": "TRESOR PUBLIC"
+  },
+  {
+    "category": "taxes.taxes",
+    "pattern": "\\bDGFIP\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "taxes.fines",
+    "pattern": "AMENDE.GOUV"
+  },
+  {
+    "category": "taxes.fines",
+    "pattern": "FORF P.STAT"
+  },
+  {
+    "category": "taxes.fines",
+    "pattern": "\\bANTAI\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "savings.accounts",
+    "pattern": "\\bLIVRET\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "savings.accounts",
+    "pattern": "\\bLDDS?\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "savings.accounts",
+    "pattern": "\\bLEP\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "savings.accounts",
+    "pattern": "\\bPEL\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "savings.investments",
+    "pattern": "TRADE REPUBLI"
+  },
+  {
+    "category": "savings.investments",
+    "pattern": "EPARGNE SALARIALE"
+  },
+  {
+    "category": "savings.investments",
+    "pattern": "\\bPEA\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "children.childcare",
+    "pattern": "CANTINE"
+  },
+  {
+    "category": "children.childcare",
+    "pattern": "PERISCOLAIRE"
+  },
+  {
+    "category": "children.childcare",
+    "pattern": "\\bENFANC",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "children.childcare",
+    "pattern": "\\bGARDERIE\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "bank.fees",
+    "pattern": "\\bCOTIS(ATION)?\\b.*\\b(CARTE|OFFRE|FORFAIT|PACKAGE|COMPTE)\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "bank.fees",
+    "pattern": "\\bFRAIS (BANCAIRES?|DE TENUE|TENUE|CARTE|DE DOSSIER|DOSSIER|D'?INTERVENTION)\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "bank.fees",
+    "pattern": "\\bCOMMISSIONS? (D'?INTERVENTION|DE MOUVEMENT|SUR)\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "food.groceries",
+    "pattern": "^(CB|CARTE|PAIEMENT|ACHAT)\\b.*\\bPICARD\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "food.groceries",
+    "pattern": "^(CB|CARTE|PAIEMENT|ACHAT)\\b.*\\bNETTO\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "shopping.clothes",
+    "pattern": "^(CB|CARTE|PAIEMENT|ACHAT)\\b.*\\bZARA\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "shopping.home",
+    "pattern": "^(CB|CARTE|PAIEMENT|ACHAT)\\b.*\\bBOULANGER\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "shopping.home",
+    "pattern": "BOULANGER.COM"
+  },
+  {
+    "category": "shopping.clothes",
+    "pattern": "DR MARTENS"
+  },
+  {
+    "category": "health.doctor",
+    "pattern": "\\bDOCTEUR\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "food.restaurants",
+    "pattern": "\\bO'? ?TACOS\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "food.restaurants",
+    "pattern": "\\bJUST ?EAT\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "food.coffee",
+    "pattern": "COLUMBUS CAFE"
+  },
+  {
+    "category": "leisure.outings",
+    "pattern": "\\bPATH(E\\b|É)",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "children.childcare",
+    "pattern": "\\bCR[EÈ]CHE",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "taxes.taxes",
+    "pattern": "\\bIMP[OÔ]TS?\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "housing.energy",
+    "pattern": "\\bOHM [EÉ]NERGIE\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "housing.energy",
+    "pattern": "TOTALENERGIES GAZ",
+    "priority": 110
+  },
+  {
+    "category": "housing.energy",
+    "pattern": "TOTAL DIRECT ENERGIE",
+    "priority": 110
+  },
+  {
+    "category": "transport.tolls",
+    "pattern": "STATIONNEMENT"
+  },
+  {
+    "category": "transport.tolls",
+    "pattern": "HORODATEUR"
+  }
+]

@@ -1,45 +1,225 @@
 [
   {
+    "key": "income",
     "name": "Income",
     "icon": "💰",
     "color": "var(--cat-income)",
-    "children": ["Salary", "Reimbursements", "Other income"]
+    "children": [
+      {
+        "key": "salary",
+        "name": "Salary"
+      },
+      {
+        "key": "reimbursements",
+        "name": "Reimbursements"
+      },
+      {
+        "key": "other",
+        "name": "Other income"
+      }
+    ]
   },
   {
+    "key": "food",
     "name": "Food",
     "icon": "🛒",
     "color": "var(--cat-groceries)",
-    "children": ["Groceries", "Restaurants", "Coffee & snacks"]
+    "children": [
+      {
+        "key": "groceries",
+        "name": "Groceries"
+      },
+      {
+        "key": "restaurants",
+        "name": "Restaurants"
+      },
+      {
+        "key": "coffee",
+        "name": "Coffee & snacks"
+      }
+    ]
   },
   {
+    "key": "housing",
     "name": "Housing",
     "icon": "🏠",
     "color": "var(--cat-housing)",
-    "children": ["Rent & mortgage", "Fees", "Electricity & gas", "Internet & phone"]
+    "children": [
+      {
+        "key": "rent",
+        "name": "Rent & mortgage"
+      },
+      {
+        "key": "charges",
+        "name": "Fees"
+      },
+      {
+        "key": "energy",
+        "name": "Electricity & gas"
+      },
+      {
+        "key": "internet",
+        "name": "Internet & phone"
+      }
+    ]
   },
   {
+    "key": "transport",
     "name": "Transport",
     "icon": "🚗",
     "color": "var(--cat-transport)",
-    "children": ["Fuel", "Public transport", "Vehicle maintenance"]
+    "children": [
+      {
+        "key": "fuel",
+        "name": "Fuel"
+      },
+      {
+        "key": "transit",
+        "name": "Public transport"
+      },
+      {
+        "key": "maintenance",
+        "name": "Vehicle maintenance"
+      },
+      {
+        "key": "tolls",
+        "name": "Tolls & parking"
+      }
+    ]
   },
   {
+    "key": "leisure",
     "name": "Leisure",
     "icon": "🎉",
     "color": "var(--cat-leisure)",
-    "children": ["Outings", "Subscriptions", "Travel"]
+    "children": [
+      {
+        "key": "outings",
+        "name": "Outings"
+      },
+      {
+        "key": "subscriptions",
+        "name": "Subscriptions"
+      },
+      {
+        "key": "travel",
+        "name": "Travel"
+      },
+      {
+        "key": "games",
+        "name": "Games & apps"
+      }
+    ]
   },
   {
+    "key": "health",
     "name": "Health",
     "icon": "🩺",
     "color": "var(--cat-health)",
-    "children": ["Doctor", "Pharmacy", "Insurance"]
+    "children": [
+      {
+        "key": "doctor",
+        "name": "Doctor"
+      },
+      {
+        "key": "pharmacy",
+        "name": "Pharmacy"
+      },
+      {
+        "key": "insurance",
+        "name": "Insurance"
+      }
+    ]
   },
   {
+    "key": "shopping",
     "name": "Shopping",
     "icon": "🛍️",
     "color": "var(--cat-shopping)",
-    "children": ["Clothing", "Home", "Electronics"]
+    "children": [
+      {
+        "key": "clothes",
+        "name": "Clothing"
+      },
+      {
+        "key": "home",
+        "name": "Home"
+      },
+      {
+        "key": "tech",
+        "name": "Electronics"
+      }
+    ]
   },
-  { "name": "Other", "icon": "📦", "color": "var(--cat-other)", "children": [] }
+  {
+    "key": "bank",
+    "name": "Bank",
+    "icon": "🏦",
+    "color": "var(--cat-bills)",
+    "children": [
+      {
+        "key": "fees",
+        "name": "Bank fees"
+      },
+      {
+        "key": "loans",
+        "name": "Loans"
+      }
+    ]
+  },
+  {
+    "key": "taxes",
+    "name": "Taxes & fines",
+    "icon": "🧾",
+    "color": "var(--cat-food)",
+    "children": [
+      {
+        "key": "taxes",
+        "name": "Taxes"
+      },
+      {
+        "key": "fines",
+        "name": "Fines & fees"
+      }
+    ]
+  },
+  {
+    "key": "savings",
+    "name": "Savings",
+    "icon": "🐷",
+    "color": "var(--cat-savings)",
+    "children": [
+      {
+        "key": "accounts",
+        "name": "Savings accounts"
+      },
+      {
+        "key": "investments",
+        "name": "Investments"
+      }
+    ]
+  },
+  {
+    "key": "children",
+    "name": "Children",
+    "icon": "🧸",
+    "color": "var(--cat-leisure)",
+    "children": [
+      {
+        "key": "childcare",
+        "name": "Childcare & school meals"
+      },
+      {
+        "key": "activities",
+        "name": "Activities"
+      }
+    ]
+  },
+  {
+    "key": "other",
+    "name": "Other",
+    "icon": "📦",
+    "color": "var(--cat-other)",
+    "children": []
+  }
 ]
