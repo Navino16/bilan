@@ -1,4 +1,4 @@
-import { utcDayFromParts, type RejectedRow } from "../csv-parse";
+import { MAX_ABS_AMOUNT, decodeCsv, utcDayFromParts, type RejectedRow } from "../csv-parse";
 import { ImportAccessError } from "../errors";
 import type { NormalizedRow } from "../types";
 import { ofxType } from "./type";
@@ -13,13 +13,7 @@ export type OfxStatement = {
   ledger: { amount: number; asOf: Date } | null;
 };
 
-export function decodeOfx(buffer: Buffer): string {
-  try {
-    return new TextDecoder("utf-8", { fatal: true }).decode(buffer);
-  } catch {
-    return new TextDecoder("windows-1252").decode(buffer);
-  }
-}
+export const decodeOfx = (buffer: Buffer): string => decodeCsv(buffer);
 
 const ENTITIES: Record<string, string> = {
   amp: "&",
@@ -28,7 +22,18 @@ const ENTITIES: Record<string, string> = {
   quot: '"',
   apos: "'",
 };
-const decodeEntities = (s: string) => s.replace(/&(amp|lt|gt|quot|apos);/g, (_, e) => ENTITIES[e]);
+const ENTITY = /&(?:(amp|lt|gt|quot|apos)|#(\d{1,7})|#[xX]([0-9a-fA-F]{1,6}));/g;
+
+const decodeEntities = (s: string) =>
+  s.replace(ENTITY, (whole, named?: string, dec?: string, hex?: string) => {
+    if (named) return ENTITIES[named];
+    const code = dec ? Number(dec) : parseInt(hex!, 16);
+    return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : whole;
+  });
+
+// Bounds on hostile input (spec §5.5): real files nest ~8 levels and hold a handful of statements.
+const MAX_DEPTH = 64;
+const MAX_STATEMENTS = 20;
 
 const TOKEN = /<(\/?)([A-Za-z][\w.]*)(?:[^<>\w.][^<>]*)?>|([^<]+)/g;
 
@@ -52,10 +57,13 @@ type Draft = {
   transactions: Fields[];
 };
 
+// Rounded to cents like the CSV path (the DB stores Decimal(12,2)); null when unreadable.
 function readAmount(raw: string | undefined): number | null {
   const s = (raw ?? "").trim().replace(",", ".");
-  return /^[+-]?\d+(\.\d+)?$/.test(s) ? Number(s) : null;
+  return /^[+-]?\d+(\.\d+)?$/.test(s) ? Math.round(Number(s) * 100) / 100 : null;
 }
+
+const outOfRange = (amount: number) => Math.abs(amount) > MAX_ABS_AMOUNT;
 
 function readDay(raw: string | undefined): Date | null {
   const m = /^(\d{4})(\d{2})(\d{2})/.exec((raw ?? "").trim());
@@ -75,6 +83,7 @@ function buildStatement(draft: Draft, index: number): OfxStatement {
     if (!date) return reject("DATE", t.DTPOSTED ?? "");
     const amount = readAmount(t.TRNAMT);
     if (amount === null) return reject("AMOUNT", t.TRNAMT ?? "");
+    if (outOfRange(amount)) return reject("AMOUNT_RANGE", t.TRNAMT ?? "");
     const rawLabel = t.NAME || t.MEMO || (t.CHECKNUM ? `CHEQUE ${t.CHECKNUM}` : "");
     if (!rawLabel) return reject("LABEL", "");
 
@@ -97,7 +106,10 @@ function buildStatement(draft: Draft, index: number): OfxStatement {
     accountLast4: (draft.account.ACCTID ?? "").slice(-4),
     rows,
     rejected,
-    ledger: ledgerAmount !== null && ledgerDay ? { amount: ledgerAmount, asOf: ledgerDay } : null,
+    ledger:
+      ledgerAmount !== null && !outOfRange(ledgerAmount) && ledgerDay
+        ? { amount: ledgerAmount, asOf: ledgerDay }
+        : null,
   };
 }
 
@@ -142,6 +154,8 @@ export function parseOfx(text: string): OfxStatement[] {
 
     if (tag === "STMTRS" || tag === "CCSTMTRS") {
       flushTrn();
+      if (draft && !draft.transactions.length) drafts.pop();
+      if (drafts.length >= MAX_STATEMENTS) throw new ImportAccessError("PARSE_FAILED");
       draft = {
         kind: tag === "STMTRS" ? "BANK" : "CREDITCARD",
         account: {},
@@ -153,10 +167,11 @@ export function parseOfx(text: string): OfxStatement[] {
       flushTrn();
       trn = {};
     }
+    if (stack.length >= MAX_DEPTH) throw new ImportAccessError("PARSE_FAILED");
     stack.push(tag);
     pending = tag;
   }
   flushTrn();
 
-  return drafts.map(buildStatement);
+  return drafts.filter((d) => d.transactions.length).map(buildStatement);
 }

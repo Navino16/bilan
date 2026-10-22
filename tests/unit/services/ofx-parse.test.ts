@@ -223,6 +223,19 @@ describe("parseOfx", () => {
     expect(performance.now() - started).toBeLessThan(1000);
   });
 
+  it.each([
+    ["nested aggregates never closed", "<OFX>" + "<X>".repeat(150_000) + "</Z>".repeat(150_000)],
+    [
+      "nested leaves under a statement",
+      "<OFX><STMTRS>" + "<X>".repeat(200_000) + "<Y>t".repeat(200_000),
+    ],
+  ])("rejects deep nesting in bounded time (%s)", (_, input) => {
+    expect(input.length).toBeGreaterThan(1_000_000);
+    const started = performance.now();
+    expect(() => parseOfx(input)).toThrow("PARSE_FAILED");
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+
   it("returns [] for an OFX without statements", () => {
     expect(parseOfx("OFXHEADER:100\n\n<OFX>\n<SIGNONMSGSRSV1>\n</SIGNONMSGSRSV1>\n</OFX>")).toEqual(
       [],
@@ -230,7 +243,78 @@ describe("parseOfx", () => {
   });
 });
 
+describe("statement limits", () => {
+  const stmt = (i: number) =>
+    `<STMTRS><BANKACCTFROM><ACCTID>000${i}</BANKACCTFROM><BANKTRANLIST>${trn(
+      `<DTPOSTED>20261020\n<TRNAMT>-${i + 1}\n<NAME>X${i}`,
+    )}</BANKTRANLIST></STMTRS>`;
+
+  it("accepts 20 statements and rejects 21", () => {
+    const file = (n: number) =>
+      `<OFX>${Array.from({ length: n }, (_, i) => stmt(i)).join("")}</OFX>`;
+    expect(parseOfx(file(20))).toHaveLength(20);
+    expect(() => parseOfx(file(21))).toThrow("PARSE_FAILED");
+  });
+
+  it("drops statements without transactions", () => {
+    const empties = "<STMTRS></STMTRS>".repeat(5000);
+    const stmts = parseOfx(`<OFX>${empties}${stmt(7)}${empties}</OFX>`);
+    expect(stmts.map((s) => [s.key, s.rows[0].rawLabel])).toEqual([["stmt-0", "X7"]]);
+  });
+
+  it("keeps a statement whose only transaction was rejected", () => {
+    const [s] = parseOfx(
+      `<OFX><STMTRS>${trn("<DTPOSTED>20261020\n<TRNAMT>x\n<NAME>X")}</STMTRS></OFX>`,
+    );
+    expect(s.rows).toEqual([]);
+    expect(s.rejected).toHaveLength(1);
+  });
+});
+
+describe("amount bounds", () => {
+  it("rounds to cents and rejects an amount past Decimal(12,2)", () => {
+    const [s] = parseOfx(
+      sgml(
+        [
+          trn("<DTPOSTED>20261020\n<TRNAMT>-1.234\n<NAME>THREE"),
+          trn("<DTPOSTED>20261020\n<TRNAMT>99999999999.00\n<NAME>HUGE"),
+          trn("<DTPOSTED>20261020\n<TRNAMT>9999999999.99\n<NAME>MAX"),
+        ].join("\n"),
+      ),
+    );
+    expect(s.rows.map((r) => [r.rawLabel, r.amount])).toEqual([
+      ["THREE", -1.23],
+      ["MAX", 9999999999.99],
+    ]);
+    expect(s.rejected).toEqual([{ row: 2, reason: "AMOUNT_RANGE", value: "99999999999.00" }]);
+  });
+
+  it("drops an out-of-range ledger balance", () => {
+    const [s] = parseOfx(
+      sgml(trn("<DTPOSTED>20261020\n<TRNAMT>-1\n<NAME>X")).replace(
+        "<BALAMT>1523.45",
+        "<BALAMT>99999999999.00",
+      ),
+    );
+    expect(s.ledger).toBeNull();
+  });
+});
+
+describe("numeric entities", () => {
+  it("decodes decimal and hexadecimal character references", () => {
+    const [s] = parseOfx(
+      sgml(trn("<DTPOSTED>20261020\n<TRNAMT>-1\n<NAME>L&#39;&#233;t&#xE9; &#x27;&#0;&#99999999;")),
+    );
+    expect(s.rows[0].rawLabel).toBe("L'été '&#0;&#99999999;");
+  });
+});
+
 describe("decodeOfx", () => {
+  it("decodes UTF-16 with a BOM", () => {
+    const buf = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from("<OFX>é", "utf16le")]);
+    expect(decodeOfx(buf)).toBe("<OFX>é");
+  });
+
   it("decodes windows-1252", () => {
     const buf = Buffer.concat([
       Buffer.from("<OFX><NAME>CAF"),
