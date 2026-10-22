@@ -4,7 +4,7 @@ import { useRef, useState, useTransition, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Upload, ChevronRight, ChevronLeft, ChevronDown, PenLine } from "lucide-react";
+import { Upload, ChevronRight, ChevronLeft, ChevronDown, PenLine, Check } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SegmentedTabs, overline } from "@/components/transactions/bits";
@@ -16,6 +16,7 @@ import {
   DATE_ORDERS,
   DECIMAL_MARKS,
   DEFAULT_DATE_ORDER,
+  OFX_MAX_BYTES,
   PDF_MAX_BYTES,
   type DateOrder,
   type DecimalMark,
@@ -32,6 +33,7 @@ import { RevertImportDialog } from "./revert-import-dialog";
 import { AddBlockedState, ADD_BLOCKED_ID } from "@/components/onboarding/add-blocked";
 import type { AddTransactionBlocker } from "@/lib/onboarding";
 import { SUPPORTED_BANKS, type BankKey } from "@/server/services/imports/pdf/detect";
+import type { OfxBalance, OfxPreviewProduct } from "@/server/services/imports/ofx-service";
 
 type Account = { id: string; name: string; bankName: string | null };
 type PreviewRow = {
@@ -54,10 +56,15 @@ type Product = {
   preview: PreviewRow[];
   page: number;
   pageSize: number;
+  kind?: OfxPreviewProduct["kind"];
+  accountType?: string | null;
+  accountLast4?: string;
+  balance?: OfxBalance | null;
 };
+type Source = "CSV" | "PDF" | "OFX";
 type Preview = {
   batchId: string;
-  source: "CSV" | "PDF";
+  source: Source;
   filename: string | null;
   fileSizeBytes: number | null;
   bank?: string | null;
@@ -80,12 +87,28 @@ type Preview = {
 };
 
 type Summary = { importedRows: number; skippedRows: number; rejectedRows?: number };
+// A ticked/unticked row: its product, plus the amount and date the live OFX balance needs.
+type RowEdit = { product: string; amount: number; date: string };
 
 const CSV_PRODUCT = "default";
 
 function isPdfFile(f: File): boolean {
   return f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf";
 }
+
+function isOfxFile(f: File): boolean {
+  return f.name.toLowerCase().endsWith(".ofx") || f.type === "application/x-ofx";
+}
+
+const sourceOf = (f: File): Source => (isPdfFile(f) ? "PDF" : isOfxFile(f) ? "OFX" : "CSV");
+const MAX_BYTES: Record<Source, number> = {
+  CSV: CSV_MAX_BYTES,
+  PDF: PDF_MAX_BYTES,
+  OFX: OFX_MAX_BYTES,
+};
+const apiBase = (source: Source) => `/api/import/${source.toLowerCase()}`;
+const OFX_ACCOUNT_TYPES = ["CHECKING", "SAVINGS", "MONEYMRKT", "CREDITLINE", "CREDITCARD"];
+const round2 = (x: number) => Math.round(x * 100) / 100;
 
 const MARK_KEY: Record<DecimalMark, "comma" | "dot"> = { ",": "comma", ".": "dot" };
 const otherMark = (m: DecimalMark): DecimalMark => (m === "," ? "." : ",");
@@ -139,12 +162,14 @@ export function ImportWizard({
   const [decimalChoice, setDecimalChoice] = useState<DecimalMark | null>(null);
   const [dateOrderChoice, setDateOrderChoice] = useState<DateOrder | null>(null);
   const [productAccount, setProductAccount] = useState<Record<string, string>>({});
-  // Per-row edits keyed by externalId: category override, and exclusion (the
-  // value is the row's product, so ignored products don't count their exclusions).
+  // Per-row edits keyed by externalId: category override, and exclusion (keeping the
+  // row's product, so ignored products don't count their exclusions).
   const [overrides, setOverrides] = useState<Record<string, string>>({});
-  const [excluded, setExcluded] = useState<Record<string, string>>({});
-  // Probable duplicates are skipped unless ticked: externalId → product, like `excluded`.
-  const [includedProbable, setIncludedProbable] = useState<Record<string, string>>({});
+  const [excluded, setExcluded] = useState<Record<string, RowEdit>>({});
+  // Probable duplicates are skipped unless ticked, kept like `excluded`.
+  const [includedProbable, setIncludedProbable] = useState<Record<string, RowEdit>>({});
+  // OFX products whose opening balance the commit should adjust.
+  const [adjustBalance, setAdjustBalance] = useState<string[]>([]);
   const [probableOnly, setProbableOnly] = useState(false);
   // Bumped when per-row edits reset, to remount the (uncontrolled) row category pickers.
   const [editsEpoch, setEditsEpoch] = useState(0);
@@ -173,7 +198,7 @@ export function ImportWizard({
 
   function errorText(code: string): string {
     if (code === "TOO_LARGE") {
-      const max = file && isPdfFile(file) ? PDF_MAX_BYTES : CSV_MAX_BYTES;
+      const max = MAX_BYTES[file ? sourceOf(file) : "CSV"];
       return t("error.TOO_LARGE", { max: formatBytes(max, locale) });
     }
     return t.has(`error.${code}`) ? t(`error.${code}`) : t("error.PARSE_FAILED");
@@ -183,18 +208,15 @@ export function ImportWizard({
     discard(preview?.batchId);
     setError(null);
     setMappingError(null);
-    const isPdf = isPdfFile(f);
+    const source = sourceOf(f);
     if (f.size === 0) return setError("EMPTY");
-    if (f.size > (isPdf ? PDF_MAX_BYTES : CSV_MAX_BYTES)) return setError("TOO_LARGE");
+    if (f.size > MAX_BYTES[source]) return setError("TOO_LARGE");
     setLoading(true);
     const fd = new FormData();
     fd.set("file", f);
     fd.set("accountId", account);
     try {
-      const res = await fetch(isPdf ? "/api/import/pdf" : "/api/import/csv", {
-        method: "POST",
-        body: fd,
-      });
+      const res = await fetch(apiBase(source), { method: "POST", body: fd });
       const data = (await res.json().catch(() => ({}))) as Preview;
       if (!res.ok) {
         setError(data.error ?? "PARSE_FAILED");
@@ -204,6 +226,7 @@ export function ImportWizard({
       setOverrides({});
       setExcluded({});
       setIncludedProbable({});
+      setAdjustBalance([]);
       setProbableOnly(false);
       setSettingsOpen(false);
       setColumns(columnsOf(data.mapping));
@@ -227,10 +250,7 @@ export function ImportWizard({
   ) {
     if (!preview) return;
     const sent = { probableOnly, ...body };
-    const url =
-      preview.source === "PDF"
-        ? `/api/import/pdf/${preview.batchId}/preview`
-        : `/api/import/csv/${preview.batchId}/preview`;
+    const url = `${apiBase(preview.source)}/${preview.batchId}/preview`;
     const seq = ++refreshSeq.current;
     setRefreshing(true);
     try {
@@ -353,10 +373,11 @@ export function ImportWizard({
   function onProductAccountChange(productKey: string, account: string) {
     const next = { ...productAccount, [productKey]: account };
     setProductAccount(next);
-    // A tick means "import anyway" against the previous account's transaction.
+    // Both ticks were given against the previous account: its transaction, its balance.
     setIncludedProbable((m) =>
-      Object.fromEntries(Object.entries(m).filter(([, k]) => k !== productKey)),
+      Object.fromEntries(Object.entries(m).filter(([, e]) => e.product !== productKey)),
     );
+    setAdjustBalance((keys) => keys.filter((k) => k !== productKey));
     const pages = Object.fromEntries(products.map((p) => [p.key, p.page]));
     void refresh(pdfBody(pages, next));
   }
@@ -381,6 +402,7 @@ export function ImportWizard({
     setOverrides({});
     setExcluded({});
     setIncludedProbable({});
+    setAdjustBalance([]);
     setProbableOnly(false);
     setError(null);
     setMappingError(null);
@@ -402,22 +424,26 @@ export function ImportWizard({
   function commit() {
     if (!preview) return;
     startTransition(async () => {
-      const isPdf = preview.source === "PDF";
-      const url = isPdf
-        ? `/api/import/pdf/${preview.batchId}/commit`
-        : `/api/import/csv/${preview.batchId}/commit`;
+      const url = `${apiBase(preview.source)}/${preview.batchId}/commit`;
       const edits = {
         autoCategorize,
         overrides,
         excludedIds: Object.keys(excluded),
         includedProbableIds: Object.keys(includedProbable),
       };
-      const body = isPdf
-        ? {
-            mapping: Object.fromEntries(Object.entries(productAccount).filter(([, v]) => v)),
-            ...edits,
-          }
-        : { mapping: preview.mapping, ...edits };
+      const mapping = Object.fromEntries(Object.entries(productAccount).filter(([, v]) => v));
+      const body =
+        preview.source === "CSV"
+          ? { mapping: preview.mapping, ...edits }
+          : preview.source === "PDF"
+            ? { mapping, ...edits }
+            : {
+                mapping,
+                ...edits,
+                adjustBalance: adjustBalance.filter(
+                  (k) => mapping[k] && products.find((p) => p.key === k)?.balance?.canAdjust,
+                ),
+              };
       setProgress(0);
       // A poll answered after the commit settled must not bring the bar back.
       let polling = true;
@@ -447,7 +473,7 @@ export function ImportWizard({
   }
 
   const products: Product[] = preview
-    ? preview.source === "PDF"
+    ? preview.source !== "CSV"
       ? (preview.products ?? [])
       : [
           {
@@ -468,8 +494,8 @@ export function ImportWizard({
   const dupCount = products.reduce((n, p) => n + p.duplicateCount, 0);
   const catCount = products.reduce((n, p) => n + p.autoCategorizedCount, 0);
   const probableTotal = products.reduce((n, p) => n + p.probableCount, 0);
-  const countIn = (edits: Record<string, string>, key: string) =>
-    Object.values(edits).filter((k) => k === key).length;
+  const countIn = (edits: Record<string, RowEdit>, key: string) =>
+    Object.values(edits).filter((e) => e.product === key).length;
   // Rows a commit would write: duplicates are always skipped, and so are unticked
   // probable duplicates, unchecked rows and products mapped to no account.
   const importable = products
@@ -486,7 +512,7 @@ export function ImportWizard({
         ),
       0,
     );
-  const sourceBadge = preview?.source ?? (file && isPdfFile(file) ? "PDF" : "CSV");
+  const sourceBadge = preview?.source ?? (file ? sourceOf(file) : "CSV");
   const accountName = accounts.find((a) => a.id === accountId)?.name ?? "";
   const fieldLabel = (field: string) => t(`col${field[0].toUpperCase()}${field.slice(1)}`);
   const settingsSummary = [
@@ -526,15 +552,16 @@ export function ImportWizard({
   function includeCheckbox(r: PreviewRow, productKey: string) {
     const checked = isIncluded(r);
     const probable = r.probableOf !== null;
-    const toggle = (edits: Record<string, string>) => {
+    const toggle = (edits: Record<string, RowEdit>) => {
       const next = { ...edits };
-      if (probable ? !checked : checked) next[r.externalId] = productKey;
-      else delete next[r.externalId];
+      if (probable ? !checked : checked) {
+        next[r.externalId] = { product: productKey, amount: r.amount, date: r.date };
+      } else delete next[r.externalId];
       return next;
     };
     // externalId doesn't depend on the account, so a PDF account switch can leave the
     // row in the other map: the maps stay exclusive, the server checks `excluded` first.
-    const forget = (edits: Record<string, string>) => {
+    const forget = (edits: Record<string, RowEdit>) => {
       if (!(r.externalId in edits)) return edits;
       const next = { ...edits };
       delete next[r.externalId];
@@ -595,6 +622,73 @@ export function ImportWizard({
             <ChevronRight />
           </Button>
         </span>
+      </div>
+    );
+  }
+
+  function productTitle(product: Product) {
+    if (preview?.source !== "OFX") return t(`products.${product.key}`);
+    const type = product.kind === "CREDITCARD" ? "CREDITCARD" : (product.accountType ?? "");
+    return t("ofxProduct", {
+      type: t(`ofxAccountType.${OFX_ACCOUNT_TYPES.includes(type) ? type : "OTHER"}`),
+      last4: product.accountLast4 ?? "",
+    });
+  }
+
+  // Server figures plus the rows the user toggled since: what the commit would produce (spec §5.5).
+  function balanceBlock(product: Product) {
+    const b = product.balance;
+    if (!b || !productAccount[product.key]) return null;
+    const upToAsOf = (edits: Record<string, RowEdit>) =>
+      Object.values(edits)
+        .filter((e) => e.product === product.key && e.date.slice(0, 10) <= b.asOf)
+        .reduce((n, e) => n + e.amount, 0);
+    const after = round2(
+      b.base + b.defaultImport - upToAsOf(excluded) + upToAsOf(includedProbable),
+    );
+    const gap = round2(b.ledger - after);
+    return (
+      <div
+        data-slot="import-ofx-balance"
+        className="flex flex-wrap items-end gap-x-6 gap-y-2 border-y px-4 py-3 text-xs md:px-5"
+      >
+        <div>
+          <div className="text-muted-foreground">
+            {t("balance.bank", { date: formatDate(b.asOf, locale) })}
+          </div>
+          <div className="text-sm font-medium tabular-nums">{money.format(b.ledger)}</div>
+        </div>
+        <div>
+          <div className="text-muted-foreground">{t("balance.after")}</div>
+          <div className="text-sm font-medium tabular-nums">{money.format(after)}</div>
+        </div>
+        {gap === 0 ? (
+          <p role="status" className="flex items-center gap-1 font-medium">
+            <Check aria-hidden className="size-3.5" style={{ color: "var(--income)" }} />
+            {t("balance.matches")}
+          </p>
+        ) : (
+          <p role="status" className="font-medium" style={{ color: "var(--warning-text)" }}>
+            {t("balance.gap", { amount: money.format(gap) })}
+          </p>
+        )}
+        {b.canAdjust && (
+          <label className="flex w-full cursor-pointer items-center gap-2 max-md:min-h-10">
+            <input
+              type="checkbox"
+              checked={adjustBalance.includes(product.key)}
+              disabled={busy}
+              onChange={(e) =>
+                setAdjustBalance((keys) =>
+                  e.target.checked ? [...keys, product.key] : keys.filter((k) => k !== product.key),
+                )
+              }
+              className="size-5 shrink-0 cursor-pointer disabled:cursor-not-allowed md:size-4"
+              style={{ accentColor: "var(--primary)" }}
+            />
+            {t("balance.adjust")}
+          </label>
+        )}
       </div>
     );
   }
@@ -710,11 +804,12 @@ export function ImportWizard({
               {t("limits", {
                 csv: formatBytes(CSV_MAX_BYTES, locale),
                 pdf: formatBytes(PDF_MAX_BYTES, locale),
+                ofx: formatBytes(OFX_MAX_BYTES, locale),
               })}
             </span>
             <input
               type="file"
-              accept=".csv,text/csv,.pdf,application/pdf"
+              accept=".csv,text/csv,.pdf,application/pdf,.ofx,application/x-ofx"
               className="sr-only"
               disabled={loading}
               onChange={(e) => {
@@ -1113,12 +1208,10 @@ export function ImportWizard({
               <div key={product.key} data-slot="pdf-product">
                 {products.length > 1 && (
                   <div className="bg-muted/40 flex items-center justify-between gap-3 border-y px-5 py-2">
-                    <span className="text-sm font-medium">{t(`products.${product.key}`)}</span>
+                    <span className="text-sm font-medium">{productTitle(product)}</span>
                     <NativeSelect
                       value={productAccount[product.key] ?? ""}
-                      aria-label={t("productAccount", {
-                        product: t(`products.${product.key}`),
-                      })}
+                      aria-label={t("productAccount", { product: productTitle(product) })}
                       onChange={(e) => onProductAccountChange(product.key, e.target.value)}
                       disabled={busy}
                       size="sm"
@@ -1133,6 +1226,7 @@ export function ImportWizard({
                     </NativeSelect>
                   </div>
                 )}
+                {balanceBlock(product)}
                 <div className="text-muted-foreground bg-muted/60 hidden grid-cols-[28px_92px_minmax(0,1fr)_172px_104px] items-center gap-3 border-y px-5 py-2.5 text-[11px] tracking-[0.08em] uppercase @2xl/preview:grid">
                   <span aria-hidden />
                   <span>{t("colDate")}</span>

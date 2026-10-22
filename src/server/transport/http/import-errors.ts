@@ -6,6 +6,7 @@ const STATUS: Record<string, number> = {
   NOTHING_TO_IMPORT: 409,
   ACCOUNT_ARCHIVED: 409,
   EMPTY: 422,
+  PARSE_FAILED: 422,
 };
 
 // Maps an import service error to its JSON response. Access errors (including a
