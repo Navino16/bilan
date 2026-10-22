@@ -181,7 +181,7 @@ describe("PDF import pipeline", () => {
     expect(p.products[1].viewRows).toBe(2);
     expect(p.products[1].preview[0].probableOf).toBe("VERSEMENT PROB");
 
-    const only = await previewPdfBatch(id, owner, { accounts, probableOnly: true });
+    const only = await previewPdfBatch(id, owner, { accounts, filter: "probable" });
     expect(only.products.map((x) => x.viewRows)).toEqual([1, 1]);
     expect(only.products[1].totalRows).toBe(2);
     expect(only.products[1].preview.map((r) => r.rawLabel)).toEqual(["VERSEMENT PROB 11/03"]);

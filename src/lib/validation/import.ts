@@ -11,3 +11,7 @@ export type DecimalMark = (typeof DECIMAL_MARKS)[number];
 export const DATE_ORDERS = ["DMY", "MDY"] as const;
 export type DateOrder = (typeof DATE_ORDERS)[number];
 export const DEFAULT_DATE_ORDER: DateOrder = "DMY";
+
+// Rows the import preview pages through: every row, the ones no rule categorized, or the probable duplicates.
+export const PREVIEW_FILTERS = ["all", "uncategorized", "probable"] as const;
+export type PreviewFilter = (typeof PREVIEW_FILTERS)[number];

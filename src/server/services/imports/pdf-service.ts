@@ -10,6 +10,7 @@ import { parsePdf, type BankKey } from "./pdf";
 import { assertImportTarget, loadBatch, withCommitClaim } from "./index";
 import { ImportAccessError } from "./errors";
 import type { CommitSummary, PreviewRow } from "./types";
+import type { PreviewFilter } from "@/lib/validation/import";
 
 type PdfMetaRow = { date: string; amount: number; rawLabel: string };
 type PdfMetaProduct = { key: string; rows: PdfMetaRow[] };
@@ -20,6 +21,7 @@ export type PdfPreviewProduct = {
   probableCount: number;
   viewRows: number;
   autoCategorizedCount: number;
+  uncategorizedCount: number;
   preview: PreviewRow[];
   page: number;
   pageSize: number;
@@ -95,7 +97,7 @@ export async function previewPdfBatch(
   opts: {
     pages?: Record<string, number>;
     accounts?: Record<string, string>;
-    probableOnly?: boolean;
+    filter?: PreviewFilter;
   } = {},
 ): Promise<PdfPreview> {
   const batch = await loadBatch(batchId, userId);
@@ -118,7 +120,7 @@ export async function previewPdfBatch(
         rows,
         userId,
         opts.pages?.[p.key] ?? 0,
-        { probableOnly: opts.probableOnly },
+        { filter: opts.filter },
       );
       return {
         key: p.key,
@@ -127,6 +129,7 @@ export async function previewPdfBatch(
         probableCount: built.probableCount,
         viewRows: built.viewRows,
         autoCategorizedCount: built.autoCategorizedCount,
+        uncategorizedCount: built.uncategorizedCount,
         preview: built.rows,
         page: built.page,
         pageSize: PREVIEW_PAGE_SIZE,

@@ -300,13 +300,12 @@ bad;LIGNE ${stamp};1,00;;B`;
     const filtered = page.waitForResponse((r) => r.url().endsWith("/preview"), {
       timeout: 30_000,
     });
-    await probable
-      .getByRole("button", { name: "Afficher uniquement les doublons probables" })
-      .click();
-    expect((await filtered).request().postDataJSON().probableOnly).toBe(true);
+    const filters = page.getByRole("group", { name: "Filtrer l'aperçu" });
+    await filters.getByRole("button", { name: "Doublons probables (1)" }).click();
+    expect((await filtered).request().postDataJSON().filter).toBe("probable");
     await expect(rows).toHaveCount(1);
     await box(`CB SHOP TWO ${stamp}`).check();
-    await probable.getByRole("button", { name: "Afficher toutes les lignes" }).click();
+    await filters.getByRole("button", { name: "Toutes (3)" }).click();
     await expect(rows).toHaveCount(3);
     await expect(box(`CB SHOP TWO ${stamp}`)).toBeChecked();
     expect((await validate()).includedProbableIds).toHaveLength(1);
@@ -487,7 +486,7 @@ bad;LIGNE ${stamp};1,00;;B`;
     await page.getByRole("button", { name: "Annuler", exact: true }).click();
   });
 
-  test("unticking auto-categorize drops rule categories from the preview (#225)", async ({
+  test("unticking auto-categorize drops rule categories and the uncategorized filter (#225, #328)", async ({
     page,
   }) => {
     const pattern = `AUTOCAT${Date.now()}`;
@@ -499,7 +498,7 @@ bad;LIGNE ${stamp};1,00;;B`;
     await page.getByRole("menuitem").nth(1).click();
     await page.getByRole("button", { name: /enregistrer/i }).click();
     const rule = page.locator('[data-slot="rule-row"]').filter({ hasText: pattern });
-    await expect(rule).toHaveCount(1);
+    await expect(rule).toHaveCount(1, { timeout: 30_000 });
 
     await page.goto("/fr/import");
     const uploaded = page.waitForResponse((r) => r.url().endsWith("/api/import/csv"), {
@@ -508,7 +507,10 @@ bad;LIGNE ${stamp};1,00;;B`;
     await page.locator('input[type="file"]').setInputFiles({
       name: `${pattern}.csv`,
       mimeType: "text/csv",
-      buffer: Buffer.from(`Date;Libellé;Montant\n14/03/2026;CB ${pattern};-9,00`, "utf8"),
+      buffer: Buffer.from(
+        `Date;Libellé;Montant\n14/03/2026;CB ${pattern};-9,00\n15/03/2026;ZQXW KJV ${pattern.slice(7)};-8,00`,
+        "utf8",
+      ),
     });
     await uploaded;
 
@@ -520,7 +522,19 @@ bad;LIGNE ${stamp};1,00;;B`;
     await expect(meta).toContainText("1 catégorisée automatiquement", { timeout: 15_000 });
     await expect(combobox).not.toContainText("Sans catégorie");
 
+    const rows = page.locator('[data-slot="import-preview-row"]');
+    const filters = page.getByRole("group", { name: "Filtrer l'aperçu" });
+    const filtered = page.waitForResponse((r) => r.url().endsWith("/preview"), {
+      timeout: 30_000,
+    });
+    await filters.getByRole("button", { name: "Sans catégorie (1)" }).click();
+    expect((await filtered).request().postDataJSON().filter).toBe("uncategorized");
+    await expect(rows).toHaveCount(1);
+    await expect(rows.first()).toContainText("ZQXW KJV");
+
     await page.getByRole("button", { name: "Catégoriser automatiquement" }).click();
+    await expect(rows).toHaveCount(2);
+    await expect(filters).toHaveCount(0);
     await expect(meta).not.toContainText("catégorisée");
     await expect(combobox).toContainText("Sans catégorie");
     await page.getByRole("button", { name: "Annuler", exact: true }).click();

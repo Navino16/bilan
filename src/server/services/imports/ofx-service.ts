@@ -3,6 +3,7 @@ import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
 import { computeExternalIds } from "@/server/services/transactions/secure-fields";
 import type { BalanceAdjustment } from "@/lib/import-status";
+import type { PreviewFilter } from "@/lib/validation/import";
 import type { TransactionInput } from "@/lib/schemas/transaction";
 import { insertRows, finalizeBatch, type CommitOptions, type InsertTotals } from "./commit";
 import { buildPreview, PREVIEW_PAGE_SIZE } from "./preview";
@@ -219,7 +220,7 @@ export async function previewOfxBatch(
   opts: {
     pages?: Record<string, number>;
     accounts?: Record<string, string>;
-    probableOnly?: boolean;
+    filter?: PreviewFilter;
   } = {},
 ): Promise<OfxPreview> {
   const batch = await loadBatch(batchId, userId);
@@ -235,9 +236,7 @@ export async function previewOfxBatch(
       const rows = toRows(p);
       const accountId = opts.accounts?.[p.key] || batch.accountId;
       const [built, balance] = await Promise.all([
-        buildPreview(accountId, rows, userId, opts.pages?.[p.key] ?? 0, {
-          probableOnly: opts.probableOnly,
-        }),
+        buildPreview(accountId, rows, userId, opts.pages?.[p.key] ?? 0, { filter: opts.filter }),
         balanceOf(p, rows, accountId, userId),
       ]);
       return {
@@ -250,6 +249,7 @@ export async function previewOfxBatch(
         probableCount: built.probableCount,
         viewRows: built.viewRows,
         autoCategorizedCount: built.autoCategorizedCount,
+        uncategorizedCount: built.uncategorizedCount,
         preview: built.rows,
         page: built.page,
         pageSize: PREVIEW_PAGE_SIZE,

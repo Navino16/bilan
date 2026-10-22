@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/server/auth/permissions";
+import { PREVIEW_FILTERS } from "@/lib/validation/import";
 import { previewCsvBatch } from "@/server/services/imports";
 import { importErrorResponse } from "@/server/transport/http/import-errors";
 
@@ -16,7 +17,7 @@ export async function POST(
   try {
     return Response.json(
       await previewCsvBatch(batchId, user.id, body.mapping, Number(body.page) || 0, {
-        probableOnly: body.probableOnly === true,
+        filter: PREVIEW_FILTERS.find((f) => f === body.filter) ?? "all",
       }),
     );
   } catch (e) {

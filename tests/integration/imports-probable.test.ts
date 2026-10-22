@@ -163,7 +163,7 @@ describe("probable duplicates", () => {
     expect(all.viewRows).toBe(60);
     expect(all.probableCount).toBe(3);
 
-    const p = await buildPreview(accountId, rows, owner, 0, { probableOnly: true });
+    const p = await buildPreview(accountId, rows, owner, 0, { filter: "probable" });
     expect(p.rows.map((r) => r.rawLabel)).toEqual(["CB ROW 10", "CB ROW 30", "CB ROW 55"]);
     expect(p.rows.map((r) => r.probableOf)).toEqual(["OLD 10", "OLD 30", "OLD 55"]);
     expect(p.viewRows).toBe(3);
