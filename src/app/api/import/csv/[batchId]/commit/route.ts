@@ -13,6 +13,13 @@ export async function POST(
   const { batchId } = await params;
   const body = await req.json().catch(() => null);
   if (!body?.mapping) return Response.json({ error: "INVALID" }, { status: 400 });
+  const includedProbableIds: unknown = body.includedProbableIds ?? [];
+  if (
+    !Array.isArray(includedProbableIds) ||
+    includedProbableIds.some((i) => typeof i !== "string")
+  ) {
+    return Response.json({ error: "INVALID" }, { status: 400 });
+  }
   try {
     const summary = await commitCsvBatch(
       batchId,
@@ -22,6 +29,7 @@ export async function POST(
         autoCategorize: body.autoCategorize ?? true,
         overrides: body.overrides ?? {},
         excludedIds: body.excludedIds ?? [],
+        includedProbableIds,
       },
     );
     return Response.json(summary);

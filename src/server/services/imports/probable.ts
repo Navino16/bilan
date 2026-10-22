@@ -10,11 +10,13 @@ const bucketKey = (date: Date, amount: number) =>
 // Row index → raw label of the existing transaction it probably duplicates: same UTC day
 // and amount, no exact key match. Each existing row backs at most one incoming row, in
 // file order; rows already claimed by a certain duplicate (`externalIds`) are left out.
+// `excludeBatchId` ignores what the running commit inserted itself (one batch, several products).
 export async function findProbableDuplicates(
   accountId: string,
   rows: { date: Date; amount: number }[],
   externalIds: string[],
   certain: Set<string>,
+  opts: { excludeBatchId?: string } = {},
 ): Promise<Map<number, string>> {
   const candidates = rows.flatMap((_, i) => (certain.has(externalIds[i]) ? [] : [i]));
   if (candidates.length === 0) return new Map();
@@ -29,6 +31,9 @@ export async function findProbableDuplicates(
   const existing = await db.transaction.findMany({
     where: {
       accountId,
+      ...(opts.excludeBatchId && {
+        OR: [{ importBatchId: null }, { importBatchId: { not: opts.excludeBatchId } }],
+      }),
       date: { gte: new Date(first), lt: new Date(last + DAY_MS) },
       amount: { in: [...new Set(candidates.map((i) => rows[i].amount.toFixed(2)))] },
     },

@@ -58,6 +58,8 @@ export type ImportPreview = {
   mapping: CsvMapping;
   totalRows: number;
   duplicateCount: number;
+  probableCount: number;
+  viewRows: number; // rows the pages walk: the whole file, or only the probable ones
   autoCategorizedCount: number;
   rejectedCount: number; // rows of the file that couldn't be read with this mapping
   rejected: RejectedRow[]; // a few examples

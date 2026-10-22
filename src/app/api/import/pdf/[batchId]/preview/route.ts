@@ -8,6 +8,7 @@ export const runtime = "nodejs";
 const bodySchema = z.object({
   pages: z.record(z.string(), z.number().int().min(0)).default({}),
   accounts: z.record(z.string(), z.string()).default({}),
+  probableOnly: z.boolean().default(false),
 });
 
 export async function POST(

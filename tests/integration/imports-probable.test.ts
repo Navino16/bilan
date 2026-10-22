@@ -129,6 +129,30 @@ describe("probable duplicates", () => {
     expect(p.probableCount).toBe(1);
   });
 
+  it("does not flag the day before or after", async () => {
+    const accountId = await newAccount();
+    await seedExisting(accountId, row("2026-04-12", -5, "CB COFFEE"));
+    const p = await buildPreview(
+      accountId,
+      [row("2026-04-11", -5, "CB COFFEE EARLY"), row("2026-04-13", -5, "CB COFFEE LATE")],
+      owner,
+    );
+    expect(p.probableCount).toBe(0);
+  });
+
+  it("does not flag a twin when the existing row is its certain match", async () => {
+    const accountId = await newAccount();
+    await seedExisting(accountId, row("2026-04-12", -5, "CB X"));
+    const p = await buildPreview(
+      accountId,
+      [row("2026-04-12", -5, "CB X"), row("2026-04-12", -5, "CB X")],
+      owner,
+    );
+    expect(p.rows[0].isDuplicate).toBe(true);
+    expect(p.rows[1].probableOf).toBeNull();
+    expect(p.probableCount).toBe(0);
+  });
+
   it("pages the probable-only view", async () => {
     const accountId = await newAccount();
     const rows = Array.from({ length: 60 }, (_, i) => row("2026-05-03", -(i + 1), `CB ROW ${i}`));

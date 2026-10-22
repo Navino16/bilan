@@ -82,6 +82,7 @@ export async function previewCsvBatch(
   userId: string,
   mapping?: CsvMappingInput,
   page = 0,
+  opts: { probableOnly?: boolean } = {},
 ): Promise<ImportPreview> {
   const batch = await loadBatch(batchId, userId);
   if (batch.source !== "CSV" || (batch.status !== "PARSING" && batch.status !== "REVIEW")) {
@@ -114,7 +115,7 @@ export async function previewCsvBatch(
   });
   if (count === 0) throw new ImportAccessError("NOT_COMMITTABLE");
 
-  const p = await buildPreview(batch.accountId, normalized, userId, page);
+  const p = await buildPreview(batch.accountId, normalized, userId, page, opts);
   return {
     batchId,
     source: "CSV",
@@ -124,6 +125,8 @@ export async function previewCsvBatch(
     mapping: resolved,
     totalRows: p.totalRows,
     duplicateCount: p.duplicateCount,
+    probableCount: p.probableCount,
+    viewRows: p.viewRows,
     autoCategorizedCount: p.autoCategorizedCount,
     rejectedCount: rejected.length,
     rejected: rejected.slice(0, REJECTED_SHOWN),

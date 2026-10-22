@@ -76,7 +76,9 @@ export async function insertRows(
     select: { externalId: true },
   });
   const seen = new Set(existing.map((e) => e.externalId!));
-  const probable = await findProbableDuplicates(target.accountId, rows, externalIds, seen);
+  const probable = await findProbableDuplicates(target.accountId, rows, externalIds, seen, {
+    excludeBatchId: target.batchId,
+  });
   const suggestions = autoCategorize
     ? await suggestMany(
         rows.map((r) => r.rawLabel),

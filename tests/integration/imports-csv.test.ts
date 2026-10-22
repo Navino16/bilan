@@ -118,6 +118,58 @@ describe("CSV import pipeline", () => {
     ).rejects.toThrow("NOTHING_TO_IMPORT");
   });
 
+  it("flags a probable duplicate and imports it once ticked", async () => {
+    const head = "Date;Libellé;Débit;Crédit\n";
+    const first = await createCsvBatch(
+      { accountId, filename: "p1.csv", text: `${head}10/06/2031;CB SHOP ONE;5,00;` },
+      { id: owner },
+    );
+    await commitCsvBatch(first.id, (await previewCsvBatch(first.id, owner)).mapping, {
+      id: owner,
+    });
+
+    const text = `${head}10/06/2031;CB SHOP ONE 10/06;5,00;\n11/06/2031;CB METRO;2,00;`;
+    const batch = await createCsvBatch({ accountId, filename: "p2.csv", text }, { id: owner });
+    const preview = await previewCsvBatch(batch.id, owner);
+    expect(preview.probableCount).toBe(1);
+    expect(preview.viewRows).toBe(2);
+    expect(preview.preview[0].probableOf).toBe("CB SHOP ONE");
+
+    const only = await previewCsvBatch(batch.id, owner, preview.mapping, 0, {
+      probableOnly: true,
+    });
+    expect(only.viewRows).toBe(1);
+    expect(only.totalRows).toBe(2);
+    expect(only.preview.map((r) => r.rawLabel)).toEqual(["CB SHOP ONE 10/06"]);
+
+    const probableId = preview.preview[0].externalId;
+    const ticked = await commitCsvBatch(
+      batch.id,
+      preview.mapping,
+      { id: owner },
+      { includedProbableIds: [probableId] },
+    );
+    expect(ticked.importedRows).toBe(2);
+  });
+
+  it("skips a probable duplicate at commit when it isn't ticked", async () => {
+    const head = "Date;Libellé;Débit;Crédit\n";
+    const seed = await createCsvBatch(
+      { accountId, filename: "q1.csv", text: `${head}10/06/2033;CB SHOP TWO;5,00;` },
+      { id: owner },
+    );
+    await commitCsvBatch(seed.id, (await previewCsvBatch(seed.id, owner)).mapping, {
+      id: owner,
+    });
+    const text = `${head}10/06/2033;CB SHOP TWO 10/06;5,00;\n11/06/2033;CB METRO;2,00;`;
+    const batch = await createCsvBatch({ accountId, filename: "q2.csv", text }, { id: owner });
+    const preview = await previewCsvBatch(batch.id, owner);
+    expect(preview.probableCount).toBe(1);
+    const summary = await commitCsvBatch(batch.id, preview.mapping, { id: owner });
+    expect(summary.importedRows).toBe(1);
+    expect(summary.skippedRows).toBe(1);
+  });
+
   it("pages the preview, counting over every row", async () => {
     const lines = Array.from(
       { length: 120 },
