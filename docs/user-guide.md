@@ -222,7 +222,8 @@ Things to check in the preview:
 
 - **Decimal mark**: when Bilan had to guess, a warning asks you to check the amounts. Click **Looks right**, or the button that switches to the other mark.
 - **Date order**: Bilan picks MM/DD only when the file can't be read as DD/MM (for example 12/25). When every date fits both orders, it assumes DD/MM and a warning asks you to check the dates. Click **Dates look right**, or **Use MM/DD**. Dates written as 2026-10-15 are never ambiguous.
-- **Duplicates**: a row with the same date, amount and bank label as a transaction already imported into this account is marked **duplicate** and skipped. You can't force it in. Transactions you entered by hand are never treated as duplicates. Identical rows within the same file are all kept.
+- **Duplicates**: a row with the same date, amount and bank label (extra spaces ignored) as a transaction already imported into this account is marked **duplicate** and skipped. You can't force it in. Transactions you entered by hand are never treated as certain duplicates. Identical rows within the same file are all kept.
+- **Probable duplicates**: a row that isn't a certain duplicate, but whose account already has a transaction (imported or entered by hand) on the same day for the same amount, is flagged **Probable duplicate**, with the matching transaction shown under "Already in the account". It is unticked, so it is skipped unless you tick it (**Import anyway**). This catches the same purchase entered by hand, or labelled differently by the bank. The counter at the top lists how many there are, and **Show probable duplicates only** filters the preview to review them.
 - **Unreadable rows**: rows with an unrecognized date or amount, an amount out of range or an empty label are skipped. Bilan shows how many there were and up to 5 examples with their line number. If a whole column is wrong, the sidebar flags it: try another column mapping.
 
 Changing the mapping, the account, the decimal mark or the date order rebuilds the preview, and you lose the rows you unticked and the categories you picked.
@@ -235,7 +236,7 @@ Drop the PDF on the same page. Bilan reads statements from **LCL** and **Revolut
 
 A Revolut statement can contain several sections (current account, deposit). Each section gets its own **Target account** choice. Pick **Don't import** to skip one.
 
-There is no decimal mark or date order to set for PDFs. Duplicates, categories and the preview work as for CSV files.
+There is no decimal mark or date order to set for PDFs. Duplicates (certain and probable), categories and the preview work as for CSV files.
 
 ### Undo an import
 
