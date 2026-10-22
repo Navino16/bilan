@@ -5,7 +5,8 @@ import { getAuth } from "@/server/auth";
 import { seedDefaultCategories } from "@/server/services/categories/seed-defaults";
 import { listForUser, type CategoryNode } from "@/server/services/categories";
 import { createTransaction } from "@/server/services/transactions";
-import { createRule } from "@/server/services/categorization";
+import { pickPrepared, prepareLabel, prepareRules } from "@/server/services/categorization/match";
+import type { RuleMatchType } from "@/lib/validation/rule";
 import { createBudget, rollRecurring } from "@/server/services/budgets";
 import { createGroup } from "@/server/services/groups";
 import { shareAccountWithGroup } from "@/server/services/accounts/sharing";
@@ -472,19 +473,23 @@ async function main(): Promise<void> {
     links++;
   }
 
-  for (const [pattern, category] of [
-    ["CARREFOUR", "Courses"],
-    ["NETFLIX", "Abonnements"],
-    ["SNCF", "Voyages"],
-  ] as const) {
-    const { id } = await createRule(
-      { pattern, matchType: "CONTAINS", categoryId: catId(category) },
-      actor,
-    );
-    // History is seeded already categorized, so credit each rule with what it would have matched.
-    const hits = txs.filter((t) => t.date <= today && t.label.includes(pattern)).length;
-    await db.categorizationRule.update({ where: { id }, data: { hits } });
+  // The signup seeded the default rules; the history is seeded already categorized, so credit
+  // each rule with what it would have matched.
+  const rules = await db.categorizationRule.findMany({ where: { userId } });
+  const prepared = prepareRules(
+    rules.map((r) => ({
+      ...r,
+      matchType: r.matchType as RuleMatchType,
+      createdAt: r.createdAt.getTime(),
+    })),
+  );
+  const hits = new Map<string, number>();
+  for (const t of txs.filter((t) => t.date <= today)) {
+    const winner = pickPrepared(prepared, prepareLabel(t.label));
+    if (winner) hits.set(winner.id, (hits.get(winner.id) ?? 0) + 1);
   }
+  for (const [id, n] of hits)
+    await db.categorizationRule.update({ where: { id }, data: { hits: n } });
 
   const { id: groupId } = await createGroup(
     { name: "Foyer Martin", description: "Compte joint et charges du logement" },
@@ -536,7 +541,7 @@ async function main(): Promise<void> {
 
   console.log(
     `Seeded ${EMAIL} (password ${PASSWORD}): 3 accounts, ${created} transactions over ${MONTHS} months, ` +
-      `${links} links, 3 rules, household "Foyer Martin"${member ? ` (+ ${MEMBER_EMAIL})` : ""}, 3 budgets.`,
+      `${links} links, ${rules.length} rules, household "Foyer Martin"${member ? ` (+ ${MEMBER_EMAIL})` : ""}, 3 budgets.`,
   );
 }
 

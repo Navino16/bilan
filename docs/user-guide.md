@@ -305,6 +305,8 @@ To delete a category, open its **⋮** menu and choose **Delete**. Its sub-categ
 
 A rule gives a category to transactions whose bank label matches a pattern.
 
+A new account starts with a set of ready-made rules on the default categories: national retailers, utilities, subscriptions, motorways, pharmacies, taxes, bank fees… so a first import is already partly categorized. Edit, turn off or delete them like your own. Transfers between people and local shops are never covered: add your own rules for them.
+
 1. On the **Rules** tab, click **New rule**.
 2. Enter the **Pattern** and pick the **Match**: **Contains**, **Equals**, **Starts with** or **Regex**.
 3. Pick the **Category** and the **Priority**: when several rules match, the highest number wins (100 by default). At equal priority, the longest pattern wins, then the most recent rule.

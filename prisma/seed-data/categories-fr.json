@@ -1,45 +1,225 @@
 [
   {
+    "key": "income",
     "name": "Revenus",
     "icon": "💰",
     "color": "var(--cat-income)",
-    "children": ["Salaire", "Remboursements", "Autres revenus"]
+    "children": [
+      {
+        "key": "salary",
+        "name": "Salaire"
+      },
+      {
+        "key": "reimbursements",
+        "name": "Remboursements"
+      },
+      {
+        "key": "other",
+        "name": "Autres revenus"
+      }
+    ]
   },
   {
+    "key": "food",
     "name": "Alimentation",
     "icon": "🛒",
     "color": "var(--cat-groceries)",
-    "children": ["Courses", "Restaurants", "Café & snacks"]
+    "children": [
+      {
+        "key": "groceries",
+        "name": "Courses"
+      },
+      {
+        "key": "restaurants",
+        "name": "Restaurants"
+      },
+      {
+        "key": "coffee",
+        "name": "Café & snacks"
+      }
+    ]
   },
   {
+    "key": "housing",
     "name": "Logement",
     "icon": "🏠",
     "color": "var(--cat-housing)",
-    "children": ["Loyer & prêt", "Charges", "Électricité & gaz", "Internet & téléphone"]
+    "children": [
+      {
+        "key": "rent",
+        "name": "Loyer & prêt"
+      },
+      {
+        "key": "charges",
+        "name": "Charges"
+      },
+      {
+        "key": "energy",
+        "name": "Électricité & gaz"
+      },
+      {
+        "key": "internet",
+        "name": "Internet & téléphone"
+      }
+    ]
   },
   {
+    "key": "transport",
     "name": "Transport",
     "icon": "🚗",
     "color": "var(--cat-transport)",
-    "children": ["Carburant", "Transports en commun", "Entretien véhicule"]
+    "children": [
+      {
+        "key": "fuel",
+        "name": "Carburant"
+      },
+      {
+        "key": "transit",
+        "name": "Transports en commun"
+      },
+      {
+        "key": "maintenance",
+        "name": "Entretien véhicule"
+      },
+      {
+        "key": "tolls",
+        "name": "Péages & parking"
+      }
+    ]
   },
   {
+    "key": "leisure",
     "name": "Loisirs",
     "icon": "🎉",
     "color": "var(--cat-leisure)",
-    "children": ["Sorties", "Abonnements", "Voyages"]
+    "children": [
+      {
+        "key": "outings",
+        "name": "Sorties"
+      },
+      {
+        "key": "subscriptions",
+        "name": "Abonnements"
+      },
+      {
+        "key": "travel",
+        "name": "Voyages"
+      },
+      {
+        "key": "games",
+        "name": "Jeux & applis"
+      }
+    ]
   },
   {
+    "key": "health",
     "name": "Santé",
     "icon": "🩺",
     "color": "var(--cat-health)",
-    "children": ["Médecin", "Pharmacie", "Mutuelle"]
+    "children": [
+      {
+        "key": "doctor",
+        "name": "Médecin"
+      },
+      {
+        "key": "pharmacy",
+        "name": "Pharmacie"
+      },
+      {
+        "key": "insurance",
+        "name": "Mutuelle"
+      }
+    ]
   },
   {
+    "key": "shopping",
     "name": "Achats",
     "icon": "🛍️",
     "color": "var(--cat-shopping)",
-    "children": ["Vêtements", "Maison", "High-tech"]
+    "children": [
+      {
+        "key": "clothes",
+        "name": "Vêtements"
+      },
+      {
+        "key": "home",
+        "name": "Maison"
+      },
+      {
+        "key": "tech",
+        "name": "High-tech"
+      }
+    ]
   },
-  { "name": "Divers", "icon": "📦", "color": "var(--cat-other)", "children": [] }
+  {
+    "key": "bank",
+    "name": "Banque",
+    "icon": "🏦",
+    "color": "var(--cat-bills)",
+    "children": [
+      {
+        "key": "fees",
+        "name": "Frais bancaires"
+      },
+      {
+        "key": "loans",
+        "name": "Crédits"
+      }
+    ]
+  },
+  {
+    "key": "taxes",
+    "name": "Impôts & taxes",
+    "icon": "🧾",
+    "color": "var(--cat-food)",
+    "children": [
+      {
+        "key": "taxes",
+        "name": "Impôts"
+      },
+      {
+        "key": "fines",
+        "name": "Amendes & taxes"
+      }
+    ]
+  },
+  {
+    "key": "savings",
+    "name": "Épargne",
+    "icon": "🐷",
+    "color": "var(--cat-savings)",
+    "children": [
+      {
+        "key": "accounts",
+        "name": "Livrets"
+      },
+      {
+        "key": "investments",
+        "name": "Investissements"
+      }
+    ]
+  },
+  {
+    "key": "children",
+    "name": "Enfants",
+    "icon": "🧸",
+    "color": "var(--cat-leisure)",
+    "children": [
+      {
+        "key": "childcare",
+        "name": "Garde & cantine"
+      },
+      {
+        "key": "activities",
+        "name": "Activités"
+      }
+    ]
+  },
+  {
+    "key": "other",
+    "name": "Divers",
+    "icon": "📦",
+    "color": "var(--cat-other)",
+    "children": []
+  }
 ]

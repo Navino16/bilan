@@ -1,18 +1,10 @@
 import type { PrismaClient } from "@prisma/client";
 import { db as defaultDb } from "@/server/db";
-import categoriesFr from "../../../../prisma/seed-data/categories-fr.json";
-import categoriesEn from "../../../../prisma/seed-data/categories-en.json";
-
-type DefaultCategory = { name: string; icon?: string; color?: string; children: string[] };
-
-const SETS: Record<"fr" | "en", DefaultCategory[]> = {
-  fr: categoriesFr as DefaultCategory[],
-  en: categoriesEn as DefaultCategory[],
-};
+import { DEFAULT_CATEGORY_SETS, DEFAULT_RULES } from "./default-sets";
 
 // Copies the locale's default category set into rows owned by `userId`
-// (isDefault = true). No-op if the user already has any category, so it is
-// safe to call on every signup and never duplicates.
+// (isDefault = true), then the default rules pointing at them. No-op if the
+// user already has any category, so it is safe to call on every signup.
 export async function seedDefaultCategories(
   userId: string,
   locale: "fr" | "en",
@@ -20,7 +12,8 @@ export async function seedDefaultCategories(
 ): Promise<void> {
   const existing = await db.category.count({ where: { userId } });
   if (existing > 0) return;
-  const set = SETS[locale] ?? SETS.fr;
+  const set = DEFAULT_CATEGORY_SETS[locale] ?? DEFAULT_CATEGORY_SETS.fr;
+  const ids = new Map<string, string>();
   for (const parent of set) {
     const created = await db.category.create({
       data: {
@@ -31,10 +24,25 @@ export async function seedDefaultCategories(
         isDefault: true,
       },
     });
-    for (const childName of parent.children) {
-      await db.category.create({
-        data: { name: childName, parentId: created.id, userId, isDefault: true },
+    ids.set(parent.key, created.id);
+    for (const child of parent.children) {
+      const { id } = await db.category.create({
+        data: { name: child.name, parentId: created.id, userId, isDefault: true },
       });
+      ids.set(`${parent.key}.${child.key}`, id);
     }
   }
+  await db.categorizationRule.createMany({
+    data: DEFAULT_RULES.map((r) => {
+      const categoryId = ids.get(r.category);
+      if (!categoryId) throw new Error(`Default rule ${r.pattern}: unknown category ${r.category}`);
+      return {
+        pattern: r.pattern,
+        matchType: r.matchType ?? "CONTAINS",
+        priority: r.priority ?? 100,
+        categoryId,
+        userId,
+      };
+    }),
+  });
 }

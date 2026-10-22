@@ -305,6 +305,8 @@ Pour supprimer une catégorie, ouvrez son menu **⋮** et choisissez **Supprimer
 
 Une règle attribue une catégorie aux transactions dont le libellé bancaire correspond à un motif.
 
+Un nouveau compte démarre avec un jeu de règles prêtes sur les catégories par défaut : grandes enseignes, énergie, abonnements, autoroutes, pharmacies, impôts, frais bancaires… Un premier import est donc déjà en partie catégorisé. Modifiez, désactivez ou supprimez-les comme les vôtres. Les virements entre personnes et les commerces locaux ne sont jamais couverts : ajoutez vos propres règles pour eux.
+
 1. Dans l’onglet **Règles**, cliquez sur **Nouvelle règle**.
 2. Saisissez le **Motif** et choisissez la **Correspondance** : **Contient**, **Égal**, **Commence par** ou **Regex**.
 3. Choisissez la **Catégorie** et la **Priorité** : quand plusieurs règles correspondent, le nombre le plus élevé l’emporte (100 par défaut). À priorité égale, le motif le plus long l’emporte, puis la règle la plus récente.
