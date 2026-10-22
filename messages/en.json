@@ -916,7 +916,7 @@
     "colCategory": "Suggested category",
     "autoDetected": "auto-detected",
     "account": "Account",
-    "drop": "Drop a CSV or PDF file here, or click to browse.",
+    "drop": "Drop a CSV, PDF or OFX file here, or click to browse.",
     "mapping": "Column mapping",
     "decimal": {
       "label": "Decimal mark",
@@ -984,6 +984,8 @@
       "linked": "{count, plural, one {# is linked to other transactions and will leave its link} other {# are linked to other transactions and will leave their links}}",
       "budgeted": "{count, plural, one {# is assigned to a budget} other {# are assigned to a budget}}",
       "edited": "{count, plural, one {# was edited since the import} other {# were edited since the import}}",
+      "balanceRestore": "The opening balance of {account} will go back to {amount}.",
+      "balanceKept": "The opening balance of {account} was changed since the import: it will stay as is.",
       "irreversible": "This can’t be undone.",
       "keep": "Keep",
       "confirm": "Delete the transactions",
@@ -996,7 +998,7 @@
         "FAILED": "Undo failed. Try again."
       }
     },
-    "formats": "Accepted formats: CSV and PDF.",
+    "formats": "Accepted formats: CSV, PDF and OFX.",
     "manualEntry": "Manual entry",
     "rejected": {
       "count": "{count, plural, one {# unreadable row skipped} other {# unreadable rows skipped}}",
@@ -1016,7 +1018,7 @@
     "nothingToImport": "Nothing to import: no row is left (duplicates, unchecked or unreadable rows, or ignored products).",
     "progress": "{done, number} of {total, plural, one {# transaction imported} other {# transactions imported}}…",
     "reading": "Reading the file…",
-    "limits": "CSV up to {csv}, PDF up to {pdf}.",
+    "limits": "CSV up to {csv}, PDF up to {pdf}, OFX up to {ofx}.",
     "productAccount": "Target account: {product}",
     "pager": {
       "range": "Rows {from} to {to} of {total}",
@@ -1031,6 +1033,22 @@
       "guessed": "Date order guessed ({order}): check the dates (“Date order” setting).",
       "confirm": "Dates look right",
       "useOther": "Use {order}"
+    },
+    "ofxProduct": "{type} ••{last4}",
+    "ofxAccountType": {
+      "CHECKING": "Current account",
+      "SAVINGS": "Savings account",
+      "MONEYMRKT": "Money market account",
+      "CREDITLINE": "Credit line",
+      "CREDITCARD": "Credit card",
+      "OTHER": "Account"
+    },
+    "balance": {
+      "bank": "Bank balance on {date}",
+      "after": "Balance after import",
+      "gap": "Gap: {amount}",
+      "matches": "Balances match",
+      "adjust": "Set the opening balance so the balance matches the bank’s"
     }
   },
   "groups": {
@@ -1917,7 +1935,9 @@
             "revoke": "Account share removed"
           },
           "deleted": "Bank account deleted",
-          "unarchived": "Bank account unarchived"
+          "unarchived": "Bank account unarchived",
+          "initial_balance_adjusted": "Opening balance adjusted by an import",
+          "initial_balance_restored": "Opening balance restored by an import revert"
         },
         "transaction": {
           "created": "Transaction created",
@@ -2124,7 +2144,7 @@
       "step1Hint": "Checking, savings, card… Your transactions will belong to it.",
       "step1Done": "You have an account ready for transactions.",
       "step2": "Import a statement or add a transaction",
-      "step2Hint": "A CSV or PDF file exported from your bank, or a manual entry.",
+      "step2Hint": "A CSV, PDF or OFX file exported from your bank, or a manual entry.",
       "done": "Done"
     },
     "transactions": {

@@ -916,7 +916,7 @@
     "colCategory": "Catégorie suggérée",
     "autoDetected": "auto-détecté",
     "account": "Compte",
-    "drop": "Déposez un fichier CSV ou PDF ici, ou cliquez pour parcourir.",
+    "drop": "Déposez un fichier CSV, PDF ou OFX ici, ou cliquez pour parcourir.",
     "mapping": "Correspondance des colonnes",
     "decimal": {
       "label": "Décimales",
@@ -984,6 +984,8 @@
       "linked": "{count, plural, one {# est liée à d’autres transactions : elle sortira de son lien} other {# sont liées à d’autres transactions : elles sortiront de leur lien}}",
       "budgeted": "{count, plural, one {# est affectée à un budget} other {# sont affectées à un budget}}",
       "edited": "{count, plural, one {# a été modifiée depuis l’import} other {# ont été modifiées depuis l’import}}",
+      "balanceRestore": "Le solde initial de {account} reviendra à {amount}.",
+      "balanceKept": "Le solde initial de {account} a été modifié depuis l’import : il restera inchangé.",
       "irreversible": "Cette action est définitive.",
       "keep": "Garder",
       "confirm": "Supprimer les transactions",
@@ -996,7 +998,7 @@
         "FAILED": "Échec de l’annulation. Réessayez."
       }
     },
-    "formats": "Formats acceptés : CSV et PDF.",
+    "formats": "Formats acceptés : CSV, PDF et OFX.",
     "manualEntry": "Saisie manuelle",
     "rejected": {
       "count": "{count, plural, one {# ligne illisible ignorée} other {# lignes illisibles ignorées}}",
@@ -1016,7 +1018,7 @@
     "nothingToImport": "Rien à importer : aucune ligne n’est retenue (doublons, lignes décochées, illisibles ou produits ignorés).",
     "progress": "{done, number} sur {total, plural, one {# transaction importée} other {# transactions importées}}…",
     "reading": "Lecture du fichier…",
-    "limits": "CSV jusqu’à {csv}, PDF jusqu’à {pdf}.",
+    "limits": "CSV jusqu’à {csv}, PDF jusqu’à {pdf}, OFX jusqu’à {ofx}.",
     "productAccount": "Compte de destination : {product}",
     "pager": {
       "range": "Lignes {from} à {to} sur {total}",
@@ -1031,6 +1033,22 @@
       "guessed": "Ordre des dates deviné ({order}) : vérifiez les dates (réglage « Ordre des dates »).",
       "confirm": "Les dates sont correctes",
       "useOther": "Utiliser {order}"
+    },
+    "ofxProduct": "{type} ••{last4}",
+    "ofxAccountType": {
+      "CHECKING": "Compte courant",
+      "SAVINGS": "Compte épargne",
+      "MONEYMRKT": "Compte monétaire",
+      "CREDITLINE": "Ligne de crédit",
+      "CREDITCARD": "Carte de crédit",
+      "OTHER": "Compte"
+    },
+    "balance": {
+      "bank": "Solde banque au {date}",
+      "after": "Solde après import",
+      "gap": "Écart : {amount}",
+      "matches": "Les soldes concordent",
+      "adjust": "Caler le solde initial pour retomber sur le solde de la banque"
     }
   },
   "groups": {
@@ -1917,7 +1935,9 @@
             "revoke": "Partage de compte retiré"
           },
           "deleted": "Compte bancaire supprimé",
-          "unarchived": "Compte bancaire désarchivé"
+          "unarchived": "Compte bancaire désarchivé",
+          "initial_balance_adjusted": "Solde initial ajusté par un import",
+          "initial_balance_restored": "Solde initial restauré par l’annulation d’un import"
         },
         "transaction": {
           "created": "Transaction créée",
@@ -2124,7 +2144,7 @@
       "step1Hint": "Compte courant, livret, carte… Vos transactions y seront rattachées.",
       "step1Done": "Vous avez un compte prêt à recevoir des transactions.",
       "step2": "Importer un relevé ou saisir une transaction",
-      "step2Hint": "Un fichier CSV ou PDF exporté depuis votre banque, ou une saisie à la main.",
+      "step2Hint": "Un fichier CSV, PDF ou OFX exporté depuis votre banque, ou une saisie à la main.",
       "done": "Fait"
     },
     "transactions": {

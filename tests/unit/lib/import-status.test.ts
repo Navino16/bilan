@@ -30,6 +30,15 @@ describe("trimBatchMetadata", () => {
     });
   });
 
+  it("keeps the opening-balance adjustments of an OFX commit", () => {
+    const balanceAdjustments = [{ accountId: "a", previous: 0, set: 12.5 }];
+    expect(trimBatchMetadata({ products: [], balanceAdjustments }, ["a"])).toEqual({
+      fileSizeBytes: null,
+      accountIds: ["a"],
+      balanceAdjustments,
+    });
+  });
+
   it("tolerates missing metadata", () => {
     expect(trimBatchMetadata(null, [])).toEqual({ fileSizeBytes: null, accountIds: [] });
   });

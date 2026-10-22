@@ -10,7 +10,7 @@
 
 ### Background
 
-Self-hosted personal-finance application. A full web app with multi-user support, a relational database, several import sources (bank CSV, bank PDF statements, manual entry), user-configurable categorization rules, transaction links and budgets.
+Self-hosted personal-finance application. A full web app with multi-user support, a relational database, several import sources (bank CSV, bank PDF statements, bank OFX files, manual entry), user-configurable categorization rules, transaction links and budgets.
 
 ### Primary users
 
@@ -53,7 +53,7 @@ Self-hosted personal-finance application. A full web app with multi-user support
 | Prisma | 7.x (with `@prisma/adapter-mariadb`) | ORM with MariaDB-native driver |
 | MariaDB | 11 | Database |
 | Better Auth | 1.6 (+ `@better-auth/passkey`) | DB-backed sessions, 2FA, passkeys, admin plugin, generic OIDC plugin |
-| papaparse · pdfjs-dist | — | CSV and PDF statement parsing |
+| papaparse · pdfjs-dist | — | CSV and PDF statement parsing (OFX has a built-in reader, no dependency) |
 | re2js | — | Linear-time regex engine for user `REGEX` rules (no ReDoS) |
 | nodemailer | — | Outgoing mail through the admin-configured SMTP |
 | Node | 24 LTS | Runtime, LTS until April 2028 |
@@ -142,7 +142,7 @@ Database-stored settings include: auth providers, SMTP, app name, security polic
 │    │ categorization, merchants, links, budgets       │
 │    ├ groups, users, signup-tokens, audit, rgpd       │
 │    ├ dashboard, export, mail, onboarding             │
-│    ├ imports/ (csv, pdf)                             │
+│    ├ imports/ (csv, pdf, ofx)                        │
 │    └ settings/ (auth-providers, smtp, app-settings)  │
 ├──────────────────────────────────────────────────────┤
 │  server/auth/  (Better Auth + dynamic providers,     │
@@ -159,7 +159,7 @@ Database-stored settings include: auth providers, SMTP, app name, security polic
 | Use case | Solution | Why |
 |---|---|---|
 | Create tx, edit category, share account, create budget, etc. | **Server Action** | Short mutation, automatic cache revalidation |
-| Upload CSV/PDF, preview, commit, progress polling | **API Route** | Large multipart payload, status codes and headers control |
+| Upload CSV/PDF/OFX, preview, commit, progress polling | **API Route** | Large multipart payload, status codes and headers control |
 | Exports (transactions CSV, full data export) | **API Route** | File download |
 | Cron jobs (audit purge, import purge, recurring budgets) | **API Route** | Called outside the browser (cron container, `CRON_SECRET` bearer) |
 | Read (transaction list, dashboard) | **Server Component** | Direct server render, no API needed |
@@ -199,7 +199,7 @@ budget/
 │   │   │   │   ├── categories/
 │   │   │   │   ├── insights/
 │   │   │   │   ├── groups/         # + join/[token]
-│   │   │   │   ├── import/         # csv/, pdf/
+│   │   │   │   ├── import/         # csv/, pdf/, ofx/
 │   │   │   │   ├── settings/       # security/ (2FA, passkeys, sessions), data/ (export, deletion)
 │   │   │   │   └── admin/          # app settings (permission required)
 │   │   │   │       ├── auth-providers/
@@ -212,7 +212,7 @@ budget/
 │   │   │   └── [...rest]/          # localized 404
 │   │   └── api/                    # Route Handlers (outside [locale])
 │   │       ├── auth/[...all]/      # Better Auth
-│   │       ├── import/             # csv/, pdf/ (+ [batchId]/preview, commit), [batchId]/progress
+│   │       ├── import/             # csv/, pdf/, ofx/ (+ [batchId]/preview, commit), [batchId]/progress
 │   │       ├── export/             # transactions/, data/
 │   │       ├── cron/               # purge-audit/, purge-imports/, roll-budgets/
 │   │       └── [...path]/          # JSON 404 for unknown API routes
@@ -784,8 +784,8 @@ Deleting a series template promotes its oldest instance to template and re-paren
 ```prisma
 model ImportBatch {
   id            String   @id @default(cuid())
-  accountId     String                                // upload account (PDF products may map to others: metadata.accountIds)
-  source        String                                // CSV | PDF
+  accountId     String                                // upload account (PDF/OFX products may map to others: metadata.accountIds)
+  source        String                                // CSV | PDF | OFX
   filename      String?
   filenameHash  String?                               // SHA-256 of the filename
   status        String                                // PARSING | REVIEW | COMMITTING | COMPLETED | REVERTED | FAILED
@@ -806,9 +806,9 @@ model ImportBatch {
 
 | Stage | `status` | `metadata` |
 |---|---|---|
-| Upload / preview | CSV `PARSING` → `REVIEW`; PDF created in `REVIEW` | Raw payload for the review step: CSV `text` or parsed PDF `products` + `bank`, and `fileSizeBytes`. |
-| Commit | `COMMITTING` → `COMPLETED` | Trimmed to `{ fileSizeBytes, bank?, accountIds, ruleHits? }` — the plaintext payload is dropped (`lib/import-status.ts`). A commit importing nothing fails. |
-| Undo | `COMPLETED` → `REVERTED` | Revert deletes the batch's transactions, decrements `CategorizationRule.hits` from `ruleHits`, dissolves undersized links (`services/imports/revert.ts`). Requires write access on every account in `accountIds`. |
+| Upload / preview | CSV `PARSING` → `REVIEW`; PDF and OFX created in `REVIEW` | Raw payload for the review step: CSV `text`, parsed PDF `products` + `bank`, or parsed OFX `products` (rows with their note, each statement's `ledger` balance) + `rejected`, and `fileSizeBytes`. |
+| Commit | `COMMITTING` → `COMPLETED` | Trimmed to `{ fileSizeBytes, bank?, accountIds, ruleHits?, balanceAdjustments? }` — the plaintext payload is dropped (`lib/import-status.ts`). A commit importing nothing fails. |
+| Undo | `COMPLETED` → `REVERTED` | Revert deletes the batch's transactions, decrements `CategorizationRule.hits` from `ruleHits`, dissolves undersized links, puts back the opening balances the import adjusted unless changed since (`services/imports/revert.ts`). Requires write access on every account in `accountIds` and in `balanceAdjustments`. |
 | Discard / purge | — | Uncommitted batches (`PARSING`, `REVIEW`, `FAILED`) can be discarded; stale ones (and crashed `COMMITTING` ones, with their rows) are purged. |
 
 ### 4.8 Group H — Settings, Preferences, Audit
@@ -951,18 +951,22 @@ In every mode, an admin can create users from `/admin/users` (`users/create.admi
 3. Visibility: `accounts.listVisibleForUser(userId, { includeArchived? })` returns own accounts + accounts shared via groups the user belongs to (archived ones only on request). Access is OWNER > WRITE > READ (`getEffectiveAccess`). Shared viewers never get the IBAN; the owner sees it masked, and the clear value takes a step-up (§6.4).
 4. Leaving or being removed from a group (#259): in the same transaction as the `GroupMember` deletion, the member's `AccountShare` rows to that group and the group budgets' `BudgetAssignment` rows (INCLUDE and EXCLUDE) on their transactions are deleted; the counts go in the `group.member.removed` audit metadata. Budget lines limited to one of their accounts are kept (they count nothing and show as a hidden account). Group deletion is unchanged. Revoking one share (`revokeShare`) does the same for that account and group, in one transaction, with `removedAssignments` in the `account.share.revoke` metadata; when no share existed, nothing is deleted.
 
-### 5.5 CSV / PDF import (main flow)
+### 5.5 CSV / PDF / OFX import (main flow)
 
-1. `/import` (single wizard; `/import/csv` and `/import/pdf` redirect to it): pick a writable, non-archived account, upload → `multipart POST /api/import/csv` or `/api/import/pdf` (Route Handlers).
-2. The Route Handler checks extension/MIME and size (CSV 5 MB, PDF 10 MB; a CSV must also look like text), then:
+1. `/import` (single wizard; `/import/csv` and `/import/pdf` redirect to it): pick a writable, non-archived account, upload → `multipart POST /api/import/csv`, `/api/import/pdf` or `/api/import/ofx` (Route Handlers).
+2. The Route Handler checks extension/MIME and size (CSV 5 MB, PDF 10 MB, OFX 5 MB; a CSV must also look like text; an OFX is `.ofx` or `application/x-ofx`), then:
    - CSV: creates `ImportBatch` (`PARSING`, raw text kept in `metadata`), parses with papaparse and returns the preview with the detected mapping (`date`, `label`, `amount` or `debit`/`credit`, optional `type`) plus the guessed decimal mark and date order. Each preview moves the batch to `REVIEW`.
    - PDF: detects the bank (LCL, Revolut, else a generic parser), stores the parsed rows per product (one per Revolut statement section) and creates the batch directly in `REVIEW`.
-3. UI: the preview is paged (50 rows) and computed over all rows: certain duplicates (same key as a row already in the destination account), probable duplicates, suggested category per row (`categorization.suggestMany`), rejected rows. The user can edit the CSV mapping (`POST /api/import/csv/[batchId]/preview`), map each PDF product to an account or ignore it, untick rows and override categories. A probable duplicate has no key match, but the account already has a transaction on the same day with the same amount, manual entries included. Matching is one-to-one, and existing rows already matched by a certain duplicate or inserted by the same batch don't count. Probable duplicates come unticked with the matching existing label; a header counter and a "probable only" filter help review them, and ticking one means "import anyway".
-4. `POST /api/import/{csv|pdf}/[batchId]/commit` claims the batch (`REVIEW` → `COMMITTING`), then `imports/commit.insertRows`:
+   - OFX (`imports/ofx/parse`, `ofx-service`): decodes the bytes as strict UTF-8, else Windows-1252 (the declared `CHARSET` isn't trusted), then a built-in linear tokenizer reads OFX 1.x SGML (unclosed leaf tags) and 2.x XML alike; nesting deeper than 64 levels or more than 20 non-empty statements fails the parse (`PARSE_FAILED`), and amounts are rounded to cents and bounded like the CSV ones (`AMOUNT_RANGE`). Per `STMTTRN`: day = `DTPOSTED` (time and timezone dropped), amount = `TRNAMT` (a comma is tolerated), label = `NAME`, else `MEMO`, else `CHEQUE <CHECKNUM>`; when both `NAME` and a different `MEMO` exist, the `MEMO` becomes the transaction note. Type: `deriveType(label)` first, `TRNTYPE` only when that gives OTHER (`CHECK`, `ATM`, `POS`, `DIRECTDEBIT`/`PAYMENT`, `XFER`). Rows with an unreadable date or amount are listed as rejected. Each statement (`STMTRS`, `CCSTMTRS`) becomes a product, titled with its account type and the last 4 characters of `ACCTID` (the full number is never shown or logged), mapped to an account or ignored like PDF products. The batch is created directly in `REVIEW`.
+3. UI: the preview is paged (50 rows; per product for PDF and OFX) and computed over all rows: certain duplicates (same key as a row already in the destination account), probable duplicates, suggested category per row (`categorization.suggestMany`), rejected rows. The user can edit the CSV mapping (`POST /api/import/csv/[batchId]/preview`), map each PDF product to an account or ignore it, untick rows and override categories. A probable duplicate has no key match, but the account already has a transaction on the same day with the same amount, manual entries included. Matching is one-to-one, and existing rows already matched by a certain duplicate or inserted by the same batch don't count. Probable duplicates come unticked with the matching existing label; a header counter and a "probable only" filter help review them, and ticking one means "import anyway".
+   - OFX balance check (`ofx-service.balanceOf`, bank statements with a `LEDGERBAL` only; credit-card statements get none, banks disagree on the sign of a card balance): the preview returns the bank balance at `DTASOF`, `base` (`initialBalance` + the destination account's transactions dated ≤ `DTASOF`) and `defaultImport` (the rows dated ≤ `DTASOF` that a commit without edits inserts: certain, probable and in-file duplicates excluded). The client adds or subtracts each row the user toggles, so the live gap equals what the commit would produce. It is computed against the account each product is mapped to.
+   - Opening-balance adjustment: `canAdjust` is true only for the account owner (`initialBalance` is owner-only), when the destination account has no transaction dated before the file's first day (the file starts its history) and the gap is not zero. On an account with earlier history the gap is only reported, since adjusting would hide missing operations.
+4. `POST /api/import/{csv|pdf|ofx}/[batchId]/commit` claims the batch (`REVIEW` → `COMMITTING`), then `imports/commit.insertRows`:
    - For each row: `externalId` = sha256 of day + amount + whitespace-normalized rawLabel (identical twins in one file get an occurrence index), encrypted label/rawLabel (the label starts as the raw label), `labelHash` / `rawLabelHash` / search tokens, type from the mapped column or derived from the label; category = the user's override (only categories they can use), else the rule suggestion.
    - Dedup check on `(accountId, externalId)`: certain duplicates are always skipped. Probable duplicates are recomputed server-side (`imports/probable`) and skipped unless their id is in the request's `includedProbableIds`; unticked rows are skipped too.
    - Insert by chunks of 500: `Transaction` + `TransactionSearchToken[]`, bumping `importedRows` (the wizard polls `GET /api/import/[batchId]/progress`).
-   - `finalizeBatch`: `COMPLETED` + counters, rule hits recorded, raw payload trimmed from `metadata`, audit `import.committed`. A commit that imports nothing fails (`NOTHING_TO_IMPORT`); a failed commit deletes its partial rows and returns the batch to `REVIEW`.
+   - OFX only: for each product whose key is in `adjustBalance`, once all products are inserted (sibling products can share an account), `openingAdjustment` re-checks owner and history server-side (a stale ticked key is dropped) and computes `set` = `LEDGERBAL` − the account's transactions ≤ `DTASOF`; `previous` and `set` are recorded as `metadata.balanceAdjustments`.
+   - `finalizeBatch`: `COMPLETED` + counters, rule hits recorded, the new `initialBalance` values written in the same DB transaction, raw payload trimmed from `metadata` (`balanceAdjustments` is kept), audit `import.committed` and, per adjustment, `account.initial_balance_adjusted` (`previous`, `set`, `batchId`). A commit that imports nothing fails (`NOTHING_TO_IMPORT`); a failed commit deletes its partial rows and returns the batch to `REVIEW`.
 5. UI shows summary (imported, skipped duplicates (certain and probable), rejected rows) + link to transactions + "Undo" (§5.12). Cancelling or uploading another file discards the uncommitted batch (best effort).
 
 ### 5.6 Auto-categorization & learning
@@ -1079,7 +1083,7 @@ Downloaded as a compact JSON attachment, streamed: the transactions are read new
 
 ### 5.12 Import undo & discard
 
-The import history on `/import` lists the latest 20 `COMPLETED` / `REVERTED` batches on accounts the user can write. "Undo" (from the history or the commit summary) first shows the impact (`getRevertImpact`: transactions, linked, assigned to a budget, edited since the import), then `imports/revert.revertImport`: WRITE needed on every account the batch touched; in one transaction the batch is claimed `COMPLETED` → `REVERTED`, its rule hits are taken back, its transactions are deleted (search tokens, assignments and link memberships cascade) and links left with fewer than 2 members are dissolved; audit `import.reverted` (`deleted`, `linksDissolved`). The batch row stays in the history as `REVERTED`.
+The import history on `/import` lists the latest 20 `COMPLETED` / `REVERTED` batches on accounts the user can write. "Undo" (from the history or the commit summary) first shows the impact (`getRevertImpact`: transactions, linked, assigned to a budget, edited since the import, and the opening balances that will be restored or kept), then `imports/revert.revertImport`: WRITE needed on every account the batch touched; in one transaction the batch is claimed `COMPLETED` → `REVERTED`, its rule hits are taken back, its transactions are deleted (search tokens, assignments and link memberships cascade) and links left with fewer than 2 members are dissolved; audit `import.reverted` (`deleted`, `linksDissolved`, `balancesRestored`, `balancesKept`). An OFX batch that adjusted an opening balance puts it back to `previous` in the same transaction, conditionally on the account still holding the value the import set (a hand edit since wins and the balance is kept; the dialog says so), whoever reverts (write access is enough, an account deleted since is skipped); audit `account.initial_balance_restored` per restored account. The batch row stays in the history as `REVERTED`.
 
 An uncommitted batch (`PARSING`, `REVIEW`, `FAILED`) is discarded when the user cancels or uploads another file (`discardBatch`, `import.discarded`); the hourly purge (§5.14) removes the rest.
 
@@ -1112,7 +1116,7 @@ Encrypted columns:
 - `AuthProvider.clientSecretEnc` (SSO client secrets);
 - `AdminSignupToken.tokenEnc`, `GroupInvitation.tokenEnc`, `codeEnc` (#275): kept decryptable so admins can copy the link or code again.
 
-Not app-encrypted (MariaDB's at-rest encryption still covers them, §6.14): amounts, dates, account/category/budget names. An import's parsed rows (CSV text, PDF products) sit in clear in `ImportBatch.metadata` until the commit or revert drops them; uncommitted batches are purged after 24 h by the `purge-imports` cron. Better Auth encrypts the TOTP secret and the backup codes itself, with `AUTH_SECRET` (the `twoFactor` plugin defaults `storeBackupCodes` to `encrypted`).
+Not app-encrypted (MariaDB's at-rest encryption still covers them, §6.14): amounts, dates, account/category/budget names. An import's parsed rows (CSV text, PDF and OFX products) sit in clear in `ImportBatch.metadata` until the commit or revert drops them; uncommitted batches are purged after 24 h by the `purge-imports` cron. Better Auth encrypts the TOTP secret and the backup codes itself, with `AUTH_SECRET` (the `twoFactor` plugin defaults `storeBackupCodes` to `encrypted`).
 
 Key rotation (post-MVP, not implemented): CLI script reads all rows, decrypts with old key, re-encrypts with new key, updates with new version prefix.
 
@@ -1298,17 +1302,17 @@ Business logic lives in services, so most behaviour is tested there. Server Acti
 
 ### 7.2 Unit test domains
 
-`tests/unit/` is split by area: `auth` (permissions, rate limiter, provider cache, OIDC resolution, 2FA enforcement, TOTP replay), `crypto` (encryption round-trip, HMAC), `services` (categorization matching, CSV parsing, PDF statement parsers, IBAN, mailer, app settings, export), `lib` (budgets, links, periods, formatting, insights, theme), `validation` (Zod schemas), `bundle` (client message scopes, no zod in the browser), `server` (proxy and its matcher, client IP, request locale), `transport` (Server Action and route wrappers), `components`, `i18n`, `docker` (migrate toolkit, prod-smoke workflow) and `env.test.ts`.
+`tests/unit/` is split by area: `auth` (permissions, rate limiter, provider cache, OIDC resolution, 2FA enforcement, TOTP replay), `crypto` (encryption round-trip, HMAC), `services` (categorization matching, CSV parsing, PDF statement parsers, OFX reader, IBAN, mailer, app settings, export), `lib` (budgets, links, periods, formatting, insights, theme), `validation` (Zod schemas), `bundle` (client message scopes, no zod in the browser), `server` (proxy and its matcher, client IP, request locale), `transport` (Server Action and route wrappers), `components`, `i18n`, `docker` (migrate toolkit, prod-smoke workflow) and `env.test.ts`.
 
 ### 7.3 Integration test domains
 
-Services against the database: accounts and sharing, transactions (encryption, search tokens, dedup, edit/delete), CSV/PDF imports and revert, categories and rules, budgets, groups and invitations, links, dashboard and insights, settings and SMTP config, auth (sign-up, login guard, sessions, passkeys, password reset, email verification, SSO link/sign-up, provider hot reload), admin actions, audit, GDPR export/deletion, step-up, setup wizard and seed.
+Services against the database: accounts and sharing, transactions (encryption, search tokens, dedup, edit/delete), CSV/PDF/OFX imports and revert, categories and rules, budgets, groups and invitations, links, dashboard and insights, settings and SMTP config, auth (sign-up, login guard, sessions, passkeys, password reset, email verification, SSO link/sign-up, provider hot reload), admin actions, audit, GDPR export/deletion, step-up, setup wizard and seed.
 
 Setup: `tests/setup.ts` sets the bootstrap env vars and defaults `DATABASE_URL` to the `mariadb-test` container (`budget_test`, port 3307). There is no reset between tests: each file creates its own fixtures with fixed ids and deletes them in `beforeAll`/`afterAll` (`tests/integration/support/` restores app settings). The CI test database is migrated but not seeded, so tests create the roles, permissions and settings they need. Files run one at a time (`fileParallelism: false`) because they share the database.
 
 ### 7.4 E2E scenarios (Playwright)
 
-One spec per area in `tests/e2e/` (accounts, transactions, CSV/PDF import, categories, rules, budgets, links, groups, insights, dashboard, admin pages and settings, two-factor, SSO identities, security headers, PWA, accessibility with axe-core, responsive layout, mobile sheets…). An `auth.setup.ts` project signs in the users created by `scripts/seed-e2e.ts` and saves their storage state.
+One spec per area in `tests/e2e/` (accounts, transactions, CSV/PDF/OFX import, categories, rules, budgets, links, groups, insights, dashboard, admin pages and settings, two-factor, SSO identities, security headers, PWA, accessibility with axe-core, responsive layout, mobile sheets…). An `auth.setup.ts` project signs in the users created by `scripts/seed-e2e.ts` and saves their storage state.
 
 Projects: `chromium` (Desktop Chrome) and `mobile` (iPhone 14, WebKit). Most interactive specs skip WebKit, where Playwright does not deliver taps in this environment; mobile interactions are tested on Chromium with a phone viewport. One worker, no full parallelism, one retry in CI. Service workers are blocked. Locally the run reuses the dev server; in CI it serves a production build (`npm run start`). `PLAYWRIGHT_BASE_URL` targets a server that is already running (docs/development.md).
 

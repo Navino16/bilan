@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
 import { LONG_TX_TIMEOUT } from "@/server/db/timeouts";
 import { canWriteAccount } from "@/server/services/accounts/sharing";
@@ -9,6 +10,7 @@ import {
   canDiscard,
   canRevert,
   trimBatchMetadata,
+  type BalanceAdjustment,
   UNCOMMITTED_STATUSES,
 } from "@/lib/import-status";
 import { ImportAccessError } from "./errors";
@@ -18,7 +20,14 @@ export type RevertImpact = {
   linked: number;
   budgeted: number;
   edited: number;
+  balances: { accountName: string; previous: number; set: number; restore: boolean }[];
 };
+
+// initialBalance is Decimal(12,2) and the recorded amounts are JSON numbers: compare at cent precision.
+const cents = (n: number) => new Prisma.Decimal(n.toFixed(2));
+
+const adjustmentsOf = (meta: unknown): BalanceAdjustment[] =>
+  (meta as { balanceAdjustments?: BalanceAdjustment[] } | null)?.balanceAdjustments ?? [];
 
 // Write access is required on every account the batch touched: a PDF batch maps
 // each product to its own account (spec D2).
@@ -30,16 +39,28 @@ async function loadRevertable(actorId: string, batchId: string) {
     select: { accountId: true },
     distinct: ["accountId"],
   });
-  const accountIds = [...new Set([batch.accountId, ...rows.map((r) => r.accountId)])];
+  // An adjusted account deleted since the import has nothing left to restore or to check.
+  const adjusted = await db.bankAccount.findMany({
+    where: { id: { in: adjustmentsOf(batch.metadata).map((a) => a.accountId) } },
+    select: { id: true, name: true, initialBalance: true },
+  });
+  const accountIds = [
+    ...new Set([batch.accountId, ...rows.map((r) => r.accountId), ...adjusted.map((a) => a.id)]),
+  ];
   for (const id of accountIds) {
     if (!(await canWriteAccount(actorId, id))) throw new ImportAccessError("FORBIDDEN");
   }
   if (!canRevert(batch.status)) throw new ImportAccessError("NOT_REVERTIBLE");
-  return batch;
+  const byId = new Map(adjusted.map((a) => [a.id, a]));
+  const adjustments = adjustmentsOf(batch.metadata).flatMap((a) => {
+    const account = byId.get(a.accountId);
+    return account ? [{ ...a, account }] : [];
+  });
+  return { batch, adjustments };
 }
 
 export async function getRevertImpact(actorId: string, batchId: string): Promise<RevertImpact> {
-  const batch = await loadRevertable(actorId, batchId);
+  const { batch, adjustments } = await loadRevertable(actorId, batchId);
   const where = { importBatchId: batchId };
   const [transactions, linked, budgeted, edited] = await Promise.all([
     db.transaction.count({ where }),
@@ -49,14 +70,25 @@ export async function getRevertImpact(actorId: string, batchId: string): Promise
       where: { ...where, updatedAt: { gt: batch.completedAt ?? batch.createdAt } },
     }),
   ]);
-  return { transactions, linked, budgeted, edited };
+  const balances = adjustments.map((a) => ({
+    accountName: a.account.name,
+    previous: a.previous,
+    set: a.set,
+    restore: a.account.initialBalance.equals(cents(a.set)),
+  }));
+  return { transactions, linked, budgeted, edited, balances };
 }
 
 export async function revertImport(
   actorId: string,
   batchId: string,
-): Promise<{ deleted: number; linksDissolved: number }> {
-  const batch = await loadRevertable(actorId, batchId);
+): Promise<{
+  deleted: number;
+  linksDissolved: number;
+  balancesRestored: number;
+  balancesKept: number;
+}> {
+  const { batch, adjustments } = await loadRevertable(actorId, batchId);
   const accountIds = (batch.metadata as { accountIds?: string[] } | null)?.accountIds ?? [
     batch.accountId,
   ];
@@ -80,16 +112,43 @@ export async function revertImport(
     const { count: deleted } = await tx.transaction.deleteMany({
       where: { importBatchId: batchId },
     });
-    return { deleted, linksDissolved: await dissolveUndersizedLinks(tx, linkIds) };
+    const linksDissolved = await dissolveUndersizedLinks(tx, linkIds);
+
+    // Conditional on the value the import set: a hand edit since then wins.
+    const restored: typeof adjustments = [];
+    for (const a of adjustments) {
+      const { count } = await tx.bankAccount.updateMany({
+        where: { id: a.accountId, initialBalance: cents(a.set) },
+        data: { initialBalance: cents(a.previous) },
+      });
+      if (count > 0) restored.push(a);
+    }
+    return {
+      deleted,
+      linksDissolved,
+      restored,
+      kept: adjustments.length - restored.length,
+    };
   }, LONG_TX_TIMEOUT);
+  const { restored, kept, ...counts } = result;
+  const summary = { ...counts, balancesRestored: restored.length, balancesKept: kept };
   await logEvent({
     userId: actorId,
     action: "import.reverted",
     entity: "ImportBatch",
     entityId: batchId,
-    metadata: result,
+    metadata: summary,
   });
-  return result;
+  for (const a of restored) {
+    await logEvent({
+      userId: actorId,
+      action: "account.initial_balance_restored",
+      entity: "BankAccount",
+      entityId: a.accountId,
+      metadata: { previous: a.set, set: a.previous, batchId },
+    });
+  }
+  return summary;
 }
 
 export async function discardBatch(actorId: string, batchId: string): Promise<void> {

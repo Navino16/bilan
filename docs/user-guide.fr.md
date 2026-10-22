@@ -201,7 +201,7 @@ Avant la suppression, Bilan liste les effets : liens qui seront dissous et budge
 
 ![Page d’import](images/fr/import.png)
 
-Bilan importe des fichiers CSV (jusqu’à 5 Mo) et des relevés PDF (jusqu’à 10 Mo) exportés depuis votre banque.
+Bilan importe des fichiers CSV (jusqu’à 5 Mo), des relevés PDF (jusqu’à 10 Mo) et des fichiers OFX (jusqu’à 5 Mo) exportés depuis votre banque. L’OFX est le plus fiable des trois : c’est un format structuré, donc pas de colonnes à faire correspondre ni de séparateur décimal ou d’ordre des dates à deviner.
 
 ### Importer un fichier CSV
 
@@ -238,6 +238,35 @@ Un relevé Revolut peut contenir plusieurs sections (compte courant, dépôt). C
 
 Pas de séparateur décimal ni d’ordre des dates à régler pour les PDF. Les doublons (certains et probables), les catégories et l’aperçu fonctionnent comme pour les CSV.
 
+### Importer un fichier OFX
+
+La plupart des banques permettent de télécharger l’historique d’un compte au format **OFX** (parfois appelé « Money » ou « Microsoft Money »), à côté des options CSV et PDF. Cherchez-le dans le menu d’export ou de téléchargement de l’historique, choisissez une période (longue la première fois, par exemple deux ans) et sélectionnez le format OFX.
+
+Déposez ensuite le fichier sur la page **Importer** comme un CSV. Bilan lit l’ancien format OFX 1.x comme le plus récent 2.x, en UTF-8 ou en Windows-1252.
+
+- **Libellé** : le nom de l’opération donné par la banque. S’il est vide, Bilan prend le mémo, et pour un chèque sans nom, **CHEQUE** suivi de son numéro. Quand un nom et un mémo différent existent, le mémo va dans la **note** de la transaction.
+- **Type** (carte, virement, prélèvement, chèque…) : Bilan le lit d’abord dans le libellé, puis dans le type donné par la banque.
+- **Plusieurs comptes dans un fichier** : chaque relevé est listé avec son type de compte et les 4 derniers caractères de son numéro (par exemple **Compte courant ••1234**). Choisissez un **Compte de destination** pour chacun, ou **Ne pas importer** pour l’ignorer, comme pour un PDF Revolut.
+- **Doublons** : les doublons certains et probables fonctionnent comme pour les CSV. C’est ce qui permet d’importer sans risque des exports réguliers qui se chevauchent, ou un OFX qui chevauche un relevé PDF du même compte : ce qui existe déjà est ignoré, et une quasi-correspondance est laissée à votre relecture.
+- **Lignes illisibles** : les transactions dont la date ou le montant n’est pas lisible sont ignorées et listées, comme pour les CSV.
+
+#### Vérifier le solde
+
+Quand le fichier donne le solde de la banque (c’est le cas de la plupart des relevés bancaires, pas des relevés de carte de crédit), l’aperçu affiche une **vérification du solde** :
+
+- **Solde banque au** *date* : le solde que la banque indique à la fin du fichier.
+- **Solde après import** : ce que Bilan afficherait pour le compte à cette date : le solde initial, plus les transactions du compte, plus les lignes qui vont être importées.
+- **Écart**, ou **Les soldes concordent**.
+
+Le solde après import suit vos choix : décocher une ligne, ou cocher un doublon probable, met l’écart à jour immédiatement. Un écart signifie en général que des opérations manquent dans le compte, ou que son solde initial est faux.
+
+#### Caler le solde initial
+
+Quand le fichier commence l’historique du compte (le compte n’a aucune transaction avant le premier jour du fichier) et qu’il y a un écart, une case propose de **Caler le solde initial pour retomber sur le solde de la banque**. Cochez-la et Bilan modifie le [solde initial](#comptes) du compte en même temps que l’import, pour que le solde corresponde à celui de la banque. C’est la façon de charger l’historique d’une banque dans un nouveau compte sans calculer le solde initial à la main.
+
+- Seul le **propriétaire** du compte voit la case, car lui seul peut modifier le solde initial. Avec un simple accès en écriture, vous voyez l’écart sans pouvoir le caler.
+- Elle n’est pas proposée sur un compte qui contient déjà des transactions plus anciennes : un écart y indique des opérations manquantes, que le calage masquerait.
+
 ### Annuler un import
 
 Mauvais fichier, mauvais compte ? Annulez tout l’import :
@@ -245,7 +274,7 @@ Mauvais fichier, mauvais compte ? Annulez tout l’import :
 - juste après l’import, cliquez sur **Annuler l’import** dans le récapitulatif, ou
 - plus tard, ouvrez le menu **⋯** de l’import dans **Imports récents** sur la page **Importer** et choisissez **Annuler l’import**.
 
-Bilan indique combien de transactions seront supprimées, et prévient si certaines sont liées à d’autres transactions, affectées à un budget ou modifiées depuis l’import. Cliquez sur **Supprimer les transactions** pour confirmer.
+Bilan indique combien de transactions seront supprimées, et prévient si certaines sont liées à d’autres transactions, affectées à un budget ou modifiées depuis l’import. Si l’import a calé le solde initial d’un compte, la fenêtre indique qu’il reviendra à sa valeur précédente. Si vous l’avez modifié vous-même depuis, il est laissé tel quel et la fenêtre vous le dit. Cliquez sur **Supprimer les transactions** pour confirmer.
 
 Toutes les transactions de cet import sont supprimées, y compris celles modifiées depuis. L’import reste dans l’historique avec le statut **Annulé**, et vous pouvez réimporter le même fichier ensuite. Il n’y a pas de délai, mais il faut un accès en écriture à chaque compte concerné par l’import.
 

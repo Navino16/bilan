@@ -11,6 +11,7 @@ export type NormalizedRow = {
   amount: number; // signed: negative = expense, positive = income
   rawLabel: string;
   type?: TxType; // from a mapped "Type" column; otherwise derived from the label
+  note?: string; // OFX MEMO when it adds to the NAME label
 };
 
 // A statement parses into one or more products (e.g. Revolut bundles a current

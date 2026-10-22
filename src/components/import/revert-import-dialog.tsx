@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ export function RevertImportDialog({
   onReverted?: (deleted: number) => void;
 }) {
   const t = useTranslations("import.revert");
+  const money = new Intl.NumberFormat(useLocale(), { style: "currency", currency: "EUR" });
   const router = useRouter();
   const [impact, setImpact] = useState<RevertImpact | null>(null);
   const [error, setError] = useState<ErrorKey | null>(null);
@@ -73,6 +74,20 @@ export function RevertImportDialog({
             {impact ? t("deleted", { count: impact.transactions }) : t("loading")}
           </DialogDescription>
         </DialogHeader>
+        {impact && impact.balances.length > 0 && (
+          <ul className="space-y-1.5 text-sm">
+            {impact.balances.map((b, i) => (
+              <li key={i}>
+                {b.restore
+                  ? t("balanceRestore", {
+                      account: b.accountName,
+                      amount: money.format(b.previous),
+                    })
+                  : t("balanceKept", { account: b.accountName })}
+              </li>
+            ))}
+          </ul>
+        )}
         {impact && extras.length > 0 && (
           <ul className="space-y-1.5 text-sm">
             {extras.map((k) => (

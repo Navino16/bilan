@@ -7,7 +7,7 @@ import {
 } from "@/server/services/transactions/secure-fields";
 import { recordHits, suggestMany } from "@/server/services/categorization";
 import { mapInSlices } from "@/server/services/categorization/cooperative";
-import { trimBatchMetadata } from "@/lib/import-status";
+import { trimBatchMetadata, type BalanceAdjustment } from "@/lib/import-status";
 import { deriveType } from "./derive-type";
 import { ImportAccessError } from "./errors";
 import { findProbableDuplicates } from "./probable";
@@ -101,7 +101,13 @@ export async function insertRows(
   // stall every other request (#301).
   const secures = (
     await mapInSlices(kept, (slice) =>
-      slice.map((i) => buildSecureFields({ label: rows[i].rawLabel, rawLabel: rows[i].rawLabel })),
+      slice.map((i) =>
+        buildSecureFields({
+          label: rows[i].rawLabel,
+          rawLabel: rows[i].rawLabel,
+          note: rows[i].note,
+        }),
+      ),
     )
   ).flat();
 
@@ -126,7 +132,7 @@ export async function insertRows(
       rawLabelEnc: secure.rawLabelEnc,
       rawLabelHash: secure.rawLabelHash,
       merchantKeyHash: secure.merchantKeyHash,
-      noteEnc: null,
+      noteEnc: secure.noteEnc,
       categoryId: override || suggestion?.categoryId || null,
       manuallyCategorized: override !== undefined,
       externalId,
@@ -172,19 +178,25 @@ function countHits(ruleIds: string[]): Record<string, number> {
 // Finalizes an ImportBatch after inserts: sets COMPLETED + counters, audit-logs.
 // Rule hits commit with the status so a rolled-back commit can't count them twice.
 // A commit that imports nothing fails, so no empty, undoable batch lands in the history.
+// `balanceAdjustments` (OFX) set opening balances in the same DB transaction.
 export async function finalizeBatch(
   batchId: string,
   totals: InsertTotals,
   actor: { id: string },
   accountIds: string[],
+  opts: { balanceAdjustments?: BalanceAdjustment[] } = {},
 ): Promise<CommitSummary> {
   if (totals.imported === 0) throw new ImportAccessError("NOTHING_TO_IMPORT");
+  const adjustments = opts.balanceAdjustments ?? [];
   const { metadata } = await db.importBatch.findUniqueOrThrow({
     where: { id: batchId },
     select: { metadata: true },
   });
   const updated = await db.$transaction(async (tx) => {
     await recordHits(totals.hitRuleIds, tx);
+    for (const a of adjustments) {
+      await tx.bankAccount.update({ where: { id: a.accountId }, data: { initialBalance: a.set } });
+    }
     return tx.importBatch.update({
       where: { id: batchId },
       data: {
@@ -195,6 +207,7 @@ export async function finalizeBatch(
         completedAt: new Date(),
         metadata: {
           ...trimBatchMetadata(metadata, accountIds),
+          ...(adjustments.length ? { balanceAdjustments: adjustments } : {}),
           ...(totals.hitRuleIds.length ? { ruleHits: countHits(totals.hitRuleIds) } : {}),
         },
       },
@@ -207,6 +220,15 @@ export async function finalizeBatch(
     entityId: batchId,
     metadata: { imported: totals.imported, skipped: totals.skipped, total: totals.total },
   });
+  for (const a of adjustments) {
+    await logEvent({
+      userId: actor.id,
+      action: "account.initial_balance_adjusted",
+      entity: "BankAccount",
+      entityId: a.accountId,
+      metadata: { previous: a.previous, set: a.set, batchId },
+    });
+  }
   return {
     batchId: updated.id,
     totalRows: totals.total,
