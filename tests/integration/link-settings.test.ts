@@ -19,7 +19,7 @@ const owner = "lset_owner";
 let accountId: string;
 
 async function tx(date: string, amount: number): Promise<string> {
-  const s = buildSecureFields({ label: "T", rawLabel: "T" });
+  const s = buildSecureFields({ label: "FRAIS", rawLabel: "FRAIS" });
   const row = await db.transaction.create({
     data: {
       accountId,

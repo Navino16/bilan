@@ -6,7 +6,8 @@ import { visibleAccountIds, visibleAccountRefs } from "@/server/services/account
 import { canWriteAccount } from "@/server/services/accounts/sharing";
 import { logEvent } from "@/server/services/audit";
 import { getLinkSuggestionSettings } from "@/server/services/users/preferences";
-import { findSuggestedPairs, pairKeyOf, type SuggestedPair } from "@/lib/links";
+import { findSuggestedPairs, labelWords, pairKeyOf, type SuggestedPair } from "@/lib/links";
+import { merchantKey } from "@/lib/merchant";
 
 export class LinkAccessError extends Error {}
 
@@ -113,11 +114,36 @@ export async function suggestPairs(userId: string): Promise<SuggestedPairView[]>
 
   const candidates = await db.transaction.findMany({
     where: { accountId: { in: [...accountName.keys()] }, linkMembership: { is: null } },
-    select: { id: true, accountId: true, amount: true, date: true, labelEnc: true },
+    select: {
+      id: true,
+      accountId: true,
+      amount: true,
+      date: true,
+      type: true,
+      merchantKeyHash: true,
+      labelEnc: true,
+    },
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     take: SUGGESTION_SCAN_LIMIT,
   });
-  const rows = candidates.map((t) => ({ id: t.id, amount: Number(t.amount), date: t.date }));
+  // Only rows with an opposite amount among the candidates can pair: decrypt just those.
+  const cents = (n: number) => Math.round(n * 100);
+  const signed = new Set(candidates.map((t) => cents(Number(t.amount))));
+  const rows = candidates.map((t) => {
+    const amount = Number(t.amount);
+    const words = signed.has(-cents(amount))
+      ? labelWords(merchantKey(decrypt(t.labelEnc, dataKey)))
+      : undefined;
+    return {
+      id: t.id,
+      amount,
+      date: t.date,
+      accountId: t.accountId,
+      type: t.type,
+      merchantKeyHash: t.merchantKeyHash,
+      words,
+    };
+  });
   const pairs = findSuggestedPairs(rows, { windowDays, minAmount, ignored });
 
   const byId = new Map(candidates.map((t) => [t.id, t]));

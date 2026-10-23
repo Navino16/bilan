@@ -189,11 +189,11 @@ describe("suggestPairs", () => {
   it("carries each leg's day and account name", async () => {
     const a = await tx(accountId, "2026-03-02T00:00:00.000Z", -40, "CB BOULANGER");
     const b = await tx(strangerAccountId, "2026-03-06T00:00:00.000Z", 40, "REMB BOULANGER");
-    await tx(accountId, "2026-03-06T00:00:00.000Z", 40, "VIR INTERNE");
+    await tx(accountId, "2026-03-06T00:00:00.000Z", 40, "AVOIR BOULANGER");
     const [pair] = (await suggestPairs(owner)).filter((p) => p.negativeId === a);
     expect(pair).toMatchObject({
       negative: { date: "2026-03-02", accountName: "Courant", label: "CB BOULANGER" },
-      positive: { date: "2026-03-06", accountName: "Courant", label: "VIR INTERNE" },
+      positive: { date: "2026-03-06", accountName: "Courant", label: "AVOIR BOULANGER" },
     });
     expect(pair.positiveId).not.toBe(b);
   });
@@ -218,6 +218,7 @@ describe("suggestPairs", () => {
         negativeId: neg,
         amount: 42.5,
         dayDelta: 4,
+        score: expect.any(Number),
         positive: { id: pos, label: "REMB DECATHLON", date: "2026-04-06", accountName: "Courant" },
         negative: { id: neg, label: "CB DECATHLON", date: "2026-04-02", accountName: "Courant" },
       },
