@@ -43,18 +43,81 @@ export type SuggestedPair = {
   negativeId: string;
   amount: number; // absolute value of the matched amount
   dayDelta: number;
+  score: number;
 };
+
+// Optional context of a candidate row: with it, pairs are filtered and ranked (POC).
+export type PairCandidate = LinkMemberRow & {
+  accountId?: string;
+  type?: string;
+  merchantKeyHash?: string | null;
+  // Significant words of the label's merchant key (labelWords).
+  words?: ReadonlySet<string>;
+};
+
+const GENERIC_WORDS = new Set([
+  "DE",
+  "DU",
+  "DES",
+  "LA",
+  "LE",
+  "LES",
+  "ET",
+  "AU",
+  "AUX",
+  "EN",
+  "SEPA",
+  "VIREMENT",
+  "VIR",
+  "PRLV",
+  "CARTE",
+  "PAIEMENT",
+  "EMIS",
+  "RECU",
+  "MOTIF",
+  "REF",
+]);
+
+export function labelWords(merchantKey: string): Set<string> {
+  return new Set(
+    merchantKey
+      .split(/[^A-Z0-9]+/)
+      .filter((w) => w.length >= 3 && !/^\d+$/.test(w) && !GENERIC_WORDS.has(w)),
+  );
+}
+
+function sharesWord(a?: ReadonlySet<string>, b?: ReadonlySet<string>): boolean {
+  if (!a || !b) return false;
+  for (const w of a) if (b.has(w)) return true;
+  return false;
+}
+
+// Within one account, an equal-and-opposite amount is a coincidence unless both rows are the
+// same merchant (a refund, a reversal). Across accounts, closer dates, the same merchant and
+// two transfers make the pair more likely. Null = not a candidate pair.
+export function pairScore(pos: PairCandidate, neg: PairCandidate, dayDelta: number): number | null {
+  if (pos.accountId === undefined || neg.accountId === undefined) return 0;
+  const sameMerchant = !!pos.merchantKeyHash && pos.merchantKeyHash === neg.merchantKeyHash;
+  const sameWords = sharesWord(pos.words, neg.words);
+  if (pos.accountId === neg.accountId && !sameMerchant && !sameWords) return null;
+  let score = 0;
+  if (pos.accountId !== neg.accountId) score += 4;
+  if (sameMerchant) score += 3;
+  else if (sameWords) score += 2;
+  if (pos.type === "TRANSFER" && neg.type === "TRANSFER") score += 1;
+  return score - dayDelta / 3;
+}
 
 // Pairs each positive amount with an equal-and-opposite negative within the day
 // window, above the minimum, not already ignored. Greedy: each transaction is
 // used in at most one pair (largest amounts first). Pure — no DB.
 export function findSuggestedPairs(
-  rows: LinkMemberRow[],
+  rows: PairCandidate[],
   opts: { windowDays: number; minAmount: number; ignored: Set<string> },
 ): SuggestedPair[] {
   const positives = rows.filter((r) => r.amount > 0).sort((a, b) => b.amount - a.amount);
   // Negatives bucketed by cents (input order kept) so each positive only scans its matches.
-  const negativesByCents = new Map<number, LinkMemberRow[]>();
+  const negativesByCents = new Map<number, PairCandidate[]>();
   for (const r of rows) {
     if (r.amount >= 0) continue;
     const cents = Math.round(-r.amount * 100);
@@ -68,14 +131,18 @@ export function findSuggestedPairs(
   for (const pos of positives) {
     if (used.has(pos.id)) continue;
     if (pos.amount < opts.minAmount) continue;
-    let best: { neg: LinkMemberRow; dayDelta: number } | null = null;
+    let best: { neg: PairCandidate; dayDelta: number; score: number } | null = null;
     for (const neg of negativesByCents.get(Math.round(pos.amount * 100)) ?? []) {
       if (used.has(neg.id)) continue;
       if (Math.abs(pos.amount + neg.amount) >= EPSILON) continue; // not opposite
       if (opts.ignored.has(pairKeyOf(pos.id, neg.id))) continue; // dismissed → skip, try next
       const dayDelta = Math.round(Math.abs(pos.date.getTime() - neg.date.getTime()) / DAY_MS);
       if (dayDelta > opts.windowDays) continue;
-      if (!best || dayDelta < best.dayDelta) best = { neg, dayDelta };
+      const score = pairScore(pos, neg, dayDelta);
+      if (score === null) continue;
+      if (!best || score > best.score || (score === best.score && dayDelta < best.dayDelta)) {
+        best = { neg, dayDelta, score };
+      }
     }
     if (!best) continue;
     const key = pairKeyOf(pos.id, best.neg.id);
@@ -87,10 +154,11 @@ export function findSuggestedPairs(
       negativeId: best.neg.id,
       amount: Math.round(pos.amount * 100) / 100,
       dayDelta: best.dayDelta,
+      score: best.score,
     });
   }
 
-  return pairs.sort((a, b) => b.amount - a.amount || a.dayDelta - b.dayDelta);
+  return pairs.sort((a, b) => b.score - a.score || b.amount - a.amount || a.dayDelta - b.dayDelta);
 }
 
 // A transaction row tagged with its link membership (null = not linked).

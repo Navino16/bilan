@@ -6,6 +6,8 @@ import {
   pairKeyOf,
   findSuggestedPairs,
   collapseLinkedRows,
+  labelWords,
+  pairScore,
 } from "@/lib/links";
 
 describe("netSum", () => {
@@ -128,7 +130,14 @@ describe("findSuggestedPairs", () => {
     ];
     const pairs = findSuggestedPairs(many, { windowDays: 30, minAmount: 0, ignored: new Set() });
     expect(pairs).toEqual([
-      { key: "n_close|p25", positiveId: "p25", negativeId: "n_close", amount: 25, dayDelta: 1 },
+      {
+        key: "n_close|p25",
+        positiveId: "p25",
+        negativeId: "n_close",
+        amount: 25,
+        dayDelta: 1,
+        score: 0,
+      },
     ]);
   });
 
@@ -140,6 +149,86 @@ describe("findSuggestedPairs", () => {
     ];
     const pairs = findSuggestedPairs(ties, { windowDays: 30, minAmount: 0, ignored: new Set() });
     expect(pairs.map((p) => p.negativeId)).toEqual(["z_first"]);
+  });
+});
+
+describe("labelWords", () => {
+  it("keeps significant words of a merchant key", () => {
+    expect(labelWords("REMISE FIDELITE TENUE DE COMPTE")).toEqual(
+      new Set(["REMISE", "FIDELITE", "TENUE", "COMPTE"]),
+    );
+    expect(labelWords("SEPA DE 12 AB")).toEqual(new Set());
+  });
+});
+
+describe("link suggestion scoring (#337)", () => {
+  const day = (d: number) => new Date(Date.UTC(2026, 2, d));
+  const row = (id: string, amount: number, d: number, over: object = {}) => ({
+    id,
+    amount,
+    date: day(d),
+    accountId: "a",
+    type: "CARD",
+    merchantKeyHash: null,
+    words: new Set<string>(),
+    ...over,
+  });
+  const opts = { windowDays: 30, minAmount: 0, ignored: new Set<string>() };
+
+  it("drops a same-account pair with unrelated labels", () => {
+    const pairs = findSuggestedPairs(
+      [
+        row("in", 50, 2, { words: new Set(["MARTIN"]) }),
+        row("out", -50, 3, { words: new Set(["LIDL"]) }),
+      ],
+      opts,
+    );
+    expect(pairs).toEqual([]);
+  });
+
+  it("keeps a same-account pair of the same merchant or with a shared word", () => {
+    const refund = [
+      row("buy", -30, 2, { merchantKeyHash: "h" }),
+      row("back", 30, 9, { merchantKeyHash: "h" }),
+    ];
+    expect(findSuggestedPairs(refund, opts).map((p) => p.key)).toEqual(["back|buy"]);
+    const rebate = [
+      row("fee", -10, 30, { words: new Set(["TENUE", "COMPTE"]) }),
+      row("rebate", 10, 30, { words: new Set(["REMISE", "TENUE", "COMPTE"]) }),
+    ];
+    expect(findSuggestedPairs(rebate, opts).map((p) => p.key)).toEqual(["fee|rebate"]);
+  });
+
+  it("prefers a transfer from another account to a same-account match a day closer", () => {
+    const pairs = findSuggestedPairs(
+      [
+        row("in", 200, 10, { accountId: "savings", type: "TRANSFER", merchantKeyHash: "h" }),
+        row("near", -200, 10, { accountId: "savings", type: "TRANSFER", merchantKeyHash: "h" }),
+        row("other", -200, 9, { accountId: "checking", type: "TRANSFER" }),
+      ],
+      opts,
+    );
+    expect(pairs.map((p) => p.negativeId)).toEqual(["other"]);
+  });
+
+  it("lists pairs by score", () => {
+    const pairs = findSuggestedPairs(
+      [
+        row("big", 500, 1, { merchantKeyHash: "x" }),
+        row("bigneg", -500, 20, { merchantKeyHash: "x" }),
+        row("small", 5, 1, { accountId: "b" }),
+        row("smallneg", -5, 1),
+      ],
+      opts,
+    );
+    expect(pairs.map((p) => p.positiveId)).toEqual(["small", "big"]);
+  });
+
+  it("scores the other account, the same merchant and two transfers", () => {
+    const a = row("a", 10, 1, { accountId: "x", type: "TRANSFER", merchantKeyHash: "h" });
+    const b = row("b", -10, 1, { accountId: "y", type: "TRANSFER", merchantKeyHash: "h" });
+    expect(pairScore(a, b, 0)).toBe(8);
+    expect(pairScore(a, b, 6)).toBe(6);
   });
 });
 
