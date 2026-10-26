@@ -1,3 +1,5 @@
+import { isValidIsoDay } from "./period";
+
 // Assigned month of a transaction (#341): `periodDate` is `date`, or the 1st of
 // another month the transaction counts toward. All dates are UTC.
 
@@ -22,4 +24,11 @@ export function assignedMonth(date: Date, periodDate: Date): YearMonth | null {
   const year = periodDate.getUTCFullYear();
   const month = periodDate.getUTCMonth() + 1;
   return sameMonth(date, year, month) ? null : { year, month };
+}
+
+// A `<input type="month">` value ("YYYY-MM") within the app's year range.
+export function parseYearMonth(value: string): YearMonth | null {
+  if (!/^\d{4}-\d{2}$/.test(value) || !isValidIsoDay(`${value}-01`)) return null;
+  const [year, month] = value.split("-").map(Number);
+  return { year, month };
 }

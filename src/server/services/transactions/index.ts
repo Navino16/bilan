@@ -21,7 +21,9 @@ import {
   type TransactionUpdateInput,
 } from "@/lib/schemas/transaction";
 import { recordHits, suggest } from "@/server/services/categorization";
+import { manualPeriodDate, type YearMonth } from "@/lib/assigned-month";
 import { buildSecureFields } from "./secure-fields";
+import { syncAutoPeriodDates } from "./period-date";
 import {
   EXPORT_COLUMNS,
   pageRows,
@@ -58,6 +60,8 @@ export type TransactionView = {
   note: string | null;
   categoryId: string | null;
   manuallyCategorized: boolean;
+  periodDate: Date;
+  periodManual: boolean;
   imported: boolean; // carries a bank dedup key (see `editScope`)
 };
 
@@ -99,6 +103,7 @@ export async function createTransaction(
       searchTokens: { create: secure.tokens.map((tokenHash) => ({ tokenHash })) },
     },
   });
+  if (tx.categoryId) await syncAutoPeriodDates({ ids: [tx.id] });
   await logEvent({
     userId: actor.id,
     action: "transaction.created",
@@ -127,6 +132,8 @@ export async function getTransactionForUser(
     note: row.noteEnc ? decrypt(row.noteEnc, dataKey) : null,
     categoryId: row.categoryId,
     manuallyCategorized: row.manuallyCategorized,
+    periodDate: row.periodDate,
+    periodManual: row.periodManual,
     imported: row.externalId !== null,
   };
 }
@@ -254,6 +261,8 @@ async function resolveListQuery(
       note: row.noteEnc ? decrypt(row.noteEnc, dataKey) : null,
       categoryId: row.categoryId,
       manuallyCategorized: Boolean(row.manuallyCategorized),
+      periodDate: row.periodDate,
+      periodManual: Boolean(row.periodManual),
       imported: row.externalId !== null,
       accountName: accountName.get(row.accountId) ?? "",
     }),
@@ -275,6 +284,7 @@ export async function recategorizeTransaction(
     where: { id },
     data: { categoryId, manuallyCategorized: true },
   });
+  await syncAutoPeriodDates({ ids: [id] });
   await logEvent({
     userId: actor.id,
     action: "transaction.recategorized",
@@ -323,10 +333,24 @@ export async function updateTransaction(
     recategorized && recategorized.categoryId !== row.categoryId && "category",
   ].filter((f): f is string => Boolean(f));
 
+  const redated = data.date !== undefined && data.date.getTime() !== row.date.getTime();
+  // A manual month survives a date edit; landing inside it pins the new date (spec, #341).
+  const manualPeriod =
+    redated && row.periodManual
+      ? {
+          periodDate: manualPeriodDate(
+            data.date!,
+            row.periodDate.getUTCFullYear(),
+            row.periodDate.getUTCMonth() + 1,
+          ),
+        }
+      : {};
+
   await db.transaction.update({
     where: { id },
     data: {
       ...(data.date ? { date: data.date } : {}),
+      ...manualPeriod,
       ...(data.amount !== undefined ? { amount: data.amount } : {}),
       ...(data.type ? { type: data.type } : {}),
       ...(recategorized ? { categoryId: recategorized.categoryId } : {}),
@@ -349,6 +373,35 @@ export async function updateTransaction(
     entityId: id,
     metadata: { fields },
   });
+  if (redated || recategorized) await syncAutoPeriodDates({ ids: [id] });
   // Best-effort, as on create: a failed counter must not fail a saved edit.
   if (recategorized) await recordHits([recategorized.ruleId]).catch(() => {});
+}
+
+// Assigns a transaction to a month by hand (#341), or back to the automatic one with `null`.
+export async function setTransactionMonth(
+  id: string,
+  month: YearMonth | null,
+  actor: { id: string },
+): Promise<void> {
+  const row = await db.transaction.findUnique({ where: { id } });
+  if (!row) throw new TransactionAccessError("NOT_FOUND");
+  if (!(await canWriteAccount(actor.id, row.accountId)))
+    throw new TransactionAccessError("FORBIDDEN");
+  if (month) {
+    await db.transaction.update({
+      where: { id },
+      data: { periodDate: manualPeriodDate(row.date, month.year, month.month), periodManual: true },
+    });
+  } else {
+    await db.transaction.update({ where: { id }, data: { periodManual: false } });
+    await syncAutoPeriodDates({ ids: [id] });
+  }
+  await logEvent({
+    userId: actor.id,
+    action: "transaction.month_set",
+    entity: "Transaction",
+    entityId: id,
+    metadata: { month: month ? `${month.year}-${String(month.month).padStart(2, "0")}` : null },
+  });
 }

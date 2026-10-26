@@ -1964,7 +1964,8 @@
           "created": "Transaction created",
           "deleted": "Transaction deleted",
           "recategorized": "Transaction recategorized",
-          "updated": "Transaction edited"
+          "updated": "Transaction edited",
+          "month_set": "Assigned month changed"
         },
         "import": {
           "created": "Import started",

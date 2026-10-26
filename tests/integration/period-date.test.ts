@@ -2,8 +2,19 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "@/server/db";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
 import { syncAutoPeriodDates } from "@/server/services/transactions/period-date";
+import {
+  createTransaction,
+  recategorizeTransaction,
+  setTransactionMonth,
+  TransactionAccessError,
+  updateTransaction,
+} from "@/server/services/transactions";
+import { insertRows } from "@/server/services/imports/commit";
+import { createRule } from "@/server/services/categorization";
+import { applyRule } from "@/server/services/categorization/apply";
 
 const owner = "period_owner";
+const stranger = "period_stranger";
 let accountId: string;
 let sal: string;
 let plain: string;
@@ -39,8 +50,9 @@ async function periodDay(id: string): Promise<string> {
 }
 
 beforeAll(async () => {
-  await db.user.deleteMany({ where: { id: owner } });
+  await db.user.deleteMany({ where: { id: { in: [owner, stranger] } } });
   await db.user.create({ data: { id: owner, email: "period-owner@bilan.local" } });
+  await db.user.create({ data: { id: stranger, email: "period-stranger@bilan.local" } });
   accountId = (
     await db.bankAccount.create({ data: { ownerId: owner, name: "Courant", type: "CHECKING" } })
   ).id;
@@ -50,9 +62,11 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await db.transaction.deleteMany({ where: { accountId } });
+  await db.importBatch.deleteMany({ where: { accountId } });
+  await db.categorizationRule.deleteMany({ where: { userId: owner } });
   await db.category.deleteMany({ where: { userId: owner } });
   await db.bankAccount.deleteMany({ where: { ownerId: owner } });
-  await db.user.deleteMany({ where: { id: owner } });
+  await db.user.deleteMany({ where: { id: { in: [owner, stranger] } } });
   await db.$disconnect();
 });
 
@@ -104,5 +118,105 @@ describe("syncAutoPeriodDates", () => {
   it("does nothing on an empty scope", async () => {
     expect(await syncAutoPeriodDates({ ids: [] })).toBe(0);
     expect(await syncAutoPeriodDates({ categoryIds: [] })).toBe(0);
+  });
+});
+
+describe("transaction writes keep periodDate in sync", () => {
+  const actor = { id: owner };
+  const manualTx = (date: string, categoryId: string | null, label = "VIR") =>
+    createTransaction(
+      {
+        accountId,
+        date: new Date(date),
+        amount: 2000,
+        type: "TRANSFER",
+        label,
+        categoryId: categoryId ?? undefined,
+      },
+      actor,
+    );
+
+  it("shifts a created transaction", async () => {
+    const { id } = await manualTx("2026-10-30T00:00:00.000Z", sal);
+    expect(await periodDay(id)).toBe("2026-11-01");
+  });
+
+  it("follows a recategorization, back to the real date when uncategorized", async () => {
+    const { id } = await manualTx("2026-10-30T00:00:00.000Z", plain);
+    expect(await periodDay(id)).toBe("2026-10-30");
+    await recategorizeTransaction(id, sal, actor);
+    expect(await periodDay(id)).toBe("2026-11-01");
+    await recategorizeTransaction(id, null, actor);
+    expect(await periodDay(id)).toBe("2026-10-30");
+  });
+
+  it("lets a manual month win, and goes back to automatic", async () => {
+    const { id } = await manualTx("2026-10-30T00:00:00.000Z", sal);
+    await setTransactionMonth(id, { year: 2026, month: 10 }, actor);
+    let row = await db.transaction.findUniqueOrThrow({ where: { id } });
+    expect(row.periodManual).toBe(true);
+    expect(await periodDay(id)).toBe("2026-10-30");
+
+    await recategorizeTransaction(id, plain, actor);
+    await recategorizeTransaction(id, sal, actor);
+    expect(await periodDay(id)).toBe("2026-10-30");
+
+    await setTransactionMonth(id, null, actor);
+    row = await db.transaction.findUniqueOrThrow({ where: { id } });
+    expect(row.periodManual).toBe(false);
+    expect(await periodDay(id)).toBe("2026-11-01");
+  });
+
+  it("assigns a past month", async () => {
+    const { id } = await manualTx("2026-01-15T00:00:00.000Z", null);
+    await setTransactionMonth(id, { year: 2025, month: 12 }, actor);
+    expect(await periodDay(id)).toBe("2025-12-01");
+  });
+
+  it("keeps a manual month across a date edit", async () => {
+    const { id } = await manualTx("2026-10-20T00:00:00.000Z", null);
+    await setTransactionMonth(id, { year: 2026, month: 11 }, actor);
+    const edit = (date: string) =>
+      updateTransaction(id, { label: "VIR", date, amount: 2000 }, actor);
+    await edit("2026-11-12");
+    expect(await periodDay(id)).toBe("2026-11-12");
+    await edit("2026-10-05");
+    expect(await periodDay(id)).toBe("2026-11-01");
+  });
+
+  it("re-evaluates the automatic shift on a date edit", async () => {
+    const { id } = await manualTx("2026-10-10T00:00:00.000Z", sal);
+    expect(await periodDay(id)).toBe("2026-10-10");
+    await updateTransaction(id, { label: "VIR", date: "2026-10-30", amount: 2000 }, actor);
+    expect(await periodDay(id)).toBe("2026-11-01");
+  });
+
+  it("refuses a month change without write access", async () => {
+    const { id } = await manualTx("2026-10-10T00:00:00.000Z", null);
+    await expect(
+      setTransactionMonth(id, { year: 2026, month: 11 }, { id: stranger }),
+    ).rejects.toBeInstanceOf(TransactionAccessError);
+  });
+
+  it("shifts imported rows categorized by a rule, and rows a rule re-applies to", async () => {
+    const rule = await createRule(
+      { pattern: "ACME PAIE", matchType: "CONTAINS", categoryId: sal },
+      actor,
+    );
+    const { id: existing } = await manualTx("2026-09-29T00:00:00.000Z", null, "VIR ACME PAIE");
+    await applyRule(rule.id, actor);
+    expect(await periodDay(existing)).toBe("2026-10-01");
+
+    const batch = await db.importBatch.create({
+      data: { accountId, source: "CSV", status: "REVIEW", createdById: owner },
+    });
+    await insertRows(
+      { batchId: batch.id, accountId },
+      [{ date: new Date("2026-10-30T00:00:00.000Z"), amount: 2100, rawLabel: "VIR ACME PAIE OCT" }],
+      actor,
+    );
+    const imported = await db.transaction.findFirstOrThrow({ where: { importBatchId: batch.id } });
+    expect(imported.categoryId).toBe(sal);
+    expect(await periodDay(imported.id)).toBe("2026-11-01");
   });
 });

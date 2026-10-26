@@ -103,6 +103,8 @@ export type ListRow = {
   noteEnc: string | null;
   categoryId: string | null;
   manuallyCategorized: boolean | number; // tinyint(1) over raw SQL
+  periodDate: Date;
+  periodManual: boolean | number;
   externalId: string | null;
   importBatchId: string | null;
 };
@@ -119,7 +121,8 @@ export const EXPORT_COLUMNS = Prisma.raw(
 
 const COLUMNS = Prisma.raw(
   "t.id, t.accountId, t.date, t.createdAt, t.updatedAt, t.amount, t.type, t.labelEnc, " +
-    "t.rawLabelEnc, t.noteEnc, t.categoryId, t.manuallyCategorized, t.externalId, t.importBatchId",
+    "t.rawLabelEnc, t.noteEnc, t.categoryId, t.manuallyCategorized, t.periodDate, t.periodManual, " +
+    "t.externalId, t.importBatchId",
 );
 
 // One page, in order. A rare search word drives the query from the token index. Otherwise a
