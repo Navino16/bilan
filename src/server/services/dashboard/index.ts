@@ -141,7 +141,7 @@ export async function loadRows(
   if (accountIds.length === 0) return { rows: [], count: 0 };
   const where: Prisma.TransactionWhereInput = {
     accountId: { in: accountIds },
-    date: { gte: period.from, lte: period.to },
+    periodDate: { gte: period.from, lte: period.to },
     ...opts.where,
   };
   const [rows, linkIds] = await Promise.all([
@@ -150,7 +150,7 @@ export async function loadRows(
       select: {
         id: true,
         amount: true,
-        date: true,
+        periodDate: true,
         categoryId: true,
         accountId: true,
         type: true,
@@ -163,7 +163,7 @@ export async function loadRows(
     rows.map((r) => ({
       id: r.id,
       amount: Number(r.amount),
-      date: r.date,
+      date: r.periodDate,
       categoryId: r.categoryId,
       accountId: r.accountId,
       type: r.type,
@@ -179,10 +179,10 @@ export const firstTransactionDate = cache(async (accountIds: string[]): Promise<
   if (accountIds.length === 0) return null;
   const first = await db.transaction.findFirst({
     where: { accountId: { in: accountIds } },
-    orderBy: { date: "asc" },
-    select: { date: true },
+    orderBy: { periodDate: "asc" },
+    select: { periodDate: true },
   });
-  return first?.date ?? null;
+  return first?.periodDate ?? null;
 });
 
 function totalsOf(rows: { amount: number }[], count: number): DashboardTotals {

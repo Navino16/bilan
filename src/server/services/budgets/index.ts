@@ -356,6 +356,7 @@ type BudgetRow = {
   id: string;
   amount: number;
   date: Date;
+  periodDate: Date;
   categoryId: string | null;
   accountId: string;
   linkId: string | null;
@@ -485,7 +486,7 @@ async function loadBudgetRows(budgets: BudgetRef[]): Promise<Map<string, LoadedB
     if (accountIds.length === 0) continue;
     orClauses.push({
       accountId: { in: accountIds },
-      OR: periods.map((date) => ({ date })),
+      OR: periods.map((periodDate) => ({ periodDate })),
     });
   }
   const assignedIds = [...new Set(assignments.map((a) => a.transactionId))];
@@ -497,7 +498,14 @@ async function loadBudgetRows(budgets: BudgetRef[]): Promise<Map<string, LoadedB
     const [txs, linkIds] = await Promise.all([
       db.transaction.findMany({
         where,
-        select: { id: true, amount: true, date: true, categoryId: true, accountId: true },
+        select: {
+          id: true,
+          amount: true,
+          date: true,
+          periodDate: true,
+          categoryId: true,
+          accountId: true,
+        },
       }),
       linkIdsWhere(where),
     ]);
@@ -505,6 +513,7 @@ async function loadBudgetRows(budgets: BudgetRef[]): Promise<Map<string, LoadedB
       id: r.id,
       amount: Number(r.amount),
       date: r.date,
+      periodDate: r.periodDate,
       categoryId: r.categoryId,
       accountId: r.accountId,
       linkId: linkIds.get(r.id) ?? null,
@@ -525,7 +534,9 @@ async function loadBudgetRows(budgets: BudgetRef[]): Promise<Map<string, LoadedB
     const to = b.periodEnd.getTime();
     l.rows = rows.filter(
       (r) =>
-        (accounts.has(r.accountId) && r.date.getTime() >= from && r.date.getTime() <= to) ||
+        (accounts.has(r.accountId) &&
+          r.periodDate.getTime() >= from &&
+          r.periodDate.getTime() <= to) ||
         l.includedIds.has(r.id) ||
         l.excluded.has(r.id),
     );
@@ -604,6 +615,7 @@ const BUDGET_TRANSACTIONS_SHOWN = 100;
 export type BudgetTransaction = {
   id: string;
   date: Date;
+  periodDate: Date;
   amount: number;
   label: string | null;
   categoryId: string | null;
@@ -711,6 +723,7 @@ async function budgetTransactions(
       ? {
           id: r.id,
           date: r.date,
+          periodDate: r.periodDate,
           amount: r.amount,
           label: labels.get(r.id) ?? "",
           categoryId: r.categoryId,
@@ -719,6 +732,7 @@ async function budgetTransactions(
       : {
           id: `hidden-${i}`,
           date: r.date,
+          periodDate: r.periodDate,
           amount: r.amount,
           label: null,
           categoryId: null,
