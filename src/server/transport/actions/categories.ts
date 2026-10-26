@@ -21,6 +21,7 @@ function parse(formData: FormData) {
     icon: formData.get("icon") || undefined,
     parentId: formData.get("parentId") ?? "",
     groupId: formData.get("groupId") ?? "",
+    shiftDays: formData.get("shiftDays") ?? "",
   });
 }
 

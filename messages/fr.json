@@ -703,7 +703,10 @@
     "customSymbol": "Symbole personnalisé ({glyph})",
     "addSymbol": "Saisir un autre symbole",
     "symbolInput": "Symbole personnalisé",
-    "symbolInvalid": "Un seul caractère ou emoji."
+    "symbolInvalid": "Un seul caractère ou emoji.",
+    "shift": "Compter dans le mois suivant",
+    "shiftHint": "Les transactions des derniers jours du mois comptent pour le mois suivant, comme un salaire versé en fin de mois.",
+    "shiftDays": "Nombre de jours"
   },
   "transactions": {
     "title": "Transactions",
@@ -893,6 +896,12 @@
       "date-asc": "Plus anciennes d’abord",
       "amount-asc": "Plus grosses dépenses d’abord",
       "amount-desc": "Plus grosses entrées d’abord"
+    },
+    "assignedMonth": {
+      "label": "Mois d’affectation",
+      "countedIn": "Compté en {month}",
+      "backToAuto": "Revenir en automatique",
+      "failed": "Le mois n’a pas pu être enregistré."
     }
   },
   "import": {
@@ -1232,7 +1241,8 @@
     "rangeStart": "Début de la période",
     "rangeEnd": "Fin de la période",
     "rangeReversed": "La fin doit être après le début.",
-    "otherCategories": "{count, plural, one {Autre catégorie} other {# autres catégories}}"
+    "otherCategories": "{count, plural, one {Autre catégorie} other {# autres catégories}}",
+    "upcoming": "Période à venir : seules les transactions affectées à cette période apparaissent."
   },
   "merchants": {
     "tab": "Marchands",
@@ -1961,7 +1971,8 @@
           "created": "Transaction créée",
           "deleted": "Transaction supprimée",
           "recategorized": "Transaction recatégorisée",
-          "updated": "Transaction modifiée"
+          "updated": "Transaction modifiée",
+          "month_set": "Mois d’affectation modifié"
         },
         "import": {
           "created": "Import démarré",

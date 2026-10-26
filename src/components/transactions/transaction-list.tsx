@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { ListChecks } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { CategoryAvatar, CategoryChip, Pill } from "./bits";
+import { AssignedMonthBadge } from "./assigned-month";
 import { type FlatCategory } from "./category-tree";
 import { categoryIndex } from "./category-tree";
 import { CreateRuleDialog } from "./create-rule-dialog";
@@ -29,6 +30,8 @@ import { useLinkErrorMessage } from "./link-error";
 export type ListItem = {
   id: string;
   date: string; // ISO
+  periodDate: string; // ISO
+  periodManual: boolean;
   amount: number;
   type: string;
   label: string;
@@ -220,6 +223,8 @@ export function TransactionList({
     ? {
         id: selected.id,
         date: selected.date,
+        periodDate: selected.periodDate,
+        periodManual: selected.periodManual,
         amount: selected.amount,
         type: selected.type,
         label: selected.label,
@@ -306,6 +311,7 @@ export function TransactionList({
                         </span>
                       </span>
                       {it.linked && <Pill>{tLink("linked")}</Pill>}
+                      <AssignedMonthBadge date={it.date} periodDate={it.periodDate} />
                     </span>
                     <span className="min-w-0">
                       {meta ? (
@@ -341,6 +347,7 @@ export function TransactionList({
                           {it.label}
                         </span>
                         {it.linked && <Pill>{tLink("linked")}</Pill>}
+                        <AssignedMonthBadge date={it.date} periodDate={it.periodDate} />
                       </span>
                       <span className="text-muted-foreground block truncate text-xs">
                         {rowDate(it) ? `${rowDate(it)} · ` : ""}

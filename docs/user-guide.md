@@ -173,6 +173,7 @@ Click a transaction to open its details:
 
 - **Category**: pick a category; it is saved immediately. See [Learn from your choices](#learn-from-your-choices).
 - **Original label**: the label exactly as your bank wrote it. It never changes, even if you rename the transaction.
+- **Assigned month**: the month the transaction counts in. See [Count a transaction in another month](#count-a-transaction-in-another-month).
 - **Note**: your own comment, added with **Edit**.
 - **Linked to**: shown when the transaction is part of a [link](#links-transfers-and-refunds).
 - **Assign to a budget**: see [Include or exclude a transaction](#include-or-exclude-a-transaction).
@@ -196,6 +197,15 @@ If you leave the category empty, your [rules](#rules) try to find one from the l
 3. Click **Link** (2 or more transactions) or **Delete** in the bar that appears.
 
 Before deleting, Bilan lists the side effects: links that will be dissolved and budgets the transactions will leave. You can delete up to 500 transactions at once. Deletion can't be undone.
+
+### Count a transaction in another month
+
+Some transactions belong to another month than the day they hit your account: a salary paid on the last working day of the month that funds the next one, or a yearly bill you file under the previous month.
+
+- **One transaction**: in its details, pick a month under **Assigned month**, past or future. **Back to automatic** cancels your choice.
+- **A whole category**: edit the category and turn on **Count toward the next month**, then set the **Number of days**. Transactions of that category dated in the last days of a month then count in the next month. Turn it on for **Salary** with 5 days and every end-of-month salary counts in the following month. It applies to the category's existing transactions too, but not to its sub-categories. A month you picked by hand always wins.
+
+The transaction keeps its real date in the list, with a **Counted in …** mention. The dashboard, insights and budgets count it in its assigned month. To see a salary that already counts in next month, the dashboard and insights let you open the next month.
 
 ## Importing statements
 
@@ -297,7 +307,8 @@ To create one:
 3. Choose the **Scope**: **Personal** (visible only to you) or a household (visible to every member). The scope can't be changed later.
 4. Pick a **Color**. The **+** button opens a custom colour picker. A sub-category can use its parent's colour.
 5. Pick a **Symbol**, or enter any character or emoji with **+**.
-6. Click **Create category**.
+6. Optionally turn on **Count toward the next month**: see [Count a transaction in another month](#count-a-transaction-in-another-month).
+7. Click **Create category**.
 
 To delete a category, open its **⋮** menu and choose **Delete**. Its sub-categories are deleted too. If transactions, rules or budget lines use it, choose where to move them with **Move to**. With **No category**, transactions become uncategorized and the rules and budget lines are deleted.
 
@@ -531,7 +542,7 @@ The dashboard and insights cover every account you can see: your own, the ones s
 
 ### Choose the period
 
-On both pages, pick **This month**, **Last month**, **Quarter**, **Year** or **Custom**, and use the arrows to move to the previous or next period.
+On both pages, pick **This month**, **Last month**, **Quarter**, **Year** or **Custom**, and use the arrows to move to the previous or next period. You can go as far as next month, marked as upcoming: it shows the transactions [assigned to it](#count-a-transaction-in-another-month) in advance.
 
 For a single month, **Compared with** lets you compare against **the previous month** or the 3-, 6- or 12-month average. Other periods are compared with the previous period of the same length.
 
@@ -627,7 +638,7 @@ Go to **Data** in the sidebar.
 
 ### Export
 
-- **Transactions (CSV)**: the transactions on the accounts you can see, with date, amount, type, label, account and category. By default the file has all of them; to narrow it, set a date range (**From**, **To**) or pick an **Account** above the buttons. The file opens in a spreadsheet and can be imported back into Bilan. In French the file uses a semicolon separator and decimal comma.
+- **Transactions (CSV)**: the transactions on the accounts you can see, with date, amount, type, label, account, category and, when it differs from the real month, the assigned month. By default the file has all of them; to narrow it, set a date range (**From**, **To**) or pick an **Account** above the buttons. The file opens in a spreadsheet and can be imported back into Bilan. In French the file uses a semicolon separator and decimal comma.
 - **All my data (JSON)**: everything that belongs to you, for your records or to move elsewhere: profile, your own accounts (IBAN included), their transactions with notes and original labels, categories, rules, merchant names, budgets, households, links, import history and your recent activity log. Accounts other people share with you are not included. Since it contains your full IBANs, it asks you to confirm it's you the same way as [showing an IBAN](#see-the-iban) if you signed in more than 10 minutes ago.
 
 ### Delete your account

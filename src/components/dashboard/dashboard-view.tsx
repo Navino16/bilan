@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
+import { AssignedMonthBadge } from "@/components/transactions/assigned-month";
 import { cn } from "@/lib/utils";
 import { overline, CategoryAvatar } from "@/components/transactions/bits";
 import { Donut, MiniBars } from "./charts";
@@ -298,7 +299,10 @@ export async function DashboardView({
                   >
                     <CategoryAvatar category={meta} size={28} />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm">{r.label}</div>
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="truncate text-sm">{r.label}</span>
+                        <AssignedMonthBadge date={r.date} periodDate={r.periodDate} />
+                      </div>
                       <div className="text-muted-foreground truncate text-[11.5px]">
                         {formatDayMonth(r.date, locale)} · {meta?.name ?? t("noCategory")}
                       </div>

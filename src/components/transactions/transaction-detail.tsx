@@ -17,6 +17,7 @@ import type { CategoryMeta } from "./category-tree";
 import { CategoryCombobox } from "./category-combobox";
 import { Pill, overline } from "./bits";
 import { TransactionEditForm } from "./transaction-edit-form";
+import { AssignedMonthBadge, AssignedMonthField } from "./assigned-month";
 import { useLinkErrorMessage } from "./link-error";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Link2, Pencil, Trash2, Unlink } from "lucide-react";
@@ -29,6 +30,8 @@ import type { LinkSummary } from "@/server/services/links";
 export type DetailItem = {
   id: string;
   date: string;
+  periodDate: string;
+  periodManual: boolean;
   amount: number;
   type: string;
   label: string;
@@ -229,8 +232,11 @@ export function TransactionDetail({
                 {nf.format(item.amount)}
               </div>
               <SheetTitle className="font-sans text-sm font-normal">{item.label}</SheetTitle>
-              <div className="text-muted-foreground text-xs first-letter:uppercase">
-                {formatLongDay(item.date, locale)}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-muted-foreground text-xs first-letter:uppercase">
+                  {formatLongDay(item.date, locale)}
+                </span>
+                <AssignedMonthBadge date={item.date} periodDate={item.periodDate} />
               </div>
               {acc?.writable && !editing && (
                 <Button
@@ -295,6 +301,17 @@ export function TransactionDetail({
                     </p>
                   )}
                 </Field>
+
+                {acc?.writable && (
+                  <Field label={t("assignedMonth.label")}>
+                    <AssignedMonthField
+                      id={item.id}
+                      date={item.date}
+                      periodDate={item.periodDate}
+                      periodManual={item.periodManual}
+                    />
+                  </Field>
+                )}
 
                 <Field label={t("account")}>
                   <div className="border-border bg-card flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-sm">

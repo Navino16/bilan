@@ -373,6 +373,8 @@ model Category {
   group   Group?  @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   isDefault Boolean  @default(false)
+  // Transactions dated in the last N days of a month count toward the next one (#341).
+  shiftDays Int?
   createdAt DateTime @default(now())
 
   @@index([userId])
@@ -383,11 +385,15 @@ model Category {
 // ─── Group D — Transactions (Phase 3) ────────────────────────────────────────
 
 model Transaction {
-  id        String   @id @default(cuid())
-  accountId String
-  date      DateTime
-  amount    Decimal  @db.Decimal(12, 2)
-  type      String // CARD | TRANSFER | DIRECT_DEBIT | CHEQUE | ATM | OTHER
+  id           String   @id @default(cuid())
+  accountId    String
+  date         DateTime
+  // Date the period aggregates bucket on: `date`, or the 1st of the assigned month (#341).
+  // The DB default copies `date`, so inserts that omit it stay correct.
+  periodDate   DateTime @default(dbgenerated("(`date`)"))
+  periodManual Boolean  @default(false)
+  amount       Decimal  @db.Decimal(12, 2)
+  type         String // CARD | TRANSFER | DIRECT_DEBIT | CHEQUE | ATM | OTHER
 
   labelEnc        String  @db.Text
   labelHash       String
@@ -417,6 +423,7 @@ model Transaction {
   @@unique([accountId, externalId])
   // Per-account newest-first walk of the transaction list (#297).
   @@index([accountId, date, createdAt])
+  @@index([accountId, periodDate])
   @@index([categoryId, date])
   // Categories met on the visible accounts (listForeignCategories, #298).
   @@index([accountId, categoryId])

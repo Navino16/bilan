@@ -1,5 +1,6 @@
 import { Prisma, type CategorizationRule } from "@prisma/client";
 import { db } from "@/server/db";
+import { syncAutoPeriodDates } from "@/server/services/transactions/period-date";
 import { LONG_TX_TIMEOUT } from "@/server/db/timeouts";
 import { decrypt } from "@/server/crypto/encryption";
 import { dataKey, searchKey } from "@/server/crypto/keys";
@@ -155,6 +156,7 @@ async function applyFrom(
           const ok = new Set(still.map((r) => r.id));
           done = chunk.filter((r) => ok.has(r.id));
         }
+        await syncAutoPeriodDates({ ids: done.map((r) => r.id) }, tx);
         for (const r of done) moved.push(r.ruleId);
       }
     }

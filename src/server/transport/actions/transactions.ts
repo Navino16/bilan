@@ -8,9 +8,11 @@ import {
   type TransactionUpdateInput,
 } from "@/lib/schemas/transaction";
 import { issueCode } from "@/lib/schemas/amount";
+import { parseYearMonth } from "@/lib/assigned-month";
 import {
   createTransaction,
   recategorizeTransaction,
+  setTransactionMonth,
   TransactionAccessError,
   updateTransaction,
 } from "@/server/services/transactions";
@@ -77,6 +79,24 @@ export async function recategorizeTransactionAction(
   if (!id) return { ok: false, error: "INVALID" };
   try {
     await recategorizeTransaction(id, categoryId, { id: user.id });
+  } catch (e) {
+    return { ok: false, error: mapError(e) };
+  }
+  return { ok: true };
+}
+
+// `month` is "YYYY-MM", or "" to go back to the automatic month.
+export async function setTransactionMonthAction(
+  _prev: TxActionState,
+  formData: FormData,
+): Promise<TxActionState> {
+  const user = await requireSession();
+  const id = String(formData.get("id") ?? "");
+  const raw = String(formData.get("month") ?? "");
+  const month = raw ? parseYearMonth(raw) : null;
+  if (!id || (raw && !month)) return { ok: false, error: "INVALID" };
+  try {
+    await setTransactionMonth(id, month, { id: user.id });
   } catch (e) {
     return { ok: false, error: mapError(e) };
   }

@@ -173,6 +173,7 @@ Cliquez sur une transaction pour ouvrir son détail :
 
 - **Catégorie** : choisissez une catégorie ; elle est enregistrée aussitôt. Voir [Apprendre de vos choix](#apprendre-de-vos-choix).
 - **Libellé d’origine** : le libellé exactement tel que votre banque l’a écrit. Il ne change jamais, même si vous renommez la transaction.
+- **Mois d’affectation** : le mois pour lequel la transaction compte. Voir [Compter une transaction dans un autre mois](#compter-une-transaction-dans-un-autre-mois).
 - **Note** : votre commentaire, ajouté avec **Modifier**.
 - **Liée à** : affiché quand la transaction fait partie d’un [lien](#liens-entre-transactions).
 - **Assigner à un budget** : voir [Inclure ou exclure une transaction](#inclure-ou-exclure-une-transaction).
@@ -196,6 +197,15 @@ Si vous laissez la catégorie vide, vos [règles](#règles) essaient d’en trou
 3. Cliquez sur **Lier** (2 transactions ou plus) ou **Supprimer** dans la barre qui apparaît.
 
 Avant la suppression, Bilan liste les effets : liens qui seront dissous et budgets dont les transactions sortiront. Vous pouvez supprimer jusqu’à 500 transactions à la fois. La suppression est irréversible.
+
+### Compter une transaction dans un autre mois
+
+Certaines transactions appartiennent à un autre mois que le jour où elles arrivent sur votre compte : un salaire versé le dernier jour ouvré du mois pour financer le mois suivant, ou une facture annuelle que vous rattachez au mois précédent.
+
+- **Une transaction** : dans son détail, choisissez un mois sous **Mois d’affectation**, passé ou futur. **Revenir en automatique** annule votre choix.
+- **Toute une catégorie** : modifiez la catégorie et activez **Compter dans le mois suivant**, puis réglez le **Nombre de jours**. Les transactions de cette catégorie datées des derniers jours d’un mois comptent alors pour le mois suivant. Activez-le sur **Salaire** avec 5 jours et chaque salaire de fin de mois compte pour le mois d’après. L’option s’applique aussi aux transactions déjà présentes dans la catégorie, mais pas à ses sous-catégories. Un mois choisi à la main l’emporte toujours.
+
+La transaction garde sa date réelle dans la liste, avec la mention **Compté en …**. Le tableau de bord, les analyses et les budgets la comptent dans son mois d’affectation. Pour voir un salaire qui compte déjà pour le mois prochain, le tableau de bord et les analyses permettent d’ouvrir le mois suivant.
 
 ## Importer des relevés
 
@@ -297,7 +307,8 @@ Pour en créer une :
 3. Choisissez la **Portée** : **Personnelle** (visible uniquement par vous) ou un foyer (visible par tous ses membres). La portée ne peut plus être changée ensuite.
 4. Choisissez une **Couleur**. Le bouton **+** ouvre un sélecteur de couleur libre. Une sous-catégorie peut reprendre la couleur de son parent.
 5. Choisissez un **Symbole**, ou saisissez n’importe quel caractère ou emoji avec **+**.
-6. Cliquez sur **Créer la catégorie**.
+6. Activez si besoin **Compter dans le mois suivant** : voir [Compter une transaction dans un autre mois](#compter-une-transaction-dans-un-autre-mois).
+7. Cliquez sur **Créer la catégorie**.
 
 Pour supprimer une catégorie, ouvrez son menu **⋮** et choisissez **Supprimer**. Ses sous-catégories sont supprimées aussi. Si des transactions, des règles ou des lignes de budget l’utilisent, choisissez où les rattacher avec **Déplacer vers**. Avec **Aucune catégorie**, les transactions deviennent non catégorisées et les règles et lignes de budget sont supprimées.
 
@@ -531,7 +542,7 @@ Le tableau de bord et les analyses portent sur tous les comptes que vous voyez :
 
 ### Choisir la période
 
-Sur les deux pages, choisissez **Ce mois**, **Mois dernier**, **Trimestre**, **Année** ou **Personnalisé**, et utilisez les flèches pour passer à la période précédente ou suivante.
+Sur les deux pages, choisissez **Ce mois**, **Mois dernier**, **Trimestre**, **Année** ou **Personnalisé**, et utilisez les flèches pour passer à la période précédente ou suivante. Vous pouvez aller jusqu’au mois prochain, signalé comme à venir : il montre les transactions qui lui sont déjà [affectées](#compter-une-transaction-dans-un-autre-mois).
 
 Pour un mois seul, **Comparé à** permet de comparer avec **le mois précédent** ou la moyenne sur 3, 6 ou 12 mois. Les autres périodes sont comparées à la période précédente de même durée.
 
@@ -627,7 +638,7 @@ Allez dans **Données** dans la barre latérale.
 
 ### Exporter
 
-- **Transactions (CSV)** : les transactions des comptes que vous voyez, avec date, montant, type, libellé, compte et catégorie. Par défaut, le fichier les contient toutes ; pour le restreindre, choisissez une période (**Du**, **Au**) ou un **Compte** au-dessus des boutons. Le fichier s’ouvre dans un tableur et peut être réimporté dans Bilan. En français, il utilise le point-virgule comme séparateur et la virgule décimale.
+- **Transactions (CSV)** : les transactions des comptes que vous voyez, avec date, montant, type, libellé, compte, catégorie et, quand il diffère du mois réel, le mois d’affectation. Par défaut, le fichier les contient toutes ; pour le restreindre, choisissez une période (**Du**, **Au**) ou un **Compte** au-dessus des boutons. Le fichier s’ouvre dans un tableur et peut être réimporté dans Bilan. En français, il utilise le point-virgule comme séparateur et la virgule décimale.
 - **Toutes mes données (JSON)** : tout ce qui vous appartient, pour vos archives ou pour changer d’outil : profil, vos propres comptes (IBAN compris), leurs transactions avec notes et libellés d’origine, catégories, règles, noms de marchands, budgets, foyers, liens, historique des imports et votre journal d’activité récent. Les comptes que d’autres partagent avec vous n’y figurent pas. Comme il contient vos IBAN complets, il vous demande de confirmer votre identité comme pour [voir un IBAN](#voir-liban) si votre connexion date de plus de 10 minutes.
 
 ### Supprimer votre compte

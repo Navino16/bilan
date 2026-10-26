@@ -7,6 +7,7 @@ import { Check, Plus, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ import { useFrozenWhileOpen } from "@/hooks/use-frozen-while-open";
 import { cn } from "@/lib/utils";
 import { createCategoryAction, updateCategoryAction } from "@/server/transport/actions/categories";
 import { CATEGORY_ICON_MAX, CATEGORY_NAME_MAX } from "@/lib/validation/category";
+import { SHIFT_DAYS_MAX, SHIFT_DAYS_MIN } from "@/lib/assigned-month";
 import { canManageInGroup, type GroupRole } from "@/lib/validation/group";
 import {
   CATEGORY_PALETTE,
@@ -48,6 +50,7 @@ export type EditableCategory = {
   icon: string | null;
   parentId: string | null;
   groupId: string | null;
+  shiftDays: number | null;
 };
 
 export type ScopeGroup = { id: string; name: string; role: GroupRole };
@@ -59,6 +62,8 @@ const MAX_SCOPE_TABS = 3;
 const UNSET_COLOR = "var(--cat-other)";
 // A native colour input needs a hex start value: the light theme's --cat-groceries.
 const PICKER_START = "#5e8c5a";
+
+const DEFAULT_SHIFT_DAYS = 5;
 
 const legendClass = "mb-2 text-sm leading-none font-medium";
 const hintClass = "text-muted-foreground text-xs";
@@ -187,6 +192,7 @@ function CategoryFields({
   const [parentId, setParentId] = useState(category?.parentId ?? "");
   const [color, setColor] = useState<string | null>(category?.color ?? null);
   const [icon, setIcon] = useState(category?.icon ?? "");
+  const [shiftOn, setShiftOn] = useState(category?.shiftDays != null);
   const [customColor, setCustomColor] = useState(
     category?.color && !paletteKeyOf(category.color) ? category.color : null,
   );
@@ -501,6 +507,36 @@ function CategoryFields({
         )}
         <FieldError form={form} name="icon" />
       </fieldset>
+
+      <div className="space-y-2">
+        <label className="flex items-center justify-between gap-4">
+          <span>
+            <span className="block text-sm font-medium">{t("shift")}</span>
+            <span className={cn(hintClass, "block")}>{t("shiftHint")}</span>
+          </span>
+          <Switch checked={shiftOn} onCheckedChange={setShiftOn} />
+        </label>
+        {shiftOn ? (
+          <div className="flex items-center gap-3">
+            <Label htmlFor="cat-shift-days">{t("shiftDays")}</Label>
+            <Input
+              id="cat-shift-days"
+              name="shiftDays"
+              type="number"
+              inputMode="numeric"
+              min={SHIFT_DAYS_MIN}
+              max={SHIFT_DAYS_MAX}
+              defaultValue={category?.shiftDays ?? DEFAULT_SHIFT_DAYS}
+              required
+              className="w-20"
+              {...form.fieldProps("shiftDays")}
+            />
+          </div>
+        ) : (
+          <input type="hidden" name="shiftDays" value="" />
+        )}
+        <FieldError form={form} name="shiftDays" />
+      </div>
     </>
   );
 }

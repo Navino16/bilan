@@ -123,15 +123,27 @@ export function parsePeriodParams(
   return monthPeriod(fb.year, fb.month);
 }
 
-// Guards against browsing an ENTIRELY future window (a direct URL to e.g.
-// ?from=2099-01-01, or a future month): it snaps back to the current month.
+// The last instant one may browse: the end of next month, which can already hold
+// transactions assigned to it (#341).
+export function nextMonthEnd(now: Date = new Date()): Date {
+  const next = addMonths(now.getUTCFullYear(), now.getUTCMonth() + 1, 1);
+  return monthPeriod(next.year, next.month).to;
+}
+
+// Guards against browsing a window starting after next month (a direct URL to e.g.
+// ?from=2099-01-01): it snaps back to the current month.
 // A period that merely extends into the future — the current year or quarter,
 // whose later months simply haven't happened yet — is kept intact so its label
 // and granularity-aware navigation stay correct (its future months render empty).
 export function clampPeriodToNow(p: Period, now: Date = new Date()): Period {
-  const current = monthPeriod(now.getUTCFullYear(), now.getUTCMonth() + 1);
-  if (p.from.getTime() > current.to.getTime()) return current;
+  if (p.from.getTime() > nextMonthEnd(now).getTime()) {
+    return monthPeriod(now.getUTCFullYear(), now.getUTCMonth() + 1);
+  }
   return p;
+}
+
+export function periodUpcoming(p: Period, now: Date = new Date()): boolean {
+  return p.from.getTime() > now.getTime();
 }
 
 export function currentUtcYear(now: Date = new Date()): number {
@@ -187,6 +199,8 @@ export type Comparison = {
   previous: Period;
   // The months averaged, oldest first (empty for "prev").
   months: { year: number; month: number }[];
+  // Not started yet: only transactions assigned to it show (#341).
+  upcoming: boolean;
 };
 
 function truncatePeriod(p: Period, days: number): Period {
@@ -209,6 +223,7 @@ export function comparisonFor(
     elapsedDays,
     previous: cut(previousPeriod(period)),
     months: count ? historyMonths(previousMonthPeriod(period), count, now) : [],
+    upcoming: periodUpcoming(period, now),
   };
 }
 

@@ -8,6 +8,8 @@ import {
   parseDayBounds,
   isValidIsoDay,
   clampPeriodToNow,
+  nextMonthEnd,
+  periodUpcoming,
   presetPeriod,
   previousPeriod,
   PERIOD_PRESETS,
@@ -144,10 +146,15 @@ describe("parsePeriodParams", () => {
 describe("clampPeriodToNow", () => {
   const now = new Date("2026-06-15T12:00:00.000Z");
 
-  it("snaps a fully-future month back to the current month", () => {
-    const p = clampPeriodToNow(monthPeriod(2027, 1), now);
+  it("snaps a month beyond the next one back to the current month", () => {
+    const p = clampPeriodToNow(monthPeriod(2026, 8), now);
     expect(p.year).toBe(2026);
     expect(p.month).toBe(6);
+  });
+
+  it("keeps the next month open for transactions assigned to it (#341)", () => {
+    const p = clampPeriodToNow(monthPeriod(2026, 7), now);
+    expect(p.month).toBe(7);
   });
 
   it("leaves a past month untouched", () => {
@@ -166,6 +173,22 @@ describe("clampPeriodToNow", () => {
     const p = clampPeriodToNow(year, now);
     expect(p.from.toISOString()).toBe("2026-01-01T00:00:00.000Z");
     expect(p.to.toISOString()).toBe("2026-12-31T23:59:59.999Z");
+  });
+});
+
+describe("periodUpcoming", () => {
+  const now = new Date("2026-10-26T12:00:00.000Z");
+
+  it("is true for a period that starts after now", () => {
+    expect(periodUpcoming(monthPeriod(2026, 11), now)).toBe(true);
+    expect(periodUpcoming(monthPeriod(2026, 10), now)).toBe(false);
+  });
+
+  it("bounds browsing at the end of the next month", () => {
+    expect(nextMonthEnd(now).toISOString()).toBe("2026-11-30T23:59:59.999Z");
+    expect(nextMonthEnd(new Date("2026-12-31T23:00:00.000Z")).toISOString()).toBe(
+      "2027-01-31T23:59:59.999Z",
+    );
   });
 });
 
@@ -362,6 +385,11 @@ describe("parseBaseline", () => {
 describe("comparisonFor", () => {
   const now = new Date(Date.UTC(2026, 9, 5, 14, 30));
   const day = (d: Date) => d.toISOString();
+
+  it("flags a period that has not started yet", () => {
+    expect(comparisonFor(monthPeriod(2026, 11), "prev", now).upcoming).toBe(true);
+    expect(comparisonFor(monthPeriod(2026, 10), "prev", now).upcoming).toBe(false);
+  });
 
   it("cuts the previous month to the same elapsed days while the month is in progress", () => {
     const c = comparisonFor(monthPeriod(2026, 10), "prev", now);

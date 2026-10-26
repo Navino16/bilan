@@ -33,7 +33,7 @@ export const CLIENT_SCOPES = {
     "transactions",
   ],
   admin: ["admin", "forms.fieldError", "shell"],
-  budgets: ["budgets", "forms.fieldError", "onboarding", "shell"],
+  budgets: ["budgets", "forms.fieldError", "onboarding", "shell", "transactions.assignedMonth"],
   categories: [
     "categories",
     "forms.fieldError",
@@ -43,7 +43,7 @@ export const CLIENT_SCOPES = {
     "stepUp",
     "transactions",
   ],
-  dashboard: ["dashboard", "shell.period"],
+  dashboard: ["dashboard", "shell.period", "transactions.assignedMonth"],
   groups: ["forms.fieldError", "groups", "invitations", "shell"],
   import: ["import", "onboarding", "rules", "shell", "transactions"],
   insights: ["dashboard", "insights", "merchants", "shell"],

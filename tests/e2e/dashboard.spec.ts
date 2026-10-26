@@ -63,8 +63,8 @@ test.describe("dashboard", () => {
     // The net amount is always signed (or exactly 0).
     await expect(page.locator('[data-slot="kpi-amount"]').nth(2)).toHaveText(/^([+\-−]|0\s)/);
 
-    // The default view is the current month — there's no future to browse into.
-    await expect(page.getByRole("button", { name: "Période suivante" })).toBeDisabled();
+    // The default view is the current month; next month stays reachable (#341).
+    await expect(page.getByRole("button", { name: "Période suivante" })).toBeEnabled();
 
     const heading = page.getByRole("heading", { level: 1 });
     // Absorb the initial hydration race (a click before PeriodNav hydrates is a
@@ -91,6 +91,15 @@ test.describe("dashboard", () => {
     // A hand-crafted future range must not render an empty future month.
     await page.goto("/fr/dashboard?from=2099-01-01&to=2099-01-31");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(current ?? "");
+  });
+
+  test("opens next month as upcoming, and no further (#341)", async ({ page }) => {
+    await page.goto("/fr/dashboard");
+    await expect(async () => {
+      await page.getByRole("button", { name: "Période suivante" }).click();
+      await expect(page).toHaveURL(/\?from=.*&to=/);
+    }).toPass();
+    await expect(page.getByText(/Période à venir/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Période suivante" })).toBeDisabled();
   });
 

@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigationTransition } from "@/components/shell/navigation-pending";
-import { shiftPeriod, toIsoDay, type Period } from "@/lib/period";
+import { nextMonthEnd, shiftPeriod, toIsoDay, type Period } from "@/lib/period";
 
 export function PeriodNav({ period }: { period: Period }) {
   const router = useRouter();
@@ -25,9 +25,8 @@ export function PeriodNav({ period }: { period: Period }) {
   }
 
   // The arrows step by the period's own granularity (month/quarter/year/range).
-  // No point browsing the future (no data yet): disable "next" once the next
-  // window would start after now.
-  const nextDisabled = shiftPeriod(period, 1).from.getTime() > new Date().getTime();
+  // Next month may already hold assigned transactions (#341); nothing later can.
+  const nextDisabled = shiftPeriod(period, 1).from.getTime() > nextMonthEnd().getTime();
 
   return (
     <div className="flex shrink-0 items-center gap-1">

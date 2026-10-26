@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { formatPeriodLabel, type Comparison } from "@/lib/period";
 import { PeriodInProgress } from "./period-in-progress";
 
-// Explains the same-date cut while the period is in progress; nothing once it is over.
+// Explains the same-date cut while the period is in progress, or what an upcoming one holds.
 export async function ComparisonNote({
   comparison,
   locale,
@@ -10,8 +10,9 @@ export async function ComparisonNote({
   comparison: Comparison;
   locale: string;
 }) {
-  if (!comparison.elapsedDays) return null;
   const t = await getTranslations("dashboard");
+  if (comparison.upcoming) return <PeriodInProgress>{t("upcoming")}</PeriodInProgress>;
+  if (!comparison.elapsedDays) return null;
   return (
     <PeriodInProgress>
       {comparison.months.length > 0

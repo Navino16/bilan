@@ -703,7 +703,10 @@
     "customSymbol": "Custom symbol ({glyph})",
     "addSymbol": "Enter another symbol",
     "symbolInput": "Custom symbol",
-    "symbolInvalid": "A single character or emoji."
+    "symbolInvalid": "A single character or emoji.",
+    "shift": "Count toward the next month",
+    "shiftHint": "Transactions from the last days of the month count toward the next month, like a salary paid at the end of the month.",
+    "shiftDays": "Number of days"
   },
   "transactions": {
     "title": "Transactions",
@@ -893,6 +896,12 @@
       "date-asc": "Oldest first",
       "amount-asc": "Largest expenses first",
       "amount-desc": "Largest income first"
+    },
+    "assignedMonth": {
+      "label": "Assigned month",
+      "countedIn": "Counted in {month}",
+      "backToAuto": "Back to automatic",
+      "failed": "The month could not be saved."
     }
   },
   "import": {
@@ -1232,7 +1241,8 @@
     "rangeStart": "Period start",
     "rangeEnd": "Period end",
     "rangeReversed": "The end must be after the start.",
-    "otherCategories": "{count, plural, one {Other category} other {# other categories}}"
+    "otherCategories": "{count, plural, one {Other category} other {# other categories}}",
+    "upcoming": "Upcoming period: only transactions assigned to it appear."
   },
   "merchants": {
     "tab": "Merchants",
@@ -1961,7 +1971,8 @@
           "created": "Transaction created",
           "deleted": "Transaction deleted",
           "recategorized": "Transaction recategorized",
-          "updated": "Transaction edited"
+          "updated": "Transaction edited",
+          "month_set": "Assigned month changed"
         },
         "import": {
           "created": "Import started",

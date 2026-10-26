@@ -5,6 +5,7 @@ import { logEvent } from "@/server/services/audit";
 import { requireGroupRole } from "@/server/services/groups/roles";
 import { groupMemberships } from "@/server/services/groups/memberships";
 import { visibleAccountIds } from "@/server/services/accounts";
+import { syncAutoPeriodDates } from "@/server/services/transactions/period-date";
 import { categoryInputSchema, type CategoryInput } from "@/lib/schemas/category";
 
 export class CategoryAccessError extends Error {}
@@ -20,6 +21,7 @@ export type CategoryNode = {
   scope: CategoryScope;
   groupId: string | null;
   isDefault: boolean;
+  shiftDays: number | null;
   children: CategoryNode[];
 };
 
@@ -82,6 +84,7 @@ export async function createCategory(
       color: data.color ?? null,
       icon: data.icon ?? null,
       parentId: data.parentId ?? null,
+      shiftDays: data.shiftDays ?? null,
       userId: data.groupId ? null : actor.id,
       groupId: data.groupId ?? null,
     },
@@ -149,6 +152,7 @@ export async function updateCategory(
   const data = categoryInputSchema.parse(input);
   const parentId = data.parentId && data.parentId !== id ? data.parentId : null;
   if (parentId) await assertValidParent(id, parentId, existing);
+  const shiftDays = data.shiftDays ?? null;
   await db.category.update({
     where: { id },
     data: {
@@ -157,8 +161,10 @@ export async function updateCategory(
       icon: data.icon ?? null,
       // Reparenting within the same scope only; ignore groupId changes (scope is immutable).
       parentId,
+      shiftDays,
     },
   });
+  if (shiftDays !== existing.shiftDays) await syncAutoPeriodDates({ categoryIds: [id] });
   await logEvent({
     userId: actor.id,
     action: "category.updated",
@@ -256,10 +262,12 @@ export async function deleteCategory(
       if (!sameScope) throw new CategoryAccessError("INVALID_TARGET");
     }
     const where = { categoryId: { in: ids } };
+    const moved = await tx.transaction.findMany({ where, select: { id: true } });
     const transactions = await tx.transaction.updateMany({
       where,
       data: { categoryId: targetId },
     });
+    await syncAutoPeriodDates({ ids: moved.map((t) => t.id) }, tx);
     const rules = targetId
       ? await tx.categorizationRule.updateMany({ where, data: { categoryId: targetId } })
       : await tx.categorizationRule.deleteMany({ where });
@@ -293,6 +301,7 @@ function buildTree(
     userId: string | null;
     groupId: string | null;
     isDefault: boolean;
+    shiftDays: number | null;
   }[],
 ): CategoryNode[] {
   const byId = new Map<string, CategoryNode>();
@@ -306,6 +315,7 @@ function buildTree(
       scope: r.groupId ? "GROUP" : "USER",
       groupId: r.groupId,
       isDefault: r.isDefault,
+      shiftDays: r.shiftDays,
       children: [],
     });
   }

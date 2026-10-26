@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
+import { syncAutoPeriodDates } from "@/server/services/transactions/period-date";
 import { logEvent } from "@/server/services/audit";
 import {
   buildSecureFields,
@@ -153,6 +154,9 @@ export async function insertRows(
       select: { id: true, externalId: true },
     });
     const idOf = new Map(created.map((c) => [c.externalId, c.id]));
+    await syncAutoPeriodDates({
+      ids: chunk.flatMap((p) => (p.data.categoryId ? [idOf.get(p.externalId)!] : [])),
+    });
     const tokens = chunk.flatMap((p) =>
       p.tokens.map((tokenHash) => ({ transactionId: idOf.get(p.externalId)!, tokenHash })),
     );

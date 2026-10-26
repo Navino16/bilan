@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { db } from "@/server/db";
+import { resetPeriodDatesOfOwner } from "@/server/services/transactions/period-date";
 import { LONG_TX_TIMEOUT } from "@/server/db/timeouts";
 import { decrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
@@ -17,6 +18,8 @@ import {
 type ExportedTransaction = {
   id: string;
   date: Date;
+  periodDate: Date;
+  periodManual: boolean;
   amount: number;
   type: string;
   label: string;
@@ -245,6 +248,8 @@ async function* ownedTransactionPages(
       yield rows.map((r) => ({
         id: r.id,
         date: r.date,
+        periodDate: r.periodDate,
+        periodManual: Boolean(r.periodManual),
         amount: Number(r.amount),
         type: r.type,
         label: decrypt(r.labelEnc, dataKey),
@@ -347,6 +352,7 @@ export async function eraseUser(client: Client, userId: string): Promise<void> {
   // so a solely-owned group would be left ownerless without this.
   for (const s of await groupSuccessions(client, userId)) {
     if (!s.successor) {
+      await resetPeriodDatesOfOwner({ groupId: s.groupId }, client);
       await client.group.delete({ where: { id: s.groupId } });
       continue;
     }
@@ -362,6 +368,7 @@ export async function eraseUser(client: Client, userId: string): Promise<void> {
     });
   }
 
+  await resetPeriodDatesOfOwner({ userId }, client);
   // Cascade: User → accounts → transactions/links/tokens/importbatches/budgetlines,
   // categories, budgets, rules, merchant aliases, memberships, sessions, authAccounts, twoFactors,
   // passkeys, preference (all onDelete: Cascade on userId/ownerId).

@@ -283,3 +283,85 @@ describe("categories service", () => {
     });
   });
 });
+
+describe("category next-month shift (#341)", () => {
+  const owner = "cat_shift_owner";
+  let accountId: string;
+
+  async function tx(date: string, categoryId: string, manual = false): Promise<string> {
+    const s = buildSecureFields({ label: "SALAIRE", rawLabel: "SALAIRE" });
+    const row = await db.transaction.create({
+      data: {
+        accountId,
+        date: new Date(date),
+        periodManual: manual,
+        amount: 2000,
+        type: "TRANSFER",
+        labelEnc: s.labelEnc,
+        labelHash: s.labelHash,
+        rawLabelEnc: s.rawLabelEnc,
+        rawLabelHash: s.rawLabelHash,
+        categoryId,
+        createdById: owner,
+      },
+    });
+    return row.id;
+  }
+
+  const periodDay = async (id: string) =>
+    (await db.transaction.findUniqueOrThrow({ where: { id } })).periodDate
+      .toISOString()
+      .slice(0, 10);
+
+  beforeAll(async () => {
+    await db.user.deleteMany({ where: { id: owner } });
+    await db.user.create({ data: { id: owner, email: "cat-shift@bilan.local" } });
+    accountId = (
+      await db.bankAccount.create({ data: { ownerId: owner, name: "Courant", type: "CHECKING" } })
+    ).id;
+  });
+
+  afterAll(async () => {
+    await db.transaction.deleteMany({ where: { accountId } });
+    await db.category.deleteMany({ where: { userId: owner } });
+    await db.bankAccount.deleteMany({ where: { ownerId: owner } });
+    await db.user.deleteMany({ where: { id: owner } });
+  });
+
+  it("stores the option and lists it", async () => {
+    const { id } = await createCategory({ name: "Salaire", shiftDays: 5 }, { id: owner });
+    expect((await db.category.findUniqueOrThrow({ where: { id } })).shiftDays).toBe(5);
+    const listed = (await listForUser(owner)).find((c) => c.id === id)!;
+    expect(listed.shiftDays).toBe(5);
+  });
+
+  it("recomputes the category's transactions when the option changes", async () => {
+    const { id } = await createCategory({ name: "Paie" }, { id: owner });
+    const auto = await tx("2026-10-30T00:00:00.000Z", id);
+    const manual = await tx("2026-10-30T00:00:00.000Z", id, true);
+
+    await updateCategory(id, { name: "Paie", shiftDays: 5 }, { id: owner });
+    expect(await periodDay(auto)).toBe("2026-11-01");
+    expect(await periodDay(manual)).toBe("2026-10-30");
+
+    await updateCategory(id, { name: "Paie" }, { id: owner });
+    expect(await periodDay(auto)).toBe("2026-10-30");
+  });
+
+  it("follows the deletion target's option, or the real date without a target", async () => {
+    const a = await createCategory({ name: "A", shiftDays: 5 }, { id: owner });
+    const b = await createCategory({ name: "B", shiftDays: 5 }, { id: owner });
+    const target = await createCategory({ name: "Target", shiftDays: 3 }, { id: owner });
+    await updateCategory(a.id, { name: "A", shiftDays: 5 }, { id: owner });
+    const inA = await tx("2026-10-30T00:00:00.000Z", a.id);
+    const inB = await tx("2026-10-27T00:00:00.000Z", b.id);
+    await updateCategory(b.id, { name: "B", shiftDays: 6 }, { id: owner });
+    expect(await periodDay(inB)).toBe("2026-11-01");
+
+    await deleteCategory(b.id, { id: owner });
+    expect(await periodDay(inB)).toBe("2026-10-27");
+
+    await deleteCategory(a.id, { id: owner }, { targetId: target.id });
+    expect(await periodDay(inA)).toBe("2026-11-01");
+  });
+});
