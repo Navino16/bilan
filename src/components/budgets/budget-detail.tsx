@@ -124,6 +124,26 @@ export function BudgetDetail({
         </div>
       </Card>
 
+      {detail.forecast && (
+        <Card className="gap-1 p-4" data-slot="budget-forecast">
+          <div className="text-muted-foreground text-xs">
+            {t("forecast.title", { date: formatDayMonth(detail.periodEnd, locale) })}
+          </div>
+          <div
+            className="font-display text-2xl leading-none"
+            style={detail.forecast.endBalance < 0 ? { color: "var(--expense)" } : undefined}
+          >
+            {nf.format(detail.forecast.endBalance)}
+          </div>
+          <p className="text-muted-foreground text-sm">
+            {t("forecast.breakdown", {
+              balance: nf.format(detail.forecast.balance),
+              remaining: nf.format(detail.forecast.remaining),
+            })}
+          </p>
+        </Card>
+      )}
+
       <ul className="space-y-3">
         {detail.lines.map((line) => {
           const style = statusStyle(line.status);

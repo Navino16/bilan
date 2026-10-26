@@ -7,6 +7,7 @@ import { requireGroupRole } from "@/server/services/groups/roles";
 import { groupMemberships } from "@/server/services/groups/memberships";
 import { logEvent } from "@/server/services/audit";
 import {
+  accountBalances,
   listVisibleForUser,
   visibleAccountIds,
   visibleAccountRefs,
@@ -603,6 +604,7 @@ export type BudgetDetail = {
   plannedTotal: number;
   spentTotal: number;
   outOfBudget: { spent: number; count: number } | null; // INCLUDEs no line matches (#345)
+  forecast: BudgetForecast | null;
   groupId: string | null;
   canManage: boolean;
   previousId: string | null; // neighbouring periods of the same recurring series
@@ -745,10 +747,31 @@ async function budgetTransactions(
   );
 }
 
+export type BudgetForecast = { balance: number; remaining: number; endBalance: number };
+
+// Projected balance at the end of the current period (#347): the scope's checking
+// accounts minus what the lines still plan to spend. Income to come isn't anticipated.
+async function budgetForecast(
+  b: { userId: string | null; groupId: string | null; periodStart: Date; periodEnd: Date },
+  lines: { remaining: number }[],
+  now: Date,
+): Promise<BudgetForecast | null> {
+  if (now < b.periodStart || now > b.periodEnd) return null;
+  const accounts = await db.bankAccount.findMany({
+    where: { id: { in: await budgetAccountIds(b) }, type: "CHECKING", archived: false },
+    select: { id: true, initialBalance: true },
+  });
+  if (accounts.length === 0) return null;
+  const balances = await accountBalances(accounts);
+  const balance = round2([...balances.values()].reduce((sum, v) => sum + v, 0));
+  const remaining = round2(lines.reduce((sum, l) => sum + Math.max(l.remaining, 0), 0));
+  return { balance, remaining, endBalance: round2(balance - remaining) };
+}
+
 export async function getBudgetDetail(
   id: string,
   viewerId: string,
-  { withTransactions = true }: { withTransactions?: boolean } = {},
+  { withTransactions = true, now = new Date() }: { withTransactions?: boolean; now?: Date } = {},
 ): Promise<BudgetDetail> {
   const b = await readableOrThrow(id, viewerId);
   const { lineSums, outOfBudget, totalSum, counted } = await computeBudgetSpend(
@@ -789,6 +812,7 @@ export async function getBudgetDetail(
             spent: round2(-outOfBudget.reduce((sum, r) => sum + r.amount, 0)),
             count: outOfBudget.length,
           },
+    forecast: await budgetForecast(b, lines, now),
     canManage: canManageBudget(b.groupId, roleByGroup),
     ...(await seriesNeighbours(b)),
     transactions: withTransactions ? await budgetTransactions(counted, viewerId, b.groupId) : [],
@@ -819,7 +843,7 @@ export async function getCurrentBudget(
   });
   if (current.length === 0) return null;
   const first = current.find((b) => !b.groupId) ?? current[0];
-  const detail = await getBudgetDetail(first.id, userId, { withTransactions: false });
+  const detail = await getBudgetDetail(first.id, userId, { withTransactions: false, now });
   const names = await readableAccountNames(userId);
   const accountNames = Object.fromEntries(
     detail.lines.flatMap((l) =>

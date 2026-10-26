@@ -1003,3 +1003,99 @@ describe("archive / description / line labels", () => {
     }
   });
 });
+
+describe("forecast (#347)", () => {
+  const user = "bud_forecast";
+  const inMarch = { now: new Date("2026-03-15T12:00:00.000Z") };
+  let checking: string;
+  let foodCat: string;
+
+  async function txFor(account: string, date: string, amount: number, categoryId: string | null) {
+    const s = buildSecureFields({ label: "T", rawLabel: "T" });
+    await db.transaction.create({
+      data: {
+        accountId: account,
+        date: new Date(date),
+        amount,
+        type: "OTHER",
+        labelEnc: s.labelEnc,
+        labelHash: s.labelHash,
+        rawLabelEnc: s.rawLabelEnc,
+        rawLabelHash: s.rawLabelHash,
+        categoryId,
+        createdById: user,
+      },
+    });
+  }
+
+  beforeAll(async () => {
+    await db.user.deleteMany({ where: { id: user } });
+    await db.user.create({ data: { id: user, email: `${user}@bilan.local` } });
+    checking = (
+      await db.bankAccount.create({
+        data: { ownerId: user, name: "Courant", type: "CHECKING", initialBalance: 1000 },
+      })
+    ).id;
+    const savings = await db.bankAccount.create({
+      data: { ownerId: user, name: "Livret", type: "SAVINGS", initialBalance: 5000 },
+    });
+    foodCat = (await db.category.create({ data: { userId: user, name: "Courses" } })).id;
+    const rentCat = (await db.category.create({ data: { userId: user, name: "Loyer" } })).id;
+    await txFor(checking, "2026-03-03T00:00:00.000Z", -150, foodCat);
+    await txFor(checking, "2026-03-01T00:00:00.000Z", -700, rentCat);
+    await txFor(savings.id, "2026-03-05T00:00:00.000Z", 100, null);
+    await db.budget.deleteMany({ where: { userId: user } });
+    await createBudget(
+      {
+        ...baseInput,
+        lines: [
+          { categoryId: foodCat, plannedAmount: 400 },
+          { categoryId: rentCat, plannedAmount: 600 },
+        ],
+      },
+      { id: user },
+    );
+  });
+
+  afterAll(async () => {
+    await db.budget.deleteMany({ where: { userId: user } });
+    await db.bankAccount.deleteMany({ where: { ownerId: user } });
+    await db.category.deleteMany({ where: { userId: user } });
+    await db.user.deleteMany({ where: { id: user } });
+  });
+
+  async function budgetId() {
+    return (await db.budget.findFirstOrThrow({ where: { userId: user } })).id;
+  }
+
+  it("projects the checking balance minus what the lines still plan to spend", async () => {
+    const detail = await getBudgetDetail(await budgetId(), user, inMarch);
+    // Checking 1000 − 150 − 700 = 150; food has 250 left, rent is over (counts 0).
+    expect(detail.forecast).toEqual({ balance: 150, remaining: 250, endBalance: -100 });
+  });
+
+  it("is absent outside the budget period", async () => {
+    const before = await getBudgetDetail(await budgetId(), user, {
+      now: new Date("2026-02-28T12:00:00.000Z"),
+    });
+    const after = await getBudgetDetail(await budgetId(), user, {
+      now: new Date("2026-04-01T12:00:00.000Z"),
+    });
+    expect(before.forecast).toBeNull();
+    expect(after.forecast).toBeNull();
+  });
+
+  it("is absent when the budget draws from no checking account", async () => {
+    await db.bankAccount.update({ where: { id: checking }, data: { archived: true } });
+    try {
+      expect((await getBudgetDetail(await budgetId(), user, inMarch)).forecast).toBeNull();
+    } finally {
+      await db.bankAccount.update({ where: { id: checking }, data: { archived: false } });
+    }
+  });
+
+  it("reaches the dashboard's current budget", async () => {
+    const current = await getCurrentBudget(user, inMarch.now);
+    expect(current?.detail.forecast?.endBalance).toBe(-100);
+  });
+});

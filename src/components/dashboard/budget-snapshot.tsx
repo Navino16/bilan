@@ -8,7 +8,7 @@ import { OrdinalText } from "@/components/ordinal-text";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import type { getCurrentBudget } from "@/server/services/budgets";
 import { BudgetBar, statusStyle } from "@/components/budgets/budget-status";
-import { formatDateRange, formatMoney } from "@/lib/format";
+import { formatDateRange, formatDayMonth, formatMoney } from "@/lib/format";
 
 export type CurrentBudget = Awaited<ReturnType<typeof getCurrentBudget>>;
 
@@ -56,6 +56,22 @@ export async function BudgetSnapshot({
           <ChevronRight className="size-4" />
         </Link>
       </div>
+      {detail.forecast && (
+        <div
+          data-slot="budget-snapshot-forecast"
+          className="flex items-baseline justify-between gap-2 text-sm"
+        >
+          <span className="text-muted-foreground">
+            {t("forecast.title", { date: formatDayMonth(detail.periodEnd, locale) })}
+          </span>
+          <span
+            className="shrink-0 font-medium tabular-nums"
+            style={detail.forecast.endBalance < 0 ? { color: "var(--expense)" } : undefined}
+          >
+            {formatMoney(detail.forecast.endBalance, locale)}
+          </span>
+        </div>
+      )}
       <div className="flex flex-col gap-3.5">
         {detail.lines.slice(0, LINES_SHOWN).map((l) => {
           const cat = l.categoryId ? categories.get(l.categoryId) : undefined;

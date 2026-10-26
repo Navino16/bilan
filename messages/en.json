@@ -584,6 +584,10 @@
     "otherPeriods": "{count, plural, one {# other period} other {# other periods}}",
     "previousPeriod": "Previous period",
     "nextPeriod": "Next period",
+    "forecast": {
+      "title": "Projected balance on {date}",
+      "breakdown": "Current checking balance {balance}, minus {remaining} left to spend. Income still to come isn’t included."
+    },
     "snapshot": {
       "overline": "Budget in progress",
       "none": "No budget in progress.",

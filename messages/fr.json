@@ -584,6 +584,10 @@
     "otherPeriods": "{count, plural, one {# autre période} other {# autres périodes}}",
     "previousPeriod": "Période précédente",
     "nextPeriod": "Période suivante",
+    "forecast": {
+      "title": "Solde prévu au {date}",
+      "breakdown": "Solde actuel des comptes courants {balance}, moins {remaining} restant à dépenser. Les revenus à venir ne sont pas comptés."
+    },
     "snapshot": {
       "overline": "Budget en cours",
       "none": "Aucun budget en cours.",

@@ -1032,6 +1032,8 @@ Archive (#260): a budget manager can archive/unarchive (`budgets.service.archive
 
 Explicit assignment: from any transaction, "Assign to a budget" menu → choose budget (mine or my groups', not archived) → mode INCLUDE/EXCLUDE → `budgets.assignTransaction` upserts `BudgetAssignment` (unique on `(budgetId, transactionId)`). The transaction's account must be readable; an INCLUDE into a group budget also needs the account to be the actor's own or shared with that group.
 
+Forecast (#347, `budgetForecast`): while `now` is within the period, `BudgetDetail.forecast` = `{ balance, remaining, endBalance }` with `balance` the current balance of the scope's non-archived `CHECKING` accounts, `remaining` = Σ max(line remaining, 0) and `endBalance = balance − remaining`. Income to come is not anticipated. Shown on the budget detail and the dashboard snapshot.
+
 The budget detail lists the latest 100 counted transactions in full to everyone who can read the budget, including a private transaction included in a group budget (§2.2); for a group budget, rows from an account neither shared with the group nor owned by a current member show masked.
 
 ### 5.8 Transaction links
