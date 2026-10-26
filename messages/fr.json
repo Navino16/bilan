@@ -1235,7 +1235,8 @@
     "rangeStart": "Début de la période",
     "rangeEnd": "Fin de la période",
     "rangeReversed": "La fin doit être après le début.",
-    "otherCategories": "{count, plural, one {Autre catégorie} other {# autres catégories}}"
+    "otherCategories": "{count, plural, one {Autre catégorie} other {# autres catégories}}",
+    "upcoming": "Période à venir : seules les transactions affectées à cette période apparaissent."
   },
   "merchants": {
     "tab": "Marchands",

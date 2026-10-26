@@ -1235,7 +1235,8 @@
     "rangeStart": "Period start",
     "rangeEnd": "Period end",
     "rangeReversed": "The end must be after the start.",
-    "otherCategories": "{count, plural, one {Other category} other {# other categories}}"
+    "otherCategories": "{count, plural, one {Other category} other {# other categories}}",
+    "upcoming": "Upcoming period: only transactions assigned to it appear."
   },
   "merchants": {
     "tab": "Merchants",
