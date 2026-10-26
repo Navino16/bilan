@@ -1197,6 +1197,10 @@
     "unverifiedHint": "{smtp, select, true {Invitations sent to your address will show up here once it’s verified: follow the link we emailed you.} other {Invitations sent to your address will show up here once an administrator verifies it.}} Meanwhile, an invitation link or code already works."
   },
   "dashboard": {
+    "accounts": {
+      "overline": "Account balances",
+      "seeAll": "Accounts"
+    },
     "overline": "Overview",
     "txCount": "{count, plural, one {# transaction} other {# transactions}}",
     "kpi": {

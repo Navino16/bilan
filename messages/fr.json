@@ -1197,6 +1197,10 @@
     "unverifiedHint": "{smtp, select, true {Les invitations envoyées à votre adresse apparaîtront ici une fois celle-ci vérifiée : suivez le lien reçu par e-mail.} other {Les invitations envoyées à votre adresse apparaîtront ici une fois celle-ci vérifiée par un administrateur.}} En attendant, un lien ou un code d’invitation fonctionne déjà."
   },
   "dashboard": {
+    "accounts": {
+      "overline": "Solde des comptes",
+      "seeAll": "Comptes"
+    },
     "overline": "Vue d’ensemble",
     "txCount": "{count, plural, one {# transaction} other {# transactions}}",
     "kpi": {
