@@ -437,6 +437,8 @@ Tip: **Reached** needs the exact amount, to the cent. Until then the percentage 
 
 Click a budget to open its details: each line with "… left" or "Over by …", **See transactions** for category lines, and the list of transactions **Counted in this budget**.
 
+During the current period, **Projected balance on …** estimates your balance at the end of the period: the current balance of your checking accounts, minus what the lines still plan to spend (an over-budget line counts as 0). Savings accounts and income still to come are left out. The projected balance also shows on the dashboard's current budget card.
+
 ### Renew a recurring budget
 
 When a recurring budget's period ends, a **Renew** button on its card creates the next period with the same lines. Unspent amounts are not carried over. Your administrator can also set up automatic renewal. The periods of a series are grouped on one card: open **… other periods** to see them, or use the arrows on the details page.

@@ -437,6 +437,8 @@ Astuce : **Atteint** demande le montant exact, au centime près. D’ici là, le
 
 Cliquez sur un budget pour ouvrir son détail : chaque ligne avec « Reste … » ou « Dépassé de … », **Voir les transactions** pour les lignes de catégorie, et la liste des transactions **Comptées dans ce budget**.
 
+Pendant la période en cours, **Solde prévu au …** estime le solde à la fin de la période : le solde actuel de vos comptes courants, moins ce que les lignes prévoient encore de dépenser (une ligne dépassée compte pour 0). Les comptes d’épargne et les revenus à venir n’entrent pas dans le calcul. Ce solde prévu s’affiche aussi sur la carte du budget en cours du tableau de bord.
+
 ### Renouveler un budget récurrent
 
 Quand la période d’un budget récurrent se termine, un bouton **Renouveler** sur sa carte crée la période suivante avec les mêmes lignes. Ce qui n’a pas été dépensé n’est pas reporté. Votre administrateur peut aussi mettre en place le renouvellement automatique. Les périodes d’une même série sont regroupées sur une carte : ouvrez **… autres périodes** pour les voir, ou utilisez les flèches de la page de détail.
