@@ -18,6 +18,8 @@ import { DEFAULT_CATEGORY_COLOR } from "@/lib/category-appearance";
 import { BaselineSelect } from "./baseline-select";
 import { ComparisonNote } from "./comparison-note";
 import { BudgetSnapshot, type CurrentBudget } from "./budget-snapshot";
+import { AccountsOverview } from "./accounts-overview";
+import type { VisibleAccount } from "@/server/services/accounts";
 
 const OTHERS_COLOR = "var(--ink-4)";
 const DONUT_SLICES = 6;
@@ -34,6 +36,7 @@ export async function DashboardView({
   comparison,
   categories,
   budget,
+  accounts,
   locale,
 }: {
   data: DashboardData;
@@ -41,6 +44,7 @@ export async function DashboardView({
   comparison: Comparison;
   categories: FlatCategory[];
   budget: CurrentBudget;
+  accounts: VisibleAccount[];
   locale: string;
 }) {
   const t = await getTranslations("dashboard");
@@ -168,6 +172,8 @@ export async function DashboardView({
         {period.month && <BaselineSelect value={comparison.baseline} />}
         <ComparisonNote comparison={comparison} locale={locale} />
       </div>
+
+      <AccountsOverview accounts={accounts} locale={locale} />
 
       {/* KPI row */}
       <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-3">

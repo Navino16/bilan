@@ -22,6 +22,17 @@ test.describe("dashboard", () => {
     });
   }
 
+  test("lists the account balances with a link to the accounts page (#349)", async ({ page }) => {
+    await page.goto("/fr/dashboard");
+    const card = page.locator('[data-slot="dashboard-accounts"]');
+    await expect(card).toContainText("Solde des comptes");
+    await expect(
+      card.locator('[data-slot="dashboard-account"]', { hasText: "E2E Courant" }),
+    ).toContainText("€");
+    await card.getByRole("link", { name: /comptes/i }).click();
+    await expect(page).toHaveURL(/\/fr\/accounts$/);
+  });
+
   const kpiRects = async (page: Page) => {
     const cards = page.locator('[data-slot="kpi-card"]');
     await expect(cards).toHaveCount(3);

@@ -558,6 +558,7 @@ Tip: transfers between your accounts count as income and expenses until you link
 
 ![Dashboard](images/en/dashboard.png)
 
+- **Account balances**: the current balance of each non-archived account and their total, whatever the selected period. **Accounts** opens the accounts page.
 - **Income**, **Expenses** and **Net balance**, each with its change against the comparison.
 - **Spending by category**: a donut with the six largest categories, the rest grouped.
 - **Day-by-day spending** (periods up to 45 days) or **Monthly spending** (longer periods), with the average and the biggest day or month.

@@ -558,6 +558,7 @@ Astuce : les virements entre vos comptes comptent comme entrées et dépenses ta
 
 ![Tableau de bord](images/fr/dashboard.png)
 
+- **Solde des comptes** : le solde actuel de chaque compte non archivé et leur total, quelle que soit la période choisie. **Comptes** ouvre la page des comptes.
 - **Revenus**, **Dépenses** et **Solde net**, chacun avec son évolution par rapport à la comparaison.
 - **Dépenses par catégorie** : un anneau avec les six plus grosses catégories, le reste regroupé.
 - **Dépenses jour par jour** (périodes jusqu’à 45 jours) ou **Dépenses par mois** (périodes plus longues), avec la moyenne et le plus gros jour ou mois.
