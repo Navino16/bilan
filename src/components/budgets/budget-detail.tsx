@@ -15,6 +15,7 @@ import { BudgetBar, statusStyle } from "./budget-status";
 import { BudgetActions, toEditableBudget, type BudgetFormOptions } from "./budget-actions";
 import { PageHeader } from "@/components/shell/page-header";
 import { formatDateRange, formatDayMonth } from "@/lib/format";
+import { AssignedMonthBadge } from "@/components/transactions/assigned-month";
 
 export function BudgetDetail({
   detail,
@@ -191,7 +192,10 @@ export function BudgetDetail({
                 >
                   <CategoryAvatar category={meta} size={28} />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm">{tx.label ?? t("detail.hiddenTx")}</div>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate text-sm">{tx.label ?? t("detail.hiddenTx")}</span>
+                      <AssignedMonthBadge date={tx.date} periodDate={tx.periodDate} />
+                    </div>
                     <div className="text-muted-foreground truncate text-[11.5px]">
                       {formatDayMonth(tx.date, locale)}
                       {meta ? ` · ${meta.name}` : ""}

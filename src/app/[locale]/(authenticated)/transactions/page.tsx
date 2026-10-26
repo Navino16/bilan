@@ -85,6 +85,8 @@ export default async function TransactionsPage({
   const allItems: ListItem[] = items.map((i) => ({
     id: i.id,
     date: i.date.toISOString(),
+    periodDate: i.periodDate.toISOString(),
+    periodManual: i.periodManual,
     amount: i.amount,
     type: i.type,
     label: i.label,
