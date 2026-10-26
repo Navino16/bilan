@@ -131,13 +131,15 @@ export type AggRow = CollapsibleRow & { accountId: string; type: string; labelEn
 // become one net row on their primary. `count` is the number of REAL
 // transactions in the period (pre-collapse) — a linked pair is still two
 // transactions the user made. Labels stay encrypted unless `withLabels` asks for
-// the ciphertext (merchant rows decrypt it).
+// the ciphertext (merchant rows decrypt it). Rows carry the month they count toward
+// (`periodDate`, #341) unless `realDates` asks for the transaction's own date.
 export async function loadRows(
   accountIds: string[],
   period: Period,
-  opts: { withLabels?: boolean; where?: Prisma.TransactionWhereInput } = {},
+  opts: { withLabels?: boolean; realDates?: boolean; where?: Prisma.TransactionWhereInput } = {},
 ): Promise<{ rows: AggRow[]; count: number }> {
   const withLabels = opts.withLabels ?? false;
+  const realDates = opts.realDates ?? false;
   if (accountIds.length === 0) return { rows: [], count: 0 };
   const where: Prisma.TransactionWhereInput = {
     accountId: { in: accountIds },
@@ -150,7 +152,8 @@ export async function loadRows(
       select: {
         id: true,
         amount: true,
-        periodDate: true,
+        periodDate: !realDates,
+        date: realDates,
         categoryId: true,
         accountId: true,
         type: true,
@@ -163,7 +166,7 @@ export async function loadRows(
     rows.map((r) => ({
       id: r.id,
       amount: Number(r.amount),
-      date: r.periodDate,
+      date: realDates ? r.date : r.periodDate,
       categoryId: r.categoryId,
       accountId: r.accountId,
       type: r.type,

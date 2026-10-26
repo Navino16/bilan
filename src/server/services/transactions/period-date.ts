@@ -3,6 +3,13 @@ import { db } from "@/server/db";
 
 const CHUNK = 1000;
 
+// `c` is the category the row `t` counts under.
+const AUTO_PERIOD_DATE = Prisma.sql`CASE
+  WHEN c.shiftDays IS NOT NULL
+    AND DAYOFMONTH(t.date) > DAYOFMONTH(LAST_DAY(t.date)) - c.shiftDays
+  THEN TIMESTAMP(LAST_DAY(t.date) + INTERVAL 1 DAY)
+  ELSE t.date END`;
+
 export type PeriodDateScope = { ids: string[] } | { categoryIds: string[] };
 
 // Recomputes the automatic `periodDate` (#341) of the non-manual rows in scope: a row whose
@@ -20,14 +27,24 @@ export async function syncAutoPeriodDates(
       column === "id" ? Prisma.sql`t.id IN (${keys})` : Prisma.sql`t.categoryId IN (${keys})`;
     count += await client.$executeRaw`
       UPDATE \`Transaction\` t LEFT JOIN \`Category\` c ON c.id = t.categoryId
-      SET t.periodDate = CASE
-        WHEN c.shiftDays IS NOT NULL
-          AND DAYOFMONTH(t.date) > DAYOFMONTH(LAST_DAY(t.date)) - c.shiftDays
-        THEN TIMESTAMP(LAST_DAY(t.date) + INTERVAL 1 DAY)
-        ELSE t.date END
+      SET t.periodDate = ${AUTO_PERIOD_DATE}
       WHERE t.periodManual = 0 AND ${match}`;
   }
   return count;
+}
+
+// Run before the rows of `categoryIds` move to `targetId` (null: uncategorized): their automatic
+// `periodDate` then follows the target's option, in one statement however many rows move.
+export async function syncAutoPeriodDatesBeforeMove(
+  categoryIds: string[],
+  targetId: string | null,
+  client: Pick<Prisma.TransactionClient, "$executeRaw"> = db,
+): Promise<number> {
+  if (categoryIds.length === 0) return 0;
+  return client.$executeRaw`
+    UPDATE \`Transaction\` t LEFT JOIN \`Category\` c ON c.id = ${targetId}
+    SET t.periodDate = ${AUTO_PERIOD_DATE}
+    WHERE t.periodManual = 0 AND t.categoryId IN (${Prisma.join(categoryIds)})`;
 }
 
 // Before a cascade deletes an owner's categories (household, user), whose SetNull would leave
