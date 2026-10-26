@@ -306,6 +306,7 @@ export function TransactionDetail({
                   <Field label={t("assignedMonth.label")}>
                     <AssignedMonthField
                       id={item.id}
+                      date={item.date}
                       periodDate={item.periodDate}
                       periodManual={item.periodManual}
                     />

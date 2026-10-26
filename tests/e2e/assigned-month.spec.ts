@@ -22,7 +22,7 @@ test.describe("assigned month (#341)", () => {
     const row = page.locator('[data-slot="transaction-row"]').filter({ hasText: label }).first();
     await row.click();
 
-    await page.getByLabel("Mois d’affectation").fill("2026-03");
+    await page.getByLabel("Mois d’affectation").selectOption("2026-03");
     await expect(row.getByText("Compté en mars 2026").first()).toBeVisible();
 
     await page.getByRole("button", { name: "Revenir en automatique" }).click();

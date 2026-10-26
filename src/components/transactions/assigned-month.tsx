@@ -4,8 +4,8 @@ import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { assignedMonth, parseYearMonth } from "@/lib/assigned-month";
+import { NativeSelect } from "@/components/ui/native-select";
+import { assignedMonth, monthChoices, type YearMonth } from "@/lib/assigned-month";
 import { formatMonthYear } from "@/lib/format";
 import { setTransactionMonthAction } from "@/server/transport/actions/transactions";
 import { Pill } from "./bits";
@@ -28,19 +28,23 @@ export function AssignedMonthBadge({ date, periodDate }: { date: DateLike; perio
   );
 }
 
-const monthValue = (d: Date) =>
-  `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+const monthValue = (m: YearMonth) => `${m.year}-${String(m.month).padStart(2, "0")}`;
+const monthOf = (d: Date): YearMonth => ({ year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 });
 
 export function AssignedMonthField({
   id,
+  date,
   periodDate,
   periodManual,
 }: {
   id: string;
+  date: DateLike;
   periodDate: DateLike;
   periodManual: boolean;
 }) {
   const t = useTranslations("transactions.assignedMonth");
+  const locale = useLocale();
+  const current = monthValue(monthOf(toDate(periodDate)));
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [failed, setFailed] = useState(false);
@@ -59,16 +63,19 @@ export function AssignedMonthField({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-2">
-        <Input
-          key={`${id}-${monthValue(toDate(periodDate))}`}
-          type="month"
+        <NativeSelect
           aria-label={t("label")}
-          defaultValue={monthValue(toDate(periodDate))}
+          value={current}
           disabled={pending}
-          // Typing a year passes through partial values ("0002-03"): only a valid month saves.
-          onChange={(e) => parseYearMonth(e.target.value) && save(e.target.value)}
-          className="w-44"
-        />
+          onChange={(e) => save(e.target.value)}
+          className="w-48"
+        >
+          {monthChoices(toDate(date), toDate(periodDate)).map((m) => (
+            <option key={monthValue(m)} value={monthValue(m)}>
+              {formatMonthYear(new Date(Date.UTC(m.year, m.month - 1, 1)), locale)}
+            </option>
+          ))}
+        </NativeSelect>
         {periodManual && (
           <Button
             type="button"

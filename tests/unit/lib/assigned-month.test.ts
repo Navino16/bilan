@@ -3,6 +3,7 @@ import {
   assignedMonth,
   assignedMonthKey,
   manualPeriodDate,
+  monthChoices,
   parseYearMonth,
 } from "@/lib/assigned-month";
 
@@ -59,5 +60,21 @@ describe("assignedMonthKey", () => {
   it("is YYYY-MM for a shifted transaction and empty otherwise", () => {
     expect(assignedMonthKey(d("2026-10-30T00:00:00Z"), d("2026-11-01T00:00:00Z"))).toBe("2026-11");
     expect(assignedMonthKey(d("2026-10-30T00:00:00Z"), d("2026-10-30T00:00:00Z"))).toBe("");
+  });
+});
+
+describe("monthChoices", () => {
+  it("offers 12 months before and after the real month, in order", () => {
+    const choices = monthChoices(d("2026-10-30T00:00:00Z"), d("2026-10-30T00:00:00Z"));
+    expect(choices).toHaveLength(25);
+    expect(choices[0]).toEqual({ year: 2025, month: 10 });
+    expect(choices[12]).toEqual({ year: 2026, month: 10 });
+    expect(choices[24]).toEqual({ year: 2027, month: 10 });
+  });
+
+  it("keeps an assigned month outside that span", () => {
+    const choices = monthChoices(d("2026-10-30T00:00:00Z"), d("2024-01-01T00:00:00Z"));
+    expect(choices[0]).toEqual({ year: 2024, month: 1 });
+    expect(choices).toHaveLength(26);
   });
 });

@@ -1,4 +1,4 @@
-import { isValidIsoDay } from "./period";
+import { addMonths, isValidIsoDay } from "./period";
 
 // Assigned month of a transaction (#341): `periodDate` is `date`, or the 1st of
 // another month the transaction counts toward. All dates are UTC.
@@ -37,4 +37,23 @@ export function parseYearMonth(value: string): YearMonth | null {
   if (!/^\d{4}-\d{2}$/.test(value) || !isValidIsoDay(`${value}-01`)) return null;
   const [year, month] = value.split("-").map(Number);
   return { year, month };
+}
+
+const CHOICE_SPAN = 12;
+
+// The months the detail's picker offers: a year either side of the real month, plus the
+// assigned one when it lies further.
+export function monthChoices(date: Date, periodDate: Date): YearMonth[] {
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth() + 1;
+  const choices = Array.from({ length: 2 * CHOICE_SPAN + 1 }, (_, i) =>
+    addMonths(year, month, i - CHOICE_SPAN),
+  );
+  const assigned = { year: periodDate.getUTCFullYear(), month: periodDate.getUTCMonth() + 1 };
+  const key = (m: YearMonth) => m.year * 12 + m.month;
+  if (!choices.some((m) => key(m) === key(assigned))) {
+    choices.push(assigned);
+    choices.sort((a, b) => key(a) - key(b));
+  }
+  return choices;
 }
