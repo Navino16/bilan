@@ -197,7 +197,16 @@ describe("transaction list plans (#297, #300)", () => {
     const paged = [];
     for await (const page of transactionPages(owner, f, 7)) paged.push(...page);
     expect(paged.map((i) => i.id)).toEqual(whole.items.map((i) => i.id));
-    const { id, date, amount, type, label, accountName, categoryId } = whole.items[0];
-    expect(paged[0]).toEqual({ id, date, amount, type, label, accountName, categoryId });
+    const { id, date, periodDate, amount, type, label, accountName, categoryId } = whole.items[0];
+    expect(paged[0]).toEqual({
+      id,
+      date,
+      periodDate,
+      amount,
+      type,
+      label,
+      accountName,
+      categoryId,
+    });
   });
 });

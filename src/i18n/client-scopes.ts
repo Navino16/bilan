@@ -33,7 +33,7 @@ export const CLIENT_SCOPES = {
     "transactions",
   ],
   admin: ["admin", "forms.fieldError", "shell"],
-  budgets: ["budgets", "forms.fieldError", "onboarding", "shell"],
+  budgets: ["budgets", "forms.fieldError", "onboarding", "shell", "transactions.assignedMonth"],
   categories: [
     "categories",
     "forms.fieldError",

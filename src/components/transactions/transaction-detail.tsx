@@ -303,7 +303,7 @@ export function TransactionDetail({
                 </Field>
 
                 {acc?.writable && (
-                  <Field label={t("assignedMonth")}>
+                  <Field label={t("assignedMonth.label")}>
                     <AssignedMonthField
                       id={item.id}
                       periodDate={item.periodDate}

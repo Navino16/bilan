@@ -897,10 +897,12 @@
       "amount-asc": "Largest expenses first",
       "amount-desc": "Largest income first"
     },
-    "assignedMonth": "Assigned month",
-    "countedIn": "Counted in {month}",
-    "backToAuto": "Back to automatic",
-    "monthFailed": "The month could not be saved."
+    "assignedMonth": {
+      "label": "Assigned month",
+      "countedIn": "Counted in {month}",
+      "backToAuto": "Back to automatic",
+      "failed": "The month could not be saved."
+    }
   },
   "import": {
     "title": "Import a statement",

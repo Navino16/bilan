@@ -897,10 +897,12 @@
       "amount-asc": "Plus grosses dépenses d’abord",
       "amount-desc": "Plus grosses entrées d’abord"
     },
-    "assignedMonth": "Mois d’affectation",
-    "countedIn": "Compté en {month}",
-    "backToAuto": "Revenir en automatique",
-    "monthFailed": "Le mois n’a pas pu être enregistré."
+    "assignedMonth": {
+      "label": "Mois d’affectation",
+      "countedIn": "Compté en {month}",
+      "backToAuto": "Revenir en automatique",
+      "failed": "Le mois n’a pas pu être enregistré."
+    }
   },
   "import": {
     "title": "Importer un relevé",

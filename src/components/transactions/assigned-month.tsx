@@ -16,7 +16,7 @@ const toDate = (d: DateLike) => (typeof d === "string" ? new Date(d) : d);
 
 // "Counted in <month>" when the transaction counts toward another month than its date (#341).
 export function AssignedMonthBadge({ date, periodDate }: { date: DateLike; periodDate: DateLike }) {
-  const t = useTranslations("transactions");
+  const t = useTranslations("transactions.assignedMonth");
   const locale = useLocale();
   const month = assignedMonth(toDate(date), toDate(periodDate));
   if (!month) return null;
@@ -40,7 +40,7 @@ export function AssignedMonthField({
   periodDate: DateLike;
   periodManual: boolean;
 }) {
-  const t = useTranslations("transactions");
+  const t = useTranslations("transactions.assignedMonth");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [failed, setFailed] = useState(false);
@@ -62,7 +62,7 @@ export function AssignedMonthField({
         <Input
           key={`${id}-${monthValue(toDate(periodDate))}`}
           type="month"
-          aria-label={t("assignedMonth")}
+          aria-label={t("label")}
           defaultValue={monthValue(toDate(periodDate))}
           disabled={pending}
           // Typing a year passes through partial values ("0002-03"): only a valid month saves.
@@ -83,7 +83,7 @@ export function AssignedMonthField({
       </div>
       {failed && (
         <p role="alert" className="text-destructive text-xs">
-          {t("monthFailed")}
+          {t("failed")}
         </p>
       )}
     </div>
