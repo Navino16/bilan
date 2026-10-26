@@ -62,6 +62,8 @@ describe("default categorization rules", () => {
     ["CB AMAZON PAYMENTS 12/04/26", "shopping"],
     ["CB BOULANGER.COM 12/04/26", "shopping.home"],
     ["PRLV SEPA TOTALENERGIES ELECTRICITE", "housing.energy"],
+    ["PRLV SEPA VEOLIA EAU ILE DE FRANCE", "housing.water"],
+    ["PRLV SEPA SAUR FACTURE EAU", "housing.water"],
     ["CB TOTALENERGIES 1234 12/04/26", "transport.fuel"],
     ["CB STATION VOIRIE 12/04/26", "transport.tolls"],
     ["VIR.PERMANENT LIVRET A", "savings.accounts"],

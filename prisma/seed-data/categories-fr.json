@@ -58,6 +58,10 @@
         "name": "Électricité & gaz"
       },
       {
+        "key": "water",
+        "name": "Eau"
+      },
+      {
         "key": "internet",
         "name": "Internet & téléphone"
       }
@@ -164,6 +168,10 @@
       {
         "key": "loans",
         "name": "Crédits"
+      },
+      {
+        "key": "transfers",
+        "name": "Virement interne"
       }
     ]
   },
