@@ -554,6 +554,7 @@ model Category {
   group     Group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   isDefault Boolean  @default(false)
+  shiftDays Int?                                      // transactions in the month's last N days count toward the next one (#341)
   createdAt DateTime @default(now())
 
   transactions Transaction[]
@@ -621,7 +622,9 @@ Rules are exported to and imported from a JSON file, `bilan-rules-YYYY-MM-DD.jso
 model Transaction {
   id            String   @id @default(cuid())
   accountId     String
-  date          DateTime                              // CLEAR — for SQL aggregations
+  date          DateTime                              // CLEAR — the real date (lists, search, dedup, links)
+  periodDate    DateTime @default(dbgenerated("(`date`)")) // CLEAR — what period aggregates bucket on (#341)
+  periodManual  Boolean  @default(false)              // periodDate picked by hand: never recomputed
   amount        Decimal  @db.Decimal(12, 2)           // CLEAR — for SQL aggregations
   type          String                                // CARD | TRANSFER | DIRECT_DEBIT | CHEQUE | ATM | OTHER
 
@@ -651,6 +654,7 @@ model Transaction {
 
   @@unique([accountId, externalId])
   @@index([accountId, date, createdAt])                // per-account newest-first walk (§6.2)
+  @@index([accountId, periodDate])                     // period aggregates (dashboard, insights, budgets)
   @@index([categoryId, date])
   @@index([accountId, categoryId])                     // categories met on visible accounts
   @@index([labelHash])
@@ -710,6 +714,8 @@ model IgnoredLinkSuggestion {                         // no FK; deleted explicit
   @@index([userId])
 }
 ```
+
+**Assigned month (#341).** `periodDate` is `date`, or the 1st of another month the transaction counts toward. The dashboard, insights, category history and budget actuals filter and bucket on it; lists, search, link suggestions, import duplicate detection and the merchant directory stay on `date`. A non-manual row is recomputed by `transactions/period-date.syncAutoPeriodDates` (one `UPDATE … JOIN Category`) whenever its category or date changes (create, import, recategorize, rule apply, date edit, category deletion) and for a whole category when its `shiftDays` changes: dated in the month's last `shiftDays` days → 1st of the next month, else `date`. `setTransactionMonth` sets a manual month (`periodManual`; picking the real month pins `date`) or goes back to automatic. The dashboard and insights can open the next month for that reason (`period.nextMonthEnd`).
 
 A link needs at least two members: when member transactions are deleted (e.g. an import revert), links left with fewer are dissolved (`services/links/dissolve.ts`). Link-suggestion parameters are per user, in `UserPreference` (§4.8).
 
@@ -1014,7 +1020,7 @@ Creation (form dialog on `/budgets`):
 Archive (#260): a budget manager can archive/unarchive (`budgets.service.archiveBudget` / `unarchiveBudget`, audit `budget.archived` / `budget.unarchived`). Archived budgets leave the list (shown in a collapsed "Archived budgets" section), the dashboard, the assignment menu and the roll cron; their detail stays readable and their menu only offers unarchive/delete. An archived budget takes no new assignment (`ARCHIVED`) and is never rolled, even by a direct call; existing assignments stay listed (marked archived) and removable in the transaction panel.
 
 `budgets.computeBudgetSpend(budget)` (all lines at once):
-1. Load the candidate transactions: a personal budget draws from the owner's visible accounts (own + shared via groups), a group budget from the accounts shared with that group, within `[periodStart, periodEnd]`; plus every transaction assigned to this budget, whatever its account or date. The budget list loads every budget's candidates in one query (`loadBudgetRows`, #299) and reads link membership from `TransactionLinkMember` joined to its transaction (`links/members.linkIdsWhere`), so its query count doesn't grow with the number of budgets.
+1. Load the candidate transactions: a personal budget draws from the owner's visible accounts (own + shared via groups), a group budget from the accounts shared with that group, whose `periodDate` (§4.5, assigned month) is within `[periodStart, periodEnd]`; plus every transaction assigned to this budget, whatever its account or date. The budget list loads every budget's candidates in one query (`loadBudgetRows`, #299) and reads link membership from `TransactionLinkMember` joined to its transaction (`links/members.linkIdsWhere`), so its query count doesn't grow with the number of budgets.
 2. Apply link logic over that whole set first:
    - Balanced groups (`|sum| < 0.005`): all members excluded.
    - Unbalanced groups: only the primary (largest absolute amount) counts, with the net sum as its effective amount.
