@@ -339,6 +339,7 @@ describe("getBudgetDetail / computeLine", () => {
         {
           id: included.id,
           date: included.date,
+          periodDate: included.date,
           amount: -12,
           label: "Cinéma",
           categoryId: strangerCat.id,
@@ -381,6 +382,7 @@ describe("getBudgetDetail / computeLine", () => {
     const masked = (date: Date) => ({
       id: "hidden-0",
       date,
+      periodDate: date,
       amount: -12,
       label: null,
       categoryId: null,
@@ -445,6 +447,7 @@ describe("getBudgetDetail / computeLine", () => {
         {
           id: t.id,
           date: t.date,
+          periodDate: t.date,
           amount: -12,
           label: "Cinéma",
           categoryId: null,
