@@ -26,6 +26,12 @@ export function assignedMonth(date: Date, periodDate: Date): YearMonth | null {
   return sameMonth(date, year, month) ? null : { year, month };
 }
 
+// The export's "assigned month" cell: YYYY-MM, empty when it is the real month.
+export function assignedMonthKey(date: Date, periodDate: Date): string {
+  const m = assignedMonth(date, periodDate);
+  return m ? `${m.year}-${String(m.month).padStart(2, "0")}` : "";
+}
+
 // A `<input type="month">` value ("YYYY-MM") within the app's year range.
 export function parseYearMonth(value: string): YearMonth | null {
   if (!/^\d{4}-\d{2}$/.test(value) || !isValidIsoDay(`${value}-01`)) return null;

@@ -111,12 +111,20 @@ export type ListRow = {
 
 export type ExportRow = Pick<
   ListRow,
-  "id" | "accountId" | "date" | "createdAt" | "amount" | "type" | "labelEnc" | "categoryId"
+  | "id"
+  | "accountId"
+  | "date"
+  | "periodDate"
+  | "createdAt"
+  | "amount"
+  | "type"
+  | "labelEnc"
+  | "categoryId"
 >;
 
 // What the CSV export reads: a third of the row, labels included (#301).
 export const EXPORT_COLUMNS = Prisma.raw(
-  "t.id, t.accountId, t.date, t.createdAt, t.amount, t.type, t.labelEnc, t.categoryId",
+  "t.id, t.accountId, t.date, t.periodDate, t.createdAt, t.amount, t.type, t.labelEnc, t.categoryId",
 );
 
 const COLUMNS = Prisma.raw(

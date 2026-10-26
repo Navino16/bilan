@@ -17,6 +17,8 @@ import {
 type ExportedTransaction = {
   id: string;
   date: Date;
+  periodDate: Date;
+  periodManual: boolean;
   amount: number;
   type: string;
   label: string;
@@ -245,6 +247,8 @@ async function* ownedTransactionPages(
       yield rows.map((r) => ({
         id: r.id,
         date: r.date,
+        periodDate: r.periodDate,
+        periodManual: Boolean(r.periodManual),
         amount: Number(r.amount),
         type: r.type,
         label: decrypt(r.labelEnc, dataKey),

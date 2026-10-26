@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { assignedMonth, manualPeriodDate, parseYearMonth } from "@/lib/assigned-month";
+import {
+  assignedMonth,
+  assignedMonthKey,
+  manualPeriodDate,
+  parseYearMonth,
+} from "@/lib/assigned-month";
 
 const d = (s: string) => new Date(s);
 
@@ -47,5 +52,12 @@ describe("parseYearMonth", () => {
     for (const v of ["", "2026-13", "2026-1", "0000-01", "2026-11-01", "abc"]) {
       expect(parseYearMonth(v)).toBeNull();
     }
+  });
+});
+
+describe("assignedMonthKey", () => {
+  it("is YYYY-MM for a shifted transaction and empty otherwise", () => {
+    expect(assignedMonthKey(d("2026-10-30T00:00:00Z"), d("2026-11-01T00:00:00Z"))).toBe("2026-11");
+    expect(assignedMonthKey(d("2026-10-30T00:00:00Z"), d("2026-10-30T00:00:00Z"))).toBe("");
   });
 });

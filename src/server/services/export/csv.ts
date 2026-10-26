@@ -8,6 +8,7 @@ export type CsvRow = {
   label: string;
   accountName: string;
   categoryName: string | null;
+  assignedMonth: string; // YYYY-MM, "" when it is the real month
 };
 
 type CsvDialect = { delimiter: string; decimal: string; headers: string[] };
@@ -18,12 +19,12 @@ const DIALECTS: Record<Locale, CsvDialect> = {
   fr: {
     delimiter: ";",
     decimal: ",",
-    headers: ["date", "montant", "type", "libellé", "compte", "catégorie"],
+    headers: ["date", "montant", "type", "libellé", "compte", "catégorie", "mois d’affectation"],
   },
   en: {
     delimiter: ",",
     decimal: ".",
-    headers: ["date", "amount", "type", "label", "account", "category"],
+    headers: ["date", "amount", "type", "label", "account", "category", "assigned month"],
   },
 };
 
@@ -76,6 +77,7 @@ export function csvLines(
       sanitizeCell(r.label),
       sanitizeCell(r.accountName),
       sanitizeCell(r.categoryName ?? ""),
+      r.assignedMonth,
     ]),
     { newline: "\n", delimiter },
   );

@@ -170,7 +170,7 @@ export async function listTransactions(
 
 export type ExportItem = Pick<
   TransactionListItem,
-  "id" | "date" | "amount" | "type" | "label" | "accountName" | "categoryId"
+  "id" | "date" | "periodDate" | "amount" | "type" | "label" | "accountName" | "categoryId"
 >;
 
 // Every row matching `filters`, newest first, page by page: keyset pagination, no count and
@@ -193,6 +193,7 @@ export async function* transactionPages(
       yield rows.map((r) => ({
         id: r.id,
         date: r.date,
+        periodDate: r.periodDate,
         amount: Number(r.amount),
         type: r.type,
         label: decrypt(r.labelEnc, dataKey),

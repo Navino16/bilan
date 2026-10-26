@@ -281,6 +281,10 @@ describe("rgpd", () => {
     expect(data.user.id).toBe(userId);
     expect(data.accounts).toHaveLength(1);
     expect(data.transactions[0].label).toBe("Loyer"); // decrypted
+    expect(data.transactions[0]).toMatchObject({
+      periodDate: data.transactions[0].date,
+      periodManual: false,
+    });
     expect(data.budgets.length).toBeGreaterThanOrEqual(1);
     expect(data.merchantAliases).toEqual([{ merchant: "FONCIA LOYER", name: "Loyer" }]);
   });

@@ -3,6 +3,7 @@ import { transactionPages, type ExportItem } from "@/server/services/transaction
 import { listForUser, listForeignCategories } from "@/server/services/categories";
 import { flattenCategories } from "@/components/transactions/category-tree";
 import { csvHeader, csvLines, type CsvRow } from "@/server/services/export/csv";
+import { assignedMonthKey } from "@/lib/assigned-month";
 import { streamOf } from "@/server/http/stream";
 import { dayEnd, dayStart, toIsoDay } from "@/lib/period";
 import { parseTransactionFilters } from "@/lib/transaction-filters";
@@ -41,6 +42,7 @@ export async function GET(req: Request): Promise<Response> {
     label: i.label,
     accountName: i.accountName,
     categoryName: i.categoryId ? (catName.get(i.categoryId) ?? null) : null,
+    assignedMonth: assignedMonthKey(i.date, i.periodDate),
   });
 
   // Every matching row, never silently truncated (RGPD/portability must be complete).
