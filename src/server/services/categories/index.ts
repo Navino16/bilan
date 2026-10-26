@@ -1,11 +1,15 @@
 import { cache } from "react";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
+import { LONG_TX_TIMEOUT } from "@/server/db/timeouts";
 import { logEvent } from "@/server/services/audit";
 import { requireGroupRole } from "@/server/services/groups/roles";
 import { groupMemberships } from "@/server/services/groups/memberships";
 import { visibleAccountIds } from "@/server/services/accounts";
-import { syncAutoPeriodDates } from "@/server/services/transactions/period-date";
+import {
+  syncAutoPeriodDates,
+  syncAutoPeriodDatesBeforeMove,
+} from "@/server/services/transactions/period-date";
 import { categoryInputSchema, type CategoryInput } from "@/lib/schemas/category";
 
 export class CategoryAccessError extends Error {}
@@ -153,18 +157,20 @@ export async function updateCategory(
   const parentId = data.parentId && data.parentId !== id ? data.parentId : null;
   if (parentId) await assertValidParent(id, parentId, existing);
   const shiftDays = data.shiftDays ?? null;
-  await db.category.update({
-    where: { id },
-    data: {
-      name: data.name,
-      color: data.color ?? null,
-      icon: data.icon ?? null,
-      // Reparenting within the same scope only; ignore groupId changes (scope is immutable).
-      parentId,
-      shiftDays,
-    },
-  });
-  if (shiftDays !== existing.shiftDays) await syncAutoPeriodDates({ categoryIds: [id] });
+  await db.$transaction(async (tx) => {
+    await tx.category.update({
+      where: { id },
+      data: {
+        name: data.name,
+        color: data.color ?? null,
+        icon: data.icon ?? null,
+        // Reparenting within the same scope only; ignore groupId changes (scope is immutable).
+        parentId,
+        shiftDays,
+      },
+    });
+    if (shiftDays !== existing.shiftDays) await syncAutoPeriodDates({ categoryIds: [id] }, tx);
+  }, LONG_TX_TIMEOUT);
   await logEvent({
     userId: actor.id,
     action: "category.updated",
@@ -262,12 +268,11 @@ export async function deleteCategory(
       if (!sameScope) throw new CategoryAccessError("INVALID_TARGET");
     }
     const where = { categoryId: { in: ids } };
-    const moved = await tx.transaction.findMany({ where, select: { id: true } });
+    await syncAutoPeriodDatesBeforeMove(ids, targetId, tx);
     const transactions = await tx.transaction.updateMany({
       where,
       data: { categoryId: targetId },
     });
-    await syncAutoPeriodDates({ ids: moved.map((t) => t.id) }, tx);
     const rules = targetId
       ? await tx.categorizationRule.updateMany({ where, data: { categoryId: targetId } })
       : await tx.categorizationRule.deleteMany({ where });
@@ -281,7 +286,7 @@ export async function deleteCategory(
       rules: rules.count,
       budgetLines: budgetLines.count,
     };
-  });
+  }, LONG_TX_TIMEOUT);
   await logEvent({
     userId: actor.id,
     action: "category.deleted",

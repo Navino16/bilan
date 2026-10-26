@@ -1,5 +1,7 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+import type { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
+import { LONG_TX_TIMEOUT } from "@/server/db/timeouts";
 import { seedDefaultCategories } from "@/server/services/categories/seed-defaults";
 import { DEFAULT_RULES } from "@/server/services/categories/default-sets";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
@@ -348,6 +350,42 @@ describe("category next-month shift (#341)", () => {
     expect(await periodDay(auto)).toBe("2026-10-30");
   });
 
+  it("saves the option and recomputes its transactions atomically", async () => {
+    const { id } = await createCategory({ name: "Prime" }, { id: owner });
+    const row = await tx("2026-10-30T00:00:00.000Z", id);
+    const original = db.$transaction.bind(db) as (...args: unknown[]) => Promise<unknown>;
+    const failingResync = (client: Prisma.TransactionClient) =>
+      new Proxy(client, {
+        get: (target, key) =>
+          key === "$executeRaw"
+            ? () => Promise.reject(new Error("resync failed"))
+            : Reflect.get(target, key),
+      });
+    const spy = vi
+      .spyOn(db, "$transaction")
+      .mockImplementationOnce(async (fn: unknown, opts: unknown) =>
+        original(
+          (client: Prisma.TransactionClient) =>
+            (fn as (c: Prisma.TransactionClient) => Promise<unknown>)(failingResync(client)),
+          opts,
+        ),
+      );
+    try {
+      await expect(
+        updateCategory(id, { name: "Prime", shiftDays: 5 }, { id: owner }),
+      ).rejects.toThrow("resync failed");
+      expect(spy).toHaveBeenCalledWith(expect.any(Function), LONG_TX_TIMEOUT);
+    } finally {
+      spy.mockRestore();
+    }
+    expect((await db.category.findUniqueOrThrow({ where: { id } })).shiftDays).toBeNull();
+    expect(await periodDay(row)).toBe("2026-10-30");
+
+    await updateCategory(id, { name: "Prime", shiftDays: 5 }, { id: owner });
+    expect((await db.category.findUniqueOrThrow({ where: { id } })).shiftDays).toBe(5);
+    expect(await periodDay(row)).toBe("2026-11-01");
+  });
+
   it("follows the deletion target's option, or the real date without a target", async () => {
     const a = await createCategory({ name: "A", shiftDays: 5 }, { id: owner });
     const b = await createCategory({ name: "B", shiftDays: 5 }, { id: owner });
@@ -355,13 +393,23 @@ describe("category next-month shift (#341)", () => {
     await updateCategory(a.id, { name: "A", shiftDays: 5 }, { id: owner });
     const inA = await tx("2026-10-30T00:00:00.000Z", a.id);
     const inB = await tx("2026-10-27T00:00:00.000Z", b.id);
+    const manualInB = await tx("2026-10-27T00:00:00.000Z", b.id, true);
     await updateCategory(b.id, { name: "B", shiftDays: 6 }, { id: owner });
     expect(await periodDay(inB)).toBe("2026-11-01");
 
-    await deleteCategory(b.id, { id: owner });
+    const spy = vi.spyOn(db, "$transaction");
+    try {
+      await deleteCategory(b.id, { id: owner });
+      expect(spy).toHaveBeenCalledWith(expect.any(Function), LONG_TX_TIMEOUT);
+    } finally {
+      spy.mockRestore();
+    }
     expect(await periodDay(inB)).toBe("2026-10-27");
+    expect(await periodDay(manualInB)).toBe("2026-10-27");
 
+    const alreadyInTarget = await tx("2026-10-26T00:00:00.000Z", target.id);
     await deleteCategory(a.id, { id: owner }, { targetId: target.id });
     expect(await periodDay(inA)).toBe("2026-11-01");
+    expect(await periodDay(alreadyInTarget)).toBe("2026-10-26");
   });
 });
