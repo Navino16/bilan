@@ -602,6 +602,7 @@ export type BudgetDetail = {
   })[];
   plannedTotal: number;
   spentTotal: number;
+  outOfBudget: { spent: number; count: number } | null; // INCLUDEs no line matches (#345)
   groupId: string | null;
   canManage: boolean;
   previousId: string | null; // neighbouring periods of the same recurring series
@@ -624,12 +625,17 @@ export type BudgetTransaction = {
 
 // Per-line sums for display + a budget-wide dedup sum for the total: a tx that
 // matches several lines is counted once in the total; an INCLUDE'd tx that
-// matches no line is attributed to the first line for display.
+// matches no line counts in the total and in the out-of-budget sum, never in a line.
 async function computeBudgetSpend(
   b: { lines: LineFilter[] },
   { rows, excluded, includedIds }: LoadedBudgetRows,
   subtrees?: Map<string, Set<string>>,
-): Promise<{ lineSums: number[]; totalSum: number; counted: BudgetRow[] }> {
+): Promise<{
+  lineSums: number[];
+  outOfBudget: BudgetRow[];
+  totalSum: number;
+  counted: BudgetRow[];
+}> {
   // Collapse links across the WHOLE loaded scope first, so a linked group split
   // across categories nets correctly (the offsetting member is not dropped by a
   // per-line filter). Each surviving row carries its primary's category/account.
@@ -642,6 +648,7 @@ async function computeBudgetSpend(
   }));
 
   const lineSums = new Array<number>(b.lines.length).fill(0);
+  const outOfBudget: BudgetRow[] = [];
   let totalSum = 0;
   const counted: BudgetRow[] = [];
   for (const r of collapsed) {
@@ -650,13 +657,10 @@ async function computeBudgetSpend(
     if (matchedIdx.length === 0 && !includedIds.has(r.id)) continue; // not in this budget
     counted.push(r);
     totalSum += r.amount; // counted once toward the total
-    if (matchedIdx.length > 0) {
-      for (const i of matchedIdx) lineSums[i] += r.amount;
-    } else if (b.lines.length > 0) {
-      lineSums[0] += r.amount; // pure INCLUDE with no matching line
-    }
+    if (matchedIdx.length === 0) outOfBudget.push(r);
+    for (const i of matchedIdx) lineSums[i] += r.amount;
   }
-  return { lineSums, totalSum, counted };
+  return { lineSums, outOfBudget, totalSum, counted };
 }
 
 async function seriesNeighbours(b: {
@@ -747,7 +751,7 @@ export async function getBudgetDetail(
   { withTransactions = true }: { withTransactions?: boolean } = {},
 ): Promise<BudgetDetail> {
   const b = await readableOrThrow(id, viewerId);
-  const { lineSums, totalSum, counted } = await computeBudgetSpend(
+  const { lineSums, outOfBudget, totalSum, counted } = await computeBudgetSpend(
     b,
     (await loadBudgetRows([b])).get(b.id)!,
   );
@@ -778,6 +782,13 @@ export async function getBudgetDetail(
     lines,
     plannedTotal,
     spentTotal,
+    outOfBudget:
+      outOfBudget.length === 0
+        ? null
+        : {
+            spent: round2(-outOfBudget.reduce((sum, r) => sum + r.amount, 0)),
+            count: outOfBudget.length,
+          },
     canManage: canManageBudget(b.groupId, roleByGroup),
     ...(await seriesNeighbours(b)),
     transactions: withTransactions ? await budgetTransactions(counted, viewerId, b.groupId) : [],

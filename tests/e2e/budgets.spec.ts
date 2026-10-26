@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 test.describe("budgets", () => {
   test.use({ storageState: "tests/e2e/.auth/owner.json" });
@@ -67,53 +67,7 @@ test.describe("budgets", () => {
   test("assigns a non-matching transaction to a budget (INCLUDE) and it counts", async ({
     page,
   }) => {
-    const stamp = Date.now();
-    const txLabel = `Assign ${stamp}`;
-    const budgetName = `Enveloppe ${stamp}`;
-
-    // 1) Seed an expense (no category → won't auto-match) on the first account.
-    await page.goto("/fr/accounts");
-    await expect(async () => {
-      await page
-        .getByRole("button", { name: /saisir une transaction/i })
-        .first()
-        .click();
-      await expect(page.locator('input[name="label"]')).toBeVisible();
-    }).toPass();
-    await page.fill('input[name="date"]', "2026-03-15");
-    await page.fill('input[name="amount"]', "-60");
-    await page.fill('input[name="label"]', txLabel);
-    await page.getByRole("button", { name: /^ajouter$/i }).click();
-    await expect(page.locator('input[name="label"]')).toBeHidden();
-
-    // 2) Create a budget on a period with no transaction, so only the INCLUDE counts.
-    await page.goto("/fr/budgets");
-    await expect(async () => {
-      await page.getByRole("button", { name: /nouveau budget/i }).click();
-      await expect(page.locator('input[name="name"]')).toBeVisible();
-    }).toPass();
-    await page.fill('input[name="name"]', budgetName);
-    await page.fill('input[name="periodStart"]', "2031-01-01");
-    await page.fill('input[name="plannedAmount"]', "200");
-    await page.getByRole("button", { name: /créer le budget/i }).click();
-    await expect(page.getByText(budgetName).first()).toBeVisible({ timeout: 15_000 });
-
-    // 3) Open the seeded transaction and assign it INCLUDE to the budget.
-    // Retried: the budget-create refresh can still be in flight and abort the goto.
-    await expect(async () => {
-      await page.goto(`/fr/transactions?search=${stamp}`);
-    }).toPass();
-    await page
-      .locator('[data-slot="transaction-row"]')
-      .filter({ hasText: txLabel })
-      .first()
-      .click({ timeout: 15_000 });
-    // Options read "name · period" (#161).
-    const budgetSelect = page.getByLabel(/choisir un budget/i);
-    const option = budgetSelect.locator("option", { hasText: budgetName });
-    await budgetSelect.selectOption((await option.getAttribute("value"))!);
-    await page.getByRole("button", { name: /^inclure$/i }).click();
-    await expect(page.getByText(/incluse/i).first()).toBeVisible({ timeout: 15_000 });
+    const budgetName = await includeIntoNewBudget(page, "-60");
 
     // 4) The budget detail now reflects the included spend (60,00 €).
     await page.goto("/fr/budgets");
@@ -125,6 +79,19 @@ test.describe("budgets", () => {
     await expect(page.getByText("60,00", { exact: false }).first()).toBeVisible({
       timeout: 15_000,
     });
+  });
+
+  test("an included income that matches no line shows out of budget (#345)", async ({ page }) => {
+    const budgetName = await includeIntoNewBudget(page, "80");
+    await page.goto("/fr/budgets");
+    const card = page.locator('[data-slot="budget-card"]').filter({ hasText: budgetName });
+    await expect(card).toContainText("-80,00 € / 200,00 €", { timeout: 15_000 });
+    await card.click();
+    await expect(page.getByRole("heading", { name: budgetName })).toBeVisible({ timeout: 15_000 });
+    const outOfBudget = page.locator('[data-slot="budget-out-of-budget"]');
+    await expect(outOfBudget).toContainText("Hors budget");
+    await expect(outOfBudget).toContainText("-80,00 €");
+    await expect(outOfBudget).toContainText("1 transaction incluse sans ligne correspondante");
   });
 
   test("renews a recurring budget, groups its periods, navigates, edits and deletes it", async ({
@@ -307,3 +274,57 @@ test.describe("budgets", () => {
     await expect(page.locator('[data-slot="budget-snapshot"]')).toBeVisible();
   });
 });
+
+// Seeds an uncategorised transaction, creates a 200 € catch-all budget on an empty
+// period and INCLUDEs the transaction into it; returns the budget name.
+async function includeIntoNewBudget(page: Page, amount: string): Promise<string> {
+  const stamp = Date.now();
+  const txLabel = `Assign ${stamp}`;
+  const budgetName = `Enveloppe ${stamp}`;
+
+  // 1) Seed a transaction (no category → won't auto-match) on the first account.
+  await page.goto("/fr/accounts");
+  await expect(async () => {
+    await page
+      .getByRole("button", { name: /saisir une transaction/i })
+      .first()
+      .click();
+    await expect(page.locator('input[name="label"]')).toBeVisible();
+  }).toPass();
+  await page.fill('input[name="date"]', "2026-03-15");
+  await page.fill('input[name="amount"]', amount);
+  await page.fill('input[name="label"]', txLabel);
+  await page.getByRole("button", { name: /^ajouter$/i }).click();
+  await expect(page.locator('input[name="label"]')).toBeHidden();
+
+  // 2) Create a budget on a period with no transaction, so only the INCLUDE counts.
+  await page.goto("/fr/budgets");
+  await expect(async () => {
+    await page.getByRole("button", { name: /nouveau budget/i }).click();
+    await expect(page.locator('input[name="name"]')).toBeVisible();
+  }).toPass();
+  await page.fill('input[name="name"]', budgetName);
+  await page.fill('input[name="periodStart"]', "2031-01-01");
+  await page.fill('input[name="plannedAmount"]', "200");
+  await page.getByRole("button", { name: /créer le budget/i }).click();
+  await expect(page.getByText(budgetName).first()).toBeVisible({ timeout: 15_000 });
+
+  // 3) Open the seeded transaction and assign it INCLUDE to the budget.
+  // Retried: the budget-create refresh can still be in flight and abort the goto.
+  await expect(async () => {
+    await page.goto(`/fr/transactions?search=${stamp}`);
+  }).toPass();
+  await page
+    .locator('[data-slot="transaction-row"]')
+    .filter({ hasText: txLabel })
+    .first()
+    .click({ timeout: 15_000 });
+  // Options read "name · period" (#161).
+  const budgetSelect = page.getByLabel(/choisir un budget/i);
+  const option = budgetSelect.locator("option", { hasText: budgetName });
+  await budgetSelect.selectOption((await option.getAttribute("value"))!);
+  await page.getByRole("button", { name: /^inclure$/i }).click();
+  await expect(page.getByText(/incluse/i).first()).toBeVisible({ timeout: 15_000 });
+
+  return budgetName;
+}
