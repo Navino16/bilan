@@ -556,7 +556,9 @@
       "transactions": "{count, plural, =0 {No transactions} one {# transaction} other {# transactions}}",
       "latestOnly": "Showing the {count, number} most recent.",
       "noTransactions": "No transaction counts in this budget yet.",
-      "hiddenTx": "Another member’s transaction"
+      "hiddenTx": "Another member’s transaction",
+      "outOfBudget": "Out of budget",
+      "outOfBudgetHint": "{count, plural, one {# included transaction} other {# included transactions}} matching no line"
     },
     "assign": {
       "title": "Assign to a budget",

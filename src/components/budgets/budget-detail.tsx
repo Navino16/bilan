@@ -164,6 +164,21 @@ export function BudgetDetail({
             </li>
           );
         })}
+        {detail.outOfBudget && (
+          <li data-slot="budget-out-of-budget">
+            <Card className="gap-1 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium">{t("detail.outOfBudget")}</span>
+                <span className="font-medium tabular-nums">
+                  {nf.format(detail.outOfBudget.spent)}
+                </span>
+              </div>
+              <p className="text-muted-foreground text-sm">
+                {t("detail.outOfBudgetHint", { count: detail.outOfBudget.count })}
+              </p>
+            </Card>
+          </li>
+        )}
       </ul>
 
       <Card className="gap-0 overflow-hidden p-0" data-slot="budget-transactions">

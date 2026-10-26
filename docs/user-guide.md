@@ -456,6 +456,8 @@ From a transaction's details, under **Assign to a budget**:
 2. Click **Include** to count the transaction in that budget even if it doesn't match a line, falls outside the period, or is on an account the budget doesn't cover. Click **Exclude** to keep it out.
 3. The assignment appears below with **Included** or **Excluded**. Click **Remove** to undo it.
 
+An included transaction that matches no line counts in the budget total, under a separate **Out of budget** card: it never changes a line.
+
 ### Household budgets
 
 A budget with a household scope belongs to the household:

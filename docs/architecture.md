@@ -1026,7 +1026,7 @@ Archive (#260): a budget manager can archive/unarchive (`budgets.service.archive
    - Unbalanced groups: only the primary (largest absolute amount) counts, with the net sum as its effective amount.
 3. Skip transactions with `BudgetAssignment(mode=EXCLUDE)` on this budget.
 4. Match lines: category (subtree) and/or account; a line without a category only takes expenses; when a category line and one of its ancestors both match, only the most specific counts; an expense no line matches goes to the catch-all lines.
-5. A transaction with `BudgetAssignment(mode=INCLUDE)` counts even if no line matches (explicit override): it goes to the total and to the first line.
+5. A transaction with `BudgetAssignment(mode=INCLUDE)` counts even if no line matches (explicit override): it goes to the total and to the budget's out-of-budget sum (`outOfBudget`, shown as its own card on the detail), never to a line (#345).
 6. Sum effective amounts → `spent` per line and for the budget.
 7. Per line (`lib/budgets.lineStatus`): `{ plannedAmount, spent, remaining, percent, status: "OK" | "WARN" (≥ 80 %) | "REACHED" | "OVER" }`. With `plannedAmount = 0`, no spending is OK at 0 %; any spending is OVER with `percent = null` (shown as "—", full bar).
 

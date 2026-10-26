@@ -456,6 +456,8 @@ Depuis le détail d’une transaction, sous **Assigner à un budget** :
 2. Cliquez sur **Inclure** pour compter la transaction dans ce budget même si elle ne correspond à aucune ligne, sort de la période ou se trouve sur un compte que le budget ne couvre pas. Cliquez sur **Exclure** pour l’en écarter.
 3. L’affectation apparaît en dessous avec **Incluse** ou **Exclue**. Cliquez sur **Retirer** pour l’annuler.
 
+Une transaction incluse qui ne correspond à aucune ligne compte dans le total du budget, sous une carte **Hors budget** à part : elle ne modifie aucune ligne.
+
 ### Budgets de foyer
 
 Un budget dont la portée est un foyer appartient au foyer :
