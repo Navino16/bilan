@@ -136,13 +136,18 @@
     "matchType": "REGEX"
   },
   {
-    "category": "housing.charges",
+    "category": "housing.water",
     "pattern": "\\bVEOLIA\\b",
     "matchType": "REGEX"
   },
   {
-    "category": "housing.charges",
+    "category": "housing.water",
     "pattern": "\\bSUEZ\\b",
+    "matchType": "REGEX"
+  },
+  {
+    "category": "housing.water",
+    "pattern": "\\bSAUR\\b",
     "matchType": "REGEX"
   },
   {
