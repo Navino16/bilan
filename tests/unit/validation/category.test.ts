@@ -54,3 +54,17 @@ describe("categoryInputSchema", () => {
     );
   });
 });
+
+describe("categoryInputSchema shiftDays", () => {
+  it("accepts 1 to 15 days and treats an empty field as off", () => {
+    expect(categoryInputSchema.parse({ name: "x", shiftDays: "5" }).shiftDays).toBe(5);
+    expect(categoryInputSchema.parse({ name: "x", shiftDays: "15" }).shiftDays).toBe(15);
+    expect(categoryInputSchema.parse({ name: "x", shiftDays: "" }).shiftDays).toBeUndefined();
+  });
+
+  it("rejects 0, 16 and fractions", () => {
+    for (const shiftDays of ["0", "16", "2.5"]) {
+      expect(categoryInputSchema.safeParse({ name: "x", shiftDays }).success).toBe(false);
+    }
+  });
+});

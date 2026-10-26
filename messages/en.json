@@ -703,7 +703,10 @@
     "customSymbol": "Custom symbol ({glyph})",
     "addSymbol": "Enter another symbol",
     "symbolInput": "Custom symbol",
-    "symbolInvalid": "A single character or emoji."
+    "symbolInvalid": "A single character or emoji.",
+    "shift": "Count toward the next month",
+    "shiftHint": "Transactions from the last days of the month count toward the next month, like a salary paid at the end of the month.",
+    "shiftDays": "Number of days"
   },
   "transactions": {
     "title": "Transactions",
