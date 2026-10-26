@@ -332,6 +332,7 @@ CREATE TABLE `Category` (
     `userId` VARCHAR(191) NULL,
     `groupId` VARCHAR(191) NULL,
     `isDefault` BOOLEAN NOT NULL DEFAULT false,
+    `shiftDays` INTEGER NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     INDEX `Category_userId_idx`(`userId`),
@@ -345,6 +346,8 @@ CREATE TABLE `Transaction` (
     `id` VARCHAR(191) NOT NULL,
     `accountId` VARCHAR(191) NOT NULL,
     `date` DATETIME(3) NOT NULL,
+    `periodDate` DATETIME(3) NOT NULL DEFAULT (`date`),
+    `periodManual` BOOLEAN NOT NULL DEFAULT false,
     `amount` DECIMAL(12, 2) NOT NULL,
     `type` VARCHAR(191) NOT NULL,
     `labelEnc` TEXT NOT NULL,
@@ -362,6 +365,7 @@ CREATE TABLE `Transaction` (
     `importBatchId` VARCHAR(191) NULL,
 
     INDEX `Transaction_accountId_date_createdAt_idx`(`accountId`, `date`, `createdAt`),
+    INDEX `Transaction_accountId_periodDate_idx`(`accountId`, `periodDate`),
     INDEX `Transaction_categoryId_date_idx`(`categoryId`, `date`),
     INDEX `Transaction_accountId_categoryId_idx`(`accountId`, `categoryId`),
     INDEX `Transaction_labelHash_idx`(`labelHash`),
