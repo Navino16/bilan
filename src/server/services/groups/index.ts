@@ -1,4 +1,5 @@
 import { db } from "@/server/db";
+import { resetPeriodDatesOfOwner } from "@/server/services/transactions/period-date";
 import { logEvent } from "@/server/services/audit";
 import { nameSchema } from "@/lib/schemas/name";
 import { GROUP_DESCRIPTION_MAX, canManageInGroup, canRemoveMember } from "@/lib/validation/group";
@@ -123,7 +124,10 @@ export async function groupDeletionImpact(
 
 export async function deleteGroup(groupId: string, actor: { id: string }): Promise<void> {
   await requireGroupRole(groupId, actor.id, "OWNER");
-  await db.group.delete({ where: { id: groupId } });
+  await db.$transaction(async (tx) => {
+    await resetPeriodDatesOfOwner({ groupId }, tx);
+    await tx.group.delete({ where: { id: groupId } });
+  });
   await logEvent({ userId: actor.id, action: "group.deleted", entity: "Group", entityId: groupId });
 }
 

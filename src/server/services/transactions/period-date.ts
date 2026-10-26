@@ -29,3 +29,19 @@ export async function syncAutoPeriodDates(
   }
   return count;
 }
+
+// Before a cascade deletes an owner's categories (household, user), whose SetNull would leave
+// their auto-shifted rows uncategorized but still shifted.
+export async function resetPeriodDatesOfOwner(
+  owner: { userId: string } | { groupId: string },
+  client: Pick<Prisma.TransactionClient, "$executeRaw"> = db,
+): Promise<number> {
+  const match =
+    "userId" in owner
+      ? Prisma.sql`c.userId = ${owner.userId}`
+      : Prisma.sql`c.groupId = ${owner.groupId}`;
+  return client.$executeRaw`
+    UPDATE \`Transaction\` t JOIN \`Category\` c ON c.id = t.categoryId
+    SET t.periodDate = t.date
+    WHERE t.periodManual = 0 AND c.shiftDays IS NOT NULL AND ${match}`;
+}

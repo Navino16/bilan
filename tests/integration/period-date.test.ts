@@ -12,6 +12,8 @@ import {
 import { insertRows } from "@/server/services/imports/commit";
 import { createRule } from "@/server/services/categorization";
 import { applyRule } from "@/server/services/categorization/apply";
+import { deleteGroup } from "@/server/services/groups";
+import { eraseUser } from "@/server/services/rgpd";
 
 const owner = "period_owner";
 const stranger = "period_stranger";
@@ -218,5 +220,36 @@ describe("transaction writes keep periodDate in sync", () => {
     const imported = await db.transaction.findFirstOrThrow({ where: { importBatchId: batch.id } });
     expect(imported.categoryId).toBe(sal);
     expect(await periodDay(imported.id)).toBe("2026-11-01");
+  });
+});
+
+describe("cascaded category deletions put shifted rows back on their real date", () => {
+  it("on household deletion", async () => {
+    const group = await db.group.create({ data: { name: "Foyer Shift", createdById: owner } });
+    await db.groupMember.create({ data: { groupId: group.id, userId: owner, role: "OWNER" } });
+    const cat = await db.category.create({
+      data: { groupId: group.id, name: "Paie foyer", shiftDays: 5 },
+    });
+    const id = await insert("2026-10-30T00:00:00.000Z", cat.id);
+    await syncAutoPeriodDates({ ids: [id] });
+    expect(await periodDay(id)).toBe("2026-11-01");
+
+    await deleteGroup(group.id, { id: owner });
+    expect(await periodDay(id)).toBe("2026-10-30");
+  });
+
+  it("on user erasure, for their categories on someone else's account", async () => {
+    const erased = "period_erased";
+    await db.user.deleteMany({ where: { id: erased } });
+    await db.user.create({ data: { id: erased, email: "period-erased@bilan.local" } });
+    const cat = await db.category.create({
+      data: { userId: erased, name: "Paie partagée", shiftDays: 5 },
+    });
+    const id = await insert("2026-10-30T00:00:00.000Z", cat.id);
+    await syncAutoPeriodDates({ ids: [id] });
+    expect(await periodDay(id)).toBe("2026-11-01");
+
+    await eraseUser(db, erased);
+    expect(await periodDay(id)).toBe("2026-10-30");
   });
 });
