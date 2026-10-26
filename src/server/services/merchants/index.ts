@@ -71,10 +71,12 @@ async function allMerchantParts(userId: string): Promise<MerchantPart[]> {
       GROUP BY t.merchantKeyHash, t.categoryId`,
     loadRows(accountIds, ALL_TIME, {
       withLabels: true,
+      realDates: true,
       where: { linkMembership: { isNot: null } },
     }),
     loadRows(accountIds, ALL_TIME, {
       withLabels: true,
+      realDates: true,
       where: { merchantKeyHash: null, linkMembership: { is: null } },
     }),
   ]);

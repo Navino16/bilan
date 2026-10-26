@@ -17,7 +17,13 @@ async function tx(
   label: string,
   amount: number,
   date: string,
-  opts: { categoryId?: string; type?: string; hashed?: boolean; account?: string } = {},
+  opts: {
+    categoryId?: string;
+    type?: string;
+    hashed?: boolean;
+    account?: string;
+    periodDate?: string;
+  } = {},
 ) {
   const { tokens, merchantKeyHash, ...fields } = buildSecureFields({ label, rawLabel: label });
   void tokens;
@@ -25,6 +31,7 @@ async function tx(
     data: {
       accountId: opts.account ?? accountId,
       date: new Date(date),
+      ...(opts.periodDate ? { periodDate: new Date(opts.periodDate) } : {}),
       amount,
       type: opts.type ?? "CARD",
       categoryId: opts.categoryId ?? null,
@@ -38,7 +45,10 @@ async function tx(
 // The directory before #296: every visible row decrypted, links collapsed, then grouped.
 async function rowByRowDirectory() {
   const all = { from: new Date(0), to: new Date(Date.UTC(9999, 11, 31)), year: null, month: null };
-  const { rows } = await loadRows([accountId, savings], all, { withLabels: true });
+  const { rows } = await loadRows([accountId, savings], all, {
+    withLabels: true,
+    realDates: true,
+  });
   return topMerchants(merchantRowsOf(rows), Infinity);
 }
 
@@ -72,6 +82,13 @@ beforeAll(async () => {
   const order = await tx("CB AMAZON", -80, "2026-02-10", { categoryId: shops });
   const partial = await tx("CB AMAZON", 30, "2026-02-12", { account: savings });
   await createLink({ transactionIds: [order, partial], userId: owner });
+  // Rows counted toward the next month (#341): the latest label goes by the real date.
+  await tx("CB PICARD", -20, "2026-03-30");
+  await tx("CB Picard", -18, "2026-03-29", { hashed: false, periodDate: "2026-04-01" });
+  await tx("CB NICOLAS", -20, "2026-03-31");
+  const wine = await tx("CB Nicolas", -50, "2026-03-28", { periodDate: "2026-04-01" });
+  const wineRefund = await tx("CB Nicolas", 10, "2026-04-02");
+  await createLink({ transactionIds: [wine, wineRefund], userId: owner });
 });
 
 afterAll(async () => {
@@ -86,6 +103,11 @@ describe("merchant directory (#296)", () => {
       expect.arrayContaining(["LIDL", "MONOPRIX", "AMAZON"]),
     );
     expect(await getMerchantDirectory(owner)).toEqual({ renamed: [], others: expected });
+  });
+
+  it("names a merchant after its latest row by real date, not by assigned month", async () => {
+    const { others } = await getMerchantDirectory(owner);
+    expect(others.map((m) => m.label)).toEqual(expect.arrayContaining(["PICARD", "NICOLAS"]));
   });
 
   it("keeps a renamed merchant's totals", async () => {
