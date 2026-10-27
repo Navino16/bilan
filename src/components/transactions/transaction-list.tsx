@@ -163,6 +163,30 @@ export function TransactionList({
     />
   );
 
+  // Also on the empty state: a recategorized row can leave the filter and empty the list (#351).
+  const dialogs = (
+    <>
+      {deleteIds && (
+        <DeleteTransactionsDialog
+          ids={deleteIds}
+          onClose={() => setDeleteIds(null)}
+          onDeleted={onDeleted}
+        />
+      )}
+
+      {rule && (
+        <CreateRuleDialog
+          open={!!rule}
+          onOpenChange={(o) => !o && setRule(null)}
+          pattern={rule.pattern}
+          categoryId={rule.categoryId}
+          categoryName={rule.categoryName}
+          categoryColor={rule.categoryColor}
+        />
+      )}
+    </>
+  );
+
   if (items.length === 0)
     return (
       <>
@@ -170,6 +194,7 @@ export function TransactionList({
           {searching ? t("emptySearch", { min: MIN_SEARCH_WORD }) : t("empty")}
         </p>
         {selectionBar}
+        {dialogs}
       </>
     );
 
@@ -393,24 +418,7 @@ export function TransactionList({
 
       {selectionBar}
 
-      {deleteIds && (
-        <DeleteTransactionsDialog
-          ids={deleteIds}
-          onClose={() => setDeleteIds(null)}
-          onDeleted={onDeleted}
-        />
-      )}
-
-      {rule && (
-        <CreateRuleDialog
-          open={!!rule}
-          onOpenChange={(o) => !o && setRule(null)}
-          pattern={rule.pattern}
-          categoryId={rule.categoryId}
-          categoryName={rule.categoryName}
-          categoryColor={rule.categoryColor}
-        />
-      )}
+      {dialogs}
     </div>
   );
 }
