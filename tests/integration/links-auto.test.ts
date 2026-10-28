@@ -3,6 +3,8 @@ import { db } from "@/server/db";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
 import { autoLinkTransfers, createLink, deleteLink, pairKeyOf } from "@/server/services/links";
 import { getDashboard } from "@/server/services/dashboard";
+import { createTransaction } from "@/server/services/transactions";
+import { commitCsvBatch, createCsvBatch, previewCsvBatch } from "@/server/services/imports";
 import { comparisonFor, monthPeriod } from "@/lib/period";
 
 const owner = "autolink_owner";
@@ -40,6 +42,7 @@ async function clean() {
   });
   await db.ignoredLinkSuggestion.deleteMany({ where: { userId: { in: [owner, other] } } });
   await db.transaction.deleteMany({ where: { accountId: { in: accounts } } });
+  await db.importBatch.deleteMany({ where: { accountId: { in: accounts } } });
 }
 
 beforeAll(async () => {
@@ -130,5 +133,43 @@ describe("autoLinkTransfers", () => {
     await autoLinkTransfers(owner);
     const after = await getDashboard(owner, period, comparison);
     expect([after.totals.income, after.totals.expense]).toEqual([0, 0]);
+  });
+});
+
+describe("automatic linking hooks", () => {
+  it("links at CSV import", async () => {
+    const out = await tx(courant, "2026-04-02", -300);
+    const csv = "Date;Libellé;Débit;Crédit\n03/04/2026;VIR SEPA EPARGNE;;300,00";
+    const batch = await createCsvBatch(
+      { accountId: livret, filename: "l.csv", text: csv },
+      { id: owner },
+    );
+    const preview = await previewCsvBatch(batch.id, owner);
+    await commitCsvBatch(batch.id, preview.mapping, { id: owner });
+    const link = await linkOf(out);
+    expect(link?.link.auto).toBe(true);
+  });
+
+  it("links a manual transaction when asked", async () => {
+    const out = await tx(courant, "2026-04-02", -80);
+    const input = { accountId: livret, date: "2026-04-03", type: "TRANSFER" as const };
+    const plain = await createTransaction({ ...input, amount: 80, label: "VIR" }, { id: owner });
+    expect(await linkOf(out)).toBeNull();
+    await db.transaction.delete({ where: { id: plain.id } });
+    await createTransaction(
+      { ...input, amount: 80, label: "VIR" },
+      { id: owner },
+      { autoLink: true },
+    );
+    expect((await linkOf(out))?.link.auto).toBe(true);
+  });
+
+  it("the backfill is idempotent", async () => {
+    await tx(courant, "2026-02-02", -10);
+    await tx(livret, "2026-02-03", 10);
+    await tx(courant, "2026-05-02", -20);
+    await tx(livret, "2026-05-03", 20);
+    expect(await autoLinkTransfers(owner)).toEqual({ linked: 2 });
+    expect(await autoLinkTransfers(owner)).toEqual({ linked: 0 });
   });
 });

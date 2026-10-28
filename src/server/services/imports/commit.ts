@@ -12,6 +12,7 @@ import { trimBatchMetadata, type BalanceAdjustment } from "@/lib/import-status";
 import { deriveType } from "./derive-type";
 import { ImportAccessError } from "./errors";
 import { findProbableDuplicates } from "./probable";
+import { autoLinkTransfers } from "@/server/services/links/auto";
 import type { CommitSummary, NormalizedRow } from "./types";
 
 // Dedups against existing `(accountId, externalId)` rows (and in-file dupes), skips
@@ -233,12 +234,36 @@ export async function finalizeBatch(
       metadata: { previous: a.previous, set: a.set, batchId },
     });
   }
+  await autoLinkImported(batchId, accountIds);
   return {
     batchId: updated.id,
     totalRows: totals.total,
     importedRows: totals.imported,
     skippedRows: totals.skipped,
   };
+}
+
+// Links the batch's transfer legs for each account owner; the import stands even if it fails.
+async function autoLinkImported(batchId: string, accountIds: string[]): Promise<void> {
+  try {
+    const [range, owners] = await Promise.all([
+      db.transaction.aggregate({
+        where: { importBatchId: batchId },
+        _min: { date: true },
+        _max: { date: true },
+      }),
+      db.bankAccount.findMany({
+        where: { id: { in: accountIds } },
+        select: { ownerId: true },
+        distinct: ["ownerId"],
+      }),
+    ]);
+    const from = range._min.date ?? undefined;
+    const to = range._max.date ?? undefined;
+    for (const { ownerId } of owners) await autoLinkTransfers(ownerId, { from, to });
+  } catch (e) {
+    console.error("auto-link after import failed", batchId, e);
+  }
 }
 
 // CSV path: insert into the batch's single account, then finalize.

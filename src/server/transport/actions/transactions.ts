@@ -59,7 +59,7 @@ export async function createTransactionAction(
     const { id } = await createTransaction(
       { ...parsed.data, categoryId: categoryId ?? undefined },
       { id: user.id },
-      { manuallyCategorized: manual },
+      { manuallyCategorized: manual, autoLink: true },
     );
     // Best-effort: a failed counter must not report a saved transaction as failed.
     await recordHits([ruleId]).catch(() => {});

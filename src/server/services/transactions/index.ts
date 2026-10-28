@@ -24,6 +24,7 @@ import { recordHits, suggest } from "@/server/services/categorization";
 import { manualPeriodDate, type YearMonth } from "@/lib/assigned-month";
 import { buildSecureFields } from "./secure-fields";
 import { syncAutoPeriodDates } from "./period-date";
+import { autoLinkTransfers } from "@/server/services/links/auto";
 import {
   EXPORT_COLUMNS,
   pageRows,
@@ -72,7 +73,7 @@ export type TransactionView = {
 export async function createTransaction(
   input: TransactionInput,
   actor: { id: string },
-  opts: { externalId?: string; manuallyCategorized?: boolean } = {},
+  opts: { externalId?: string; manuallyCategorized?: boolean; autoLink?: boolean } = {},
 ): Promise<{ id: string }> {
   const data = transactionInputSchema.parse(input);
   if (!(await canWriteAccount(actor.id, data.accountId))) {
@@ -104,6 +105,13 @@ export async function createTransaction(
     },
   });
   if (tx.categoryId) await syncAutoPeriodDates({ ids: [tx.id] });
+  if (opts.autoLink) {
+    const { ownerId } = await db.bankAccount.findUniqueOrThrow({
+      where: { id: data.accountId },
+      select: { ownerId: true },
+    });
+    await autoLinkTransfers(ownerId, { from: data.date, to: data.date });
+  }
   await logEvent({
     userId: actor.id,
     action: "transaction.created",

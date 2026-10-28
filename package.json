@@ -28,6 +28,7 @@
     "db:studio": "prisma studio",
     "db:seed-dev": "tsx --env-file=.env scripts/seed-dev-user.ts",
     "db:reindex-search": "tsx --env-file=.env scripts/reindex-search-tokens.ts",
+    "db:auto-link": "tsx --env-file=.env scripts/auto-link-transfers.ts",
     "icons": "tsx scripts/generate-icons.ts",
     "docs:db": "bash scripts/docs-db.sh",
     "docs:screenshots": "tsx scripts/docs-screenshots.ts",

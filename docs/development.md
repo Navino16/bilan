@@ -43,6 +43,7 @@ already exists; `npm run db:seed-dev -- --reset` wipes and re-seeds it.
 | `npm run ci`                         | lint + typecheck + test                     |
 | `npm run db:seed-dev`                | Seed the demo user (above)                  |
 | `npm run db:reindex-search`          | Rebuild the search index                    |
+| `npm run db:auto-link`               | Link past transfers between own accounts    |
 | `npm run db:backup-dev`              | Encrypted dump of the dev DB                |
 | `npm run icons`                      | Regenerate the favicon, PWA icons and logo  |
 | `npm run docs:db` / `docs:screenshots` | Regenerate the documentation screenshots  |
@@ -57,6 +58,10 @@ change to the text normalization, add `-- --rehash` to rewrite `labelHash`/`rawL
 It runs from a source checkout (`npm ci`) whose `.env` points at the target database with the
 same `DATA_ENCRYPTION_KEY`/`SEARCH_TOKEN_KEY`: the Docker runtime image ships neither the
 scripts nor `tsx`.
+
+`npm run db:auto-link` links the two legs of past transfers between accounts a user owns, as
+imports and manual entries do from now on (same amount in opposite directions, at most 4 days
+apart, one obvious match). Pairs the user unlinked are never linked again; it is safe to re-run.
 
 ## Schema changes
 
