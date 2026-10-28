@@ -2020,6 +2020,7 @@
           }
         },
         "link": {
+          "autoCreated": "Automatic transfer links created",
           "created": "Link created",
           "deleted": "Link deleted",
           "suggestionIgnored": "Link suggestion ignored",

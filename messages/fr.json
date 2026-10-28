@@ -2020,6 +2020,7 @@
           }
         },
         "link": {
+          "autoCreated": "Liaisons automatiques de virements créées",
           "created": "Liaison créée",
           "deleted": "Liaison supprimée",
           "suggestionIgnored": "Suggestion de liaison ignorée",
