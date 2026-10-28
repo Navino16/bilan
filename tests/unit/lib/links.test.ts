@@ -8,6 +8,9 @@ import {
   collapseLinkedRows,
   labelWords,
   pairScore,
+  findAutoLinkPairs,
+  AUTO_LINK_WINDOW_DAYS,
+  type AutoLinkCandidate,
 } from "@/lib/links";
 
 describe("netSum", () => {
@@ -229,6 +232,76 @@ describe("link suggestion scoring (#337)", () => {
     const b = row("b", -10, 1, { accountId: "y", type: "TRANSFER", merchantKeyHash: "h" });
     expect(pairScore(a, b, 0)).toBe(8);
     expect(pairScore(a, b, 6)).toBe(6);
+  });
+});
+
+describe("findAutoLinkPairs", () => {
+  const row = (id: string, accountId: string, amount: number, day: string): AutoLinkCandidate => ({
+    id,
+    accountId,
+    amount,
+    date: new Date(`${day}T00:00:00.000Z`),
+  });
+  const run = (rows: AutoLinkCandidate[], ignored: string[] = []) =>
+    findAutoLinkPairs(rows, { windowDays: AUTO_LINK_WINDOW_DAYS, ignored: new Set(ignored) });
+
+  it("links a cross-account pair 2 days apart", () => {
+    expect(run([row("out", "C", -200, "2026-03-03"), row("in", "L", 200, "2026-03-05")])).toEqual([
+      { positiveId: "in", negativeId: "out" },
+    ]);
+  });
+
+  it("ignores a same-account opposite pair", () => {
+    const rows = [
+      { ...row("buy", "C", -30, "2026-03-03"), merchantKeyHash: "h" },
+      { ...row("refund", "C", 30, "2026-03-04"), merchantKeyHash: "h" },
+    ];
+    expect(run(rows)).toEqual([]);
+  });
+
+  it("ignores pairs more than 4 days apart", () => {
+    expect(run([row("out", "C", -200, "2026-03-01"), row("in", "L", 200, "2026-03-06")])).toEqual(
+      [],
+    );
+  });
+
+  it("ignores a one-cent difference", () => {
+    expect(
+      run([row("out", "C", -100.01, "2026-03-03"), row("in", "L", 100, "2026-03-03")]),
+    ).toEqual([]);
+  });
+
+  it("skips an ignored pair", () => {
+    const rows = [row("out", "C", -200, "2026-03-03"), row("in", "L", 200, "2026-03-04")];
+    expect(run(rows, [pairKeyOf("in", "out")])).toEqual([]);
+  });
+
+  it("leaves equal transfers on the same day unlinked", () => {
+    const rows = [
+      row("a1", "L", 100, "2026-03-03"),
+      row("a2", "L", 100, "2026-03-03"),
+      row("b1", "C", -100, "2026-03-03"),
+      row("b2", "C", -100, "2026-03-03"),
+    ];
+    expect(run(rows)).toEqual([]);
+  });
+
+  it("picks the strictly closer candidate", () => {
+    const rows = [
+      row("in", "L", 50, "2026-03-04"),
+      row("near", "C", -50, "2026-03-03"),
+      row("far", "J", -50, "2026-03-01"),
+    ];
+    expect(run(rows)).toEqual([{ positiveId: "in", negativeId: "near" }]);
+  });
+
+  it("requires the match to be mutual", () => {
+    const rows = [
+      row("out", "C", -80, "2026-03-03"),
+      row("in1", "L", 80, "2026-03-04"),
+      row("in2", "J", 80, "2026-03-05"),
+    ];
+    expect(run(rows)).toEqual([{ positiveId: "in1", negativeId: "out" }]);
   });
 });
 

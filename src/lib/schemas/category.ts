@@ -28,6 +28,7 @@ export const categoryInputSchema = z.object({
     emptyToUndefined,
     z.coerce.number().int().min(SHIFT_DAYS_MIN).max(SHIFT_DAYS_MAX).optional(),
   ),
+  savings: z.boolean().optional(),
 });
 
 export type CategoryInput = z.input<typeof categoryInputSchema>;

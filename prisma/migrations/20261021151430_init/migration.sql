@@ -333,6 +333,7 @@ CREATE TABLE `Category` (
     `groupId` VARCHAR(191) NULL,
     `isDefault` BOOLEAN NOT NULL DEFAULT false,
     `shiftDays` INTEGER NULL,
+    `savings` BOOLEAN NOT NULL DEFAULT false,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     INDEX `Category_userId_idx`(`userId`),
@@ -448,6 +449,7 @@ CREATE TABLE `MerchantAlias` (
 CREATE TABLE `TransactionLink` (
     `id` VARCHAR(191) NOT NULL,
     `name` VARCHAR(191) NULL,
+    `auto` BOOLEAN NOT NULL DEFAULT false,
     `createdById` VARCHAR(191) NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 

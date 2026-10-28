@@ -712,6 +712,8 @@
     "symbolInvalid": "A single character or emoji.",
     "shift": "Count toward the next month",
     "shiftHint": "Transactions from the last days of the month count toward the next month, like a salary paid at the end of the month.",
+    "savings": "Counts as savings",
+    "savingsHint": "Its spending counts toward the dashboard's net savings, subcategories included.",
     "shiftDays": "Number of days"
   },
   "transactions": {
@@ -1206,7 +1208,8 @@
     "kpi": {
       "income": "Income",
       "expense": "Expenses",
-      "net": "Net balance"
+      "net": "Net balance",
+      "savings": "Net savings"
     },
     "vsPrev": "{arrow} {pct} vs previous period",
     "noPrev": "Nothing in the previous period",
@@ -2018,6 +2021,7 @@
           }
         },
         "link": {
+          "autoCreated": "Automatic transfer links created",
           "created": "Link created",
           "deleted": "Link deleted",
           "suggestionIgnored": "Link suggestion ignored",

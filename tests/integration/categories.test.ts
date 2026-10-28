@@ -57,6 +57,12 @@ describe("seedDefaultCategories", () => {
     expect(rules.find((r) => r.pattern === "\\bTER\\b")?.matchType).toBe("REGEX");
   });
 
+  it("flags only the default savings root as counting as savings", async () => {
+    const all = await db.category.findMany({ where: { userId } });
+    const flagged = all.filter((c) => c.savings);
+    expect(flagged.map((c) => [c.name, c.parentId])).toEqual([["Épargne", null]]);
+  });
+
   it("is idempotent-safe: a second seed does not duplicate when categories already exist", async () => {
     const before = await db.category.count({ where: { userId } });
     const rulesBefore = await db.categorizationRule.count({ where: { userId } });
@@ -283,6 +289,32 @@ describe("categories service", () => {
       ).rejects.toBeInstanceOf(CategoryAccessError);
       expect(await db.category.count({ where: { id: root.id } })).toBe(1);
     });
+  });
+});
+
+describe("category savings flag", () => {
+  const owner = "cat_savings_owner";
+
+  beforeAll(async () => {
+    await db.user.deleteMany({ where: { id: owner } });
+    await db.user.create({ data: { id: owner, email: "cat-savings@bilan.local" } });
+  });
+
+  afterAll(async () => {
+    await db.category.deleteMany({ where: { userId: owner } });
+    await db.user.deleteMany({ where: { id: owner } });
+  });
+
+  it("is set on create and cleared on update", async () => {
+    const { id } = await createCategory({ name: "PEA", savings: true }, { id: owner });
+    expect((await db.category.findUniqueOrThrow({ where: { id } })).savings).toBe(true);
+    await updateCategory(id, { name: "PEA", savings: false }, { id: owner });
+    expect((await db.category.findUniqueOrThrow({ where: { id } })).savings).toBe(false);
+  });
+
+  it("defaults to false", async () => {
+    const { id } = await createCategory({ name: "Loisirs" }, { id: owner });
+    expect((await db.category.findUniqueOrThrow({ where: { id } })).savings).toBe(false);
   });
 });
 

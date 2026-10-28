@@ -2,7 +2,6 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { AssignedMonthBadge } from "@/components/transactions/assigned-month";
-import { cn } from "@/lib/utils";
 import { overline, CategoryAvatar } from "@/components/transactions/bits";
 import { Donut, MiniBars } from "./charts";
 import { PeriodNav } from "./period-nav";
@@ -90,6 +89,7 @@ export async function DashboardView({
   // The net can change sign between periods, which makes a % meaningless (issue #112 §7):
   // it shows the difference in euros instead.
   const netDiff = data.totals.net - data.previous.net;
+  const savingsDiff = data.savings.current - data.savings.previous;
   const hasPrevious = data.previous.income !== 0 || data.previous.expense !== 0;
   const signedMoney = new Intl.NumberFormat(locale, {
     style: "currency",
@@ -125,6 +125,23 @@ export async function DashboardView({
         data.totals.net > 0
           ? "var(--income)"
           : data.totals.net < 0
+            ? "var(--expense)"
+            : "var(--foreground)",
+    },
+    {
+      key: "savings",
+      amount: signedMoney.format(data.savings.current),
+      note: hasPrevious
+        ? t(months ? "vsAvgAmount" : "vsPrevAmount", {
+            arrow: savingsDiff > 0 ? "↗" : savingsDiff < 0 ? "↘" : "=",
+            amount: signedMoney.format(savingsDiff),
+            months,
+          })
+        : noReference,
+      tone:
+        data.savings.current > 0
+          ? "var(--income)"
+          : data.savings.current < 0
             ? "var(--expense)"
             : "var(--foreground)",
     },
@@ -176,16 +193,9 @@ export async function DashboardView({
       <AccountsOverview accounts={accounts} locale={locale} />
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-3">
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-3">
         {kpis.map((k) => (
-          <Card
-            key={k.key}
-            data-slot="kpi-card"
-            className={cn(
-              "gap-1 p-3.5 md:gap-2 md:p-5",
-              k.key === "net" && "col-span-2 md:col-span-1",
-            )}
-          >
+          <Card key={k.key} data-slot="kpi-card" className="gap-1 p-3.5 md:gap-2 md:p-5">
             <div className={overline}>{t(`kpi.${k.key}`)}</div>
             <div
               className="font-display text-[1.375rem] leading-none tabular-nums md:text-3xl"

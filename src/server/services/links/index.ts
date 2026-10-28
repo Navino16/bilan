@@ -66,13 +66,23 @@ export async function createLink(input: {
 export async function deleteLink(linkId: string, userId: string): Promise<void> {
   const link = await db.transactionLink.findUnique({
     where: { id: linkId },
-    include: { members: { select: { transaction: { select: { accountId: true } } } } },
+    include: {
+      members: { select: { transactionId: true, transaction: { select: { accountId: true } } } },
+    },
   });
   if (!link) throw new LinkAccessError("NOT_FOUND");
   await assertCanWriteAll(
     userId,
     link.members.map((m) => m.transaction.accountId),
   );
+  if (link.auto && link.members.length === 2) {
+    const [a, b] = link.members.map((m) => m.transactionId);
+    await db.ignoredLinkSuggestion.upsert({
+      where: { userId_pairKey: { userId: link.createdById, pairKey: pairKeyOf(a, b) } },
+      update: {},
+      create: { userId: link.createdById, pairKey: pairKeyOf(a, b) },
+    });
+  }
   await db.transactionLink.delete({ where: { id: linkId } });
   await logEvent({ userId, action: "link.deleted", entity: "TransactionLink", entityId: linkId });
 }
@@ -291,3 +301,4 @@ export async function ignoreSuggestion(userId: string, pairKey: string): Promise
 }
 
 export { pairKeyOf };
+export { autoLinkTransfers } from "./auto";

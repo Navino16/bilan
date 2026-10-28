@@ -308,7 +308,8 @@ To create one:
 4. Pick a **Color**. The **+** button opens a custom colour picker. A sub-category can use its parent's colour.
 5. Pick a **Symbol**, or enter any character or emoji with **+**.
 6. Optionally turn on **Count toward the next month**: see [Count a transaction in another month](#count-a-transaction-in-another-month).
-7. Click **Create category**.
+7. Optionally turn on **Counts as savings**: spending in this category and its sub-categories counts toward the dashboard's **Net savings** (money put aside on an account Bilan doesn't track, such as a brokerage account or a child's savings book). It is on for the default **Savings** category.
+8. Click **Create category**.
 
 To delete a category, open its **⋮** menu and choose **Delete**. Its sub-categories are deleted too. If transactions, rules or budget lines use it, choose where to move them with **Move to**. With **No category**, transactions become uncategorized and the rules and budget lines are deleted.
 
@@ -391,7 +392,13 @@ Linked transactions stay in the list with a **Linked** tag.
 - **From suggestions**: on **Transactions**, click **Suggestions**. Bilan suggests pairs with the same amount and opposite signs, at most 30 days apart. Within one account, only pairs whose labels look alike (same merchant, or a shared word like a fee and its rebate) are suggested; the most likely pairs come first. Click **Link** to accept a pair or **Ignore** to dismiss it. Ignored pairs are listed further down, and **Restore** makes a pair eligible again. **Settings** changes, for you only, the **Maximum gap (days)** between the two transactions (0 for the same day, up to 365) and the **Minimum amount** below which pairs aren't suggested.
 - **By hand**: [select](#select-several-transactions) two or more transactions and click **Link**. You can also open a transaction and click **Link to other transactions**: it is selected, and stays selected while you search or filter for the others (the selection bar names it).
 
-Nothing is linked automatically. Linking requires write access to every account involved.
+Linking requires write access to every account involved.
+
+### Automatic links
+
+Bilan links the two sides of a transfer between two accounts you own by itself, when you import a statement or add a transaction by hand: same amount in opposite directions, at most 4 days apart, and one obvious match. When it isn't sure (two transfers of the same amount on the same day, for example), the pair stays in the suggestions. Transfers to an account someone shares with you are never linked automatically.
+
+To undo an automatic link, [unlink](#unlink) it: Bilan won't link that pair again.
 
 ### Unlink
 
@@ -552,7 +559,7 @@ For a single month, **Compared with** lets you compare against **the previous mo
 
 While the period is still running, Bilan compares it with the same number of days of the comparison period, and a note says so.
 
-Tip: transfers between your accounts count as income and expenses until you link them. See [Links](#links-transfers-and-refunds).
+Tip: transfers between your own accounts are linked automatically and left out of income and expenses. A transfer Bilan couldn't link counts as both until you link it. See [Links](#links-transfers-and-refunds).
 
 ### Dashboard
 
@@ -560,6 +567,7 @@ Tip: transfers between your accounts count as income and expenses until you link
 
 - **Account balances**: the current balance of each non-archived account and their total, whatever the selected period. **Accounts** opens the accounts page.
 - **Income**, **Expenses** and **Net balance**, each with its change against the comparison.
+- **Net savings**: linked transfers into your savings accounts minus those out of them, plus spending in categories that [count as savings](#categories), with its change against the comparison.
 - **Spending by category**: a donut with the six largest categories, the rest grouped.
 - **Day-by-day spending** (periods up to 45 days) or **Monthly spending** (longer periods), with the average and the biggest day or month.
 - **Budget in progress**: your current budget, line by line. Click **Details** to open it.

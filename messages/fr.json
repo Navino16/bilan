@@ -712,6 +712,8 @@
     "symbolInvalid": "Un seul caractère ou emoji.",
     "shift": "Compter dans le mois suivant",
     "shiftHint": "Les transactions des derniers jours du mois comptent pour le mois suivant, comme un salaire versé en fin de mois.",
+    "savings": "Compte comme de l'épargne",
+    "savingsHint": "Ses dépenses comptent dans l'épargne nette du dashboard, sous-catégories comprises.",
     "shiftDays": "Nombre de jours"
   },
   "transactions": {
@@ -1206,7 +1208,8 @@
     "kpi": {
       "income": "Revenus",
       "expense": "Dépenses",
-      "net": "Solde net"
+      "net": "Solde net",
+      "savings": "Épargne nette"
     },
     "vsPrev": "{arrow} {pct} vs période précédente",
     "noPrev": "Rien sur la période précédente",
@@ -2018,6 +2021,7 @@
           }
         },
         "link": {
+          "autoCreated": "Liaisons automatiques de virements créées",
           "created": "Liaison créée",
           "deleted": "Liaison supprimée",
           "suggestionIgnored": "Suggestion de liaison ignorée",

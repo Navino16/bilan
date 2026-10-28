@@ -51,6 +51,7 @@ export type EditableCategory = {
   parentId: string | null;
   groupId: string | null;
   shiftDays: number | null;
+  savings: boolean;
 };
 
 export type ScopeGroup = { id: string; name: string; role: GroupRole };
@@ -193,6 +194,7 @@ function CategoryFields({
   const [color, setColor] = useState<string | null>(category?.color ?? null);
   const [icon, setIcon] = useState(category?.icon ?? "");
   const [shiftOn, setShiftOn] = useState(category?.shiftDays != null);
+  const [savings, setSavings] = useState(category?.savings ?? false);
   const [customColor, setCustomColor] = useState(
     category?.color && !paletteKeyOf(category.color) ? category.color : null,
   );
@@ -537,6 +539,15 @@ function CategoryFields({
         )}
         <FieldError form={form} name="shiftDays" />
       </div>
+
+      <label className="flex items-center justify-between gap-4">
+        <span>
+          <span className="block text-sm font-medium">{t("savings")}</span>
+          <span className={cn(hintClass, "block")}>{t("savingsHint")}</span>
+        </span>
+        <Switch checked={savings} onCheckedChange={setSavings} />
+        <input type="hidden" name="savings" value={savings ? "on" : ""} />
+      </label>
     </>
   );
 }

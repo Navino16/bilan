@@ -35,33 +35,34 @@ test.describe("dashboard", () => {
 
   const kpiRects = async (page: Page) => {
     const cards = page.locator('[data-slot="kpi-card"]');
-    await expect(cards).toHaveCount(3);
+    await expect(cards).toHaveCount(4);
     return cards.evaluateAll((els) =>
       els.map((el) => el.getBoundingClientRect().toJSON() as DOMRect),
     );
   };
 
-  test("below md the KPIs form a 2-column grid with the net card spanning both", async ({
-    page,
-  }) => {
+  test("below md the KPIs form a 2×2 grid", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/fr/dashboard");
-    const [income, expense, net] = await kpiRects(page);
+    const [income, expense, net, savings] = await kpiRects(page);
     expect(Math.abs(income.y - expense.y)).toBeLessThan(1);
     expect(expense.x).toBeGreaterThan(income.right);
     expect(net.y).toBeGreaterThan(income.bottom);
     expect(Math.abs(net.x - income.x)).toBeLessThan(1);
-    expect(Math.abs(net.right - expense.right)).toBeLessThan(1);
+    expect(Math.abs(savings.y - net.y)).toBeLessThan(1);
+    expect(Math.abs(savings.right - expense.right)).toBeLessThan(1);
   });
 
   test("from md up the KPIs sit in a single row", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/fr/dashboard");
-    const [income, expense, net] = await kpiRects(page);
+    const [income, expense, net, savings] = await kpiRects(page);
     expect(Math.abs(income.y - expense.y)).toBeLessThan(1);
     expect(Math.abs(expense.y - net.y)).toBeLessThan(1);
+    expect(Math.abs(net.y - savings.y)).toBeLessThan(1);
     expect(expense.x).toBeGreaterThan(income.right);
     expect(net.x).toBeGreaterThan(expense.right);
+    expect(savings.x).toBeGreaterThan(net.right);
   });
 
   test("renders the KPI row and month label, and navigates months", async ({ page }) => {
@@ -69,6 +70,8 @@ test.describe("dashboard", () => {
     await expect(page.getByText("Revenus", { exact: true })).toBeVisible();
     await expect(page.getByText("Dépenses", { exact: true })).toBeVisible();
     await expect(page.getByText("Solde net", { exact: true })).toBeVisible();
+    await expect(page.getByText("Épargne nette", { exact: true })).toBeVisible();
+    await expect(page.locator('[data-slot="kpi-note"]').nth(3)).not.toContainText("%");
     // The net can change sign, so its comparison is an amount, never a percentage.
     await expect(page.locator('[data-slot="kpi-note"]').nth(2)).not.toContainText("%");
     // The net amount is always signed (or exactly 0).
