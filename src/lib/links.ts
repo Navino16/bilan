@@ -161,6 +161,69 @@ export function findSuggestedPairs(
   return pairs.sort((a, b) => b.score - a.score || b.amount - a.amount || a.dayDelta - b.dayDelta);
 }
 
+export const AUTO_LINK_WINDOW_DAYS = 4;
+
+export type AutoLinkCandidate = PairCandidate & { accountId: string };
+
+type Edge = { pos: AutoLinkCandidate; neg: AutoLinkCandidate; score: number };
+
+// The edge that strictly outscores every other edge of the same row; null on a tie.
+function strictBest(edges: Edge[]): Edge | null {
+  let best: Edge | null = null;
+  let tied = false;
+  for (const e of edges) {
+    if (!best || e.score > best.score) {
+      best = e;
+      tied = false;
+    } else if (e.score === best.score) tied = true;
+  }
+  return tied ? null : best;
+}
+
+// Transfer legs to link without asking: cross-account, opposite to the cent, within the
+// window, and each leg's strictly best candidate is the other (spec A). Ties stay suggestions.
+export function findAutoLinkPairs(
+  rows: AutoLinkCandidate[],
+  opts: { windowDays: number; ignored: Set<string> },
+): { positiveId: string; negativeId: string }[] {
+  const negativesByCents = new Map<number, AutoLinkCandidate[]>();
+  for (const r of rows) {
+    if (r.amount >= 0) continue;
+    const cents = Math.round(-r.amount * 100);
+    const bucket = negativesByCents.get(cents);
+    if (bucket) bucket.push(r);
+    else negativesByCents.set(cents, [r]);
+  }
+  const edgesOf = new Map<string, Edge[]>();
+  const add = (id: string, e: Edge) => {
+    const list = edgesOf.get(id);
+    if (list) list.push(e);
+    else edgesOf.set(id, [e]);
+  };
+  for (const pos of rows) {
+    if (pos.amount <= 0) continue;
+    for (const neg of negativesByCents.get(Math.round(pos.amount * 100)) ?? []) {
+      if (pos.accountId === neg.accountId) continue;
+      if (opts.ignored.has(pairKeyOf(pos.id, neg.id))) continue;
+      const dayDelta = Math.round(Math.abs(pos.date.getTime() - neg.date.getTime()) / DAY_MS);
+      if (dayDelta > opts.windowDays) continue;
+      const score = pairScore(pos, neg, dayDelta);
+      if (score === null) continue;
+      const edge = { pos, neg, score };
+      add(pos.id, edge);
+      add(neg.id, edge);
+    }
+  }
+  const pairs: { positiveId: string; negativeId: string }[] = [];
+  for (const pos of rows) {
+    const edge = pos.amount > 0 ? strictBest(edgesOf.get(pos.id) ?? []) : null;
+    if (edge && strictBest(edgesOf.get(edge.neg.id)!) === edge) {
+      pairs.push({ positiveId: pos.id, negativeId: edge.neg.id });
+    }
+  }
+  return pairs;
+}
+
 // A transaction row tagged with its link membership (null = not linked).
 export type CollapsibleRow = {
   id: string;
