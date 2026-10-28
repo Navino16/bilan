@@ -375,6 +375,8 @@ model Category {
   isDefault Boolean  @default(false)
   // Transactions dated in the last N days of a month count toward the next one (#341).
   shiftDays Int?
+  // Counted in the dashboard's net savings, with its subtree.
+  savings   Boolean  @default(false)
   createdAt DateTime @default(now())
 
   @@index([userId])
@@ -514,6 +516,7 @@ model MerchantAlias {
 model TransactionLink {
   id          String   @id @default(cuid())
   name        String?
+  auto        Boolean  @default(false) // made by autoLinkTransfers; deleting it ignores the pair
   createdById String
   createdAt   DateTime @default(now())
 

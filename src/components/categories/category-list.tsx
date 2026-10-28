@@ -25,6 +25,7 @@ type Node = {
   scope: "USER" | "GROUP";
   groupId: string | null;
   shiftDays: number | null;
+  savings: boolean;
   children: Node[];
 };
 
@@ -54,6 +55,7 @@ function Row({
     parentId: node.parentId,
     groupId: node.groupId,
     shiftDays: node.shiftDays,
+    savings: node.savings,
   };
 
   return (

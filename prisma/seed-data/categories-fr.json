@@ -193,6 +193,7 @@
   },
   {
     "key": "savings",
+    "savings": true,
     "name": "Épargne",
     "icon": "🐷",
     "color": "var(--cat-savings)",

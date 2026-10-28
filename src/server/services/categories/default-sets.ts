@@ -8,6 +8,7 @@ export type DefaultCategory = {
   name: string;
   icon?: string;
   color?: string;
+  savings?: boolean;
   children: { key: string; name: string }[];
 };
 

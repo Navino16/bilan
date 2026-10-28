@@ -20,6 +20,7 @@ export async function seedDefaultCategories(
         name: parent.name,
         icon: parent.icon ?? null,
         color: parent.color ?? null,
+        savings: parent.savings ?? false,
         userId,
         isDefault: true,
       },
