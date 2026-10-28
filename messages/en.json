@@ -1208,7 +1208,8 @@
     "kpi": {
       "income": "Income",
       "expense": "Expenses",
-      "net": "Net balance"
+      "net": "Net balance",
+      "savings": "Net savings"
     },
     "vsPrev": "{arrow} {pct} vs previous period",
     "noPrev": "Nothing in the previous period",

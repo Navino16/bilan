@@ -7,6 +7,7 @@ import { listTransactions, type TransactionListItem } from "@/server/services/tr
 import { collapseLinkedRows, type CollapsibleRow } from "@/lib/links";
 import { averageMonthRows, type AmountRow } from "@/lib/insights";
 import { monthPeriod, monthsSpan, type Comparison, type Period } from "@/lib/period";
+import { netSavings } from "./savings";
 
 export type DashboardTotals = { income: number; expense: number; net: number; count: number };
 export type TracePoint = { date: string; amount: number };
@@ -28,6 +29,7 @@ export type DashboardData = {
   byCategory: { categoryId: string | null; amount: number }[];
   trace: DashboardTrace;
   recent: TransactionListItem[];
+  savings: { current: number; previous: number };
 };
 
 // Above this span the daily trace becomes unreadable → switch to monthly buckets.
@@ -234,10 +236,13 @@ export async function getDashboard(
   const accountIds = await visibleAccountIds(userId);
 
   // Independent queries for the two periods → run them together.
-  const [current, previousLoaded, first] = await Promise.all([
+  const { months } = comparison;
+  const [current, previousLoaded, first, savedNow, savedBefore] = await Promise.all([
     loadRows(accountIds, period),
     referenceRows(accountIds, comparison),
     firstTransactionDate(accountIds),
+    netSavings(userId, accountIds, period),
+    netSavings(userId, accountIds, months.length ? monthsSpan(months) : comparison.previous),
   ]);
   const totals = totalsOf(current.rows, current.count);
   const prev = totalsOf(previousLoaded, 0);
@@ -275,5 +280,9 @@ export async function getDashboard(
     byCategory,
     trace,
     recent,
+    savings: {
+      current: savedNow,
+      previous: months.length ? round2(savedBefore / months.length) : savedBefore,
+    },
   };
 }

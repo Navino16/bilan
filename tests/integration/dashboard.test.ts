@@ -184,3 +184,87 @@ describe("getDashboard link-aware totals", () => {
     });
   });
 });
+
+describe("net savings", () => {
+  const saver = "dash_saver";
+  let courant: string;
+  let livret: string;
+  let kids: string;
+
+  async function row(
+    account: string,
+    day: string,
+    amount: number,
+    categoryId: string | null = null,
+  ) {
+    const s = buildSecureFields({ label: "VIR", rawLabel: "VIR" });
+    const r = await db.transaction.create({
+      data: {
+        accountId: account,
+        date: new Date(`${day}T00:00:00.000Z`),
+        amount,
+        type: "TRANSFER",
+        labelEnc: s.labelEnc,
+        labelHash: s.labelHash,
+        rawLabelEnc: s.rawLabelEnc,
+        rawLabelHash: s.rawLabelHash,
+        categoryId,
+        createdById: saver,
+      },
+    });
+    return r.id;
+  }
+
+  beforeAll(async () => {
+    await db.user.deleteMany({ where: { id: saver } });
+    await db.user.create({ data: { id: saver, email: "dash-saver@bilan.local" } });
+    courant = (
+      await db.bankAccount.create({ data: { ownerId: saver, name: "Courant", type: "CHECKING" } })
+    ).id;
+    livret = (
+      await db.bankAccount.create({ data: { ownerId: saver, name: "Livret", type: "SAVINGS" } })
+    ).id;
+    const savings = await db.category.create({
+      data: { userId: saver, name: "Épargne", savings: true },
+    });
+    kids = (
+      await db.category.create({
+        data: { userId: saver, name: "Livrets enfants", parentId: savings.id },
+      })
+    ).id;
+  });
+
+  afterAll(async () => {
+    const accounts = [courant, livret];
+    await db.transactionLink.deleteMany({
+      where: { members: { some: { transaction: { accountId: { in: accounts } } } } },
+    });
+    await db.transaction.deleteMany({ where: { accountId: { in: accounts } } });
+    await db.category.deleteMany({ where: { userId: saver, parentId: { not: null } } });
+    await db.category.deleteMany({ where: { userId: saver } });
+    await db.bankAccount.deleteMany({ where: { ownerId: saver } });
+    await db.user.deleteMany({ where: { id: saver } });
+  });
+
+  const march = monthPeriod(2026, 3);
+  const dashboard = () => getDashboard(saver, march, comparisonFor(march, "prev", later));
+
+  it("is zero without savings activity", async () => {
+    expect((await dashboard()).savings.current).toBe(0);
+  });
+
+  it("adds transfers into savings and savings-category spending, minus transfers back", async () => {
+    const out = await row(courant, "2026-03-03", -300);
+    const into = await row(livret, "2026-03-04", 300);
+    await createLink({ transactionIds: [out, into], userId: saver });
+    const back = await row(courant, "2026-03-20", 100);
+    const from = await row(livret, "2026-03-19", -100);
+    await createLink({ transactionIds: [back, from], userId: saver });
+    await row(courant, "2026-03-05", -50, kids);
+
+    const data = await dashboard();
+    expect(data.savings.current).toBe(250);
+    // The linked transfers stay out of income and expenses.
+    expect([data.totals.income, data.totals.expense]).toEqual([0, 50]);
+  });
+});

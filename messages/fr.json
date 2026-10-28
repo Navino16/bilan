@@ -1208,7 +1208,8 @@
     "kpi": {
       "income": "Revenus",
       "expense": "Dépenses",
-      "net": "Solde net"
+      "net": "Solde net",
+      "savings": "Épargne nette"
     },
     "vsPrev": "{arrow} {pct} vs période précédente",
     "noPrev": "Rien sur la période précédente",
