@@ -308,7 +308,8 @@ Pour en créer une :
 4. Choisissez une **Couleur**. Le bouton **+** ouvre un sélecteur de couleur libre. Une sous-catégorie peut reprendre la couleur de son parent.
 5. Choisissez un **Symbole**, ou saisissez n’importe quel caractère ou emoji avec **+**.
 6. Activez si besoin **Compter dans le mois suivant** : voir [Compter une transaction dans un autre mois](#compter-une-transaction-dans-un-autre-mois).
-7. Cliquez sur **Créer la catégorie**.
+7. Activez si besoin **Compte comme de l’épargne** : les dépenses de cette catégorie et de ses sous-catégories comptent dans l’**Épargne nette** du dashboard (de l’argent mis de côté sur un compte que Bilan ne suit pas, comme un compte-titres ou le livret d’un enfant). C’est activé pour la catégorie **Épargne** par défaut.
+8. Cliquez sur **Créer la catégorie**.
 
 Pour supprimer une catégorie, ouvrez son menu **⋮** et choisissez **Supprimer**. Ses sous-catégories sont supprimées aussi. Si des transactions, des règles ou des lignes de budget l’utilisent, choisissez où les rattacher avec **Déplacer vers**. Avec **Aucune catégorie**, les transactions deviennent non catégorisées et les règles et lignes de budget sont supprimées.
 
@@ -391,7 +392,13 @@ Les transactions liées restent dans la liste avec l’étiquette **Liée**.
 - **Depuis les suggestions** : sur **Transactions**, cliquez sur **Suggestions**. Bilan propose des paires de même montant et de sens opposé, à 30 jours d’écart au plus. Dans un même compte, seules les paires dont les libellés se ressemblent (même marchand, ou un mot en commun comme des frais et leur remise) sont proposées ; les paires les plus probables viennent en premier. Cliquez sur **Lier** pour accepter une paire ou **Ignorer** pour l’écarter. Les paires ignorées sont listées plus bas, et **Restaurer** permet de les suggérer de nouveau. **Réglages** modifie, pour vous seul, l’**Écart maximal (jours)** entre les deux opérations (0 pour le même jour, jusqu’à 365) et le **Montant minimum** en dessous duquel aucune paire n’est suggérée.
 - **À la main** : [sélectionnez](#sélectionner-plusieurs-transactions) deux transactions ou plus et cliquez sur **Lier**. Vous pouvez aussi ouvrir une transaction et cliquer sur **Lier à d’autres transactions** : elle est sélectionnée, et le reste pendant que vous cherchez ou filtrez les autres (la barre de sélection la rappelle).
 
-Rien n’est lié automatiquement. Il faut un accès en écriture à chaque compte concerné.
+Il faut un accès en écriture à chaque compte concerné.
+
+### Liens automatiques
+
+Bilan lie de lui-même les deux côtés d’un virement entre deux de vos comptes, quand vous importez un relevé ou ajoutez une transaction à la main : même montant en sens opposé, 4 jours d’écart au plus, et une seule correspondance évidente. Quand il a un doute (deux virements du même montant le même jour, par exemple), la paire reste dans les suggestions. Un virement vers un compte qu’on partage avec vous n’est jamais lié automatiquement.
+
+Pour annuler un lien automatique, [déliez-le](#délier) : Bilan ne liera plus cette paire.
 
 ### Délier
 
@@ -552,7 +559,7 @@ Pour un mois seul, **Comparé à** permet de comparer avec **le mois précédent
 
 Tant que la période est en cours, Bilan la compare au même nombre de jours de la période de comparaison, et une note l’indique.
 
-Astuce : les virements entre vos comptes comptent comme entrées et dépenses tant que vous ne les liez pas. Voir [Liens entre transactions](#liens-entre-transactions).
+Astuce : les virements entre vos propres comptes sont liés automatiquement et restent hors des revenus et des dépenses. Un virement que Bilan n’a pas pu lier compte dans les deux tant que vous ne le liez pas. Voir [Liens entre transactions](#liens-entre-transactions).
 
 ### Tableau de bord
 
@@ -560,6 +567,7 @@ Astuce : les virements entre vos comptes comptent comme entrées et dépenses ta
 
 - **Solde des comptes** : le solde actuel de chaque compte non archivé et leur total, quelle que soit la période choisie. **Comptes** ouvre la page des comptes.
 - **Revenus**, **Dépenses** et **Solde net**, chacun avec son évolution par rapport à la comparaison.
+- **Épargne nette** : les virements liés vers vos comptes d’épargne moins ceux qui en sortent, plus les dépenses des catégories qui [comptent comme de l’épargne](#catégories), avec son évolution par rapport à la comparaison.
 - **Dépenses par catégorie** : un anneau avec les six plus grosses catégories, le reste regroupé.
 - **Dépenses jour par jour** (périodes jusqu’à 45 jours) ou **Dépenses par mois** (périodes plus longues), avec la moyenne et le plus gros jour ou mois.
 - **Budget en cours** : votre budget du moment, ligne par ligne. Cliquez sur **Détail** pour l’ouvrir.

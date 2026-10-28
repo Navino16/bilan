@@ -76,7 +76,7 @@ Self-hosted personal-finance application. A full web app with multi-user support
 - **Multi-user model**: shared via **groups (households)** only. A user may belong to multiple groups. Accounts always have a user owner; sharing is done by granting a group access to an account (READ or WRITE).
 - **Categories model**: owned by `User` OR `Group` (symmetric with accounts via XOR ownership, enforced in the service layer). Default categories seeded at signup in user's locale.
 - **Categorization**: user-configurable rules (pattern + match type `CONTAINS | EXACT | STARTS_WITH | REGEX`, priority), scoped to a user or a group. When a user changes a transaction's category, the UI proposes creating a rule.
-- **Transaction links**: manual + auto-suggestions. Pairs `+X/-X` within a per-user window (default 30 days) and above an optional per-user minimum amount (default 0). Inside one account a pair needs the same `merchantKeyHash` or a shared significant word of the merchant key; pairs are scored (other account, same merchant, shared word, two transfers, day gap) and listed by score (`pairScore` in `lib/links.ts`). Only rows with an opposite amount get their label decrypted.
+- **Transaction links**: manual + auto-suggestions. Pairs `+X/-X` within a per-user window (default 30 days) and above an optional per-user minimum amount (default 0). Inside one account a pair needs the same `merchantKeyHash` or a shared significant word of the merchant key; pairs are scored (other account, same merchant, shared word, two transfers, day gap) and listed by score (`pairScore` in `lib/links.ts`). Only rows with an opposite amount get their label decrypted. **Automatic links (#353)**: `links/auto.autoLinkTransfers` links, without asking, the legs of transfers between two accounts the same user owns: opposite to the cent, real dates at most 4 days apart, each leg the other's strictly best candidate (`findAutoLinkPairs`); ties stay suggestions. It runs after every import (`finalizeBatch`, over the batch's date range; a failure is logged, never fails the import), after a manual entry, and over history via `npm run db:auto-link`. Deleting an automatic link records its pair in `IgnoredLinkSuggestion`. The dashboard's net savings (`dashboard/savings.ts`) = linked legs on `SAVINGS` accounts whose link crosses to a non-savings account, plus unlinked spending in `Category.savings` subtrees.
   - Balanced groups (sum = 0): all transactions excluded from totals.
   - Unbalanced groups: the **primary** transaction (largest absolute amount) receives the net sum in its category; other members are neutralized.
 - **Budgets**: scoped to user OR group; can target categories AND/OR accounts; custom periods (week, month, quarter, year, custom), optionally recurring (rolled into the next period by a cron route); automatic matching by category/account + explicit `BudgetAssignment` (`INCLUDE` / `EXCLUDE`) overrides.
@@ -555,6 +555,7 @@ model Category {
 
   isDefault Boolean  @default(false)
   shiftDays Int?                                      // transactions in the month's last N days count toward the next one (#341)
+  savings   Boolean  @default(false)                  // subtree counted in the dashboard's net savings (#353)
   createdAt DateTime @default(now())
 
   transactions Transaction[]
@@ -689,6 +690,7 @@ model MerchantAlias {
 model TransactionLink {
   id          String   @id @default(cuid())
   name        String?
+  auto        Boolean  @default(false)                  // made by links/auto; deleting it ignores the pair (#353)
   createdById String                                  // no FK; deleted explicitly on user erasure
   createdAt   DateTime @default(now())
 
