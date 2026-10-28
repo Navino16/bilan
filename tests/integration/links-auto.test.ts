@@ -11,6 +11,7 @@ const owner = "autolink_owner";
 const other = "autolink_other";
 let courant: string;
 let livret: string;
+let joint: string;
 let shared: string; // other's account, shared with the owner (WRITE)
 let groupId: string;
 
@@ -36,7 +37,7 @@ const linkOf = (id: string) =>
   db.transactionLinkMember.findUnique({ where: { transactionId: id }, include: { link: true } });
 
 async function clean() {
-  const accounts = [courant, livret, shared];
+  const accounts = [courant, livret, joint, shared];
   await db.transactionLink.deleteMany({
     where: { members: { some: { transaction: { accountId: { in: accounts } } } } },
   });
@@ -55,6 +56,9 @@ beforeAll(async () => {
   ).id;
   livret = (
     await db.bankAccount.create({ data: { ownerId: owner, name: "Livret", type: "SAVINGS" } })
+  ).id;
+  joint = (
+    await db.bankAccount.create({ data: { ownerId: owner, name: "Commun", type: "CHECKING" } })
   ).id;
   shared = (
     await db.bankAccount.create({ data: { ownerId: other, name: "Joint", type: "CHECKING" } })
@@ -113,6 +117,25 @@ describe("autoLinkTransfers", () => {
     expect(await autoLinkTransfers(owner)).toEqual({ linked: 0 });
     const ignored = await db.ignoredLinkSuggestion.findMany({ where: { userId: owner } });
     expect(ignored.map((r) => r.pairKey)).toEqual([pairKeyOf(out, into)]);
+  });
+
+  it("links what a first pass leaves unique", async () => {
+    // P prefers N1; N2 ties between P and Q until P is linked.
+    await tx(livret, "2026-03-01", 40);
+    await tx(courant, "2026-03-01", -40);
+    const n2 = await tx(joint, "2026-03-03", -40);
+    const q = await tx(courant, "2026-03-05", 40);
+    expect(await autoLinkTransfers(owner)).toEqual({ linked: 2 });
+    expect((await linkOf(n2))?.linkId).toBe((await linkOf(q))?.linkId);
+  });
+
+  it("does not take a worse partner because the better one is just outside the range", async () => {
+    const worse = await tx(courant, "2026-03-06", -100);
+    await tx(livret, "2026-03-09", 100);
+    await tx(joint, "2026-03-11", -100);
+    const day = new Date("2026-03-05T00:00:00.000Z");
+    await autoLinkTransfers(owner, { from: day, to: day });
+    expect(await linkOf(worse)).toBeNull();
   });
 
   it("deleting a manual link records nothing", async () => {

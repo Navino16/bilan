@@ -267,4 +267,15 @@ describe("net savings", () => {
     // The linked transfers stay out of income and expenses.
     expect([data.totals.income, data.totals.expense]).toEqual([0, 50]);
   });
+
+  it("averages savings over recorded months cut to the elapsed days", async () => {
+    const april = monthPeriod(2026, 4);
+    const data = await getDashboard(
+      saver,
+      april,
+      comparisonFor(april, "avg3", new Date("2026-04-05T12:00:00.000Z")),
+    );
+    // March up to the 5th: +300 into the livret and 50 to the kids' savings; no data before March.
+    expect(data.savings.previous).toBe(350);
+  });
 });

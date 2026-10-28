@@ -66,6 +66,18 @@ export type TransactionView = {
   imported: boolean; // carries a bank dedup key (see `editScope`)
 };
 
+async function autoLinkAround(accountId: string, date: Date): Promise<void> {
+  try {
+    const { ownerId } = await db.bankAccount.findUniqueOrThrow({
+      where: { id: accountId },
+      select: { ownerId: true },
+    });
+    await autoLinkTransfers(ownerId, { from: date, to: date });
+  } catch (e) {
+    console.error("auto-link after manual entry failed", e);
+  }
+}
+
 // Creates a transaction the actor is allowed to write (owner or WRITE share),
 // encrypting labels/note and writing per-word search tokens in one DB transaction.
 // `categoryId` is taken verbatim (manual choice or import suggestion); auto-suggest
@@ -105,19 +117,14 @@ export async function createTransaction(
     },
   });
   if (tx.categoryId) await syncAutoPeriodDates({ ids: [tx.id] });
-  if (opts.autoLink) {
-    const { ownerId } = await db.bankAccount.findUniqueOrThrow({
-      where: { id: data.accountId },
-      select: { ownerId: true },
-    });
-    await autoLinkTransfers(ownerId, { from: data.date, to: data.date });
-  }
   await logEvent({
     userId: actor.id,
     action: "transaction.created",
     entity: "Transaction",
     entityId: tx.id,
   });
+  // Best-effort: a failed link must not report a saved transaction as failed.
+  if (opts.autoLink) await autoLinkAround(data.accountId, data.date);
   return { id: tx.id };
 }
 

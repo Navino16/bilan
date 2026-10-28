@@ -227,6 +227,27 @@ export async function referenceRows(
   return recorded.length ? averageMonthRows(rows, recorded.length, elapsedDays) : [];
 }
 
+// Net savings of the reference side, averaged like `referenceRows`: recorded months only,
+// each cut to the elapsed days while the period is in progress.
+async function savingsReference(
+  userId: string,
+  accountIds: string[],
+  comparison: Comparison,
+): Promise<number> {
+  const { months, elapsedDays } = comparison;
+  if (months.length === 0) return netSavings(userId, accountIds, comparison.previous);
+  const first = await firstTransactionDate(accountIds);
+  const windows = months
+    .map((m) => monthPeriod(m.year, m.month))
+    .map((p) =>
+      elapsedDays ? { ...p, to: new Date(p.from.getTime() + elapsedDays * 86_400_000 - 1) } : p,
+    )
+    .filter((p) => first && p.to >= first);
+  if (windows.length === 0) return 0;
+  const sums = await Promise.all(windows.map((p) => netSavings(userId, accountIds, p)));
+  return round2(sums.reduce((a, b) => a + b, 0) / windows.length);
+}
+
 export async function getDashboard(
   userId: string,
   period: Period,
@@ -236,13 +257,12 @@ export async function getDashboard(
   const accountIds = await visibleAccountIds(userId);
 
   // Independent queries for the two periods → run them together.
-  const { months } = comparison;
   const [current, previousLoaded, first, savedNow, savedBefore] = await Promise.all([
     loadRows(accountIds, period),
     referenceRows(accountIds, comparison),
     firstTransactionDate(accountIds),
     netSavings(userId, accountIds, period),
-    netSavings(userId, accountIds, months.length ? monthsSpan(months) : comparison.previous),
+    savingsReference(userId, accountIds, comparison),
   ]);
   const totals = totalsOf(current.rows, current.count);
   const prev = totalsOf(previousLoaded, 0);
@@ -280,9 +300,6 @@ export async function getDashboard(
     byCategory,
     trace,
     recent,
-    savings: {
-      current: savedNow,
-      previous: months.length ? round2(savedBefore / months.length) : savedBefore,
-    },
+    savings: { current: savedNow, previous: savedBefore },
   };
 }
