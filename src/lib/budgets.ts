@@ -138,3 +138,36 @@ export function groupBudgetSeries<T extends SeriesMember>(items: T[]): { head: T
   });
   return series.sort((a, b) => b.head.periodStart.getTime() - a.head.periodStart.getTime());
 }
+
+export type BudgetLanding = {
+  balance: number;
+  incomeToCome: number;
+  spendingToCome: number;
+  endBalance: number;
+};
+
+// Balance at the period's end (design §E): what each line still plans to receive or pay,
+// overruns adding nothing since they already left the balance.
+export function budgetLanding(input: {
+  balance: number;
+  lines: { flow: "in" | "out"; plannedAmount: number; doneOnAccount: number }[];
+  margin: number | null;
+  outOnAccount: number;
+}): BudgetLanding {
+  const toCome = (planned: number, done: number) => Math.max(planned - done, 0);
+  let incomeToCome = 0;
+  let spendingToCome = input.margin == null ? 0 : toCome(input.margin, input.outOnAccount);
+  for (const l of input.lines) {
+    if (l.flow === "in") incomeToCome += toCome(l.plannedAmount, l.doneOnAccount);
+    else spendingToCome += toCome(l.plannedAmount, l.doneOnAccount);
+  }
+  const balance = round2(input.balance);
+  incomeToCome = round2(incomeToCome);
+  spendingToCome = round2(spendingToCome);
+  return {
+    balance,
+    incomeToCome,
+    spendingToCome,
+    endBalance: round2(balance + incomeToCome - spendingToCome),
+  };
+}
