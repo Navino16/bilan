@@ -504,7 +504,12 @@ describe("getBudgetDetail / computeLine", () => {
     });
     const detail = await getBudgetDetail(id, owner);
     expect(detail.lines[0].spent).toBe(30); // 40 excluded
-    expect(detail.outOfBudget).toEqual({ spent: 25, count: 1 });
+    expect(detail.outOfBudget).toEqual({
+      spent: 25,
+      count: 1,
+      planned: null,
+      unmatchedTransfers: 0,
+    });
     expect(detail.spentTotal).toBe(55);
   });
 
@@ -558,7 +563,12 @@ describe("assignTransaction", () => {
     await assignTransaction({ budgetId: id, transactionId: t, mode: "INCLUDE" }, { id: owner });
     detail = await getBudgetDetail(id, owner);
     expect(detail.spentTotal).toBe(25);
-    expect(detail.outOfBudget).toEqual({ spent: 25, count: 1 });
+    expect(detail.outOfBudget).toEqual({
+      spent: 25,
+      count: 1,
+      planned: null,
+      unmatchedTransfers: 0,
+    });
 
     await unassignTransaction({ budgetId: id, transactionId: t }, { id: owner });
     detail = await getBudgetDetail(id, owner);
@@ -821,7 +831,12 @@ describe("hardening (group scope, dedup, links, out-of-period, canManage)", () =
     const detail = await getBudgetDetail(id, owner);
     expect(detail.lines[0].spent).toBe(0);
     expect(detail.lines[1].spent).toBe(0);
-    expect(detail.outOfBudget).toEqual({ spent: 50, count: 1 });
+    expect(detail.outOfBudget).toEqual({
+      spent: 50,
+      count: 1,
+      planned: null,
+      unmatchedTransfers: 0,
+    });
     expect(detail.spentTotal).toBe(50);
   });
 
@@ -839,7 +854,12 @@ describe("hardening (group scope, dedup, links, out-of-period, canManage)", () =
     );
     const detail = await getBudgetDetail(id, owner);
     expect(detail.lines[0].spent).toBe(40);
-    expect(detail.outOfBudget).toEqual({ spent: -300, count: 1 });
+    expect(detail.outOfBudget).toEqual({
+      spent: -300,
+      count: 1,
+      planned: null,
+      unmatchedTransfers: 0,
+    });
     expect(detail.spentTotal).toBe(-260);
     expect(detail.transactionCount).toBe(2);
   });
@@ -865,7 +885,12 @@ describe("hardening (group scope, dedup, links, out-of-period, canManage)", () =
     await assignTransaction({ budgetId: id, transactionId: t, mode: "INCLUDE" }, { id: owner });
     const detail = await getBudgetDetail(id, owner);
     expect(detail.spentTotal).toBe(25);
-    expect(detail.outOfBudget).toEqual({ spent: 25, count: 1 });
+    expect(detail.outOfBudget).toEqual({
+      spent: 25,
+      count: 1,
+      planned: null,
+      unmatchedTransfers: 0,
+    });
   });
 
   it("#6 canManage is false for a non-admin group member, true for the owner", async () => {

@@ -296,3 +296,161 @@ describe("an attached budget's scope", () => {
     expect(detail.spentTotal).toBe(0);
   });
 });
+
+describe("an attached budget by line kind", () => {
+  async function link(a: string, b: string) {
+    await createLink({ transactionIds: [a, b], userId: owner });
+  }
+
+  // Salary in, a transfer to the joint account, music, an unplanned expense and a top-up
+  // taken from the savings account.
+  async function envelope(over: Partial<BudgetInput> = {}) {
+    await tx(courant, "2026-03-01", 2000, cat.salary);
+    await link(await tx(courant, "2026-03-02", -800), await tx(joint, "2026-03-02", 800));
+    await tx(courant, "2026-03-05", -20, cat.musique);
+    const stray = await tx(courant, "2026-03-06", -12);
+    const fromSavings = await tx(courant, "2026-03-07", 300);
+    await link(fromSavings, await tx(livret, "2026-03-07", -300));
+    const { id } = await createBudget(
+      input({
+        outOfBudgetPlanned: 100,
+        lines: [
+          { kind: "INCOME", categoryId: cat.salary, plannedAmount: 2000 },
+          { kind: "TRANSFER", direction: "OUT", counterpartAccountId: joint, plannedAmount: 800 },
+          { categoryId: cat.musique, plannedAmount: 30 },
+        ],
+        ...over,
+      }),
+      { id: owner },
+    );
+    return { id, stray, fromSavings };
+  }
+
+  it("splits spending and income by kind", async () => {
+    const { id } = await envelope();
+    const d = await getBudgetDetail(id, owner);
+    expect(d.lines.map((l) => l.spent)).toEqual([2000, 800, 20]);
+    expect(d.lines.map((l) => l.kind)).toEqual(["INCOME", "TRANSFER", "EXPENSE"]);
+    expect(d.outOfBudget).toEqual({ spent: 12, count: 1, planned: 100, unmatchedTransfers: 0 });
+    expect(d.unplannedIncome).toEqual({ received: 300, count: 1, fromSavings: 300 });
+    expect(d.plannedTotal).toBe(930);
+    expect(d.spentTotal).toBe(832);
+    expect(d.incomePlanned).toBe(2000);
+    expect(d.incomeReceived).toBe(2000);
+    expect(d.transactionCount).toBe(5);
+  });
+
+  it("flags an unlinked leg with a same-amount row on another account", async () => {
+    await tx(courant, "2026-03-10", -50);
+    await tx(livret, "2026-03-12", 50);
+    const { id } = await createBudget(input(), { id: owner });
+    expect((await getBudgetDetail(id, owner)).outOfBudget?.unmatchedTransfers).toBe(1);
+    await updateBudget(
+      id,
+      input({
+        lines: [
+          { categoryId: cat.courses, plannedAmount: 100 },
+          { kind: "TRANSFER", direction: "OUT", counterpartAccountId: livret, plannedAmount: 100 },
+        ],
+      }),
+      { id: owner },
+    );
+    const d = await getBudgetDetail(id, owner);
+    expect(d.lines[1].spent).toBe(50);
+    expect(d.outOfBudget).toMatchObject({ count: 0, unmatchedTransfers: 0 });
+  });
+
+  it("shows a transfer line as a read-only mirror in the destination budget", async () => {
+    const { id: source } = await envelope();
+    const { id } = await createBudget(input({ groupId, accountId: joint, name: "Foyer" }), {
+      id: owner,
+    });
+    const d = await getBudgetDetail(id, owner);
+    const mirror = d.lines.find((l) => l.mirrorOf);
+    expect(mirror).toMatchObject({
+      kind: "TRANSFER",
+      direction: "IN",
+      counterpartAccountId: courant,
+      plannedAmount: 800,
+      spent: 800,
+      mirrorOf: { budgetId: source, budgetName: "Perso" },
+    });
+    expect(d.incomePlanned).toBe(800);
+    expect(d.incomeReceived).toBe(800);
+    const listed = (await listBudgetsForUser(owner)).find((b) => b.id === id);
+    expect(listed?.incomePlanned).toBe(800);
+  });
+
+  it("shows no mirror across period types, to a viewer who can't read the source, or next to an own line", async () => {
+    await envelope();
+    const quarter = await createBudget(
+      input({ accountId: joint, periodType: "QUARTER", periodEnd: "2026-05-31" }),
+      { id: owner },
+    );
+    expect((await getBudgetDetail(quarter.id, owner)).lines.some((l) => l.mirrorOf)).toBe(false);
+    await db.budget.delete({ where: { id: quarter.id } });
+
+    const shared = await createBudget(input({ groupId, accountId: joint }), { id: owner });
+    expect((await getBudgetDetail(shared.id, member)).lines.some((l) => l.mirrorOf)).toBe(false);
+    await db.budget.delete({ where: { id: shared.id } });
+
+    const own = await createBudget(
+      input({
+        accountId: joint,
+        lines: [
+          { kind: "TRANSFER", direction: "IN", counterpartAccountId: courant, plannedAmount: 700 },
+        ],
+      }),
+      { id: owner },
+    );
+    const lines = (await getBudgetDetail(own.id, owner)).lines.filter(
+      (l) => l.counterpartAccountId === courant,
+    );
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({ mirrorOf: null, plannedAmount: 700, spent: 800 });
+  });
+
+  it("doesn't turn the budget over when more than planned goes to savings", async () => {
+    await link(await tx(courant, "2026-03-03", -150), await tx(livret, "2026-03-03", 150));
+    const { id } = await createBudget(
+      input({
+        lines: [
+          { kind: "TRANSFER", direction: "OUT", counterpartAccountId: livret, plannedAmount: 100 },
+        ],
+      }),
+      { id: owner },
+    );
+    const d = await getBudgetDetail(id, owner);
+    expect(d.spentTotal).toBe(150);
+    expect(d.lines[0].counterpartSavings).toBe(true);
+    expect((await listBudgetsForUser(owner)).find((b) => b.id === id)?.status).not.toBe("OVER");
+  });
+
+  it("lists only out-of-budget or unplanned rows on demand", async () => {
+    const { id, stray, fromSavings } = await envelope();
+    const out = await getBudgetDetail(id, owner, { show: "out" });
+    expect(out.transactions.map((t) => t.id)).toEqual([stray]);
+    expect(out.transactionCount).toBe(1);
+    const unplanned = await getBudgetDetail(id, owner, { show: "unplanned" });
+    expect(unplanned.transactions.map((t) => t.id)).toEqual([fromSavings]);
+  });
+
+  it("reports the same totals in the list as in the detail", async () => {
+    const { id } = await envelope();
+    const d = await getBudgetDetail(id, owner);
+    const item = (await listBudgetsForUser(owner)).find((b) => b.id === id)!;
+    expect({
+      plannedTotal: item.plannedTotal,
+      spentTotal: item.spentTotal,
+      incomePlanned: item.incomePlanned,
+      incomeReceived: item.incomeReceived,
+      unplannedIncome: item.unplannedIncome,
+    }).toEqual({
+      plannedTotal: d.plannedTotal,
+      spentTotal: d.spentTotal,
+      incomePlanned: d.incomePlanned,
+      incomeReceived: d.incomeReceived,
+      unplannedIncome: d.unplannedIncome,
+    });
+  });
+});

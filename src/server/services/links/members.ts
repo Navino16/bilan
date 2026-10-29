@@ -12,3 +12,28 @@ export async function linkIdsWhere(
   });
   return new Map(members.map((m) => [m.transactionId, m.linkId]));
 }
+
+export type LinkPartner = { transactionId: string; accountId: string; accountType: string };
+
+// Members of each link with their account and its type, in one query.
+export async function linkPartners(linkIds: string[]): Promise<Map<string, LinkPartner[]>> {
+  if (linkIds.length === 0) return new Map();
+  const members = await db.transactionLinkMember.findMany({
+    where: { linkId: { in: linkIds } },
+    select: {
+      linkId: true,
+      transactionId: true,
+      transaction: { select: { accountId: true, account: { select: { type: true } } } },
+    },
+  });
+  const out = new Map<string, LinkPartner[]>();
+  for (const m of members) {
+    const partner = {
+      transactionId: m.transactionId,
+      accountId: m.transaction.accountId,
+      accountType: m.transaction.account.type,
+    };
+    out.set(m.linkId, [...(out.get(m.linkId) ?? []), partner]);
+  }
+  return out;
+}

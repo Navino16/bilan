@@ -35,6 +35,17 @@ import {
   type TransferDirection,
 } from "@/lib/validation/budget";
 import { budgetInputSchema, type BudgetInput } from "@/lib/schemas/budget";
+import {
+  budgetMirrors,
+  computeAttachedSpend,
+  loadTransferContext,
+  summarizeAttached,
+  type AttachedSpend,
+  type BudgetLineSpec,
+  type BudgetRow,
+  type LoadedBudgetRows,
+  type TransferContext,
+} from "./attached";
 
 export class BudgetAccessError extends Error {}
 
@@ -329,6 +340,9 @@ export type BudgetListItem = {
   spentTotal: number;
   percent: number | null;
   status: BudgetStatus;
+  incomePlanned: number;
+  incomeReceived: number;
+  unplannedIncome: UnplannedIncome | null;
   description: string | null;
   archived: boolean;
   parentBudgetId: string | null;
@@ -376,20 +390,13 @@ export async function listBudgetsForUser(
       b.periodEnd.getTime() < now &&
       canManageBudget(b.groupId, roleByGroup),
   );
-  const [loaded, subtrees, rolled] = await Promise.all([
-    loadBudgetRows(rows),
-    withDescendants(lineCategoryIds(rows)),
+  const [evaluations, rolled] = await Promise.all([
+    evaluateBudgets(rows, { userId, groupIds }),
     withNextInstance(ended),
   ]);
-  const spends = await Promise.all(
-    rows.map((b) => computeBudgetSpend(b, loaded.get(b.id)!, subtrees)),
-  );
   const rollable = rows.map((b) => ended.includes(b) && !rolled.has(b.id));
   return rows.map((b, i) => {
-    const plannedTotal = budgetPlannedTotal(
-      b.lines.map((l) => ({ plannedAmount: Number(l.plannedAmount) })),
-    );
-    const { spent, percent, status } = lineStatus(plannedTotal, round2(-spends[i].totalSum));
+    const e = evaluations[i];
     return {
       id: b.id,
       name: b.name,
@@ -413,10 +420,13 @@ export async function listBudgetsForUser(
         label: l.label,
         plannedAmount: Number(l.plannedAmount),
       })),
-      plannedTotal,
-      spentTotal: spent,
-      percent,
-      status,
+      plannedTotal: e.plannedTotal,
+      spentTotal: e.spentTotal,
+      percent: e.percent,
+      status: e.status,
+      incomePlanned: e.incomePlanned,
+      incomeReceived: e.incomeReceived,
+      unplannedIncome: e.unplannedIncome,
       started: b.periodStart.getTime() <= now,
       ended: b.periodEnd.getTime() < now,
       rollable: rollable[i],
@@ -424,16 +434,6 @@ export async function listBudgetsForUser(
     };
   });
 }
-
-type BudgetRow = {
-  id: string;
-  amount: number;
-  date: Date;
-  periodDate: Date;
-  categoryId: string | null;
-  accountId: string;
-  linkId: string | null;
-};
 
 // A user may READ a budget they own or that belongs to a group they're in.
 async function readableOrThrow(id: string, userId: string) {
@@ -504,12 +504,6 @@ type BudgetRef = {
   accountId: string | null;
   periodStart: Date;
   periodEnd: Date;
-};
-
-type LoadedBudgetRows = {
-  rows: BudgetRow[];
-  excluded: Set<string>;
-  includedIds: Set<string>;
 };
 
 const scopeKey = (b: { userId: string | null; groupId: string | null }) =>
@@ -595,7 +589,15 @@ async function loadBudgetRows(budgets: BudgetRef[]): Promise<Map<string, LoadedB
   }
 
   const loaded = new Map<string, LoadedBudgetRows>(
-    budgets.map((b) => [b.id, { rows: [], excluded: new Set(), includedIds: new Set() }]),
+    budgets.map((b) => [
+      b.id,
+      {
+        rows: [],
+        excluded: new Set(),
+        includedIds: new Set(),
+        scope: scopes.get(scopeKey(b)) ?? new Set(),
+      },
+    ]),
   );
   for (const a of assignments) {
     const l = loaded.get(a.budgetId)!;
@@ -669,6 +671,148 @@ function matchingLines(r: BudgetRow, filters: LineMatcher[]): number[] {
   });
 }
 
+export type BudgetDetailLine = LineStatus & {
+  id: string;
+  kind: BudgetLineKind;
+  categoryId: string | null;
+  accountId: string | null;
+  direction: TransferDirection | null;
+  counterpartAccountId: string | null;
+  label: string | null;
+  counterpartSavings: boolean;
+  mirrorOf: { budgetId: string; budgetName: string } | null; // read-only, design §C
+};
+
+export type OutOfBudget = {
+  spent: number;
+  count: number;
+  planned: number | null;
+  unmatchedTransfers: number;
+};
+export type UnplannedIncome = { received: number; count: number; fromSavings: number };
+
+type BudgetWithLines = Budget & { lines: BudgetLine[] };
+
+type BudgetEvaluation = {
+  lines: BudgetDetailLine[];
+  plannedTotal: number;
+  spentTotal: number;
+  percent: number | null;
+  status: BudgetStatus;
+  incomePlanned: number;
+  incomeReceived: number;
+  outOfBudget: OutOfBudget | null;
+  unplannedIncome: UnplannedIncome | null;
+  counted: BudgetRow[];
+  shown: { out: BudgetRow[]; unplanned: BudgetRow[] };
+  attached: { specs: BudgetLineSpec[]; spend: AttachedSpend } | null;
+};
+
+function lineSpecs(b: BudgetWithLines, mirrors: Map<string, BudgetLineSpec[]>): BudgetLineSpec[] {
+  return [
+    ...b.lines.map((l) => ({
+      id: l.id,
+      kind: l.kind as BudgetLineKind,
+      categoryId: l.categoryId,
+      accountId: l.accountId,
+      direction: l.direction as TransferDirection | null,
+      counterpartAccountId: l.counterpartAccountId,
+      label: l.label,
+      plannedAmount: Number(l.plannedAmount),
+      mirrorOf: null,
+    })),
+    ...(b.accountId ? (mirrors.get(b.id) ?? []) : []),
+  ];
+}
+
+// Spend of every budget as `viewer` sees it, in a constant number of queries (#299).
+async function evaluateBudgets(
+  budgets: BudgetWithLines[],
+  viewer: { userId: string; groupIds: string[] },
+  now: Date = new Date(),
+): Promise<BudgetEvaluation[]> {
+  const [loaded, subtrees, mirrors] = await Promise.all([
+    loadBudgetRows(budgets),
+    withDescendants(lineCategoryIds(budgets)),
+    budgetMirrors(budgets, viewer),
+  ]);
+  const ctx: TransferContext = await loadTransferContext(
+    budgets.map((b) => ({ ...b, lines: lineSpecs(b, mirrors) })),
+    loaded,
+    mirrors,
+  );
+  return Promise.all(
+    budgets.map(async (b) => {
+      const specs = lineSpecs(b, mirrors);
+      if (b.accountId) {
+        const margin = b.outOfBudgetPlanned == null ? null : Number(b.outOfBudgetPlanned);
+        const spend = computeAttachedSpend(
+          { id: b.id, accountId: b.accountId },
+          specs,
+          loaded.get(b.id)!,
+          subtrees,
+          ctx,
+          now,
+        );
+        const sum = summarizeAttached(specs, margin, spend, ctx);
+        return {
+          ...sum,
+          lines: specs.map((l, i) => ({ ...detailLine(l), ...sum.lines[i] })),
+          counted: spend.counted,
+          shown: { out: spend.out, unplanned: spend.unplanned },
+          attached: { specs, spend },
+        };
+      }
+      const { lineSums, outOfBudget, totalSum, counted } = await computeBudgetSpend(
+        b,
+        loaded.get(b.id)!,
+        subtrees,
+      );
+      const plannedTotal = budgetPlannedTotal(specs);
+      const { spent, percent, status } = lineStatus(plannedTotal, round2(-totalSum));
+      return {
+        lines: specs.map((l, i) => ({
+          ...detailLine(l),
+          ...lineStatus(l.plannedAmount, round2(-lineSums[i])),
+          counterpartSavings: false,
+        })),
+        plannedTotal,
+        spentTotal: spent,
+        percent,
+        status,
+        incomePlanned: 0,
+        incomeReceived: 0,
+        outOfBudget:
+          outOfBudget.length === 0
+            ? null
+            : {
+                spent: round2(-outOfBudget.reduce((sum, r) => sum + r.amount, 0)),
+                count: outOfBudget.length,
+                planned: null,
+                unmatchedTransfers: 0,
+              },
+        unplannedIncome: null,
+        counted,
+        shown: { out: outOfBudget, unplanned: [] },
+        attached: null,
+      };
+    }),
+  );
+}
+
+function detailLine(l: BudgetLineSpec) {
+  return {
+    id: l.id,
+    kind: l.kind,
+    categoryId: l.categoryId,
+    accountId: l.accountId,
+    direction: l.direction,
+    counterpartAccountId: l.counterpartAccountId,
+    label: l.label,
+    mirrorOf: l.mirrorOf,
+  };
+}
+
 export type BudgetDetail = {
   id: string;
   name: string;
@@ -680,15 +824,14 @@ export type BudgetDetail = {
   periodStart: Date;
   periodEnd: Date;
   recurring: boolean;
-  lines: (LineStatus & {
-    id: string;
-    categoryId: string | null;
-    accountId: string | null;
-    label: string | null;
-  })[];
+  lines: BudgetDetailLine[];
   plannedTotal: number;
   spentTotal: number;
-  outOfBudget: { spent: number; count: number } | null; // INCLUDEs no line matches (#345)
+  // Attached: rows no line takes, with the optional margin. Unattached: INCLUDEs no line matches (#345).
+  outOfBudget: OutOfBudget | null;
+  unplannedIncome: UnplannedIncome | null; // attached only
+  incomePlanned: number;
+  incomeReceived: number;
   forecast: BudgetForecast | null;
   groupId: string | null;
   canManage: boolean;
@@ -863,26 +1006,16 @@ async function budgetForecast(
 export async function getBudgetDetail(
   id: string,
   viewerId: string,
-  { withTransactions = true, now = new Date() }: { withTransactions?: boolean; now?: Date } = {},
+  {
+    withTransactions = true,
+    now = new Date(),
+    show,
+  }: { withTransactions?: boolean; now?: Date; show?: "out" | "unplanned" } = {},
 ): Promise<BudgetDetail> {
   const b = await readableOrThrow(id, viewerId);
-  const { lineSums, outOfBudget, totalSum, counted } = await computeBudgetSpend(
-    b,
-    (await loadBudgetRows([b])).get(b.id)!,
-  );
-  const { roleByGroup } = await budgetScopeForUser(viewerId);
-
-  const lines = b.lines.map((l, i) => ({
-    id: l.id,
-    categoryId: l.categoryId,
-    accountId: l.accountId,
-    label: l.label,
-    ...lineStatus(Number(l.plannedAmount), round2(-lineSums[i])),
-  }));
-  const plannedTotal = budgetPlannedTotal(
-    b.lines.map((l) => ({ plannedAmount: Number(l.plannedAmount) })),
-  );
-  const spentTotal = round2(-totalSum);
+  const { groupIds, roleByGroup } = await budgetScopeForUser(viewerId);
+  const [e] = await evaluateBudgets([b], { userId: viewerId, groupIds }, now);
+  const listed = show ? e.shown[show] : e.counted;
   return {
     id: b.id,
     name: b.name,
@@ -895,21 +1028,18 @@ export async function getBudgetDetail(
     periodStart: b.periodStart,
     periodEnd: b.periodEnd,
     recurring: b.recurring,
-    lines,
-    plannedTotal,
-    spentTotal,
-    outOfBudget:
-      outOfBudget.length === 0
-        ? null
-        : {
-            spent: round2(-outOfBudget.reduce((sum, r) => sum + r.amount, 0)),
-            count: outOfBudget.length,
-          },
-    forecast: await budgetForecast(b, lines, now),
+    lines: e.lines,
+    plannedTotal: e.plannedTotal,
+    spentTotal: e.spentTotal,
+    outOfBudget: e.outOfBudget,
+    unplannedIncome: e.unplannedIncome,
+    incomePlanned: e.incomePlanned,
+    incomeReceived: e.incomeReceived,
+    forecast: await budgetForecast(b, e.lines, now),
     canManage: canManageBudget(b.groupId, roleByGroup),
     ...(await seriesNeighbours(b)),
-    transactions: withTransactions ? await budgetTransactions(counted, viewerId, b.groupId) : [],
-    transactionCount: counted.length,
+    transactions: withTransactions ? await budgetTransactions(listed, viewerId, b.groupId) : [],
+    transactionCount: listed.length,
   };
 }
 

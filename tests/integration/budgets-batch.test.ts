@@ -8,6 +8,7 @@ import {
 } from "@/server/services/budgets";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
 import { createLink } from "@/server/services/links";
+import { periodEndFor } from "@/lib/budgets";
 
 const owner = "budb_owner";
 let personal = "";
@@ -167,6 +168,37 @@ describe("listBudgetsForUser batch loading (#299)", () => {
     await recurringMonth("2025-06-01", "2025-06-30");
     await recurringMonth("2025-07-01", "2025-07-31");
     await recurringMonth("2025-08-01", "2025-08-31");
+    expect(await queriesOfList()).toBe(before);
+  });
+
+  it("runs as many queries for many attached budgets as for one", async () => {
+    const attachedMonth = async (month: string) => {
+      await tx(personal, `${month}-05`, -10, food);
+      await tx(personal, `${month}-06`, -5, null);
+      await createBudget(
+        {
+          name: `Compte ${month}`,
+          periodType: "MONTH",
+          periodStart: `${month}-01`,
+          periodEnd: periodEndFor("MONTH", `${month}-01`)!,
+          accountId: personal,
+          lines: [
+            { categoryId: food, plannedAmount: 100 },
+            { kind: "TRANSFER", direction: "OUT", counterpartAccountId: shared, plannedAmount: 50 },
+          ],
+        },
+        { id: owner },
+      );
+    };
+    await attachedMonth("2024-05");
+    const out = await tx(personal, "2024-05-07", -7, null);
+    await createLink({
+      transactionIds: [out, await tx(shared, "2024-05-07", 7, null)],
+      userId: owner,
+    });
+    await queriesOfList();
+    const before = await queriesOfList();
+    for (const month of ["2024-06", "2024-07", "2024-08"]) await attachedMonth(month);
     expect(await queriesOfList()).toBe(before);
   });
 });
