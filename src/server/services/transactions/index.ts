@@ -25,6 +25,7 @@ import { manualPeriodDate, type YearMonth } from "@/lib/assigned-month";
 import { buildSecureFields } from "./secure-fields";
 import { syncAutoPeriodDates } from "./period-date";
 import { autoLinkTransfers } from "@/server/services/links/auto";
+import { linkedTransferLegs, setManualMonth } from "@/server/services/links/month";
 import {
   EXPORT_COLUMNS,
   pageRows,
@@ -404,20 +405,22 @@ export async function setTransactionMonth(
   if (!row) throw new TransactionAccessError("NOT_FOUND");
   if (!(await canWriteAccount(actor.id, row.accountId)))
     throw new TransactionAccessError("FORBIDDEN");
+  const rows = [row, ...(await linkedTransferLegs(id, actor.id))];
+  const ids = rows.map((r) => r.id);
   if (month) {
-    await db.transaction.update({
-      where: { id },
-      data: { periodDate: manualPeriodDate(row.date, month.year, month.month), periodManual: true },
-    });
+    await setManualMonth(rows, month);
   } else {
-    await db.transaction.update({ where: { id }, data: { periodManual: false } });
-    await syncAutoPeriodDates({ ids: [id] });
+    await db.transaction.updateMany({ where: { id: { in: ids } }, data: { periodManual: false } });
+    await syncAutoPeriodDates({ ids });
   }
-  await logEvent({
-    userId: actor.id,
-    action: "transaction.month_set",
-    entity: "Transaction",
-    entityId: id,
-    metadata: { month: month ? `${month.year}-${String(month.month).padStart(2, "0")}` : null },
-  });
+  const key = month ? `${month.year}-${String(month.month).padStart(2, "0")}` : null;
+  for (const entityId of ids) {
+    await logEvent({
+      userId: actor.id,
+      action: "transaction.month_set",
+      entity: "Transaction",
+      entityId,
+      metadata: { month: key },
+    });
+  }
 }

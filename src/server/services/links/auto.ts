@@ -3,6 +3,7 @@ import { db } from "@/server/db";
 import { decrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
 import { logEvent } from "@/server/services/audit";
+import { alignNewLinkMonth, type MonthLeg } from "./month";
 import { AUTO_LINK_WINDOW_DAYS, findAutoLinkPairs, labelWords } from "@/lib/links";
 import { merchantKey } from "@/lib/merchant";
 
@@ -42,6 +43,8 @@ export async function autoLinkTransfers(
         amount: true,
         date: true,
         type: true,
+        periodDate: true,
+        periodManual: true,
         merchantKeyHash: true,
         labelEnc: true,
       },
@@ -60,6 +63,8 @@ export async function autoLinkTransfers(
       amount,
       date: t.date,
       type: t.type,
+      periodDate: t.periodDate,
+      periodManual: t.periodManual,
       merchantKeyHash: t.merchantKeyHash,
       words: signed.has(-cents(amount))
         ? labelWords(merchantKey(decrypt(t.labelEnc, dataKey)))
@@ -67,18 +72,18 @@ export async function autoLinkTransfers(
     };
   });
   const ignored = new Set(ignoredRows.map((r) => r.pairKey));
-  const dateOf = new Map(rows.map((r) => [r.id, r.date]));
+  const rowOf = new Map(rows.map((r) => [r.id, r]));
 
   // Linking a pair can leave a former tie unique: repeat until nothing new pairs up.
   let linked = 0;
   for (;;) {
     const pairs = findAutoLinkPairs(rows, { windowDays: AUTO_LINK_WINDOW_DAYS, ignored }).filter(
-      (p) => inRange(dateOf.get(p.positiveId)!) && inRange(dateOf.get(p.negativeId)!),
+      (p) => inRange(rowOf.get(p.positiveId)!.date) && inRange(rowOf.get(p.negativeId)!.date),
     );
     if (pairs.length === 0) break;
     const taken = new Set(pairs.flatMap((p) => [p.positiveId, p.negativeId]));
     rows = rows.filter((r) => !taken.has(r.id));
-    linked += await createAutoLinks(ownerId, pairs);
+    linked += await createAutoLinks(ownerId, pairs, rowOf);
   }
   if (linked > 0) {
     await logEvent({
@@ -95,6 +100,7 @@ export async function autoLinkTransfers(
 async function createAutoLinks(
   ownerId: string,
   pairs: { positiveId: string; negativeId: string }[],
+  rowOf: Map<string, MonthLeg>,
 ): Promise<number> {
   let linked = 0;
   for (const p of pairs) {
@@ -108,6 +114,7 @@ async function createAutoLinks(
           },
         },
       });
+      await alignNewLinkMonth([rowOf.get(p.positiveId)!, rowOf.get(p.negativeId)!]);
       linked++;
     } catch (e) {
       // A leg linked meanwhile (unique transactionId): leave that pair alone.
