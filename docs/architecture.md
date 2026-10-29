@@ -529,7 +529,9 @@ model BankAccount {
   shares       AccountShare[]
   transactions Transaction[]
   imports      ImportBatch[]
-  budgetLines  BudgetLine[]
+  budgetLines      BudgetLine[] @relation("BudgetLineAccount")
+  counterpartLines BudgetLine[] @relation("BudgetLineCounterpart")
+  attachedBudgets  Budget[]     @relation("BudgetAccount")
   @@index([ownerId])
   @@index([ibanHash])
 }
@@ -735,6 +737,11 @@ model Budget {
   user           User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
   group          Group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
+  // Attached budget (#355): counts this account only; at most one non-archived per account and day
+  accountId          String?
+  account            BankAccount? @relation("BudgetAccount", fields: [accountId], references: [id], onDelete: SetNull)
+  outOfBudgetPlanned Decimal?     @db.Decimal(12, 2)  // optional margin of the out-of-budget line
+
   // Period
   periodType     String                               // WEEK | MONTH | QUARTER | YEAR | CUSTOM
   periodStart    DateTime
@@ -752,6 +759,7 @@ model Budget {
   assignments BudgetAssignment[]
   @@index([userId, periodStart])
   @@index([groupId, periodStart])
+  @@index([accountId, periodStart])
   @@index([parentBudgetId])
 }
 
@@ -763,8 +771,14 @@ model BudgetLine {
   // Filters: category (incl. descendants) and/or account; neither = catch-all line for unmatched expenses
   categoryId    String?
   category      Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  accountId     String?
-  account       BankAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  accountId     String?                              // unattached budgets only
+  account       BankAccount? @relation("BudgetLineAccount", fields: [accountId], references: [id], onDelete: SetNull)
+
+  // Attached budgets (#355): EXPENSE | INCOME on a category, TRANSFER OUT | IN with a counterpart account
+  kind                 String       @default("EXPENSE")
+  direction            String?
+  counterpartAccountId String?
+  counterpart          BankAccount? @relation("BudgetLineCounterpart", fields: [counterpartAccountId], references: [id], onDelete: SetNull)
 
   plannedAmount Decimal @db.Decimal(12, 2)
   label         String?
@@ -1018,6 +1032,7 @@ Creation (form dialog on `/budgets`):
 - Recurring: if yes, the next-period instance (same lines, chained to the template by `parentBudgetId`) is created once the period has ended, by the daily roll cron (§5.14) or by hand from the list.
 - Lines: each line targets a category (with its sub-categories), an account, both, or neither (catch-all), with a `plannedAmount`. Lines may only use accounts the budget draws from and categories the actor can use (a group budget: personal ones or that group's).
 - Optional `description` (≤ 500 chars) and per-line `label` (≤ 80 chars, shown instead of the category/account name), both editable in the create/edit form.
+- Optional `accountId` (#355): the budget is attached to that account, which must be in its scope (`INVALID_ACCOUNT`). Creating, editing, unarchiving or renewing a budget whose period overlaps another non-archived budget attached to the same account is refused (`ACCOUNT_OVERLAP`); the roll cron skips it. Its lines have a `kind`: `EXPENSE` / `INCOME` need a category, `TRANSFER` needs a `direction` and a counterpart account in scope; it may set `outOfBudgetPlanned`. Unattached budgets keep `EXPENSE` lines only. Renewing copies all of it.
 
 Archive (#260): a budget manager can archive/unarchive (`budgets.service.archiveBudget` / `unarchiveBudget`, audit `budget.archived` / `budget.unarchived`). Archived budgets leave the list (shown in a collapsed "Archived budgets" section), the dashboard, the assignment menu and the roll cron; their detail stays readable and their menu only offers unarchive/delete. An archived budget takes no new assignment (`ARCHIVED`) and is never rolled, even by a direct call; existing assignments stay listed (marked archived) and removable in the transaction panel.
 
@@ -1034,7 +1049,15 @@ Archive (#260): a budget manager can archive/unarchive (`budgets.service.archive
 
 Explicit assignment: from any transaction, "Assign to a budget" menu → choose budget (mine or my groups', not archived) → mode INCLUDE/EXCLUDE → `budgets.assignTransaction` upserts `BudgetAssignment` (unique on `(budgetId, transactionId)`). The transaction's account must be readable; an INCLUDE into a group budget also needs the account to be the actor's own or shared with that group.
 
-Forecast (#347, `budgetForecast`): while `now` is within the period, `BudgetDetail.forecast` = `{ balance, remaining, endBalance }` with `balance` the current balance of the scope's non-archived `CHECKING` accounts, `remaining` = Σ max(line remaining, 0) and `endBalance = balance − remaining`. Income to come is not anticipated. Shown on the budget detail and the dashboard snapshot.
+Forecast (#347, `budgetForecast`): while `now` is within the period, an unattached budget's `BudgetDetail.forecast` = `{ balance, remaining, endBalance }` with `balance` the current balance of the scope's non-archived `CHECKING` accounts, `remaining` = Σ max(line remaining, 0) and `endBalance = balance − remaining`. Income to come is not anticipated. Shown on the budget detail and the dashboard snapshot.
+
+Attached budgets (#355, `services/budgets/attached.ts`, pure matching in `lib/budget-match.ts`) replace steps 1, 4 and 5:
+1. Candidates: the rows of the budget's account only (while it is still in the scope), plus INCLUDEs. Loading the scope would collapse a linked transfer's two legs to zero.
+2. Transfer context, in a constant number of queries for all budgets: each linked row's partner accounts (`links/members.linkPartners`), and for each unlinked row the accounts holding an unlinked opposite row of the same amount within `AUTO_LINK_WINDOW_DAYS` (a pending leg).
+3. Mirrors (`budgetMirrors`): `TRANSFER` lines of other non-archived attached budgets whose counterpart is this account, same `periodType` and `periodStart`, readable by the viewer, become read-only lines in the opposite direction, unless the budget has its own line on that account in that direction.
+4. `bucketRow` puts each non-excluded row in one bucket: a `TRANSFER` line of the row's direction whose counterpart is a partner (or a pending account when unlinked), else the most specific `EXPENSE` line (outflows) or `INCOME` line, then `EXPENSE` as a refund unless the row is a transfer leg (inflows), else out of budget (outflows) or unplanned income (inflows).
+5. Totals: spending = outgoing lines + out of budget, planned = outgoing lines + margin; income lines report what they received. A savings transfer over plan doesn't count toward the budget's `OVER` status. `unplannedIncome.fromSavings` sums unplanned rows whose partner account is `SAVINGS`; `outOfBudget.unmatchedTransfers` counts out-of-budget rows with a pending leg.
+6. Landing (`lib/budgets.budgetLanding`), while `now` is within the period: `balance` = the account's balance from rows dated ≤ now, `+ Σ max(planned − received, 0)` over incoming lines, `− Σ max(planned − spent, 0)` over outgoing lines and the margin, with received/spent counting only rows on the account dated ≤ now. `listBudgetsForUser` returns it per budget; the Budgets page shows one card per account.
 
 The budget detail lists the latest 100 counted transactions in full to everyone who can read the budget, including a private transaction included in a group budget (§2.2); for a group budget, rows from an account neither shared with the group nor owned by a current member show masked.
 

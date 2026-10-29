@@ -408,17 +408,18 @@ Open one of the transactions and click **Unlink** in the **Linked to** section. 
 
 ![Budgets](images/en/budgets.png)
 
-A budget sets how much you plan to spend per category or account over a period, and tracks what you actually spend.
+A budget sets how much you plan to spend per category or account over a period, and tracks what you actually spend. Attached to an account, it becomes that account's envelope: planned income, transfers and spending, and where the account lands at the end of the period (see [Budget on an account](#budget-on-an-account)).
 
 ### Create a budget
 
 1. Go to **Budgets** and click **New budget**.
 2. Enter a **Name** and, if you like, a **Description**.
 3. Choose the **Scope**: **Personal**, or a household you manage (see [Household budgets](#household-budgets)). It can't be changed later.
-4. Choose the **Period**: Week, Month, Quarter, Year or Custom, then the **Start** date. The end date follows from the period.
-5. Tick **Recurring** for a budget that repeats every period.
-6. Add **Lines**. For each line, pick a **Category** (or **All categories**), an **Account** (or **All accounts**) and a **Planned amount**. A line can also have a **Label**, shown instead of the category or account name.
-7. Click **Create budget**.
+4. Optionally choose an **Account** (see [Budget on an account](#budget-on-an-account)). Leave **None: all accounts** for a budget across your accounts.
+5. Choose the **Period**: Week, Month, Quarter, Year or Custom, then the **Start** date. The end date follows from the period.
+6. Tick **Recurring** for a budget that repeats every period.
+7. Add **Lines**. For each line, pick a **Category** (or **All categories**), an **Account** (or **All accounts**) and a **Planned amount**. A line can also have a **Label**, shown instead of the category or account name.
+8. Click **Create budget**.
 
 How lines count spending:
 
@@ -426,6 +427,45 @@ How lines count spending:
 - When a parent line and a sub-category line both match, the transaction goes to the more specific one.
 - An **All categories / All accounts** line takes every expense that no other line matches.
 - Linked transactions are counted as explained in [Links](#links-transfers-and-refunds).
+
+### Budget on an account
+
+A budget attached to an account follows that account only: the money that comes in, the money that goes out, and the transfers to your other accounts. Use one per checking account, for example one for your personal account and one for the household's joint account.
+
+- An account has at most one budget at a time: two budgets on the same account can't overlap, even partly. Archived budgets don't count.
+- A household budget can use an account shared with the household.
+- Transfers to your other accounts count in full: a transfer to your savings account is money that left this account.
+
+Each line has a **Type**:
+
+| Type         | What it counts on the account                                                      |
+| ------------ | ---------------------------------------------------------------------------------- |
+| **Expense**  | spending in the category and its sub-categories (a refund reduces it)              |
+| **Income**   | money received in the category, for example your salary                           |
+| **Transfer** | transfers **To** or **From** another of your accounts, chosen in **Other account** |
+
+A transaction counts in one line only. Transfer lines come first, then the most specific category line. A transfer is matched once it is linked to the other account's side (see [Automatic links](#automatic-links)), or when that account holds the same amount the other way within 4 days. Money coming from another account never counts as a refund of an expense line.
+
+Going over a line reads differently by type: **Over by …** for an expense, **+… more than planned** for income or a transfer, and **+… saved on top** for a transfer to a savings account, which doesn't push the budget over.
+
+A transfer line is set once, in the budget of the account the money leaves. The other account's budget shows it as a read-only line, **Planned in …**, when both budgets have the same period type and start and you can see both. If that budget already has its own **From** line for this account, only its own line counts.
+
+**Out of budget** is always the last line. It collects what the account paid that no other line takes: uncategorized transactions, categories without a line, unplanned transfers. You can give it an optional **Margin** for the unexpected. Click it to list those transactions; click a transaction to open it in **Transactions**, where you can recategorize it or include it elsewhere. When a transfer is left there because it isn't linked yet, a link to the link suggestions appears.
+
+**Unplanned income** lists the money received that no Income or Transfer line takes. What came from a savings account shows as **Taken from savings this period**.
+
+#### Where the account lands
+
+During the current period, the **Budgets** page opens with **Where I land**: one card per account with a budget in progress. Its balance at the period's end is:
+
+> today's balance + income still expected − spending still to come
+
+- Today's balance only counts transactions dated today or earlier.
+- Income still expected: what each Income line and incoming transfer has not received yet.
+- Spending still to come: what each Expense line and outgoing transfer has not spent yet, plus what is left of the Out-of-budget margin. A line already over counts as 0.
+- A transaction from another account included in the budget counts in its line, but not in the landing: it never touched this account.
+
+Past and future periods show planned versus actual only. Savings accounts get no budget and no landing: their balance shows on the dashboard.
 
 ### Follow a budget
 
@@ -444,11 +484,11 @@ Tip: **Reached** needs the exact amount, to the cent. Until then the percentage 
 
 Click a budget to open its details: each line with "… left" or "Over by …", **See transactions** for category lines, and the list of transactions **Counted in this budget**.
 
-During the current period, **Projected balance on …** estimates your balance at the end of the period: the current balance of your checking accounts, minus what the lines still plan to spend (an over-budget line counts as 0). Savings accounts and income still to come are left out. The projected balance also shows on the dashboard's current budget card.
+During the current period, a budget with no account shows **Projected balance on …**: the current balance of your checking accounts, minus what the lines still plan to spend (an over-budget line counts as 0). Savings accounts and income still to come are left out. A budget on an account shows its landing instead (see [Where the account lands](#where-the-account-lands)). Either figure also shows on the dashboard's current budget card.
 
 ### Renew a recurring budget
 
-When a recurring budget's period ends, a **Renew** button on its card creates the next period with the same lines. Unspent amounts are not carried over. Your administrator can also set up automatic renewal. The periods of a series are grouped on one card: open **… other periods** to see them, or use the arrows on the details page.
+When a recurring budget's period ends, a **Renew** button on its card creates the next period with the same account, lines and margin. If another budget already covers the next period on that account, the budget isn't renewed. Unspent amounts are not carried over. Your administrator can also set up automatic renewal. The periods of a series are grouped on one card: open **… other periods** to see them, or use the arrows on the details page.
 
 ### Edit, archive or delete a budget
 
