@@ -20,6 +20,7 @@ import { BudgetBar, statusStyle } from "./budget-status";
 import { BudgetActions, toEditableBudget } from "./budget-actions";
 import type { BudgetAccountOption, BudgetListItem } from "@/server/services/budgets";
 import { PageHeader } from "@/components/shell/page-header";
+import { LandingCards } from "./landing-cards";
 
 export function BudgetsView({
   budgets,
@@ -40,6 +41,7 @@ export function BudgetsView({
   const router = useRouter();
   const [rolling, startRoll] = useTransition();
   const nf = new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" });
+  const accountNames = new Map(accounts.map((a) => [a.id, a.name]));
 
   const [rollResult, setRollResult] = useState<
     { ok: true; id?: string; from: BudgetListItem } | { ok: false; error: string } | null
@@ -114,6 +116,8 @@ export function BudgetsView({
         </Alert>
       )}
 
+      <LandingCards budgets={budgets} accountNames={accountNames} />
+
       {budgets.length === 0 ? (
         <EmptyState
           icon={Target}
@@ -163,6 +167,11 @@ export function BudgetsView({
                         <Badge variant={b.scope === "GROUP" ? "default" : "secondary"}>
                           {b.scope === "GROUP" ? t("scopeGroup") : t("scopePersonal")}
                         </Badge>
+                        {b.accountId && accountNames.has(b.accountId) && (
+                          <Badge variant="outline" data-slot="budget-account">
+                            {accountNames.get(b.accountId)}
+                          </Badge>
+                        )}
                         {b.recurring && <Badge variant="outline">{t("recurring")}</Badge>}
                         <span>{formatDateRange(b.periodStart, b.periodEnd, locale)}</span>
                       </div>

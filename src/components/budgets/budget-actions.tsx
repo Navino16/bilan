@@ -22,7 +22,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { archiveBudgetAction, unarchiveBudgetAction } from "@/server/transport/actions/budgets";
-import { BudgetForm, type BudgetLineOption, type EditableBudget } from "./budget-form";
+import {
+  BudgetForm,
+  type BudgetLineOption,
+  type EditableBudget,
+  type EditableBudgetLine,
+} from "./budget-form";
 import { BudgetDeleteDialog } from "./budget-delete-dialog";
 import type { CategoryOption } from "@/components/categories/category-options";
 import type { BudgetAccountOption } from "@/server/services/budgets";
@@ -171,31 +176,35 @@ export function toEditableBudget(b: {
   name: string;
   description: string | null;
   groupId: string | null;
+  accountId: string | null;
+  outOfBudgetPlanned: number | null;
   periodType: string;
   periodStart: Date;
   periodEnd: Date;
   recurring: boolean;
-  lines: {
-    categoryId: string | null;
-    accountId: string | null;
-    label: string | null;
-    plannedAmount: number;
-  }[];
+  lines: (EditableBudgetLine & { mirrorOf?: unknown })[];
 }): EditableBudget {
   return {
     id: b.id,
     name: b.name,
     description: b.description,
     groupId: b.groupId,
+    accountId: b.accountId,
+    outOfBudgetPlanned: b.outOfBudgetPlanned,
     periodType: b.periodType,
     periodStart: isoDay(b.periodStart),
     periodEnd: isoDay(b.periodEnd),
     recurring: b.recurring,
-    lines: b.lines.map((l) => ({
-      categoryId: l.categoryId,
-      accountId: l.accountId,
-      label: l.label,
-      plannedAmount: l.plannedAmount,
-    })),
+    lines: b.lines
+      .filter((l) => !l.mirrorOf)
+      .map((l) => ({
+        kind: l.kind,
+        categoryId: l.categoryId,
+        accountId: l.accountId,
+        direction: l.direction,
+        counterpartAccountId: l.counterpartAccountId,
+        label: l.label,
+        plannedAmount: l.plannedAmount,
+      })),
   };
 }

@@ -269,6 +269,94 @@ test.describe("budgets", () => {
     }
   });
 
+  test("an attached budget shows its landing, sections and out-of-budget rows", async ({
+    page,
+  }) => {
+    const stamp = Date.now();
+    const account = `Atterrissage ${stamp}`;
+    const name = `Enveloppe compte ${stamp}`;
+    const today = new Date().toISOString().slice(0, 10);
+    await createAccount(page, account, "500");
+    await page
+      .locator('[data-slot="card"]', { hasText: account })
+      .getByRole("button", { name: /saisir une transaction/i })
+      .click();
+    await page.fill('input[name="date"]', today);
+    await page.fill('input[name="amount"]', "-12");
+    await page.fill('input[name="label"]', `Imprévu ${stamp}`);
+    await page.getByRole("button", { name: /^ajouter$/i }).click();
+    await expect(page.locator('input[name="label"]')).toBeHidden();
+
+    await openNewBudget(page);
+    await page.fill('input[name="name"]', name);
+    await page.locator("#bud-account").selectOption({ label: account });
+    await page.fill('input[name="periodStart"]', `${today.slice(0, 7)}-01`);
+    const line = page.locator('[data-slot="budget-line-row"]').first();
+    await line.getByLabel("Catégorie").selectOption({ index: 1 });
+    await line.getByLabel("Montant prévu").fill("100");
+    await page.getByRole("button", { name: /créer le budget/i }).click();
+
+    const landing = page.locator('[data-slot="landing-card"]').filter({ hasText: account });
+    await expect(landing).toContainText("388,00", { timeout: 15_000 });
+    await page.locator('[data-slot="budget-card"]').filter({ hasText: name }).click();
+    await expect(page.getByRole("heading", { name })).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('[data-slot="budget-income"]')).toBeVisible();
+    await expect(page.locator('[data-slot="budget-spending"]')).toBeVisible();
+    const outOfBudget = page.locator('[data-slot="budget-out-of-budget"]');
+    await expect(outOfBudget).toContainText("12,00");
+    await outOfBudget.getByRole("link").first().click();
+    await expect(page).toHaveURL(/\?show=out$/);
+    const rows = page.locator('[data-slot="budget-transaction-row"]');
+    await expect(rows).toHaveCount(1);
+    await expect(rows).toContainText(`Imprévu ${stamp}`);
+
+    await deleteBudget(page, name);
+  });
+
+  test("builds an attached budget with income, a transfer and a margin, and edits it back", async ({
+    page,
+  }) => {
+    const stamp = Date.now();
+    const savings = `Livret ${stamp}`;
+    const name = `Comptes ${stamp}`;
+    await createAccount(page, savings, "0");
+
+    await openNewBudget(page);
+    await page.fill('input[name="name"]', name);
+    await page.locator("#bud-account").selectOption({ label: "E2E Courant" });
+    await page.fill('input[name="periodStart"]', `${2100 + (stamp % 800)}-01-01`);
+    const lines = page.locator('[data-slot="budget-line-row"]');
+    await lines.nth(0).getByLabel("Type").selectOption({ label: "Rentrée" });
+    await lines.nth(0).getByLabel("Catégorie").selectOption({ index: 1 });
+    await lines.nth(0).getByLabel("Montant prévu").fill("2000");
+    await page.getByRole("button", { name: /ajouter une ligne/i }).click();
+    await lines.nth(1).getByLabel("Type").selectOption({ label: "Virement" });
+    await lines.nth(1).getByLabel("Autre compte").selectOption({ label: savings });
+    await lines.nth(1).getByLabel("Montant prévu").fill("300");
+    await page.fill('input[name="outOfBudgetPlanned"]', "50");
+    await expect(page.getByText("Total prévu : 350,00 €")).toBeVisible();
+    await page.getByRole("button", { name: /créer le budget/i }).click();
+
+    const card = page.locator('[data-slot="budget-card"]').filter({ hasText: name });
+    await expect(card).toContainText("E2E Courant", { timeout: 15_000 });
+    await card.getByRole("button", { name: `Actions pour ${name}` }).click();
+    await page.getByRole("menuitem", { name: /modifier/i }).click();
+    await expect(page.locator("#bud-account").locator("option:checked")).toHaveText("E2E Courant");
+    await expect(lines.nth(0).getByLabel("Type")).toHaveValue("INCOME");
+    await expect(lines.nth(1).getByLabel("Type")).toHaveValue("TRANSFER");
+    await expect(lines.nth(1).getByLabel("Sens")).toHaveValue("OUT");
+    await expect(lines.nth(1).getByLabel("Autre compte").locator("option:checked")).toHaveText(
+      savings,
+    );
+    await expect(page.locator('input[name="outOfBudgetPlanned"]')).toHaveValue("50,00");
+    await page.getByRole("button", { name: /^annuler$/i }).click();
+
+    await card.click();
+    await expect(page.getByRole("heading", { name })).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('[data-slot="budget-income"]')).toContainText("0,00 € / 2 000,00 €");
+    await deleteBudget(page, name);
+  });
+
   test("the dashboard shows a budget snapshot", async ({ page }) => {
     await page.goto("/fr/dashboard");
     await expect(page.locator('[data-slot="budget-snapshot"]')).toBeVisible();
@@ -327,4 +415,39 @@ async function includeIntoNewBudget(page: Page, amount: string): Promise<string>
   await expect(page.getByText(/incluse/i).first()).toBeVisible({ timeout: 15_000 });
 
   return budgetName;
+}
+
+async function createAccount(page: Page, name: string, balance: string): Promise<void> {
+  await page.goto("/fr/accounts");
+  await expect(async () => {
+    await page.getByRole("button", { name: /nouveau compte/i }).click();
+    await expect(page.locator('input[name="name"]')).toBeVisible();
+  }).toPass();
+  await page.fill('input[name="name"]', name);
+  await page.fill('input[name="initialBalance"]', balance);
+  await page.getByRole("button", { name: /créer le compte/i }).click();
+  await expect(page.getByText(name).first()).toBeVisible({ timeout: 15_000 });
+}
+
+async function openNewBudget(page: Page): Promise<void> {
+  await page.goto("/fr/budgets");
+  await expect(async () => {
+    await page.getByRole("button", { name: /nouveau budget/i }).click();
+    await expect(page.locator('input[name="name"]')).toBeVisible();
+  }).toPass();
+}
+
+async function deleteBudget(page: Page, name: string): Promise<void> {
+  await page.goto("/fr/budgets");
+  await page
+    .locator('[data-slot="budget-card"]')
+    .filter({ hasText: name })
+    .getByRole("button", { name: `Actions pour ${name}` })
+    .click();
+  await page.getByRole("menuitem", { name: /supprimer/i }).click();
+  await page
+    .locator('[data-slot="budget-delete-dialog"]')
+    .getByRole("button", { name: /^supprimer$/i })
+    .click();
+  await expect(page.locator('[data-slot="budget-card"]').filter({ hasText: name })).toHaveCount(0);
 }

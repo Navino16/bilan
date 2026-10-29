@@ -519,7 +519,24 @@
       "catchAllHint": "An “All categories / All accounts” line takes every expense that no other line matches.",
       "hidden": "Hidden category or account",
       "archivedAccount": "{name} (archived)",
-      "labelPlaceholder": "Label (optional, defaults to the category or account)"
+      "labelPlaceholder": "Label (optional, defaults to the category or account)",
+      "kindLabel": "Kind",
+      "kind": {
+        "EXPENSE": "Expense",
+        "INCOME": "Income",
+        "TRANSFER": "Transfer"
+      },
+      "directionLabel": "Direction",
+      "direction": {
+        "OUT": "To",
+        "IN": "From"
+      },
+      "counterpart": "Other account",
+      "chooseCategory": "Choose a category",
+      "chooseAccount": "Choose an account",
+      "transferTo": "Transfer → {account}",
+      "transferFrom": "Transfer ← {account}",
+      "attachedHint": "Each line takes this account’s transactions of its category, or its transfers to or from the chosen account. Everything else goes out of budget."
     },
     "plannedTotal": "Planned total",
     "save": "Save",
@@ -538,7 +555,9 @@
       "AMOUNT_INVALID": "Invalid amount. Examples: -12.34 or 1,234.56.",
       "AMOUNT_AMBIGUOUS": "Ambiguous amount: write 1234 or 1.23 (no lone thousands separator).",
       "AMOUNT_PRECISION": "The amount can’t have more than 2 decimals.",
-      "ARCHIVED": "This budget is archived: unarchive it to assign transactions to it."
+      "ARCHIVED": "This budget is archived: unarchive it to assign transactions to it.",
+      "INVALID_ACCOUNT": "This account isn’t available for this budget.",
+      "ACCOUNT_OVERLAP": "Another budget already follows this account over this period."
     },
     "status": {
       "OK": "On track",
@@ -558,7 +577,24 @@
       "noTransactions": "No transaction counts in this budget yet.",
       "hiddenTx": "Another member’s transaction",
       "outOfBudget": "Out of budget",
-      "outOfBudgetHint": "{count, plural, one {# included transaction} other {# included transactions}} matching no line"
+      "outOfBudgetHint": "{count, plural, one {# included transaction} other {# included transactions}} matching no line",
+      "income": "Income",
+      "spending": "Spending",
+      "received": "Received",
+      "expected": "Expected",
+      "toReceive": "{amount} to receive",
+      "moreThanPlanned": "+{amount} more than planned",
+      "savedOnTop": "+{amount} saved on top",
+      "mirrorOf": "Planned in {name}",
+      "unplannedIncome": "Unplanned income",
+      "unplannedHint": "{count, plural, =0 {No income outside the lines} one {# transaction no income line takes} other {# transactions no income line takes}}",
+      "fromSavings": "Taken from savings this period: {amount}",
+      "outOfBudgetAccountHint": "{count, plural, =0 {Nothing paid outside the lines} one {# transaction no other line takes} other {# transactions no other line takes}}",
+      "margin": "Margin {amount}",
+      "unmatchedTransfers": "{count, plural, one {# transfer isn’t linked yet} other {# transfers aren’t linked yet}}: see the link suggestions.",
+      "showAll": "Show all",
+      "showingOut": "Out-of-budget transactions",
+      "showingUnplanned": "Unplanned income"
     },
     "assign": {
       "title": "Assign to a budget",
@@ -604,7 +640,28 @@
     "archiveBody": "The budget leaves the list, the dashboard and the assignment menu, and is no longer renewed. Its lines and assignments are kept and you can unarchive it.",
     "archivedTitle": "Archived budgets · {count, number}",
     "archivedHint": "Out of the list, the dashboard and the assignment menu. Open one to view it, or unarchive it from its menu.",
-    "archivedBadge": "Archived"
+    "archivedBadge": "Archived",
+    "account": {
+      "label": "Account",
+      "none": "None: all accounts",
+      "hint": "The budget follows this account only: its transfers to your other accounts count, and the Budgets page shows where the account lands at the end of the period."
+    },
+    "outOfBudget": {
+      "label": "Out of budget",
+      "margin": "Margin (optional)",
+      "marginHint": "Room for the unexpected: what is left of it is reserved in the landing."
+    },
+    "lineStatus": {
+      "EXPECTED": "Expected",
+      "RECEIVED": "Received",
+      "SAVED": "Saved on top"
+    },
+    "landing": {
+      "title": "Where I land",
+      "on": "On {date}",
+      "breakdown": "{balance} today + {income} to receive − {spending} to pay",
+      "fromSavings": "Taken from savings: {amount}"
+    }
   },
   "categories": {
     "title": "Categories",

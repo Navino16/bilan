@@ -21,16 +21,20 @@ export const generateMetadata = pageTitle("budget");
 
 export default async function BudgetDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; id: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const { locale, id } = await params;
   setRequestLocale(locale);
   const user = await requireSession();
+  const sp = await searchParams;
+  const show = sp.show === "out" || sp.show === "unplanned" ? sp.show : undefined;
 
   let detail: Awaited<ReturnType<typeof getBudgetDetail>>;
   try {
-    detail = await getBudgetDetail(id, user.id);
+    detail = await getBudgetDetail(id, user.id, { show });
   } catch (e) {
     if (e instanceof BudgetAccessError) notFound();
     throw e;
@@ -63,6 +67,7 @@ export default async function BudgetDetailPage({
       categories={categories}
       accounts={accounts}
       formOptions={formOptions}
+      show={show}
     />
   );
 }

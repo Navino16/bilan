@@ -844,6 +844,7 @@ export type BudgetDetail = {
   id: string;
   name: string;
   accountId: string | null;
+  outOfBudgetPlanned: number | null;
   description: string | null;
   archived: boolean;
   scope: BudgetScope;
@@ -1048,6 +1049,7 @@ export async function getBudgetDetail(
     id: b.id,
     name: b.name,
     accountId: b.accountId,
+    outOfBudgetPlanned: b.outOfBudgetPlanned == null ? null : Number(b.outOfBudgetPlanned),
     description: b.description,
     archived: b.archived,
     scope: b.groupId ? "GROUP" : "USER",
@@ -1099,7 +1101,9 @@ export async function getCurrentBudget(
   const names = await readableAccountNames(userId);
   const accountNames = Object.fromEntries(
     detail.lines.flatMap((l) =>
-      l.accountId && names.has(l.accountId) ? [[l.accountId, names.get(l.accountId)!]] : [],
+      [l.accountId, l.counterpartAccountId].flatMap((id) =>
+        id && names.has(id) ? [[id, names.get(id)!]] : [],
+      ),
     ),
   );
   return { detail, others: current.length - 1, accountNames };
