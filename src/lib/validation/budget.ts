@@ -3,3 +3,7 @@ export const BUDGET_DESCRIPTION_MAX = 500;
 export const BUDGET_LINE_LABEL_MAX = 80;
 export const BUDGET_PERIOD_TYPES = ["WEEK", "MONTH", "QUARTER", "YEAR", "CUSTOM"] as const;
 export type BudgetPeriodType = (typeof BUDGET_PERIOD_TYPES)[number];
+export const BUDGET_LINE_KINDS = ["EXPENSE", "INCOME", "TRANSFER"] as const;
+export type BudgetLineKind = (typeof BUDGET_LINE_KINDS)[number];
+export const TRANSFER_DIRECTIONS = ["OUT", "IN"] as const;
+export type TransferDirection = (typeof TRANSFER_DIRECTIONS)[number];

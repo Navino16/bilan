@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { Budget, Prisma } from "@prisma/client";
+import type { Budget, BudgetLine, Prisma } from "@prisma/client";
 import { db } from "@/server/db";
 import { decrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
@@ -29,7 +29,11 @@ import {
   type BudgetStatus,
   type LineStatus,
 } from "@/lib/budgets";
-import { type BudgetPeriodType } from "@/lib/validation/budget";
+import {
+  type BudgetLineKind,
+  type BudgetPeriodType,
+  type TransferDirection,
+} from "@/lib/validation/budget";
 import { budgetInputSchema, type BudgetInput } from "@/lib/schemas/budget";
 
 export class BudgetAccessError extends Error {}
@@ -84,13 +88,17 @@ function utcBounds(
 // actor may use: their own or, for a group budget, that group's (#155). Ids kept
 // from the budget's current lines stay valid, so another admin can still edit it.
 async function assertLinesInScope(
-  lines: { categoryId?: string; accountId?: string }[],
+  lines: { categoryId?: string; accountId?: string; counterpartAccountId?: string }[],
   scope: { userId: string | null; groupId: string | null },
   actorId: string,
-  current: { categoryId: string | null; accountId: string | null }[] = [],
+  current: {
+    categoryId: string | null;
+    accountId: string | null;
+    counterpartAccountId: string | null;
+  }[] = [],
 ): Promise<void> {
   const keptCategories = new Set(current.map((l) => l.categoryId));
-  const keptAccounts = new Set(current.map((l) => l.accountId));
+  const keptAccounts = new Set(current.flatMap((l) => [l.accountId, l.counterpartAccountId]));
   const categoryIds = [
     ...new Set(lines.flatMap((l) => (l.categoryId ? [l.categoryId] : []))),
   ].filter((id) => !keptCategories.has(id));
@@ -108,11 +116,74 @@ async function assertLinesInScope(
     }
   }
   const accountIds = lines.flatMap((l) =>
-    l.accountId && !keptAccounts.has(l.accountId) ? [l.accountId] : [],
+    [l.accountId, l.counterpartAccountId].filter(
+      (id): id is string => !!id && !keptAccounts.has(id),
+    ),
   );
   if (accountIds.length === 0) return;
   const allowed = new Set(await budgetAccountIds(scope));
   if (accountIds.some((id) => !allowed.has(id))) throw new BudgetAccessError("INVALID_LINE");
+}
+
+// The account of an attached budget must be one its scope draws from; an edit may keep
+// the current one (e.g. since archived), as lines do.
+async function assertBudgetAccount(
+  accountId: string,
+  scope: { userId: string | null; groupId: string | null },
+  kept: string | null = null,
+): Promise<void> {
+  if (accountId === kept) return;
+  if (!(await budgetAccountIds(scope)).includes(accountId))
+    throw new BudgetAccessError("INVALID_ACCOUNT");
+}
+
+// At most one non-archived attached budget per account covers a given day (design §B).
+async function attachedOverlap(
+  accountId: string,
+  start: Date,
+  end: Date,
+  excludeId?: string,
+): Promise<boolean> {
+  const other = await db.budget.findFirst({
+    where: {
+      accountId,
+      archived: false,
+      periodStart: { lte: end },
+      periodEnd: { gte: start },
+      ...(excludeId ? { id: { not: excludeId } } : {}),
+    },
+    select: { id: true },
+  });
+  return other != null;
+}
+
+type ParsedBudget = ReturnType<typeof parseInput>;
+
+// Lines of an attached budget filter on its account implicitly; only transfers keep a
+// direction and a counterpart.
+function lineData(l: ParsedBudget["lines"][number], attached: boolean) {
+  const transfer = l.kind === "TRANSFER";
+  return {
+    kind: l.kind,
+    categoryId: transfer ? null : (l.categoryId ?? null),
+    accountId: attached ? null : (l.accountId ?? null),
+    direction: transfer ? (l.direction ?? null) : null,
+    counterpartAccountId: transfer ? (l.counterpartAccountId ?? null) : null,
+    label: l.label ?? null,
+    plannedAmount: l.plannedAmount,
+  };
+}
+
+async function assertAttachable(
+  data: ParsedBudget,
+  scope: { userId: string | null; groupId: string | null },
+  period: { start: Date; end: Date },
+  current?: { id: string; accountId: string | null },
+): Promise<void> {
+  if (!data.accountId) return;
+  await assertBudgetAccount(data.accountId, scope, current?.accountId);
+  if (await attachedOverlap(data.accountId, period.start, period.end, current?.id))
+    throw new BudgetAccessError("ACCOUNT_OVERLAP");
 }
 
 export async function createBudget(
@@ -122,11 +193,9 @@ export async function createBudget(
   const data = parseInput(input);
   await assertCanManageScope(data.groupId, actor.id);
   const { start, end } = utcBounds(data.periodType, data.periodStart, data.periodEnd);
-  await assertLinesInScope(
-    data.lines,
-    { userId: data.groupId ? null : actor.id, groupId: data.groupId ?? null },
-    actor.id,
-  );
+  const scope = { userId: data.groupId ? null : actor.id, groupId: data.groupId ?? null };
+  await assertLinesInScope(data.lines, scope, actor.id);
+  await assertAttachable(data, scope, { start, end });
 
   const budget = await db.budget.create({
     data: {
@@ -134,19 +203,14 @@ export async function createBudget(
       description: data.description ?? null,
       userId: data.groupId ? null : actor.id,
       groupId: data.groupId ?? null,
+      accountId: data.accountId ?? null,
+      outOfBudgetPlanned: data.outOfBudgetPlanned ?? null,
       periodType: data.periodType,
       periodStart: start,
       periodEnd: end,
       recurring: data.recurring ?? false,
       createdById: actor.id,
-      lines: {
-        create: data.lines.map((l) => ({
-          categoryId: l.categoryId ?? null,
-          accountId: l.accountId ?? null,
-          label: l.label ?? null,
-          plannedAmount: l.plannedAmount,
-        })),
-      },
+      lines: { create: data.lines.map((l) => lineData(l, !!data.accountId)) },
     },
   });
   await logEvent({
@@ -184,9 +248,10 @@ export async function updateBudget(
   const { start, end } = utcBounds(data.periodType, data.periodStart, data.periodEnd);
   const current = await db.budgetLine.findMany({
     where: { budgetId: id },
-    select: { categoryId: true, accountId: true },
+    select: { categoryId: true, accountId: true, counterpartAccountId: true },
   });
   await assertLinesInScope(data.lines, existing, actor.id, current);
+  await assertAttachable(data, existing, { start, end }, existing);
   // Scope (user vs group) is immutable here — recreate to move it.
   await db.$transaction([
     db.budgetLine.deleteMany({ where: { budgetId: id } }),
@@ -195,18 +260,13 @@ export async function updateBudget(
       data: {
         name: data.name,
         description: data.description ?? null,
+        accountId: data.accountId ?? null,
+        outOfBudgetPlanned: data.outOfBudgetPlanned ?? null,
         periodType: data.periodType,
         periodStart: start,
         periodEnd: end,
         recurring: data.recurring ?? false,
-        lines: {
-          create: data.lines.map((l) => ({
-            categoryId: l.categoryId ?? null,
-            accountId: l.accountId ?? null,
-            label: l.label ?? null,
-            plannedAmount: l.plannedAmount,
-          })),
-        },
+        lines: { create: data.lines.map((l) => lineData(l, !!data.accountId)) },
       },
     }),
   ]);
@@ -242,7 +302,9 @@ export async function archiveBudget(id: string, actor: { id: string }): Promise<
 }
 
 export async function unarchiveBudget(id: string, actor: { id: string }): Promise<void> {
-  await manageableOrThrow(id, actor.id);
+  const b = await manageableOrThrow(id, actor.id);
+  if (b.accountId && (await attachedOverlap(b.accountId, b.periodStart, b.periodEnd, b.id)))
+    throw new BudgetAccessError("ACCOUNT_OVERLAP");
   await db.budget.update({ where: { id }, data: { archived: false } });
   await logEvent({
     userId: actor.id,
@@ -257,6 +319,8 @@ export type BudgetListItem = {
   name: string;
   scope: BudgetScope;
   groupId: string | null;
+  accountId: string | null;
+  outOfBudgetPlanned: number | null;
   periodType: string;
   periodStart: Date;
   periodEnd: Date;
@@ -269,8 +333,11 @@ export type BudgetListItem = {
   archived: boolean;
   parentBudgetId: string | null;
   lines: {
+    kind: BudgetLineKind;
     categoryId: string | null;
     accountId: string | null;
+    direction: TransferDirection | null;
+    counterpartAccountId: string | null;
     label: string | null;
     plannedAmount: number;
   }[];
@@ -297,7 +364,7 @@ export async function listBudgetsForUser(
   const rows = await db.budget.findMany({
     where: { archived, OR: [{ userId }, { groupId: { in: groupIds } }] },
     include: {
-      lines: { select: { plannedAmount: true, categoryId: true, accountId: true, label: true } },
+      lines: true,
     },
     orderBy: { periodStart: "desc" },
   });
@@ -330,14 +397,19 @@ export async function listBudgetsForUser(
       archived: b.archived,
       scope: b.groupId ? "GROUP" : "USER",
       groupId: b.groupId,
+      accountId: b.accountId,
+      outOfBudgetPlanned: b.outOfBudgetPlanned == null ? null : Number(b.outOfBudgetPlanned),
       parentBudgetId: b.parentBudgetId,
       periodType: b.periodType,
       periodStart: b.periodStart,
       periodEnd: b.periodEnd,
       recurring: b.recurring,
       lines: b.lines.map((l) => ({
+        kind: l.kind as BudgetLineKind,
         categoryId: l.categoryId,
         accountId: l.accountId,
+        direction: l.direction as TransferDirection | null,
+        counterpartAccountId: l.counterpartAccountId,
         label: l.label,
         plannedAmount: Number(l.plannedAmount),
       })),
@@ -1042,6 +1114,21 @@ async function withNextInstance(budgets: SeriesRef[]): Promise<Set<string>> {
   );
 }
 
+const attachedFields = (b: Budget) => ({
+  accountId: b.accountId,
+  outOfBudgetPlanned: b.outOfBudgetPlanned,
+});
+
+const copiedLine = (l: BudgetLine) => ({
+  kind: l.kind,
+  categoryId: l.categoryId,
+  accountId: l.accountId,
+  direction: l.direction,
+  counterpartAccountId: l.counterpartAccountId,
+  label: l.label,
+  plannedAmount: l.plannedAmount,
+});
+
 // Core roll: create the next-period instance of a recurring budget if it doesn't
 // already exist (idempotent). `createdById` owns the new row; `auditUserId` is the
 // acting user (null for the system cron → anonymous audit).
@@ -1055,6 +1142,8 @@ async function rollFrom(
   const template = b.parentBudgetId ?? b.id; // chain instances off the original template
   const period = nextPeriod(b.periodType as BudgetPeriodType, b.periodStart, b.periodEnd);
   if (await nextInstanceExists(b)) return { created: false };
+  if (b.accountId && (await attachedOverlap(b.accountId, period.start, period.end)))
+    throw new BudgetAccessError("ACCOUNT_OVERLAP");
 
   const lines = await db.budgetLine.findMany({ where: { budgetId: b.id } });
   const instance = await db.budget.create({
@@ -1063,20 +1152,14 @@ async function rollFrom(
       description: b.description,
       userId: b.userId,
       groupId: b.groupId,
+      ...attachedFields(b),
       periodType: b.periodType,
       periodStart: period.start,
       periodEnd: period.end,
       recurring: true,
       parentBudgetId: template,
       createdById,
-      lines: {
-        create: lines.map((l) => ({
-          categoryId: l.categoryId,
-          accountId: l.accountId,
-          label: l.label,
-          plannedAmount: l.plannedAmount,
-        })),
-      },
+      lines: { create: lines.map(copiedLine) },
     },
   });
   await logEvent({
@@ -1119,11 +1202,13 @@ export async function rollRecurringBudgets(
 ): Promise<{ checked: number; rolled: number }> {
   const due = await dueBudgets(now);
   if (due.length === 0) return { checked: 0, rolled: 0 };
-  const instances = due.map((b) => ({
+  const planned = due.map((b) => ({
     b,
     id: randomUUID(),
     period: nextPeriod(b.periodType as BudgetPeriodType, b.periodStart, b.periodEnd),
   }));
+  const instances = await withoutAttachedOverlap(planned);
+  if (instances.length === 0) return { checked: due.length, rolled: 0 };
   await db.$transaction([
     db.budget.createMany({
       data: instances.map(({ b, id, period }) => ({
@@ -1132,6 +1217,7 @@ export async function rollRecurringBudgets(
         description: b.description,
         userId: b.userId,
         groupId: b.groupId,
+        ...attachedFields(b),
         periodType: b.periodType,
         periodStart: period.start,
         periodEnd: period.end,
@@ -1142,13 +1228,7 @@ export async function rollRecurringBudgets(
     }),
     db.budgetLine.createMany({
       data: instances.flatMap(({ b, id }) =>
-        b.lines.map((l) => ({
-          budgetId: id,
-          categoryId: l.categoryId,
-          accountId: l.accountId,
-          label: l.label,
-          plannedAmount: l.plannedAmount,
-        })),
+        b.lines.map((l) => ({ budgetId: id, ...copiedLine(l) })),
       ),
     }),
     db.auditLog.createMany({
@@ -1161,5 +1241,31 @@ export async function rollRecurringBudgets(
       })),
     }),
   ]);
-  return { checked: due.length, rolled: due.length };
+  return { checked: due.length, rolled: instances.length };
+}
+
+// The cron skips a renewal whose period another attached budget already covers on the
+// same account (design §B); one query for every due budget.
+async function withoutAttachedOverlap<T extends { b: Budget; period: { start: Date; end: Date } }>(
+  planned: T[],
+): Promise<T[]> {
+  const attached = planned.filter((p) => p.b.accountId);
+  if (attached.length === 0) return planned;
+  const taken = await db.budget.findMany({
+    where: {
+      archived: false,
+      accountId: { in: [...new Set(attached.map((p) => p.b.accountId!))] },
+      periodStart: { lte: new Date(Math.max(...attached.map((p) => p.period.end.getTime()))) },
+      periodEnd: { gte: new Date(Math.min(...attached.map((p) => p.period.start.getTime()))) },
+    },
+    select: { accountId: true, periodStart: true, periodEnd: true },
+  });
+  return planned.filter(
+    ({ b, period }) =>
+      !b.accountId ||
+      !taken.some(
+        (t) =>
+          t.accountId === b.accountId && t.periodStart <= period.end && t.periodEnd >= period.start,
+      ),
+  );
 }

@@ -485,6 +485,8 @@ CREATE TABLE `Budget` (
     `description` VARCHAR(191) NULL,
     `userId` VARCHAR(191) NULL,
     `groupId` VARCHAR(191) NULL,
+    `accountId` VARCHAR(191) NULL,
+    `outOfBudgetPlanned` DECIMAL(12, 2) NULL,
     `periodType` VARCHAR(191) NOT NULL,
     `periodStart` DATETIME(3) NOT NULL,
     `periodEnd` DATETIME(3) NOT NULL,
@@ -496,6 +498,7 @@ CREATE TABLE `Budget` (
 
     INDEX `Budget_userId_periodStart_idx`(`userId`, `periodStart`),
     INDEX `Budget_groupId_periodStart_idx`(`groupId`, `periodStart`),
+    INDEX `Budget_accountId_periodStart_idx`(`accountId`, `periodStart`),
     INDEX `Budget_parentBudgetId_idx`(`parentBudgetId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -506,6 +509,9 @@ CREATE TABLE `BudgetLine` (
     `budgetId` VARCHAR(191) NOT NULL,
     `categoryId` VARCHAR(191) NULL,
     `accountId` VARCHAR(191) NULL,
+    `kind` VARCHAR(191) NOT NULL DEFAULT 'EXPENSE',
+    `direction` VARCHAR(191) NULL,
+    `counterpartAccountId` VARCHAR(191) NULL,
     `plannedAmount` DECIMAL(12, 2) NOT NULL,
     `label` VARCHAR(191) NULL,
 
@@ -624,6 +630,9 @@ ALTER TABLE `Budget` ADD CONSTRAINT `Budget_userId_fkey` FOREIGN KEY (`userId`) 
 ALTER TABLE `Budget` ADD CONSTRAINT `Budget_groupId_fkey` FOREIGN KEY (`groupId`) REFERENCES `Group`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE `Budget` ADD CONSTRAINT `Budget_accountId_fkey` FOREIGN KEY (`accountId`) REFERENCES `BankAccount`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE `Budget` ADD CONSTRAINT `Budget_parentBudgetId_fkey` FOREIGN KEY (`parentBudgetId`) REFERENCES `Budget`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -634,6 +643,9 @@ ALTER TABLE `BudgetLine` ADD CONSTRAINT `BudgetLine_categoryId_fkey` FOREIGN KEY
 
 -- AddForeignKey
 ALTER TABLE `BudgetLine` ADD CONSTRAINT `BudgetLine_accountId_fkey` FOREIGN KEY (`accountId`) REFERENCES `BankAccount`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `BudgetLine` ADD CONSTRAINT `BudgetLine_counterpartAccountId_fkey` FOREIGN KEY (`counterpartAccountId`) REFERENCES `BankAccount`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `BudgetAssignment` ADD CONSTRAINT `BudgetAssignment_budgetId_fkey` FOREIGN KEY (`budgetId`) REFERENCES `Budget`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
