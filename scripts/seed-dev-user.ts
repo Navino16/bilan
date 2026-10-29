@@ -499,7 +499,8 @@ async function main(): Promise<void> {
   const member = await db.user.findUnique({ where: { email: MEMBER_EMAIL } });
   if (member) await db.groupMember.create({ data: { groupId, userId: member.id, role: "MEMBER" } });
 
-  // Last month's recurring budget, rolled into this month.
+  // Last month's recurring budget on the checking account, rolled into this month; its
+  // transfer to the joint account shows as a mirror in the household budget.
   const monthBounds = (offset: number) => ({
     start: isoDay(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + offset, 1))),
     end: isoDay(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + offset + 1, 0))),
@@ -512,7 +513,24 @@ async function main(): Promise<void> {
       periodStart: prev.start,
       periodEnd: prev.end,
       recurring: true,
+      accountId: accountIds.courant,
+      outOfBudgetPlanned: 250,
       lines: [
+        { kind: "INCOME", categoryId: catId("Salaire"), plannedAmount: 2650 },
+        {
+          kind: "TRANSFER",
+          direction: "OUT",
+          counterpartAccountId: accountIds.joint,
+          label: "Contribution au foyer",
+          plannedAmount: 950,
+        },
+        {
+          kind: "TRANSFER",
+          direction: "OUT",
+          counterpartAccountId: accountIds.livret,
+          label: "Livret A",
+          plannedAmount: 200,
+        },
         { categoryId: catId("Restaurants"), plannedAmount: 120 },
         { categoryId: catId("Café & snacks"), plannedAmount: 25 },
         { categoryId: catId("Sorties"), plannedAmount: 80 },
@@ -527,6 +545,7 @@ async function main(): Promise<void> {
     {
       name: "Charges du foyer",
       groupId,
+      accountId: accountIds.joint,
       periodType: "MONTH",
       periodStart: cur.start,
       periodEnd: cur.end,

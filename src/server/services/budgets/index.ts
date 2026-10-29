@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { Budget, Prisma } from "@prisma/client";
+import type { Budget, BudgetLine, Prisma } from "@prisma/client";
 import { db } from "@/server/db";
 import { decrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
@@ -26,11 +26,27 @@ import {
   nextPeriod,
   periodEndFor,
   round2,
+  type BudgetLanding,
   type BudgetStatus,
   type LineStatus,
 } from "@/lib/budgets";
-import { type BudgetPeriodType } from "@/lib/validation/budget";
+import {
+  type BudgetLineKind,
+  type BudgetPeriodType,
+  type TransferDirection,
+} from "@/lib/validation/budget";
 import { budgetInputSchema, type BudgetInput } from "@/lib/schemas/budget";
+import {
+  attachedLanding,
+  budgetMirrors,
+  computeAttachedSpend,
+  loadTransferContext,
+  summarizeAttached,
+  type AttachedSpend,
+  type BudgetLineSpec,
+  type BudgetRow,
+  type LoadedBudgetRows,
+} from "./attached";
 
 export class BudgetAccessError extends Error {}
 
@@ -84,13 +100,17 @@ function utcBounds(
 // actor may use: their own or, for a group budget, that group's (#155). Ids kept
 // from the budget's current lines stay valid, so another admin can still edit it.
 async function assertLinesInScope(
-  lines: { categoryId?: string; accountId?: string }[],
+  lines: { categoryId?: string; accountId?: string; counterpartAccountId?: string }[],
   scope: { userId: string | null; groupId: string | null },
   actorId: string,
-  current: { categoryId: string | null; accountId: string | null }[] = [],
+  current: {
+    categoryId: string | null;
+    accountId: string | null;
+    counterpartAccountId: string | null;
+  }[] = [],
 ): Promise<void> {
   const keptCategories = new Set(current.map((l) => l.categoryId));
-  const keptAccounts = new Set(current.map((l) => l.accountId));
+  const keptAccounts = new Set(current.flatMap((l) => [l.accountId, l.counterpartAccountId]));
   const categoryIds = [
     ...new Set(lines.flatMap((l) => (l.categoryId ? [l.categoryId] : []))),
   ].filter((id) => !keptCategories.has(id));
@@ -108,11 +128,94 @@ async function assertLinesInScope(
     }
   }
   const accountIds = lines.flatMap((l) =>
-    l.accountId && !keptAccounts.has(l.accountId) ? [l.accountId] : [],
+    [l.accountId, l.counterpartAccountId].filter(
+      (id): id is string => !!id && !keptAccounts.has(id),
+    ),
   );
   if (accountIds.length === 0) return;
   const allowed = new Set(await budgetAccountIds(scope));
   if (accountIds.some((id) => !allowed.has(id))) throw new BudgetAccessError("INVALID_LINE");
+}
+
+// The account of an attached budget must be one its scope draws from; an edit may keep
+// the current one (e.g. since archived), as lines do.
+// A personal budget may only follow an account its owner holds (design §B).
+async function assertBudgetAccount(
+  accountId: string,
+  scope: { userId: string | null; groupId: string | null },
+  kept: string | null = null,
+): Promise<void> {
+  if (accountId === kept) return;
+  const allowed = scope.groupId
+    ? (await budgetAccountIds(scope)).includes(accountId)
+    : (await db.bankAccount.count({ where: { id: accountId, ownerId: scope.userId! } })) > 0;
+  if (!allowed) throw new BudgetAccessError("INVALID_ACCOUNT");
+}
+
+// Attached budgets that still hold their account: a household budget whose account was
+// unshared counts nothing and must not block the account (one query).
+async function stillAttached<T extends { accountId: string | null; groupId: string | null }>(
+  budgets: T[],
+): Promise<T[]> {
+  const grouped = budgets.filter((b) => b.groupId && b.accountId);
+  const shares =
+    grouped.length === 0
+      ? []
+      : await db.accountShare.findMany({
+          where: { OR: grouped.map((b) => ({ accountId: b.accountId!, groupId: b.groupId! })) },
+          select: { accountId: true, groupId: true },
+        });
+  const shared = new Set(shares.map((sh) => `${sh.accountId}|${sh.groupId}`));
+  return budgets.filter((b) => !b.groupId || shared.has(`${b.accountId}|${b.groupId}`));
+}
+
+// At most one non-archived attached budget per account covers a given day (design §B).
+async function attachedOverlap(
+  accountId: string,
+  start: Date,
+  end: Date,
+  excludeId?: string,
+): Promise<boolean> {
+  const others = await db.budget.findMany({
+    where: {
+      accountId,
+      archived: false,
+      periodStart: { lte: end },
+      periodEnd: { gte: start },
+      ...(excludeId ? { id: { not: excludeId } } : {}),
+    },
+    select: { accountId: true, groupId: true },
+  });
+  return (await stillAttached(others)).length > 0;
+}
+
+type ParsedBudget = ReturnType<typeof parseInput>;
+
+// Lines of an attached budget filter on its account implicitly; only transfers keep a
+// direction and a counterpart.
+function lineData(l: ParsedBudget["lines"][number], attached: boolean) {
+  const transfer = l.kind === "TRANSFER";
+  return {
+    kind: l.kind,
+    categoryId: transfer ? null : (l.categoryId ?? null),
+    accountId: attached ? null : (l.accountId ?? null),
+    direction: transfer ? (l.direction ?? null) : null,
+    counterpartAccountId: transfer ? (l.counterpartAccountId ?? null) : null,
+    label: l.label ?? null,
+    plannedAmount: l.plannedAmount,
+  };
+}
+
+async function assertAttachable(
+  data: ParsedBudget,
+  scope: { userId: string | null; groupId: string | null },
+  period: { start: Date; end: Date },
+  current?: { id: string; accountId: string | null },
+): Promise<void> {
+  if (!data.accountId) return;
+  await assertBudgetAccount(data.accountId, scope, current?.accountId);
+  if (await attachedOverlap(data.accountId, period.start, period.end, current?.id))
+    throw new BudgetAccessError("ACCOUNT_OVERLAP");
 }
 
 export async function createBudget(
@@ -122,11 +225,9 @@ export async function createBudget(
   const data = parseInput(input);
   await assertCanManageScope(data.groupId, actor.id);
   const { start, end } = utcBounds(data.periodType, data.periodStart, data.periodEnd);
-  await assertLinesInScope(
-    data.lines,
-    { userId: data.groupId ? null : actor.id, groupId: data.groupId ?? null },
-    actor.id,
-  );
+  const scope = { userId: data.groupId ? null : actor.id, groupId: data.groupId ?? null };
+  await assertLinesInScope(data.lines, scope, actor.id);
+  await assertAttachable(data, scope, { start, end });
 
   const budget = await db.budget.create({
     data: {
@@ -134,19 +235,14 @@ export async function createBudget(
       description: data.description ?? null,
       userId: data.groupId ? null : actor.id,
       groupId: data.groupId ?? null,
+      accountId: data.accountId ?? null,
+      outOfBudgetPlanned: data.outOfBudgetPlanned ?? null,
       periodType: data.periodType,
       periodStart: start,
       periodEnd: end,
       recurring: data.recurring ?? false,
       createdById: actor.id,
-      lines: {
-        create: data.lines.map((l) => ({
-          categoryId: l.categoryId ?? null,
-          accountId: l.accountId ?? null,
-          label: l.label ?? null,
-          plannedAmount: l.plannedAmount,
-        })),
-      },
+      lines: { create: data.lines.map((l) => lineData(l, !!data.accountId)) },
     },
   });
   await logEvent({
@@ -184,9 +280,10 @@ export async function updateBudget(
   const { start, end } = utcBounds(data.periodType, data.periodStart, data.periodEnd);
   const current = await db.budgetLine.findMany({
     where: { budgetId: id },
-    select: { categoryId: true, accountId: true },
+    select: { categoryId: true, accountId: true, counterpartAccountId: true },
   });
   await assertLinesInScope(data.lines, existing, actor.id, current);
+  await assertAttachable(data, existing, { start, end }, existing);
   // Scope (user vs group) is immutable here — recreate to move it.
   await db.$transaction([
     db.budgetLine.deleteMany({ where: { budgetId: id } }),
@@ -195,18 +292,13 @@ export async function updateBudget(
       data: {
         name: data.name,
         description: data.description ?? null,
+        accountId: data.accountId ?? null,
+        outOfBudgetPlanned: data.outOfBudgetPlanned ?? null,
         periodType: data.periodType,
         periodStart: start,
         periodEnd: end,
         recurring: data.recurring ?? false,
-        lines: {
-          create: data.lines.map((l) => ({
-            categoryId: l.categoryId ?? null,
-            accountId: l.accountId ?? null,
-            label: l.label ?? null,
-            plannedAmount: l.plannedAmount,
-          })),
-        },
+        lines: { create: data.lines.map((l) => lineData(l, !!data.accountId)) },
       },
     }),
   ]);
@@ -242,7 +334,9 @@ export async function archiveBudget(id: string, actor: { id: string }): Promise<
 }
 
 export async function unarchiveBudget(id: string, actor: { id: string }): Promise<void> {
-  await manageableOrThrow(id, actor.id);
+  const b = await manageableOrThrow(id, actor.id);
+  if (b.accountId && (await attachedOverlap(b.accountId, b.periodStart, b.periodEnd, b.id)))
+    throw new BudgetAccessError("ACCOUNT_OVERLAP");
   await db.budget.update({ where: { id }, data: { archived: false } });
   await logEvent({
     userId: actor.id,
@@ -257,6 +351,8 @@ export type BudgetListItem = {
   name: string;
   scope: BudgetScope;
   groupId: string | null;
+  accountId: string | null;
+  outOfBudgetPlanned: number | null;
   periodType: string;
   periodStart: Date;
   periodEnd: Date;
@@ -265,12 +361,19 @@ export type BudgetListItem = {
   spentTotal: number;
   percent: number | null;
   status: BudgetStatus;
+  incomePlanned: number;
+  incomeReceived: number;
+  unplannedIncome: UnplannedIncome | null;
+  landing: BudgetLanding | null; // attached budget in progress (design §E)
   description: string | null;
   archived: boolean;
   parentBudgetId: string | null;
   lines: {
+    kind: BudgetLineKind;
     categoryId: string | null;
     accountId: string | null;
+    direction: TransferDirection | null;
+    counterpartAccountId: string | null;
     label: string | null;
     plannedAmount: number;
   }[];
@@ -291,17 +394,17 @@ function canManageBudget(groupId: string | null, roleByGroup: Map<string, string
 // The user's own budgets + those of groups they belong to, active or archived ones.
 export async function listBudgetsForUser(
   userId: string,
-  { archived = false }: { archived?: boolean } = {},
+  { archived = false, now: at = new Date() }: { archived?: boolean; now?: Date } = {},
 ): Promise<BudgetListItem[]> {
   const { groupIds, roleByGroup } = await budgetScopeForUser(userId);
   const rows = await db.budget.findMany({
     where: { archived, OR: [{ userId }, { groupId: { in: groupIds } }] },
     include: {
-      lines: { select: { plannedAmount: true, categoryId: true, accountId: true, label: true } },
+      lines: true,
     },
     orderBy: { periodStart: "desc" },
   });
-  const now = Date.now();
+  const now = at.getTime();
   const ended = rows.filter(
     (b) =>
       b.recurring &&
@@ -309,20 +412,20 @@ export async function listBudgetsForUser(
       b.periodEnd.getTime() < now &&
       canManageBudget(b.groupId, roleByGroup),
   );
-  const [loaded, subtrees, rolled] = await Promise.all([
-    loadBudgetRows(rows),
-    withDescendants(lineCategoryIds(rows)),
+  const [evaluations, rolled, free] = await Promise.all([
+    evaluateBudgets(rows, { userId, groupIds }, at),
     withNextInstance(ended),
+    withoutAttachedOverlap(
+      ended.map((b) => ({
+        b,
+        period: nextPeriod(b.periodType as BudgetPeriodType, b.periodStart, b.periodEnd),
+      })),
+    ),
   ]);
-  const spends = await Promise.all(
-    rows.map((b) => computeBudgetSpend(b, loaded.get(b.id)!, subtrees)),
-  );
-  const rollable = rows.map((b) => ended.includes(b) && !rolled.has(b.id));
+  const renewable = new Set(free.map((f) => f.b.id));
+  const rollable = rows.map((b) => ended.includes(b) && !rolled.has(b.id) && renewable.has(b.id));
   return rows.map((b, i) => {
-    const plannedTotal = budgetPlannedTotal(
-      b.lines.map((l) => ({ plannedAmount: Number(l.plannedAmount) })),
-    );
-    const { spent, percent, status } = lineStatus(plannedTotal, round2(-spends[i].totalSum));
+    const e = evaluations[i];
     return {
       id: b.id,
       name: b.name,
@@ -330,21 +433,30 @@ export async function listBudgetsForUser(
       archived: b.archived,
       scope: b.groupId ? "GROUP" : "USER",
       groupId: b.groupId,
+      accountId: b.accountId,
+      outOfBudgetPlanned: b.outOfBudgetPlanned == null ? null : Number(b.outOfBudgetPlanned),
       parentBudgetId: b.parentBudgetId,
       periodType: b.periodType,
       periodStart: b.periodStart,
       periodEnd: b.periodEnd,
       recurring: b.recurring,
       lines: b.lines.map((l) => ({
+        kind: l.kind as BudgetLineKind,
         categoryId: l.categoryId,
         accountId: l.accountId,
+        direction: l.direction as TransferDirection | null,
+        counterpartAccountId: l.counterpartAccountId,
         label: l.label,
         plannedAmount: Number(l.plannedAmount),
       })),
-      plannedTotal,
-      spentTotal: spent,
-      percent,
-      status,
+      plannedTotal: e.plannedTotal,
+      spentTotal: e.spentTotal,
+      percent: e.percent,
+      status: e.status,
+      incomePlanned: e.incomePlanned,
+      incomeReceived: e.incomeReceived,
+      unplannedIncome: e.unplannedIncome,
+      landing: e.landing,
       started: b.periodStart.getTime() <= now,
       ended: b.periodEnd.getTime() < now,
       rollable: rollable[i],
@@ -352,16 +464,6 @@ export async function listBudgetsForUser(
     };
   });
 }
-
-type BudgetRow = {
-  id: string;
-  amount: number;
-  date: Date;
-  periodDate: Date;
-  categoryId: string | null;
-  accountId: string;
-  linkId: string | null;
-};
 
 // A user may READ a budget they own or that belongs to a group they're in.
 async function readableOrThrow(id: string, userId: string) {
@@ -429,14 +531,9 @@ type BudgetRef = {
   id: string;
   userId: string | null;
   groupId: string | null;
+  accountId: string | null;
   periodStart: Date;
   periodEnd: Date;
-};
-
-type LoadedBudgetRows = {
-  rows: BudgetRow[];
-  excluded: Set<string>;
-  includedIds: Set<string>;
 };
 
 const scopeKey = (b: { userId: string | null; groupId: string | null }) =>
@@ -522,7 +619,15 @@ async function loadBudgetRows(budgets: BudgetRef[]): Promise<Map<string, LoadedB
   }
 
   const loaded = new Map<string, LoadedBudgetRows>(
-    budgets.map((b) => [b.id, { rows: [], excluded: new Set(), includedIds: new Set() }]),
+    budgets.map((b) => [
+      b.id,
+      {
+        rows: [],
+        excluded: new Set(),
+        includedIds: new Set(),
+        scope: scopes.get(scopeKey(b)) ?? new Set(),
+      },
+    ]),
   );
   for (const a of assignments) {
     const l = loaded.get(a.budgetId)!;
@@ -530,7 +635,7 @@ async function loadBudgetRows(budgets: BudgetRef[]): Promise<Map<string, LoadedB
   }
   for (const b of budgets) {
     const l = loaded.get(b.id)!;
-    const accounts = scopes.get(scopeKey(b))!;
+    const accounts = budgetRowAccounts(b, scopes.get(scopeKey(b))!);
     const from = b.periodStart.getTime();
     const to = b.periodEnd.getTime();
     l.rows = rows.filter(
@@ -545,12 +650,20 @@ async function loadBudgetRows(budgets: BudgetRef[]): Promise<Map<string, LoadedB
   return loaded;
 }
 
-type LineFilter = { categoryId: string | null; accountId: string | null };
+// An attached budget draws from its account only, and only while its scope still holds it
+// (design §B): loading the scope would net a linked transfer's two legs to zero.
+function budgetRowAccounts(b: { accountId: string | null }, scope: Set<string>): Set<string> {
+  if (!b.accountId) return scope;
+  return scope.has(b.accountId) ? new Set([b.accountId]) : new Set();
+}
+
+type LineFilter = { kind: string; categoryId: string | null; accountId: string | null };
 
 function lineCategoryIds(budgets: { lines: LineFilter[] }[]): string[] {
   return budgets.flatMap((b) => b.lines.flatMap((l) => (l.categoryId ? [l.categoryId] : [])));
 }
 type LineMatcher = {
+  kind: string;
   categoryId: string | null;
   categoryIds: Set<string> | null;
   accountId: string | null;
@@ -560,6 +673,7 @@ type LineMatcher = {
 // account. Without a category it only takes expenses, so income never counts as
 // negative spending. A line with neither filter is the catch-all (see below).
 function matchesLine(r: BudgetRow, line: LineMatcher): boolean {
+  if (line.kind !== "EXPENSE") return false;
   if (line.categoryIds == null && line.accountId == null) return false;
   if (line.categoryIds == null && r.amount >= 0) return false;
   if (line.categoryIds != null && (r.categoryId == null || !line.categoryIds.has(r.categoryId)))
@@ -574,7 +688,9 @@ function matchingLines(r: BudgetRow, filters: LineMatcher[]): number[] {
   const matched = filters.flatMap((f, i) => (matchesLine(r, f) ? [i] : []));
   if (matched.length === 0) {
     if (r.amount >= 0) return [];
-    return filters.flatMap((f, i) => (f.categoryIds == null && f.accountId == null ? [i] : []));
+    return filters.flatMap((f, i) =>
+      f.kind === "EXPENSE" && f.categoryIds == null && f.accountId == null ? [i] : [],
+    );
   }
   return matched.filter((i) => {
     const outer = filters[i];
@@ -585,9 +701,178 @@ function matchingLines(r: BudgetRow, filters: LineMatcher[]): number[] {
   });
 }
 
+export type BudgetDetailLine = LineStatus & {
+  id: string;
+  kind: BudgetLineKind;
+  categoryId: string | null;
+  accountId: string | null;
+  direction: TransferDirection | null;
+  counterpartAccountId: string | null;
+  label: string | null;
+  counterpartSavings: boolean;
+  mirrorOf: { budgetId: string; budgetName: string } | null; // read-only, design §C
+};
+
+export type OutOfBudget = {
+  spent: number;
+  count: number;
+  planned: number | null;
+  unmatchedTransfers: number;
+};
+export type UnplannedIncome = { received: number; count: number; fromSavings: number };
+
+type BudgetWithLines = Budget & { lines: BudgetLine[] };
+
+type BudgetEvaluation = {
+  lines: BudgetDetailLine[];
+  plannedTotal: number;
+  spentTotal: number;
+  percent: number | null;
+  status: BudgetStatus;
+  incomePlanned: number;
+  incomeReceived: number;
+  outOfBudget: OutOfBudget | null;
+  unplannedIncome: UnplannedIncome | null;
+  landing: BudgetLanding | null;
+  counted: BudgetRow[];
+  shown: { out: BudgetRow[]; unplanned: BudgetRow[] };
+  attached: { specs: BudgetLineSpec[]; spend: AttachedSpend } | null;
+};
+
+function lineSpecs(b: BudgetWithLines, mirrors: Map<string, BudgetLineSpec[]>): BudgetLineSpec[] {
+  return [
+    ...b.lines.map((l) => ({
+      id: l.id,
+      kind: l.kind as BudgetLineKind,
+      categoryId: l.categoryId,
+      accountId: l.accountId,
+      direction: l.direction as TransferDirection | null,
+      counterpartAccountId: l.counterpartAccountId,
+      label: l.label,
+      plannedAmount: Number(l.plannedAmount),
+      mirrorOf: null,
+    })),
+    ...(b.accountId ? (mirrors.get(b.id) ?? []) : []),
+  ];
+}
+
+// Spend of every budget as `viewer` sees it, in a constant number of queries (#299).
+async function evaluateBudgets(
+  budgets: BudgetWithLines[],
+  viewer: { userId: string; groupIds: string[] },
+  now: Date = new Date(),
+): Promise<BudgetEvaluation[]> {
+  const [loaded, subtrees, mirrors] = await Promise.all([
+    loadBudgetRows(budgets),
+    withDescendants(lineCategoryIds(budgets)),
+    budgetMirrors(budgets, viewer),
+  ]);
+  const landing = budgets.filter(
+    (b) =>
+      b.accountId &&
+      !b.archived &&
+      loaded.get(b.id)!.scope.has(b.accountId) &&
+      b.periodStart <= now &&
+      now <= b.periodEnd,
+  );
+  const [ctx, balances] = await Promise.all([
+    loadTransferContext(
+      budgets.map((b) => ({ ...b, lines: lineSpecs(b, mirrors) })),
+      loaded,
+      mirrors,
+    ),
+    balancesAsOf([...new Set(landing.map((b) => b.accountId!))], now),
+  ]);
+  return Promise.all(
+    budgets.map(async (b) => {
+      const specs = lineSpecs(b, mirrors);
+      if (b.accountId) {
+        const margin = b.outOfBudgetPlanned == null ? null : Number(b.outOfBudgetPlanned);
+        const spend = computeAttachedSpend(
+          { id: b.id, accountId: b.accountId },
+          specs,
+          loaded.get(b.id)!,
+          subtrees,
+          ctx,
+          now,
+        );
+        const sum = summarizeAttached(specs, margin, spend, ctx);
+        return {
+          ...sum,
+          landing: landing.includes(b)
+            ? attachedLanding(specs, margin, spend, balances.get(b.accountId)!)
+            : null,
+          lines: specs.map((l, i) => ({ ...detailLine(l), ...sum.lines[i] })),
+          counted: spend.counted,
+          shown: { out: spend.out, unplanned: spend.unplanned },
+          attached: { specs, spend },
+        };
+      }
+      const { lineSums, outOfBudget, totalSum, counted } = await computeBudgetSpend(
+        b,
+        loaded.get(b.id)!,
+        subtrees,
+      );
+      const plannedTotal = budgetPlannedTotal(specs.filter((l) => l.kind === "EXPENSE"));
+      const { spent, percent, status } = lineStatus(plannedTotal, round2(-totalSum));
+      return {
+        lines: specs.map((l, i) => ({
+          ...detailLine(l),
+          ...lineStatus(l.plannedAmount, round2(-lineSums[i])),
+          counterpartSavings: false,
+        })),
+        plannedTotal,
+        spentTotal: spent,
+        percent,
+        status,
+        incomePlanned: 0,
+        incomeReceived: 0,
+        outOfBudget:
+          outOfBudget.length === 0
+            ? null
+            : {
+                spent: round2(-outOfBudget.reduce((sum, r) => sum + r.amount, 0)),
+                count: outOfBudget.length,
+                planned: null,
+                unmatchedTransfers: 0,
+              },
+        unplannedIncome: null,
+        landing: null,
+        counted,
+        shown: { out: outOfBudget, unplanned: [] },
+        attached: null,
+      };
+    }),
+  );
+}
+
+async function balancesAsOf(accountIds: string[], asOf: Date): Promise<Map<string, number>> {
+  if (accountIds.length === 0) return new Map();
+  const accounts = await db.bankAccount.findMany({
+    where: { id: { in: accountIds } },
+    select: { id: true, initialBalance: true },
+  });
+  return accountBalances(accounts, { asOf });
+}
+
+function detailLine(l: BudgetLineSpec) {
+  return {
+    id: l.id,
+    kind: l.kind,
+    categoryId: l.categoryId,
+    accountId: l.accountId,
+    direction: l.direction,
+    counterpartAccountId: l.counterpartAccountId,
+    label: l.label,
+    mirrorOf: l.mirrorOf,
+  };
+}
+
 export type BudgetDetail = {
   id: string;
   name: string;
+  accountId: string | null;
+  outOfBudgetPlanned: number | null;
   description: string | null;
   archived: boolean;
   scope: BudgetScope;
@@ -595,16 +880,16 @@ export type BudgetDetail = {
   periodStart: Date;
   periodEnd: Date;
   recurring: boolean;
-  lines: (LineStatus & {
-    id: string;
-    categoryId: string | null;
-    accountId: string | null;
-    label: string | null;
-  })[];
+  lines: BudgetDetailLine[];
   plannedTotal: number;
   spentTotal: number;
-  outOfBudget: { spent: number; count: number } | null; // INCLUDEs no line matches (#345)
+  // Attached: rows no line takes, with the optional margin. Unattached: INCLUDEs no line matches (#345).
+  outOfBudget: OutOfBudget | null;
+  unplannedIncome: UnplannedIncome | null; // attached only
+  incomePlanned: number;
+  incomeReceived: number;
   forecast: BudgetForecast | null;
+  landing: BudgetLanding | null;
   groupId: string | null;
   canManage: boolean;
   previousId: string | null; // neighbouring periods of the same recurring series
@@ -644,6 +929,7 @@ async function computeBudgetSpend(
   const collapsed = collapseLinkedRows(rows);
   const lineSubtrees = subtrees ?? (await withDescendants(lineCategoryIds([b])));
   const filters: LineMatcher[] = b.lines.map((l) => ({
+    kind: l.kind,
     categoryId: l.categoryId,
     categoryIds: l.categoryId ? lineSubtrees.get(l.categoryId)! : null,
     accountId: l.accountId,
@@ -752,11 +1038,17 @@ export type BudgetForecast = { balance: number; remaining: number; endBalance: n
 // Projected balance at the end of the current period (#347): the scope's checking
 // accounts minus what the lines still plan to spend. Income to come isn't anticipated.
 async function budgetForecast(
-  b: { userId: string | null; groupId: string | null; periodStart: Date; periodEnd: Date },
+  b: {
+    userId: string | null;
+    groupId: string | null;
+    accountId: string | null;
+    periodStart: Date;
+    periodEnd: Date;
+  },
   lines: { remaining: number }[],
   now: Date,
 ): Promise<BudgetForecast | null> {
-  if (now < b.periodStart || now > b.periodEnd) return null;
+  if (b.accountId || now < b.periodStart || now > b.periodEnd) return null;
   const accounts = await db.bankAccount.findMany({
     where: { id: { in: await budgetAccountIds(b) }, type: "CHECKING", archived: false },
     select: { id: true, initialBalance: true },
@@ -771,29 +1063,21 @@ async function budgetForecast(
 export async function getBudgetDetail(
   id: string,
   viewerId: string,
-  { withTransactions = true, now = new Date() }: { withTransactions?: boolean; now?: Date } = {},
+  {
+    withTransactions = true,
+    now = new Date(),
+    show,
+  }: { withTransactions?: boolean; now?: Date; show?: "out" | "unplanned" } = {},
 ): Promise<BudgetDetail> {
   const b = await readableOrThrow(id, viewerId);
-  const { lineSums, outOfBudget, totalSum, counted } = await computeBudgetSpend(
-    b,
-    (await loadBudgetRows([b])).get(b.id)!,
-  );
-  const { roleByGroup } = await budgetScopeForUser(viewerId);
-
-  const lines = b.lines.map((l, i) => ({
-    id: l.id,
-    categoryId: l.categoryId,
-    accountId: l.accountId,
-    label: l.label,
-    ...lineStatus(Number(l.plannedAmount), round2(-lineSums[i])),
-  }));
-  const plannedTotal = budgetPlannedTotal(
-    b.lines.map((l) => ({ plannedAmount: Number(l.plannedAmount) })),
-  );
-  const spentTotal = round2(-totalSum);
+  const { groupIds, roleByGroup } = await budgetScopeForUser(viewerId);
+  const [e] = await evaluateBudgets([b], { userId: viewerId, groupIds }, now);
+  const listed = show ? e.shown[show] : e.counted;
   return {
     id: b.id,
     name: b.name,
+    accountId: b.accountId,
+    outOfBudgetPlanned: b.outOfBudgetPlanned == null ? null : Number(b.outOfBudgetPlanned),
     description: b.description,
     archived: b.archived,
     scope: b.groupId ? "GROUP" : "USER",
@@ -802,21 +1086,23 @@ export async function getBudgetDetail(
     periodStart: b.periodStart,
     periodEnd: b.periodEnd,
     recurring: b.recurring,
-    lines,
-    plannedTotal,
-    spentTotal,
-    outOfBudget:
-      outOfBudget.length === 0
-        ? null
-        : {
-            spent: round2(-outOfBudget.reduce((sum, r) => sum + r.amount, 0)),
-            count: outOfBudget.length,
-          },
-    forecast: await budgetForecast(b, lines, now),
+    lines: e.lines,
+    plannedTotal: e.plannedTotal,
+    spentTotal: e.spentTotal,
+    outOfBudget: e.outOfBudget,
+    unplannedIncome: e.unplannedIncome,
+    incomePlanned: e.incomePlanned,
+    incomeReceived: e.incomeReceived,
+    forecast: await budgetForecast(
+      b,
+      e.lines.filter((l) => l.kind === "EXPENSE"),
+      now,
+    ),
+    landing: e.landing,
     canManage: canManageBudget(b.groupId, roleByGroup),
     ...(await seriesNeighbours(b)),
-    transactions: withTransactions ? await budgetTransactions(counted, viewerId, b.groupId) : [],
-    transactionCount: counted.length,
+    transactions: withTransactions ? await budgetTransactions(listed, viewerId, b.groupId) : [],
+    transactionCount: listed.length,
   };
 }
 
@@ -847,7 +1133,9 @@ export async function getCurrentBudget(
   const names = await readableAccountNames(userId);
   const accountNames = Object.fromEntries(
     detail.lines.flatMap((l) =>
-      l.accountId && names.has(l.accountId) ? [[l.accountId, names.get(l.accountId)!]] : [],
+      [l.accountId, l.counterpartAccountId].flatMap((id) =>
+        id && names.has(id) ? [[id, names.get(id)!]] : [],
+      ),
     ),
   );
   return { detail, others: current.length - 1, accountNames };
@@ -1042,6 +1330,21 @@ async function withNextInstance(budgets: SeriesRef[]): Promise<Set<string>> {
   );
 }
 
+const attachedFields = (b: Budget) => ({
+  accountId: b.accountId,
+  outOfBudgetPlanned: b.outOfBudgetPlanned,
+});
+
+const copiedLine = (l: BudgetLine) => ({
+  kind: l.kind,
+  categoryId: l.categoryId,
+  accountId: l.accountId,
+  direction: l.direction,
+  counterpartAccountId: l.counterpartAccountId,
+  label: l.label,
+  plannedAmount: l.plannedAmount,
+});
+
 // Core roll: create the next-period instance of a recurring budget if it doesn't
 // already exist (idempotent). `createdById` owns the new row; `auditUserId` is the
 // acting user (null for the system cron → anonymous audit).
@@ -1055,6 +1358,8 @@ async function rollFrom(
   const template = b.parentBudgetId ?? b.id; // chain instances off the original template
   const period = nextPeriod(b.periodType as BudgetPeriodType, b.periodStart, b.periodEnd);
   if (await nextInstanceExists(b)) return { created: false };
+  if (b.accountId && (await attachedOverlap(b.accountId, period.start, period.end)))
+    throw new BudgetAccessError("ACCOUNT_OVERLAP");
 
   const lines = await db.budgetLine.findMany({ where: { budgetId: b.id } });
   const instance = await db.budget.create({
@@ -1063,20 +1368,14 @@ async function rollFrom(
       description: b.description,
       userId: b.userId,
       groupId: b.groupId,
+      ...attachedFields(b),
       periodType: b.periodType,
       periodStart: period.start,
       periodEnd: period.end,
       recurring: true,
       parentBudgetId: template,
       createdById,
-      lines: {
-        create: lines.map((l) => ({
-          categoryId: l.categoryId,
-          accountId: l.accountId,
-          label: l.label,
-          plannedAmount: l.plannedAmount,
-        })),
-      },
+      lines: { create: lines.map(copiedLine) },
     },
   });
   await logEvent({
@@ -1119,11 +1418,13 @@ export async function rollRecurringBudgets(
 ): Promise<{ checked: number; rolled: number }> {
   const due = await dueBudgets(now);
   if (due.length === 0) return { checked: 0, rolled: 0 };
-  const instances = due.map((b) => ({
+  const planned = due.map((b) => ({
     b,
     id: randomUUID(),
     period: nextPeriod(b.periodType as BudgetPeriodType, b.periodStart, b.periodEnd),
   }));
+  const instances = await withoutAttachedOverlap(planned);
+  if (instances.length === 0) return { checked: due.length, rolled: 0 };
   await db.$transaction([
     db.budget.createMany({
       data: instances.map(({ b, id, period }) => ({
@@ -1132,6 +1433,7 @@ export async function rollRecurringBudgets(
         description: b.description,
         userId: b.userId,
         groupId: b.groupId,
+        ...attachedFields(b),
         periodType: b.periodType,
         periodStart: period.start,
         periodEnd: period.end,
@@ -1142,13 +1444,7 @@ export async function rollRecurringBudgets(
     }),
     db.budgetLine.createMany({
       data: instances.flatMap(({ b, id }) =>
-        b.lines.map((l) => ({
-          budgetId: id,
-          categoryId: l.categoryId,
-          accountId: l.accountId,
-          label: l.label,
-          plannedAmount: l.plannedAmount,
-        })),
+        b.lines.map((l) => ({ budgetId: id, ...copiedLine(l) })),
       ),
     }),
     db.auditLog.createMany({
@@ -1161,5 +1457,33 @@ export async function rollRecurringBudgets(
       })),
     }),
   ]);
-  return { checked: due.length, rolled: due.length };
+  return { checked: due.length, rolled: instances.length };
+}
+
+// Renewals whose period another attached budget doesn't already cover on the same account
+// (design §B), for every budget at once.
+async function withoutAttachedOverlap<T extends { b: Budget; period: { start: Date; end: Date } }>(
+  planned: T[],
+): Promise<T[]> {
+  const attached = planned.filter((p) => p.b.accountId);
+  if (attached.length === 0) return planned;
+  const taken = await stillAttached(
+    await db.budget.findMany({
+      where: {
+        archived: false,
+        accountId: { in: [...new Set(attached.map((p) => p.b.accountId!))] },
+        periodStart: { lte: new Date(Math.max(...attached.map((p) => p.period.end.getTime()))) },
+        periodEnd: { gte: new Date(Math.min(...attached.map((p) => p.period.start.getTime()))) },
+      },
+      select: { accountId: true, groupId: true, periodStart: true, periodEnd: true },
+    }),
+  );
+  return planned.filter(
+    ({ b, period }) =>
+      !b.accountId ||
+      !taken.some(
+        (t) =>
+          t.accountId === b.accountId && t.periodStart <= period.end && t.periodEnd >= period.start,
+      ),
+  );
 }

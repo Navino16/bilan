@@ -408,17 +408,18 @@ Ouvrez l’une des transactions et cliquez sur **Délier** dans la section **Li�
 
 ![Budgets](images/fr/budgets.png)
 
-Un budget fixe ce que vous prévoyez de dépenser par catégorie ou par compte sur une période, et suit ce que vous dépensez réellement.
+Un budget fixe ce que vous prévoyez de dépenser par catégorie ou par compte sur une période, et suit ce que vous dépensez réellement. Rattaché à un compte, il devient l’enveloppe de ce compte : rentrées, virements et dépenses prévus, et le solde où le compte atterrit en fin de période (voir [Budget sur un compte](#budget-sur-un-compte)).
 
 ### Créer un budget
 
 1. Allez dans **Budgets** et cliquez sur **Nouveau budget**.
 2. Saisissez un **Nom** et, si vous le souhaitez, une **Description**.
 3. Choisissez la **Portée** : **Personnel**, ou un foyer que vous gérez (voir [Budgets de foyer](#budgets-de-foyer)). Elle ne peut plus être changée ensuite.
-4. Choisissez la **Période** : Semaine, Mois, Trimestre, Année ou Personnalisée, puis la date de **Début**. La date de fin découle de la période.
-5. Cochez **Récurrent** pour un budget qui se répète à chaque période.
-6. Ajoutez des **Lignes**. Pour chaque ligne, choisissez une **Catégorie** (ou **Toutes catégories**), un **Compte** (ou **Tous comptes**) et un **Montant prévu**. Une ligne peut aussi avoir un **Libellé**, affiché à la place du nom de la catégorie ou du compte.
-7. Cliquez sur **Créer le budget**.
+4. Choisissez si vous le souhaitez un **Compte** (voir [Budget sur un compte](#budget-sur-un-compte)). Laissez **Aucun : tous les comptes** pour un budget sur l’ensemble de vos comptes.
+5. Choisissez la **Période** : Semaine, Mois, Trimestre, Année ou Personnalisée, puis la date de **Début**. La date de fin découle de la période.
+6. Cochez **Récurrent** pour un budget qui se répète à chaque période.
+7. Ajoutez des **Lignes**. Pour chaque ligne, choisissez une **Catégorie** (ou **Toutes catégories**), un **Compte** (ou **Tous comptes**) et un **Montant prévu**. Une ligne peut aussi avoir un **Libellé**, affiché à la place du nom de la catégorie ou du compte.
+8. Cliquez sur **Créer le budget**.
 
 Comment les lignes comptent les dépenses :
 
@@ -426,6 +427,46 @@ Comment les lignes comptent les dépenses :
 - Quand une ligne parente et une ligne de sous-catégorie correspondent toutes les deux, la transaction va à la plus précise.
 - Une ligne **Toutes catégories / Tous comptes** reprend toutes les dépenses qui n’entrent dans aucune autre ligne.
 - Les transactions liées sont comptées comme expliqué dans [Liens entre transactions](#liens-entre-transactions).
+
+### Budget sur un compte
+
+Un budget rattaché à un compte ne suit que ce compte : l’argent qui arrive, l’argent qui sort, et les virements vers vos autres comptes. Prévoyez-en un par compte courant, par exemple un pour votre compte personnel et un pour le compte joint du foyer.
+
+- Un compte a au plus un budget à la fois : deux budgets sur le même compte ne peuvent pas se chevaucher, même en partie. Les budgets archivés ne comptent pas.
+- Un budget personnel utilise un de vos propres comptes ; un budget de foyer, un compte partagé avec le foyer.
+- Les virements vers vos autres comptes comptent en entier : un virement vers votre livret est de l’argent sorti de ce compte.
+
+Chaque ligne a un **Type** :
+
+| Type         | Ce qu’elle compte sur le compte                                                         |
+| ------------ | --------------------------------------------------------------------------------------- |
+| **Dépense**  | les dépenses de la catégorie et de ses sous-catégories (un remboursement les diminue)   |
+| **Rentrée**  | l’argent reçu dans la catégorie, par exemple votre salaire                              |
+| **Virement** | les virements **Vers** ou **Depuis** un autre de vos comptes, choisi dans **Autre compte** |
+
+Une transaction ne compte que dans une ligne. Les lignes de virement passent d’abord, puis la ligne de catégorie la plus précise. Un virement est reconnu dès qu’il est lié à sa contrepartie sur l’autre compte (voir [Liens automatiques](#liens-automatiques)), ou quand cet autre compte porte le même montant en sens inverse à 4 jours ou moins. L’argent qui vient d’un autre compte ne compte jamais comme le remboursement d’une ligne de dépense.
+
+Un dépassement se lit selon le type : **Dépassé de …** pour une dépense, **+… de plus que prévu** pour une rentrée ou un virement, et **+… épargnés en plus** pour un virement vers un compte d’épargne, qui ne fait pas passer le budget en dépassement.
+
+Une ligne de virement se saisit une seule fois, dans le budget du compte d’où part l’argent. Le budget de l’autre compte l’affiche en lecture seule, **Prévu dans …**, quand les deux budgets ont le même type de période et le même début et que vous voyez les deux. Si ce budget a déjà sa propre ligne **Depuis** ce compte, seule sa ligne compte.
+
+**Hors budget** est toujours la dernière ligne. Elle reprend ce que le compte a payé et qu’aucune autre ligne ne prend : transactions sans catégorie, catégories sans ligne, virements imprévus. Vous pouvez lui donner une **Marge** facultative pour l’imprévu. Cliquez dessus pour lister ces transactions ; cliquez sur une transaction pour l’ouvrir dans **Transactions**, où vous pouvez la recatégoriser ou l’inclure ailleurs. Quand un virement y reste parce qu’il n’est pas encore lié, un lien vers les suggestions de liens apparaît.
+
+**Rentrées hors budget** liste l’argent reçu qu’aucune ligne de rentrée ou de virement ne prend. Ce qui vient d’un compte d’épargne s’affiche en **Puisé dans l’épargne sur la période**.
+
+#### Où le compte atterrit
+
+Pendant la période en cours, la page **Budgets** commence par **Où j’atterris** : une carte par compte dont le budget est en cours. Son solde en fin de période est :
+
+> solde d’aujourd’hui + rentrées encore attendues − dépenses encore à venir
+
+- Le solde d’aujourd’hui ne compte que les transactions datées d’aujourd’hui ou avant.
+- Rentrées encore attendues : ce que chaque ligne de rentrée et chaque virement entrant n’a pas encore reçu.
+- Dépenses encore à venir : ce que chaque ligne de dépense et chaque virement sortant n’a pas encore dépensé, plus ce qui reste de la marge Hors budget. Une ligne déjà dépassée compte pour 0.
+- Une transaction déjà datée plus tard dans la période n’est pas dans le solde d’aujourd’hui : elle compte dans ce qui reste à venir quand elle dépasse ce qui reste de sa ligne.
+- Une transaction d’un autre compte incluse dans le budget compte dans sa ligne, mais pas dans l’atterrissage : elle n’a jamais touché ce compte.
+
+Les périodes passées et à venir n’affichent que le prévu et le réalisé. Les comptes d’épargne n’ont ni budget ni atterrissage : leur solde s’affiche sur le tableau de bord.
 
 ### Suivre un budget
 
@@ -444,11 +485,11 @@ Astuce : **Atteint** demande le montant exact, au centime près. D’ici là, le
 
 Cliquez sur un budget pour ouvrir son détail : chaque ligne avec « Reste … » ou « Dépassé de … », **Voir les transactions** pour les lignes de catégorie, et la liste des transactions **Comptées dans ce budget**.
 
-Pendant la période en cours, **Solde prévu au …** estime le solde à la fin de la période : le solde actuel de vos comptes courants, moins ce que les lignes prévoient encore de dépenser (une ligne dépassée compte pour 0). Les comptes d’épargne et les revenus à venir n’entrent pas dans le calcul. Ce solde prévu s’affiche aussi sur la carte du budget en cours du tableau de bord.
+Pendant la période en cours, un budget sans compte affiche **Solde prévu au …** : le solde actuel de vos comptes courants, moins ce que les lignes prévoient encore de dépenser (une ligne dépassée compte pour 0). Les comptes d’épargne et les revenus à venir n’entrent pas dans le calcul. Un budget sur un compte affiche son atterrissage à la place (voir [Où le compte atterrit](#où-le-compte-atterrit)). L’un ou l’autre s’affiche aussi sur la carte du budget en cours du tableau de bord.
 
 ### Renouveler un budget récurrent
 
-Quand la période d’un budget récurrent se termine, un bouton **Renouveler** sur sa carte crée la période suivante avec les mêmes lignes. Ce qui n’a pas été dépensé n’est pas reporté. Votre administrateur peut aussi mettre en place le renouvellement automatique. Les périodes d’une même série sont regroupées sur une carte : ouvrez **… autres périodes** pour les voir, ou utilisez les flèches de la page de détail.
+Quand la période d’un budget récurrent se termine, un bouton **Renouveler** sur sa carte crée la période suivante avec le même compte, les mêmes lignes et la même marge. Si un autre budget couvre déjà la période suivante sur ce compte, le budget n’est pas renouvelé. Ce qui n’a pas été dépensé n’est pas reporté. Votre administrateur peut aussi mettre en place le renouvellement automatique. Les périodes d’une même série sont regroupées sur une carte : ouvrez **… autres périodes** pour les voir, ou utilisez les flèches de la page de détail.
 
 ### Modifier, archiver ou supprimer un budget
 

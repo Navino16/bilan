@@ -38,6 +38,8 @@ function parse(formData: FormData) {
     name: formData.get("name") ?? "",
     description: formData.get("description") ?? "",
     groupId: formData.get("groupId") ?? "",
+    accountId: formData.get("accountId") ?? "",
+    outOfBudgetPlanned: formData.get("outOfBudgetPlanned") ?? "",
     periodType: formData.get("periodType") ?? "MONTH",
     periodStart: formData.get("periodStart") ?? "",
     periodEnd: formData.get("periodEnd") ?? "",

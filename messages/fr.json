@@ -519,7 +519,24 @@
       "catchAllHint": "Une ligne « Toutes catégories / Tous comptes » reprend toutes les dépenses qui n’entrent dans aucune autre ligne.",
       "hidden": "Catégorie ou compte non visible",
       "archivedAccount": "{name} (archivé)",
-      "labelPlaceholder": "Libellé (facultatif, sinon la catégorie ou le compte)"
+      "labelPlaceholder": "Libellé (facultatif, sinon la catégorie ou le compte)",
+      "kindLabel": "Type",
+      "kind": {
+        "EXPENSE": "Dépense",
+        "INCOME": "Rentrée",
+        "TRANSFER": "Virement"
+      },
+      "directionLabel": "Sens",
+      "direction": {
+        "OUT": "Vers",
+        "IN": "Depuis"
+      },
+      "counterpart": "Autre compte",
+      "chooseCategory": "Choisir une catégorie",
+      "chooseAccount": "Choisir un compte",
+      "transferTo": "Virement → {account}",
+      "transferFrom": "Virement ← {account}",
+      "attachedHint": "Chaque ligne prend les transactions de ce compte dans sa catégorie, ou ses virements vers ou depuis le compte choisi. Le reste va hors budget."
     },
     "plannedTotal": "Total prévu",
     "save": "Enregistrer",
@@ -538,7 +555,9 @@
       "AMOUNT_INVALID": "Montant invalide. Exemples : -12,34 ou 1 234,56.",
       "AMOUNT_AMBIGUOUS": "Montant ambigu : écrivez 1234 ou 1,23 (sans séparateur de milliers seul).",
       "AMOUNT_PRECISION": "Le montant ne peut pas avoir plus de 2 décimales.",
-      "ARCHIVED": "Ce budget est archivé : désarchivez-le pour y affecter des transactions."
+      "ARCHIVED": "Ce budget est archivé : désarchivez-le pour y affecter des transactions.",
+      "INVALID_ACCOUNT": "Ce compte n’est pas disponible pour ce budget.",
+      "ACCOUNT_OVERLAP": "Un autre budget suit déjà ce compte sur cette période."
     },
     "status": {
       "OK": "Dans le budget",
@@ -558,7 +577,24 @@
       "noTransactions": "Aucune transaction ne compte encore dans ce budget.",
       "hiddenTx": "Transaction d’un autre membre",
       "outOfBudget": "Hors budget",
-      "outOfBudgetHint": "{count, plural, one {# transaction incluse} other {# transactions incluses}} sans ligne correspondante"
+      "outOfBudgetHint": "{count, plural, one {# transaction incluse} other {# transactions incluses}} sans ligne correspondante",
+      "income": "Rentrées",
+      "spending": "Dépenses",
+      "received": "Reçu",
+      "expected": "Prévu",
+      "toReceive": "{amount} à recevoir",
+      "moreThanPlanned": "+{amount} de plus que prévu",
+      "savedOnTop": "+{amount} épargnés en plus",
+      "mirrorOf": "Prévu dans {name}",
+      "unplannedIncome": "Rentrées hors budget",
+      "unplannedHint": "{count, plural, =0 {Aucune rentrée hors des lignes} one {# transaction qu’aucune ligne de rentrée ne prend} other {# transactions qu’aucune ligne de rentrée ne prend}}",
+      "fromSavings": "Puisé dans l’épargne sur la période : {amount}",
+      "outOfBudgetAccountHint": "{count, plural, =0 {Rien de payé hors des lignes} one {# transaction qu’aucune autre ligne ne prend} other {# transactions qu’aucune autre ligne ne prend}}",
+      "margin": "Marge {amount}",
+      "unmatchedTransfers": "{count, plural, one {# virement n’est pas encore lié} other {# virements ne sont pas encore liés}} : voir les suggestions de liens.",
+      "showAll": "Tout afficher",
+      "showingOut": "Transactions hors budget",
+      "showingUnplanned": "Rentrées hors budget"
     },
     "assign": {
       "title": "Assigner à un budget",
@@ -604,7 +640,28 @@
     "archiveBody": "Le budget quitte la liste, le tableau de bord et le menu d’affectation, et il n’est plus renouvelé. Ses lignes et ses affectations sont conservées et vous pourrez le désarchiver.",
     "archivedTitle": "Budgets archivés · {count, number}",
     "archivedHint": "Hors de la liste, du tableau de bord et du menu d’affectation. Ouvrez-en un pour le consulter, ou désarchivez-le depuis son menu.",
-    "archivedBadge": "Archivé"
+    "archivedBadge": "Archivé",
+    "account": {
+      "label": "Compte",
+      "none": "Aucun : tous les comptes",
+      "hint": "Le budget suit ce compte seul : ses virements vers vos autres comptes comptent, et la page Budgets montre où le compte atterrit en fin de période."
+    },
+    "outOfBudget": {
+      "label": "Hors budget",
+      "margin": "Marge (facultative)",
+      "marginHint": "Pour l’imprévu : ce qu’il en reste est réservé dans l’atterrissage."
+    },
+    "lineStatus": {
+      "EXPECTED": "Attendu",
+      "RECEIVED": "Reçu",
+      "SAVED": "Épargne en plus"
+    },
+    "landing": {
+      "title": "Où j’atterris",
+      "on": "Au {date}",
+      "breakdown": "{balance} aujourd’hui + {income} à recevoir − {spending} à payer",
+      "fromSavings": "Puisé dans l’épargne : {amount}"
+    }
   },
   "categories": {
     "title": "Catégories",

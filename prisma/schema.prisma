@@ -274,11 +274,13 @@ model BankAccount {
   archived       Boolean  @default(false)
   createdAt      DateTime @default(now())
 
-  owner        User           @relation("AccountOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  shares       AccountShare[]
-  transactions Transaction[]
-  imports      ImportBatch[]
-  budgetLines  BudgetLine[]
+  owner            User           @relation("AccountOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  shares           AccountShare[]
+  transactions     Transaction[]
+  imports          ImportBatch[]
+  budgetLines      BudgetLine[]   @relation("BudgetLineAccount")
+  counterpartLines BudgetLine[]   @relation("BudgetLineCounterpart")
+  attachedBudgets  Budget[]       @relation("BudgetAccount")
 
   @@index([ownerId])
   @@index([ibanHash])
@@ -560,6 +562,12 @@ model Budget {
   user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
   group   Group?  @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
+  // Attached budget: counts this account only (design §B).
+  accountId          String?
+  account            BankAccount? @relation("BudgetAccount", fields: [accountId], references: [id], onDelete: SetNull)
+  // Optional margin of the out-of-budget line of an attached budget (design §D).
+  outOfBudgetPlanned Decimal?     @db.Decimal(12, 2)
+
   periodType     String // WEEK | MONTH | QUARTER | YEAR | CUSTOM
   periodStart    DateTime
   periodEnd      DateTime
@@ -577,6 +585,7 @@ model Budget {
 
   @@index([userId, periodStart])
   @@index([groupId, periodStart])
+  @@index([accountId, periodStart])
   @@index([parentBudgetId])
 }
 
@@ -588,7 +597,12 @@ model BudgetLine {
   categoryId String?
   category   Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   accountId  String?
-  account    BankAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  account    BankAccount? @relation("BudgetLineAccount", fields: [accountId], references: [id], onDelete: SetNull)
+
+  kind                 String       @default("EXPENSE") // EXPENSE | INCOME | TRANSFER
+  direction            String? // TRANSFER only: OUT | IN
+  counterpartAccountId String?
+  counterpart          BankAccount? @relation("BudgetLineCounterpart", fields: [counterpartAccountId], references: [id], onDelete: SetNull)
 
   plannedAmount Decimal @db.Decimal(12, 2)
   label         String?

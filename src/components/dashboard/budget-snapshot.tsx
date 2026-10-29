@@ -7,8 +7,9 @@ import { overline } from "@/components/transactions/bits";
 import { OrdinalText } from "@/components/ordinal-text";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import type { getCurrentBudget } from "@/server/services/budgets";
-import { BudgetBar, statusStyle } from "@/components/budgets/budget-status";
+import { BudgetBar, lineDisplay, statusStyle } from "@/components/budgets/budget-status";
 import { formatDateRange, formatDayMonth, formatMoney } from "@/lib/format";
+import { lineFlow } from "@/lib/budget-match";
 
 export type CurrentBudget = Awaited<ReturnType<typeof getCurrentBudget>>;
 
@@ -39,6 +40,8 @@ export async function BudgetSnapshot({
   }
 
   const { detail, others, accountNames } = budget;
+  const projected = detail.forecast?.endBalance ?? detail.landing?.endBalance;
+  const lines = detail.accountId ? detail.lines.filter((l) => lineFlow(l) === "out") : detail.lines;
   return (
     <Card className="gap-4 p-4.5 md:p-6" data-slot="budget-snapshot">
       <div className="flex items-start justify-between gap-3">
@@ -56,7 +59,7 @@ export async function BudgetSnapshot({
           <ChevronRight className="size-4" />
         </Link>
       </div>
-      {detail.forecast && (
+      {projected !== undefined && (
         <div
           data-slot="budget-snapshot-forecast"
           className="flex items-baseline justify-between gap-2 text-sm"
@@ -66,17 +69,25 @@ export async function BudgetSnapshot({
           </span>
           <span
             className="shrink-0 font-medium tabular-nums"
-            style={detail.forecast.endBalance < 0 ? { color: "var(--expense)" } : undefined}
+            style={projected < 0 ? { color: "var(--expense)" } : undefined}
           >
-            {formatMoney(detail.forecast.endBalance, locale)}
+            {formatMoney(projected, locale)}
           </span>
         </div>
       )}
       <div className="flex flex-col gap-3.5">
-        {detail.lines.slice(0, LINES_SHOWN).map((l) => {
+        {lines.slice(0, LINES_SHOWN).map((l) => {
           const cat = l.categoryId ? categories.get(l.categoryId) : undefined;
+          const counterpart = l.counterpartAccountId
+            ? accountNames[l.counterpartAccountId]
+            : undefined;
           const name =
             l.label ??
+            (l.kind === "TRANSFER"
+              ? t(l.direction === "IN" ? "line.transferFrom" : "line.transferTo", {
+                  account: counterpart ?? t("line.hidden"),
+                })
+              : undefined) ??
             cat?.name ??
             (l.accountId ? accountNames[l.accountId] : undefined) ??
             (l.categoryId || l.accountId
@@ -93,7 +104,7 @@ export async function BudgetSnapshot({
                     style={{ background: cat?.color ?? "var(--muted-foreground)" }}
                   />
                   <span className="truncate">{name}</span>
-                  {l.status === "OVER" && (
+                  {l.status === "OVER" && lineDisplay(l).overrun === "over" && (
                     <Badge style={statusStyle("OVER")} className="border-transparent">
                       {t("status.OVER")}
                     </Badge>
@@ -101,7 +112,11 @@ export async function BudgetSnapshot({
                 </div>
                 <span
                   className="shrink-0 text-[12.5px] tabular-nums"
-                  style={l.status === "OVER" ? { color: "var(--expense)" } : undefined}
+                  style={
+                    l.status === "OVER" && lineDisplay(l).overrun === "over"
+                      ? { color: "var(--expense)" }
+                      : undefined
+                  }
                 >
                   {formatMoney(l.spent, locale)}{" "}
                   <span className="text-muted-foreground">
@@ -109,16 +124,16 @@ export async function BudgetSnapshot({
                   </span>
                 </span>
               </div>
-              <BudgetBar percent={l.percent} status={l.status} />
+              <BudgetBar percent={l.percent} status={lineDisplay(l).barStatus} />
             </div>
           );
         })}
       </div>
-      {(detail.lines.length > LINES_SHOWN || others > 0) && (
+      {(lines.length > LINES_SHOWN || others > 0) && (
         <Link href={`/${locale}/budgets`} className="text-muted-foreground text-xs hover:underline">
           {others > 0
             ? t("snapshot.others", { count: others })
-            : t("snapshot.moreLines", { count: detail.lines.length - LINES_SHOWN })}
+            : t("snapshot.moreLines", { count: lines.length - LINES_SHOWN })}
         </Link>
       )}
     </Card>
