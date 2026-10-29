@@ -398,7 +398,7 @@ Il faut un accès en écriture à chaque compte concerné.
 
 ### Liens automatiques
 
-Bilan lie de lui-même les deux côtés d’un virement entre deux de vos comptes, quand vous importez un relevé ou ajoutez une transaction à la main : même montant en sens opposé, 4 jours d’écart au plus, et une seule correspondance évidente. Quand il a un doute (deux virements du même montant le même jour, par exemple), la paire reste dans les suggestions. Un virement vers un compte qu’on partage avec vous n’est jamais lié automatiquement.
+Bilan lie de lui-même les deux côtés d’un virement entre deux de vos comptes, quand vous importez un relevé ou ajoutez une transaction à la main : les deux côtés sont des virements, même montant en sens opposé, 4 jours d’écart au plus, et une seule correspondance évidente. Un virement qui correspond à un paiement par carte, un prélèvement ou un retrait n’est que suggéré, jamais lié de lui-même. Quand il a un doute (deux virements du même montant le même jour, par exemple), la paire reste dans les suggestions. Un virement vers un compte qu’on partage avec vous n’est jamais lié automatiquement.
 
 Pour annuler un lien automatique, [déliez-le](#délier) : Bilan ne liera plus cette paire.
 

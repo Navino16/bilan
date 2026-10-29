@@ -33,6 +33,7 @@ export async function autoLinkTransfers(
     db.transaction.findMany({
       where: {
         accountId: { in: accounts.map((a) => a.id) },
+        type: "TRANSFER",
         linkMembership: { is: null },
         ...(opts.from || opts.to ? { date } : {}),
       },
