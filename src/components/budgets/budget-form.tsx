@@ -223,21 +223,24 @@ function BudgetFormBody({
     setLines((prev) => prev.map((l, i) => (i === index ? { ...l, ...patch } : l)));
   }
 
-  // Without an account, lines go back to plain expense lines (design §F).
+  // Without an account, lines go back to plain expense lines and transfers are dropped
+  // (design §F): a transfer line has no category and would become a catch-all.
   function changeAccount(next: string) {
     setAccountId(next);
     if (!next) setMargin("");
-    setLines((prev) =>
-      prev.map((l) =>
-        next
-          ? {
-              ...l,
-              accountId: "",
-              counterpartAccountId: l.counterpartAccountId === next ? "" : l.counterpartAccountId,
-            }
-          : { ...l, kind: "EXPENSE", counterpartAccountId: "" },
-      ),
-    );
+    setLines((prev) => {
+      if (!next) {
+        const kept = prev
+          .filter((l) => l.kind !== "TRANSFER")
+          .map((l) => ({ ...l, kind: "EXPENSE" as const }));
+        return kept.length > 0 ? kept : [blankLine()];
+      }
+      return prev.map((l) => ({
+        ...l,
+        accountId: "",
+        counterpartAccountId: l.counterpartAccountId === next ? "" : l.counterpartAccountId,
+      }));
+    });
   }
 
   function changeScope(next: string) {

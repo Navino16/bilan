@@ -138,6 +138,41 @@ describe("attaching a budget to an account", () => {
     ).resolves.toBeDefined();
   });
 
+  it("attaches a personal budget only to an account its owner holds", async () => {
+    const own = await db.category.create({ data: { userId: member, name: "Courses" } });
+    try {
+      await expect(
+        createBudget(
+          input({ accountId: joint, lines: [{ categoryId: own.id, plannedAmount: 10 }] }),
+          { id: member },
+        ),
+      ).rejects.toThrow("INVALID_ACCOUNT");
+    } finally {
+      await db.category.delete({ where: { id: own.id } });
+    }
+  });
+
+  it("isn't blocked by a household budget on an account no longer shared", async () => {
+    await createBudget(input({ groupId, accountId: joint }), { id: owner });
+    await db.accountShare.deleteMany({ where: { accountId: joint, groupId } });
+    try {
+      await expect(createBudget(input({ accountId: joint }), { id: owner })).resolves.toBeDefined();
+    } finally {
+      await db.accountShare.create({
+        data: { accountId: joint, groupId, permission: "WRITE", createdById: owner },
+      });
+    }
+  });
+
+  it("doesn't offer to renew into a period another budget covers on the account", async () => {
+    const { id } = await createBudget(input({ recurring: true }), { id: owner });
+    await createBudget(input({ ...april, name: "Avril" }), { id: owner });
+    const item = (await listBudgetsForUser(owner, { now: new Date("2026-04-15T00:00:00Z") })).find(
+      (b) => b.id === id,
+    );
+    expect(item?.rollable).toBe(false);
+  });
+
   it("refuses overlapping attached budgets on one account", async () => {
     const { id } = await createBudget(input(), { id: owner });
     await expect(
@@ -296,6 +331,7 @@ describe("an attached budget's scope", () => {
     const detail = await getBudgetDetail(id, owner);
     expect(detail.lines.map((l) => l.spent)).toEqual([0, 0]);
     expect(detail.spentTotal).toBe(0);
+    expect(detail.plannedTotal).toBe(100);
   });
 });
 
@@ -412,6 +448,39 @@ describe("an attached budget by line kind", () => {
     expect(lines[0]).toMatchObject({ mirrorOf: null, plannedAmount: 700, spent: 800 });
   });
 
+  it("takes a refund even when an unrelated account holds the opposite amount", async () => {
+    await tx(courant, "2026-03-10", 20, cat.courses);
+    await tx(joint, "2026-03-12", -20);
+    await tx(courant, "2026-03-14", -50);
+    await tx(joint, "2026-03-15", 50);
+    const { id } = await createBudget(input(), { id: owner });
+    const d = await getBudgetDetail(id, owner);
+    expect(d.lines[0].spent).toBe(-20);
+    expect(d.unplannedIncome?.count).toBe(0);
+    expect(d.outOfBudget?.unmatchedTransfers).toBe(0);
+  });
+
+  it("mirrors an incoming transfer line as an outgoing one in the source account's budget", async () => {
+    await link(await tx(courant, "2026-03-02", -800), await tx(joint, "2026-03-02", 800));
+    await createBudget(
+      input({
+        accountId: joint,
+        lines: [
+          { kind: "TRANSFER", direction: "IN", counterpartAccountId: courant, plannedAmount: 800 },
+        ],
+      }),
+      { id: owner },
+    );
+    const { id } = await createBudget(input(), { id: owner });
+    const d = await getBudgetDetail(id, owner);
+    expect(d.lines.find((l) => l.mirrorOf)).toMatchObject({
+      direction: "OUT",
+      counterpartAccountId: joint,
+      spent: 800,
+    });
+    expect(d.plannedTotal).toBe(900);
+  });
+
   it("doesn't turn the budget over when more than planned goes to savings", async () => {
     await link(await tx(courant, "2026-03-03", -150), await tx(livret, "2026-03-03", 150));
     const { id } = await createBudget(
@@ -493,11 +562,12 @@ describe("landing", () => {
     const { id } = await landingBudget();
     const d = await getBudgetDetail(id, owner, { now });
     expect(d.forecast).toBeNull();
+    // Musique: 10 left of its plan, but 40 already dated the 20th → 40 still to come.
     expect(d.landing).toEqual({
       balance: 2668,
       incomeToCome: 0,
-      spendingToCome: 298,
-      endBalance: 2370,
+      spendingToCome: 328,
+      endBalance: 2340,
     });
     const item = (await listBudgetsForUser(owner, { now })).find((b) => b.id === id);
     expect(item?.landing).toEqual(d.landing);
@@ -538,8 +608,11 @@ describe("landing", () => {
     });
   });
 
-  it("has no landing outside the period, unattached, or once the account is unshared", async () => {
+  it("has no landing outside the period, unattached, archived, or once the account is unshared", async () => {
     const { id } = await landingBudget();
+    await archiveBudget(id, { id: owner });
+    expect((await getBudgetDetail(id, owner, { now })).landing).toBeNull();
+    await unarchiveBudget(id, { id: owner });
     const april = new Date("2026-04-01T12:00:00.000Z");
     expect((await getBudgetDetail(id, owner, { now: april })).landing).toBeNull();
     const loose = await createBudget(input({ accountId: undefined, name: "Libre" }), { id: owner });

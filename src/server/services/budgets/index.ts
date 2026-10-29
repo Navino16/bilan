@@ -139,14 +139,34 @@ async function assertLinesInScope(
 
 // The account of an attached budget must be one its scope draws from; an edit may keep
 // the current one (e.g. since archived), as lines do.
+// A personal budget may only follow an account its owner holds (design §B).
 async function assertBudgetAccount(
   accountId: string,
   scope: { userId: string | null; groupId: string | null },
   kept: string | null = null,
 ): Promise<void> {
   if (accountId === kept) return;
-  if (!(await budgetAccountIds(scope)).includes(accountId))
-    throw new BudgetAccessError("INVALID_ACCOUNT");
+  const allowed = scope.groupId
+    ? (await budgetAccountIds(scope)).includes(accountId)
+    : (await db.bankAccount.count({ where: { id: accountId, ownerId: scope.userId! } })) > 0;
+  if (!allowed) throw new BudgetAccessError("INVALID_ACCOUNT");
+}
+
+// Attached budgets that still hold their account: a household budget whose account was
+// unshared counts nothing and must not block the account (one query).
+async function stillAttached<T extends { accountId: string | null; groupId: string | null }>(
+  budgets: T[],
+): Promise<T[]> {
+  const grouped = budgets.filter((b) => b.groupId && b.accountId);
+  const shares =
+    grouped.length === 0
+      ? []
+      : await db.accountShare.findMany({
+          where: { OR: grouped.map((b) => ({ accountId: b.accountId!, groupId: b.groupId! })) },
+          select: { accountId: true, groupId: true },
+        });
+  const shared = new Set(shares.map((sh) => `${sh.accountId}|${sh.groupId}`));
+  return budgets.filter((b) => !b.groupId || shared.has(`${b.accountId}|${b.groupId}`));
 }
 
 // At most one non-archived attached budget per account covers a given day (design §B).
@@ -156,7 +176,7 @@ async function attachedOverlap(
   end: Date,
   excludeId?: string,
 ): Promise<boolean> {
-  const other = await db.budget.findFirst({
+  const others = await db.budget.findMany({
     where: {
       accountId,
       archived: false,
@@ -164,9 +184,9 @@ async function attachedOverlap(
       periodEnd: { gte: start },
       ...(excludeId ? { id: { not: excludeId } } : {}),
     },
-    select: { id: true },
+    select: { accountId: true, groupId: true },
   });
-  return other != null;
+  return (await stillAttached(others)).length > 0;
 }
 
 type ParsedBudget = ReturnType<typeof parseInput>;
@@ -392,11 +412,18 @@ export async function listBudgetsForUser(
       b.periodEnd.getTime() < now &&
       canManageBudget(b.groupId, roleByGroup),
   );
-  const [evaluations, rolled] = await Promise.all([
+  const [evaluations, rolled, free] = await Promise.all([
     evaluateBudgets(rows, { userId, groupIds }, at),
     withNextInstance(ended),
+    withoutAttachedOverlap(
+      ended.map((b) => ({
+        b,
+        period: nextPeriod(b.periodType as BudgetPeriodType, b.periodStart, b.periodEnd),
+      })),
+    ),
   ]);
-  const rollable = rows.map((b) => ended.includes(b) && !rolled.has(b.id));
+  const renewable = new Set(free.map((f) => f.b.id));
+  const rollable = rows.map((b) => ended.includes(b) && !rolled.has(b.id) && renewable.has(b.id));
   return rows.map((b, i) => {
     const e = evaluations[i];
     return {
@@ -743,6 +770,7 @@ async function evaluateBudgets(
   const landing = budgets.filter(
     (b) =>
       b.accountId &&
+      !b.archived &&
       loaded.get(b.id)!.scope.has(b.accountId) &&
       b.periodStart <= now &&
       now <= b.periodEnd,
@@ -785,7 +813,7 @@ async function evaluateBudgets(
         loaded.get(b.id)!,
         subtrees,
       );
-      const plannedTotal = budgetPlannedTotal(specs);
+      const plannedTotal = budgetPlannedTotal(specs.filter((l) => l.kind === "EXPENSE"));
       const { spent, percent, status } = lineStatus(plannedTotal, round2(-totalSum));
       return {
         lines: specs.map((l, i) => ({
@@ -1065,7 +1093,11 @@ export async function getBudgetDetail(
     unplannedIncome: e.unplannedIncome,
     incomePlanned: e.incomePlanned,
     incomeReceived: e.incomeReceived,
-    forecast: await budgetForecast(b, e.lines, now),
+    forecast: await budgetForecast(
+      b,
+      e.lines.filter((l) => l.kind === "EXPENSE"),
+      now,
+    ),
     landing: e.landing,
     canManage: canManageBudget(b.groupId, roleByGroup),
     ...(await seriesNeighbours(b)),
@@ -1428,22 +1460,24 @@ export async function rollRecurringBudgets(
   return { checked: due.length, rolled: instances.length };
 }
 
-// The cron skips a renewal whose period another attached budget already covers on the
-// same account (design §B); one query for every due budget.
+// Renewals whose period another attached budget doesn't already cover on the same account
+// (design §B), for every budget at once.
 async function withoutAttachedOverlap<T extends { b: Budget; period: { start: Date; end: Date } }>(
   planned: T[],
 ): Promise<T[]> {
   const attached = planned.filter((p) => p.b.accountId);
   if (attached.length === 0) return planned;
-  const taken = await db.budget.findMany({
-    where: {
-      archived: false,
-      accountId: { in: [...new Set(attached.map((p) => p.b.accountId!))] },
-      periodStart: { lte: new Date(Math.max(...attached.map((p) => p.period.end.getTime()))) },
-      periodEnd: { gte: new Date(Math.min(...attached.map((p) => p.period.start.getTime()))) },
-    },
-    select: { accountId: true, periodStart: true, periodEnd: true },
-  });
+  const taken = await stillAttached(
+    await db.budget.findMany({
+      where: {
+        archived: false,
+        accountId: { in: [...new Set(attached.map((p) => p.b.accountId!))] },
+        periodStart: { lte: new Date(Math.max(...attached.map((p) => p.period.end.getTime()))) },
+        periodEnd: { gte: new Date(Math.min(...attached.map((p) => p.period.start.getTime()))) },
+      },
+      select: { accountId: true, groupId: true, periodStart: true, periodEnd: true },
+    }),
+  );
   return planned.filter(
     ({ b, period }) =>
       !b.accountId ||

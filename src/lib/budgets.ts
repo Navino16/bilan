@@ -147,19 +147,23 @@ export type BudgetLanding = {
 };
 
 // Balance at the period's end (design §E): what each line still plans to receive or pay,
-// overruns adding nothing since they already left the balance.
+// overruns adding nothing since they already left the balance. Rows already dated later in
+// the period aren't in the balance yet: they count when they exceed what is left of the plan.
 export function budgetLanding(input: {
   balance: number;
-  lines: { flow: "in" | "out"; plannedAmount: number; doneOnAccount: number }[];
+  lines: { flow: "in" | "out"; plannedAmount: number; doneOnAccount: number; doneLater: number }[];
   margin: number | null;
   outOnAccount: number;
+  outLater: number;
 }): BudgetLanding {
-  const toCome = (planned: number, done: number) => Math.max(planned - done, 0);
+  const toCome = (planned: number, done: number, later: number) =>
+    Math.max(planned - done, later, 0);
   let incomeToCome = 0;
-  let spendingToCome = input.margin == null ? 0 : toCome(input.margin, input.outOnAccount);
+  let spendingToCome = toCome(input.margin ?? 0, input.outOnAccount, input.outLater);
   for (const l of input.lines) {
-    if (l.flow === "in") incomeToCome += toCome(l.plannedAmount, l.doneOnAccount);
-    else spendingToCome += toCome(l.plannedAmount, l.doneOnAccount);
+    const amount = toCome(l.plannedAmount, l.doneOnAccount, l.doneLater);
+    if (l.flow === "in") incomeToCome += amount;
+    else spendingToCome += amount;
   }
   const balance = round2(input.balance);
   incomeToCome = round2(incomeToCome);

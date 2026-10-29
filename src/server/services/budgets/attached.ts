@@ -133,6 +133,8 @@ const cents = (n: number) => Math.round(n * 100);
 
 // Link partners of each attached budget's rows, and for its unlinked rows the accounts holding
 // an opposite same-amount unlinked row within the auto-link window (a pending transfer leg).
+// Only transfer counterparts and savings accounts count, so a coincidental amount elsewhere
+// doesn't turn a refund into a transfer.
 export async function loadTransferContext(
   budgets: {
     id: string;
@@ -187,6 +189,12 @@ export async function loadTransferContext(
     }),
   ]);
   for (const t of types) ctx.accountTypes.set(t.id, t.type);
+  for (const b of attached) {
+    const counterparts = new Set(b.lines.map((l) => l.counterpartAccountId));
+    const searched = searchedOf.get(b.id)!;
+    for (const a of searched)
+      if (!counterparts.has(a) && ctx.accountTypes.get(a) !== "SAVINGS") searched.delete(a);
+  }
   const byCents = new Map<number, { accountId: string; date: Date }[]>();
   for (const c of candidates) {
     const key = cents(Number(c.amount));
@@ -222,9 +230,11 @@ export async function loadTransferContext(
 export type AttachedSpend = {
   lineSums: number[]; // signed
   lineSumsOnAccount: number[]; // signed, rows on the budget's account dated ≤ now (design §E)
+  lineSumsLater: number[]; // signed, rows on the account dated after now
   out: BudgetRow[];
   unplanned: BudgetRow[];
   outOnAccount: number; // signed
+  outLater: number; // signed
   fromSavings: number;
   unmatchedTransfers: number;
   counted: BudgetRow[];
@@ -250,9 +260,11 @@ export function computeAttachedSpend(
   const spend: AttachedSpend = {
     lineSums: lines.map(() => 0),
     lineSumsOnAccount: lines.map(() => 0),
+    lineSumsLater: lines.map(() => 0),
     out: [],
     unplanned: [],
     outOnAccount: 0,
+    outLater: 0,
     fromSavings: 0,
     unmatchedTransfers: 0,
     counted: [],
@@ -270,15 +282,19 @@ export function computeAttachedSpend(
       },
       matchLines,
     );
-    const onAccount = r.accountId === b.accountId && r.date <= now;
+    const own = r.accountId === b.accountId;
+    const onAccount = own && r.date <= now;
+    const later = own && r.date > now;
     spend.counted.push(r);
     spend.bucketOf.set(r.id, bucket);
     if (typeof bucket === "number") {
       spend.lineSums[bucket] += r.amount;
       if (onAccount) spend.lineSumsOnAccount[bucket] += r.amount;
+      if (later) spend.lineSumsLater[bucket] += r.amount;
     } else if (bucket === "out") {
       spend.out.push(r);
       if (onAccount) spend.outOnAccount += r.amount;
+      if (later) spend.outLater += r.amount;
       if (c.partners.length === 0 && c.pending.length > 0) spend.unmatchedTransfers++;
     } else {
       spend.unplanned.push(r);
@@ -358,7 +374,6 @@ export function summarizeAttached(
   };
 }
 
-// Landing of an attached budget whose period contains `now` (design §E).
 export function attachedLanding(
   lines: BudgetLineSpec[],
   margin: number | null,
@@ -368,11 +383,16 @@ export function attachedLanding(
   return budgetLanding({
     balance,
     lines: lines.map((l, i) => {
-      const flow = lineFlow(l);
-      const done = spend.lineSumsOnAccount[i];
-      return { flow, plannedAmount: l.plannedAmount, doneOnAccount: flow === "in" ? done : -done };
+      const sign = lineFlow(l) === "in" ? 1 : -1;
+      return {
+        flow: lineFlow(l),
+        plannedAmount: l.plannedAmount,
+        doneOnAccount: sign * spend.lineSumsOnAccount[i],
+        doneLater: sign * spend.lineSumsLater[i],
+      };
     }),
     margin,
     outOnAccount: -spend.outOnAccount,
+    outLater: -spend.outLater,
   });
 }

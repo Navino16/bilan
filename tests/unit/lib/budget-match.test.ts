@@ -92,12 +92,13 @@ describe("budgetLanding", () => {
       budgetLanding({
         balance: 2668,
         lines: [
-          { flow: "in", plannedAmount: 2000, doneOnAccount: 2000 },
-          { flow: "out", plannedAmount: 500, doneOnAccount: 300 },
-          { flow: "out", plannedAmount: 30, doneOnAccount: 20 },
+          { flow: "in", plannedAmount: 2000, doneOnAccount: 2000, doneLater: 0 },
+          { flow: "out", plannedAmount: 500, doneOnAccount: 300, doneLater: 0 },
+          { flow: "out", plannedAmount: 30, doneOnAccount: 20, doneLater: 0 },
         ],
         margin: 100,
         outOnAccount: 12,
+        outLater: 0,
       }),
     ).toEqual({ balance: 2668, incomeToCome: 0, spendingToCome: 298, endBalance: 2370 });
   });
@@ -107,12 +108,37 @@ describe("budgetLanding", () => {
       budgetLanding({
         balance: 100.1,
         lines: [
-          { flow: "out", plannedAmount: 30, doneOnAccount: 50 },
-          { flow: "in", plannedAmount: 2000, doneOnAccount: 0 },
+          { flow: "out", plannedAmount: 30, doneOnAccount: 50, doneLater: 0 },
+          { flow: "in", plannedAmount: 2000, doneOnAccount: 0, doneLater: 0 },
         ],
         margin: null,
         outOnAccount: 12,
+        outLater: 0,
       }),
     ).toEqual({ balance: 100.1, incomeToCome: 2000, spendingToCome: 0, endBalance: 2100.1 });
+  });
+
+  it("counts rows already dated later in the period when they exceed what is left", () => {
+    expect(
+      budgetLanding({
+        balance: 1000,
+        lines: [
+          { flow: "out", plannedAmount: 30, doneOnAccount: 20, doneLater: 40 },
+          { flow: "in", plannedAmount: 100, doneOnAccount: 0, doneLater: 150 },
+        ],
+        margin: 100,
+        outOnAccount: 12,
+        outLater: 500,
+      }),
+    ).toEqual({ balance: 1000, incomeToCome: 150, spendingToCome: 540, endBalance: 610 });
+    expect(
+      budgetLanding({
+        balance: 1000,
+        lines: [],
+        margin: null,
+        outOnAccount: 0,
+        outLater: 60,
+      }).spendingToCome,
+    ).toBe(60);
   });
 });
