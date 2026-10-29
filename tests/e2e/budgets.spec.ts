@@ -311,6 +311,7 @@ test.describe("budgets", () => {
     await expect(rows).toContainText(`Imprévu ${stamp}`);
 
     await deleteBudget(page, name);
+    await deleteAccount(page, account);
   });
 
   test("builds an attached budget with income, a transfer and a margin, and edits it back", async ({
@@ -355,6 +356,7 @@ test.describe("budgets", () => {
     await expect(page.getByRole("heading", { name })).toBeVisible({ timeout: 15_000 });
     await expect(page.locator('[data-slot="budget-income"]')).toContainText("0,00 € / 2 000,00 €");
     await deleteBudget(page, name);
+    await deleteAccount(page, savings);
   });
 
   test("the dashboard shows a budget snapshot", async ({ page }) => {
@@ -427,6 +429,22 @@ async function createAccount(page: Page, name: string, balance: string): Promise
   await page.fill('input[name="initialBalance"]', balance);
   await page.getByRole("button", { name: /créer le compte/i }).click();
   await expect(page.getByText(name).first()).toBeVisible({ timeout: 15_000 });
+}
+
+// Test accounts would otherwise pile up in every account list (the import step lists them all).
+async function deleteAccount(page: Page, name: string): Promise<void> {
+  await page.goto("/fr/accounts");
+  await page
+    .locator('[data-slot="card"]')
+    .filter({ hasText: name })
+    .last()
+    .getByRole("button", { name: /^actions pour/i })
+    .click();
+  await page.getByRole("menuitem", { name: /supprimer/i }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/saisissez/i).fill(name);
+  await dialog.getByRole("button", { name: /supprimer définitivement/i }).click();
+  await expect(page.getByText(name)).toHaveCount(0, { timeout: 15_000 });
 }
 
 async function openNewBudget(page: Page): Promise<void> {
