@@ -433,7 +433,7 @@ Comment les lignes comptent les dépenses :
 Un budget rattaché à un compte ne suit que ce compte : l’argent qui arrive, l’argent qui sort, et les virements vers vos autres comptes. Prévoyez-en un par compte courant, par exemple un pour votre compte personnel et un pour le compte joint du foyer.
 
 - Un compte a au plus un budget à la fois : deux budgets sur le même compte ne peuvent pas se chevaucher, même en partie. Les budgets archivés ne comptent pas.
-- Un budget de foyer peut utiliser un compte partagé avec le foyer.
+- Un budget personnel utilise un de vos propres comptes ; un budget de foyer, un compte partagé avec le foyer.
 - Les virements vers vos autres comptes comptent en entier : un virement vers votre livret est de l’argent sorti de ce compte.
 
 Chaque ligne a un **Type** :
@@ -463,6 +463,7 @@ Pendant la période en cours, la page **Budgets** commence par **Où j’atterri
 - Le solde d’aujourd’hui ne compte que les transactions datées d’aujourd’hui ou avant.
 - Rentrées encore attendues : ce que chaque ligne de rentrée et chaque virement entrant n’a pas encore reçu.
 - Dépenses encore à venir : ce que chaque ligne de dépense et chaque virement sortant n’a pas encore dépensé, plus ce qui reste de la marge Hors budget. Une ligne déjà dépassée compte pour 0.
+- Une transaction déjà datée plus tard dans la période n’est pas dans le solde d’aujourd’hui : elle compte dans ce qui reste à venir quand elle dépasse ce qui reste de sa ligne.
 - Une transaction d’un autre compte incluse dans le budget compte dans sa ligne, mais pas dans l’atterrissage : elle n’a jamais touché ce compte.
 
 Les périodes passées et à venir n’affichent que le prévu et le réalisé. Les comptes d’épargne n’ont ni budget ni atterrissage : leur solde s’affiche sur le tableau de bord.

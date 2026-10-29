@@ -433,7 +433,7 @@ How lines count spending:
 A budget attached to an account follows that account only: the money that comes in, the money that goes out, and the transfers to your other accounts. Use one per checking account, for example one for your personal account and one for the household's joint account.
 
 - An account has at most one budget at a time: two budgets on the same account can't overlap, even partly. Archived budgets don't count.
-- A household budget can use an account shared with the household.
+- A personal budget uses one of your own accounts; a household budget, an account shared with the household.
 - Transfers to your other accounts count in full: a transfer to your savings account is money that left this account.
 
 Each line has a **Type**:
@@ -463,6 +463,7 @@ During the current period, the **Budgets** page opens with **Where I land**: one
 - Today's balance only counts transactions dated today or earlier.
 - Income still expected: what each Income line and incoming transfer has not received yet.
 - Spending still to come: what each Expense line and outgoing transfer has not spent yet, plus what is left of the Out-of-budget margin. A line already over counts as 0.
+- A transaction already dated later in the period isn't in today's balance: it counts in what is still to come when it is more than what is left of its line.
 - A transaction from another account included in the budget counts in its line, but not in the landing: it never touched this account.
 
 Past and future periods show planned versus actual only. Savings accounts get no budget and no landing: their balance shows on the dashboard.
