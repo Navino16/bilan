@@ -3,6 +3,7 @@ import { db } from "@/server/db";
 import {
   archiveBudget,
   createBudget,
+  getBudgetDetail,
   listBudgetsForUser,
   rollRecurring,
   rollRecurringBudgets,
@@ -11,6 +12,7 @@ import {
 } from "@/server/services/budgets";
 import type { BudgetInput } from "@/lib/schemas/budget";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
+import { createLink } from "@/server/services/links";
 
 const owner = "bacc_owner";
 const member = "bacc_member";
@@ -234,5 +236,63 @@ describe("attaching a budget to an account", () => {
     await expect(rollRecurring(id, { id: owner })).rejects.toThrow("ACCOUNT_OVERLAP");
     await rollRecurringBudgets(new Date("2026-04-02T00:00:00.000Z"));
     expect(await db.budget.count({ where: { parentBudgetId: id } })).toBe(0);
+  });
+});
+
+describe("an attached budget's scope", () => {
+  async function livretsTransfer() {
+    const out = await tx(courant, "2026-03-10", -300, cat.livrets);
+    const into = await tx(livret, "2026-03-10", 300, cat.livrets);
+    await createLink({ transactionIds: [out, into], userId: owner });
+    await tx(courant, "2026-03-12", -25, cat.livrets);
+  }
+  const livretsLine = () => [{ categoryId: cat.livrets, plannedAmount: 400 }];
+
+  it("keeps a transfer leg linked to another account", async () => {
+    await livretsTransfer();
+    const { id } = await createBudget(input({ lines: livretsLine() }), { id: owner });
+    const detail = await getBudgetDetail(id, owner);
+    expect(detail.accountId).toBe(courant);
+    expect(detail.lines[0].spent).toBe(325);
+    expect(detail.spentTotal).toBe(325);
+  });
+
+  it("an unattached budget still nets the same transfer to zero", async () => {
+    await livretsTransfer();
+    const { id } = await createBudget(input({ accountId: undefined, lines: livretsLine() }), {
+      id: owner,
+    });
+    expect((await getBudgetDetail(id, owner)).lines[0].spent).toBe(25);
+  });
+
+  it("an attached group budget counts nothing once its account is unshared", async () => {
+    await tx(joint, "2026-03-05", -50, cat.courses);
+    const { id } = await createBudget(input({ groupId, accountId: joint }), { id: owner });
+    expect((await getBudgetDetail(id, owner)).spentTotal).toBe(50);
+    await db.accountShare.deleteMany({ where: { accountId: joint, groupId } });
+    try {
+      expect((await getBudgetDetail(id, owner)).spentTotal).toBe(0);
+    } finally {
+      await db.accountShare.create({
+        data: { accountId: joint, groupId, permission: "WRITE", createdById: owner },
+      });
+    }
+  });
+
+  it("an unattached budget ignores income and transfer lines", async () => {
+    await tx(courant, "2026-03-05", -40, null);
+    const { id } = await createBudget(
+      input({
+        lines: [
+          { categoryId: cat.courses, plannedAmount: 100 },
+          { kind: "TRANSFER", direction: "OUT", counterpartAccountId: livret, plannedAmount: 10 },
+        ],
+      }),
+      { id: owner },
+    );
+    await db.budget.update({ where: { id }, data: { accountId: null } });
+    const detail = await getBudgetDetail(id, owner);
+    expect(detail.lines.map((l) => l.spent)).toEqual([0, 0]);
+    expect(detail.spentTotal).toBe(0);
   });
 });

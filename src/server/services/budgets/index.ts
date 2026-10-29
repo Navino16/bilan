@@ -501,6 +501,7 @@ type BudgetRef = {
   id: string;
   userId: string | null;
   groupId: string | null;
+  accountId: string | null;
   periodStart: Date;
   periodEnd: Date;
 };
@@ -602,7 +603,7 @@ async function loadBudgetRows(budgets: BudgetRef[]): Promise<Map<string, LoadedB
   }
   for (const b of budgets) {
     const l = loaded.get(b.id)!;
-    const accounts = scopes.get(scopeKey(b))!;
+    const accounts = budgetRowAccounts(b, scopes.get(scopeKey(b))!);
     const from = b.periodStart.getTime();
     const to = b.periodEnd.getTime();
     l.rows = rows.filter(
@@ -617,12 +618,20 @@ async function loadBudgetRows(budgets: BudgetRef[]): Promise<Map<string, LoadedB
   return loaded;
 }
 
-type LineFilter = { categoryId: string | null; accountId: string | null };
+// An attached budget draws from its account only, and only while its scope still holds it
+// (design §B): loading the scope would net a linked transfer's two legs to zero.
+function budgetRowAccounts(b: { accountId: string | null }, scope: Set<string>): Set<string> {
+  if (!b.accountId) return scope;
+  return scope.has(b.accountId) ? new Set([b.accountId]) : new Set();
+}
+
+type LineFilter = { kind: string; categoryId: string | null; accountId: string | null };
 
 function lineCategoryIds(budgets: { lines: LineFilter[] }[]): string[] {
   return budgets.flatMap((b) => b.lines.flatMap((l) => (l.categoryId ? [l.categoryId] : [])));
 }
 type LineMatcher = {
+  kind: string;
   categoryId: string | null;
   categoryIds: Set<string> | null;
   accountId: string | null;
@@ -632,6 +641,7 @@ type LineMatcher = {
 // account. Without a category it only takes expenses, so income never counts as
 // negative spending. A line with neither filter is the catch-all (see below).
 function matchesLine(r: BudgetRow, line: LineMatcher): boolean {
+  if (line.kind !== "EXPENSE") return false;
   if (line.categoryIds == null && line.accountId == null) return false;
   if (line.categoryIds == null && r.amount >= 0) return false;
   if (line.categoryIds != null && (r.categoryId == null || !line.categoryIds.has(r.categoryId)))
@@ -646,7 +656,9 @@ function matchingLines(r: BudgetRow, filters: LineMatcher[]): number[] {
   const matched = filters.flatMap((f, i) => (matchesLine(r, f) ? [i] : []));
   if (matched.length === 0) {
     if (r.amount >= 0) return [];
-    return filters.flatMap((f, i) => (f.categoryIds == null && f.accountId == null ? [i] : []));
+    return filters.flatMap((f, i) =>
+      f.kind === "EXPENSE" && f.categoryIds == null && f.accountId == null ? [i] : [],
+    );
   }
   return matched.filter((i) => {
     const outer = filters[i];
@@ -660,6 +672,7 @@ function matchingLines(r: BudgetRow, filters: LineMatcher[]): number[] {
 export type BudgetDetail = {
   id: string;
   name: string;
+  accountId: string | null;
   description: string | null;
   archived: boolean;
   scope: BudgetScope;
@@ -716,6 +729,7 @@ async function computeBudgetSpend(
   const collapsed = collapseLinkedRows(rows);
   const lineSubtrees = subtrees ?? (await withDescendants(lineCategoryIds([b])));
   const filters: LineMatcher[] = b.lines.map((l) => ({
+    kind: l.kind,
     categoryId: l.categoryId,
     categoryIds: l.categoryId ? lineSubtrees.get(l.categoryId)! : null,
     accountId: l.accountId,
@@ -824,11 +838,17 @@ export type BudgetForecast = { balance: number; remaining: number; endBalance: n
 // Projected balance at the end of the current period (#347): the scope's checking
 // accounts minus what the lines still plan to spend. Income to come isn't anticipated.
 async function budgetForecast(
-  b: { userId: string | null; groupId: string | null; periodStart: Date; periodEnd: Date },
+  b: {
+    userId: string | null;
+    groupId: string | null;
+    accountId: string | null;
+    periodStart: Date;
+    periodEnd: Date;
+  },
   lines: { remaining: number }[],
   now: Date,
 ): Promise<BudgetForecast | null> {
-  if (now < b.periodStart || now > b.periodEnd) return null;
+  if (b.accountId || now < b.periodStart || now > b.periodEnd) return null;
   const accounts = await db.bankAccount.findMany({
     where: { id: { in: await budgetAccountIds(b) }, type: "CHECKING", archived: false },
     select: { id: true, initialBalance: true },
@@ -866,6 +886,7 @@ export async function getBudgetDetail(
   return {
     id: b.id,
     name: b.name,
+    accountId: b.accountId,
     description: b.description,
     archived: b.archived,
     scope: b.groupId ? "GROUP" : "USER",
