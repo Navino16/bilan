@@ -205,6 +205,8 @@ Certaines transactions appartiennent à un autre mois que le jour où elles arri
 - **Une transaction** : dans son détail, choisissez un mois sous **Mois d’affectation**, passé ou futur. **Revenir en automatique** annule votre choix.
 - **Toute une catégorie** : modifiez la catégorie et activez **Compter dans le mois suivant**, puis réglez le **Nombre de jours**. Les transactions de cette catégorie datées des derniers jours d’un mois comptent alors pour le mois suivant. Activez-le sur **Salaire** avec 5 jours et chaque salaire de fin de mois compte pour le mois d’après. L’option s’applique aussi aux transactions déjà présentes dans la catégorie, mais pas à ses sous-catégories. Un mois choisi à la main l’emporte toujours.
 
+Les deux côtés d’un virement [lié](#lier-des-transactions) entre vos comptes comptent dans le même mois : choisir un mois pour un côté, ou revenir en automatique, fait de même pour l’autre côté (si vous pouvez modifier son compte). Quand vous liez deux virements et qu’un seul a un mois choisi à la main, l’autre côté prend ce mois.
+
 La transaction garde sa date réelle dans la liste, avec la mention **Compté en …**. Le tableau de bord, les analyses et les budgets la comptent dans son mois d’affectation. Pour voir un salaire qui compte déjà pour le mois prochain, le tableau de bord et les analyses permettent d’ouvrir le mois suivant.
 
 ## Importer des relevés

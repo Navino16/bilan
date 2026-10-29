@@ -5,6 +5,7 @@ import { toIsoDay } from "@/lib/period";
 import { visibleAccountIds, visibleAccountRefs } from "@/server/services/accounts";
 import { canWriteAccount } from "@/server/services/accounts/sharing";
 import { logEvent } from "@/server/services/audit";
+import { alignNewLinkMonth } from "./month";
 import { getLinkSuggestionSettings } from "@/server/services/users/preferences";
 import { findSuggestedPairs, labelWords, pairKeyOf, type SuggestedPair } from "@/lib/links";
 import { merchantKey } from "@/lib/merchant";
@@ -32,7 +33,15 @@ export async function createLink(input: {
 
   const rows = await db.transaction.findMany({
     where: { id: { in: ids } },
-    select: { id: true, accountId: true, linkMembership: { select: { linkId: true } } },
+    select: {
+      id: true,
+      accountId: true,
+      type: true,
+      date: true,
+      periodDate: true,
+      periodManual: true,
+      linkMembership: { select: { linkId: true } },
+    },
   });
   if (rows.length !== ids.length) throw new LinkAccessError("NOT_FOUND");
   for (const r of rows) {
@@ -50,6 +59,7 @@ export async function createLink(input: {
       members: { create: ids.map((transactionId) => ({ transactionId })) },
     },
   });
+  await alignNewLinkMonth(rows);
   await logEvent({
     userId: input.userId,
     action: "link.created",

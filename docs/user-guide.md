@@ -205,6 +205,8 @@ Some transactions belong to another month than the day they hit your account: a 
 - **One transaction**: in its details, pick a month under **Assigned month**, past or future. **Back to automatic** cancels your choice.
 - **A whole category**: edit the category and turn on **Count toward the next month**, then set the **Number of days**. Transactions of that category dated in the last days of a month then count in the next month. Turn it on for **Salary** with 5 days and every end-of-month salary counts in the following month. It applies to the category's existing transactions too, but not to its sub-categories. A month you picked by hand always wins.
 
+Both sides of a [linked](#link-transactions) transfer between your accounts count in the same month: picking a month for one side, or going back to automatic, does the same for the other side (if you can edit its account). When you link two transfers and only one of them has a month picked by hand, the other side takes that month.
+
 The transaction keeps its real date in the list, with a **Counted in …** mention. The dashboard, insights and budgets count it in its assigned month. To see a salary that already counts in next month, the dashboard and insights let you open the next month.
 
 ## Importing statements
