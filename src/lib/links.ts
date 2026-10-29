@@ -180,12 +180,14 @@ function strictBest(edges: Edge[]): Edge | null {
   return tied ? null : best;
 }
 
-// Transfer legs to link without asking: cross-account, opposite to the cent, within the
-// window, and each leg's strictly best candidate is the other (spec A). Ties stay suggestions.
+// Transfer legs to link without asking: both rows TRANSFER (#357), cross-account, opposite to the
+// cent, within the window, and each leg's strictly best candidate is the other (spec A). Ties
+// stay suggestions.
 export function findAutoLinkPairs(
-  rows: AutoLinkCandidate[],
+  candidates: AutoLinkCandidate[],
   opts: { windowDays: number; ignored: Set<string> },
 ): { positiveId: string; negativeId: string }[] {
+  const rows = candidates.filter((r) => r.type === "TRANSFER");
   const negativesByCents = new Map<number, AutoLinkCandidate[]>();
   for (const r of rows) {
     if (r.amount >= 0) continue;

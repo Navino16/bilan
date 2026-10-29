@@ -241,6 +241,7 @@ describe("findAutoLinkPairs", () => {
     accountId,
     amount,
     date: new Date(`${day}T00:00:00.000Z`),
+    type: "TRANSFER",
   });
   const run = (rows: AutoLinkCandidate[], ignored: string[] = []) =>
     findAutoLinkPairs(rows, { windowDays: AUTO_LINK_WINDOW_DAYS, ignored: new Set(ignored) });
@@ -249,6 +250,25 @@ describe("findAutoLinkPairs", () => {
     expect(run([row("out", "C", -200, "2026-03-03"), row("in", "L", 200, "2026-03-05")])).toEqual([
       { positiveId: "in", negativeId: "out" },
     ]);
+  });
+
+  it("only links two transfers", () => {
+    const rows = [
+      { ...row("atm", "C", -200, "2026-03-03"), type: "ATM" },
+      row("refund", "L", 200, "2026-03-04"),
+      { ...row("card", "C", -90, "2026-03-03"), type: "CARD" },
+      row("in", "L", 90, "2026-03-03"),
+    ];
+    expect(run(rows)).toEqual([]);
+  });
+
+  it("does not let a non-transfer compete with a transfer pair", () => {
+    const rows = [
+      row("out", "C", -60, "2026-03-01"),
+      row("in", "L", 60, "2026-03-04"),
+      { ...row("card", "J", -60, "2026-03-04"), type: "CARD" },
+    ];
+    expect(run(rows)).toEqual([{ positiveId: "in", negativeId: "out" }]);
   });
 
   it("ignores a same-account opposite pair", () => {
