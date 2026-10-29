@@ -193,6 +193,17 @@ export function BudgetsView({
                         {b.percent === null ? "—" : formatPercent(b.percent / 100, locale)}
                       </span>
                     </div>
+                    {b.accountId && (
+                      <div
+                        data-slot="budget-card-income"
+                        className="text-muted-foreground flex items-center justify-between text-sm tabular-nums"
+                      >
+                        <span>{t("detail.income")}</span>
+                        <span>
+                          {nf.format(b.incomeReceived)} / {nf.format(b.incomePlanned)}
+                        </span>
+                      </div>
+                    )}
                   </Link>
                   {b.canManage && (
                     <BudgetActions
