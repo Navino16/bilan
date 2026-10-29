@@ -33,10 +33,11 @@ export type VisibleAccount = {
 // Current balance per account: opening balance + sum of its transactions.
 export async function accountBalances(
   accounts: { id: string; initialBalance: unknown }[],
+  { asOf }: { asOf?: Date } = {},
 ): Promise<Map<string, number>> {
   const sums = await db.transaction.groupBy({
     by: ["accountId"],
-    where: { accountId: { in: accounts.map((a) => a.id) } },
+    where: { accountId: { in: accounts.map((a) => a.id) }, ...(asOf && { date: { lte: asOf } }) },
     _sum: { amount: true },
   });
   const byId = new Map(sums.map((s) => [s.accountId, Number(s._sum.amount ?? 0)]));

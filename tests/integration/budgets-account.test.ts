@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { db } from "@/server/db";
 import {
   archiveBudget,
+  assignTransaction,
   createBudget,
   getBudgetDetail,
   listBudgetsForUser,
@@ -13,6 +14,7 @@ import {
 import type { BudgetInput } from "@/lib/schemas/budget";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
 import { createLink } from "@/server/services/links";
+import { accountBalances } from "@/server/services/accounts";
 
 const owner = "bacc_owner";
 const member = "bacc_member";
@@ -452,5 +454,104 @@ describe("an attached budget by line kind", () => {
       incomeReceived: d.incomeReceived,
       unplannedIncome: d.unplannedIncome,
     });
+  });
+});
+
+describe("landing", () => {
+  const now = new Date("2026-03-15T12:00:00.000Z");
+
+  async function landingBudget(over: Partial<BudgetInput> = {}) {
+    await tx(courant, "2026-03-01", 2000, cat.salary);
+    const out = await tx(courant, "2026-03-03", -300);
+    await createLink({ transactionIds: [out, await tx(livret, "2026-03-03", 300)], userId: owner });
+    await tx(courant, "2026-03-05", -20, cat.musique);
+    await tx(courant, "2026-03-06", -12);
+    await tx(courant, "2026-03-20", -40, cat.musique);
+    return createBudget(
+      input({
+        outOfBudgetPlanned: 100,
+        lines: [
+          { kind: "INCOME", categoryId: cat.salary, plannedAmount: 2000 },
+          { kind: "TRANSFER", direction: "OUT", counterpartAccountId: livret, plannedAmount: 500 },
+          { categoryId: cat.musique, plannedAmount: 30 },
+        ],
+        ...over,
+      }),
+      { id: owner },
+    );
+  }
+
+  it("leaves rows dated after the given day out of an account balance", async () => {
+    await tx(courant, "2026-03-01", 50);
+    await tx(courant, "2026-03-20", -40);
+    const account = { id: courant, initialBalance: 1000 };
+    expect((await accountBalances([account], { asOf: now })).get(courant)).toBe(1050);
+    expect((await accountBalances([account])).get(courant)).toBe(1010);
+  });
+
+  it("lands the account at the period's end", async () => {
+    const { id } = await landingBudget();
+    const d = await getBudgetDetail(id, owner, { now });
+    expect(d.forecast).toBeNull();
+    expect(d.landing).toEqual({
+      balance: 2668,
+      incomeToCome: 0,
+      spendingToCome: 298,
+      endBalance: 2370,
+    });
+    const item = (await listBudgetsForUser(owner, { now })).find((b) => b.id === id);
+    expect(item?.landing).toEqual(d.landing);
+  });
+
+  it("raises the landing by the income still expected", async () => {
+    await tx(courant, "2026-03-05", -20, cat.musique);
+    const { id } = await createBudget(
+      input({ lines: [{ kind: "INCOME", categoryId: cat.salary, plannedAmount: 2000 }] }),
+      { id: owner },
+    );
+    expect((await getBudgetDetail(id, owner, { now })).landing).toEqual({
+      balance: 980,
+      incomeToCome: 2000,
+      spendingToCome: 0,
+      endBalance: 2980,
+    });
+  });
+
+  it("counts a row included from another account in its line but not in the landing", async () => {
+    await tx(courant, "2026-03-05", -20, cat.musique);
+    const included = await tx(joint, "2026-03-06", -30, cat.musique);
+    const { id } = await createBudget(
+      input({ lines: [{ categoryId: cat.musique, plannedAmount: 60 }] }),
+      { id: owner },
+    );
+    await assignTransaction(
+      { budgetId: id, transactionId: included, mode: "INCLUDE" },
+      { id: owner },
+    );
+    const d = await getBudgetDetail(id, owner, { now });
+    expect(d.lines[0].spent).toBe(50);
+    expect(d.landing).toEqual({
+      balance: 980,
+      incomeToCome: 0,
+      spendingToCome: 40,
+      endBalance: 940,
+    });
+  });
+
+  it("has no landing outside the period, unattached, or once the account is unshared", async () => {
+    const { id } = await landingBudget();
+    const april = new Date("2026-04-01T12:00:00.000Z");
+    expect((await getBudgetDetail(id, owner, { now: april })).landing).toBeNull();
+    const loose = await createBudget(input({ accountId: undefined, name: "Libre" }), { id: owner });
+    expect((await getBudgetDetail(loose.id, owner, { now })).landing).toBeNull();
+    const shared = await createBudget(input({ groupId, accountId: joint }), { id: owner });
+    await db.accountShare.deleteMany({ where: { accountId: joint, groupId } });
+    try {
+      expect((await getBudgetDetail(shared.id, owner, { now })).landing).toBeNull();
+    } finally {
+      await db.accountShare.create({
+        data: { accountId: joint, groupId, permission: "WRITE", createdById: owner },
+      });
+    }
   });
 });
