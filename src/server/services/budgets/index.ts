@@ -19,6 +19,7 @@ import {
   withDescendants,
 } from "@/server/services/categories";
 import { collapseLinkedRows } from "@/lib/links";
+import type { RowBucket } from "@/lib/budget-match";
 import { linkIdsWhere } from "@/server/services/links/members";
 import {
   budgetPlannedTotal,
@@ -735,6 +736,9 @@ type BudgetEvaluation = {
   unplannedIncome: UnplannedIncome | null;
   landing: BudgetLanding | null;
   counted: BudgetRow[];
+  // Lines (or out/unplanned) each counted row lands in; an unattached budget's row may hit several.
+  bucketsOf: Map<string, RowBucket[]>;
+  rows: BudgetRow[]; // loaded, before collapsing links
   shown: { out: BudgetRow[]; unplanned: BudgetRow[] };
   attached: { specs: BudgetLineSpec[]; spend: AttachedSpend } | null;
 };
@@ -805,11 +809,13 @@ async function evaluateBudgets(
             : null,
           lines: specs.map((l, i) => ({ ...detailLine(l), ...sum.lines[i] })),
           counted: spend.counted,
+          bucketsOf: new Map([...spend.bucketOf].map(([id, bucket]) => [id, [bucket]])),
+          rows: loaded.get(b.id)!.rows,
           shown: { out: spend.out, unplanned: spend.unplanned },
           attached: { specs, spend },
         };
       }
-      const { lineSums, outOfBudget, totalSum, counted } = await computeBudgetSpend(
+      const { lineSums, outOfBudget, totalSum, counted, bucketsOf } = await computeBudgetSpend(
         b,
         loaded.get(b.id)!,
         subtrees,
@@ -840,6 +846,8 @@ async function evaluateBudgets(
         unplannedIncome: null,
         landing: null,
         counted,
+        bucketsOf,
+        rows: loaded.get(b.id)!.rows,
         shown: { out: outOfBudget, unplanned: [] },
         attached: null,
       };
@@ -923,6 +931,7 @@ async function computeBudgetSpend(
   outOfBudget: BudgetRow[];
   totalSum: number;
   counted: BudgetRow[];
+  bucketsOf: Map<string, RowBucket[]>;
 }> {
   // Collapse links across the WHOLE loaded scope first, so a linked group split
   // across categories nets correctly (the offsetting member is not dropped by a
@@ -940,6 +949,7 @@ async function computeBudgetSpend(
   const outOfBudget: BudgetRow[] = [];
   let totalSum = 0;
   const counted: BudgetRow[] = [];
+  const bucketsOf = new Map<string, RowBucket[]>();
   for (const r of collapsed) {
     if (excluded.has(r.id)) continue;
     const matchedIdx = matchingLines(r, filters);
@@ -948,8 +958,9 @@ async function computeBudgetSpend(
     totalSum += r.amount; // counted once toward the total
     if (matchedIdx.length === 0) outOfBudget.push(r);
     for (const i of matchedIdx) lineSums[i] += r.amount;
+    bucketsOf.set(r.id, matchedIdx.length === 0 ? ["out"] : matchedIdx);
   }
-  return { lineSums, outOfBudget, totalSum, counted };
+  return { lineSums, outOfBudget, totalSum, counted, bucketsOf };
 }
 
 async function seriesNeighbours(b: {
@@ -1327,6 +1338,105 @@ export async function listAssignmentsForTx(
     orderBy: { assignedAt: "asc" },
   });
   return rows.map((r) => ({ budgetId: r.budgetId, mode: r.mode, budget: toAssignable(r.budget) }));
+}
+
+export type BudgetMatchLine = Pick<
+  BudgetDetailLine,
+  "id" | "kind" | "categoryId" | "accountId" | "direction" | "counterpartAccountId" | "label"
+>;
+
+export type TxBudgetMatch = {
+  budgetId: string;
+  name: string;
+  groupName: string | null;
+  periodStart: Date;
+  periodEnd: Date;
+  lineCount: number; // the catch-all line's label depends on it
+  lines: BudgetMatchLine[];
+  outside: "out" | "unplanned" | null; // set when no line takes the transaction
+};
+
+export type TxBudgetMatches = {
+  matches: TxBudgetMatch[];
+  names: Record<string, string>; // line category and account ids → names the viewer may see
+};
+
+// Where a transaction lands in each non-archived budget the viewer reads (#365), from the same
+// evaluation as the budget detail. A link member collapsed into its primary reports the
+// primary's bucket.
+export async function listBudgetMatchesForTx(
+  transactionId: string,
+  viewerId: string,
+  now: Date = new Date(),
+): Promise<TxBudgetMatches> {
+  const [{ groupIds }, tx] = await Promise.all([
+    budgetScopeForUser(viewerId),
+    db.transaction.findUnique({ where: { id: transactionId }, select: { periodDate: true } }),
+  ]);
+  if (!tx) return { matches: [], names: {} };
+  const budgets = await db.budget.findMany({
+    where: {
+      archived: false,
+      AND: [
+        { OR: [{ userId: viewerId }, { groupId: { in: groupIds } }] },
+        {
+          OR: [
+            { periodStart: { lte: tx.periodDate }, periodEnd: { gte: tx.periodDate } },
+            { assignments: { some: { transactionId } } },
+          ],
+        },
+      ],
+    },
+    include: { lines: true, group: { select: { name: true } } },
+    orderBy: [{ periodStart: "desc" }, { name: "asc" }],
+  });
+  const evaluations = await evaluateBudgets(budgets, { userId: viewerId, groupIds }, now);
+
+  const matches = budgets.flatMap((b, i): TxBudgetMatch[] => {
+    const e = evaluations[i];
+    const own = e.rows.find((r) => r.id === transactionId);
+    if (!own) return [];
+    const survivor =
+      own.linkId == null ? own.id : e.counted.find((r) => r.linkId === own.linkId)?.id;
+    const buckets = survivor ? e.bucketsOf.get(survivor) : undefined;
+    if (!buckets) return [];
+    const outside = buckets.find((x): x is "out" | "unplanned" => typeof x !== "number") ?? null;
+    return [
+      {
+        budgetId: b.id,
+        name: b.name,
+        groupName: b.group?.name ?? null,
+        periodStart: b.periodStart,
+        periodEnd: b.periodEnd,
+        lineCount: e.lines.length,
+        lines: buckets.flatMap((x) => {
+          if (typeof x !== "number") return [];
+          const { id, kind, categoryId, accountId, direction, counterpartAccountId, label } =
+            e.lines[x];
+          return [{ id, kind, categoryId, accountId, direction, counterpartAccountId, label }];
+        }),
+        outside,
+      },
+    ];
+  });
+
+  const lines = matches.flatMap((m) => m.lines);
+  const categoryIds = [...new Set(lines.flatMap((l) => (l.categoryId ? [l.categoryId] : [])))];
+  const [categories, accounts] = await Promise.all([
+    categoryIds.length === 0
+      ? []
+      : db.category.findMany({
+          where: { id: { in: categoryIds } },
+          select: { id: true, name: true },
+        }),
+    lines.some((l) => l.accountId || l.counterpartAccountId) ? visibleAccountRefs(viewerId) : [],
+  ]);
+  const wanted = new Set(lines.flatMap((l) => [l.accountId, l.counterpartAccountId]));
+  const names = Object.fromEntries([
+    ...categories.map((c) => [c.id, c.name]),
+    ...accounts.filter((a) => wanted.has(a.id)).map((a) => [a.id, a.name]),
+  ]);
+  return { matches, names };
 }
 
 type SeriesRef = {

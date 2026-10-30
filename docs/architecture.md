@@ -1049,6 +1049,8 @@ Archive (#260): a budget manager can archive/unarchive (`budgets.service.archive
 
 Explicit assignment: from any transaction, "Assign to a budget" menu → choose budget (mine or my groups', not archived) → mode INCLUDE/EXCLUDE → `budgets.assignTransaction` upserts `BudgetAssignment` (unique on `(budgetId, transactionId)`). The transaction's account must be readable; an INCLUDE into a group budget also needs the account to be the actor's own or shared with that group.
 
+"Counted in" (#365, `budgets.listBudgetMatchesForTx`): the transaction panel lists, for each non-archived budget the viewer reads whose period holds the transaction's `periodDate` or that has an assignment on it, the line(s) it lands in or out-of-budget / unplanned income. It reuses `evaluateBudgets` (same batch loading, link collapse and matching as the detail; `bucketsOf` per counted row); a link member collapsed into its primary reports the primary's bucket.
+
 Forecast (#347, `budgetForecast`): while `now` is within the period, an unattached budget's `BudgetDetail.forecast` = `{ balance, remaining, endBalance }` with `balance` the current balance of the scope's non-archived `CHECKING` accounts, `remaining` = Σ max(line remaining, 0) and `endBalance = balance − remaining`. Income to come is not anticipated. Shown on the budget detail and the dashboard snapshot.
 
 Attached budgets (#355, `services/budgets/attached.ts`, pure matching in `lib/budget-match.ts`) replace steps 1, 4 and 5:

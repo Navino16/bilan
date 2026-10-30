@@ -5,6 +5,7 @@ import {
   createBudget,
   getBudgetDetail,
   listBudgetsForUser,
+  listBudgetMatchesForTx,
   listCurrentLandings,
 } from "@/server/services/budgets";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
@@ -235,5 +236,36 @@ describe("listBudgetsForUser batch loading (#299)", () => {
     const two = await queriesOfLandings();
     expect(two.lands).toHaveLength(2);
     expect(two.queries).toBe(one.queries);
+  });
+
+  it("finds a transaction's budget lines in as many queries for many budgets as for one", async () => {
+    const t = await tx(personal, "2022-03-05", -10, food);
+    const covering = (name: string, accountId?: string) =>
+      createBudget(
+        {
+          name,
+          periodType: "MONTH",
+          periodStart: "2022-03-01",
+          periodEnd: "2022-03-31",
+          accountId,
+          lines: [{ categoryId: food, plannedAmount: 100 }],
+        },
+        { id: owner },
+      );
+    const queriesOfMatches = async () => {
+      const before = await questions();
+      const { matches } = await listBudgetMatchesForTx(t, owner);
+      return { count: matches.length, queries: (await questions()) - before - 1 };
+    };
+    await covering("Compte 2022", personal);
+    await covering("Un");
+    await queriesOfMatches();
+    const one = await queriesOfMatches();
+    expect(one.count).toBe(2);
+    await covering("Deux");
+    await covering("Trois");
+    const many = await queriesOfMatches();
+    expect(many.count).toBe(4);
+    expect(many.queries).toBe(one.queries);
   });
 });

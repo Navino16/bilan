@@ -176,6 +176,7 @@ Cliquez sur une transaction pour ouvrir son détail :
 - **Mois d’affectation** : le mois pour lequel la transaction compte. Voir [Compter une transaction dans un autre mois](#compter-une-transaction-dans-un-autre-mois).
 - **Note** : votre commentaire, ajouté avec **Modifier**.
 - **Liée à** : affiché quand la transaction fait partie d’un [lien](#liens-entre-transactions).
+- **Comptée dans** : chaque budget actif qui compte la transaction, avec la ligne où elle tombe, ou **Hors budget** / **Rentrées hors budget** quand aucune ligne ne la prend. C’est le même rapprochement que sur la page du budget ; cliquez sur une entrée pour ouvrir ce budget.
 - **Assigner à un budget** : voir [Inclure ou exclure une transaction](#inclure-ou-exclure-une-transaction).
 - **Supprimer la transaction** en bas.
 
@@ -507,6 +508,8 @@ Depuis le détail d’une transaction, sous **Assigner à un budget** :
 1. **Choisir un budget**.
 2. Cliquez sur **Inclure** pour compter la transaction dans ce budget même si elle ne correspond à aucune ligne, sort de la période ou se trouve sur un compte que le budget ne couvre pas. Cliquez sur **Exclure** pour l’en écarter.
 3. L’affectation apparaît en dessous avec **Incluse** ou **Exclue**. Cliquez sur **Retirer** pour l’annuler.
+
+**Comptée dans**, juste au-dessus, se met à jour aussitôt : une transaction exclue quitte ce budget, une transaction incluse le rejoint.
 
 Une transaction incluse qui ne correspond à aucune ligne compte dans le total du budget, sous une carte **Hors budget** à part : elle ne modifie aucune ligne.
 

@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,7 @@ import {
   assignTransactionAction,
   unassignTransactionAction,
   listAssignmentsForTxAction,
+  listBudgetMatchesForTxAction,
 } from "@/server/transport/actions/budgets";
 import { deleteLinkAction, getLinkSummaryAction } from "@/server/transport/actions/links";
 import { type FlatCategory } from "./category-tree";
@@ -24,7 +26,8 @@ import { Link2, Pencil, Trash2, Unlink } from "lucide-react";
 import { formatPeriodLabel } from "@/lib/period";
 import { formatDate, formatLongDay } from "@/lib/format";
 import { editScope } from "@/lib/transaction-edit";
-import type { AssignableBudget, TxAssignment } from "@/server/services/budgets";
+import type { AssignableBudget, TxAssignment, TxBudgetMatches } from "@/server/services/budgets";
+import { useBudgetLineLabel } from "@/components/budgets/line-label";
 import type { LinkSummary } from "@/server/services/links";
 
 export type DetailItem = {
@@ -103,6 +106,11 @@ export function TransactionDetail({
     txId: "",
     rows: [],
   });
+  const [loadedMatches, setMatches] = useState<{ txId: string; result: TxBudgetMatches }>({
+    txId: "",
+    result: { matches: [], names: {} },
+  });
+  const budgetLineLabel = useBudgetLineLabel();
   const [chosen, setChosen] = useState("");
   const [, startAssign] = useTransition();
   // Keyed by transaction id so switching rows needs no reset effect.
@@ -160,8 +168,25 @@ export function TransactionDetail({
   }, [itemId]);
   const assignments = loadedAssignments.txId === itemId ? loadedAssignments.rows : [];
 
-  function refreshAssignments(txId: string) {
+  // Where the transaction counts (#365); its category, assigned month and link change the answer.
+  const itemCategoryId = item?.categoryId;
+  const itemPeriodDate = item?.periodDate;
+  const itemLinked = item?.linked;
+  useEffect(() => {
+    if (!itemId) return;
+    let active = true;
+    listBudgetMatchesForTxAction(itemId).then((result) => {
+      if (active) setMatches({ txId: itemId, result });
+    });
+    return () => {
+      active = false;
+    };
+  }, [itemId, itemCategoryId, itemPeriodDate, itemLinked]);
+  const matches = loadedMatches.txId === itemId ? loadedMatches.result : null;
+
+  function refreshBudgets(txId: string) {
     listAssignmentsForTxAction(txId).then((rows) => setAssignments({ txId, rows }));
+    listBudgetMatchesForTxAction(txId).then((result) => setMatches({ txId, result }));
   }
 
   function assign(mode: "INCLUDE" | "EXCLUDE") {
@@ -172,7 +197,7 @@ export function TransactionDetail({
     fd.set("mode", mode);
     startAssign(async () => {
       const r = await assignTransactionAction(null, fd);
-      if (r?.ok) refreshAssignments(item.id);
+      if (r?.ok) refreshBudgets(item.id);
     });
   }
 
@@ -183,13 +208,13 @@ export function TransactionDetail({
     fd.set("transactionId", item.id);
     startAssign(async () => {
       const r = await unassignTransactionAction(null, fd);
-      if (r?.ok) refreshAssignments(item.id);
+      if (r?.ok) refreshBudgets(item.id);
     });
   }
 
   const nf = new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" });
   // Same-named budgets differ by owner and period (#161).
-  const budgetLabel = (b: AssignableBudget) =>
+  const budgetLabel = (b: { name: string; periodStart: Date; periodEnd: Date }) =>
     `${b.name} · ${formatPeriodLabel({ from: b.periodStart, to: b.periodEnd, year: null, month: null }, locale)}`;
   const budgetGroups = new Map<string, AssignableBudget[]>();
   for (const b of budgets) {
@@ -403,6 +428,44 @@ export function TransactionDetail({
                         </p>
                       )}
                     </div>
+                  </Field>
+                )}
+
+                {matches && matches.matches.length > 0 && (
+                  <Field label={tb("countedIn")}>
+                    <ul className="space-y-1.5">
+                      {matches.matches.map((m) => (
+                        <li key={m.budgetId}>
+                          <Link
+                            href={`/${locale}/budgets/${m.budgetId}${m.outside ? `?show=${m.outside}` : ""}`}
+                            data-slot="budget-match"
+                            className="border-border hover:bg-muted/50 block rounded-lg border px-3 py-2 text-sm"
+                          >
+                            <span className="block truncate">
+                              {budgetLabel(m)}
+                              {m.groupName && (
+                                <span className="text-muted-foreground"> · {m.groupName}</span>
+                              )}
+                            </span>
+                            <span className="text-muted-foreground block truncate text-xs">
+                              {m.outside === "out"
+                                ? tBudgets("detail.outOfBudget")
+                                : m.outside === "unplanned"
+                                  ? tBudgets("detail.unplannedIncome")
+                                  : m.lines
+                                      .map((l) =>
+                                        budgetLineLabel(l, {
+                                          category: (id) => matches.names[id],
+                                          account: (id) => matches.names[id],
+                                          lineCount: m.lineCount,
+                                        }),
+                                      )
+                                      .join(", ")}
+                            </span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
                   </Field>
                 )}
 
