@@ -473,6 +473,7 @@ CREATE TABLE `IgnoredLinkSuggestion` (
     `userId` VARCHAR(191) NOT NULL,
     `pairKey` VARCHAR(191) NOT NULL,
     `ignoredAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `restoredAt` DATETIME(3) NULL,
 
     INDEX `IgnoredLinkSuggestion_userId_idx`(`userId`),
     PRIMARY KEY (`userId`, `pairKey`)

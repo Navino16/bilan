@@ -540,9 +540,11 @@ model TransactionLinkMember {
 }
 
 model IgnoredLinkSuggestion {
-  userId    String
-  pairKey   String // canonical "txid1|txid2" (ids sorted)
-  ignoredAt DateTime @default(now())
+  userId     String
+  pairKey    String // canonical "txid1|txid2" (ids sorted)
+  ignoredAt  DateTime  @default(now())
+  // Set when restored: suggested again, but never auto-linked again (#363).
+  restoredAt DateTime?
 
   @@id([userId, pairKey])
   @@index([userId])

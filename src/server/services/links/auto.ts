@@ -49,6 +49,7 @@ export async function autoLinkTransfers(
         labelEnc: true,
       },
     }),
+    // Restored pairs too: they come back as suggestions only (#363).
     db.ignoredLinkSuggestion.findMany({ where: { userId: ownerId }, select: { pairKey: true } }),
   ]);
 

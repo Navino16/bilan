@@ -400,7 +400,7 @@ Linking requires write access to every account involved.
 
 Bilan links the two sides of a transfer between two accounts you own by itself, when you import a statement or add a transaction by hand: both sides are transfers, same amount in opposite directions, at most 4 days apart, and one obvious match. A transfer that matches a card payment, a direct debit or a cash withdrawal is only suggested, never linked by itself. When it isn't sure (two transfers of the same amount on the same day, for example), the pair stays in the suggestions. Transfers to an account someone shares with you are never linked automatically.
 
-To undo an automatic link, [unlink](#unlink) it: Bilan won't link that pair again.
+To undo an automatic link, [unlink](#unlink) it: Bilan won't link that pair again, and stops suggesting it to you and to the accounts' owner. If you restore the pair from the ignored pairs, it comes back as a suggestion only, never linked automatically again.
 
 ### Unlink
 

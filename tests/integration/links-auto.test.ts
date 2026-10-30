@@ -5,7 +5,10 @@ import {
   autoLinkTransfers,
   createLink,
   deleteLink,
+  ignoreSuggestion,
+  listIgnoredSuggestions,
   pairKeyOf,
+  restoreSuggestion,
   suggestPairs,
 } from "@/server/services/links";
 import { getDashboard } from "@/server/services/dashboard";
@@ -153,6 +156,22 @@ describe("autoLinkTransfers", () => {
     });
     expect(rows.map((r) => r.userId)).toEqual([owner, other].sort());
     expect((await suggestPairs(owner)).map((p) => p.key)).not.toContain(pairKeyOf(out, into));
+  });
+
+  it("a restored pair comes back as a suggestion, never as an auto link", async () => {
+    const out = await tx(courant, "2026-03-03", -200);
+    const into = await tx(livret, "2026-03-04", 200);
+    const key = pairKeyOf(out, into);
+    await autoLinkTransfers(owner);
+    await deleteLink((await linkOf(out))!.linkId, owner);
+    await restoreSuggestion(owner, key);
+    expect(await autoLinkTransfers(owner)).toEqual({ linked: 0 });
+    expect((await suggestPairs(owner)).map((p) => p.key)).toContain(key);
+    expect((await listIgnoredSuggestions(owner)).map((p) => p.key)).not.toContain(key);
+    await expect(restoreSuggestion(owner, key)).rejects.toThrow("NOT_FOUND");
+    await ignoreSuggestion(owner, key);
+    expect((await suggestPairs(owner)).map((p) => p.key)).not.toContain(key);
+    expect((await listIgnoredSuggestions(owner)).map((p) => p.key)).toEqual([key]);
   });
 
   it("links what a first pass leaves unique", async () => {
