@@ -278,4 +278,13 @@ describe("net savings", () => {
     // March up to the 5th: +300 into the livret and 50 to the kids' savings; no data before March.
     expect(data.savings.previous).toBe(350);
   });
+
+  it("counts a savings-category transfer once while its savings leg is unlinked", async () => {
+    await row(courant, "2026-05-03", -80, kids);
+    await row(livret, "2026-05-04", 80);
+    const may = monthPeriod(2026, 5);
+    const data = await getDashboard(saver, may, comparisonFor(may, "prev", later));
+    // Only the checking row counts (savings-category spending); an unlinked savings leg doesn't.
+    expect(data.savings.current).toBe(80);
+  });
 });
