@@ -73,6 +73,7 @@ describe("default categorization rules", () => {
     ["VIREMENT DGFIP FINANCES PUBLIQU", "taxes.taxes"],
     ["PRLV SEPA IMPÔTS", "taxes.taxes"],
     ["PRLV SEPA COTISATION MUTUELLE", "health.insurance"],
+    ["VIR CPAM PARIS REMBOURSEMENT", "health.reimbursements"],
     ["CB DR MARTENS 12/04/26", "shopping.clothes"],
     ["CB PATHÉ 12/04/26", "leisure.outings"],
     ["CB PICARD SURGELES 12/04/26", "food.groceries"],

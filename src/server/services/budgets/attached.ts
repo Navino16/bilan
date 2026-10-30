@@ -331,8 +331,8 @@ export type AttachedSummary = {
   unplannedIncome: { received: number; count: number; fromSavings: number };
 };
 
-// Spending side = outgoing lines + out of budget; income side = incoming lines. Saving more
-// than planned doesn't push the budget's status over (design item 6).
+// Spending side = outgoing lines + out of budget; income side = incoming lines + unplanned
+// income. Saving more than planned doesn't push the budget's status over (design item 6).
 export function summarizeAttached(
   lines: BudgetLineSpec[],
   margin: number | null,
@@ -342,7 +342,7 @@ export function summarizeAttached(
   let plannedTotal = margin ?? 0;
   let savedOnTop = 0;
   let incomePlanned = 0;
-  let incomeReceived = 0;
+  let incomeReceived = spend.unplanned.reduce((s, r) => s + r.amount, 0);
   let spentSum = -spend.out.reduce((s, r) => s + r.amount, 0);
   const statuses = lines.map((l, i) => {
     const counterpartSavings =
