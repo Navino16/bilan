@@ -59,7 +59,11 @@ export type UserDataExport = {
   groups: unknown[];
   invitationsSent: unknown[];
   links: { id: string; name: string | null; createdAt: Date; transactionIds: string[] }[];
-  ignoredLinkSuggestions: { transactionIds: string[]; ignoredAt: Date }[];
+  ignoredLinkSuggestions: {
+    transactionIds: string[];
+    ignoredAt: Date;
+    restoredAt: Date | null;
+  }[];
   imports: {
     id: string;
     source: string;
@@ -131,7 +135,7 @@ export async function exportParts(userId: string): Promise<{
     }),
     db.ignoredLinkSuggestion.findMany({
       where: { userId },
-      select: { pairKey: true, ignoredAt: true },
+      select: { pairKey: true, ignoredAt: true, restoredAt: true },
     }),
     db.auditLog.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 5000 }),
   ]);
@@ -190,9 +194,9 @@ export async function exportParts(userId: string): Promise<{
   }));
   const linkOf = new Map(links.flatMap((l) => l.transactionIds.map((t) => [t, l.id] as const)));
   const txIds = new Set(ownedPairRows.map((t) => t.id));
-  const ignoredLinkSuggestions = ignoredRows.flatMap(({ pairKey, ignoredAt }) => {
+  const ignoredLinkSuggestions = ignoredRows.flatMap(({ pairKey, ignoredAt, restoredAt }) => {
     const transactionIds = pairKey.split("|").filter((id) => txIds.has(id));
-    return transactionIds.length ? [{ transactionIds, ignoredAt }] : [];
+    return transactionIds.length ? [{ transactionIds, ignoredAt, restoredAt }] : [];
   });
 
   const owned = new Set(accountIds);

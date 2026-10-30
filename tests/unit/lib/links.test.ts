@@ -315,6 +315,15 @@ describe("findAutoLinkPairs", () => {
     expect(run(rows)).toEqual([{ positiveId: "in", negativeId: "near" }]);
   });
 
+  it("lets a shared label word break a tie on day gap and amount", () => {
+    const rows = [
+      { ...row("in", "L", 120, "2026-03-04"), words: new Set(["LOYER"]) },
+      { ...row("other", "J", -120, "2026-03-03"), words: new Set(["COURSES"]) },
+      { ...row("rent", "C", -120, "2026-03-05"), words: new Set(["LOYER"]) },
+    ];
+    expect(run(rows)).toEqual([{ positiveId: "in", negativeId: "rent" }]);
+  });
+
   it("requires the match to be mutual", () => {
     const rows = [
       row("out", "C", -80, "2026-03-03"),

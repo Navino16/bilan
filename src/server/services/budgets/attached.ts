@@ -1,7 +1,7 @@
 // Budgets attached to an account (design §B–§E): mirrors, transfer context and per-kind sums.
 // Every loader runs a constant number of queries for any number of budgets (#299).
 import { db } from "@/server/db";
-import { AUTO_LINK_WINDOW_DAYS, collapseLinkedRows } from "@/lib/links";
+import { AUTO_LINK_WINDOW_DAYS, collapseLinkedRows, pairKeyOf } from "@/lib/links";
 import { bucketRow, lineFlow, type MatchLine, type RowBucket } from "@/lib/budget-match";
 import {
   budgetLanding,
@@ -134,7 +134,7 @@ const cents = (n: number) => Math.round(n * 100);
 // Link partners of each attached budget's rows, and for its unlinked rows the accounts holding
 // an opposite same-amount unlinked row within the auto-link window (a pending transfer leg).
 // Only transfer counterparts and savings accounts count, so a coincidental amount elsewhere
-// doesn't turn a refund into a transfer.
+// doesn't turn a refund into a transfer, and neither does a pair the viewer dismissed.
 export async function loadTransferContext(
   budgets: {
     id: string;
@@ -143,6 +143,7 @@ export async function loadTransferContext(
   }[],
   loaded: Map<string, LoadedBudgetRows>,
   mirrors: Map<string, BudgetLineSpec[]>,
+  viewerId: string,
 ): Promise<TransferContext> {
   const attached = budgets.filter((b) => b.accountId);
   const ctx: TransferContext = { rows: new Map(), accountTypes: new Map() };
@@ -167,7 +168,7 @@ export async function loadTransferContext(
   );
   const times = unlinkedOwn.map((r) => r.date.getTime());
 
-  const [partners, candidates, types] = await Promise.all([
+  const [partners, candidates, types, dismissed] = await Promise.all([
     linkPartners([...new Set(allRows.flatMap((r) => (r.linkId ? [r.linkId] : [])))]),
     unlinkedOwn.length === 0 || searchedAccounts.length === 0
       ? []
@@ -181,13 +182,20 @@ export async function loadTransferContext(
               lte: new Date(Math.max(...times) + AUTO_LINK_WINDOW_DAYS * DAY),
             },
           },
-          select: { accountId: true, amount: true, date: true },
+          select: { id: true, accountId: true, amount: true, date: true },
         }),
     db.bankAccount.findMany({
       where: { id: { in: [...new Set([...counterparts, ...searchedAccounts])] } },
       select: { id: true, type: true },
     }),
+    unlinkedOwn.length === 0
+      ? []
+      : db.ignoredLinkSuggestion.findMany({
+          where: { userId: viewerId, restoredAt: null },
+          select: { pairKey: true },
+        }),
   ]);
+  const ignored = new Set(dismissed.map((r) => r.pairKey));
   for (const t of types) ctx.accountTypes.set(t.id, t.type);
   for (const b of attached) {
     const counterparts = new Set(b.lines.map((l) => l.counterpartAccountId));
@@ -195,7 +203,7 @@ export async function loadTransferContext(
     for (const a of searched)
       if (!counterparts.has(a) && ctx.accountTypes.get(a) !== "SAVINGS") searched.delete(a);
   }
-  const byCents = new Map<number, { accountId: string; date: Date }[]>();
+  const byCents = new Map<number, { id: string; accountId: string; date: Date }[]>();
   for (const c of candidates) {
     const key = cents(Number(c.amount));
     byCents.set(key, [...(byCents.get(key) ?? []), c]);
@@ -216,7 +224,8 @@ export async function loadTransferContext(
               .filter(
                 (c) =>
                   searched.has(c.accountId) &&
-                  Math.abs(c.date.getTime() - r.date.getTime()) <= AUTO_LINK_WINDOW_DAYS * DAY,
+                  Math.abs(c.date.getTime() - r.date.getTime()) <= AUTO_LINK_WINDOW_DAYS * DAY &&
+                  !ignored.has(pairKeyOf(r.id, c.id)),
               )
               .map((c) => c.accountId)
           : [];

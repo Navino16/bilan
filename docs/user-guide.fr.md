@@ -400,7 +400,7 @@ Il faut un accès en écriture à chaque compte concerné.
 
 Bilan lie de lui-même les deux côtés d’un virement entre deux de vos comptes, quand vous importez un relevé ou ajoutez une transaction à la main : les deux côtés sont des virements, même montant en sens opposé, 4 jours d’écart au plus, et une seule correspondance évidente. Un virement qui correspond à un paiement par carte, un prélèvement ou un retrait n’est que suggéré, jamais lié de lui-même. Quand il a un doute (deux virements du même montant le même jour, par exemple), la paire reste dans les suggestions. Un virement vers un compte qu’on partage avec vous n’est jamais lié automatiquement.
 
-Pour annuler un lien automatique, [déliez-le](#délier) : Bilan ne liera plus cette paire.
+Pour annuler un lien automatique, [déliez-le](#délier) : Bilan ne liera plus cette paire et cesse de la suggérer, à vous comme au propriétaire des comptes. Si vous restaurez la paire depuis les paires ignorées, elle revient en suggestion seulement, sans plus jamais être liée automatiquement.
 
 ### Délier
 
@@ -446,7 +446,7 @@ Chaque ligne a un **Type** :
 | **Rentrée**  | l’argent reçu dans la catégorie, par exemple votre salaire                              |
 | **Virement** | les virements **Vers** ou **Depuis** un autre de vos comptes, choisi dans **Autre compte** |
 
-Une transaction ne compte que dans une ligne. Les lignes de virement passent d’abord, puis la ligne de catégorie la plus précise. Un virement est reconnu dès qu’il est lié à sa contrepartie sur l’autre compte (voir [Liens automatiques](#liens-automatiques)), ou quand cet autre compte porte le même montant en sens inverse à 4 jours ou moins. L’argent qui vient d’un autre compte ne compte jamais comme le remboursement d’une ligne de dépense.
+Une transaction ne compte que dans une ligne. Les lignes de virement passent d’abord, puis la ligne de catégorie la plus précise. Un virement est reconnu dès qu’il est lié à sa contrepartie sur l’autre compte (voir [Liens automatiques](#liens-automatiques)), ou quand cet autre compte porte le même montant en sens inverse à 4 jours ou moins et que vous n’avez pas ignoré cette paire dans les suggestions de liens. L’argent qui vient d’un autre compte ne compte jamais comme le remboursement d’une ligne de dépense.
 
 Un dépassement se lit selon le type : **Dépassé de …** pour une dépense, **+… de plus que prévu** pour une rentrée ou un virement, et **+… épargnés en plus** pour un virement vers un compte d’épargne, qui ne fait pas passer le budget en dépassement.
 

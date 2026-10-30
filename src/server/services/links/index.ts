@@ -87,11 +87,14 @@ export async function deleteLink(linkId: string, userId: string): Promise<void> 
   );
   if (link.auto && link.members.length === 2) {
     const [a, b] = link.members.map((m) => m.transactionId);
-    await db.ignoredLinkSuggestion.upsert({
-      where: { userId_pairKey: { userId: link.createdById, pairKey: pairKeyOf(a, b) } },
-      update: {},
-      create: { userId: link.createdById, pairKey: pairKeyOf(a, b) },
-    });
+    const pairKey = pairKeyOf(a, b);
+    for (const id of new Set([link.createdById, userId])) {
+      await db.ignoredLinkSuggestion.upsert({
+        where: { userId_pairKey: { userId: id, pairKey } },
+        update: { restoredAt: null },
+        create: { userId: id, pairKey },
+      });
+    }
   }
   await db.transactionLink.delete({ where: { id: linkId } });
   await logEvent({ userId, action: "link.deleted", entity: "TransactionLink", entityId: linkId });
@@ -126,7 +129,10 @@ export async function suggestPairs(userId: string): Promise<SuggestedPairView[]>
   const [{ windowDays, minAmount }, visible, ignoredRows] = await Promise.all([
     getLinkSuggestionSettings(userId),
     visibleAccountRefs(userId),
-    db.ignoredLinkSuggestion.findMany({ where: { userId }, select: { pairKey: true } }),
+    db.ignoredLinkSuggestion.findMany({
+      where: { userId, restoredAt: null },
+      select: { pairKey: true },
+    }),
   ]);
   if (visible.length === 0) return [];
   const accountName = new Map(visible.map((a) => [a.id, a.name]));
@@ -185,7 +191,7 @@ export type IgnoredPairView = { key: string; amount: number; positive: PairLeg; 
 // (any other pair could never be suggested again), most recently ignored first.
 export async function listIgnoredSuggestions(userId: string): Promise<IgnoredPairView[]> {
   const ignored = await db.ignoredLinkSuggestion.findMany({
-    where: { userId },
+    where: { userId, restoredAt: null },
     orderBy: { ignoredAt: "desc" },
     take: 200,
     select: { pairKey: true },
@@ -223,8 +229,12 @@ export async function listIgnoredSuggestions(userId: string): Promise<IgnoredPai
   return out;
 }
 
+// Kept as restored rather than deleted so automatic linking keeps leaving the pair alone.
 export async function restoreSuggestion(userId: string, pairKey: string): Promise<void> {
-  const { count } = await db.ignoredLinkSuggestion.deleteMany({ where: { userId, pairKey } });
+  const { count } = await db.ignoredLinkSuggestion.updateMany({
+    where: { userId, pairKey, restoredAt: null },
+    data: { restoredAt: new Date() },
+  });
   if (count === 0) throw new LinkAccessError("NOT_FOUND");
   await logEvent({
     userId,
@@ -299,7 +309,7 @@ export async function getLinkSummary(
 export async function ignoreSuggestion(userId: string, pairKey: string): Promise<void> {
   await db.ignoredLinkSuggestion.upsert({
     where: { userId_pairKey: { userId, pairKey } },
-    update: {},
+    update: { ignoredAt: new Date(), restoredAt: null },
     create: { userId, pairKey },
   });
   await logEvent({

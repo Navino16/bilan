@@ -400,7 +400,7 @@ Linking requires write access to every account involved.
 
 Bilan links the two sides of a transfer between two accounts you own by itself, when you import a statement or add a transaction by hand: both sides are transfers, same amount in opposite directions, at most 4 days apart, and one obvious match. A transfer that matches a card payment, a direct debit or a cash withdrawal is only suggested, never linked by itself. When it isn't sure (two transfers of the same amount on the same day, for example), the pair stays in the suggestions. Transfers to an account someone shares with you are never linked automatically.
 
-To undo an automatic link, [unlink](#unlink) it: Bilan won't link that pair again.
+To undo an automatic link, [unlink](#unlink) it: Bilan won't link that pair again, and stops suggesting it to you and to the accounts' owner. If you restore the pair from the ignored pairs, it comes back as a suggestion only, never linked automatically again.
 
 ### Unlink
 
@@ -446,7 +446,7 @@ Each line has a **Type**:
 | **Income**   | money received in the category, for example your salary                           |
 | **Transfer** | transfers **To** or **From** another of your accounts, chosen in **Other account** |
 
-A transaction counts in one line only. Transfer lines come first, then the most specific category line. A transfer is matched once it is linked to the other account's side (see [Automatic links](#automatic-links)), or when that account holds the same amount the other way within 4 days. Money coming from another account never counts as a refund of an expense line.
+A transaction counts in one line only. Transfer lines come first, then the most specific category line. A transfer is matched once it is linked to the other account's side (see [Automatic links](#automatic-links)), or when that account holds the same amount the other way within 4 days and you haven't ignored that pair in the link suggestions. Money coming from another account never counts as a refund of an expense line.
 
 Going over a line reads differently by type: **Over by …** for an expense, **+… more than planned** for income or a transfer, and **+… saved on top** for a transfer to a savings account, which doesn't push the budget over.
 

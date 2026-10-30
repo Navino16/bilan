@@ -101,6 +101,15 @@ function monthTransactions(y: number, m0: number): Tx[] {
     type: "TRANSFER",
     pairKey: `joint-${key}`,
   });
+  // Pushed, not added: `add` draws a random day, which would reshuffle the rest of the data.
+  out.push({
+    account: "joint",
+    date: day(3),
+    amount: 850,
+    label: "VIR DE M ALEX MARTIN",
+    type: "TRANSFER",
+    category: "Autres revenus",
+  });
   add({
     account: "courant",
     date: day(29),
@@ -550,6 +559,12 @@ async function main(): Promise<void> {
       periodStart: cur.start,
       periodEnd: cur.end,
       lines: [
+        {
+          kind: "INCOME",
+          categoryId: catId("Autres revenus"),
+          label: "Contribution d'Alex",
+          plannedAmount: 850,
+        },
         { categoryId: catId("Loyer & prêt"), plannedAmount: 890 },
         { categoryId: catId("Électricité & gaz"), plannedAmount: 80 },
         { categoryId: catId("Courses"), plannedAmount: 550 },
