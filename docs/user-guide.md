@@ -457,6 +457,8 @@ A transfer line is set once, in the budget of the account the money leaves. The 
 
 **Unplanned income** lists the money received that no Income or Transfer line takes. What came from a savings account shows as **Taken from savings this period**. The **Income** section total includes it, as the **Expenses** total includes out of budget.
 
+At the top of the page, the **Balance** shows the period's income minus its spending, with the balance the lines plan for below it.
+
 #### Where the account lands
 
 During the current period, the **Budgets** page opens with **Where I land**: one card per account with a budget in progress (the dashboard shows the same cards). Its balance at the period's end is:

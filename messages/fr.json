@@ -567,6 +567,8 @@
     },
     "detail": {
       "spent": "Dépensé",
+      "balance": "Solde",
+      "balancePlanned": "prévu {amount}",
       "planned": "Prévu",
       "remaining": "Reste {amount}",
       "overBy": "Dépassé de {amount}",
