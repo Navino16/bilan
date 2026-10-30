@@ -15,6 +15,7 @@ import { lineFlow } from "@/lib/budget-match";
 import { BudgetBar, lineDisplay } from "./budget-status";
 import { BudgetActions, toEditableBudget, type BudgetFormOptions } from "./budget-actions";
 import { LandingCard } from "./landing-cards";
+import { useBudgetLineLabel } from "./line-label";
 import { PageHeader } from "@/components/shell/page-header";
 import { formatDateRange, formatDayMonth } from "@/lib/format";
 import { AssignedMonthBadge } from "@/components/transactions/assigned-month";
@@ -41,20 +42,13 @@ export function BudgetDetail({
   const period = { from: detail.periodStart, to: detail.periodEnd };
   const attached = detail.accountId != null;
   const base = `/${locale}/budgets/${detail.id}`;
-
-  function lineLabel(line: BudgetDetailLine): string {
-    if (line.label) return line.label;
-    if (line.kind === "TRANSFER") {
-      const account = line.counterpartAccountId ? accounts[line.counterpartAccountId] : undefined;
-      return t(line.direction === "IN" ? "line.transferFrom" : "line.transferTo", {
-        account: account ?? t("line.hidden"),
-      });
-    }
-    if (line.categoryId && categories[line.categoryId]) return categories[line.categoryId].name;
-    if (line.accountId && accounts[line.accountId]) return accounts[line.accountId];
-    if (line.categoryId || line.accountId) return t("line.hidden");
-    return detail.lines.length > 1 ? t("line.otherSpending") : t("line.allSpending");
-  }
+  const budgetLineLabel = useBudgetLineLabel();
+  const lineLabel = (line: BudgetDetailLine) =>
+    budgetLineLabel(line, {
+      category: (id) => categories[id]?.name,
+      account: (id) => accounts[id],
+      lineCount: detail.lines.length,
+    });
 
   function remainingText(line: BudgetDetailLine): string {
     const incoming = lineFlow(line) === "in";

@@ -12,9 +12,11 @@ import {
   assignTransaction,
   unassignTransaction,
   listAssignmentsForTx,
+  listBudgetMatchesForTx,
   rollRecurring,
   BudgetAccessError,
   type TxAssignment,
+  type TxBudgetMatches,
 } from "@/server/services/budgets";
 import { budgetInputSchema } from "@/lib/schemas/budget";
 import { AMOUNT_ERRORS } from "@/lib/amount";
@@ -158,20 +160,32 @@ export async function unassignTransactionAction(
   }
 }
 
-// Lazy per-transaction fetch for the detail panel: which budgets the tx is
-// currently assigned to (INCLUDE/EXCLUDE). Requires a session AND that the
-// caller can read the transaction's account — otherwise a session holder could
-// enumerate any transaction id and learn its budget assignments (IDOR).
-export async function listAssignmentsForTxAction(transactionId: string): Promise<TxAssignment[]> {
+// The session user, when they can read the transaction's account: the panel's lazy fetches
+// below would otherwise let a session holder probe any transaction id (IDOR).
+async function txReader(transactionId: string): Promise<string | null> {
   const user = await requireSession();
-  if (!transactionId) return [];
+  if (!transactionId) return null;
   const txRow = await db.transaction.findUnique({
     where: { id: transactionId },
     select: { accountId: true },
   });
-  if (!txRow) return [];
-  if (!(await canReadAccount(user.id, txRow.accountId))) return [];
-  return listAssignmentsForTx(transactionId, user.id);
+  if (!txRow || !(await canReadAccount(user.id, txRow.accountId))) return null;
+  return user.id;
+}
+
+// Lazy per-transaction fetch for the detail panel: which budgets the tx is
+// currently assigned to (INCLUDE/EXCLUDE).
+export async function listAssignmentsForTxAction(transactionId: string): Promise<TxAssignment[]> {
+  const userId = await txReader(transactionId);
+  return userId ? listAssignmentsForTx(transactionId, userId) : [];
+}
+
+// Which budget line the tx counts toward in each budget, for the detail panel (#365).
+export async function listBudgetMatchesForTxAction(
+  transactionId: string,
+): Promise<TxBudgetMatches> {
+  const userId = await txReader(transactionId);
+  return userId ? listBudgetMatchesForTx(transactionId, userId) : { matches: [], names: {} };
 }
 
 export async function rollRecurringAction(

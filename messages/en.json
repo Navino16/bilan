@@ -598,6 +598,7 @@
     },
     "assign": {
       "title": "Assign to a budget",
+      "countedIn": "Counted in",
       "choose": "Choose a budget",
       "include": "Include",
       "exclude": "Exclude",

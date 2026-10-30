@@ -176,6 +176,7 @@ Click a transaction to open its details:
 - **Assigned month**: the month the transaction counts in. See [Count a transaction in another month](#count-a-transaction-in-another-month).
 - **Note**: your own comment, added with **Edit**.
 - **Linked to**: shown when the transaction is part of a [link](#links-transfers-and-refunds).
+- **Counted in**: each active budget that counts the transaction, with the line it lands in, or **Out of budget** / **Unplanned income** when no line takes it. It is the same matching as the budget's own page; click an entry to open that budget.
 - **Assign to a budget**: see [Include or exclude a transaction](#include-or-exclude-a-transaction).
 - **Delete transaction** at the bottom.
 
@@ -507,6 +508,8 @@ From a transaction's details, under **Assign to a budget**:
 1. **Choose a budget**.
 2. Click **Include** to count the transaction in that budget even if it doesn't match a line, falls outside the period, or is on an account the budget doesn't cover. Click **Exclude** to keep it out.
 3. The assignment appears below with **Included** or **Excluded**. Click **Remove** to undo it.
+
+**Counted in**, just above, updates right away: an excluded transaction leaves that budget, an included one joins it.
 
 An included transaction that matches no line counts in the budget total, under a separate **Out of budget** card: it never changes a line.
 
