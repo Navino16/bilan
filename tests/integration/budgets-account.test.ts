@@ -377,7 +377,7 @@ describe("an attached budget by line kind", () => {
     expect(d.plannedTotal).toBe(930);
     expect(d.spentTotal).toBe(832);
     expect(d.incomePlanned).toBe(2000);
-    expect(d.incomeReceived).toBe(2000);
+    expect(d.incomeReceived).toBe(2300);
     expect(d.transactionCount).toBe(5);
   });
 

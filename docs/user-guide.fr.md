@@ -455,7 +455,7 @@ Une ligne de virement se saisit une seule fois, dans le budget du compte d’où
 
 **Hors budget** est toujours la dernière ligne. Elle reprend ce que le compte a payé et qu’aucune autre ligne ne prend : transactions sans catégorie, catégories sans ligne, virements imprévus. Vous pouvez lui donner une **Marge** facultative pour l’imprévu. Cliquez dessus pour lister ces transactions ; cliquez sur une transaction pour l’ouvrir dans **Transactions**, où vous pouvez la recatégoriser ou l’inclure ailleurs. Quand un virement y reste parce qu’il n’est pas encore lié, un lien vers les suggestions de liens apparaît.
 
-**Rentrées hors budget** liste l’argent reçu qu’aucune ligne de rentrée ou de virement ne prend. Ce qui vient d’un compte d’épargne s’affiche en **Puisé dans l’épargne sur la période**.
+**Rentrées hors budget** liste l’argent reçu qu’aucune ligne de rentrée ou de virement ne prend. Ce qui vient d’un compte d’épargne s’affiche en **Puisé dans l’épargne sur la période**. Le total de la section **Rentrées** les inclut, comme celui des **Dépenses** inclut le hors budget.
 
 En haut de la page, le **Solde** donne les rentrées moins les dépenses de la période, avec en dessous le solde prévu par les lignes.
 

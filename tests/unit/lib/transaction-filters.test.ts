@@ -19,6 +19,17 @@ describe("transactionsHref", () => {
     );
   });
 
+  it("narrows to an account", () => {
+    const href = transactionsHref("fr", period, {
+      categoryId: "cat1",
+      accountId: "acc1",
+      dir: "out",
+    });
+    expect(href).toBe(
+      "/fr/transactions?from=2026-03-01&to=2026-03-31&dir=out&categoryId=cat1&accountId=acc1",
+    );
+  });
+
   it("maps the uncategorized bucket to the sentinel", () => {
     const href = transactionsHref("en", period, { categoryId: null, dir: "in" });
     expect(new URL(href, "http://x").searchParams.get("categoryId")).toBe(UNCATEGORIZED);

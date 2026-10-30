@@ -455,7 +455,7 @@ A transfer line is set once, in the budget of the account the money leaves. The 
 
 **Out of budget** is always the last line. It collects what the account paid that no other line takes: uncategorized transactions, categories without a line, unplanned transfers. You can give it an optional **Margin** for the unexpected. Click it to list those transactions; click a transaction to open it in **Transactions**, where you can recategorize it or include it elsewhere. When a transfer is left there because it isn't linked yet, a link to the link suggestions appears.
 
-**Unplanned income** lists the money received that no Income or Transfer line takes. What came from a savings account shows as **Taken from savings this period**.
+**Unplanned income** lists the money received that no Income or Transfer line takes. What came from a savings account shows as **Taken from savings this period**. The **Income** section total includes it, as the **Expenses** total includes out of budget.
 
 At the top of the page, the **Balance** shows the period's income minus its spending, with the balance the lines plan for below it.
 
