@@ -132,6 +132,10 @@
       {
         "key": "insurance",
         "name": "Mutuelle"
+      },
+      {
+        "key": "reimbursements",
+        "name": "Remboursements"
       }
     ]
   },

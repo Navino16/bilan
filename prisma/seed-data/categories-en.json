@@ -132,6 +132,10 @@
       {
         "key": "insurance",
         "name": "Insurance"
+      },
+      {
+        "key": "reimbursements",
+        "name": "Reimbursements"
       }
     ]
   },
