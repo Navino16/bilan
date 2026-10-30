@@ -96,6 +96,7 @@ export function BudgetDetail({
                 href={transactionsHref(locale, period, {
                   dir: lineFlow(line) === "in" ? "in" : "out",
                   categoryId: line.categoryId,
+                  accountId: detail.accountId ?? line.accountId,
                 })}
                 className="text-primary w-fit text-sm hover:underline"
               >

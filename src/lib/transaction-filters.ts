@@ -68,6 +68,7 @@ export function parseTransactionFilters(
 export type TransactionsLinkFilter = {
   dir: "in" | "out";
   categoryId?: string | null;
+  accountId?: string | null;
   search?: string;
 };
 
@@ -84,6 +85,7 @@ export function transactionsHref(
   if (filter.categoryId !== undefined) {
     params.set("categoryId", filter.categoryId ?? UNCATEGORIZED);
   }
+  if (filter.accountId) params.set("accountId", filter.accountId);
   if (filter.search) params.set("search", filter.search);
   return `/${locale}/transactions?${params.toString()}`;
 }
