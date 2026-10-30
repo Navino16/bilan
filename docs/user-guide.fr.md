@@ -457,6 +457,8 @@ Une ligne de virement se saisit une seule fois, dans le budget du compte d’où
 
 **Rentrées hors budget** liste l’argent reçu qu’aucune ligne de rentrée ou de virement ne prend. Ce qui vient d’un compte d’épargne s’affiche en **Puisé dans l’épargne sur la période**.
 
+En haut de la page, le **Solde** donne les rentrées moins les dépenses de la période, avec en dessous le solde prévu par les lignes.
+
 #### Où le compte atterrit
 
 Pendant la période en cours, la page **Budgets** commence par **Où j’atterris** : une carte par compte dont le budget est en cours (le tableau de bord affiche les mêmes cartes). Son solde en fin de période est :
