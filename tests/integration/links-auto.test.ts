@@ -1,7 +1,13 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { db } from "@/server/db";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
-import { autoLinkTransfers, createLink, deleteLink, pairKeyOf } from "@/server/services/links";
+import {
+  autoLinkTransfers,
+  createLink,
+  deleteLink,
+  pairKeyOf,
+  suggestPairs,
+} from "@/server/services/links";
 import { getDashboard } from "@/server/services/dashboard";
 import { createTransaction } from "@/server/services/transactions";
 import { commitCsvBatch, createCsvBatch, previewCsvBatch } from "@/server/services/imports";
@@ -13,6 +19,7 @@ let courant: string;
 let livret: string;
 let joint: string;
 let shared: string; // other's account, shared with the owner (WRITE)
+let sharedSavings: string; // other's savings account, shared with the owner (WRITE)
 let groupId: string;
 
 async function tx(accountId: string, day: string, amount: number, label = "VIR"): Promise<string> {
@@ -37,13 +44,14 @@ const linkOf = (id: string) =>
   db.transactionLinkMember.findUnique({ where: { transactionId: id }, include: { link: true } });
 
 async function clean() {
-  const accounts = [courant, livret, joint, shared];
+  const accounts = [courant, livret, joint, shared, sharedSavings];
   await db.transactionLink.deleteMany({
     where: { members: { some: { transaction: { accountId: { in: accounts } } } } },
   });
   await db.ignoredLinkSuggestion.deleteMany({ where: { userId: { in: [owner, other] } } });
   await db.transaction.deleteMany({ where: { accountId: { in: accounts } } });
   await db.importBatch.deleteMany({ where: { accountId: { in: accounts } } });
+  await db.auditLog.deleteMany({ where: { userId: { in: [owner, other] } } });
 }
 
 beforeAll(async () => {
@@ -63,11 +71,16 @@ beforeAll(async () => {
   shared = (
     await db.bankAccount.create({ data: { ownerId: other, name: "Joint", type: "CHECKING" } })
   ).id;
+  sharedSavings = (
+    await db.bankAccount.create({ data: { ownerId: other, name: "Epargne", type: "SAVINGS" } })
+  ).id;
   groupId = (await db.group.create({ data: { name: "Foyer", createdById: other } })).id;
   await db.groupMember.create({ data: { groupId, userId: owner, role: "MEMBER" } });
-  await db.accountShare.create({
-    data: { accountId: shared, groupId, permission: "WRITE", createdById: other },
-  });
+  for (const accountId of [shared, sharedSavings]) {
+    await db.accountShare.create({
+      data: { accountId, groupId, permission: "WRITE", createdById: other },
+    });
+  }
 });
 
 beforeEach(clean);
@@ -117,6 +130,29 @@ describe("autoLinkTransfers", () => {
     expect(await autoLinkTransfers(owner)).toEqual({ linked: 0 });
     const ignored = await db.ignoredLinkSuggestion.findMany({ where: { userId: owner } });
     expect(ignored.map((r) => r.pairKey)).toEqual([pairKeyOf(out, into)]);
+  });
+
+  it("audits a run on the owner", async () => {
+    await tx(courant, "2026-03-03", -200);
+    await tx(livret, "2026-03-04", 200);
+    await autoLinkTransfers(owner);
+    const rows = await db.auditLog.findMany({ where: { action: "link.autoCreated" } });
+    expect(
+      rows.filter((r) => r.userId === owner).map((r) => [r.entity, r.entityId, r.metadata]),
+    ).toEqual([["User", owner, { count: 1 }]]);
+  });
+
+  it("a shared writer deleting an auto link ignores the pair for both users", async () => {
+    const out = await tx(shared, "2026-03-03", -60);
+    const into = await tx(sharedSavings, "2026-03-04", 60);
+    await autoLinkTransfers(other);
+    await deleteLink((await linkOf(out))!.linkId, owner);
+    const rows = await db.ignoredLinkSuggestion.findMany({
+      where: { pairKey: pairKeyOf(out, into) },
+      orderBy: { userId: "asc" },
+    });
+    expect(rows.map((r) => r.userId)).toEqual([owner, other].sort());
+    expect((await suggestPairs(owner)).map((p) => p.key)).not.toContain(pairKeyOf(out, into));
   });
 
   it("links what a first pass leaves unique", async () => {
@@ -185,6 +221,18 @@ describe("automatic linking hooks", () => {
       { autoLink: true },
     );
     expect((await linkOf(out))?.link.auto).toBe(true);
+  });
+
+  it("links the owner's transfer when a shared writer enters a leg", async () => {
+    const out = await tx(shared, "2026-04-02", -90);
+    await createTransaction(
+      { accountId: sharedSavings, date: "2026-04-03", type: "TRANSFER", amount: 90, label: "VIR" },
+      { id: owner },
+      { autoLink: true },
+    );
+    const link = await linkOf(out);
+    expect(link?.link.auto).toBe(true);
+    expect(link?.link.createdById).toBe(other);
   });
 
   it("the backfill is idempotent", async () => {

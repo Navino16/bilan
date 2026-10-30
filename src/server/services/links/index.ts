@@ -87,11 +87,14 @@ export async function deleteLink(linkId: string, userId: string): Promise<void> 
   );
   if (link.auto && link.members.length === 2) {
     const [a, b] = link.members.map((m) => m.transactionId);
-    await db.ignoredLinkSuggestion.upsert({
-      where: { userId_pairKey: { userId: link.createdById, pairKey: pairKeyOf(a, b) } },
-      update: {},
-      create: { userId: link.createdById, pairKey: pairKeyOf(a, b) },
-    });
+    const pairKey = pairKeyOf(a, b);
+    for (const id of new Set([link.createdById, userId])) {
+      await db.ignoredLinkSuggestion.upsert({
+        where: { userId_pairKey: { userId: id, pairKey } },
+        update: {},
+        create: { userId: id, pairKey },
+      });
+    }
   }
   await db.transactionLink.delete({ where: { id: linkId } });
   await logEvent({ userId, action: "link.deleted", entity: "TransactionLink", entityId: linkId });

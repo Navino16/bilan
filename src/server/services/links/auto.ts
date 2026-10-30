@@ -89,7 +89,7 @@ export async function autoLinkTransfers(
     await logEvent({
       userId: ownerId,
       action: "link.autoCreated",
-      entity: "TransactionLink",
+      entity: "User",
       entityId: ownerId,
       metadata: { count: linked },
     });
