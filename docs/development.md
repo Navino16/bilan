@@ -20,15 +20,16 @@ already exists; `npm run db:seed-dev -- --reset` wipes and re-seeds it.
 
 - **Login**: `dev@bilan.local` / `dev-password-123` (super admin: sees the whole admin area)
 - **Accounts**: Compte courant, Livret A, Compte joint
-- **Transactions**: ~450 over the 12 months ending today (recomputed on each run,
+- **Transactions**: ~460 over the 12 months ending today (recomputed on each run,
   deterministic for a given day), categorized with the default categories; ~15% left
   uncategorized on purpose (ATM withdrawals, PayPal…)
 - **Links**: monthly internal transfers (→ joint, → Livret A) + a refunded purchase
 - **Rules**: 3 categorization rules (Carrefour, Netflix, SNCF)
 - **Household**: "Foyer Martin" with `member@e2e.local` (if the e2e users are seeded),
   the joint account shared with write access
-- **Budgets**: a recurring monthly budget (last month, rolled into this month) and a
-  household budget that goes over
+- **Budgets**: a recurring monthly budget on the checking account (last month, rolled into
+  this month) and a household budget on the joint account that goes over; the joint account
+  gets the partner's monthly contribution too, so both land at a positive end balance
 
 ## Scripts
 
