@@ -6,6 +6,7 @@ import {
   createBudget,
   getBudgetDetail,
   listBudgetsForUser,
+  listCurrentLandings,
   rollRecurring,
   rollRecurringBudgets,
   unarchiveBudget,
@@ -74,6 +75,7 @@ async function cleanData() {
   await db.budget.deleteMany({ where: { OR: [{ userId: { in: users } }, { groupId }] } });
   await db.transaction.deleteMany({ where: { account: { ownerId: { in: users } } } });
   await db.transactionLink.deleteMany({ where: { createdById: { in: users } } });
+  await db.category.deleteMany({ where: { userId: stranger } });
 }
 
 beforeAll(async () => {
@@ -606,6 +608,49 @@ describe("landing", () => {
       spendingToCome: 40,
       endBalance: 940,
     });
+  });
+
+  it("lists the landing of every attached budget in progress the user reads", async () => {
+    const { id } = await landingBudget();
+    const household = await createBudget(
+      input({ name: "Foyer", groupId, accountId: joint, outOfBudgetPlanned: 80 }),
+      { id: owner },
+    );
+    await createBudget(input({ accountId: undefined, name: "Libre" }), { id: owner });
+    await createBudget(input({ ...april, name: "Avril" }), { id: owner });
+    const theirs = await db.category.create({ data: { userId: stranger, name: "Autre" } });
+    const other = await createBudget(
+      input({
+        accountId: strangerAccount,
+        name: "Autre",
+        lines: [{ categoryId: theirs.id, plannedAmount: 50 }],
+      }),
+      { id: stranger },
+    );
+
+    const lands = await listCurrentLandings(owner, now);
+    expect(lands.map((l) => l.id).sort()).toEqual([id, household.id].sort());
+    const detail = await getBudgetDetail(id, owner, { now });
+    expect(lands.find((l) => l.id === id)).toEqual({
+      id,
+      accountId: courant,
+      accountName: "Courant",
+      periodEnd: detail.periodEnd,
+      landing: detail.landing,
+      unplannedIncome: detail.unplannedIncome,
+    });
+    expect(lands.find((l) => l.id === household.id)?.landing).toEqual({
+      balance: 0,
+      incomeToCome: 0,
+      spendingToCome: 180,
+      endBalance: -180,
+    });
+    expect((await listCurrentLandings(member, now)).map((l) => l.id)).toEqual([household.id]);
+    expect((await listCurrentLandings(stranger, now)).map((l) => l.id)).toEqual([other.id]);
+
+    await archiveBudget(id, { id: owner });
+    expect((await listCurrentLandings(owner, now)).map((l) => l.id)).toEqual([household.id]);
+    expect(await listCurrentLandings(owner, new Date("2026-05-15T12:00:00.000Z"))).toEqual([]);
   });
 
   it("has no landing outside the period, unattached, archived, or once the account is unshared", async () => {

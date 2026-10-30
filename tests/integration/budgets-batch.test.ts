@@ -5,6 +5,7 @@ import {
   createBudget,
   getBudgetDetail,
   listBudgetsForUser,
+  listCurrentLandings,
 } from "@/server/services/budgets";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
 import { createLink } from "@/server/services/links";
@@ -200,5 +201,39 @@ describe("listBudgetsForUser batch loading (#299)", () => {
     const before = await queriesOfList();
     for (const month of ["2024-06", "2024-07", "2024-08"]) await attachedMonth(month);
     expect(await queriesOfList()).toBe(before);
+  });
+
+  it("computes the current landings in as many queries for many accounts as for one", async () => {
+    const now = new Date("2023-03-15T12:00:00.000Z");
+    const attached = (accountId: string, counterpartAccountId: string) =>
+      createBudget(
+        {
+          name: `Atterrissage ${accountId}`,
+          periodType: "MONTH",
+          periodStart: "2023-03-01",
+          periodEnd: "2023-03-31",
+          accountId,
+          lines: [
+            { categoryId: food, plannedAmount: 100 },
+            { kind: "TRANSFER", direction: "OUT", counterpartAccountId, plannedAmount: 50 },
+          ],
+        },
+        { id: owner },
+      );
+    const queriesOfLandings = async () => {
+      const before = await questions();
+      const lands = await listCurrentLandings(owner, now);
+      return { lands, queries: (await questions()) - before - 1 };
+    };
+    await tx(personal, "2023-03-05", -10, food);
+    await tx(shared, "2023-03-06", -20, food);
+    await attached(personal, shared);
+    await queriesOfLandings();
+    const one = await queriesOfLandings();
+    expect(one.lands).toHaveLength(1);
+    await attached(shared, personal);
+    const two = await queriesOfLandings();
+    expect(two.lands).toHaveLength(2);
+    expect(two.queries).toBe(one.queries);
   });
 });

@@ -458,7 +458,7 @@ A transfer line is set once, in the budget of the account the money leaves. The 
 
 #### Where the account lands
 
-During the current period, the **Budgets** page opens with **Where I land**: one card per account with a budget in progress. Its balance at the period's end is:
+During the current period, the **Budgets** page opens with **Where I land**: one card per account with a budget in progress (the dashboard shows the same cards). Its balance at the period's end is:
 
 > today's balance + income still expected − spending still to come
 
@@ -609,6 +609,7 @@ Tip: transfers between your own accounts are linked automatically and left out o
 ![Dashboard](images/en/dashboard.png)
 
 - **Account balances**: the current balance of each non-archived account and their total, whatever the selected period. **Accounts** opens the accounts page.
+- **Where I land**: one card per account whose [budget](#where-the-account-lands) is in progress today, with its balance at the period's end. Like the balances, it shows today's budgets whatever the selected period. Click a card to open its budget.
 - **Income**, **Expenses** and **Net balance**, each with its change against the comparison.
 - **Net savings**: linked transfers into your savings accounts minus those out of them, plus spending in categories that [count as savings](#categories), with its change against the comparison.
 - **Spending by category**: a donut with the six largest categories, the rest grouped.
