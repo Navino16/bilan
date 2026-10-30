@@ -19,6 +19,8 @@ import { ComparisonNote } from "./comparison-note";
 import { BudgetSnapshot, type CurrentBudget } from "./budget-snapshot";
 import { AccountsOverview } from "./accounts-overview";
 import type { VisibleAccount } from "@/server/services/accounts";
+import type { CurrentLanding } from "@/server/services/budgets";
+import { LandingCards } from "@/components/budgets/landing-cards";
 
 const OTHERS_COLOR = "var(--ink-4)";
 const DONUT_SLICES = 6;
@@ -36,6 +38,7 @@ export async function DashboardView({
   categories,
   budget,
   accounts,
+  landings,
   locale,
 }: {
   data: DashboardData;
@@ -44,6 +47,7 @@ export async function DashboardView({
   categories: FlatCategory[];
   budget: CurrentBudget;
   accounts: VisibleAccount[];
+  landings: CurrentLanding[];
   locale: string;
 }) {
   const t = await getTranslations("dashboard");
@@ -191,6 +195,11 @@ export async function DashboardView({
       </div>
 
       <AccountsOverview accounts={accounts} locale={locale} />
+      {/* Today's budgets whatever period is displayed, like the balances above (design §E). */}
+      <LandingCards
+        budgets={landings}
+        accountNames={new Map(landings.map((l) => [l.accountId, l.accountName]))}
+      />
 
       {/* KPI row */}
       <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-3">

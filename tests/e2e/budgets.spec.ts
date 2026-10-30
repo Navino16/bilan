@@ -269,7 +269,7 @@ test.describe("budgets", () => {
     }
   });
 
-  test("an attached budget shows its landing, sections and out-of-budget rows", async ({
+  test("an attached budget shows its landing here and on the dashboard, sections and out-of-budget rows", async ({
     page,
   }) => {
     const stamp = Date.now();
@@ -298,7 +298,11 @@ test.describe("budgets", () => {
 
     const landing = page.locator('[data-slot="landing-card"]').filter({ hasText: account });
     await expect(landing).toContainText("388,00", { timeout: 15_000 });
-    await page.locator('[data-slot="budget-card"]').filter({ hasText: name }).click();
+    await page.goto("/fr/dashboard");
+    const onDashboard = page.locator('[data-slot="landing-card"]').filter({ hasText: account });
+    await expect(onDashboard).toContainText("388,00");
+    await expect(onDashboard).toContainText("488,00");
+    await onDashboard.getByRole("link").click();
     await expect(page.getByRole("heading", { name })).toBeVisible({ timeout: 15_000 });
     await expect(page.locator('[data-slot="budget-income"]')).toBeVisible();
     await expect(page.locator('[data-slot="budget-spending"]')).toBeVisible();

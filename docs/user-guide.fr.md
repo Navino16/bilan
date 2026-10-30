@@ -458,7 +458,7 @@ Une ligne de virement se saisit une seule fois, dans le budget du compte d’où
 
 #### Où le compte atterrit
 
-Pendant la période en cours, la page **Budgets** commence par **Où j’atterris** : une carte par compte dont le budget est en cours. Son solde en fin de période est :
+Pendant la période en cours, la page **Budgets** commence par **Où j’atterris** : une carte par compte dont le budget est en cours (le tableau de bord affiche les mêmes cartes). Son solde en fin de période est :
 
 > solde d’aujourd’hui + rentrées encore attendues − dépenses encore à venir
 
@@ -609,6 +609,7 @@ Astuce : les virements entre vos propres comptes sont liés automatiquement et r
 ![Tableau de bord](images/fr/dashboard.png)
 
 - **Solde des comptes** : le solde actuel de chaque compte non archivé et leur total, quelle que soit la période choisie. **Comptes** ouvre la page des comptes.
+- **Où j’atterris** : une carte par compte dont le [budget](#où-le-compte-atterrit) est en cours aujourd’hui, avec son solde en fin de période. Comme les soldes, elle montre les budgets du jour quelle que soit la période choisie. Cliquez sur une carte pour ouvrir son budget.
 - **Revenus**, **Dépenses** et **Solde net**, chacun avec son évolution par rapport à la comparaison.
 - **Épargne nette** : les virements liés vers vos comptes d’épargne moins ceux qui en sortent, plus les dépenses des catégories qui [comptent comme de l’épargne](#catégories), avec son évolution par rapport à la comparaison.
 - **Dépenses par catégorie** : un anneau avec les six plus grosses catégories, le reste regroupé.

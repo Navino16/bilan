@@ -1141,6 +1141,51 @@ export async function getCurrentBudget(
   return { detail, others: current.length - 1, accountNames };
 }
 
+export type CurrentLanding = Pick<BudgetListItem, "id" | "periodEnd" | "unplannedIncome"> & {
+  accountId: string;
+  accountName: string;
+  landing: BudgetLanding;
+};
+
+// The landing of every account-attached budget the user reads whose period contains `now`
+// (design §E, dashboard), evaluated together like the list (#299).
+export async function listCurrentLandings(
+  userId: string,
+  now: Date = new Date(),
+): Promise<CurrentLanding[]> {
+  const { groupIds } = await budgetScopeForUser(userId);
+  const rows = await db.budget.findMany({
+    where: {
+      archived: false,
+      accountId: { not: null },
+      periodStart: { lte: now },
+      periodEnd: { gte: now },
+      OR: [{ userId }, { groupId: { in: groupIds } }],
+    },
+    include: { lines: true },
+    orderBy: { periodStart: "desc" },
+  });
+  if (rows.length === 0) return [];
+  const [evaluations, names] = await Promise.all([
+    evaluateBudgets(rows, { userId, groupIds }, now),
+    readableAccountNames(userId),
+  ]);
+  return rows.flatMap((b, i) => {
+    const { landing, unplannedIncome } = evaluations[i];
+    if (!landing || !b.accountId) return [];
+    return [
+      {
+        id: b.id,
+        accountId: b.accountId,
+        accountName: names.get(b.accountId) ?? "",
+        periodEnd: b.periodEnd,
+        landing,
+        unplannedIncome,
+      },
+    ];
+  });
+}
+
 export async function assignTransaction(
   input: { budgetId: string; transactionId: string; mode: "INCLUDE" | "EXCLUDE" },
   actor: { id: string },
