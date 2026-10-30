@@ -14,7 +14,7 @@ import {
 } from "@/server/services/budgets";
 import type { BudgetInput } from "@/lib/schemas/budget";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
-import { createLink } from "@/server/services/links";
+import { createLink, ignoreSuggestion, pairKeyOf } from "@/server/services/links";
 import { accountBalances } from "@/server/services/accounts";
 
 const owner = "bacc_owner";
@@ -75,6 +75,7 @@ async function cleanData() {
   await db.budget.deleteMany({ where: { OR: [{ userId: { in: users } }, { groupId }] } });
   await db.transaction.deleteMany({ where: { account: { ownerId: { in: users } } } });
   await db.transactionLink.deleteMany({ where: { createdById: { in: users } } });
+  await db.ignoredLinkSuggestion.deleteMany({ where: { userId: { in: users } } });
   await db.category.deleteMany({ where: { userId: stranger } });
 }
 
@@ -398,6 +399,24 @@ describe("an attached budget by line kind", () => {
     const d = await getBudgetDetail(id, owner);
     expect(d.lines[1].spent).toBe(50);
     expect(d.outOfBudget).toMatchObject({ count: 0, unmatchedTransfers: 0 });
+  });
+
+  it("doesn't match an unlinked leg through a dismissed link suggestion", async () => {
+    const out = await tx(courant, "2026-03-10", -50);
+    const into = await tx(livret, "2026-03-12", 50);
+    await ignoreSuggestion(owner, pairKeyOf(out, into));
+    const { id } = await createBudget(
+      input({
+        lines: [
+          { categoryId: cat.courses, plannedAmount: 100 },
+          { kind: "TRANSFER", direction: "OUT", counterpartAccountId: livret, plannedAmount: 100 },
+        ],
+      }),
+      { id: owner },
+    );
+    const d = await getBudgetDetail(id, owner);
+    expect(d.lines[1].spent).toBe(0);
+    expect(d.outOfBudget).toMatchObject({ spent: 50, count: 1, unmatchedTransfers: 0 });
   });
 
   it("shows a transfer line as a read-only mirror in the destination budget", async () => {

@@ -446,7 +446,7 @@ Each line has a **Type**:
 | **Income**   | money received in the category, for example your salary                           |
 | **Transfer** | transfers **To** or **From** another of your accounts, chosen in **Other account** |
 
-A transaction counts in one line only. Transfer lines come first, then the most specific category line. A transfer is matched once it is linked to the other account's side (see [Automatic links](#automatic-links)), or when that account holds the same amount the other way within 4 days. Money coming from another account never counts as a refund of an expense line.
+A transaction counts in one line only. Transfer lines come first, then the most specific category line. A transfer is matched once it is linked to the other account's side (see [Automatic links](#automatic-links)), or when that account holds the same amount the other way within 4 days and you haven't ignored that pair in the link suggestions. Money coming from another account never counts as a refund of an expense line.
 
 Going over a line reads differently by type: **Over by …** for an expense, **+… more than planned** for income or a transfer, and **+… saved on top** for a transfer to a savings account, which doesn't push the budget over.
 

@@ -780,6 +780,7 @@ async function evaluateBudgets(
       budgets.map((b) => ({ ...b, lines: lineSpecs(b, mirrors) })),
       loaded,
       mirrors,
+      viewer.userId,
     ),
     balancesAsOf([...new Set(landing.map((b) => b.accountId!))], now),
   ]);
