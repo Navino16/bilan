@@ -13,7 +13,7 @@ gen_secret() { openssl rand -base64 32; }
 if [[ ! -f .env ]]; then
   echo "==> Generating .env from .env.example"
   cp .env.example .env
-  for key in AUTH_SECRET DATA_ENCRYPTION_KEY SEARCH_TOKEN_KEY; do
+  for key in AUTH_SECRET DATA_ENCRYPTION_KEY SEARCH_TOKEN_KEY CRON_SECRET; do
     secret="$(gen_secret)"
     # Replace "KEY=...optional comment" with "KEY=<secret>", preserving nothing after.
     sed -i "s|^${key}=.*|${key}=${secret}|" .env

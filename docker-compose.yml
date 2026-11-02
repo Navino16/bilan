@@ -70,5 +70,18 @@ services:
       mariadb:
         condition: service_healthy
 
+  # Scheduled jobs, as in docker-compose.prod.yml. Restarts until the app answers.
+  cron:
+    image: alpine:3
+    restart: unless-stopped
+    init: true
+    environment:
+      CRON_SECRET: ${CRON_SECRET:-}
+    command: ["sh", "/opt/cron/start.sh"]
+    volumes:
+      - ./docker/cron:/opt/cron:ro
+    depends_on:
+      - app
+
 volumes:
   mariadb_data:

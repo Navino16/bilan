@@ -5,9 +5,12 @@ Requirements: Node 24, Docker.
 ```bash
 npm ci
 npm run setup        # generates .env and the MariaDB keyring, starts MariaDB, migrates and seeds
-npm run dev          # http://localhost:3000 (or: docker compose up -d app)
+npm run dev          # http://localhost:3000 (or: docker compose up -d app cron)
 npm run db:seed-dev  # optional demo user, see below
 ```
+
+The `cron` service calls the [scheduled jobs](self-hosting.md#scheduled-jobs) (recurring budget roll,
+purges) on the production schedule, with the `CRON_SECRET` that `npm run setup` writes to `.env`.
 
 Stack: Next.js 16 (App Router) · React 19 · TypeScript · Tailwind v4 · shadcn/ui · next-intl ·
 Prisma 7 + MariaDB 11 · Better Auth · Vitest · Playwright.
