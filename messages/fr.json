@@ -1261,7 +1261,8 @@
   "dashboard": {
     "accounts": {
       "overline": "Solde des comptes",
-      "seeAll": "Comptes"
+      "seeAll": "Comptes",
+      "landing": "Au {date} : {amount}"
     },
     "overline": "Vue d’ensemble",
     "txCount": "{count, plural, one {# transaction} other {# transactions}}",

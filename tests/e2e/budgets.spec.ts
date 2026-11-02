@@ -299,10 +299,13 @@ test.describe("budgets", () => {
     const landing = page.locator('[data-slot="landing-card"]').filter({ hasText: account });
     await expect(landing).toContainText("388,00", { timeout: 15_000 });
     await page.goto("/fr/dashboard");
-    const onDashboard = page.locator('[data-slot="landing-card"]').filter({ hasText: account });
-    await expect(onDashboard).toContainText("388,00");
+    const onDashboard = page
+      .locator('[data-slot="dashboard-account"]')
+      .filter({ hasText: account });
     await expect(onDashboard).toContainText("488,00");
-    await onDashboard.getByRole("link").click();
+    const landingLink = onDashboard.locator('[data-slot="dashboard-account-landing"]');
+    await expect(landingLink).toContainText("388,00");
+    await landingLink.click();
     await expect(page.getByRole("heading", { name })).toBeVisible({ timeout: 15_000 });
     await expect(page.locator('[data-slot="budget-income"]')).toBeVisible();
     await expect(page.locator('[data-slot="budget-spending"]')).toBeVisible();

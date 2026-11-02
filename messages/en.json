@@ -1261,7 +1261,8 @@
   "dashboard": {
     "accounts": {
       "overline": "Account balances",
-      "seeAll": "Accounts"
+      "seeAll": "Accounts",
+      "landing": "On {date}: {amount}"
     },
     "overline": "Overview",
     "txCount": "{count, plural, one {# transaction} other {# transactions}}",

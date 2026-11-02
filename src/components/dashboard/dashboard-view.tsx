@@ -20,7 +20,6 @@ import { BudgetSnapshot, type CurrentBudget } from "./budget-snapshot";
 import { AccountsOverview } from "./accounts-overview";
 import type { VisibleAccount } from "@/server/services/accounts";
 import type { CurrentLanding } from "@/server/services/budgets";
-import { LandingCards } from "@/components/budgets/landing-cards";
 
 const OTHERS_COLOR = "var(--ink-4)";
 const DONUT_SLICES = 6;
@@ -194,12 +193,7 @@ export async function DashboardView({
         <ComparisonNote comparison={comparison} locale={locale} />
       </div>
 
-      <AccountsOverview accounts={accounts} locale={locale} />
-      {/* Today's budgets whatever period is displayed, like the balances above (design §E). */}
-      <LandingCards
-        budgets={landings}
-        accountNames={new Map(landings.map((l) => [l.accountId, l.accountName]))}
-      />
+      <AccountsOverview accounts={accounts} landings={landings} locale={locale} />
 
       {/* KPI row */}
       <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-3">
