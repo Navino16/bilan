@@ -2,3 +2,4 @@
 5 0 * * * sh /opt/cron/run.sh roll-budgets >/proc/1/fd/1 2>/proc/1/fd/2
 0 3 * * * sh /opt/cron/run.sh purge-audit >/proc/1/fd/1 2>/proc/1/fd/2
 0 * * * * sh /opt/cron/run.sh purge-imports >/proc/1/fd/1 2>/proc/1/fd/2
+20 * * * * sh /opt/cron/run.sh bank-sync >/proc/1/fd/1 2>/proc/1/fd/2

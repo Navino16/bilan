@@ -7,18 +7,21 @@ const jobs = vi.hoisted(() => ({
   purgeAuditOlderThan: vi.fn(async () => 0),
   purgeStaleImports: vi.fn(async () => 0),
   purgeExpiredAuthRequests: vi.fn(async () => 0),
+  syncDueConnections: vi.fn(async () => ({ due: 0, synced: 0 })),
   logEvent: vi.fn(),
 }));
 vi.mock("@/server/services/budgets", () => jobs);
 vi.mock("@/server/services/audit", () => jobs);
 vi.mock("@/server/services/imports/revert", () => jobs);
 vi.mock("@/server/services/bank-sync/connect", () => jobs);
+vi.mock("@/server/services/bank-sync/sync", () => jobs);
 
 import { POST as rollBudgets } from "@/app/api/cron/roll-budgets/route";
 import { POST as purgeAudit } from "@/app/api/cron/purge-audit/route";
 import { POST as purgeImports } from "@/app/api/cron/purge-imports/route";
+import { POST as bankSync } from "@/app/api/cron/bank-sync/route";
 
-const routes = { rollBudgets, purgeAudit, purgeImports };
+const routes = { rollBudgets, purgeAudit, purgeImports, bankSync };
 const call = (route: (req: Request) => Promise<Response>, token?: string) =>
   route(
     new Request("http://localhost/api/cron/x", {
@@ -56,4 +59,24 @@ it("purges stale imports and expired bank authorization requests", async () => {
   jobs.purgeExpiredAuthRequests.mockResolvedValueOnce(3);
   const res = await call(purgeImports, "s3cret");
   expect(await res.json()).toEqual({ purged: 2, authRequests: 3 });
+});
+
+it("runs the due bank syncs and audits their counts", async () => {
+  env.CRON_SECRET = "s3cret";
+  const counts = { due: 2, synced: 1, rateLimited: 1 };
+  jobs.syncDueConnections.mockResolvedValueOnce(counts as never);
+  const res = await call(bankSync, "s3cret");
+  expect(await res.json()).toEqual(counts);
+  expect(jobs.syncDueConnections).toHaveBeenCalledWith(expect.any(Date));
+  expect(jobs.logEvent).toHaveBeenCalledWith({
+    userId: null,
+    action: "bank_sync.cron",
+    metadata: counts,
+  });
+});
+
+it("audits a bank sync run only when a connection was due", async () => {
+  env.CRON_SECRET = "s3cret";
+  await call(bankSync, "s3cret");
+  expect(jobs.logEvent).not.toHaveBeenCalled();
 });
