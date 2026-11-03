@@ -50,7 +50,10 @@ async function loadRevertable(actorId: string, batchId: string) {
   for (const id of accountIds) {
     if (!(await canWriteAccount(actorId, id))) throw new ImportAccessError("FORBIDDEN");
   }
-  if (!canRevert(batch.status)) throw new ImportAccessError("NOT_REVERTIBLE");
+  // Synced rows are deleted one by one, with tombstones (design §Deleting synced rows).
+  if (batch.source === "SYNC" || !canRevert(batch.status)) {
+    throw new ImportAccessError("NOT_REVERTIBLE");
+  }
   const byId = new Map(adjusted.map((a) => [a.id, a]));
   const adjustments = adjustmentsOf(batch.metadata).flatMap((a) => {
     const account = byId.get(a.accountId);
@@ -185,6 +188,7 @@ export async function listRecentImports(userId: string, limit = 20): Promise<Imp
   const batches = await db.importBatch.findMany({
     where: {
       accountId: { in: writable.map((a) => a.id) },
+      source: { not: "SYNC" },
       status: { in: ["COMPLETED", "REVERTED"] },
     },
     orderBy: { createdAt: "desc" },
