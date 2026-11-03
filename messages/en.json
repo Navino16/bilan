@@ -1608,6 +1608,7 @@
       "signupTokens": "Invitation tokens",
       "authProviders": "Auth providers",
       "smtp": "SMTP",
+      "bankSync": "Bank sync",
       "appSettings": "Settings",
       "audit": "Audit log"
     },
@@ -1821,6 +1822,48 @@
       "removeTitle": "Remove the SMTP configuration?",
       "removeBody": "No email will be sent (invitations, password resets, security alerts) until a new configuration is saved."
     },
+    "bankSync": {
+      "overline": "Bank",
+      "title": "Bank sync",
+      "subtitle": "Enable Banking application that imports transactions from the bank.",
+      "intro": "In restricted production mode, Enable Banking only gives access to the accounts linked in its control panel: those of the application owner and their household.",
+      "applicationId": "Application ID",
+      "privateKey": "Private key (PEM)",
+      "privateKeyKept": "Stored key: leave blank to keep it (same application)",
+      "privateKeyHint": "Paste the private key generated when the application was created. It is stored encrypted and never shown again.",
+      "enabled": "Offer bank sync to users",
+      "enabledHint": "While it is off, the feature is hidden from users.",
+      "redirectUrl": "Redirect URL",
+      "redirectUrlHint": "Register it in the Enable Banking application. It must use HTTPS.",
+      "copyRedirect": "Copy the redirect URL",
+      "copiedRedirect": "URL copied",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Configuration saved.",
+      "error": {
+        "INVALID": "Check the fields you entered.",
+        "FAILED": "Save failed."
+      },
+      "test": {
+        "run": "Test the connection",
+        "running": "Testing…",
+        "hint": "The test uses the saved configuration, even when off: it reads the application and counts the banks available in France.",
+        "ok": "Application “{name}” ({environment}), {active, select, true {active} other {inactive}}: {count, plural, one {# bank available} other {# banks available}} in France.",
+        "inactive": "The application is not active yet. Activate it by linking your accounts in the Enable Banking control panel, then test again.",
+        "error": {
+          "NOT_CONFIGURED": "Save a configuration first.",
+          "RATE_LIMITED": "Too many tests. Try again in a minute.",
+          "UNAUTHORIZED": "Enable Banking rejects the signature: check the application ID and the private key.",
+          "EXPIRED_SESSION": "Enable Banking answered that the session expired.",
+          "NOT_FOUND": "Enable Banking can’t find this application.",
+          "NETWORK": "Enable Banking can’t be reached from the server.",
+          "HTTP": "Enable Banking returned an error. Try again later."
+        }
+      },
+      "remove": "Remove the configuration",
+      "removeTitle": "Remove the bank sync configuration?",
+      "removeBody": "Bank sync will be unavailable until a new configuration is saved."
+    },
     "authProviders": {
       "listTitle": "Configured providers",
       "addTitle": "Add a provider",
@@ -1913,6 +1956,7 @@
         "AppSetting": "Setting",
         "AuthProvider": "Auth provider",
         "SmtpConfig": "SMTP settings",
+        "BankSyncConfig": "Bank sync settings",
         "AdminSignupToken": "Invitation token",
         "Group": "Household",
         "GroupInvitation": "Household invitation",
@@ -1996,6 +2040,11 @@
             "update": "SMTP settings changed",
             "test": "SMTP test",
             "delete": "SMTP settings removed"
+          },
+          "bankSync": {
+            "update": "Bank sync settings changed",
+            "test": "Bank sync test",
+            "delete": "Bank sync settings removed"
           },
           "auth_provider": {
             "update": "Auth provider changed",
@@ -2213,6 +2262,7 @@
       "adminSignupTokens": "Invitation tokens · Administration",
       "adminAuthProviders": "Auth providers · Administration",
       "adminSmtp": "SMTP · Administration",
+      "adminBankSync": "Bank sync · Administration",
       "adminAppSettings": "Settings · Administration",
       "adminAudit": "Audit log · Administration",
       "login": "Sign in",
@@ -2287,7 +2337,9 @@
       "SAME_PASSWORD": "Must be different from the current password.",
       "BAD_CONFIRM": "The email you entered doesn’t match.",
       "USER_EXISTS": "An account already exists with this email.",
-      "OUT_OF_RANGE": "Whole number from {min, number} to {max, number}."
+      "OUT_OF_RANGE": "Whole number from {min, number} to {max, number}.",
+      "KEY_REQUIRED": "Paste the private key: it is only kept for the same application ID.",
+      "INVALID_KEY": "This is not an RSA private key in PEM format."
     }
   }
 }

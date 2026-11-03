@@ -212,6 +212,16 @@ model SmtpConfig {
   updatedById String?
 }
 
+// Enable Banking application, a singleton like SmtpConfig (design §Data model).
+model BankSyncConfig {
+  id            String   @id @default(cuid())
+  applicationId String
+  privateKeyEnc String   @db.Text
+  enabled       Boolean  @default(false)
+  updatedAt     DateTime @updatedAt
+  updatedById   String?
+}
+
 // TLS: implicit TLS (465); STARTTLS: upgrade required (587); NONE: unencrypted local relay.
 enum SmtpSecurity {
   TLS

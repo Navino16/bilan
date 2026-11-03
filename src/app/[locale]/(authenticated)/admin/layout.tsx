@@ -26,6 +26,7 @@ export default async function AdminLayout({
     { path: "signup-tokens", key: "signupTokens", permission: "admin.signup_tokens.manage" },
     { path: "auth-providers", key: "authProviders", permission: "admin.security.write" },
     { path: "smtp", key: "smtp", permission: "admin.security.write" },
+    { path: "bank-sync", key: "bankSync", permission: "admin.security.write" },
     { path: "app-settings", key: "appSettings", permission: "admin.settings.write" },
     { path: "audit", key: "audit", permission: "admin.audit.read" },
   ] as const;

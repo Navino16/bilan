@@ -64,8 +64,11 @@ describe("auditActionMessage", () => {
     });
   });
 
-  it("keeps dedicated labels for SMTP and auth providers", () => {
+  it("keeps dedicated labels for SMTP, auth providers and bank sync", () => {
     expect(auditActionMessage("settings.smtp.update")).toEqual({ key: "settings.smtp.update" });
+    expect(auditActionMessage("settings.bankSync.update")).toEqual({
+      key: "settings.bankSync.update",
+    });
     expect(auditActionMessage("settings.auth_provider.update")).toEqual({
       key: "settings.auth_provider.update",
     });

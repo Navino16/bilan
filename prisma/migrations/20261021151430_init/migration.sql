@@ -193,6 +193,18 @@ CREATE TABLE `SmtpConfig` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
+CREATE TABLE `BankSyncConfig` (
+    `id` VARCHAR(191) NOT NULL,
+    `applicationId` VARCHAR(191) NOT NULL,
+    `privateKeyEnc` TEXT NOT NULL,
+    `enabled` BOOLEAN NOT NULL DEFAULT false,
+    `updatedAt` DATETIME(3) NOT NULL,
+    `updatedById` VARCHAR(191) NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
 CREATE TABLE `AppSetting` (
     `key` VARCHAR(191) NOT NULL,
     `value` JSON NOT NULL,

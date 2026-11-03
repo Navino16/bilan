@@ -173,7 +173,7 @@ test.describe("admin settings", () => {
     await expect(page.locator("#set-app_name")).toBeVisible();
     await expect(page.locator("#set-registration_mode")).toHaveCount(0);
     await expect(page.locator("#set-security\\.admin_2fa_required")).toHaveCount(0);
-    for (const path of ["/fr/admin/auth-providers", "/fr/admin/smtp"]) {
+    for (const path of ["/fr/admin/auth-providers", "/fr/admin/smtp", "/fr/admin/bank-sync"]) {
       const res = await page.goto(path, { waitUntil: "domcontentloaded" });
       expect(res?.status()).toBe(403);
     }
