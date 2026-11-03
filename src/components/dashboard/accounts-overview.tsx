@@ -3,24 +3,49 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { overline } from "@/components/transactions/bits";
-import { formatMoney } from "@/lib/format";
+import { formatDayMonth, formatMoney } from "@/lib/format";
 import type { VisibleAccount } from "@/server/services/accounts";
+import type { CurrentLanding } from "@/server/services/budgets";
 
 const negativeTone = (n: number) => (n < 0 ? { color: "var(--expense)" } : undefined);
 
-// Current balances, independent of the dashboard period (#349).
+// Current balances and, for accounts with a budget in progress, their end-of-period landing:
+// both independent of the dashboard period (#349, #379).
 export async function AccountsOverview({
   accounts,
+  landings = [],
   locale,
 }: {
   accounts: VisibleAccount[];
+  landings?: CurrentLanding[];
   locale: string;
 }) {
   if (accounts.length === 0) return null;
-  const [t, tAccounts] = await Promise.all([
+  const [t, tAccounts, tLanding] = await Promise.all([
     getTranslations("dashboard.accounts"),
     getTranslations("accounts"),
+    getTranslations("budgets.landing"),
   ]);
+  const landingOf = new Map<string, CurrentLanding>();
+  for (const l of landings) if (!landingOf.has(l.accountId)) landingOf.set(l.accountId, l);
+  const landingLink = (l: CurrentLanding) => (
+    <Link
+      href={`/${locale}/budgets/${l.id}`}
+      title={tLanding("breakdown", {
+        balance: formatMoney(l.landing.balance, locale),
+        income: formatMoney(l.landing.incomeToCome, locale),
+        spending: formatMoney(l.landing.spendingToCome, locale),
+      })}
+      data-slot="dashboard-account-landing"
+      className="text-muted-foreground text-[11.5px] tabular-nums hover:underline"
+      style={negativeTone(l.landing.endBalance)}
+    >
+      {t("landing", {
+        date: formatDayMonth(l.periodEnd, locale),
+        amount: formatMoney(l.landing.endBalance, locale),
+      })}
+    </Link>
+  );
   const total = Math.round(accounts.reduce((sum, a) => sum + a.balance, 0) * 100) / 100;
 
   return (
@@ -59,12 +84,12 @@ export async function AccountsOverview({
                 </div>
               )}
             </div>
-            <span
-              className="shrink-0 text-sm font-medium tabular-nums"
-              style={negativeTone(a.balance)}
-            >
-              {formatMoney(a.balance, locale)}
-            </span>
+            <div className="flex shrink-0 flex-col items-end">
+              <span className="text-sm font-medium tabular-nums" style={negativeTone(a.balance)}>
+                {formatMoney(a.balance, locale)}
+              </span>
+              {landingOf.has(a.id) && landingLink(landingOf.get(a.id)!)}
+            </div>
           </div>
         ))}
       </div>
