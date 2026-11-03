@@ -152,7 +152,7 @@ export async function completeBankAuth(
   });
   await logEvent({
     userId,
-    action: "bankSync.connection.created",
+    action: "bank_sync.connection.created",
     entity: "BankConnection",
     entityId: connection.id,
     metadata: { aspspName: request.aspspName, accounts: accounts.length },

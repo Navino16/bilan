@@ -204,7 +204,7 @@ export async function saveBankMapping(
   const mapped = planned.flatMap((p) => (p.accountId ? [p.accountId] : []));
   await logEvent({
     userId,
-    action: "bankSync.mapping.saved",
+    action: "bank_sync.mapping.saved",
     entity: "BankConnection",
     entityId: connectionId,
     metadata: { mapped: mapped.length, ignored: planned.length - mapped.length },

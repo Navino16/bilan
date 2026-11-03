@@ -413,7 +413,7 @@
         "syncedTarget": "{name} (already synced)",
         "name": "Name of the new account",
         "syncFrom": "Import from",
-        "syncFromHint": "Defaults to the day of the account’s last transaction; empty: all the history the bank provides.",
+        "syncFromHint": "Defaults to the day of the account’s last transaction (duplicates are left out); for an empty account, all the history the bank provides.",
         "syncedElsewhere": "Already synced by your other connection.",
         "unsupportedCurrency": "{currency} account: only euro accounts are synced.",
         "submit": "Map and import",
@@ -2047,7 +2047,8 @@
         "budget": "Budgets",
         "link": "Links",
         "mail": "Emails",
-        "audit": "Audit log"
+        "audit": "Audit log",
+        "bank_sync": "Bank sync"
       },
       "entities": {
         "User": "User",
@@ -2058,6 +2059,7 @@
         "AuthProvider": "Auth provider",
         "SmtpConfig": "SMTP settings",
         "BankSyncConfig": "Bank sync settings",
+        "BankConnection": "Bank connection",
         "AdminSignupToken": "Invitation token",
         "Group": "Household",
         "GroupInvitation": "Household invitation",
@@ -2245,6 +2247,14 @@
         },
         "audit": {
           "purged": "Audit log purged"
+        },
+        "bank_sync": {
+          "connection": {
+            "created": "Bank connected"
+          },
+          "mapping": {
+            "saved": "Bank accounts mapped"
+          }
         }
       }
     },

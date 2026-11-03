@@ -413,7 +413,7 @@
         "syncedTarget": "{name} (déjà synchronisé)",
         "name": "Nom du nouveau compte",
         "syncFrom": "Importer depuis le",
-        "syncFromHint": "Par défaut, le jour de la dernière opération du compte ; vide : tout l’historique fourni par la banque.",
+        "syncFromHint": "Par défaut, le jour de la dernière opération du compte (les doublons sont écartés) ; pour un compte vide, tout l’historique fourni par la banque.",
         "syncedElsewhere": "Déjà synchronisé par votre autre connexion.",
         "unsupportedCurrency": "Compte en {currency} : seuls les comptes en euros sont synchronisés.",
         "submit": "Associer et importer",
@@ -2047,7 +2047,8 @@
         "budget": "Budgets",
         "link": "Liaisons",
         "mail": "E-mails",
-        "audit": "Journal d’audit"
+        "audit": "Journal d’audit",
+        "bank_sync": "Synchronisation bancaire"
       },
       "entities": {
         "User": "Utilisateur",
@@ -2058,6 +2059,7 @@
         "AuthProvider": "Fournisseur d’authentification",
         "SmtpConfig": "Configuration SMTP",
         "BankSyncConfig": "Configuration de la synchronisation bancaire",
+        "BankConnection": "Connexion bancaire",
         "AdminSignupToken": "Jeton d’invitation",
         "Group": "Foyer",
         "GroupInvitation": "Invitation de foyer",
@@ -2245,6 +2247,14 @@
         },
         "audit": {
           "purged": "Journal d’audit purgé"
+        },
+        "bank_sync": {
+          "connection": {
+            "created": "Banque connectée"
+          },
+          "mapping": {
+            "saved": "Comptes bancaires associés"
+          }
         }
       }
     },

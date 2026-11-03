@@ -182,7 +182,7 @@ describe("completeBankAuth", () => {
 
     expect(await db.bankAuthRequest.count({ where: { userId: owner } })).toBe(0);
     const audit = await db.auditLog.findFirstOrThrow({
-      where: { userId: owner, action: "bankSync.connection.created" },
+      where: { userId: owner, action: "bank_sync.connection.created" },
     });
     expect(audit.entityId).toBe(conn.id);
     expect(audit.metadata).toEqual({ aspspName: "Banque Fictive", accounts: 2 });
