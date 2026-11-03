@@ -26,12 +26,15 @@ test.describe("bank sync admin page", () => {
         await appId.fill("e2e-app-id");
         await page.locator("#bs-privateKey").fill(pem);
         await expect(page.locator("#bs-enabled")).not.toBeChecked();
+        await expect(page.locator("#bs-syncIntervalHours")).toHaveValue("6");
+        await page.locator("#bs-syncIntervalHours").selectOption("12");
         await page.getByRole("button", { name: "Enregistrer" }).click();
         await expect(page.getByText("Configuration enregistrée.")).toBeVisible({ timeout: 2000 });
       }).toPass({ timeout: 20_000 });
 
       await page.reload({ waitUntil: "domcontentloaded" });
       await expect(appId).toHaveValue("e2e-app-id");
+      await expect(page.locator("#bs-syncIntervalHours")).toHaveValue("12");
       const key = page.locator("#bs-privateKey");
       await expect(key).toHaveValue("");
       await expect(key).toHaveAttribute("placeholder", /clé enregistrée/i);

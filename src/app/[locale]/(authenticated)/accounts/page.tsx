@@ -6,6 +6,7 @@ import { listForUser } from "@/server/services/categories";
 import { listGroupsForUser } from "@/server/services/groups";
 import { isBankSyncAvailable } from "@/server/services/bank-sync/config";
 import { listBankConnections } from "@/server/services/bank-sync/connect";
+import { listSyncedAccounts } from "@/server/services/bank-sync/status";
 import { flattenCategories } from "@/components/transactions/category-tree";
 import { AccountList } from "@/components/accounts/account-list";
 import { AccountForm } from "@/components/accounts/account-form";
@@ -35,9 +36,10 @@ export default async function AccountsPage({
   const accounts = await listVisibleForUser(user.id, { includeArchived: true });
   const categories = flattenCategories(await listForUser(user.id));
   const groups = (await listGroupsForUser(user.id)).map((g) => ({ id: g.id, name: g.name }));
-  const [bankSync, connections] = await Promise.all([
+  const [bankSync, connections, synced] = await Promise.all([
     isBankSyncAvailable(),
     listBankConnections(user.id),
+    listSyncedAccounts(user.id),
   ]);
   const result = sp.bankSync;
   const resultKey = result && t.has(`bankSync.result.${result}`) ? result : "FAILED";
@@ -68,7 +70,12 @@ export default async function AccountsPage({
           <AlertDescription>{t(`bankSync.result.${resultKey as "FAILED"}`)}</AlertDescription>
         </Alert>
       )}
-      <AccountList accounts={accounts} groups={groups} categories={categories} />
+      <AccountList
+        accounts={accounts}
+        synced={bankSync ? synced : {}}
+        groups={groups}
+        categories={categories}
+      />
       {connections.length > 0 && <BankConnections connections={connections} />}
     </div>
   );

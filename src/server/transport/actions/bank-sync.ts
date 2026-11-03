@@ -37,6 +37,7 @@ export async function saveBankSyncConfigAction(
     applicationId: String(formData.get("applicationId") ?? ""),
     privateKey: String(formData.get("privateKey") ?? ""),
     enabled: ["on", "true"].includes(String(formData.get("enabled") ?? "")),
+    syncIntervalHours: Number(formData.get("syncIntervalHours") ?? 6),
   };
   const parsed = bankSyncConfigSchema.safeParse(input);
   if (!parsed.success) return invalidInput(parsed.error, input);

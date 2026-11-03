@@ -368,6 +368,7 @@
         "NETWORK": "Enable Banking ne répond pas. Réessayez plus tard.",
         "NOT_FOUND": "Connexion bancaire introuvable.",
         "HTTP": "Enable Banking a renvoyé une erreur. Réessayez plus tard.",
+        "BUSY": "Une synchronisation de cette banque est déjà en cours. Réessayez dans un instant.",
         "FAILED": "Échec. Réessayez."
       },
       "result": {
@@ -387,6 +388,16 @@
         "EXPIRED_STATE": "L’autorisation a pris plus de 15 minutes. Reconnectez la banque.",
         "WRONG_USER": "Cette autorisation a été lancée par un autre utilisateur.",
         "DENIED": "L’accès aux comptes a été refusé à la banque. Rien n’a été connecté."
+      },
+      "status": {
+        "synced": "Synchronisé {ago} · {bank}",
+        "neverSynced": "Pas encore synchronisé · {bank}",
+        "pending": "{count, plural, one {# opération en attente} other {# opérations en attente}}, {total}",
+        "syncNow": "Synchroniser",
+        "syncing": "Synchronisation…",
+        "done": "{count, plural, =0 {Aucune nouvelle opération.} one {# nouvelle opération.} other {# nouvelles opérations.}}",
+        "truncated": "La banque n’a pas envoyé toutes les opérations demandées : certaines peuvent manquer.",
+        "tooSoon": "Cette banque a déjà été synchronisée il y a moins de 10 minutes."
       },
       "connections": {
         "overline": "Banques",
@@ -420,6 +431,7 @@
         "submitting": "Import en cours…",
         "done": "Import terminé",
         "imported": "{name} : {count, plural, =0 {aucune nouvelle opération} one {# opération importée} other {# opérations importées}}",
+        "truncated": "{name} : la banque n’a pas envoyé tout l’historique demandé, certaines opérations peuvent manquer.",
         "back": "Retour aux comptes",
         "error": {
           "UNAVAILABLE": "La synchronisation bancaire n’est pas disponible sur cette instance.",
@@ -1934,6 +1946,10 @@
       "privateKeyHint": "Collez la clé privée générée à la création de l’application. Elle est chiffrée et n’est jamais réaffichée.",
       "enabled": "Proposer la synchronisation bancaire aux utilisateurs",
       "enabledHint": "Tant qu’elle est désactivée, la fonctionnalité est masquée pour les utilisateurs.",
+      "syncInterval": "Fréquence de synchronisation",
+      "syncIntervalOption": "Toutes les {hours} heures",
+      "syncIntervalHint": "Synchronisation en arrière-plan de chaque connexion. Certaines banques limitent ces accès à 4 par jour et par compte : élargissez l’intervalle si une banque les refuse.",
+      "rateLimited": "Une banque a limité les accès le {date} : envisagez un intervalle plus long.",
       "redirectUrl": "URL de redirection",
       "redirectUrlHint": "À enregistrer dans l’application Enable Banking. Elle doit être en HTTPS.",
       "copyRedirect": "Copier l’URL de redirection",
