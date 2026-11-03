@@ -2266,11 +2266,13 @@
         },
         "bank_sync": {
           "connection": {
-            "created": "Banque connectée"
+            "created": "Banque connectée",
+            "expired": "Connexion bancaire expirée"
           },
           "mapping": {
             "saved": "Comptes bancaires associés"
-          }
+          },
+          "cron": "Synchronisation bancaire automatique"
         }
       }
     },
