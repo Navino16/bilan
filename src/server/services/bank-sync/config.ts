@@ -15,7 +15,6 @@ import {
 
 export const BANK_SYNC_SINGLETON_ID = "default";
 
-// An empty key keeps the stored one, for the same application id only (upsertBankSyncConfig).
 export const bankSyncConfigSchema = z.object({
   applicationId: z.string().trim().min(1).max(100),
   privateKey: z.string().default(""),
@@ -51,7 +50,7 @@ export async function upsertBankSyncConfig(
     assertRsaPrivateKey(parsed.privateKey);
     privateKeyEnc = encrypt(parsed.privateKey, dataKey);
   } else {
-    // The key signs for one application: reusing it under another id would never authenticate.
+    // A key is tied to its application id.
     const existing = await getBankSyncConfig();
     if (existing?.applicationId !== parsed.applicationId) {
       throw new BankSyncConfigError("KEY_REQUIRED");

@@ -21,15 +21,15 @@ test.describe("bank sync admin page", () => {
       /\/api\/bank-sync\/callback$/,
     );
 
-    await expect(async () => {
-      await appId.fill("e2e-app-id");
-      await page.locator("#bs-privateKey").fill(pem);
-      await expect(page.locator("#bs-enabled")).not.toBeChecked();
-      await page.getByRole("button", { name: "Enregistrer" }).click();
-      await expect(page.getByText("Configuration enregistrée.")).toBeVisible({ timeout: 2000 });
-    }).toPass({ timeout: 20_000 });
-
     try {
+      await expect(async () => {
+        await appId.fill("e2e-app-id");
+        await page.locator("#bs-privateKey").fill(pem);
+        await expect(page.locator("#bs-enabled")).not.toBeChecked();
+        await page.getByRole("button", { name: "Enregistrer" }).click();
+        await expect(page.getByText("Configuration enregistrée.")).toBeVisible({ timeout: 2000 });
+      }).toPass({ timeout: 20_000 });
+
       await page.reload({ waitUntil: "domcontentloaded" });
       await expect(appId).toHaveValue("e2e-app-id");
       const key = page.locator("#bs-privateKey");
@@ -37,11 +37,15 @@ test.describe("bank sync admin page", () => {
       await expect(key).toHaveAttribute("placeholder", /clé enregistrée/i);
       expect(await page.content()).not.toContain("PRIVATE KEY");
     } finally {
-      await page.getByRole("button", { name: "Supprimer la configuration" }).click();
-      const dialog = page.getByRole("alertdialog");
-      await dialog.getByRole("button", { name: "Supprimer la configuration" }).click();
-      await expect(dialog).toHaveCount(0);
-      await expect(appId).toHaveValue("");
+      await page.reload({ waitUntil: "domcontentloaded" });
+      const remove = page.getByRole("button", { name: "Supprimer la configuration" });
+      if (await remove.isVisible()) {
+        await remove.click();
+        const dialog = page.getByRole("alertdialog");
+        await dialog.getByRole("button", { name: "Supprimer la configuration" }).click();
+        await expect(dialog).toHaveCount(0);
+        await expect(appId).toHaveValue("");
+      }
     }
   });
 });

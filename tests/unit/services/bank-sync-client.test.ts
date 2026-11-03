@@ -165,6 +165,27 @@ describe("Enable Banking client", () => {
     expect(err.status).toBeNull();
   });
 
+  it("maps a reply without its list to HTTP", async () => {
+    const bank = fakeEnableBanking();
+    bank.on("GET", /\/transactions$/, { body: {} });
+    expect((await caught(clientFor(bank).transactions("uid-fake-a", "2026-10-01"))).code).toBe(
+      "HTTP",
+    );
+  });
+
+  it("maps an unusable key to UNAUTHORIZED without calling the bank", async () => {
+    const bank = fakeEnableBanking();
+    const client = createEnableBankingClient({
+      applicationId: "app-test-id",
+      privateKeyPem: "not a pem",
+      fetch: bank.fetch,
+    });
+    const err = await caught(client.application());
+    expect(err.code).toBe("UNAUTHORIZED");
+    expect(err.status).toBeNull();
+    expect(bank.calls).toHaveLength(0);
+  });
+
   it("keeps the response body and ids out of errors", async () => {
     const bank = fakeEnableBanking();
     bank.on("GET", /\/transactions$/, {

@@ -114,9 +114,13 @@ export function createEnableBankingClient(opts: {
   ): Promise<T> {
     const url = new URL(path, baseUrl);
     for (const [k, v] of Object.entries(o.query ?? {})) url.searchParams.set(k, v);
-    const headers: Record<string, string> = {
-      Authorization: `Bearer ${signJwt(opts.applicationId, opts.privateKeyPem, now())}`,
-    };
+    let token: string;
+    try {
+      token = signJwt(opts.applicationId, opts.privateKeyPem, now());
+    } catch {
+      throw new EnableBankingError("UNAUTHORIZED", null);
+    }
+    const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
     if (o.body !== undefined) headers["Content-Type"] = "application/json";
     if (o.psu?.ip) headers["Psu-Ip-Address"] = o.psu.ip;
     if (o.psu?.userAgent) headers["Psu-User-Agent"] = o.psu.userAgent;
@@ -142,6 +146,11 @@ export function createEnableBankingClient(opts: {
     }
   }
 
+  const list = <T>(rows: T[] | undefined): T[] => {
+    if (!Array.isArray(rows)) throw new EnableBankingError("HTTP", null);
+    return rows;
+  };
+
   const account = (uid: string, leaf: string) => `/accounts/${encodeURIComponent(uid)}/${leaf}`;
 
   return {
@@ -149,7 +158,7 @@ export function createEnableBankingClient(opts: {
 
     async aspsps(country) {
       const r = await request<{ aspsps: EbAspsp[] }>("GET", "/aspsps", { query: { country } });
-      return r.aspsps;
+      return list(r.aspsps);
     },
 
     startAuth: (input) =>
@@ -171,7 +180,7 @@ export function createEnableBankingClient(opts: {
 
     async balances(uid, psu) {
       const r = await request<{ balances: EbBalance[] }>("GET", account(uid, "balances"), { psu });
-      return r.balances;
+      return list(r.balances);
     },
 
     async transactions(uid, dateFrom, psu) {
@@ -185,7 +194,7 @@ export function createEnableBankingClient(opts: {
           transactions: EbTransaction[];
           continuation_key?: string | null;
         }>("GET", account(uid, "transactions"), { query, psu });
-        rows.push(...r.transactions);
+        rows.push(...list(r.transactions));
         key = r.continuation_key ?? undefined;
         pages++;
       } while (key && pages < MAX_TRANSACTION_PAGES);
