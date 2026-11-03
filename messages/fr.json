@@ -339,7 +339,108 @@
       "AMOUNT_PRECISION": "Le montant ne peut pas avoir plus de 2 décimales."
     },
     "legendOthers": "Autres · {count, number}",
-    "legendNegative": "Hachuré : solde négatif"
+    "legendNegative": "Hachuré : solde négatif",
+    "bankSync": {
+      "connect": "Connecter ma banque",
+      "dialog": {
+        "overline": "Synchronisation bancaire",
+        "title": "Connecter ma banque",
+        "intro": "Choisissez votre banque : vous allez l’autoriser à partager vos comptes avec Bilan, en lecture seule, via Enable Banking. Vous revenez ensuite ici pour associer les comptes.",
+        "country": "Pays",
+        "search": "Rechercher une banque",
+        "searchPlaceholder": "Nom de la banque",
+        "banks": "Banques",
+        "loading": "Chargement des banques…",
+        "empty": "Aucune banque ne correspond.",
+        "consent": "Accès valable jusqu’à {days, plural, one {# jour} other {# jours}}",
+        "cancel": "Annuler",
+        "submit": "Continuer vers la banque",
+        "submitting": "Redirection…"
+      },
+      "error": {
+        "UNAVAILABLE": "La synchronisation bancaire n’est pas disponible sur cette instance.",
+        "UNKNOWN_BANK": "Choisissez une banque de la liste.",
+        "RATE_LIMITED_LOCAL": "Trop de tentatives. Réessayez dans quelques minutes.",
+        "RATE_LIMITED": "La banque limite les accès pour aujourd’hui. Réessayez plus tard.",
+        "APP_INACTIVE": "L’application Enable Banking de l’instance n’est pas active : prévenez l’administrateur.",
+        "UNAUTHORIZED": "Enable Banking a refusé l’accès : prévenez l’administrateur.",
+        "EXPIRED_SESSION": "L’autorisation donnée à la banque a expiré. Reconnectez la banque.",
+        "NETWORK": "Enable Banking ne répond pas. Réessayez plus tard.",
+        "NOT_FOUND": "Connexion bancaire introuvable.",
+        "HTTP": "Enable Banking a renvoyé une erreur. Réessayez plus tard.",
+        "FAILED": "Échec. Réessayez."
+      },
+      "result": {
+        "UNAVAILABLE": "La synchronisation bancaire n’est pas disponible sur cette instance.",
+        "UNKNOWN_BANK": "Choisissez une banque de la liste.",
+        "RATE_LIMITED_LOCAL": "Trop de tentatives. Réessayez dans quelques minutes.",
+        "RATE_LIMITED": "La banque limite les accès pour aujourd’hui. Réessayez plus tard.",
+        "APP_INACTIVE": "L’application Enable Banking de l’instance n’est pas active : prévenez l’administrateur.",
+        "UNAUTHORIZED": "Enable Banking a refusé l’accès : prévenez l’administrateur.",
+        "EXPIRED_SESSION": "L’autorisation donnée à la banque a expiré. Reconnectez la banque.",
+        "NETWORK": "Enable Banking ne répond pas. Réessayez plus tard.",
+        "NOT_FOUND": "Connexion bancaire introuvable.",
+        "HTTP": "Enable Banking a renvoyé une erreur. Réessayez plus tard.",
+        "FAILED": "Échec. Réessayez.",
+        "SIGNED_OUT": "Votre session a expiré pendant l’autorisation. Connectez-vous puis reconnectez la banque.",
+        "UNKNOWN_STATE": "Ce retour de la banque est inconnu ou déjà utilisé. Reconnectez la banque.",
+        "EXPIRED_STATE": "L’autorisation a pris plus de 15 minutes. Reconnectez la banque.",
+        "WRONG_USER": "Cette autorisation a été lancée par un autre utilisateur.",
+        "DENIED": "L’accès aux comptes a été refusé à la banque. Rien n’a été connecté."
+      },
+      "connections": {
+        "overline": "Banques",
+        "title": "Connexions bancaires",
+        "validUntil": "Accès valable jusqu’au {date}",
+        "mapped": "Synchronisés : {names}",
+        "unmapped": "Aucun compte associé",
+        "map": "Associer les comptes",
+        "status": {
+          "ACTIVE": "Active",
+          "EXPIRED": "Expirée",
+          "REVOKED": "Révoquée",
+          "ERROR": "En erreur"
+        }
+      },
+      "mapping": {
+        "overline": "Synchronisation bancaire",
+        "title": "Associer les comptes de {bank}",
+        "intro": "Pour chaque compte renvoyé par la banque, choisissez le compte Bilan à tenir à jour, créez-en un, ou ignorez-le. L’historique est importé tout de suite ; les doublons avec vos imports de fichiers sont écartés.",
+        "empty": "La banque n’a renvoyé aucun compte.",
+        "target": "Compte Bilan",
+        "ignore": "Ignorer ce compte",
+        "create": "Créer un nouveau compte",
+        "syncedTarget": "{name} (déjà synchronisé)",
+        "name": "Nom du nouveau compte",
+        "syncFrom": "Importer depuis le",
+        "syncFromHint": "Par défaut, le jour de la dernière opération du compte ; vide : tout l’historique fourni par la banque.",
+        "syncedElsewhere": "Déjà synchronisé par votre autre connexion.",
+        "unsupportedCurrency": "Compte en {currency} : seuls les comptes en euros sont synchronisés.",
+        "submit": "Associer et importer",
+        "submitting": "Import en cours…",
+        "done": "Import terminé",
+        "imported": "{name} : {count, plural, =0 {aucune nouvelle opération} one {# opération importée} other {# opérations importées}}",
+        "back": "Retour aux comptes",
+        "error": {
+          "UNAVAILABLE": "La synchronisation bancaire n’est pas disponible sur cette instance.",
+          "UNKNOWN_BANK": "Choisissez une banque de la liste.",
+          "RATE_LIMITED_LOCAL": "Trop de tentatives. Réessayez dans quelques minutes.",
+          "RATE_LIMITED": "La banque limite les accès pour aujourd’hui. Réessayez plus tard.",
+          "APP_INACTIVE": "L’application Enable Banking de l’instance n’est pas active : prévenez l’administrateur.",
+          "UNAUTHORIZED": "Enable Banking a refusé l’accès : prévenez l’administrateur.",
+          "EXPIRED_SESSION": "L’autorisation donnée à la banque a expiré. Reconnectez la banque.",
+          "NETWORK": "Enable Banking ne répond pas. Réessayez plus tard.",
+          "NOT_FOUND": "Connexion bancaire introuvable.",
+          "HTTP": "Enable Banking a renvoyé une erreur. Réessayez plus tard.",
+          "FAILED": "Échec. Réessayez.",
+          "INVALID": "Vérifiez les champs.",
+          "FORBIDDEN": "Vous ne pouvez associer que vos propres comptes, non archivés.",
+          "ALREADY_SYNCED": "Un de ces comptes est déjà synchronisé par une autre connexion.",
+          "UNSUPPORTED_CURRENCY": "Seuls les comptes en euros peuvent être synchronisés.",
+          "BUSY": "Une synchronisation de cette banque est déjà en cours. Réessayez dans un instant."
+        }
+      }
+    }
   },
   "rules": {
     "pageTitle": "Catégories & règles",
@@ -2272,7 +2373,8 @@
       "verifyEmail": "Vérification de l’adresse",
       "setup": "Installation",
       "forbidden": "Accès refusé",
-      "notFound": "Page introuvable"
+      "notFound": "Page introuvable",
+      "bankMapping": "Associer les comptes · Comptes"
     }
   },
   "onboarding": {
@@ -2339,7 +2441,9 @@
       "USER_EXISTS": "Un compte existe déjà avec cet e-mail.",
       "OUT_OF_RANGE": "Nombre entier entre {min, number} et {max, number}.",
       "KEY_REQUIRED": "Collez la clé privée : elle n’est conservée que pour le même identifiant d’application.",
-      "INVALID_KEY": "Ce n’est pas une clé privée RSA au format PEM."
+      "INVALID_KEY": "Ce n’est pas une clé privée RSA au format PEM.",
+      "DATE_INVALID": "Date invalide.",
+      "DATE_IN_FUTURE": "La date ne peut pas être dans le futur."
     }
   }
 }

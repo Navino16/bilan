@@ -145,6 +145,24 @@ test.describe("accounts", () => {
   });
 });
 
+// No e2e configures Enable Banking or clicks "Connect": the bank flow is covered by the integration tests.
+test.describe("bank sync", () => {
+  test.use({ storageState: "tests/e2e/.auth/owner.json" });
+
+  test("no bank connect button while bank sync is not configured", async ({ page }) => {
+    await page.goto("/fr/accounts");
+    await expect(page.getByRole("button", { name: /nouveau compte/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /connecter ma banque/i })).toHaveCount(0);
+  });
+
+  test("explains the bank's answer and hides foreign connections", async ({ page }) => {
+    await page.goto("/fr/accounts?bankSync=DENIED");
+    await expect(page.locator('[data-slot="bank-sync-result"]')).toContainText(/refusé/i);
+    const res = await page.goto("/fr/accounts/bank-sync/not-a-connection");
+    expect(res?.status()).toBe(404);
+  });
+});
+
 // The stale-session step-up (password or new sign-in) is covered by the integration tests:
 // the e2e suite can't age a browser session past the 10-minute window.
 test.describe("IBAN reveal (#257)", () => {

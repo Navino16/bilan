@@ -166,3 +166,29 @@ export async function purgeExpiredAuthRequests(now: Date): Promise<number> {
   });
   return count;
 }
+
+export type BankConnectionSummary = {
+  id: string;
+  aspspName: string;
+  status: string;
+  validUntil: Date;
+  mappedAccounts: string[];
+};
+
+export async function listBankConnections(userId: string): Promise<BankConnectionSummary[]> {
+  const rows = await db.bankConnection.findMany({
+    where: { userId, status: { not: "REVOKED" } },
+    select: {
+      id: true,
+      aspspName: true,
+      status: true,
+      validUntil: true,
+      accounts: { select: { account: { select: { name: true } } }, orderBy: { name: "asc" } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  return rows.map(({ accounts, ...c }) => ({
+    ...c,
+    mappedAccounts: accounts.flatMap((a) => (a.account ? [a.account.name] : [])),
+  }));
+}

@@ -1,0 +1,27 @@
+// Countries Enable Banking covers, offered by the bank picker (client-safe).
+export const BANK_COUNTRIES = [
+  "AT",
+  "BE",
+  "DE",
+  "DK",
+  "EE",
+  "ES",
+  "FI",
+  "FR",
+  "GB",
+  "IE",
+  "IT",
+  "LT",
+  "LU",
+  "LV",
+  "NL",
+  "NO",
+  "PL",
+  "PT",
+  "SE",
+] as const;
+export type BankCountry = (typeof BANK_COUNTRIES)[number];
+
+export function isBankCountry(value: unknown): value is BankCountry {
+  return typeof value === "string" && (BANK_COUNTRIES as readonly string[]).includes(value);
+}

@@ -1,4 +1,5 @@
 import { dayStart, toIsoDay } from "@/lib/period";
+import type { MappingChoice } from "@/lib/schemas/bank-sync";
 import { db } from "@/server/db";
 import { createAccount } from "@/server/services/accounts";
 import { logEvent } from "@/server/services/audit";
@@ -27,11 +28,7 @@ export type MappingView = {
   }[];
 };
 
-export type MappingChoice = { connectionAccountId: string } & (
-  | { action: "IGNORE" }
-  | { action: "MAP"; accountId: string; syncFrom?: string }
-  | { action: "CREATE"; name: string; syncFrom?: string }
-);
+export type { MappingChoice };
 
 const SYNCED_CURRENCY = "EUR";
 
