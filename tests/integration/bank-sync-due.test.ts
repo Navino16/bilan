@@ -6,6 +6,7 @@ import { createEnableBankingClient } from "@/server/services/bank-sync/client";
 import { BANK_SYNC_SINGLETON_ID } from "@/server/services/bank-sync/config";
 import {
   ERROR_THRESHOLD,
+  FAILURE_BACKOFF_MS,
   RATE_LIMIT_BACKOFF_MS,
   syncConnection,
   syncDueConnections,
@@ -227,16 +228,27 @@ describe("syncDueConnections", () => {
       broken ? { status: 500, body: {} } : { body: { transactions: [] } },
     );
 
-    for (let i = 1; i < ERROR_THRESHOLD; i++) {
-      expect(await syncDueConnections(now, { client })).toMatchObject({ failed: 1 });
-      expect(await connOf(c.id)).toMatchObject({ status: "ACTIVE", failureCount: i });
-    }
+    const at = (h: number) => new Date(now.getTime() + h * 3600_000);
+    expect(await syncDueConnections(at(0), { client })).toMatchObject({ failed: 1 });
+    expect(await connOf(c.id)).toMatchObject({
+      status: "ACTIVE",
+      failureCount: 1,
+      retryAfter: new Date(at(0).getTime() + FAILURE_BACKOFF_MS),
+    });
+    expect((await syncDueConnections(at(1), { client })).due).toBe(0);
+    expect(await syncDueConnections(at(3), { client })).toMatchObject({ failed: 1 });
+    expect(await connOf(c.id)).toMatchObject({
+      failureCount: 2,
+      retryAfter: new Date(at(3).getTime() + 2 * FAILURE_BACKOFF_MS),
+    });
+    expect((await syncDueConnections(at(8), { client })).due).toBe(0);
     broken = false;
-    expect(await syncDueConnections(now, { client })).toMatchObject({ synced: 1 });
+    expect(await syncDueConnections(at(9), { client })).toMatchObject({ synced: 1 });
     expect(await connOf(c.id)).toMatchObject({
       status: "ACTIVE",
       failureCount: 0,
       lastError: null,
+      retryAfter: null,
     });
 
     broken = true;
@@ -256,6 +268,56 @@ describe("syncDueConnections", () => {
       code: "NOT_FOUND",
     });
     expect(fake.calls).toHaveLength(0);
+  });
+
+  it("an instance-wide error is not held against the connections", async () => {
+    const c = await connection(["uid-inst"]);
+    fake.on("GET", /\/balances$/, { status: 403, body: { message: "Application is not active" } });
+    for (let h = 0; h < ERROR_THRESHOLD + 1; h++) {
+      const res = await syncDueConnections(new Date(now.getTime() + h * 3600_000), { client });
+      expect(res).toMatchObject({ due: 1, failed: 1 });
+    }
+    expect(await connOf(c.id)).toMatchObject({
+      status: "ACTIVE",
+      failureCount: 0,
+      retryAfter: null,
+      lastError: "APP_INACTIVE",
+    });
+  });
+
+  it("one failing account does not keep the others from syncing", async () => {
+    const c = await connection(["uid-f1", "uid-f2", "uid-f3", "uid-f4"]);
+    fake.on("GET", "/accounts/uid-f2/transactions", { status: 404, body: {} });
+    expect(await syncConnection(c.id, { client, now })).toEqual({
+      status: "FAILED",
+      code: "NOT_FOUND",
+    });
+    expect(fetchedUids()).toEqual(["uid-f1", "uid-f2", "uid-f3", "uid-f4"]);
+    const links = await db.bankConnectionAccount.findMany({ where: { connectionId: c.id } });
+    expect(links.filter((l) => l.lastSyncedDate !== null)).toHaveLength(3);
+  });
+
+  it("a rate limit wins over another account's error", async () => {
+    const c = await connection(["uid-r1", "uid-r2"]);
+    fake.on("GET", "/accounts/uid-r1/transactions", { status: 500, body: {} });
+    fake.on("GET", "/accounts/uid-r2/transactions", async () => {
+      await new Promise((r) => setTimeout(r, 20));
+      return { status: 429, body: {} };
+    });
+    expect(await syncConnection(c.id, { client, now })).toEqual({
+      status: "FAILED",
+      code: "RATE_LIMITED",
+    });
+    expect(await connOf(c.id)).toMatchObject({ failureCount: 0, lastError: "RATE_LIMITED" });
+  });
+
+  it("leaves a connection with no mapped account to the mapping page", async () => {
+    const c = await connection(["uid-unmapped"]);
+    await db.bankConnectionAccount.updateMany({
+      where: { connectionId: c.id },
+      data: { accountId: null },
+    });
+    expect((await syncDueConnections(now, { client })).due).toBe(0);
   });
 
   it("fetches at most two accounts of a connection at once", async () => {

@@ -27,6 +27,7 @@ import { computeExternalIds } from "@/server/services/transactions/secure-fields
 export const SYNC_CLAIM_STALE_MS = 30 * 60_000;
 export const RATE_LIMIT_BACKOFF_MS = 6 * 3600_000;
 export const ERROR_THRESHOLD = 3;
+export const FAILURE_BACKOFF_MS = 3 * 3600_000;
 export const SYNC_ACCOUNT_CONCURRENCY = 2;
 // The cron fires at a fixed minute: a sync stamped a few seconds into it is due again N hours later.
 const DUE_SLACK_MS = 5 * 60_000;
@@ -205,7 +206,12 @@ export async function syncAccount(
   return { accountId, imported, skipped, truncated: fetched.truncated };
 }
 
-// Starts nothing new once a call failed, so a rate limit stops the connection's remaining accounts.
+// Codes that end the whole connection's run: other accounts would get the same answer.
+const STOPS_CONNECTION: BankSyncErrorCode[] = ["RATE_LIMITED", "EXPIRED_SESSION"];
+const stopsConnection = (e: unknown) =>
+  e instanceof EnableBankingError && STOPS_CONNECTION.includes(e.code);
+
+// Starts nothing new after a stopping error; any other error lets the remaining items run first.
 async function mapLimit<T, R>(
   items: T[],
   limit: number,
@@ -215,12 +221,14 @@ async function mapLimit<T, R>(
   let next = 0;
   let failure = null as { error: unknown } | null;
   async function worker(): Promise<void> {
-    while (!failure && next < items.length) {
+    while (!(failure && stopsConnection(failure.error)) && next < items.length) {
       const i = next++;
       try {
         results[i] = await fn(items[i]);
       } catch (error) {
-        failure ??= { error };
+        if (!failure || (stopsConnection(error) && !stopsConnection(failure.error))) {
+          failure = { error };
+        }
       }
     }
   }
@@ -245,8 +253,11 @@ async function markExpired(connectionId: string, conn: ConnectionState, live: st
   });
 }
 
+// Instance-wide: the admin's configuration or Enable Banking itself, not this connection.
+const INSTANCE_ERRORS: BankSyncErrorCode[] = ["APP_INACTIVE", "UNAUTHORIZED", "NETWORK"];
+
 // Lifecycle of a failed sync (design §Sync engine): a rate limit backs off, an expired consent
-// stops the connection, any other error counts towards ERROR.
+// stops the connection, a connection error backs off longer each time and counts towards ERROR.
 async function recordFailure(
   connectionId: string,
   conn: ConnectionState,
@@ -266,12 +277,20 @@ async function recordFailure(
     });
     return;
   }
+  if (INSTANCE_ERRORS.includes(code)) {
+    await db.bankConnection.updateMany({
+      where: { id: connectionId, status: { in: live } },
+      data: { lastError: code },
+    });
+    return;
+  }
   const failureCount = conn.failureCount + 1;
   await db.bankConnection.updateMany({
     where: { id: connectionId, status: { in: live } },
     data: {
       lastError: code,
       failureCount,
+      retryAfter: new Date(now.getTime() + failureCount * FAILURE_BACKOFF_MS),
       ...(failureCount >= ERROR_THRESHOLD && { status: "ERROR" }),
     },
   });
@@ -394,6 +413,7 @@ export async function syncDueConnections(
   const due = await db.bankConnection.findMany({
     where: {
       status: "ACTIVE",
+      accounts: { some: { accountId: { not: null } } },
       AND: [
         { OR: [{ retryAfter: null }, { retryAfter: { lte: now } }] },
         {
