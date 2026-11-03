@@ -4,6 +4,7 @@ import { db } from "@/server/db";
 import { createAccount } from "@/server/services/accounts";
 import { logEvent } from "@/server/services/audit";
 import type { EnableBankingClient, Psu } from "@/server/services/bank-sync/client";
+import { availableClient } from "@/server/services/bank-sync/connect";
 import { BankSyncError } from "@/server/services/bank-sync/errors";
 import { syncConnection, type AccountSyncResult } from "@/server/services/bank-sync/sync";
 
@@ -34,7 +35,7 @@ const SYNCED_CURRENCY = "EUR";
 
 async function ownConnection(userId: string, connectionId: string) {
   const connection = await db.bankConnection.findFirst({
-    where: { id: connectionId, userId },
+    where: { id: connectionId, userId, status: "ACTIVE" },
     include: { accounts: { orderBy: { id: "asc" } } },
   });
   if (!connection) throw new BankSyncError("NOT_FOUND");
@@ -105,6 +106,8 @@ type Planned = {
   create: { name: string } | null;
   syncFrom: Date | null;
   remapped: boolean;
+  // No completed sync on this account yet: the opening-balance rule may apply.
+  startsSync: boolean;
 };
 
 // Every choice is checked before anything is written or fetched.
@@ -131,7 +134,14 @@ async function plan(
     if (!link || seenLinks.has(link.id)) throw new BankSyncError("NOT_FOUND");
     seenLinks.add(link.id);
     if (c.action === "IGNORE") {
-      return { linkId: link.id, accountId: null, create: null, syncFrom: null, remapped: true };
+      return {
+        linkId: link.id,
+        accountId: null,
+        create: null,
+        syncFrom: null,
+        remapped: true,
+        startsSync: false,
+      };
     }
     if (link.currency !== SYNCED_CURRENCY) throw new BankSyncError("UNSUPPORTED_CURRENCY");
     if (link.ibanHash && elsewhere.ibanHashes.has(link.ibanHash)) {
@@ -144,6 +154,7 @@ async function plan(
         create: { name: c.name },
         syncFrom: c.syncFrom ? dayStart(c.syncFrom) : null,
         remapped: true,
+        startsSync: true,
       };
     }
     if (!owned.has(c.accountId)) throw new BankSyncError("FORBIDDEN");
@@ -158,6 +169,7 @@ async function plan(
       create: null,
       syncFrom: day ? dayStart(day) : null,
       remapped: link.accountId !== c.accountId,
+      startsSync: link.accountId !== c.accountId || link.lastSyncedDate === null,
     };
   });
 }
@@ -171,6 +183,7 @@ export async function saveBankMapping(
 ): Promise<{ accounts: (AccountSyncResult & { name: string })[] }> {
   const connection = await ownConnection(userId, connectionId);
   const planned = await plan(userId, connection, choices);
+  const client = await availableClient(opts.client);
 
   const openingBalanceFor: string[] = [];
   for (const p of planned) {
@@ -182,7 +195,7 @@ export async function saveBankMapping(
         )
       ).id;
       openingBalanceFor.push(p.accountId);
-    } else if (p.accountId) {
+    } else if (p.accountId && p.startsSync) {
       const earlier = await db.transaction.count({
         where: { accountId: p.accountId, ...(p.syncFrom && { date: { lt: p.syncFrom } }) },
       });
@@ -214,7 +227,7 @@ export async function saveBankMapping(
   const result = await syncConnection(connectionId, {
     psu: opts.psu,
     now: opts.now,
-    client: opts.client,
+    client,
     accountIds: mapped,
     openingBalanceFor,
   });

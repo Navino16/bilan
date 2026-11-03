@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -24,10 +25,16 @@ const mapValue = (accountId: string) => `MAP:${accountId}`;
 export function BankMappingForm({ view }: { view: MappingView }) {
   const t = useTranslations("accounts.bankSync.mapping");
   const locale = useLocale();
+  const router = useRouter();
   const form = useActionForm(saveBankMappingAction.bind(null, view.connectionId), {
     resetOnSuccess: false,
   });
   const { state, pending } = form;
+
+  // A failed fetch may follow a saved mapping (e.g. a created account): rows re-read it.
+  useEffect(() => {
+    if (state && !state.ok && state.error !== "INVALID") router.refresh();
+  }, [state, router]);
 
   if (view.accounts.length === 0) {
     return <p className="text-muted-foreground text-sm">{t("empty")}</p>;
@@ -38,8 +45,8 @@ export function BankMappingForm({ view }: { view: MappingView }) {
         <AlertTitle>{t("done")}</AlertTitle>
         <AlertDescription className="space-y-3">
           <ul className="space-y-1">
-            {state.accounts.map((a) => (
-              <li key={a.name}>{t("imported", { name: a.name, count: a.imported })}</li>
+            {state.accounts.map((a, i) => (
+              <li key={i}>{t("imported", { name: a.name, count: a.imported })}</li>
             ))}
           </ul>
           <Link href={`/${locale}/accounts`} className={buttonVariants({ variant: "outline" })}>
@@ -53,7 +60,13 @@ export function BankMappingForm({ view }: { view: MappingView }) {
   return (
     <form {...form.formProps} className="space-y-4">
       {view.accounts.map((row, i) => (
-        <MappingRow key={row.id} index={i} row={row} targets={view.targets} form={form} />
+        <MappingRow
+          key={`${row.id}:${row.accountId ?? ""}`}
+          index={i}
+          row={row}
+          targets={view.targets}
+          form={form}
+        />
       ))}
       {form.error && (
         <Alert variant="destructive">
@@ -83,7 +96,8 @@ function MappingRow({
   const t = useTranslations("accounts.bankSync.mapping");
   const field = (name: string) => `a.${index}.${name}`;
   const locked = row.syncedElsewhere || row.currency !== "EUR";
-  const [choice, setChoice] = useState(row.accountId ? mapValue(row.accountId) : "IGNORE");
+  const mappable = row.accountId && targets.some((x) => x.id === row.accountId);
+  const [choice, setChoice] = useState(mappable ? mapValue(row.accountId!) : "IGNORE");
   const [syncFrom, setSyncFrom] = useState(row.defaultSyncFrom ?? "");
   const mappedTo = choice.startsWith("MAP:") ? choice.slice(4) : "";
   const action = locked ? "IGNORE" : mappedTo ? "MAP" : choice;
@@ -95,7 +109,9 @@ function MappingRow({
       <input type="hidden" name={field("action")} value={action} />
       <input type="hidden" name={field("accountId")} value={locked ? "" : mappedTo} />
       <div className="min-w-0 space-y-0.5">
-        <div className="truncate font-medium">{row.name}</div>
+        <div id={id("bank")} className="truncate font-medium">
+          {row.name}
+        </div>
         <div className="text-muted-foreground text-xs">{row.currency}</div>
         {row.syncedElsewhere ? (
           <p className="text-muted-foreground text-sm">{t("syncedElsewhere")}</p>
@@ -119,7 +135,7 @@ function MappingRow({
                 const target = targets.find((x) => mapValue(x.id) === next);
                 setSyncFrom(target?.defaultSyncFrom ?? "");
               }}
-              {...form.fieldProps(field("accountId"))}
+              {...form.fieldProps(field("accountId"), id("bank"))}
             >
               <option value="IGNORE">{t("ignore")}</option>
               {targets.map((x) => (

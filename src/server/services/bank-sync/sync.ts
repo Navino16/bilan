@@ -30,13 +30,47 @@ export type ConnectionSyncResult =
 
 type SyncLink = BankConnectionAccount & { connection: { userId: string } };
 
-// Day of the last row the bank sent: a truncated fetch resumes from there.
-function lastFetchedDay(txs: EbTransaction[]): Date | null {
-  for (let i = txs.length - 1; i >= 0; i--) {
-    const day = txs[i].booking_date ?? txs[i].value_date;
-    if (isValidIsoDay(day)) return dayStart(day);
+const MAX_FETCH_ROUNDS = 4;
+
+const dayOf = (t: EbTransaction): string | null => {
+  const day = t.booking_date ?? t.value_date;
+  return isValidIsoDay(day) ? day : null;
+};
+
+function dayRange(txs: EbTransaction[]): { first: string; last: string } | null {
+  const days = txs.flatMap((t) => dayOf(t) ?? []);
+  return days.length ? { first: days[0], last: days[days.length - 1] } : null;
+}
+
+// Banks page oldest first: a fetch cut at MAX_TRANSACTION_PAGES resumes from its last day,
+// whose rows may be partial, so they are fetched again whole. Newest first can't resume.
+async function fetchTransactions(
+  client: EnableBankingClient,
+  uid: string,
+  from: string,
+  psu: Psu | undefined,
+): Promise<{ transactions: EbTransaction[]; truncated: boolean; resumeDay: string | null }> {
+  const kept: EbTransaction[] = [];
+  let start = from;
+  for (let round = 1; ; round++) {
+    const page = await client.listTransactions(uid, start, psu);
+    const range = dayRange(page.transactions);
+    if (!page.truncated) {
+      return { transactions: [...kept, ...page.transactions], truncated: false, resumeDay: null };
+    }
+    const ascending = range !== null && range.first <= range.last;
+    if (!ascending || range.last <= start || round === MAX_FETCH_ROUNDS) {
+      console.warn("[bilan] bank history truncated");
+      return {
+        transactions: [...kept, ...page.transactions],
+        truncated: true,
+        resumeDay: ascending ? range.last : null,
+      };
+    }
+    const resume = range.last;
+    kept.push(...page.transactions.filter((t) => (dayOf(t) ?? "") < resume));
+    start = resume;
   }
-  return null;
 }
 
 // Opening balance of an account that starts with the sync (design §Connect flow 6).
@@ -91,7 +125,7 @@ export async function syncAccount(
   const uid = decrypt(link.uidEnc, dataKey);
 
   const balances = pickBalances(await client.balances(uid, opts.psu), now);
-  const fetched = await client.listTransactions(uid, syncWindowStart(link, now), opts.psu);
+  const fetched = await fetchTransactions(client, uid, syncWindowStart(link, now), opts.psu);
   const { rows, pendingCount, pendingTotal } = toSyncRows(fetched.transactions);
 
   let imported = 0;
@@ -132,11 +166,14 @@ export async function syncAccount(
 
   const today = dayStart(toIsoDay(now));
   let lastSyncedDate = fetched.truncated
-    ? (lastFetchedDay(fetched.transactions) ?? link.lastSyncedDate)
+    ? fetched.resumeDay
+      ? dayStart(fetched.resumeDay)
+      : link.lastSyncedDate
     : today;
   if (lastSyncedDate && lastSyncedDate > today) lastSyncedDate = today;
-  await db.bankConnectionAccount.update({
-    where: { id: link.id },
+  // A link remapped meanwhile starts over on its new account.
+  await db.bankConnectionAccount.updateMany({
+    where: { id: link.id, accountId },
     data: {
       ...(balances.booked && {
         bookedBalance: balances.booked.amount,
@@ -154,7 +191,7 @@ export async function syncAccount(
   return { accountId, imported, skipped };
 }
 
-// One sync per connection at a time: the claim is a timestamp, taken over once stale (Review Focus 3).
+// One sync per connection at a time: the claim is a timestamp, taken over once stale (design §Sync engine).
 export async function syncConnection(
   connectionId: string,
   opts: {

@@ -341,6 +341,88 @@ describe("saveBankMapping", () => {
     expect(ownLink.syncFrom).toEqual(new Date("2026-10-28T00:00:00.000Z"));
   });
 
+  it("keeps a created account mapped when the initial fetch fails, so a retry reuses it", async () => {
+    const conn = await connection([{ uid: "uid-fake-a" }]);
+    const before = await db.bankAccount.count({ where: { ownerId: owner } });
+    fake.on("GET", "/accounts/uid-fake-a/transactions", { status: 500, body: {} });
+    expect(
+      await codeOf(
+        save(conn.id, [
+          { connectionAccountId: conn.links[0], action: "CREATE", name: "Retry Test" },
+        ]),
+      ),
+    ).toBe("HTTP");
+    const view = await getMappingView(owner, conn.id);
+    const created = view.accounts[0].accountId!;
+    expect(view.targets.find((t) => t.id === created)?.name).toBe("Retry Test");
+
+    bankReturns(
+      "uid-fake-a",
+      [fakeTx({ date: "2026-10-05", amount: -4, label: "CB RETRY TEST" })],
+      {
+        amount: "96.00",
+        date: "2026-10-31",
+      },
+    );
+    const res = await save(conn.id, [
+      { connectionAccountId: conn.links[0], action: "MAP", accountId: created },
+    ]);
+    expect(res.accounts).toEqual([
+      { accountId: created, name: "Retry Test", imported: 1, skipped: 0 },
+    ]);
+    expect(await db.bankAccount.count({ where: { ownerId: owner } })).toBe(before + 1);
+    const account = await db.bankAccount.findUniqueOrThrow({ where: { id: created } });
+    expect(Number(account.initialBalance)).toBe(100);
+  });
+
+  it("writes nothing while bank sync is unavailable", async () => {
+    const conn = await connection([{ uid: "uid-fake-a" }]);
+    const before = await db.bankAccount.count({ where: { ownerId: owner } });
+    await seedBankSyncConfig({ enabled: false });
+    try {
+      expect(
+        await codeOf(
+          save(conn.id, [
+            { connectionAccountId: conn.links[0], action: "CREATE", name: "Off Test" },
+          ]),
+        ),
+      ).toBe("UNAVAILABLE");
+    } finally {
+      await seedBankSyncConfig();
+    }
+    expect(await db.bankAccount.count({ where: { ownerId: owner } })).toBe(before);
+    expect(
+      (await db.bankConnectionAccount.findUniqueOrThrow({ where: { id: conn.links[0] } }))
+        .accountId,
+    ).toBeNull();
+    expect(fake.calls).toHaveLength(0);
+  });
+
+  it("keeps a hand-edited opening balance when the mapping is saved again", async () => {
+    const conn = await connection([{ uid: "uid-fake-a" }]);
+    bankReturns("uid-fake-a", [], { amount: "80.00", date: "2026-10-31" });
+    const first = await save(conn.id, [
+      { connectionAccountId: conn.links[0], action: "CREATE", name: "Edited Test" },
+    ]);
+    const id = first.accounts[0].accountId;
+    expect(Number((await db.bankAccount.findUniqueOrThrow({ where: { id } })).initialBalance)).toBe(
+      80,
+    );
+    await db.bankAccount.update({ where: { id }, data: { initialBalance: 55 } });
+    await save(conn.id, [{ connectionAccountId: conn.links[0], action: "MAP", accountId: id }]);
+    expect(Number((await db.bankAccount.findUniqueOrThrow({ where: { id } })).initialBalance)).toBe(
+      55,
+    );
+  });
+
+  it("refuses a connection that is no longer active", async () => {
+    const conn = await connection([{ uid: "uid-fake-a" }], { status: "REVOKED" });
+    expect(await codeOf(getMappingView(owner, conn.id))).toBe("NOT_FOUND");
+    expect(
+      await codeOf(save(conn.id, [{ connectionAccountId: conn.links[0], action: "IGNORE" }])),
+    ).toBe("NOT_FOUND");
+  });
+
   it("ignored accounts are never fetched", async () => {
     const conn = await connection([{ uid: "uid-fake-a", accountId: own }, { uid: "uid-fake-b" }]);
     const [a, b] = conn.links;

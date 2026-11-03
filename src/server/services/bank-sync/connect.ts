@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import type { PrismaClient } from "@prisma/client";
 import { db } from "@/server/db";
 import { decrypt, encrypt } from "@/server/crypto/encryption";
 import { hmacExact } from "@/server/crypto/hmac";
@@ -25,7 +26,7 @@ export function clearBankListCache(): void {
   bankCache.clear();
 }
 
-async function availableClient(client?: EnableBankingClient): Promise<EnableBankingClient> {
+export async function availableClient(client?: EnableBankingClient): Promise<EnableBankingClient> {
   if (!(await isBankSyncAvailable())) throw new BankSyncError("UNAVAILABLE");
   const c = client ?? (await bankSyncClient());
   if (!c) throw new BankSyncError("UNAVAILABLE");
@@ -97,7 +98,7 @@ export async function startBankAuth(
   }
 }
 
-// Review Focus 5: a foreign user leaves the request for its owner; every other refusal consumes it.
+// A foreign user leaves the request for its owner; every other refusal consumes it (design §Security and privacy).
 export async function completeBankAuth(
   userId: string,
   input: { state: string; code?: string; error?: string },
@@ -123,33 +124,40 @@ export async function completeBankAuth(
   } catch (e) {
     throw asBankSyncError(e);
   }
-  const validUntil = new Date(session.access?.valid_until);
-  if (Number.isNaN(validUntil.getTime())) throw new BankSyncError("HTTP");
+  let connection;
+  let accounts;
+  try {
+    const validUntil = new Date(session.access?.valid_until);
+    if (Number.isNaN(validUntil.getTime())) throw new BankSyncError("HTTP");
 
-  const accounts = (session.accounts ?? []).flatMap((a, i) =>
-    a.uid
-      ? [
-          {
-            uidEnc: encrypt(a.uid, dataKey),
-            ibanHash: a.account_id?.iban
-              ? hmacExact(normalizeIban(a.account_id.iban), searchKey)
-              : null,
-            name: (a.name?.trim() || `${request.aspspName} ${i + 1}`).slice(0, 100),
-            currency: (a.currency ?? "EUR").slice(0, 3),
-          },
-        ]
-      : [],
-  );
-  const connection = await db.bankConnection.create({
-    data: {
-      userId,
-      aspspName: request.aspspName,
-      aspspCountry: request.aspspCountry,
-      sessionIdEnc: encrypt(session.session_id, dataKey),
-      validUntil,
-      accounts: { create: accounts },
-    },
-  });
+    accounts = (session.accounts ?? []).flatMap((a, i) =>
+      a.uid
+        ? [
+            {
+              uidEnc: encrypt(a.uid, dataKey),
+              ibanHash: a.account_id?.iban
+                ? hmacExact(normalizeIban(a.account_id.iban), searchKey)
+                : null,
+              name: (a.name?.trim() || `${request.aspspName} ${i + 1}`).slice(0, 100),
+              currency: (a.currency ?? "EUR").slice(0, 3),
+            },
+          ]
+        : [],
+    );
+    connection = await db.bankConnection.create({
+      data: {
+        userId,
+        aspspName: request.aspspName,
+        aspspCountry: request.aspspCountry,
+        sessionIdEnc: encrypt(session.session_id, dataKey),
+        validUntil,
+        accounts: { create: accounts },
+      },
+    });
+  } catch (e) {
+    await deleteSessionQuietly(client, session.session_id);
+    throw e;
+  }
   await logEvent({
     userId,
     action: "bank_sync.connection.created",
@@ -194,8 +202,11 @@ export async function listBankConnections(userId: string): Promise<BankConnectio
 }
 
 // Read before a user deletion erases the connections; revoked once it committed.
-export async function userBankSessions(userId: string): Promise<string[]> {
-  const rows = await db.bankConnection.findMany({
+export async function userBankSessions(
+  userId: string,
+  client: Pick<PrismaClient, "bankConnection"> = db,
+): Promise<string[]> {
+  const rows = await client.bankConnection.findMany({
     where: { userId, status: { not: "REVOKED" } },
     select: { sessionIdEnc: true },
   });
@@ -210,14 +221,16 @@ export async function revokeBankSessions(
   if (sessionIdsEnc.length === 0) return;
   const client = opts.client ?? (await bankSyncClient({ requireEnabled: false }).catch(() => null));
   if (!client) return;
-  for (const enc of sessionIdsEnc) {
-    try {
-      await client.deleteSession(decrypt(enc, dataKey));
-    } catch (e) {
-      console.error(
-        "[bilan] bank session revoke failed",
-        e instanceof EnableBankingError ? e.code : "UNKNOWN",
-      );
-    }
+  for (const enc of sessionIdsEnc) await deleteSessionQuietly(client, decrypt(enc, dataKey));
+}
+
+async function deleteSessionQuietly(client: EnableBankingClient, sessionId: string): Promise<void> {
+  try {
+    await client.deleteSession(sessionId);
+  } catch (e) {
+    console.error(
+      "[bilan] bank session revoke failed",
+      e instanceof EnableBankingError ? e.code : "UNKNOWN",
+    );
   }
 }

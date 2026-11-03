@@ -169,7 +169,7 @@ export async function adminDeleteUser(
   confirmEmail: string,
   database: PrismaClient = db,
 ): Promise<void> {
-  const bankSessions = await userBankSessions(targetId);
+  const bankSessions = await userBankSessions(targetId, database);
   await database.$transaction(async (tx) => {
     const { email } = await authorize(tx, "delete", actor.id, targetId);
     if (confirmEmail.trim().toLowerCase() !== email.toLowerCase()) {
@@ -183,7 +183,7 @@ export async function adminDeleteUser(
 
 // RGPD self-deletion; the last active super admin can't leave the instance unadministered.
 export async function deleteOwnAccount(userId: string, database: PrismaClient = db): Promise<void> {
-  const bankSessions = await userBankSessions(userId);
+  const bankSessions = await userBankSessions(userId, database);
   await database.$transaction(async (tx) => {
     const active = await lockActiveSuperAdmins(tx);
     if (active.includes(userId) && active.length === 1) {

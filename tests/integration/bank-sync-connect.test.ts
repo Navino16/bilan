@@ -204,6 +204,20 @@ describe("completeBankAuth", () => {
     await db.bankConnection.delete({ where: { id: connectionId } });
   });
 
+  it("deletes the bank session when the connection cannot be stored", async () => {
+    fake.on("POST", "/sessions", {
+      body: { session_id: "sess-fake-3", access: { valid_until: "not a date" }, accounts: [] },
+    });
+    const state = await start();
+    expect(await codeOf(completeBankAuth(owner, { state, code: "c" }, { client, now }))).toBe(
+      "HTTP",
+    );
+    expect(
+      fake.calls.filter((c) => c.method === "DELETE" && c.path === "/sessions/sess-fake-3"),
+    ).toHaveLength(1);
+    expect(await db.bankConnection.count({ where: { userId: owner } })).toBe(0);
+  });
+
   it("refuses a replayed, expired, foreign or denied callback", async () => {
     // Replayed
     const used = await start();
