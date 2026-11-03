@@ -80,14 +80,19 @@ describe("Enable Banking client", () => {
     expect(bank.calls[1].query.get("continuation_key")).toBe("k1");
     expect(bank.calls[2].query.get("continuation_key")).toBe("k2");
     for (const call of bank.calls) expect(call.query.get("date_from")).toBe("2026-10-01");
+    bank.calls.length = 0;
+    const listed = await clientFor(bank).listTransactions("uid-fake-a", "2026-10-01");
+    expect(listed.transactions).toHaveLength(5);
+    expect(listed.truncated).toBe(false);
   });
 
-  it("stops after MAX_TRANSACTION_PAGES pages", async () => {
+  it("stops after MAX_TRANSACTION_PAGES pages and says so", async () => {
     const bank = fakeEnableBanking();
     bank.on("GET", /\/transactions$/, { body: { transactions: [], continuation_key: "again" } });
-    await clientFor(bank).transactions("uid-fake-a", "2026-10-01");
+    const listed = await clientFor(bank).listTransactions("uid-fake-a", "2026-10-01");
     expect(MAX_TRANSACTION_PAGES).toBe(50);
     expect(bank.calls).toHaveLength(50);
+    expect(listed.truncated).toBe(true);
   });
 
   it("posts the authorization request", async () => {

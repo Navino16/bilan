@@ -235,5 +235,22 @@ describe("deleteTransactions", () => {
 
     await deleteTransactions(owner, [first.id]);
     expect((await revertImport(owner, batch.id)).deleted).toBe(1);
+    expect(await db.syncTombstone.count({ where: { accountId: accA } })).toBe(0);
+  });
+
+  it("records a tombstone for a deleted synced row only", async () => {
+    const batch = await db.importBatch.create({
+      data: { accountId: accA, source: "SYNC", status: "COMMITTING", createdById: owner },
+    });
+    const rows = [{ date: new Date(Date.UTC(2026, 4, 9)), amount: -7, rawLabel: "SYNC DEL ONE" }];
+    const r = await insertRows({ batchId: batch.id, accountId: accA }, rows, { id: owner });
+    await finalizeBatch(batch.id, r, { id: owner }, [accA]);
+    const [synced] = await db.transaction.findMany({ where: { importBatchId: batch.id } });
+    const manual = await tx("Manual del");
+
+    await deleteTransactions(owner, [synced.id, manual]);
+    const stones = await db.syncTombstone.findMany({ where: { accountId: accA } });
+    expect(stones.map((t) => t.externalId)).toEqual([synced.externalId]);
+    await db.syncTombstone.deleteMany({ where: { accountId: accA } });
   });
 });
