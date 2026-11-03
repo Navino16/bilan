@@ -4,7 +4,6 @@ import { syncDueConnections } from "@/server/services/bank-sync/sync";
 
 export const runtime = "nodejs";
 
-// Hourly; each connection is synced once its interval has elapsed (design §Sync engine).
 export async function POST(req: Request): Promise<Response> {
   if (!env.CRON_SECRET) return new Response(null, { status: 404 });
   if (req.headers.get("authorization") !== `Bearer ${env.CRON_SECRET}`) {

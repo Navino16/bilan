@@ -148,7 +148,6 @@ export type SyncNowState =
 export async function syncNowAction(connectionId: string): Promise<SyncNowState> {
   const user = await requireSession();
   const psu = requestOrigin(await headers());
-  // Only an attempt that reached the bank uses up the slot.
   const outcome = await withRefund(
     bankSyncNowLimiter,
     `${user.id}:${connectionId}`,
