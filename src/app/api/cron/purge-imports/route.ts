@@ -1,5 +1,6 @@
 import { env } from "@/env";
 import { logEvent } from "@/server/services/audit";
+import { purgeExpiredAuthRequests } from "@/server/services/bank-sync/connect";
 import { purgeStaleImports } from "@/server/services/imports/revert";
 
 export const runtime = "nodejs";
@@ -11,7 +12,9 @@ export async function POST(req: Request): Promise<Response> {
   if (req.headers.get("authorization") !== `Bearer ${env.CRON_SECRET}`) {
     return new Response(null, { status: 401 });
   }
-  const count = await purgeStaleImports(new Date(Date.now() - STALE_MS));
-  await logEvent({ userId: null, action: "import.purged", metadata: { count } });
-  return Response.json({ purged: count });
+  const now = new Date();
+  const count = await purgeStaleImports(new Date(now.getTime() - STALE_MS));
+  const authRequests = await purgeExpiredAuthRequests(now);
+  await logEvent({ userId: null, action: "import.purged", metadata: { count, authRequests } });
+  return Response.json({ purged: count, authRequests });
 }

@@ -6,11 +6,13 @@ const jobs = vi.hoisted(() => ({
   rollRecurringBudgets: vi.fn(async () => ({ checked: 0, rolled: 0 })),
   purgeAuditOlderThan: vi.fn(async () => 0),
   purgeStaleImports: vi.fn(async () => 0),
+  purgeExpiredAuthRequests: vi.fn(async () => 0),
   logEvent: vi.fn(),
 }));
 vi.mock("@/server/services/budgets", () => jobs);
 vi.mock("@/server/services/audit", () => jobs);
 vi.mock("@/server/services/imports/revert", () => jobs);
+vi.mock("@/server/services/bank-sync/connect", () => jobs);
 
 import { POST as rollBudgets } from "@/app/api/cron/roll-budgets/route";
 import { POST as purgeAudit } from "@/app/api/cron/purge-audit/route";
@@ -46,4 +48,12 @@ describe.each(Object.entries(routes))("cron route %s", (_, route) => {
     env.CRON_SECRET = "s3cret";
     expect((await call(route, "s3cret")).status).toBe(200);
   });
+});
+
+it("purges stale imports and expired bank authorization requests", async () => {
+  env.CRON_SECRET = "s3cret";
+  jobs.purgeStaleImports.mockResolvedValueOnce(2);
+  jobs.purgeExpiredAuthRequests.mockResolvedValueOnce(3);
+  const res = await call(purgeImports, "s3cret");
+  expect(await res.json()).toEqual({ purged: 2, authRequests: 3 });
 });
