@@ -1608,6 +1608,7 @@
       "signupTokens": "Jetons d’invitation",
       "authProviders": "Fournisseurs d’authentification",
       "smtp": "SMTP",
+      "bankSync": "Synchro bancaire",
       "appSettings": "Paramètres",
       "audit": "Journal d’audit"
     },
@@ -1820,6 +1821,48 @@
       "remove": "Supprimer la configuration",
       "removeTitle": "Supprimer la configuration SMTP ?",
       "removeBody": "Plus aucun e-mail ne sera envoyé (invitations, réinitialisations, alertes de sécurité) tant qu’une nouvelle configuration n’est pas enregistrée."
+    },
+    "bankSync": {
+      "overline": "Banque",
+      "title": "Synchronisation bancaire",
+      "subtitle": "Application Enable Banking qui importe les opérations depuis la banque.",
+      "intro": "En mode production restreint, Enable Banking ne donne accès qu’aux comptes liés dans son espace de contrôle : ceux du propriétaire de l’application et de son foyer.",
+      "applicationId": "Identifiant de l’application",
+      "privateKey": "Clé privée (PEM)",
+      "privateKeyKept": "Clé enregistrée : laisser vide pour la conserver (même application)",
+      "privateKeyHint": "Collez la clé privée générée à la création de l’application. Elle est chiffrée et n’est jamais réaffichée.",
+      "enabled": "Proposer la synchronisation bancaire aux utilisateurs",
+      "enabledHint": "Tant qu’elle est désactivée, la fonctionnalité est masquée pour les utilisateurs.",
+      "redirectUrl": "URL de redirection",
+      "redirectUrlHint": "À enregistrer dans l’application Enable Banking. Elle doit être en HTTPS.",
+      "copyRedirect": "Copier l’URL de redirection",
+      "copiedRedirect": "URL copiée",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saved": "Configuration enregistrée.",
+      "error": {
+        "INVALID": "Vérifiez les champs saisis.",
+        "FAILED": "Échec de l’enregistrement."
+      },
+      "test": {
+        "run": "Tester la connexion",
+        "running": "Test…",
+        "hint": "Le test utilise la configuration enregistrée, même désactivée : il lit l’application et compte les banques disponibles en France.",
+        "ok": "Application « {name} » ({environment}), {active, select, true {active} other {inactive}} : {count, plural, one {# banque disponible} other {# banques disponibles}} en France.",
+        "inactive": "L’application n’est pas encore active. Activez-la en liant vos comptes dans l’espace de contrôle Enable Banking, puis relancez le test.",
+        "error": {
+          "NOT_CONFIGURED": "Enregistrez d’abord une configuration.",
+          "RATE_LIMITED": "Trop de tests. Réessayez dans une minute.",
+          "UNAUTHORIZED": "Enable Banking refuse la signature : vérifiez l’identifiant de l’application et la clé privée.",
+          "EXPIRED_SESSION": "Enable Banking a répondu que la session a expiré.",
+          "NOT_FOUND": "Enable Banking ne trouve pas cette application.",
+          "NETWORK": "Enable Banking est injoignable depuis le serveur.",
+          "HTTP": "Enable Banking a renvoyé une erreur. Réessayez plus tard."
+        }
+      },
+      "remove": "Supprimer la configuration",
+      "removeTitle": "Supprimer la configuration de la synchronisation bancaire ?",
+      "removeBody": "La synchronisation bancaire sera indisponible tant qu’une nouvelle configuration n’est pas enregistrée."
     },
     "authProviders": {
       "listTitle": "Fournisseurs configurés",
@@ -2219,6 +2262,7 @@
       "adminSignupTokens": "Jetons d’invitation · Administration",
       "adminAuthProviders": "Fournisseurs d’authentification · Administration",
       "adminSmtp": "SMTP · Administration",
+      "adminBankSync": "Synchro bancaire · Administration",
       "adminAppSettings": "Paramètres · Administration",
       "adminAudit": "Journal d’audit · Administration",
       "login": "Connexion",
@@ -2293,7 +2337,9 @@
       "SAME_PASSWORD": "Doit être différent du mot de passe actuel.",
       "BAD_CONFIRM": "L’e-mail saisi ne correspond pas.",
       "USER_EXISTS": "Un compte existe déjà avec cet e-mail.",
-      "OUT_OF_RANGE": "Nombre entier entre {min, number} et {max, number}."
+      "OUT_OF_RANGE": "Nombre entier entre {min, number} et {max, number}.",
+      "KEY_REQUIRED": "Collez la clé privée : elle n’est conservée que pour le même identifiant d’application.",
+      "INVALID_KEY": "Ce n’est pas une clé privée RSA au format PEM."
     }
   }
 }
