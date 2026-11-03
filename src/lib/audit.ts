@@ -24,6 +24,7 @@ export const AUDIT_ENTITIES = [
   "AppSetting",
   "AuthProvider",
   "SmtpConfig",
+  "BankSyncConfig",
   "AdminSignupToken",
   "Group",
   "GroupInvitation",
@@ -48,11 +49,13 @@ export const SETTING_LABELS: Record<string, string> = {
   "security.admin_2fa_required": "admin2faRequired",
 };
 
+const DEDICATED_SETTING_LABELS = new Set(["smtp", "auth_provider", "bankSync"]);
+
 // i18n key (under `admin.audit.actions`) for an action code. App settings are
 // audited as `settings.<key>.update` for any key, so they share one label.
 export function auditActionMessage(code: string): { key: string; setting?: string } {
   const setting = /^settings\.(.+)\.update$/.exec(code);
-  if (setting && setting[1] !== "smtp" && setting[1] !== "auth_provider") {
+  if (setting && !DEDICATED_SETTING_LABELS.has(setting[1])) {
     return { key: "settingUpdated", setting: setting[1] };
   }
   return { key: code };

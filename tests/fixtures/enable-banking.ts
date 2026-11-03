@@ -1,4 +1,8 @@
 import { generateKeyPairSync, type KeyObject } from "node:crypto";
+import { db } from "@/server/db";
+import { encrypt } from "@/server/crypto/encryption";
+import { dataKey } from "@/server/crypto/keys";
+import { BANK_SYNC_SINGLETON_ID } from "@/server/services/bank-sync/config";
 import type { EbTransaction } from "@/server/services/bank-sync/types";
 
 // In-memory Enable Banking API for tests: wire shapes of the POC calls, fake data only.
@@ -153,4 +157,22 @@ export function testKeyPair(): { privateKeyPem: string; publicKey: KeyObject } {
     };
   }
   return keyPair;
+}
+
+// The config is a singleton shared by test files: seed in beforeAll, clear in afterAll.
+export async function seedBankSyncConfig(opts: { enabled?: boolean } = {}): Promise<void> {
+  const data = {
+    applicationId: "app-test-id",
+    privateKeyEnc: encrypt(testKeyPair().privateKeyPem, dataKey),
+    enabled: opts.enabled ?? true,
+  };
+  await db.bankSyncConfig.upsert({
+    where: { id: BANK_SYNC_SINGLETON_ID },
+    create: { id: BANK_SYNC_SINGLETON_ID, ...data },
+    update: data,
+  });
+}
+
+export async function clearBankSyncConfig(): Promise<void> {
+  await db.bankSyncConfig.deleteMany({ where: { id: BANK_SYNC_SINGLETON_ID } });
 }

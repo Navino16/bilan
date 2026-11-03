@@ -1913,6 +1913,7 @@
         "AppSetting": "Setting",
         "AuthProvider": "Auth provider",
         "SmtpConfig": "SMTP settings",
+        "BankSyncConfig": "Bank sync settings",
         "AdminSignupToken": "Invitation token",
         "Group": "Household",
         "GroupInvitation": "Household invitation",
@@ -1996,6 +1997,11 @@
             "update": "SMTP settings changed",
             "test": "SMTP test",
             "delete": "SMTP settings removed"
+          },
+          "bankSync": {
+            "update": "Bank sync settings changed",
+            "test": "Bank sync test",
+            "delete": "Bank sync settings removed"
           },
           "auth_provider": {
             "update": "Auth provider changed",

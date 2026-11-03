@@ -1913,6 +1913,7 @@
         "AppSetting": "Paramètre",
         "AuthProvider": "Fournisseur d’authentification",
         "SmtpConfig": "Configuration SMTP",
+        "BankSyncConfig": "Configuration de la synchronisation bancaire",
         "AdminSignupToken": "Jeton d’invitation",
         "Group": "Foyer",
         "GroupInvitation": "Invitation de foyer",
@@ -1996,6 +1997,11 @@
             "update": "Configuration SMTP modifiée",
             "test": "Test SMTP",
             "delete": "Configuration SMTP supprimée"
+          },
+          "bankSync": {
+            "update": "Synchronisation bancaire modifiée",
+            "test": "Test de la synchronisation bancaire",
+            "delete": "Synchronisation bancaire supprimée"
           },
           "auth_provider": {
             "update": "Fournisseur d’authentification modifié",
