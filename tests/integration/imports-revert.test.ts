@@ -324,6 +324,16 @@ describe("listRecentImports", () => {
     const times = items.map((i) => i.createdAt.getTime());
     expect([...times].sort((a, b) => b - a)).toEqual(times);
   });
+
+  it("a SYNC batch is neither listed nor revertible", async () => {
+    const id = await committedBatch([{ accountId: accA, labels: ["HIST SYNC"] }]);
+    await db.importBatch.update({ where: { id }, data: { source: "SYNC" } });
+
+    expect((await listRecentImports(owner)).map((i) => i.id)).not.toContain(id);
+    await expect(getRevertImpact(owner, id)).rejects.toThrow("NOT_REVERTIBLE");
+    await expect(revertImport(owner, id)).rejects.toThrow("NOT_REVERTIBLE");
+    expect(await db.transaction.count({ where: { importBatchId: id } })).toBe(1);
+  });
 });
 
 describe("commit claim", () => {

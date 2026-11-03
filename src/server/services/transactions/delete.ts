@@ -12,15 +12,24 @@ export type DeleteImpact = {
   budgeted: number;
 };
 
-async function loadDeletable(
-  actorId: string,
-  rawIds: string[],
-): Promise<{ id: string; accountId: string }[]> {
+type Deletable = {
+  id: string;
+  accountId: string;
+  externalId: string | null;
+  importBatch: { source: string } | null;
+};
+
+async function loadDeletable(actorId: string, rawIds: string[]): Promise<Deletable[]> {
   const ids = [...new Set(rawIds)];
   if (ids.length === 0 || ids.length > MAX_DELETE_IDS) throw new TransactionAccessError("INVALID");
   const rows = await db.transaction.findMany({
     where: { id: { in: ids } },
-    select: { id: true, accountId: true },
+    select: {
+      id: true,
+      accountId: true,
+      externalId: true,
+      importBatch: { select: { source: true } },
+    },
   });
   if (rows.length !== ids.length) throw new TransactionAccessError("NOT_FOUND");
   for (const accountId of new Set(rows.map((r) => r.accountId))) {
@@ -72,6 +81,15 @@ export async function deleteTransactions(
     if (deleted !== ids.length) throw new TransactionAccessError("NOT_FOUND");
     const linkIds = [...new Set(memberships.map((m) => m.linkId))];
     const linksDissolved = await dissolveUndersizedLinks(tx, linkIds);
+    // Later syncs never re-insert a synced row the user deleted (design §Deleting synced rows).
+    const tombstones = rows.flatMap((r) =>
+      r.importBatch?.source === "SYNC" && r.externalId
+        ? [{ accountId: r.accountId, externalId: r.externalId }]
+        : [],
+    );
+    if (tombstones.length) {
+      await tx.syncTombstone.createMany({ data: tombstones, skipDuplicates: true });
+    }
     await tx.auditLog.createMany({
       data: rows.map((r) => ({
         userId: actorId,

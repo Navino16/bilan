@@ -1,10 +1,18 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { db } from "@/server/db";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
 import { exportParts, exportUserData, deleteUser, userDataJson } from "@/server/services/rgpd";
 import { renameMerchant } from "@/server/services/merchants";
 import { encrypt } from "@/server/crypto/encryption";
-import { dataKey } from "@/server/crypto/keys";
+import { dataKey, searchKey } from "@/server/crypto/keys";
+import { hmacExact } from "@/server/crypto/hmac";
+import {
+  clearBankSyncConfig,
+  FAKE_IBAN,
+  fakeEnableBanking,
+  seedBankSyncConfig,
+  type FakeBank,
+} from "../fixtures/enable-banking";
 
 const userId = "rgpd_owner";
 const ownerB = "rgpd_ownerB";
@@ -15,6 +23,29 @@ let groupId: string;
 let txId: string;
 let batchId: string;
 let linkId: string;
+let fake: FakeBank;
+
+const bankConnection = (owner: string, accountId: string | null = null) =>
+  db.bankConnection.create({
+    data: {
+      userId: owner,
+      aspspName: "Banque Fictive",
+      aspspCountry: "FR",
+      sessionIdEnc: encrypt("sess-fake-1", dataKey),
+      validUntil: new Date("2027-05-02T09:00:00.000Z"),
+      accounts: {
+        create: {
+          uidEnc: encrypt("uid-fake-a", dataKey),
+          ibanHash: hmacExact(FAKE_IBAN, searchKey),
+          name: "Compte Courant Test",
+          currency: "EUR",
+          accountId,
+        },
+      },
+    },
+  });
+const sessionDeletes = () =>
+  fake.calls.filter((c) => c.method === "DELETE" && c.path === "/sessions/sess-fake-1");
 
 beforeAll(async () => {
   await db.user.deleteMany({ where: { id: userId } });
@@ -90,6 +121,14 @@ beforeAll(async () => {
 
   await renameMerchant(userId, "FONCIA LOYER", "Loyer");
 
+  await bankConnection(userId, accountId);
+  await db.bankAuthRequest.create({
+    data: { stateHash: "rgpd-state-hash", userId, aspspName: "Banque Fictive", aspspCountry: "FR" },
+  });
+  await seedBankSyncConfig();
+  fake = fakeEnableBanking();
+  vi.stubGlobal("fetch", fake.fetch);
+
   groupId = (await db.group.create({ data: { name: "Foyer", createdById: userId } })).id;
   await db.groupMember.create({ data: { groupId, userId, role: "OWNER" } });
   await db.groupInvitation.create({
@@ -107,6 +146,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  vi.unstubAllGlobals();
+  await clearBankSyncConfig();
   await db.transactionLink.deleteMany({ where: { createdById: userId } });
   await db.transaction.deleteMany({ where: { accountId } });
   await db.bankAccount.deleteMany({ where: { ownerId: userId } });
@@ -324,12 +365,44 @@ describe("rgpd", () => {
     }
   });
 
+  it("exportUserData lists the bank connections without their secrets", async () => {
+    const data = await exportUserData(userId);
+    expect(data.bankConnections).toEqual([
+      {
+        aspspName: "Banque Fictive",
+        aspspCountry: "FR",
+        status: "ACTIVE",
+        validUntil: new Date("2027-05-02T09:00:00.000Z"),
+        createdAt: expect.any(Date),
+        lastSyncAt: null,
+        accounts: [
+          {
+            name: "Compte Courant Test",
+            currency: "EUR",
+            accountId,
+            syncFrom: null,
+            lastSyncedDate: null,
+          },
+        ],
+      },
+    ]);
+    const json = JSON.stringify(data);
+    for (const secret of ["uidEnc", "sessionIdEnc", "ibanHash", "sess-fake-1", "uid-fake-a"]) {
+      expect(json).not.toContain(secret);
+    }
+  });
+
   it("deleteUser cascades owned data, clears FK-less rows, revokes sessions, keeps an anonymous audit entry", async () => {
     await db.session.create({
       data: { id: "s1", userId, token: "t1", expiresAt: new Date(Date.now() + 1e6) },
     });
+    fake.calls.length = 0;
     await deleteUser(userId);
     expect(await db.user.findUnique({ where: { id: userId } })).toBeNull();
+    expect(await db.bankConnection.count({ where: { userId } })).toBe(0);
+    expect(await db.bankConnectionAccount.count({ where: { accountId } })).toBe(0);
+    expect(await db.bankAuthRequest.count({ where: { userId } })).toBe(0);
+    expect(sessionDeletes()).toHaveLength(1);
     expect(await db.session.count({ where: { userId } })).toBe(0);
     expect(await db.bankAccount.count({ where: { ownerId: userId } })).toBe(0);
     expect(await db.merchantAlias.count({ where: { userId } })).toBe(0);
@@ -373,5 +446,17 @@ describe("rgpd", () => {
     const succMember = await db.groupMember.findFirst({ where: { groupId: g.id, userId: succ } });
     expect(succMember?.role).toBe("OWNER"); // promoted
     expect(await db.groupMember.count({ where: { groupId: g.id, userId: ownerB } })).toBe(0);
+  });
+
+  it("deleteUser goes on when the bank refuses to delete a session", async () => {
+    const failing = "rgpd_bank_fail";
+    await db.user.create({ data: { id: failing, email: "rgpd-bank-fail@bilan.local" } });
+    await bankConnection(failing);
+    fake.on("DELETE", /^\/sessions\//, { status: 500, body: {} });
+    fake.calls.length = 0;
+    await deleteUser(failing);
+    expect(sessionDeletes()).toHaveLength(1);
+    expect(await db.user.findUnique({ where: { id: failing } })).toBeNull();
+    expect(await db.bankConnection.count({ where: { userId: failing } })).toBe(0);
   });
 });

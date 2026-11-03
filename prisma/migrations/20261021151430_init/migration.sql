@@ -205,6 +205,73 @@ CREATE TABLE `BankSyncConfig` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
+CREATE TABLE `BankConnection` (
+    `id` VARCHAR(191) NOT NULL,
+    `userId` VARCHAR(191) NOT NULL,
+    `aspspName` VARCHAR(191) NOT NULL,
+    `aspspCountry` VARCHAR(2) NOT NULL,
+    `sessionIdEnc` TEXT NOT NULL,
+    `validUntil` DATETIME(3) NOT NULL,
+    `status` VARCHAR(191) NOT NULL DEFAULT 'ACTIVE',
+    `lastSyncAt` DATETIME(3) NULL,
+    `lastError` VARCHAR(191) NULL,
+    `syncStartedAt` DATETIME(3) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    INDEX `BankConnection_userId_idx`(`userId`),
+    INDEX `BankConnection_status_idx`(`status`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `BankConnectionAccount` (
+    `id` VARCHAR(191) NOT NULL,
+    `connectionId` VARCHAR(191) NOT NULL,
+    `uidEnc` TEXT NOT NULL,
+    `ibanHash` VARCHAR(191) NULL,
+    `name` VARCHAR(191) NOT NULL,
+    `currency` VARCHAR(3) NOT NULL,
+    `accountId` VARCHAR(191) NULL,
+    `syncFrom` DATETIME(3) NULL,
+    `lastSyncedDate` DATETIME(3) NULL,
+    `bookedBalance` DECIMAL(12, 2) NULL,
+    `bookedBalanceDate` DATETIME(3) NULL,
+    `expectedBalance` DECIMAL(12, 2) NULL,
+    `expectedBalanceDate` DATETIME(3) NULL,
+    `pendingCount` INTEGER NOT NULL DEFAULT 0,
+    `pendingTotal` DECIMAL(12, 2) NOT NULL DEFAULT 0,
+
+    INDEX `BankConnectionAccount_connectionId_idx`(`connectionId`),
+    INDEX `BankConnectionAccount_accountId_idx`(`accountId`),
+    INDEX `BankConnectionAccount_ibanHash_idx`(`ibanHash`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `BankAuthRequest` (
+    `id` VARCHAR(191) NOT NULL,
+    `stateHash` VARCHAR(191) NOT NULL,
+    `userId` VARCHAR(191) NOT NULL,
+    `aspspName` VARCHAR(191) NOT NULL,
+    `aspspCountry` VARCHAR(2) NOT NULL,
+    `reconnectOf` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    UNIQUE INDEX `BankAuthRequest_stateHash_key`(`stateHash`),
+    INDEX `BankAuthRequest_createdAt_idx`(`createdAt`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `SyncTombstone` (
+    `accountId` VARCHAR(191) NOT NULL,
+    `externalId` VARCHAR(191) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    PRIMARY KEY (`accountId`, `externalId`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
 CREATE TABLE `AppSetting` (
     `key` VARCHAR(191) NOT NULL,
     `value` JSON NOT NULL,
@@ -572,6 +639,21 @@ ALTER TABLE `UserRole` ADD CONSTRAINT `UserRole_roleId_fkey` FOREIGN KEY (`roleI
 
 -- AddForeignKey
 ALTER TABLE `UserPreference` ADD CONSTRAINT `UserPreference_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `BankConnection` ADD CONSTRAINT `BankConnection_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `BankConnectionAccount` ADD CONSTRAINT `BankConnectionAccount_connectionId_fkey` FOREIGN KEY (`connectionId`) REFERENCES `BankConnection`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `BankConnectionAccount` ADD CONSTRAINT `BankConnectionAccount_accountId_fkey` FOREIGN KEY (`accountId`) REFERENCES `BankAccount`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `BankAuthRequest` ADD CONSTRAINT `BankAuthRequest_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `SyncTombstone` ADD CONSTRAINT `SyncTombstone_accountId_fkey` FOREIGN KEY (`accountId`) REFERENCES `BankAccount`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `BankAccount` ADD CONSTRAINT `BankAccount_ownerId_fkey` FOREIGN KEY (`ownerId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

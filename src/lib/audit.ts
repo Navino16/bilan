@@ -14,6 +14,7 @@ export const AUDIT_FAMILIES = [
   "link",
   "mail",
   "audit",
+  "bank_sync",
 ] as const;
 
 export const AUDIT_ENTITIES = [
@@ -25,6 +26,7 @@ export const AUDIT_ENTITIES = [
   "AuthProvider",
   "SmtpConfig",
   "BankSyncConfig",
+  "BankConnection",
   "AdminSignupToken",
   "Group",
   "GroupInvitation",

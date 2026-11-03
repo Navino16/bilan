@@ -1,6 +1,14 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { isAPIError } from "better-auth/api";
 import { db } from "@/server/db";
+import { encrypt } from "@/server/crypto/encryption";
+import { dataKey } from "@/server/crypto/keys";
+import {
+  clearBankSyncConfig,
+  fakeEnableBanking,
+  seedBankSyncConfig,
+  type FakeBank,
+} from "../fixtures/enable-banking";
 import { getAuth } from "@/server/auth";
 import { seedRolesAndPermissions } from "@/../prisma/seed";
 import { buildPermissionsChecker } from "@/server/auth/permissions";
@@ -31,6 +39,7 @@ const KEYS = [
   "coOwner",
   "member2",
   "loner",
+  "banker",
 ];
 
 const emailOf = (key: string) => `lc-${key}+${stamp}@bilan.local`;
@@ -318,5 +327,42 @@ describe("deleteOwnAccount", () => {
       where: { action: "user.deleted", entityId: ids.super1 },
     });
     expect(audit?.userId).toBeNull();
+  });
+});
+
+describe("bank sessions of a deleted user", () => {
+  let fake: FakeBank;
+  const deletes = () => fake.calls.filter((c) => c.method === "DELETE");
+
+  beforeAll(async () => {
+    await seedBankSyncConfig();
+    fake = fakeEnableBanking();
+    vi.stubGlobal("fetch", fake.fetch);
+    await db.bankConnection.create({
+      data: {
+        userId: ids.banker,
+        aspspName: "Banque Fictive",
+        aspspCountry: "FR",
+        sessionIdEnc: encrypt("sess-fake-1", dataKey),
+        validUntil: new Date("2027-05-02T09:00:00.000Z"),
+      },
+    });
+  });
+
+  afterAll(async () => {
+    vi.unstubAllGlobals();
+    await clearBankSyncConfig();
+  });
+
+  it("are revoked only once the deletion went through", async () => {
+    expect(
+      await refusal(adminDeleteUser({ id: ids.super2 }, ids.banker, "wrong@bilan.local")),
+    ).toBe("CONFIRMATION");
+    expect(deletes()).toHaveLength(0);
+    expect(await db.bankConnection.count({ where: { userId: ids.banker } })).toBe(1);
+
+    await adminDeleteUser({ id: ids.super2 }, ids.banker, emailOf("banker"));
+    expect(deletes().map((c) => c.path)).toEqual(["/sessions/sess-fake-1"]);
+    expect(await db.bankConnection.count({ where: { userId: ids.banker } })).toBe(0);
   });
 });

@@ -339,7 +339,108 @@
       "AMOUNT_PRECISION": "The amount can’t have more than 2 decimals."
     },
     "legendOthers": "Others · {count, number}",
-    "legendNegative": "Hatched: negative balance"
+    "legendNegative": "Hatched: negative balance",
+    "bankSync": {
+      "connect": "Connect my bank",
+      "dialog": {
+        "overline": "Bank sync",
+        "title": "Connect my bank",
+        "intro": "Pick your bank: you will authorize it to share your accounts with Bilan, read-only, through Enable Banking. You then come back here to map the accounts.",
+        "country": "Country",
+        "search": "Search for a bank",
+        "searchPlaceholder": "Bank name",
+        "banks": "Banks",
+        "loading": "Loading banks…",
+        "empty": "No bank matches.",
+        "consent": "Access valid for up to {days, plural, one {# day} other {# days}}",
+        "cancel": "Cancel",
+        "submit": "Continue to the bank",
+        "submitting": "Redirecting…"
+      },
+      "error": {
+        "UNAVAILABLE": "Bank sync is not available on this instance.",
+        "UNKNOWN_BANK": "Pick a bank from the list.",
+        "RATE_LIMITED_LOCAL": "Too many attempts. Try again in a few minutes.",
+        "RATE_LIMITED": "The bank limits access for today. Try again later.",
+        "APP_INACTIVE": "The instance’s Enable Banking application is not active: let the administrator know.",
+        "UNAUTHORIZED": "Enable Banking refused access: let the administrator know.",
+        "EXPIRED_SESSION": "The authorization given to the bank has expired. Reconnect the bank.",
+        "NETWORK": "Enable Banking does not answer. Try again later.",
+        "NOT_FOUND": "Bank connection not found.",
+        "HTTP": "Enable Banking returned an error. Try again later.",
+        "FAILED": "Failed. Try again."
+      },
+      "result": {
+        "UNAVAILABLE": "Bank sync is not available on this instance.",
+        "UNKNOWN_BANK": "Pick a bank from the list.",
+        "RATE_LIMITED_LOCAL": "Too many attempts. Try again in a few minutes.",
+        "RATE_LIMITED": "The bank limits access for today. Try again later.",
+        "APP_INACTIVE": "The instance’s Enable Banking application is not active: let the administrator know.",
+        "UNAUTHORIZED": "Enable Banking refused access: let the administrator know.",
+        "EXPIRED_SESSION": "The authorization given to the bank has expired. Reconnect the bank.",
+        "NETWORK": "Enable Banking does not answer. Try again later.",
+        "NOT_FOUND": "Bank connection not found.",
+        "HTTP": "Enable Banking returned an error. Try again later.",
+        "FAILED": "Failed. Try again.",
+        "SIGNED_OUT": "Your session ended during the authorization. Sign in, then connect the bank again.",
+        "UNKNOWN_STATE": "This return from the bank is unknown or already used. Connect the bank again.",
+        "EXPIRED_STATE": "The authorization took more than 15 minutes. Connect the bank again.",
+        "WRONG_USER": "This authorization was started by another user.",
+        "DENIED": "Access to the accounts was refused at the bank. Nothing was connected."
+      },
+      "connections": {
+        "overline": "Banks",
+        "title": "Bank connections",
+        "validUntil": "Access valid until {date}",
+        "mapped": "Synced: {names}",
+        "unmapped": "No account mapped",
+        "map": "Map accounts",
+        "status": {
+          "ACTIVE": "Active",
+          "EXPIRED": "Expired",
+          "REVOKED": "Revoked",
+          "ERROR": "Failing"
+        }
+      },
+      "mapping": {
+        "overline": "Bank sync",
+        "title": "Map the accounts of {bank}",
+        "intro": "For each account the bank returned, pick the Bilan account to keep up to date, create one, or ignore it. The history is imported right away; duplicates of your file imports are left out.",
+        "empty": "The bank returned no account.",
+        "target": "Bilan account",
+        "ignore": "Ignore this account",
+        "create": "Create a new account",
+        "syncedTarget": "{name} (already synced)",
+        "name": "Name of the new account",
+        "syncFrom": "Import from",
+        "syncFromHint": "Defaults to the day of the account’s last transaction (duplicates are left out); for an empty account, all the history the bank provides.",
+        "syncedElsewhere": "Already synced by your other connection.",
+        "unsupportedCurrency": "{currency} account: only euro accounts are synced.",
+        "submit": "Map and import",
+        "submitting": "Importing…",
+        "done": "Import finished",
+        "imported": "{name}: {count, plural, =0 {no new transaction} one {# transaction imported} other {# transactions imported}}",
+        "back": "Back to accounts",
+        "error": {
+          "UNAVAILABLE": "Bank sync is not available on this instance.",
+          "UNKNOWN_BANK": "Pick a bank from the list.",
+          "RATE_LIMITED_LOCAL": "Too many attempts. Try again in a few minutes.",
+          "RATE_LIMITED": "The bank limits access for today. Try again later.",
+          "APP_INACTIVE": "The instance’s Enable Banking application is not active: let the administrator know.",
+          "UNAUTHORIZED": "Enable Banking refused access: let the administrator know.",
+          "EXPIRED_SESSION": "The authorization given to the bank has expired. Reconnect the bank.",
+          "NETWORK": "Enable Banking does not answer. Try again later.",
+          "NOT_FOUND": "Bank connection not found.",
+          "HTTP": "Enable Banking returned an error. Try again later.",
+          "FAILED": "Failed. Try again.",
+          "INVALID": "Check the fields.",
+          "FORBIDDEN": "You can only map your own accounts, not archived.",
+          "ALREADY_SYNCED": "One of these accounts is already synced by another connection.",
+          "UNSUPPORTED_CURRENCY": "Only euro accounts can be synced.",
+          "BUSY": "A sync of this bank is already running. Try again in a moment."
+        }
+      }
+    }
   },
   "rules": {
     "pageTitle": "Categories & rules",
@@ -1946,7 +2047,8 @@
         "budget": "Budgets",
         "link": "Links",
         "mail": "Emails",
-        "audit": "Audit log"
+        "audit": "Audit log",
+        "bank_sync": "Bank sync"
       },
       "entities": {
         "User": "User",
@@ -1957,6 +2059,7 @@
         "AuthProvider": "Auth provider",
         "SmtpConfig": "SMTP settings",
         "BankSyncConfig": "Bank sync settings",
+        "BankConnection": "Bank connection",
         "AdminSignupToken": "Invitation token",
         "Group": "Household",
         "GroupInvitation": "Household invitation",
@@ -2144,6 +2247,14 @@
         },
         "audit": {
           "purged": "Audit log purged"
+        },
+        "bank_sync": {
+          "connection": {
+            "created": "Bank connected"
+          },
+          "mapping": {
+            "saved": "Bank accounts mapped"
+          }
         }
       }
     },
@@ -2272,7 +2383,8 @@
       "verifyEmail": "Email verification",
       "setup": "Setup",
       "forbidden": "Access denied",
-      "notFound": "Page not found"
+      "notFound": "Page not found",
+      "bankMapping": "Map accounts · Accounts"
     }
   },
   "onboarding": {
@@ -2339,7 +2451,9 @@
       "USER_EXISTS": "An account already exists with this email.",
       "OUT_OF_RANGE": "Whole number from {min, number} to {max, number}.",
       "KEY_REQUIRED": "Paste the private key: it is only kept for the same application ID.",
-      "INVALID_KEY": "This is not an RSA private key in PEM format."
+      "INVALID_KEY": "This is not an RSA private key in PEM format.",
+      "DATE_INVALID": "Invalid date.",
+      "DATE_IN_FUTURE": "The date cannot be in the future."
     }
   }
 }

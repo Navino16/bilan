@@ -2,6 +2,7 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import { db } from "@/server/db";
 import { LONG_TX_TIMEOUT } from "@/server/db/timeouts";
 import { logEvent } from "@/server/services/audit";
+import { revokeBankSessions, userBankSessions } from "@/server/services/bank-sync/connect";
 import { eraseUser, groupSuccessions, logUserDeleted } from "@/server/services/rgpd";
 import { mayHandleRole, topRole, type InstanceRole } from "@/lib/instance-roles";
 import { lockActiveSuperAdmins } from "@/server/services/users/roles";
@@ -168,6 +169,7 @@ export async function adminDeleteUser(
   confirmEmail: string,
   database: PrismaClient = db,
 ): Promise<void> {
+  const bankSessions = await userBankSessions(targetId, database);
   await database.$transaction(async (tx) => {
     const { email } = await authorize(tx, "delete", actor.id, targetId);
     if (confirmEmail.trim().toLowerCase() !== email.toLowerCase()) {
@@ -175,11 +177,13 @@ export async function adminDeleteUser(
     }
     await eraseUser(tx, targetId);
   }, LONG_TX_TIMEOUT);
+  await revokeBankSessions(bankSessions);
   await logUserDeleted(targetId, actor);
 }
 
 // RGPD self-deletion; the last active super admin can't leave the instance unadministered.
 export async function deleteOwnAccount(userId: string, database: PrismaClient = db): Promise<void> {
+  const bankSessions = await userBankSessions(userId, database);
   await database.$transaction(async (tx) => {
     const active = await lockActiveSuperAdmins(tx);
     if (active.includes(userId) && active.length === 1) {
@@ -187,5 +191,6 @@ export async function deleteOwnAccount(userId: string, database: PrismaClient = 
     }
     await eraseUser(tx, userId);
   }, LONG_TX_TIMEOUT);
+  await revokeBankSessions(bankSessions);
   await logUserDeleted(userId, { id: userId });
 }

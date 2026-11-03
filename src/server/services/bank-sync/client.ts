@@ -68,6 +68,12 @@ export type EnableBankingClient = {
   deleteSession(sessionId: string): Promise<void>;
   balances(uid: string, psu?: Psu): Promise<EbBalance[]>;
   transactions(uid: string, dateFrom: string, psu?: Psu): Promise<EbTransaction[]>;
+  // `truncated`: MAX_TRANSACTION_PAGES was reached with pages left.
+  listTransactions(
+    uid: string,
+    dateFrom: string,
+    psu?: Psu,
+  ): Promise<{ transactions: EbTransaction[]; truncated: boolean }>;
 };
 
 async function errorFields(res: Response): Promise<{ error?: unknown; message?: unknown }> {
@@ -153,6 +159,28 @@ export function createEnableBankingClient(opts: {
 
   const account = (uid: string, leaf: string) => `/accounts/${encodeURIComponent(uid)}/${leaf}`;
 
+  async function listTransactions(
+    uid: string,
+    dateFrom: string,
+    psu?: Psu,
+  ): Promise<{ transactions: EbTransaction[]; truncated: boolean }> {
+    const rows: EbTransaction[] = [];
+    let key: string | undefined;
+    let pages = 0;
+    do {
+      const query: Record<string, string> = { date_from: dateFrom };
+      if (key) query.continuation_key = key;
+      const r = await request<{
+        transactions: EbTransaction[];
+        continuation_key?: string | null;
+      }>("GET", account(uid, "transactions"), { query, psu });
+      rows.push(...list(r.transactions));
+      key = r.continuation_key ?? undefined;
+      pages++;
+    } while (key && pages < MAX_TRANSACTION_PAGES);
+    return { transactions: rows, truncated: Boolean(key) };
+  }
+
   return {
     application: () => request<EbApplication>("GET", "/application"),
 
@@ -184,21 +212,9 @@ export function createEnableBankingClient(opts: {
     },
 
     async transactions(uid, dateFrom, psu) {
-      const rows: EbTransaction[] = [];
-      let key: string | undefined;
-      let pages = 0;
-      do {
-        const query: Record<string, string> = { date_from: dateFrom };
-        if (key) query.continuation_key = key;
-        const r = await request<{
-          transactions: EbTransaction[];
-          continuation_key?: string | null;
-        }>("GET", account(uid, "transactions"), { query, psu });
-        rows.push(...list(r.transactions));
-        key = r.continuation_key ?? undefined;
-        pages++;
-      } while (key && pages < MAX_TRANSACTION_PAGES);
-      return rows;
+      return (await listTransactions(uid, dateFrom, psu)).transactions;
     },
+
+    listTransactions,
   };
 }
