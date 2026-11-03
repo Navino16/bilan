@@ -5,11 +5,17 @@ import { redirect } from "next/navigation";
 import { isBankCountry } from "@/lib/bank-sync";
 import { parseMappingForm } from "@/lib/schemas/bank-sync";
 import { requirePermission, requireSession } from "@/server/auth/permissions";
-import { bankAuthStartLimiter, bankSyncTestLimiter } from "@/server/auth/rate-limit";
+import {
+  bankAuthStartLimiter,
+  bankSyncNowLimiter,
+  bankSyncTestLimiter,
+  withRefund,
+} from "@/server/auth/rate-limit";
 import { requestOrigin } from "@/server/http/client-ip";
 import { listBanks, startBankAuth, type BankOption } from "@/server/services/bank-sync/connect";
 import { BankSyncError, type BankSyncFlowCode } from "@/server/services/bank-sync/errors";
 import { saveBankMapping } from "@/server/services/bank-sync/mapping";
+import { syncNow } from "@/server/services/bank-sync/status";
 import {
   BankSyncConfigError,
   bankSyncConfigSchema,
@@ -31,6 +37,7 @@ export async function saveBankSyncConfigAction(
     applicationId: String(formData.get("applicationId") ?? ""),
     privateKey: String(formData.get("privateKey") ?? ""),
     enabled: ["on", "true"].includes(String(formData.get("enabled") ?? "")),
+    syncIntervalHours: Number(formData.get("syncIntervalHours") ?? 6),
   };
   const parsed = bankSyncConfigSchema.safeParse(input);
   if (!parsed.success) return invalidInput(parsed.error, input);
@@ -105,7 +112,7 @@ export async function startBankAuthAction(
 }
 
 export type BankMappingState =
-  | { ok: true; accounts: { name: string; imported: number }[] }
+  | { ok: true; accounts: { name: string; imported: number; truncated: boolean }[] }
   | FormFailure
   | null;
 
@@ -121,8 +128,49 @@ export async function saveBankMappingAction(
     const { accounts } = await saveBankMapping(user.id, connectionId, parsed.choices, {
       psu: requestOrigin(await headers()),
     });
-    return { ok: true, accounts: accounts.map((a) => ({ name: a.name, imported: a.imported })) };
+    return {
+      ok: true,
+      accounts: accounts.map((a) => ({
+        name: a.name,
+        imported: a.imported,
+        truncated: a.truncated,
+      })),
+    };
   } catch (e) {
     return { ok: false, error: flowCode(e, "bank mapping") };
   }
+}
+
+export type SyncNowState =
+  | { ok: true; imported: number; truncated: boolean }
+  | { ok: false; error: BankSyncFlowCode | "FAILED" };
+
+export async function syncNowAction(connectionId: string): Promise<SyncNowState> {
+  const user = await requireSession();
+  const psu = requestOrigin(await headers());
+  const outcome = await withRefund(
+    bankSyncNowLimiter,
+    `${user.id}:${connectionId}`,
+    async (): Promise<{ state: SyncNowState; calledBank: boolean }> => {
+      try {
+        const res = await syncNow(user.id, connectionId, psu);
+        if (res.status === "BUSY") {
+          return { state: { ok: false, error: "BUSY" }, calledBank: false };
+        }
+        if (res.status === "FAILED") {
+          return { state: { ok: false, error: res.code }, calledBank: true };
+        }
+        const state: SyncNowState = {
+          ok: true,
+          imported: res.accounts.reduce((n, a) => n + a.imported, 0),
+          truncated: res.accounts.some((a) => a.truncated),
+        };
+        return { state, calledBank: true };
+      } catch (e) {
+        return { state: { ok: false, error: flowCode(e, "bank sync now") }, calledBank: false };
+      }
+    },
+    (r) => r.calledBank,
+  );
+  return outcome.allowed ? outcome.result.state : { ok: false, error: "RATE_LIMITED_LOCAL" };
 }

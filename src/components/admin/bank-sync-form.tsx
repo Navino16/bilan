@@ -1,17 +1,20 @@
 "use client";
 
 import { useActionState, useRef, useState, useTransition } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { PlugZap, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ConfirmDialog } from "@/components/shell/confirm-dialog";
 import { CopyLinkButton } from "@/components/shell/copy-link-button";
 import { useActionForm } from "@/components/forms/use-action-form";
 import { FieldError } from "@/components/forms/field-error";
+import { SYNC_INTERVALS } from "@/lib/bank-sync";
+import { formatDate } from "@/lib/format";
 import {
   deleteBankSyncConfigAction,
   saveBankSyncConfigAction,
@@ -19,16 +22,24 @@ import {
   type BankSyncTestState,
 } from "@/server/transport/actions/bank-sync";
 
-export type BankSyncDefaults = { applicationId: string; enabled: boolean; hasKey: true } | null;
+export type BankSyncDefaults = {
+  applicationId: string;
+  enabled: boolean;
+  hasKey: true;
+  syncIntervalHours: number;
+} | null;
 
 export function BankSyncForm({
   defaults,
   redirectUrl,
+  rateLimitedAt,
 }: {
   defaults: BankSyncDefaults;
   redirectUrl: string;
+  rateLimitedAt: Date | null;
 }) {
   const t = useTranslations("admin.bankSync");
+  const locale = useLocale();
   // Remounts the fields once a removal reaches the props: inputs keep their mount-time value.
   const configured = defaults !== null;
   const [shown, setShown] = useState({ configured, generation: 0 });
@@ -39,6 +50,13 @@ export function BankSyncForm({
   return (
     <div className="space-y-6">
       <p className="text-muted-foreground text-sm">{t("intro")}</p>
+      {rateLimitedAt && (
+        <Alert data-slot="bank-sync-rate-limited">
+          <AlertDescription>
+            {t("rateLimited", { date: formatDate(rateLimitedAt, locale) })}
+          </AlertDescription>
+        </Alert>
+      )}
       <div className="space-y-2">
         <Label htmlFor="bs-redirectUrl">{t("redirectUrl")}</Label>
         <div className="flex items-center gap-1">
@@ -129,6 +147,26 @@ function ConfigForm({ defaults }: { defaults: BankSyncDefaults }) {
             {t("enabledHint")}
           </p>
         </div>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="bs-syncIntervalHours">{t("syncInterval")}</Label>
+        <NativeSelect
+          id="bs-syncIntervalHours"
+          name="syncIntervalHours"
+          defaultValue={String(defaults?.syncIntervalHours ?? SYNC_INTERVALS[0])}
+          className="sm:max-w-64"
+          {...form.fieldProps("syncIntervalHours", "bs-syncIntervalHours-hint")}
+        >
+          {SYNC_INTERVALS.map((hours) => (
+            <option key={hours} value={hours}>
+              {t("syncIntervalOption", { hours })}
+            </option>
+          ))}
+        </NativeSelect>
+        <p id="bs-syncIntervalHours-hint" className="text-muted-foreground text-xs">
+          {t("syncIntervalHint")}
+        </p>
+        <FieldError form={form} name="syncIntervalHours" />
       </div>
       {state?.ok && (
         <Alert>

@@ -108,7 +108,14 @@ beforeEach(async () => {
   await db.bankAccount.update({ where: { id: courant }, data: { initialBalance: 0 } });
   await db.bankConnection.update({
     where: { id: connectionId },
-    data: { syncStartedAt: null, lastSyncAt: null, lastError: null },
+    data: {
+      status: "ACTIVE",
+      syncStartedAt: null,
+      lastSyncAt: null,
+      lastError: null,
+      failureCount: 0,
+      retryAfter: null,
+    },
   });
   await db.bankConnectionAccount.update({
     where: { id: linkId },
@@ -152,7 +159,7 @@ describe("syncConnection", () => {
     const res = await sync();
     expect(res).toEqual({
       status: "OK",
-      accounts: [{ accountId: courant, imported: 2, skipped: 0 }],
+      accounts: [{ accountId: courant, imported: 2, skipped: 0, truncated: false }],
     });
 
     const batches = await db.importBatch.findMany({ where: { accountId: courant } });
@@ -193,14 +200,14 @@ describe("syncConnection", () => {
     const res = await sync();
     expect(res).toEqual({
       status: "OK",
-      accounts: [{ accountId: courant, imported: 0, skipped: 1 }],
+      accounts: [{ accountId: courant, imported: 0, skipped: 1, truncated: false }],
     });
     expect(await db.importBatch.count({ where: { accountId: courant } })).toBe(1);
 
     bankReturns([]);
     expect(await sync()).toEqual({
       status: "OK",
-      accounts: [{ accountId: courant, imported: 0, skipped: 0 }],
+      accounts: [{ accountId: courant, imported: 0, skipped: 0, truncated: false }],
     });
     expect(await db.importBatch.count({ where: { accountId: courant } })).toBe(1);
   });
@@ -237,7 +244,7 @@ describe("syncConnection", () => {
     ]);
     expect(await sync()).toEqual({
       status: "OK",
-      accounts: [{ accountId: courant, imported: 0, skipped: 1 }],
+      accounts: [{ accountId: courant, imported: 0, skipped: 1, truncated: false }],
     });
     expect(await rowsOf()).toHaveLength(1);
 
@@ -247,7 +254,7 @@ describe("syncConnection", () => {
     ]);
     expect(await sync()).toEqual({
       status: "OK",
-      accounts: [{ accountId: courant, imported: 1, skipped: 1 }],
+      accounts: [{ accountId: courant, imported: 1, skipped: 1, truncated: false }],
     });
     expect(await rowsOf()).toHaveLength(2);
   });
@@ -266,7 +273,7 @@ describe("syncConnection", () => {
 
     expect(await sync()).toEqual({
       status: "OK",
-      accounts: [{ accountId: courant, imported: 0, skipped: 0 }],
+      accounts: [{ accountId: courant, imported: 0, skipped: 0, truncated: false }],
     });
     expect(await rowsOf()).toHaveLength(0);
   });
@@ -370,6 +377,28 @@ describe("syncConnection", () => {
     expect(both.map((r) => r.status).sort()).toEqual(["BUSY", "OK"]);
   });
 
+  it("refuses a connection that is not active, without any bank call", async () => {
+    const refusals = [
+      ["REVOKED", "NOT_FOUND"],
+      ["EXPIRED", "EXPIRED_SESSION"],
+      ["ERROR", "NOT_FOUND"],
+    ] as const;
+    for (const [status, code] of refusals) {
+      await db.bankConnection.update({ where: { id: connectionId }, data: { status } });
+      await expect(sync()).rejects.toMatchObject({ code });
+    }
+    expect(fake.calls).toHaveLength(0);
+    await expect(syncConnection("missing", { client, now })).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+
+    bankReturns([]);
+    expect((await sync({ allowError: true })).status).toBe("OK");
+    expect(
+      await db.bankConnection.findUniqueOrThrow({ where: { id: connectionId } }),
+    ).toMatchObject({ status: "ACTIVE", failureCount: 0, syncStartedAt: null });
+  });
+
   it("sends the PSU headers only for a user-present sync", async () => {
     await sync();
     for (const c of fake.calls) expect(c.headers.get("psu-ip-address")).toBeNull();
@@ -439,7 +468,7 @@ describe("syncConnection", () => {
     // Pages 0-47 cover Oct 1-16; the second round brings Oct 17 whole and Oct 18.
     expect(res).toEqual({
       status: "OK",
-      accounts: [{ accountId: courant, imported: 52, skipped: 0 }],
+      accounts: [{ accountId: courant, imported: 52, skipped: 0, truncated: false }],
     });
     expect(txCalls()).toHaveLength(51);
     const link = await db.bankConnectionAccount.findUniqueOrThrow({ where: { id: linkId } });
@@ -466,7 +495,7 @@ describe("syncConnection", () => {
     const res = await sync({ openingBalanceFor: [courant] });
     expect(res).toEqual({
       status: "OK",
-      accounts: [{ accountId: courant, imported: 50, skipped: 0 }],
+      accounts: [{ accountId: courant, imported: 50, skipped: 0, truncated: true }],
     });
     expect(txCalls()).toHaveLength(100);
     const link = await db.bankConnectionAccount.findUniqueOrThrow({ where: { id: linkId } });

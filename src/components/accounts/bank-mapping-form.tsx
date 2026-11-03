@@ -46,7 +46,14 @@ export function BankMappingForm({ view }: { view: MappingView }) {
         <AlertDescription className="space-y-3">
           <ul className="space-y-1">
             {state.accounts.map((a, i) => (
-              <li key={i}>{t("imported", { name: a.name, count: a.imported })}</li>
+              <li key={i}>
+                {t("imported", { name: a.name, count: a.imported })}
+                {a.truncated && (
+                  <span className="text-muted-foreground block text-xs">
+                    {t("truncated", { name: a.name })}
+                  </span>
+                )}
+              </li>
             ))}
           </ul>
           <Link href={`/${locale}/accounts`} className={buttonVariants({ variant: "outline" })}>

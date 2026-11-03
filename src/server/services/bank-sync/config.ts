@@ -2,6 +2,7 @@ import { createPrivateKey } from "node:crypto";
 import { z } from "zod";
 import type { BankSyncConfig } from "@prisma/client";
 import { env } from "@/env";
+import { isSyncInterval } from "@/lib/bank-sync";
 import { db } from "@/server/db";
 import { decrypt, encrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
@@ -19,6 +20,7 @@ export const bankSyncConfigSchema = z.object({
   applicationId: z.string().trim().min(1).max(100),
   privateKey: z.string().default(""),
   enabled: z.boolean().default(false),
+  syncIntervalHours: z.number().refine(isSyncInterval).default(6),
 });
 export type BankSyncConfigInput = z.input<typeof bankSyncConfigSchema>;
 
@@ -62,6 +64,7 @@ export async function upsertBankSyncConfig(
     applicationId: parsed.applicationId,
     privateKeyEnc,
     enabled: parsed.enabled,
+    syncIntervalHours: parsed.syncIntervalHours,
     updatedById: actor.id,
   };
   const row = await db.bankSyncConfig.upsert({
@@ -74,7 +77,7 @@ export async function upsertBankSyncConfig(
     action: "settings.bankSync.update",
     entity: "BankSyncConfig",
     entityId: row.id,
-    metadata: { enabled: row.enabled, keyChanged },
+    metadata: { enabled: row.enabled, keyChanged, syncIntervalHours: row.syncIntervalHours },
   });
   return row;
 }
@@ -94,6 +97,13 @@ export async function deleteBankSyncConfig(actor: { id: string }): Promise<boole
 
 export async function isBankSyncAvailable(): Promise<boolean> {
   return (await getBankSyncConfig())?.enabled ?? false;
+}
+
+const RATE_LIMIT_NOTICE_MS = 7 * 86_400_000;
+
+export function recentRateLimit(cfg: BankSyncConfig, now = new Date()): Date | null {
+  const at = cfg.lastRateLimitedAt;
+  return at && now.getTime() - at.getTime() < RATE_LIMIT_NOTICE_MS ? at : null;
 }
 
 export function bankSyncRedirectUrl(): string {

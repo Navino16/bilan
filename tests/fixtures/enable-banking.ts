@@ -17,7 +17,7 @@ export type FakeReply = { status?: number; body: unknown };
 type Route = {
   method: string;
   path: string | RegExp;
-  reply: FakeReply | ((call: FakeCall) => FakeReply);
+  reply: FakeReply | ((call: FakeCall) => FakeReply | Promise<FakeReply>);
 };
 export type FakeBank = {
   fetch: typeof fetch;
@@ -117,7 +117,7 @@ export function fakeEnableBanking(): FakeBank {
     calls.push(call);
     const route = [...overrides, ...defaultRoutes].find((r) => matches(r, method, call.path));
     if (!route) return Response.json({ error: "NOT_FOUND" }, { status: 404 });
-    const reply = typeof route.reply === "function" ? route.reply(call) : route.reply;
+    const reply = typeof route.reply === "function" ? await route.reply(call) : route.reply;
     return Response.json(reply.body ?? {}, { status: reply.status ?? 200 });
   };
 

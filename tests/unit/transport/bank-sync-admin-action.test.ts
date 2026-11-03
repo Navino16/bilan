@@ -36,9 +36,25 @@ describe("bank sync admin actions", () => {
     );
     expect(res).toEqual({ ok: true });
     expect(service.upsertBankSyncConfig).toHaveBeenCalledWith(
-      { applicationId: "app-test-id", privateKey: "PEM", enabled: true },
+      { applicationId: "app-test-id", privateKey: "PEM", enabled: true, syncIntervalHours: 6 },
       { id: "bs-admin" },
     );
+  });
+
+  it("parses the sync interval and refuses one that is not offered", async () => {
+    service.upsertBankSyncConfig.mockResolvedValue({});
+    const fields = { applicationId: "app-test-id", privateKey: "" };
+    expect(
+      await saveBankSyncConfigAction(null, form({ ...fields, syncIntervalHours: "12" })),
+    ).toEqual({ ok: true });
+    expect(service.upsertBankSyncConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ syncIntervalHours: 12 }),
+      { id: "bs-admin" },
+    );
+    expect(
+      await saveBankSyncConfigAction(null, form({ ...fields, syncIntervalHours: "8" })),
+    ).toMatchObject({ ok: false, fieldErrors: { syncIntervalHours: "INVALID" } });
+    expect(service.upsertBankSyncConfig).toHaveBeenCalledTimes(1);
   });
 
   it("maps key errors to the privateKey field", async () => {

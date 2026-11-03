@@ -8,10 +8,12 @@ import {
   BANK_SYNC_SINGLETON_ID,
   BankSyncConfigError,
   bankSyncClient,
+  bankSyncConfigSchema,
   bankSyncRedirectUrl,
   deleteBankSyncConfig,
   getBankSyncConfig,
   isBankSyncAvailable,
+  recentRateLimit,
   testBankSyncConfig,
   upsertBankSyncConfig,
 } from "@/server/services/bank-sync/config";
@@ -62,6 +64,36 @@ describe("bank sync config", () => {
     expect(kept.privateKeyEnc).toBe(row.privateKeyEnc);
     expect(kept.enabled).toBe(false);
     expect(await db.bankSyncConfig.count()).toBe(1);
+  });
+
+  it("stores a sync interval of 6, 12 or 24 hours, 6 by default", async () => {
+    const row = await upsertBankSyncConfig(
+      { applicationId: "app-test-id", privateKey: pem, enabled: true },
+      actor,
+    );
+    expect(row.syncIntervalHours).toBe(6);
+    const twelve = await upsertBankSyncConfig(
+      { applicationId: "app-test-id", privateKey: "", enabled: true, syncIntervalHours: 12 },
+      actor,
+    );
+    expect(twelve.syncIntervalHours).toBe(12);
+    for (const syncIntervalHours of [8, 0, 6.5]) {
+      expect(
+        bankSyncConfigSchema.safeParse({ applicationId: "app-test-id", syncIntervalHours }).success,
+      ).toBe(false);
+    }
+  });
+
+  it("reports a bank rate limit for a week", async () => {
+    const at = new Date("2026-11-03T10:00:00.000Z");
+    const row = await upsertBankSyncConfig(
+      { applicationId: "app-test-id", privateKey: pem, enabled: true },
+      actor,
+    );
+    expect(recentRateLimit(row, at)).toBeNull();
+    const limited = { ...row, lastRateLimitedAt: at };
+    expect(recentRateLimit(limited, new Date(at.getTime() + 6 * 86_400_000))).toEqual(at);
+    expect(recentRateLimit(limited, new Date(at.getTime() + 8 * 86_400_000))).toBeNull();
   });
 
   it("asks for the key on first save and for another application id", async () => {
@@ -190,8 +222,8 @@ describe("bank sync config", () => {
     }
     const updates = rows.filter((r) => r.action === "settings.bankSync.update");
     expect(updates.slice(-2).map((r) => r.metadata)).toEqual([
-      { enabled: true, keyChanged: true },
-      { enabled: false, keyChanged: false },
+      { enabled: true, keyChanged: true, syncIntervalHours: 6 },
+      { enabled: false, keyChanged: false, syncIntervalHours: 6 },
     ]);
     expect(rows.filter((r) => r.action === "settings.bankSync.delete")).toHaveLength(1);
   });

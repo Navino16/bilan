@@ -198,6 +198,8 @@ CREATE TABLE `BankSyncConfig` (
     `applicationId` VARCHAR(191) NOT NULL,
     `privateKeyEnc` TEXT NOT NULL,
     `enabled` BOOLEAN NOT NULL DEFAULT false,
+    `syncIntervalHours` INTEGER NOT NULL DEFAULT 6,
+    `lastRateLimitedAt` DATETIME(3) NULL,
     `updatedAt` DATETIME(3) NOT NULL,
     `updatedById` VARCHAR(191) NULL,
 
@@ -216,6 +218,8 @@ CREATE TABLE `BankConnection` (
     `lastSyncAt` DATETIME(3) NULL,
     `lastError` VARCHAR(191) NULL,
     `syncStartedAt` DATETIME(3) NULL,
+    `failureCount` INTEGER NOT NULL DEFAULT 0,
+    `retryAfter` DATETIME(3) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     INDEX `BankConnection_userId_idx`(`userId`),

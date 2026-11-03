@@ -368,6 +368,7 @@
         "NETWORK": "Enable Banking does not answer. Try again later.",
         "NOT_FOUND": "Bank connection not found.",
         "HTTP": "Enable Banking returned an error. Try again later.",
+        "BUSY": "A sync of this bank is already running. Try again in a moment.",
         "FAILED": "Failed. Try again."
       },
       "result": {
@@ -387,6 +388,16 @@
         "EXPIRED_STATE": "The authorization took more than 15 minutes. Connect the bank again.",
         "WRONG_USER": "This authorization was started by another user.",
         "DENIED": "Access to the accounts was refused at the bank. Nothing was connected."
+      },
+      "status": {
+        "synced": "Synced {ago} · {bank}",
+        "neverSynced": "Not synced yet · {bank}",
+        "pending": "{count, plural, one {# transaction pending} other {# transactions pending}}, {total}",
+        "syncNow": "Sync now",
+        "syncing": "Syncing…",
+        "done": "{count, plural, =0 {No new transaction.} one {# new transaction.} other {# new transactions.}}",
+        "truncated": "The bank did not send every transaction requested: some may be missing.",
+        "tooSoon": "This bank was already synced less than 10 minutes ago."
       },
       "connections": {
         "overline": "Banks",
@@ -420,6 +431,7 @@
         "submitting": "Importing…",
         "done": "Import finished",
         "imported": "{name}: {count, plural, =0 {no new transaction} one {# transaction imported} other {# transactions imported}}",
+        "truncated": "{name}: the bank did not send all the history requested, some transactions may be missing.",
         "back": "Back to accounts",
         "error": {
           "UNAVAILABLE": "Bank sync is not available on this instance.",
@@ -1934,6 +1946,10 @@
       "privateKeyHint": "Paste the private key generated when the application was created. It is stored encrypted and never shown again.",
       "enabled": "Offer bank sync to users",
       "enabledHint": "While it is off, the feature is hidden from users.",
+      "syncInterval": "Sync frequency",
+      "syncIntervalOption": "Every {hours} hours",
+      "syncIntervalHint": "Background sync of each connection. Some banks limit these accesses to 4 a day per account: widen the interval if a bank refuses them.",
+      "rateLimited": "A bank limited access on {date}: consider a longer interval.",
       "redirectUrl": "Redirect URL",
       "redirectUrlHint": "Register it in the Enable Banking application. It must use HTTPS.",
       "copyRedirect": "Copy the redirect URL",
@@ -2250,11 +2266,13 @@
         },
         "bank_sync": {
           "connection": {
-            "created": "Bank connected"
+            "created": "Bank connected",
+            "expired": "Bank connection expired"
           },
           "mapping": {
             "saved": "Bank accounts mapped"
-          }
+          },
+          "cron": "Background bank sync"
         }
       }
     },

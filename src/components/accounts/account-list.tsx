@@ -10,10 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { AccountRowActions } from "@/components/accounts/account-row-actions";
+import { BankSyncStatus } from "@/components/accounts/bank-sync-status";
 import type { ShareGroup } from "@/components/accounts/share-dialog";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import type { VisibleAccount } from "@/server/services/accounts";
+import type { SyncedAccountInfo } from "@/server/services/bank-sync/status";
 import { balanceLegend, balanceSegments } from "@/lib/balance-legend";
 import { revealAccountIbanAction } from "@/server/transport/actions/accounts";
 import type { StepUpMethod } from "@/server/services/users/step-up";
@@ -110,10 +112,11 @@ type CardProps = {
 
 function AccountCard({
   account: a,
+  synced,
   groups,
   categories,
   writableAccounts,
-}: CardProps & { account: VisibleAccount }) {
+}: CardProps & { account: VisibleAccount; synced?: SyncedAccountInfo }) {
   const t = useTranslations("accounts");
   const money = useMoney();
   return (
@@ -154,6 +157,7 @@ function AccountCard({
         </div>
         <Badge variant="outline">{t(`types.${a.type}`)}</Badge>
       </div>
+      {synced && <BankSyncStatus info={synced} />}
 
       <div className="mt-auto flex flex-wrap items-end justify-between gap-2 pt-3">
         <div className="min-w-0">
@@ -207,10 +211,12 @@ function AccountCard({
 
 export function AccountList({
   accounts: allAccounts,
+  synced = {},
   groups,
   categories,
 }: {
   accounts: VisibleAccount[];
+  synced?: Record<string, SyncedAccountInfo>;
   groups: ShareGroup[];
   categories: FlatCategory[];
 }) {
@@ -329,7 +335,7 @@ export function AccountList({
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {accounts.map((a) => (
-            <AccountCard key={a.id} account={a} {...cardProps} />
+            <AccountCard key={a.id} account={a} synced={synced[a.id]} {...cardProps} />
           ))}
         </div>
       )}
@@ -344,7 +350,7 @@ export function AccountList({
           </div>
           <div className="grid gap-3 opacity-80 sm:grid-cols-2">
             {archived.map((a) => (
-              <AccountCard key={a.id} account={a} {...cardProps} />
+              <AccountCard key={a.id} account={a} synced={synced[a.id]} {...cardProps} />
             ))}
           </div>
         </section>
