@@ -36,7 +36,7 @@ describe("bank sync admin actions", () => {
     );
     expect(res).toEqual({ ok: true });
     expect(service.upsertBankSyncConfig).toHaveBeenCalledWith(
-      { applicationId: "app-test-id", privateKey: "PEM", enabled: true },
+      { applicationId: "app-test-id", privateKey: "PEM", enabled: true, syncIntervalHours: 6 },
       { id: "bs-admin" },
     );
   });

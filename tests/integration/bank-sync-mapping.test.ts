@@ -248,7 +248,13 @@ describe("saveBankMapping", () => {
 
     const res = await save(conn.id, [map(b, revokedTarget)]);
     expect(res.accounts).toEqual([
-      { accountId: revokedTarget, name: "Revoked target", imported: 0, skipped: 0 },
+      {
+        accountId: revokedTarget,
+        name: "Revoked target",
+        imported: 0,
+        skipped: 0,
+        truncated: false,
+      },
     ]);
   });
 
@@ -275,7 +281,13 @@ describe("saveBankMapping", () => {
       { connectionAccountId: conn.links[0], action: "CREATE", name: "Courant Test" },
     ]);
     expect(res.accounts).toEqual([
-      { accountId: expect.any(String), name: "Courant Test", imported: 2, skipped: 0 },
+      {
+        accountId: expect.any(String),
+        name: "Courant Test",
+        imported: 2,
+        skipped: 0,
+        truncated: false,
+      },
     ]);
     const created = await db.bankAccount.findUniqueOrThrow({
       where: { id: res.accounts[0].accountId },
@@ -368,7 +380,7 @@ describe("saveBankMapping", () => {
       { connectionAccountId: conn.links[0], action: "MAP", accountId: created },
     ]);
     expect(res.accounts).toEqual([
-      { accountId: created, name: "Retry Test", imported: 1, skipped: 0 },
+      { accountId: created, name: "Retry Test", imported: 1, skipped: 0, truncated: false },
     ]);
     expect(await db.bankAccount.count({ where: { ownerId: owner } })).toBe(before + 1);
     const account = await db.bankAccount.findUniqueOrThrow({ where: { id: created } });

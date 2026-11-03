@@ -13,7 +13,11 @@ import {
   type EnableBankingClient,
   type Psu,
 } from "@/server/services/bank-sync/client";
-import { bankSyncClient } from "@/server/services/bank-sync/config";
+import {
+  BANK_SYNC_SINGLETON_ID,
+  bankSyncClient,
+  getBankSyncConfig,
+} from "@/server/services/bank-sync/config";
 import { BankSyncError } from "@/server/services/bank-sync/errors";
 import { pickBalances, syncWindowStart, toSyncRows } from "@/server/services/bank-sync/rows";
 import type { EbTransaction } from "@/server/services/bank-sync/types";
@@ -21,8 +25,19 @@ import { finalizeBatch, insertRows } from "@/server/services/imports/commit";
 import { computeExternalIds } from "@/server/services/transactions/secure-fields";
 
 export const SYNC_CLAIM_STALE_MS = 30 * 60_000;
+export const RATE_LIMIT_BACKOFF_MS = 6 * 3600_000;
+export const ERROR_THRESHOLD = 3;
+export const SYNC_ACCOUNT_CONCURRENCY = 2;
+// The cron fires at a fixed minute: a sync stamped a few seconds into it is due again N hours later.
+const DUE_SLACK_MS = 5 * 60_000;
 
-export type AccountSyncResult = { accountId: string; imported: number; skipped: number };
+// `truncated`: the bank still had pages when the fetch stopped (design §Sync engine).
+export type AccountSyncResult = {
+  accountId: string;
+  imported: number;
+  skipped: number;
+  truncated: boolean;
+};
 export type ConnectionSyncResult =
   | { status: "OK"; accounts: AccountSyncResult[] }
   | { status: "BUSY" }
@@ -60,7 +75,6 @@ async function fetchTransactions(
     }
     const ascending = range !== null && range.first <= range.last;
     if (!ascending || range.last <= start || round === MAX_FETCH_ROUNDS) {
-      console.warn("[bilan] bank history truncated");
       return {
         transactions: [...kept, ...page.transactions],
         truncated: true,
@@ -188,10 +202,83 @@ export async function syncAccount(
       lastSyncedDate,
     },
   });
-  return { accountId, imported, skipped };
+  return { accountId, imported, skipped, truncated: fetched.truncated };
+}
+
+// Starts nothing new once a call failed, so a rate limit stops the connection's remaining accounts.
+async function mapLimit<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = [];
+  let next = 0;
+  let failure = null as { error: unknown } | null;
+  async function worker(): Promise<void> {
+    while (!failure && next < items.length) {
+      const i = next++;
+      try {
+        results[i] = await fn(items[i]);
+      } catch (error) {
+        failure ??= { error };
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  if (failure) throw failure.error;
+  return results;
+}
+
+type ConnectionState = { userId: string; validUntil: Date; failureCount: number };
+
+async function markExpired(connectionId: string, conn: ConnectionState, live: string[]) {
+  const { count } = await db.bankConnection.updateMany({
+    where: { id: connectionId, status: { in: live } },
+    data: { status: "EXPIRED", lastError: "EXPIRED_SESSION" },
+  });
+  if (count === 0) return;
+  await logEvent({
+    userId: conn.userId,
+    action: "bank_sync.connection.expired",
+    entity: "BankConnection",
+    entityId: connectionId,
+  });
+}
+
+// Lifecycle of a failed sync (design §Sync engine): a rate limit backs off, an expired consent
+// stops the connection, any other error counts towards ERROR.
+async function recordFailure(
+  connectionId: string,
+  conn: ConnectionState,
+  live: string[],
+  code: BankSyncErrorCode,
+  now: Date,
+): Promise<void> {
+  if (code === "EXPIRED_SESSION") return markExpired(connectionId, conn, live);
+  if (code === "RATE_LIMITED") {
+    await db.bankConnection.updateMany({
+      where: { id: connectionId, status: { in: live } },
+      data: { lastError: code, retryAfter: new Date(now.getTime() + RATE_LIMIT_BACKOFF_MS) },
+    });
+    await db.bankSyncConfig.updateMany({
+      where: { id: BANK_SYNC_SINGLETON_ID },
+      data: { lastRateLimitedAt: now },
+    });
+    return;
+  }
+  const failureCount = conn.failureCount + 1;
+  await db.bankConnection.updateMany({
+    where: { id: connectionId, status: { in: live } },
+    data: {
+      lastError: code,
+      failureCount,
+      ...(failureCount >= ERROR_THRESHOLD && { status: "ERROR" }),
+    },
+  });
 }
 
 // One sync per connection at a time: the claim is a timestamp, taken over once stale (design §Sync engine).
+// An ERROR connection is only retried when `allowError` (Sync now).
 export async function syncConnection(
   connectionId: string,
   opts: {
@@ -200,14 +287,17 @@ export async function syncConnection(
     client?: EnableBankingClient;
     accountIds?: string[];
     openingBalanceFor?: string[];
+    allowError?: boolean;
   } = {},
 ): Promise<ConnectionSyncResult> {
   const now = opts.now ?? new Date();
   const client = opts.client ?? (await bankSyncClient());
   if (!client) throw new BankSyncError("UNAVAILABLE");
+  const live = opts.allowError ? ["ACTIVE", "ERROR"] : ["ACTIVE"];
   const claim = await db.bankConnection.updateMany({
     where: {
       id: connectionId,
+      status: { in: live },
       OR: [
         { syncStartedAt: null },
         { syncStartedAt: { lt: new Date(now.getTime() - SYNC_CLAIM_STALE_MS) } },
@@ -216,12 +306,24 @@ export async function syncConnection(
     data: { syncStartedAt: now },
   });
   if (claim.count === 0) {
-    const exists = await db.bankConnection.count({ where: { id: connectionId } });
-    if (exists === 0) throw new BankSyncError("NOT_FOUND");
+    const current = await db.bankConnection.findUnique({
+      where: { id: connectionId },
+      select: { status: true },
+    });
+    if (current?.status === "EXPIRED") throw new BankSyncError("EXPIRED_SESSION");
+    if (!current || !live.includes(current.status)) throw new BankSyncError("NOT_FOUND");
     return { status: "BUSY" };
   }
 
+  const conn = await db.bankConnection.findUniqueOrThrow({
+    where: { id: connectionId },
+    select: { userId: true, validUntil: true, failureCount: true },
+  });
   try {
+    if (conn.validUntil <= now) {
+      await markExpired(connectionId, conn, live);
+      return { status: "FAILED", code: "EXPIRED_SESSION" };
+    }
     const links = await db.bankConnectionAccount.findMany({
       where: {
         connectionId,
@@ -230,24 +332,27 @@ export async function syncConnection(
       include: { connection: { select: { userId: true } } },
       orderBy: { id: "asc" },
     });
-    const accounts: AccountSyncResult[] = [];
-    for (const link of links) {
-      accounts.push(
-        await syncAccount(client, link, {
-          psu: opts.psu,
-          now,
-          openingBalance: opts.openingBalanceFor?.includes(link.accountId!) ?? false,
-        }),
-      );
-    }
-    await db.bankConnection.update({
-      where: { id: connectionId },
-      data: { lastSyncAt: now, lastError: null },
+    const accounts = await mapLimit(links, SYNC_ACCOUNT_CONCURRENCY, (link) =>
+      syncAccount(client, link, {
+        psu: opts.psu,
+        now,
+        openingBalance: opts.openingBalanceFor?.includes(link.accountId!) ?? false,
+      }),
+    );
+    await db.bankConnection.updateMany({
+      where: { id: connectionId, status: { in: live } },
+      data: {
+        status: "ACTIVE",
+        lastSyncAt: now,
+        lastError: null,
+        failureCount: 0,
+        retryAfter: null,
+      },
     });
     return { status: "OK", accounts };
   } catch (e) {
     if (!(e instanceof EnableBankingError)) throw e;
-    await db.bankConnection.update({ where: { id: connectionId }, data: { lastError: e.code } });
+    await recordFailure(connectionId, conn, live, e.code, now);
     return { status: "FAILED", code: e.code };
   } finally {
     await db.bankConnection.updateMany({
@@ -255,4 +360,79 @@ export async function syncConnection(
       data: { syncStartedAt: null },
     });
   }
+}
+
+export type DueSyncSummary = {
+  due: number;
+  synced: number;
+  busy: number;
+  rateLimited: number;
+  expired: number;
+  failed: number;
+  imported: number;
+  truncated: number;
+};
+
+// The cron's run: background syncs, one connection after the other (design §Sync engine).
+export async function syncDueConnections(
+  now: Date,
+  opts: { client?: EnableBankingClient } = {},
+): Promise<DueSyncSummary> {
+  const summary: DueSyncSummary = {
+    due: 0,
+    synced: 0,
+    busy: 0,
+    rateLimited: 0,
+    expired: 0,
+    failed: 0,
+    imported: 0,
+    truncated: 0,
+  };
+  const cfg = await getBankSyncConfig();
+  if (!cfg?.enabled) return summary;
+  const syncedBefore = new Date(now.getTime() - cfg.syncIntervalHours * 3600_000 + DUE_SLACK_MS);
+  const due = await db.bankConnection.findMany({
+    where: {
+      status: "ACTIVE",
+      AND: [
+        { OR: [{ retryAfter: null }, { retryAfter: { lte: now } }] },
+        {
+          OR: [
+            { lastSyncAt: null },
+            { lastSyncAt: { lte: syncedBefore } },
+            { validUntil: { lte: now } },
+          ],
+        },
+      ],
+    },
+    select: { id: true },
+    orderBy: [{ lastSyncAt: "asc" }, { id: "asc" }],
+  });
+  summary.due = due.length;
+  if (due.length === 0) return summary;
+  const client = opts.client ?? (await bankSyncClient());
+  if (!client) return summary;
+
+  for (const { id } of due) {
+    try {
+      const result = await syncConnection(id, { now, client });
+      if (result.status === "OK") {
+        summary.synced++;
+        for (const a of result.accounts) {
+          summary.imported += a.imported;
+          if (a.truncated) summary.truncated++;
+        }
+      } else if (result.status === "BUSY") summary.busy++;
+      else if (result.code === "RATE_LIMITED") summary.rateLimited++;
+      else if (result.code === "EXPIRED_SESSION") summary.expired++;
+      else summary.failed++;
+    } catch (e) {
+      summary.failed++;
+      console.error(
+        "[bilan] bank sync failed",
+        e instanceof BankSyncError ? e.code : e instanceof Error ? e.name : typeof e,
+      );
+    }
+  }
+  return summary;
 }

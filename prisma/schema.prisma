@@ -216,12 +216,14 @@ model SmtpConfig {
 
 // Enable Banking application, a singleton like SmtpConfig (design §Data model).
 model BankSyncConfig {
-  id            String   @id @default(cuid())
-  applicationId String
-  privateKeyEnc String   @db.Text
-  enabled       Boolean  @default(false)
-  updatedAt     DateTime @updatedAt
-  updatedById   String?
+  id                String    @id @default(cuid())
+  applicationId     String
+  privateKeyEnc     String    @db.Text
+  enabled           Boolean   @default(false)
+  syncIntervalHours Int       @default(6) // one of SYNC_INTERVALS
+  lastRateLimitedAt DateTime? // last 429 from a bank, shown on the admin page
+  updatedAt         DateTime  @updatedAt
+  updatedById       String?
 }
 
 // One user consent at Enable Banking (design §Data model).
@@ -236,6 +238,8 @@ model BankConnection {
   lastSyncAt    DateTime?
   lastError     String? // error code only (design §Security and privacy)
   syncStartedAt DateTime? // claim against concurrent syncs
+  failureCount  Int       @default(0) // consecutive failed syncs
+  retryAfter    DateTime? // background syncs wait until then after a rate limit
   createdAt     DateTime  @default(now())
 
   user     User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
