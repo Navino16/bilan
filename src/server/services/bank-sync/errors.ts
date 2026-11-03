@@ -12,6 +12,7 @@ export type BankSyncFlowCode =
   | "ALREADY_SYNCED"
   | "UNSUPPORTED_CURRENCY"
   | "RATE_LIMITED_LOCAL"
+  | "BUSY"
   | BankSyncErrorCode;
 
 export class BankSyncError extends Error {
