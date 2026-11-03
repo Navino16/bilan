@@ -1,11 +1,11 @@
 import { randomBytes } from "node:crypto";
 import { db } from "@/server/db";
-import { encrypt } from "@/server/crypto/encryption";
+import { decrypt, encrypt } from "@/server/crypto/encryption";
 import { hmacExact } from "@/server/crypto/hmac";
 import { dataKey, searchKey } from "@/server/crypto/keys";
 import { logEvent } from "@/server/services/audit";
 import { normalizeIban } from "@/server/services/accounts/iban";
-import type { EnableBankingClient } from "@/server/services/bank-sync/client";
+import { EnableBankingError, type EnableBankingClient } from "@/server/services/bank-sync/client";
 import {
   bankSyncClient,
   bankSyncRedirectUrl,
@@ -191,4 +191,33 @@ export async function listBankConnections(userId: string): Promise<BankConnectio
     ...c,
     mappedAccounts: accounts.flatMap((a) => (a.account ? [a.account.name] : [])),
   }));
+}
+
+// Read before a user deletion erases the connections; revoked once it committed.
+export async function userBankSessions(userId: string): Promise<string[]> {
+  const rows = await db.bankConnection.findMany({
+    where: { userId, status: { not: "REVOKED" } },
+    select: { sessionIdEnc: true },
+  });
+  return rows.map((r) => r.sessionIdEnc);
+}
+
+// Best effort: a session Enable Banking still holds expires with its consent.
+export async function revokeBankSessions(
+  sessionIdsEnc: string[],
+  opts: { client?: EnableBankingClient } = {},
+): Promise<void> {
+  if (sessionIdsEnc.length === 0) return;
+  const client = opts.client ?? (await bankSyncClient({ requireEnabled: false }).catch(() => null));
+  if (!client) return;
+  for (const enc of sessionIdsEnc) {
+    try {
+      await client.deleteSession(decrypt(enc, dataKey));
+    } catch (e) {
+      console.error(
+        "[bilan] bank session revoke failed",
+        e instanceof EnableBankingError ? e.code : "UNKNOWN",
+      );
+    }
+  }
 }

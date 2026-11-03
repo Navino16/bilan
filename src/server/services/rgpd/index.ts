@@ -5,6 +5,7 @@ import { LONG_TX_TIMEOUT } from "@/server/db/timeouts";
 import { decrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
 import { logEvent } from "@/server/services/audit";
+import { revokeBankSessions, userBankSessions } from "@/server/services/bank-sync/connect";
 import { loadAliases } from "@/server/services/merchants";
 import { pageRows, type ListQuery, type ListRow } from "@/server/services/transactions/list-query";
 import {
@@ -77,6 +78,21 @@ export type UserDataExport = {
     createdAt: Date;
     completedAt: Date | null;
   }[];
+  bankConnections: {
+    aspspName: string;
+    aspspCountry: string;
+    status: string;
+    validUntil: Date;
+    createdAt: Date;
+    lastSyncAt: Date | null;
+    accounts: {
+      name: string;
+      currency: string;
+      accountId: string | null;
+      syncFrom: Date | null;
+      lastSyncedDate: Date | null;
+    }[];
+  }[];
   auditLog: unknown[];
 };
 
@@ -116,6 +132,7 @@ export async function exportParts(userId: string): Promise<{
     memberships,
     invitationsSent,
     ignoredRows,
+    bankConnections,
     auditLog,
   ] = await Promise.all([
     db.user.findUniqueOrThrow({
@@ -136,6 +153,29 @@ export async function exportParts(userId: string): Promise<{
     db.ignoredLinkSuggestion.findMany({
       where: { userId },
       select: { pairKey: true, ignoredAt: true, restoredAt: true },
+    }),
+    // No session id, account uid or IBAN hash (design §Security and privacy).
+    db.bankConnection.findMany({
+      where: { userId },
+      select: {
+        aspspName: true,
+        aspspCountry: true,
+        status: true,
+        validUntil: true,
+        createdAt: true,
+        lastSyncAt: true,
+        accounts: {
+          select: {
+            name: true,
+            currency: true,
+            accountId: true,
+            syncFrom: true,
+            lastSyncedDate: true,
+          },
+          orderBy: { name: "asc" },
+        },
+      },
+      orderBy: { createdAt: "asc" },
     }),
     db.auditLog.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 5000 }),
   ]);
@@ -232,6 +272,7 @@ export async function exportParts(userId: string): Promise<{
       links,
       ignoredLinkSuggestions,
       imports,
+      bankConnections,
       auditLog,
     },
     transactionPages: () => ownedTransactionPages(accountIds, linkOf),
@@ -396,6 +437,8 @@ export async function deleteUser(
   userId: string,
   actor: { id: string } = { id: userId },
 ): Promise<void> {
+  const bankSessions = await userBankSessions(userId);
   await db.$transaction((tx) => eraseUser(tx, userId), LONG_TX_TIMEOUT);
+  await revokeBankSessions(bankSessions);
   await logUserDeleted(userId, actor);
 }
