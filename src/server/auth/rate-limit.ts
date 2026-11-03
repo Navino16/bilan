@@ -113,6 +113,8 @@ export const bankAuthStartLimiter = sharedLimiter("bankAuthStart", {
   max: 10,
   windowMs: 10 * 60_000,
 });
+// Keyed by user and connection: each sync calls the bank (design §Sync engine).
+export const bankSyncNowLimiter = sharedLimiter("bankSyncNow", { max: 1, windowMs: 10 * 60_000 });
 // Keyed by user id: each resend mails the user's address.
 export const verificationMailLimiter = sharedLimiter("verificationMail", {
   max: 3,
