@@ -336,10 +336,20 @@
       "CONFIRMATION": "The name you typed doesn’t match the account.",
       "AMOUNT_INVALID": "Invalid amount. Examples: -12.34 or 1,234.56.",
       "AMOUNT_AMBIGUOUS": "Ambiguous amount: write 1234 or 1.23 (no lone thousands separator).",
-      "AMOUNT_PRECISION": "The amount can’t have more than 2 decimals."
+      "AMOUNT_PRECISION": "The amount can’t have more than 2 decimals.",
+      "INVALID_MIRROR": "Pick at least one source account and a label pattern."
     },
     "legendOthers": "Others · {count, number}",
     "legendNegative": "Hatched: negative balance",
+    "mirror": {
+      "title": "Kept up to date from transfers",
+      "description": "Your bank doesn’t list this account? Each transfer from a source account whose label contains the pattern adds the opposite operation here, after imports and bank syncs.",
+      "sources": "Source accounts",
+      "noSources": "No other account to pick.",
+      "pattern": "Label pattern",
+      "patternHint": "Matched anywhere in the label, ignoring case and accents.",
+      "interest": "Interest stays a manual entry."
+    },
     "bankSync": {
       "connect": "Connect my bank",
       "dialog": {

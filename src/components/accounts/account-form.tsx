@@ -28,6 +28,8 @@ import {
   ACCOUNT_IBAN_MAX,
   ACCOUNT_NAME_MAX,
   ACCOUNT_TYPES,
+  MIRROR_PATTERN_MAX,
+  defaultMirrorPattern,
   type AccountType,
 } from "@/lib/validation/account";
 import { createAccountAction, updateAccountAction } from "@/server/transport/actions/accounts";
@@ -56,11 +58,13 @@ type EditableAccount = {
   color: string | null;
   initialBalance: number;
   ibanMasked: string | null;
+  mirror?: { sourceAccountIds: string[]; pattern: string } | null;
 };
 
 export function AccountForm({
   mode,
   account,
+  mirrorSources = [],
   trigger,
   open: controlledOpen,
   onOpenChange,
@@ -68,6 +72,8 @@ export function AccountForm({
 }: {
   mode: "create" | "edit";
   account?: EditableAccount;
+  /** Accounts a savings account can be kept up to date from (edit mode). */
+  mirrorSources?: { id: string; name: string }[];
   /** Omit to drive the dialog from `open`/`onOpenChange` (e.g. a menu item). */
   trigger?: React.ReactNode;
   open?: boolean;
@@ -246,6 +252,10 @@ export function AccountForm({
             )}
           </div>
 
+          {mode === "edit" && account && type === "SAVINGS" && (
+            <MirrorSection account={account} sources={mirrorSources} />
+          )}
+
           <div className="space-y-2">
             <Label>{t("color")}</Label>
             <div className="flex flex-wrap items-center gap-2">
@@ -341,5 +351,54 @@ export function AccountForm({
         {body}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function MirrorSection({
+  account,
+  sources,
+}: {
+  account: EditableAccount;
+  sources: { id: string; name: string }[];
+}) {
+  const t = useTranslations("accounts.mirror");
+  const selected = new Set(account.mirror?.sourceAccountIds ?? []);
+  return (
+    <fieldset className="border-border space-y-3 rounded-lg border p-3" data-slot="savings-mirror">
+      <input type="hidden" name="mirror" value="1" />
+      <legend className="px-1 text-sm font-medium">{t("title")}</legend>
+      <p className="text-muted-foreground text-xs">{t("description")}</p>
+      <div className="space-y-1.5">
+        <Label>{t("sources")}</Label>
+        {sources.length === 0 ? (
+          <p className="text-muted-foreground text-xs">{t("noSources")}</p>
+        ) : (
+          sources.map((s) => (
+            <label key={s.id} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="mirrorSource"
+                value={s.id}
+                defaultChecked={selected.has(s.id)}
+                className="border-input size-4 rounded border"
+              />
+              <span className="min-w-0 truncate">{s.name}</span>
+            </label>
+          ))
+        )}
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="acc-mirrorPattern">{t("pattern")}</Label>
+        <Input
+          id="acc-mirrorPattern"
+          name="mirrorPattern"
+          defaultValue={account.mirror?.pattern ?? defaultMirrorPattern(account.name)}
+          maxLength={MIRROR_PATTERN_MAX}
+          autoComplete="off"
+        />
+        <p className="text-muted-foreground text-xs">{t("patternHint")}</p>
+      </div>
+      <p className="text-muted-foreground text-xs">{t("interest")}</p>
+    </fieldset>
   );
 }
