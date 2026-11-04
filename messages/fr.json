@@ -343,11 +343,19 @@
     "legendNegative": "Hachuré : solde négatif",
     "mirror": {
       "title": "Tenu à jour par les virements",
-      "description": "Votre banque ne remonte pas ce compte ? Chaque virement d’un compte source dont le libellé contient le motif ajoute ici l’opération inverse, après les imports et les synchronisations bancaires.",
+      "description": "Votre banque ne remonte pas ce compte ? Chaque virement d’un compte source dont le libellé correspond au motif ajoute ici l’opération inverse, après les imports et les synchronisations bancaires.",
       "sources": "Comptes sources",
       "noSources": "Aucun autre compte à choisir.",
       "pattern": "Motif du libellé",
-      "patternHint": "Recherché n’importe où dans le libellé, sans tenir compte de la casse ni des accents.",
+      "matchType": "Correspondance",
+      "match": {
+        "CONTAINS": "Contient",
+        "EXACT": "Libellé exact"
+      },
+      "patternHint": {
+        "CONTAINS": "Recherché n’importe où dans le libellé, sans tenir compte de la casse ni des accents.",
+        "EXACT": "Doit être le libellé entier, sans tenir compte de la casse, des accents ni des espaces en trop."
+      },
       "interest": "Les intérêts restent une saisie manuelle."
     },
     "bankSync": {

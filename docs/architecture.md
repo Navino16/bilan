@@ -997,7 +997,7 @@ model SavingsMirrorSource {                   // source accounts of a savings mi
 
 - An account is mapped by at most one `ACTIVE` connection, and only by its owner: enforced in `bank-sync/mapping.ts` (no unique index, since a revoked or expired connection keeps its rows).
 - A user's connections cascade with the user; deleting a user (admin or RGPD) first reads their sessions and revokes them at Enable Banking once the deletion committed. The RGPD export lists connections and their account names, never session ids, uids or IBAN hashes.
-- `BankAccount.mirrorPattern` (savings accounts only) is the label pattern of the savings mirror (§5.15); `SavingsMirrorSource` holds its sources, all owned by the savings account's owner.
+- `BankAccount.mirrorPattern` (savings accounts only) is the label pattern of the savings mirror (§5.15), matched as `mirrorMatchType` `CONTAINS` (default) or `EXACT`; `SavingsMirrorSource` holds its sources, all owned by the savings account's owner.
 
 ---
 
@@ -1235,7 +1235,7 @@ Services in `server/services/bank-sync/`; the Enable Banking client (`client.ts`
 
 **Deleting synced rows**: deleting a transaction of a `SYNC` batch, or a mirror leg, writes a `SyncTombstone`, so no later sync or import brings it back. `SYNC` batches are not listed in recent imports and can't be reverted (`NOT_REVERTIBLE`).
 
-**Savings mirror legs** (`links/mirror.ts`): for savings accounts a bank doesn't expose. After each committed batch (sync or file) and its auto-links, each new `TRANSFER` row of a source account, still unlinked, whose decrypted label contains the savings account's pattern (folded, case-insensitive; the longest pattern wins) gets an opposite leg on the savings account, labelled `Virement depuis/vers <source>`, with `externalId` = `mirror:` + SHA-256 of the source's account id and `externalId`, then the pair is linked and its month aligned. An unlinked opposite row within the auto-link window (4 days, not an ignored pair) is linked instead. Tombstones keep deleted legs deleted; rows imported before the pattern was set are not mirrored; interest stays manual.
+**Savings mirror legs** (`links/mirror.ts`): for savings accounts a bank doesn't expose. After each committed batch (sync or file) and its auto-links, each new `TRANSFER` row of a source account, still unlinked, whose decrypted label matches the savings account's pattern (folded, case-insensitive; `CONTAINS`, or `EXACT` on the whole label with whitespace runs collapsed; an exact match wins over a contains one, then the longest pattern) gets an opposite leg on the savings account, labelled `Virement depuis/vers <source>`, with `externalId` = `mirror:` + SHA-256 of the source's account id and `externalId`, then the pair is linked and its month aligned. An unlinked opposite row within the auto-link window (4 days, not an ignored pair) is linked instead. Tombstones keep deleted legs deleted; rows imported before the pattern was set are not mirrored; interest stays manual.
 
 ---
 

@@ -347,6 +347,7 @@ CREATE TABLE `BankAccount` (
     `icon` VARCHAR(191) NULL,
     `archived` BOOLEAN NOT NULL DEFAULT false,
     `mirrorPattern` VARCHAR(191) NULL,
+    `mirrorMatchType` VARCHAR(191) NOT NULL DEFAULT 'CONTAINS',
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     INDEX `BankAccount_ownerId_idx`(`ownerId`),

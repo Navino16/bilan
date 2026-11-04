@@ -378,12 +378,15 @@ Certaines banques ne partagent pas leurs comptes d’épargne (un Livret A chez 
 
 1. Ouvrez **Modifier** dans le menu du compte d’épargne (comptes de type **Épargne** seulement, dont vous êtes propriétaire).
 2. Sous **Tenu à jour par les virements**, cochez les **Comptes sources** : vos comptes d’où partent les virements.
-3. Vérifiez le **Motif du libellé** : par défaut, le nom du compte en majuscules, recherché n’importe où dans le libellé, sans tenir compte de la casse ni des accents.
+3. Vérifiez le **Motif du libellé** : par défaut, le nom du compte en majuscules. À côté, choisissez comment il est recherché, sans tenir compte de la casse ni des accents dans les deux cas :
+   - **Contient** (par défaut) : n’importe où dans le libellé.
+   - **Libellé exact** : le libellé entier doit être le motif, aux espaces en trop près. Utile quand d’autres virements commencent de la même façon : avec le motif `VIR.PERMANENT Livret A`, un virement libellé `VIR.PERMANENT Livret A Camille` (le Livret A de quelqu’un d’autre) n’est pas reporté.
 4. Cliquez sur **Enregistrer**.
 
-Après chaque synchronisation bancaire ou import de fichier sur un compte source, chaque nouveau virement dont le libellé contient le motif, et qui n’est pas encore lié, ajoute l’opération inverse sur le compte d’épargne (« Virement depuis … » ou « Virement vers … »), [liée](#liens-entre-transactions) à lui. Quand le compte d’épargne a déjà l’opération inverse (même montant, 4 jours d’écart au plus, non liée), Bilan la lie au lieu d’en ajouter une.
+Après chaque synchronisation bancaire ou import de fichier sur un compte source, chaque nouveau virement dont le libellé correspond au motif, et qui n’est pas encore lié, ajoute l’opération inverse sur le compte d’épargne (« Virement depuis … » ou « Virement vers … »), [liée](#liens-entre-transactions) à lui. Quand le compte d’épargne a déjà l’opération inverse (même montant, 4 jours d’écart au plus, non liée), Bilan la lie au lieu d’en ajouter une.
 
 - Un compte d’épargne a un seul motif de libellé, pour tous ses comptes sources.
+- Quand un virement correspond à plusieurs comptes d’épargne, un libellé exact l’emporte sur un motif « contient », puis le motif le plus long l’emporte.
 - Seules les transactions importées ou synchronisées après le réglage sont reportées : l’historique existant ne change pas.
 - Les intérêts restent une saisie manuelle.
 - Si vous supprimez une opération ajoutée par Bilan, elle ne revient pas.

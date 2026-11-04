@@ -17,7 +17,7 @@ import {
   setSavingsMirror,
   AccountAccessError,
 } from "@/server/services/accounts";
-import { MIRROR_PATTERN_MAX } from "@/lib/validation/account";
+import { MIRROR_MATCH_TYPES, MIRROR_PATTERN_MAX } from "@/lib/validation/account";
 import {
   ibanRevealFailure,
   revealAccountIban,
@@ -68,6 +68,7 @@ export async function createAccountAction(
 const mirrorSchema = z.object({
   sourceAccountIds: z.array(z.string().min(1).max(191)).max(50),
   pattern: z.string().max(MIRROR_PATTERN_MAX),
+  matchType: z.enum(MIRROR_MATCH_TYPES).default("CONTAINS"),
 });
 
 // The savings section of the form: no source ticked turns the mirror off.
@@ -75,6 +76,7 @@ function parseMirror(formData: FormData) {
   return mirrorSchema.safeParse({
     sourceAccountIds: formData.getAll("mirrorSource"),
     pattern: formData.get("mirrorPattern") ?? "",
+    matchType: formData.get("mirrorMatchType") ?? undefined,
   });
 }
 
@@ -101,11 +103,11 @@ export async function updateAccountAction(
       },
     );
     if (withMirror && mirror.success) {
-      const { sourceAccountIds, pattern } = mirror.data;
+      const { sourceAccountIds, ...rest } = mirror.data;
       await setSavingsMirror(
         user.id,
         id,
-        sourceAccountIds.length ? { sourceAccountIds, pattern } : null,
+        sourceAccountIds.length ? { sourceAccountIds, ...rest } : null,
       );
     }
   } catch (e) {

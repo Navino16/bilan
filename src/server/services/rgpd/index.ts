@@ -50,7 +50,7 @@ export type UserDataExport = {
     color: string | null;
     icon: string | null;
     archived: boolean;
-    mirror: { pattern: string; sourceAccountIds: string[] } | null;
+    mirror: { pattern: string; matchType: string; sourceAccountIds: string[] } | null;
     createdAt: Date;
   }[];
   transactions: ExportedTransaction[];
@@ -198,6 +198,7 @@ export async function exportParts(userId: string): Promise<{
     mirror: a.mirrorPattern
       ? {
           pattern: a.mirrorPattern,
+          matchType: a.mirrorMatchType,
           sourceAccountIds: a.mirrorSources.map((m) => m.sourceAccountId),
         }
       : null,

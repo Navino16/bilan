@@ -361,20 +361,21 @@ model AdminSignupToken {
 // ─── Group C — Bank accounts (Phase 2) ───────────────────────────────────────
 
 model BankAccount {
-  id             String   @id @default(cuid())
-  ownerId        String
-  name           String
-  type           String // CHECKING | SAVINGS | CREDIT | OTHER
-  initialBalance Decimal  @default(0) @db.Decimal(12, 2) // CLEAR — opening balance; transactions add to it (Phase 3+)
-  ibanEnc        String?  @db.Text // AES-256-GCM (v1.iv.ct.tag)
-  ibanHash       String? // HMAC-SHA256 blind index for equality search
-  bankName       String?
-  color          String?  @default("#2563eb")
-  icon           String?
-  archived       Boolean  @default(false)
+  id              String   @id @default(cuid())
+  ownerId         String
+  name            String
+  type            String // CHECKING | SAVINGS | CREDIT | OTHER
+  initialBalance  Decimal  @default(0) @db.Decimal(12, 2) // CLEAR — opening balance; transactions add to it (Phase 3+)
+  ibanEnc         String?  @db.Text // AES-256-GCM (v1.iv.ct.tag)
+  ibanHash        String? // HMAC-SHA256 blind index for equality search
+  bankName        String?
+  color           String?  @default("#2563eb")
+  icon            String?
+  archived        Boolean  @default(false)
   // Label pattern of the source transfers a savings account mirrors (design §Savings mirror legs).
-  mirrorPattern  String?
-  createdAt      DateTime @default(now())
+  mirrorPattern   String?
+  mirrorMatchType String   @default("CONTAINS") // CONTAINS | EXACT
+  createdAt       DateTime @default(now())
 
   owner            User                    @relation("AccountOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   shares           AccountShare[]
