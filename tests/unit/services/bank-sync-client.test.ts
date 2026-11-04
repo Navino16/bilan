@@ -148,6 +148,7 @@ describe("Enable Banking client", () => {
     [401, {}, "UNAUTHORIZED"],
     [403, {}, "UNAUTHORIZED"],
     [404, {}, "NOT_FOUND"],
+    [400, { error: "REDIRECT_URI_NOT_ALLOWED" }, "REDIRECT_NOT_ALLOWED"],
     [500, {}, "HTTP"],
   ] as const)("maps a %i %j to %s", async (status, body, code) => {
     const bank = fakeEnableBanking();

@@ -368,6 +368,7 @@
         "NETWORK": "Enable Banking does not answer. Try again later.",
         "NOT_FOUND": "Bank connection not found.",
         "HTTP": "Enable Banking returned an error. Try again later.",
+        "REDIRECT_NOT_ALLOWED": "Enable Banking refuses the redirect URL: register exactly the one shown in Administration › Bank sync.",
         "BUSY": "A sync of this bank is already running. Try again in a moment.",
         "FAILED": "Failed. Try again."
       },
@@ -382,6 +383,7 @@
         "NETWORK": "Enable Banking does not answer. Try again later.",
         "NOT_FOUND": "Bank connection not found.",
         "HTTP": "Enable Banking returned an error. Try again later.",
+        "REDIRECT_NOT_ALLOWED": "Enable Banking refuses the redirect URL: register exactly the one shown in Administration › Bank sync.",
         "FAILED": "Failed. Try again.",
         "SIGNED_OUT": "Your session ended during the authorization. Sign in, then connect the bank again.",
         "UNKNOWN_STATE": "This return from the bank is unknown or already used. Connect the bank again.",
@@ -444,6 +446,7 @@
           "NETWORK": "Enable Banking does not answer. Try again later.",
           "NOT_FOUND": "Bank connection not found.",
           "HTTP": "Enable Banking returned an error. Try again later.",
+          "REDIRECT_NOT_ALLOWED": "Enable Banking refuses the redirect URL: register exactly the one shown in Administration › Bank sync.",
           "FAILED": "Failed. Try again.",
           "INVALID": "Check the fields.",
           "FORBIDDEN": "You can only map your own accounts, not archived.",
@@ -1974,7 +1977,8 @@
           "EXPIRED_SESSION": "Enable Banking answered that the session expired.",
           "NOT_FOUND": "Enable Banking can’t find this application.",
           "NETWORK": "Enable Banking can’t be reached from the server.",
-          "HTTP": "Enable Banking returned an error. Try again later."
+          "HTTP": "Enable Banking returned an error. Try again later.",
+          "REDIRECT_NOT_ALLOWED": "Enable Banking refuses the redirect URL: register exactly the one shown in Administration › Bank sync."
         }
       },
       "remove": "Remove the configuration",

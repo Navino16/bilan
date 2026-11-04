@@ -154,6 +154,12 @@ describe("bank sync config", () => {
     expect(bankSyncRedirectUrl()).toBe(new URL("/api/bank-sync/callback", env.APP_URL).href);
   });
 
+  it("prefers the BANK_SYNC_REDIRECT_URL override", () => {
+    expect(bankSyncRedirectUrl("https://bilan.test/api/bank-sync/callback")).toBe(
+      "https://bilan.test/api/bank-sync/callback",
+    );
+  });
+
   it("tests the application and counts the banks", async () => {
     await upsertBankSyncConfig(
       { applicationId: "app-test-id", privateKey: pem, enabled: false },

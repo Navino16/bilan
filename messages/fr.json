@@ -368,6 +368,7 @@
         "NETWORK": "Enable Banking ne répond pas. Réessayez plus tard.",
         "NOT_FOUND": "Connexion bancaire introuvable.",
         "HTTP": "Enable Banking a renvoyé une erreur. Réessayez plus tard.",
+        "REDIRECT_NOT_ALLOWED": "Enable Banking refuse l’adresse de retour : enregistrez exactement celle affichée dans Administration › Synchronisation bancaire.",
         "BUSY": "Une synchronisation de cette banque est déjà en cours. Réessayez dans un instant.",
         "FAILED": "Échec. Réessayez."
       },
@@ -382,6 +383,7 @@
         "NETWORK": "Enable Banking ne répond pas. Réessayez plus tard.",
         "NOT_FOUND": "Connexion bancaire introuvable.",
         "HTTP": "Enable Banking a renvoyé une erreur. Réessayez plus tard.",
+        "REDIRECT_NOT_ALLOWED": "Enable Banking refuse l’adresse de retour : enregistrez exactement celle affichée dans Administration › Synchronisation bancaire.",
         "FAILED": "Échec. Réessayez.",
         "SIGNED_OUT": "Votre session a expiré pendant l’autorisation. Connectez-vous puis reconnectez la banque.",
         "UNKNOWN_STATE": "Ce retour de la banque est inconnu ou déjà utilisé. Reconnectez la banque.",
@@ -444,6 +446,7 @@
           "NETWORK": "Enable Banking ne répond pas. Réessayez plus tard.",
           "NOT_FOUND": "Connexion bancaire introuvable.",
           "HTTP": "Enable Banking a renvoyé une erreur. Réessayez plus tard.",
+          "REDIRECT_NOT_ALLOWED": "Enable Banking refuse l’adresse de retour : enregistrez exactement celle affichée dans Administration › Synchronisation bancaire.",
           "FAILED": "Échec. Réessayez.",
           "INVALID": "Vérifiez les champs.",
           "FORBIDDEN": "Vous ne pouvez associer que vos propres comptes, non archivés.",
@@ -1974,7 +1977,8 @@
           "EXPIRED_SESSION": "Enable Banking a répondu que la session a expiré.",
           "NOT_FOUND": "Enable Banking ne trouve pas cette application.",
           "NETWORK": "Enable Banking est injoignable depuis le serveur.",
-          "HTTP": "Enable Banking a renvoyé une erreur. Réessayez plus tard."
+          "HTTP": "Enable Banking a renvoyé une erreur. Réessayez plus tard.",
+          "REDIRECT_NOT_ALLOWED": "Enable Banking refuse l’adresse de retour : enregistrez exactement celle affichée dans Administration › Synchronisation bancaire."
         }
       },
       "remove": "Supprimer la configuration",

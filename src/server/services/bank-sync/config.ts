@@ -106,8 +106,8 @@ export function recentRateLimit(cfg: BankSyncConfig, now = new Date()): Date | n
   return at && now.getTime() - at.getTime() < RATE_LIMIT_NOTICE_MS ? at : null;
 }
 
-export function bankSyncRedirectUrl(): string {
-  return new URL("/api/bank-sync/callback", env.APP_URL).href;
+export function bankSyncRedirectUrl(override = env.BANK_SYNC_REDIRECT_URL): string {
+  return override || new URL("/api/bank-sync/callback", env.APP_URL).href;
 }
 
 export async function bankSyncClient(
