@@ -2242,7 +2242,8 @@
           "deleted": "Bank account deleted",
           "unarchived": "Bank account unarchived",
           "initial_balance_adjusted": "Opening balance adjusted by an import",
-          "initial_balance_restored": "Opening balance restored by an import revert"
+          "initial_balance_restored": "Opening balance restored by an import revert",
+          "mirror_updated": "Savings account kept up to date from transfers: settings changed"
         },
         "transaction": {
           "created": "Transaction created",
@@ -2289,7 +2290,8 @@
           "created": "Link created",
           "deleted": "Link deleted",
           "suggestionIgnored": "Link suggestion ignored",
-          "suggestionRestored": "Link suggestion restored"
+          "suggestionRestored": "Link suggestion restored",
+          "mirrorCreated": "Savings mirror legs created"
         },
         "mail": {
           "security": {

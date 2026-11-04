@@ -289,7 +289,7 @@ model BankAuthRequest {
   @@index([createdAt])
 }
 
-// A synced row the user deleted: later syncs never re-insert it (design §Deleting synced rows).
+// A synced row or a savings mirror leg the user deleted: never re-inserted (design §Deleting synced rows).
 model SyncTombstone {
   accountId  String
   externalId String

@@ -137,6 +137,7 @@ export async function setSavingsMirror(
   input: SavingsMirror | null,
 ): Promise<void> {
   const account = await ownedOrThrow(savingsAccountId, actorId);
+  if (!input && !account.mirrorPattern) return;
   const sourceIds = [...new Set(input?.sourceAccountIds ?? [])];
   const pattern = input?.pattern.trim() ?? "";
   if (input) {
