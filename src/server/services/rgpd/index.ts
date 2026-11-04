@@ -50,6 +50,7 @@ export type UserDataExport = {
     color: string | null;
     icon: string | null;
     archived: boolean;
+    mirror: { pattern: string; sourceAccountIds: string[] } | null;
     createdAt: Date;
   }[];
   transactions: ExportedTransaction[];
@@ -140,7 +141,11 @@ export async function exportParts(userId: string): Promise<{
       select: { id: true, email: true, name: true, createdAt: true },
     }),
     db.userPreference.findUnique({ where: { userId } }),
-    db.bankAccount.findMany({ where: { ownerId: userId }, orderBy: { createdAt: "asc" } }),
+    db.bankAccount.findMany({
+      where: { ownerId: userId },
+      include: { mirrorSources: { select: { sourceAccountId: true } } },
+      orderBy: { createdAt: "asc" },
+    }),
     db.category.findMany({ where: { userId } }),
     db.categorizationRule.findMany({ where: { userId } }),
     loadAliases(userId),
@@ -190,6 +195,12 @@ export async function exportParts(userId: string): Promise<{
     color: a.color,
     icon: a.icon,
     archived: a.archived,
+    mirror: a.mirrorPattern
+      ? {
+          pattern: a.mirrorPattern,
+          sourceAccountIds: a.mirrorSources.map((m) => m.sourceAccountId),
+        }
+      : null,
     createdAt: a.createdAt,
   }));
 

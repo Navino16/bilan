@@ -110,7 +110,19 @@ type CardProps = {
   groups: ShareGroup[];
   categories: FlatCategory[];
   writableAccounts: { id: string; name: string }[];
+  ownedAccounts: VisibleAccount[];
 };
+
+// Owned accounts that can feed a savings account: active non-savings ones, plus the current
+// sources so they can still be unticked.
+function mirrorSourcesFor(account: VisibleAccount, owned: VisibleAccount[]) {
+  const selected = new Set(account.mirror?.sourceAccountIds ?? []);
+  return owned
+    .filter(
+      (o) => o.id !== account.id && (selected.has(o.id) || (!o.archived && o.type !== "SAVINGS")),
+    )
+    .map((o) => ({ id: o.id, name: o.name }));
+}
 
 function AccountCard({
   account: a,
@@ -119,6 +131,7 @@ function AccountCard({
   groups,
   categories,
   writableAccounts,
+  ownedAccounts,
 }: CardProps & {
   account: VisibleAccount;
   synced?: SyncedAccountInfo;
@@ -207,8 +220,10 @@ function AccountCard({
                 initialBalance: a.initialBalance,
                 ibanMasked: a.ibanMasked,
                 archived: a.archived,
+                mirror: a.mirror,
               }}
               groups={groups}
+              mirrorSources={mirrorSourcesFor(a, ownedAccounts)}
             />
           )}
         </div>
@@ -239,7 +254,8 @@ export function AccountList({
     id: a.id,
     name: a.name,
   }));
-  const cardProps = { groups, categories, writableAccounts };
+  const ownedAccounts = allAccounts.filter((a) => a.access === "OWNER");
+  const cardProps = { groups, categories, writableAccounts, ownedAccounts };
   const total = accounts.reduce((sum, a) => sum + a.balance, 0);
   const legend = balanceLegend(accounts);
   const colorOf = new Map(legend.items.map((a) => [a.id, a.color ?? "#2563eb"]));

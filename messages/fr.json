@@ -336,10 +336,20 @@
       "CONFIRMATION": "Le nom saisi ne correspond pas au compte.",
       "AMOUNT_INVALID": "Montant invalide. Exemples : -12,34 ou 1 234,56.",
       "AMOUNT_AMBIGUOUS": "Montant ambigu : écrivez 1234 ou 1,23 (sans séparateur de milliers seul).",
-      "AMOUNT_PRECISION": "Le montant ne peut pas avoir plus de 2 décimales."
+      "AMOUNT_PRECISION": "Le montant ne peut pas avoir plus de 2 décimales.",
+      "INVALID_MIRROR": "Choisissez au moins un compte source et un motif de libellé."
     },
     "legendOthers": "Autres · {count, number}",
     "legendNegative": "Hachuré : solde négatif",
+    "mirror": {
+      "title": "Tenu à jour par les virements",
+      "description": "Votre banque ne remonte pas ce compte ? Chaque virement d’un compte source dont le libellé contient le motif ajoute ici l’opération inverse, après les imports et les synchronisations bancaires.",
+      "sources": "Comptes sources",
+      "noSources": "Aucun autre compte à choisir.",
+      "pattern": "Motif du libellé",
+      "patternHint": "Recherché n’importe où dans le libellé, sans tenir compte de la casse ni des accents.",
+      "interest": "Les intérêts restent une saisie manuelle."
+    },
     "bankSync": {
       "connect": "Connecter ma banque",
       "dialog": {
@@ -2232,7 +2242,8 @@
           "deleted": "Compte bancaire supprimé",
           "unarchived": "Compte bancaire désarchivé",
           "initial_balance_adjusted": "Solde initial ajusté par un import",
-          "initial_balance_restored": "Solde initial restauré par l’annulation d’un import"
+          "initial_balance_restored": "Solde initial restauré par l’annulation d’un import",
+          "mirror_updated": "Compte d’épargne tenu à jour par les virements : réglages modifiés"
         },
         "transaction": {
           "created": "Transaction créée",
@@ -2279,7 +2290,8 @@
           "created": "Liaison créée",
           "deleted": "Liaison supprimée",
           "suggestionIgnored": "Suggestion de liaison ignorée",
-          "suggestionRestored": "Suggestion de liaison restaurée"
+          "suggestionRestored": "Suggestion de liaison restaurée",
+          "mirrorCreated": "Opérations miroir d’épargne créées"
         },
         "mail": {
           "security": {

@@ -289,7 +289,7 @@ model BankAuthRequest {
   @@index([createdAt])
 }
 
-// A synced row the user deleted: later syncs never re-insert it (design §Deleting synced rows).
+// A synced row or a savings mirror leg the user deleted: never re-inserted (design §Deleting synced rows).
 model SyncTombstone {
   accountId  String
   externalId String
@@ -298,6 +298,18 @@ model SyncTombstone {
   account BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@id([accountId, externalId])
+}
+
+// A source account whose matching transfers get a mirror leg on the savings account.
+model SavingsMirrorSource {
+  savingsAccountId String
+  sourceAccountId  String
+
+  savings BankAccount @relation("MirrorSavings", fields: [savingsAccountId], references: [id], onDelete: Cascade)
+  source  BankAccount @relation("MirrorSource", fields: [sourceAccountId], references: [id], onDelete: Cascade)
+
+  @@id([savingsAccountId, sourceAccountId])
+  @@index([sourceAccountId])
 }
 
 // TLS: implicit TLS (465); STARTTLS: upgrade required (587); NONE: unencrypted local relay.
@@ -360,6 +372,8 @@ model BankAccount {
   color          String?  @default("#2563eb")
   icon           String?
   archived       Boolean  @default(false)
+  // Label pattern of the source transfers a savings account mirrors (design §Savings mirror legs).
+  mirrorPattern  String?
   createdAt      DateTime @default(now())
 
   owner            User                    @relation("AccountOwner", fields: [ownerId], references: [id], onDelete: Cascade)
@@ -371,6 +385,8 @@ model BankAccount {
   attachedBudgets  Budget[]                @relation("BudgetAccount")
   bankLinks        BankConnectionAccount[]
   syncTombstones   SyncTombstone[]
+  mirrorSources    SavingsMirrorSource[]   @relation("MirrorSavings")
+  mirroredBy       SavingsMirrorSource[]   @relation("MirrorSource")
 
   @@index([ownerId])
   @@index([ibanHash])

@@ -1,8 +1,11 @@
+import { foldDiacritics } from "@/lib/text";
+
 export const ACCOUNT_TYPES = ["CHECKING", "SAVINGS", "CREDIT", "OTHER"] as const;
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
 export const ACCOUNT_NAME_MAX = 100;
 export const ACCOUNT_BANK_NAME_MAX = 100;
 export const ACCOUNT_IBAN_MAX = 40;
+export const MIRROR_PATTERN_MAX = 100;
 
 const comparableName = (s: string) =>
   s
@@ -13,4 +16,9 @@ const comparableName = (s: string) =>
 
 export function confirmsAccountName(typed: string, name: string): boolean {
   return comparableName(typed) === comparableName(name);
+}
+
+// Savings accounts are usually named like the bank labels them: "Livret A" → "LIVRET A".
+export function defaultMirrorPattern(name: string): string {
+  return foldDiacritics(name).toUpperCase().trim().slice(0, MIRROR_PATTERN_MAX);
 }

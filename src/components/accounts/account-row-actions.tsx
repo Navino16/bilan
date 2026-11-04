@@ -35,6 +35,7 @@ export type EditableAccount = {
   initialBalance: number;
   ibanMasked: string | null;
   archived: boolean;
+  mirror: { sourceAccountIds: string[]; pattern: string } | null;
 };
 
 type Dialogs = "edit" | "share" | "archive" | "delete" | null;
@@ -42,9 +43,11 @@ type Dialogs = "edit" | "share" | "archive" | "delete" | null;
 export function AccountRowActions({
   account,
   groups,
+  mirrorSources,
 }: {
   account: EditableAccount;
   groups: ShareGroup[];
+  mirrorSources: { id: string; name: string }[];
 }) {
   const t = useTranslations("accounts");
   const router = useRouter();
@@ -125,6 +128,7 @@ export function AccountRowActions({
           <AccountForm
             mode="edit"
             account={account}
+            mirrorSources={mirrorSources}
             open={open === "edit"}
             onOpenChange={onOpenChange("edit")}
           />

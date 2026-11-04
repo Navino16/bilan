@@ -14,8 +14,10 @@ import {
   updateAccount,
   archiveAccount,
   unarchiveAccount,
+  setSavingsMirror,
   AccountAccessError,
 } from "@/server/services/accounts";
+import { MIRROR_PATTERN_MAX } from "@/lib/validation/account";
 import {
   ibanRevealFailure,
   revealAccountIban,
@@ -63,6 +65,19 @@ export async function createAccountAction(
   return { ok: true };
 }
 
+const mirrorSchema = z.object({
+  sourceAccountIds: z.array(z.string().min(1).max(191)).max(50),
+  pattern: z.string().max(MIRROR_PATTERN_MAX),
+});
+
+// The savings section of the form: no source ticked turns the mirror off.
+function parseMirror(formData: FormData) {
+  return mirrorSchema.safeParse({
+    sourceAccountIds: formData.getAll("mirrorSource"),
+    pattern: formData.get("mirrorPattern") ?? "",
+  });
+}
+
 export async function updateAccountAction(
   _prev: AccountActionState,
   formData: FormData,
@@ -73,6 +88,9 @@ export async function updateAccountAction(
   const parsed = parse(formData);
   if (!parsed.success)
     return invalidInput(parsed.error, undefined, issueCode(parsed.error.issues, AMOUNT_ERRORS));
+  const withMirror = formData.get("mirror") === "1" && parsed.data.type === "SAVINGS";
+  const mirror = parseMirror(formData);
+  if (withMirror && !mirror.success) return { ok: false, error: "INVALID_MIRROR" };
   try {
     await updateAccount(
       id,
@@ -82,8 +100,17 @@ export async function updateAccountAction(
         removeIban: formData.get("removeIban") === "1",
       },
     );
+    if (withMirror && mirror.success) {
+      const { sourceAccountIds, pattern } = mirror.data;
+      await setSavingsMirror(
+        user.id,
+        id,
+        sourceAccountIds.length ? { sourceAccountIds, pattern } : null,
+      );
+    }
   } catch (e) {
-    return { ok: false, error: e instanceof AccountAccessError ? "FORBIDDEN" : "FAILED" };
+    if (!(e instanceof AccountAccessError)) return { ok: false, error: "FAILED" };
+    return { ok: false, error: e.message === "INVALID_MIRROR" ? "INVALID_MIRROR" : "FORBIDDEN" };
   }
   return { ok: true };
 }

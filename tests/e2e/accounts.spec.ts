@@ -107,6 +107,64 @@ test.describe("accounts", () => {
     await expect(page.getByText(name)).toHaveCount(0);
   });
 
+  test("keeps a savings account up to date from transfers", async ({ page }) => {
+    const stamp = Date.now();
+    const livret = `Livret ${stamp}`;
+    const courant = `Courant ${stamp}`;
+    const card = (name: string) =>
+      page.locator('[data-slot="card"]').filter({ hasText: name }).last();
+    await page.goto("/fr/accounts");
+    await expect(async () => {
+      await page.getByRole("button", { name: /nouveau compte/i }).click();
+      await expect(page.locator('input[name="name"]')).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 20_000 });
+    await page.fill('input[name="name"]', courant);
+    await page.getByRole("button", { name: /créer le compte/i }).click();
+    await expect(card(courant)).toBeVisible();
+
+    await page.getByRole("button", { name: /nouveau compte/i }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Épargne" }).click();
+    await page.fill('input[name="name"]', livret);
+    await page.getByRole("button", { name: /créer le compte/i }).click();
+    await expect(card(livret)).toBeVisible();
+
+    const openEdit = async () => {
+      await card(livret)
+        .getByRole("button", { name: /^actions pour/i })
+        .click();
+      await page.getByRole("menuitem", { name: /modifier/i }).click();
+      return page.getByRole("dialog").locator('[data-slot="savings-mirror"]');
+    };
+    let mirror = await openEdit();
+    await expect(mirror.getByText(/tenu à jour par les virements/i)).toBeVisible();
+    await expect(mirror.locator('input[name="mirrorPattern"]')).toHaveValue(`LIVRET ${stamp}`);
+    await mirror.getByLabel(courant).check();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: /enregistrer/i })
+      .click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+
+    mirror = await openEdit();
+    await expect(mirror.getByLabel(courant)).toBeChecked();
+    await expect(mirror.locator('input[name="mirrorPattern"]')).toHaveValue(`LIVRET ${stamp}`);
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: /annuler/i })
+      .click();
+
+    for (const name of [livret, courant]) {
+      await card(name)
+        .getByRole("button", { name: /^actions pour/i })
+        .click();
+      await page.getByRole("menuitem", { name: /supprimer/i }).click();
+      const dialog = page.getByRole("dialog");
+      await dialog.getByLabel(/saisissez/i).fill(name);
+      await dialog.getByRole("button", { name: /supprimer définitivement/i }).click();
+      await expect(page.getByText(name)).toHaveCount(0);
+    }
+  });
+
   test("share an account READ with a household; member sees it read-only", async ({
     page,
     browser,
