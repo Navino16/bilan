@@ -139,6 +139,7 @@ test.describe("accounts", () => {
     await expect(mirror.getByText(/tenu à jour par les virements/i)).toBeVisible();
     await expect(mirror.locator('input[name="mirrorPattern"]')).toHaveValue(`LIVRET ${stamp}`);
     await mirror.getByLabel(courant).check();
+    await mirror.getByRole("button", { name: "Libellé exact" }).click();
     await page
       .getByRole("dialog")
       .getByRole("button", { name: /enregistrer/i })
@@ -148,6 +149,10 @@ test.describe("accounts", () => {
     mirror = await openEdit();
     await expect(mirror.getByLabel(courant)).toBeChecked();
     await expect(mirror.locator('input[name="mirrorPattern"]')).toHaveValue(`LIVRET ${stamp}`);
+    await expect(mirror.getByRole("button", { name: "Libellé exact" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     await page
       .getByRole("dialog")
       .getByRole("button", { name: /annuler/i })

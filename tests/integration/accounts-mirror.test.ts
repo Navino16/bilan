@@ -34,7 +34,7 @@ beforeEach(async () => {
   await db.savingsMirrorSource.deleteMany({ where: { savingsAccountId: livret } });
   await db.bankAccount.update({
     where: { id: livret },
-    data: { type: "SAVINGS", mirrorPattern: null },
+    data: { type: "SAVINGS", mirrorPattern: null, mirrorMatchType: "CONTAINS" },
   });
 });
 
@@ -50,19 +50,39 @@ describe("savings mirror settings", () => {
       sourceAccountIds: [courant, joint, courant],
       pattern: "  LIVRET A ",
     });
-    expect(await getSavingsMirror(owner, livret)).toEqual({
+    const expected = {
       sourceAccountIds: [courant, joint].sort(),
       pattern: "LIVRET A",
-    });
+      matchType: "CONTAINS",
+    };
+    expect(await getSavingsMirror(owner, livret)).toEqual(expected);
     const view = (await listVisibleForUser(owner)).find((a) => a.id === livret);
-    expect(view?.mirror).toEqual({
-      sourceAccountIds: [courant, joint].sort(),
-      pattern: "LIVRET A",
-    });
+    expect(view?.mirror).toEqual(expected);
     const audit = await db.auditLog.findFirstOrThrow({
       where: { action: "account.mirror_updated", entityId: livret },
     });
-    expect(audit.metadata).toEqual({ sources: 2 });
+    expect(audit.metadata).toEqual({ sources: 2, matchType: "CONTAINS" });
+  });
+
+  it("stores the exact label mode, and falls back to contains when omitted", async () => {
+    await setSavingsMirror(owner, livret, {
+      sourceAccountIds: [courant],
+      pattern: "VIR.PERMANENT Livret A",
+      matchType: "EXACT",
+    });
+    expect(await getSavingsMirror(owner, livret)).toMatchObject({ matchType: "EXACT" });
+    await setSavingsMirror(owner, livret, { sourceAccountIds: [courant], pattern: "LIVRET A" });
+    expect(await getSavingsMirror(owner, livret)).toMatchObject({ matchType: "CONTAINS" });
+  });
+
+  it("rejects an unknown match mode", async () => {
+    const err = await setSavingsMirror(owner, livret, {
+      sourceAccountIds: [courant],
+      pattern: "LIVRET A",
+      matchType: "REGEX" as "EXACT",
+    }).catch((e: unknown) => e);
+    expect((err as Error).message).toBe("INVALID_MIRROR");
+    expect(await getSavingsMirror(owner, livret)).toBeNull();
   });
 
   it("null turns it off", async () => {
@@ -97,9 +117,15 @@ describe("savings mirror settings", () => {
   });
 
   it("is cleared when the account stops being a savings account", async () => {
-    await setSavingsMirror(owner, livret, { sourceAccountIds: [courant], pattern: "LIVRET A" });
+    await setSavingsMirror(owner, livret, {
+      sourceAccountIds: [courant],
+      pattern: "LIVRET A",
+      matchType: "EXACT",
+    });
     await updateAccount(livret, { name: "Livret A", type: "CHECKING" }, { id: owner });
     expect(await getSavingsMirror(owner, livret)).toBeNull();
+    const row = await db.bankAccount.findUniqueOrThrow({ where: { id: livret } });
+    expect(row.mirrorMatchType).toBe("CONTAINS");
     expect(await db.savingsMirrorSource.count({ where: { savingsAccountId: livret } })).toBe(0);
   });
 

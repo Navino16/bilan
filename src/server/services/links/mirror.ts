@@ -7,6 +7,7 @@ import { logEvent } from "@/server/services/audit";
 import { matchRule } from "@/server/services/categorization/match";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
 import { AUTO_LINK_WINDOW_DAYS, pairKeyOf } from "@/lib/links";
+import { toMirrorMatchType, type MirrorMatchType } from "@/lib/validation/account";
 import { alignNewLinkMonth, type MonthLeg } from "./month";
 
 const DAY_MS = 86_400_000;
@@ -24,14 +25,34 @@ export function mirrorExternalId(source: { accountId: string; externalId: string
 export const isMirrorExternalId = (externalId: string | null): boolean =>
   !!externalId?.startsWith(MIRROR_PREFIX);
 
-type Savings = { id: string; ownerId: string; pattern: string };
+type Savings = { id: string; ownerId: string; pattern: string; matchType: MirrorMatchType };
 type SourceRow = MonthLeg & { accountId: string; amount: number; externalId: string };
 
-const matches = (pattern: string, label: string) =>
-  matchRule(
-    { id: "", categoryId: "", pattern, matchType: "CONTAINS", caseSensitive: false },
-    label,
+const squashSpaces = (s: string) => s.replace(/\s+/g, " ");
+
+// EXACT compares the whole label, whitespace runs collapsed (bank labels pad with spaces).
+export function mirrorMatches(
+  { pattern, matchType }: Pick<Savings, "pattern" | "matchType">,
+  label: string,
+): boolean {
+  const exact = matchType === "EXACT";
+  return matchRule(
+    {
+      id: "",
+      categoryId: "",
+      pattern: exact ? squashSpaces(pattern) : pattern,
+      matchType,
+      caseSensitive: false,
+    },
+    exact ? squashSpaces(label) : label,
   );
+}
+
+// An exact match beats a contains one, then the longest pattern wins.
+const compareTargets = (a: Savings, b: Savings) =>
+  Number(b.matchType === "EXACT") - Number(a.matchType === "EXACT") ||
+  b.pattern.length - a.pattern.length ||
+  (a.id < b.id ? -1 : 1);
 
 // Opposite legs on the savings accounts the batch's source rows feed (design §Savings mirror
 // legs). Runs after auto-links: only TRANSFER rows they left unlinked are considered.
@@ -51,7 +72,7 @@ export async function mirrorSavingsLegs(
     select: {
       sourceAccountId: true,
       source: { select: { name: true, ownerId: true } },
-      savings: { select: { id: true, ownerId: true, mirrorPattern: true } },
+      savings: { select: { id: true, ownerId: true, mirrorPattern: true, mirrorMatchType: true } },
     },
   });
   const savingsOf = new Map<string, Savings[]>();
@@ -60,7 +81,12 @@ export async function mirrorSavingsLegs(
     // Mirror legs stay within one owner's accounts (design §Ownership).
     if (c.savings.ownerId !== c.source.ownerId) continue;
     const list = savingsOf.get(c.sourceAccountId) ?? [];
-    list.push({ id: c.savings.id, ownerId: c.savings.ownerId, pattern: c.savings.mirrorPattern! });
+    list.push({
+      id: c.savings.id,
+      ownerId: c.savings.ownerId,
+      pattern: c.savings.mirrorPattern!,
+      matchType: toMirrorMatchType(c.savings.mirrorMatchType),
+    });
     savingsOf.set(c.sourceAccountId, list);
     sourceName.set(c.sourceAccountId, c.source.name);
   }
@@ -91,11 +117,10 @@ export async function mirrorSavingsLegs(
   const perOwner = new Map<string, { created: number; linked: number }>();
   for (const r of rows) {
     const label = decrypt(r.rawLabelEnc, dataKey);
-    // The most specific pattern wins when a source feeds several savings accounts.
     const target = savingsOf
       .get(r.accountId)!
-      .filter((s) => matches(s.pattern, label))
-      .sort((a, b) => b.pattern.length - a.pattern.length || (a.id < b.id ? -1 : 1))[0];
+      .filter((s) => mirrorMatches(s, label))
+      .sort(compareTargets)[0];
     if (!target) continue;
     const source: SourceRow = { ...r, amount: Number(r.amount), externalId: r.externalId! };
     const outcome = await mirrorOne(source, target, sourceName.get(r.accountId)!);

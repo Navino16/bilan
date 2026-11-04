@@ -6,7 +6,7 @@ import { commitCsvBatch, createCsvBatch, previewCsvBatch } from "@/server/servic
 import { setSavingsMirror } from "@/server/services/accounts";
 import { createEnableBankingClient } from "@/server/services/bank-sync/client";
 import { syncConnection } from "@/server/services/bank-sync/sync";
-import { mirrorExternalId, mirrorSavingsLegs } from "@/server/services/links/mirror";
+import { mirrorExternalId, mirrorMatches, mirrorSavingsLegs } from "@/server/services/links/mirror";
 import { setManualMonth } from "@/server/services/links/month";
 import { pairKeyOf } from "@/lib/links";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
@@ -107,7 +107,7 @@ beforeEach(async () => {
   await db.savingsMirrorSource.deleteMany({ where: { savingsAccountId: { in: accounts } } });
   await db.bankAccount.updateMany({
     where: { id: { in: accounts } },
-    data: { mirrorPattern: null, archived: false },
+    data: { mirrorPattern: null, mirrorMatchType: "CONTAINS", archived: false },
   });
   await db.bankConnectionAccount.updateMany({
     where: { connectionId },
@@ -292,6 +292,38 @@ describe("savings mirror legs", () => {
     expect((await rowsOn(ldds)).map((r) => Number(r.amount))).toEqual([50]);
   });
 
+  it("exact mode mirrors only the transfers whose whole label is the pattern", async () => {
+    await setSavingsMirror(owner, livret, {
+      sourceAccountIds: [courant],
+      pattern: "VIR.PERMANENT Livret A",
+      matchType: "EXACT",
+    });
+    await importCsv(courant, [
+      "05/10/2026;VIR.PERMANENT Livret A;100,00;",
+      "05/10/2026;VIR.PERMANENT Livret A Camille;30,00;",
+      "05/10/2026;VIR.PERMANENT Livret A Lucas;20,00;",
+    ]);
+    expect((await rowsOn(livret)).map((r) => Number(r.amount))).toEqual([100]);
+  });
+
+  it("an exact match beats a contains one of the same length", async () => {
+    await setSavingsMirror(owner, livret, {
+      sourceAccountIds: [courant],
+      pattern: "VIR.PERMANENT LIVRET A",
+    });
+    await setSavingsMirror(owner, ldds, {
+      sourceAccountIds: [courant],
+      pattern: "vir.permanent livret a",
+      matchType: "EXACT",
+    });
+    await importCsv(courant, [
+      "05/10/2026;VIR.PERMANENT Livret A;100,00;",
+      "05/10/2026;VIR.PERMANENT Livret A Camille;30,00;",
+    ]);
+    expect((await rowsOn(ldds)).map((r) => Number(r.amount))).toEqual([100]);
+    expect((await rowsOn(livret)).map((r) => Number(r.amount))).toEqual([30]);
+  });
+
   it("never writes to a savings account of another owner, nor an archived one", async () => {
     await db.bankAccount.update({
       where: { id: foreignSavings },
@@ -304,5 +336,25 @@ describe("savings mirror legs", () => {
     await importCsv(courant, ["10/10/2026;VIR LIVRET A TEST;300,00;"]);
     expect(await rowsOn(foreignSavings)).toHaveLength(0);
     expect(await rowsOn(livret)).toHaveLength(0);
+  });
+});
+
+describe("mirror label matching", () => {
+  const exact = { pattern: "VIR.PERMANENT Livret A", matchType: "EXACT" } as const;
+  const contains = { pattern: "VIR.PERMANENT Livret A", matchType: "CONTAINS" } as const;
+
+  it("exact ignores case, accents, surrounding and repeated spaces", () => {
+    expect(mirrorMatches(exact, "VIR.PERMANENT Livret A")).toBe(true);
+    expect(mirrorMatches(exact, "  vir.permanent   LIVRET\u00a0A ")).toBe(true);
+    expect(mirrorMatches({ ...exact, pattern: "VIR LIVRET EPARGNE" }, "VIR Livret Épargne")).toBe(
+      true,
+    );
+    expect(mirrorMatches(exact, "VIR.PERMANENT Livret A Camille")).toBe(false);
+    expect(mirrorMatches(exact, "VIR.PERMANENT Livret")).toBe(false);
+  });
+
+  it("contains matches the pattern anywhere", () => {
+    expect(mirrorMatches(contains, "VIR.PERMANENT Livret A Camille")).toBe(true);
+    expect(mirrorMatches(contains, "VIR.PERMANENT Livret B")).toBe(false);
   });
 });

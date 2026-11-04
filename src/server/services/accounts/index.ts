@@ -7,7 +7,12 @@ import { logEvent } from "@/server/services/audit";
 import { accountInputSchema, type AccountInput } from "@/lib/schemas/account";
 import { isValidIban, normalizeIban, maskIban } from "./iban";
 import { displayName } from "@/lib/validation/name";
-import { MIRROR_PATTERN_MAX } from "@/lib/validation/account";
+import {
+  MIRROR_MATCH_TYPES,
+  MIRROR_PATTERN_MAX,
+  toMirrorMatchType,
+  type MirrorMatchType,
+} from "@/lib/validation/account";
 
 // Thrown for both authorization failures and invalid business input so callers
 // (Server Actions) can map any of them to a single user-facing error state.
@@ -32,7 +37,11 @@ export type VisibleAccount = {
   mirror: SavingsMirror | null; // owner view only
 };
 
-export type SavingsMirror = { sourceAccountIds: string[]; pattern: string };
+export type SavingsMirror = {
+  sourceAccountIds: string[];
+  pattern: string;
+  matchType: MirrorMatchType;
+};
 
 // Current balance per account: opening balance + sum of its transactions.
 export async function accountBalances(
@@ -118,7 +127,11 @@ export async function updateAccount(
       icon: data.icon ?? null,
       initialBalance: data.initialBalance,
       ...iban,
-      ...(data.type !== "SAVINGS" && { mirrorPattern: null, mirrorSources: { deleteMany: {} } }),
+      ...(data.type !== "SAVINGS" && {
+        mirrorPattern: null,
+        mirrorMatchType: "CONTAINS",
+        mirrorSources: { deleteMany: {} },
+      }),
     },
   });
   await logEvent({
@@ -134,14 +147,16 @@ export async function updateAccount(
 export async function setSavingsMirror(
   actorId: string,
   savingsAccountId: string,
-  input: SavingsMirror | null,
+  input: (Omit<SavingsMirror, "matchType"> & { matchType?: MirrorMatchType }) | null,
 ): Promise<void> {
   const account = await ownedOrThrow(savingsAccountId, actorId);
   if (!input && !account.mirrorPattern) return;
   const sourceIds = [...new Set(input?.sourceAccountIds ?? [])];
   const pattern = input?.pattern.trim() ?? "";
+  const matchType = input?.matchType ?? "CONTAINS";
   if (input) {
     if (account.type !== "SAVINGS") throw new AccountAccessError("INVALID_MIRROR");
+    if (!MIRROR_MATCH_TYPES.includes(matchType)) throw new AccountAccessError("INVALID_MIRROR");
     if (!pattern || pattern.length > MIRROR_PATTERN_MAX) {
       throw new AccountAccessError("INVALID_MIRROR");
     }
@@ -160,7 +175,7 @@ export async function setSavingsMirror(
     }),
     db.bankAccount.update({
       where: { id: savingsAccountId },
-      data: { mirrorPattern: input ? pattern : null },
+      data: { mirrorPattern: input ? pattern : null, mirrorMatchType: matchType },
     }),
   ]);
   await logEvent({
@@ -168,7 +183,7 @@ export async function setSavingsMirror(
     action: "account.mirror_updated",
     entity: "BankAccount",
     entityId: savingsAccountId,
-    metadata: { sources: sourceIds.length },
+    metadata: { sources: sourceIds.length, matchType },
   });
 }
 
@@ -186,6 +201,7 @@ export async function getSavingsMirror(
   return {
     sourceAccountIds: sources.map((s) => s.sourceAccountId),
     pattern: account.mirrorPattern,
+    matchType: toMirrorMatchType(account.mirrorMatchType),
   };
 }
 
@@ -290,6 +306,7 @@ export async function listVisibleForUser(
       ? {
           sourceAccountIds: a.mirrorSources.map((m) => m.sourceAccountId),
           pattern: a.mirrorPattern,
+          matchType: toMirrorMatchType(a.mirrorMatchType),
         }
       : null,
   }));

@@ -378,12 +378,15 @@ Some banks don't share their savings accounts (a Livret A at LCL, for example). 
 
 1. Open **Edit** in the savings account's menu (accounts of type **Savings** only, as their owner).
 2. Under **Kept up to date from transfers**, tick the **Source accounts**: your accounts the transfers come from.
-3. Check the **Label pattern**: it defaults to the account's name in capitals, and is matched anywhere in the label, ignoring case and accents.
+3. Check the **Label pattern**: it defaults to the account's name in capitals. Next to it, pick how it's matched, ignoring case and accents either way:
+   - **Contains** (the default): anywhere in the label.
+   - **Exact label**: the whole label must be the pattern, extra spaces aside. Use it when other transfers start the same way: with the pattern `VIR.PERMANENT Livret A`, a transfer labelled `VIR.PERMANENT Livret A Camille` (someone else's Livret A) isn't mirrored.
 4. Click **Save**.
 
-After each bank sync or file import on a source account, each new transfer whose label contains the pattern, and that isn't linked yet, adds the opposite operation on the savings account ("Virement depuis …" or "Virement vers …"), [linked](#links-transfers-and-refunds) to it. When the savings account already has the opposite operation (same amount, at most 4 days apart, not linked), Bilan links it instead of adding one.
+After each bank sync or file import on a source account, each new transfer whose label matches the pattern, and that isn't linked yet, adds the opposite operation on the savings account ("Virement depuis …" or "Virement vers …"), [linked](#links-transfers-and-refunds) to it. When the savings account already has the opposite operation (same amount, at most 4 days apart, not linked), Bilan links it instead of adding one.
 
 - A savings account has one label pattern, for all its source accounts.
+- When a transfer matches several savings accounts, an exact label wins over a contains pattern, then the longest pattern wins.
 - Only transactions imported or synced after you set it are mirrored: the existing history isn't changed.
 - Interest stays a manual entry.
 - If you delete an operation Bilan added, it doesn't come back.

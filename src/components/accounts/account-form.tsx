@@ -28,13 +28,16 @@ import {
   ACCOUNT_IBAN_MAX,
   ACCOUNT_NAME_MAX,
   ACCOUNT_TYPES,
+  MIRROR_MATCH_TYPES,
   MIRROR_PATTERN_MAX,
   defaultMirrorPattern,
   type AccountType,
+  type MirrorMatchType,
 } from "@/lib/validation/account";
 import { createAccountAction, updateAccountAction } from "@/server/transport/actions/accounts";
 import { useActionForm } from "@/components/forms/use-action-form";
 import { FieldError } from "@/components/forms/field-error";
+import { SegmentedTabs } from "@/components/transactions/bits";
 
 // Light-mode hex values of the design's `--cat-*` palette. Stored as plain hex
 // (schema validates `#rrggbb`) so the chosen accent is theme-independent.
@@ -58,7 +61,7 @@ type EditableAccount = {
   color: string | null;
   initialBalance: number;
   ibanMasked: string | null;
-  mirror?: { sourceAccountIds: string[]; pattern: string } | null;
+  mirror?: { sourceAccountIds: string[]; pattern: string; matchType: MirrorMatchType } | null;
 };
 
 export function AccountForm({
@@ -363,6 +366,9 @@ function MirrorSection({
 }) {
   const t = useTranslations("accounts.mirror");
   const selected = new Set(account.mirror?.sourceAccountIds ?? []);
+  const [matchType, setMatchType] = useState<MirrorMatchType>(
+    account.mirror?.matchType ?? "CONTAINS",
+  );
   return (
     <fieldset className="border-border space-y-3 rounded-lg border p-3" data-slot="savings-mirror">
       <input type="hidden" name="mirror" value="1" />
@@ -389,14 +395,25 @@ function MirrorSection({
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="acc-mirrorPattern">{t("pattern")}</Label>
-        <Input
-          id="acc-mirrorPattern"
-          name="mirrorPattern"
-          defaultValue={account.mirror?.pattern ?? defaultMirrorPattern(account.name)}
-          maxLength={MIRROR_PATTERN_MAX}
-          autoComplete="off"
-        />
-        <p className="text-muted-foreground text-xs">{t("patternHint")}</p>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Input
+            id="acc-mirrorPattern"
+            name="mirrorPattern"
+            defaultValue={account.mirror?.pattern ?? defaultMirrorPattern(account.name)}
+            maxLength={MIRROR_PATTERN_MAX}
+            autoComplete="off"
+            className="min-w-0 flex-1"
+          />
+          <input type="hidden" name="mirrorMatchType" value={matchType} />
+          <SegmentedTabs
+            items={MIRROR_MATCH_TYPES.map((m) => ({ id: m, label: t(`match.${m}`) }))}
+            value={matchType}
+            onChange={setMatchType}
+            aria-label={t("matchType")}
+            className="self-start sm:self-auto"
+          />
+        </div>
+        <p className="text-muted-foreground text-xs">{t(`patternHint.${matchType}`)}</p>
       </div>
       <p className="text-muted-foreground text-xs">{t("interest")}</p>
     </fieldset>

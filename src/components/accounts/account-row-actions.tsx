@@ -25,6 +25,7 @@ import { AccountForm } from "@/components/accounts/account-form";
 import { AccountDeleteDialog } from "@/components/accounts/account-delete-dialog";
 import { ShareDialog, type ShareGroup } from "@/components/accounts/share-dialog";
 import { archiveAccountAction, unarchiveAccountAction } from "@/server/transport/actions/accounts";
+import type { MirrorMatchType } from "@/lib/validation/account";
 
 export type EditableAccount = {
   id: string;
@@ -35,7 +36,7 @@ export type EditableAccount = {
   initialBalance: number;
   ibanMasked: string | null;
   archived: boolean;
-  mirror: { sourceAccountIds: string[]; pattern: string } | null;
+  mirror: { sourceAccountIds: string[]; pattern: string; matchType: MirrorMatchType } | null;
 };
 
 type Dialogs = "edit" | "share" | "archive" | "delete" | null;
