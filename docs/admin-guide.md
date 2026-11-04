@@ -2,7 +2,7 @@
 
 # Bilan administrator guide
 
-This guide covers running a Bilan instance from the web interface: the first start, users and roles, sign-up and sign-in, single sign-on, e-mail, and the audit log. For installation, environment variables, backups and scheduled jobs, see the [self-hosting guide](self-hosting.md).
+This guide covers running a Bilan instance from the web interface: the first start, users and roles, sign-up and sign-in, single sign-on, e-mail, bank sync, and the audit log. For installation, environment variables, backups and scheduled jobs, see the [self-hosting guide](self-hosting.md).
 
 Almost everything is configured in the app. Changes take effect immediately, without a restart. Only the bootstrap secrets and the public address (`APP_URL`) live in the environment file.
 
@@ -17,6 +17,7 @@ Almost everything is configured in the app. Changes take effect immediately, wit
 - [Single sign-on (OIDC and Google)](#single-sign-on-oidc-and-google)
 - [E-mail (SMTP)](#e-mail-smtp)
 - [E-mail address verification](#e-mail-address-verification)
+- [Bank sync (Enable Banking)](#bank-sync-enable-banking)
 - [Audit log](#audit-log)
 - [Security notes](#security-notes)
 
@@ -36,7 +37,7 @@ Click **Finish**: the account is created and you are signed in. From then on, `/
 
 ## The administration area
 
-Open **Administration** in the sidebar (the entry only appears for administrators). The area has six tabs. Each one is shown only if your role allows it.
+Open **Administration** in the sidebar (the entry only appears for administrators). The area has seven tabs. Each one is shown only if your role allows it.
 
 | Tab               | Purpose                                                         |
 | ----------------- | --------------------------------------------------------------- |
@@ -44,6 +45,7 @@ Open **Administration** in the sidebar (the entry only appears for administrator
 | Invitation tokens | Tokens that let people sign up when registration is invite-only |
 | Auth providers    | SSO providers (OIDC, Google)                                    |
 | SMTP              | Outgoing e-mail server                                          |
+| Bank sync         | Enable Banking application used to sync bank accounts           |
 | Settings          | Instance name, registration mode, password and 2FA policies     |
 | Audit log         | History of the actions performed on the instance                |
 
@@ -62,7 +64,7 @@ Each account has one instance role: **User**, **Administrator** or **Super admin
 | Delete users permanently                                        | No   | No                            | Anyone but themselves         |
 | Change the instance name                                        | No   | Yes                           | Yes                           |
 | Registration mode, password sign-in, password length, admin 2FA | No   | No                            | Yes                           |
-| Invitation tokens, auth providers, SMTP                         | No   | No                            | Yes                           |
+| Invitation tokens, auth providers, SMTP, bank sync              | No   | No                            | Yes                           |
 
 Rank rules:
 
@@ -309,14 +311,15 @@ Click **Send a test email**. The test uses the saved configuration, even when it
 
 ### What Bilan sends
 
-| E-mail               | When                                                                       |
-| -------------------- | -------------------------------------------------------------------------- |
-| Address verification | After sign-up, and when the user clicks **Resend the email** in the banner |
-| Password reset       | **Forgot password?** on the sign-in page (link valid 1 hour)               |
-| Account created      | An administrator creates the user (password-setup link, valid 1 hour)      |
-| Password changed     | After a password change or reset                                           |
-| Household invitation | A household administrator invites someone (link and code)                  |
-| Security alerts      | New sign-in (password, passkey or SSO), passkey added, two-factor disabled |
+| E-mail                | When                                                                       |
+| --------------------- | -------------------------------------------------------------------------- |
+| Address verification  | After sign-up, and when the user clicks **Resend the email** in the banner |
+| Password reset        | **Forgot password?** on the sign-in page (link valid 1 hour)               |
+| Account created       | An administrator creates the user (password-setup link, valid 1 hour)      |
+| Password changed      | After a password change or reset                                           |
+| Household invitation  | A household administrator invites someone (link and code)                  |
+| Security alerts       | New sign-in (password, passkey or SSO), passkey added, two-factor disabled |
+| Bank consent reminder | 14 and 3 days before a user's bank connection expires                      |
 
 E-mails are written in the recipient's language.
 
@@ -329,6 +332,7 @@ Bilan works without SMTP, with these differences:
 - **Forgot password?** cannot deliver its link.
 - No verification e-mail is sent and the verification banner is hidden. An administrator marks addresses as verified instead (see below).
 - No security alerts are sent.
+- No bank consent reminder is sent: users still see the banner in the app.
 
 ## E-mail address verification
 
@@ -344,6 +348,75 @@ An address becomes verified when:
 
 Users cannot change their e-mail address after sign-up.
 
+## Bank sync (Enable Banking)
+
+![Bank sync tab](images/en/admin-bank-sync.png)
+
+Bank sync imports users' bank transactions by itself, read-only, through [Enable Banking](https://enablebanking.com), a licensed account-information provider (PSD2). Bilan never talks to the banks directly: the instance has one Enable Banking application, configured in **Administration > Bank sync**, and each user connects their own bank from the **Accounts** page (see [Bank sync](user-guide.md#bank-sync) in the user guide). The feature stays hidden from users until a configuration is saved with **Offer bank sync to users** ticked.
+
+### Restricted production mode
+
+Enable Banking's free **restricted production** mode is meant for your own accounts: it only gives access to the accounts linked in the application's control panel, those of the application owner and their household. It suits a personal or family instance. Offering bank sync to anyone else needs a contract with Enable Banking; Bilan doesn't check who uses it. Whether another household member can link their own accounts in your control panel is not verified yet.
+
+### Create the Enable Banking application
+
+1. Sign up at [Enable Banking](https://enablebanking.com) and, in its control panel, create an application in the **Production** environment (restricted mode).
+2. Keep the application ID and the private key (a PEM file) you get when creating it.
+3. Register the [redirect URL](#redirect-url) shown in Bilan as an allowed redirect URL of the application.
+4. Link your bank accounts in the control panel ("Activate by linking accounts"). The application stays inactive until at least one account is linked, and in restricted mode Bilan only gets the linked accounts: an account you don't link never shows up when you connect the bank.
+
+### Configure
+
+| Field                    | Description                                                                                                                                                              |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Application ID           | The ID of the Enable Banking application                                                                                                                                 |
+| Private key (PEM)        | Paste the whole RSA private key, `BEGIN` and `END` lines included. Stored encrypted and never shown again. Leave blank to keep the saved one (same application ID only). |
+| Offer bank sync to users | Off hides the feature from users and stops the background syncs                                                                                                          |
+| Sync frequency           | Every 6 (default), 12 or 24 hours. See [Sync frequency](#sync-frequency).                                                                                                |
+
+Click **Save**. A key that isn't an RSA private key in PEM format is refused, and so is a blank key when no key is saved yet or when the application ID changed.
+
+### Redirect URL
+
+After the user authorizes access at their bank, Enable Banking sends the browser back to Bilan at `<APP_URL>/api/bank-sync/callback`. The tab shows the exact URL, with a copy button: register it as-is in the Enable Banking application.
+
+- It must use **HTTPS**: Enable Banking refuses `http://` URLs for a production application.
+- Only the user's browser follows it: Enable Banking never calls your server, so an instance on a private network, or behind a certificate from an internal CA, works as long as the browser trusts it.
+- To use another URL (for example a development instance whose `APP_URL` is plain HTTP, behind an HTTPS proxy), set `BANK_SYNC_REDIRECT_URL` in the environment file: see [Bank sync](self-hosting.md#bank-sync) in the self-hosting guide. The tab then shows that URL.
+
+When the URL Bilan sends is not registered, users get "Enable Banking refuses the redirect URL: register exactly the one shown in Administration › Bank sync." Compare the registered URL with the one on the tab, character for character.
+
+### Test the connection
+
+**Test the connection** uses the saved configuration, even when it is off: it reads the application and counts the banks available in France. You can run 5 tests per minute.
+
+| Message                                                 | Meaning                                                                             |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Application "…" (PRODUCTION), active: N banks available | Ready                                                                               |
+| The application is not active yet                       | No account is linked in the control panel yet: link them, then test again           |
+| Enable Banking rejects the signature                    | The application ID and the private key don't match                                  |
+| Enable Banking can't find this application              | Wrong application ID                                                                |
+| Enable Banking can't be reached from the server         | The server has no outgoing access to `api.enablebanking.com` (firewall, proxy, DNS) |
+| Enable Banking returned an error                        | Any other answer: try again later                                                   |
+
+The test does not use the redirect URL: a wrong redirect URL only shows when a user connects a bank.
+
+### Sync frequency
+
+The `cron` service calls the bank sync job every hour (see [Scheduled jobs](self-hosting.md#scheduled-jobs)). Each run syncs the connections whose last sync is older than the **Sync frequency**, one after the other, and mails the consent reminders.
+
+Many banks limit these background accesses, made while the user is away, to **4 a day per account**. A background sync of an account makes one balance call and one or more transaction calls. When a bank refuses one (rate limit), the connection waits 6 hours before its next background sync, and the tab shows "A bank limited access on …" for a week: choose a longer interval if it keeps happening. The syncs a user triggers (connecting, reconnecting, **Sync now**) are made with the user present and don't count against that limit.
+
+A connection that fails 3 times in a row (other than a rate limit, an expired consent, or an instance-wide problem such as an inactive application or no network) is marked **Failing**: background syncs skip it until its owner clicks **Sync now**. Between failures, the next attempt waits 3 hours longer each time.
+
+### Remove the configuration
+
+**Remove the configuration** deletes the application ID and the key. Bank sync is unavailable until a new configuration is saved: users' connections are kept but no longer sync. To pause the feature without losing the key, untick **Offer bank sync to users** instead.
+
+### Privacy
+
+The private key, the Enable Banking session of each connection and the bank's account identifiers are stored encrypted with `DATA_ENCRYPTION_KEY`; IBANs returned by the bank are only kept as a keyed hash, to recognize an account when the user reconnects. None of them appear in the audit log, the error messages or the pages. A connection is visible only to the user who made it, not to administrators. Deleting a user also deletes their Enable Banking sessions.
+
 ## Audit log
 
 ![Audit log tab](images/en/admin-audit.png)
@@ -356,9 +429,10 @@ Every change of state is logged, reads are not. This includes:
 
 - authentication: sign-ins (password, passkey, 2FA step, SSO) and failed sign-ins, sign-ups, password changes and resets, two-factor changes, backup code regenerations, forgotten trusted devices, passkeys, revoked sessions, linked and unlinked SSO identities, address verifications;
 - users: creation by an administrator, role changes, disabling, re-enabling, address marked verified, deletion;
-- settings: every app setting, SMTP changes and tests, auth providers;
+- settings: every app setting, SMTP and bank sync changes and tests, auth providers;
 - invitation tokens, households and their invitations;
-- users' financial activity: bank accounts and shares, transactions, imports, categories, rules, budgets, links;
+- users' financial activity: bank accounts and shares, transactions, imports, categories, rules, budgets, links, bank connections (connected, reconnected, mapped, expired, disconnected);
+- each bank sync run that had something to do (`bank_sync.cron`, by **system**), with its counts;
 - failed security e-mails and audit purges.
 
 An SSO sign-in is logged as `auth.login.success` with `method: sso` and the provider key. The first SSO sign-in of an identity that creates an account is logged as the sign-up only (`auth.register.success`). A refused SSO sign-in (identity not linked, sign-up closed, account disabled, provider error) is logged as `auth.login.failed` with Better Auth's error code (`other` for an unexpected one). A sign-in cancelled at the provider is not logged, nor is one refused before Bilan reads the sign-in request.

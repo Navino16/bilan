@@ -12,13 +12,14 @@ This guide walks through the app as a user. Running an instance is covered in th
 2. [Accounts](#accounts)
 3. [Transactions](#transactions)
 4. [Importing statements](#importing-statements)
-5. [Categories, rules and merchants](#categories-rules-and-merchants)
-6. [Links: transfers and refunds](#links-transfers-and-refunds)
-7. [Budgets](#budgets)
-8. [Households](#households)
-9. [Dashboard and insights](#dashboard-and-insights)
-10. [Account security](#account-security)
-11. [Your data](#your-data)
+5. [Bank sync](#bank-sync)
+6. [Categories, rules and merchants](#categories-rules-and-merchants)
+7. [Links: transfers and refunds](#links-transfers-and-refunds)
+8. [Budgets](#budgets)
+9. [Households](#households)
+10. [Dashboard and insights](#dashboard-and-insights)
+11. [Account security](#account-security)
+12. [Your data](#your-data)
 
 ## Getting started
 
@@ -292,6 +293,101 @@ You imported the wrong file or picked the wrong account? Undo the whole import:
 Bilan shows how many transactions will be deleted, and warns you if some are linked to other transactions, assigned to a budget, or were edited since the import. If the import adjusted an account's opening balance, the dialog says it will go back to its previous value. If you changed that opening balance yourself since, it is left as it is and the dialog tells you so. Click **Delete the transactions** to confirm.
 
 All of that import's transactions are deleted, edited ones included. The import stays in the history as **Undone**, and you can import the same file again afterwards. There is no time limit, but you need write access to every account the import went into.
+
+## Bank sync
+
+Bank sync keeps your accounts up to date from your bank by itself, read-only, through Enable Banking, a licensed account-information provider. It only shows when the administrator of your instance has set it up: the **Accounts** page then has a **Connect my bank** button. Bilan can't make payments or change anything at your bank.
+
+### Connect your bank
+
+1. On **Accounts**, click **Connect my bank**.
+2. Pick the **Country** and your bank (type part of its name to search). Each bank shows how long the access lasts: "Access valid for up to 180 days", for example.
+3. Click **Continue to the bank**, sign in at your bank and authorize the access.
+4. Your bank sends you back to Bilan, on the page where you map the accounts. Do it right away: see [Map the accounts](#map-the-accounts).
+
+Complete the authorization within 15 minutes; past that, connect the bank again. If you refuse the access at the bank, nothing is connected.
+
+### Map the accounts
+
+![Mapping the accounts of a bank](images/en/bank-mapping.png)
+
+For each account the bank returned, pick what Bilan does with it:
+
+- a **Bilan account** to keep up to date: one of your own accounts, not archived. Accounts shared with you are not offered. An account already synced by your other connection shows "(already synced)" and can't be picked.
+- **Create a new account**: a checking account named after the bank's account (you can change the name).
+- **Ignore this account**: nothing is imported from it.
+
+Only euro accounts can be synced. A bank account already synced by another of your connections shows "Already synced by your other connection."
+
+**Import from** sets where the history starts. It defaults to the day of the account's last transaction; for an empty account, it starts with all the history the bank provides (at most 3 years).
+
+Click **Map and import**: the history is imported right away, and Bilan shows how many transactions each account got. As with a file import:
+
+- rows already in the account are left out, and so are probable duplicates (same day and same amount as a transaction already there, imported or entered by hand). Connecting a bank on an account you filled from statement files is safe: what is there stays, and only what is missing is added. Unlike a file import, there is no preview to tick a probable duplicate back in;
+- your [rules](#rules) categorize the new transactions, and transfers between your accounts are [linked](#automatic-links);
+- for LCL, the label is the one printed on the statement, as in its OFX files, so your rules match the same way.
+
+When the account has no transaction before the import starts (a new or empty account), Bilan also sets its [opening balance](#set-the-opening-balance) so its balance matches the bank's.
+
+If the bank didn't send all the history requested, the summary says some transactions may be missing. To change the mapping later, click **Map accounts** next to the bank, under **Bank connections** at the bottom of the **Accounts** page.
+
+#### Full history right after connecting
+
+Some banks, LCL among them, only give operations older than 90 days right after you authorize the access, while you are on the page: syncs made in the background then only reach the last 90 days. So the full history is imported when you map the accounts just after connecting (or [reconnecting](#reconnect-or-disconnect)). If you want years of history, map the accounts as soon as you are back from the bank, and set **Import from** then.
+
+### Keeping up to date
+
+![Accounts page with a synced account](images/en/accounts.png)
+
+Once mapped, Bilan syncs each connection in the background a few times a day (the administrator sets the frequency). A synced account's card shows "Synced 2 hours ago · *bank*". Each sync reads the last 7 days again, to catch operations the bank books late; what is already there is left out.
+
+- **Sync now** syncs the connection's accounts at once. It works once every 10 minutes per bank ("This bank was already synced less than 10 minutes ago").
+- **Pending operations** (a card payment the bank hasn't booked yet) are not imported: the account shows "2 transactions pending, −€35.40", and each one comes in once the bank books it.
+- If the bank limits access for the day, or Enable Banking doesn't answer, the error shows on the account's card and Bilan tries again later. After 3 failed syncs in a row, the connection is marked **Failing** and only **Sync now** retries it.
+
+Only you see the sync status of your accounts: household members you share an account with see its transactions, not your bank connection.
+
+### Bank balance check
+
+At each sync, the bank also gives the account's balance. On the synced account's card:
+
+- **Matches the bank on** *date*: the bank's balance and Bilan's balance on that day are the same.
+- **Gap with the bank on** *date*: the difference (bank minus Bilan). Click it to open the account's transactions for the week up to that day.
+- **Balance expected by the bank on** *date*: shown when the bank gives it. It includes the pending operations, which Bilan doesn't import, so it can differ from the booked balance: the check only compares the booked balance.
+
+A gap usually means operations are missing in Bilan (a synced transaction you deleted, a probable duplicate that was not one) or were entered by hand without existing at the bank, or that the opening balance is wrong.
+
+### Reconnect or disconnect
+
+The bank's consent lasts a limited time, often 180 days. The **Bank connections** section of the **Accounts** page lists your banks, with the accounts they sync and "Access valid until …".
+
+- **From 14 days before it ends**, a banner on the dashboard and the **Accounts** page tells you, with a **Reconnect** button. If the instance sends e-mails, you also get one 14 days and 3 days before.
+- **Reconnect** takes you to the bank to authorize the access again. Bilan recognizes your accounts and keeps their mapping: you come back to **Accounts** with "Bank reconnected", and the sync runs right away. If an account can't be matched with the previous connection, the mapping page opens instead.
+- **Once expired**, the connection shows **Expired** and its accounts no longer sync. Nothing is deleted: reconnect to start again.
+- **Disconnect** stops syncing the bank's accounts and deletes Bilan's access at the bank. The transactions already synced stay.
+
+### Deleting synced transactions
+
+You can delete a synced transaction like any other. It doesn't come back at the next sync. Syncs don't appear in **Recent imports** on the **Import** page and can't be undone as a whole.
+
+### Savings accounts your bank doesn't list
+
+![Savings account kept up to date from transfers](images/en/account-mirror.png)
+
+Some banks don't share their savings accounts (a Livret A at LCL, for example). Bilan can still keep such an account up to date from the transfers you make to it:
+
+1. Open **Edit** in the savings account's menu (accounts of type **Savings** only, as their owner).
+2. Under **Kept up to date from transfers**, tick the **Source accounts**: your accounts the transfers come from.
+3. Check the **Label pattern**: it defaults to the account's name in capitals, and is matched anywhere in the label, ignoring case and accents.
+4. Click **Save**.
+
+After each bank sync or file import on a source account, each new transfer whose label contains the pattern, and that isn't linked yet, adds the opposite operation on the savings account ("Virement depuis …" or "Virement vers …"), [linked](#links-transfers-and-refunds) to it. When the savings account already has the opposite operation (same amount, at most 4 days apart, not linked), Bilan links it instead of adding one.
+
+- A savings account has one label pattern, for all its source accounts.
+- Only transactions imported or synced after you set it are mirrored: the existing history isn't changed.
+- Interest stays a manual entry.
+- If you delete an operation Bilan added, it doesn't come back.
+- Untick every source account to turn it off.
 
 ## Categories, rules and merchants
 
@@ -700,7 +796,7 @@ Go to **Data** in the sidebar.
 ### Export
 
 - **Transactions (CSV)**: the transactions on the accounts you can see, with date, amount, type, label, account, category and, when it differs from the real month, the assigned month. By default the file has all of them; to narrow it, set a date range (**From**, **To**) or pick an **Account** above the buttons. The file opens in a spreadsheet and can be imported back into Bilan. In French the file uses a semicolon separator and decimal comma.
-- **All my data (JSON)**: everything that belongs to you, for your records or to move elsewhere: profile, your own accounts (IBAN included), their transactions with notes and original labels, categories, rules, merchant names, budgets, households, links, import history and your recent activity log. Accounts other people share with you are not included. Since it contains your full IBANs, it asks you to confirm it's you the same way as [showing an IBAN](#see-the-iban) if you signed in more than 10 minutes ago.
+- **All my data (JSON)**: everything that belongs to you, for your records or to move elsewhere: profile, your own accounts (IBAN included), their transactions with notes and original labels, categories, rules, merchant names, budgets, households, links, import history, bank connections (without their access to the bank) and your recent activity log. Accounts other people share with you are not included. Since it contains your full IBANs, it asks you to confirm it's you the same way as [showing an IBAN](#see-the-iban) if you signed in more than 10 minutes ago.
 
 ### Delete your account
 
@@ -709,5 +805,6 @@ Click **Delete my account**, type your **Password** (or your e-mail address if y
 - your accounts and their transactions are deleted, including those shared with a household: other members lose them too;
 - for each household you own, another member becomes owner; a household with no other member is deleted;
 - the household's own categories, rules and budgets are kept.
+- your bank connections are disconnected: Bilan deletes its access at the bank.
 
 Tip: export your data first if you want to keep a copy.

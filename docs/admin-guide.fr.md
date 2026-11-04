@@ -2,7 +2,7 @@
 
 # Guide d'administration de Bilan
 
-Ce guide couvre l'administration d'une instance Bilan depuis l'interface web : premier démarrage, utilisateurs et rôles, inscription et connexion, authentification unique (SSO), e-mails et journal d'audit. Pour l'installation, les variables d'environnement, les sauvegardes et les tâches planifiées, consultez le [guide d'auto-hébergement](self-hosting.fr.md).
+Ce guide couvre l'administration d'une instance Bilan depuis l'interface web : premier démarrage, utilisateurs et rôles, inscription et connexion, authentification unique (SSO), e-mails, synchronisation bancaire et journal d'audit. Pour l'installation, les variables d'environnement, les sauvegardes et les tâches planifiées, consultez le [guide d'auto-hébergement](self-hosting.fr.md).
 
 Presque tout se configure dans l'application. Les modifications s'appliquent immédiatement, sans redémarrage. Seuls les secrets d'amorçage et l'adresse publique (`APP_URL`) se trouvent dans le fichier d'environnement.
 
@@ -17,6 +17,7 @@ Presque tout se configure dans l'application. Les modifications s'appliquent imm
 - [Authentification unique (OIDC et Google)](#authentification-unique-oidc-et-google)
 - [E-mails (SMTP)](#e-mails-smtp)
 - [Vérification des adresses e-mail](#vérification-des-adresses-e-mail)
+- [Synchronisation bancaire (Enable Banking)](#synchronisation-bancaire-enable-banking)
 - [Journal d'audit](#journal-daudit)
 - [Notes de sécurité](#notes-de-sécurité)
 
@@ -36,7 +37,7 @@ Cliquez sur **Terminer** : le compte est créé et vous êtes connecté. Ensuite
 
 ## L'espace d'administration
 
-Ouvrez **Administration** dans la barre latérale (l'entrée n'apparaît que pour les administrateurs). L'espace compte six onglets, chacun affiché seulement si votre rôle le permet.
+Ouvrez **Administration** dans la barre latérale (l'entrée n'apparaît que pour les administrateurs). L'espace compte sept onglets, chacun affiché seulement si votre rôle le permet.
 
 | Onglet                          | Rôle                                                                                        |
 | ------------------------------- | ------------------------------------------------------------------------------------------- |
@@ -44,6 +45,7 @@ Ouvrez **Administration** dans la barre latérale (l'entrée n'apparaît que pou
 | Jetons d'invitation             | Jetons permettant de s'inscrire quand l'inscription est sur invitation                      |
 | Fournisseurs d'authentification | Fournisseurs SSO (OIDC, Google)                                                             |
 | SMTP                            | Serveur d'envoi des e-mails                                                                 |
+| Synchro bancaire                | Application Enable Banking utilisée pour synchroniser les comptes bancaires                 |
 | Paramètres                      | Nom de l'instance, mode d'inscription, règles de mot de passe et de double authentification |
 | Journal d'audit                 | Historique des actions effectuées sur l'instance                                            |
 
@@ -62,7 +64,7 @@ Chaque compte a un rôle d'instance : **Utilisateur**, **Administrateur** ou **S
 | Supprimer définitivement des utilisateurs                                                             | Non         | Non                                        | Tout le monde sauf soi-même           |
 | Changer le nom de l'instance                                                                          | Non         | Oui                                        | Oui                                   |
 | Mode d'inscription, connexion par mot de passe, longueur minimale, double authentification des admins | Non         | Non                                        | Oui                                   |
-| Jetons d'invitation, fournisseurs d'authentification, SMTP                                            | Non         | Non                                        | Oui                                   |
+| Jetons d'invitation, fournisseurs d'authentification, SMTP, synchro bancaire                          | Non         | Non                                        | Oui                                   |
 
 Règles de rang :
 
@@ -317,6 +319,7 @@ Cliquez sur **Envoyer un e-mail de test**. Le test utilise la configuration enre
 | Mot de passe modifié             | Après un changement ou une réinitialisation du mot de passe                                                    |
 | Invitation dans un foyer         | Un administrateur du foyer invite quelqu'un (lien et code)                                                     |
 | Alertes de sécurité              | Nouvelle connexion (mot de passe, clé d'accès ou SSO), clé d'accès ajoutée, double authentification désactivée |
+| Rappel de consentement bancaire  | 14 et 3 jours avant l'expiration d'une connexion bancaire d'un utilisateur                                     |
 
 Les e-mails sont rédigés dans la langue du destinataire.
 
@@ -329,6 +332,7 @@ Bilan fonctionne sans SMTP, avec ces différences :
 - **Mot de passe oublié ?** ne peut pas transmettre son lien.
 - Aucun e-mail de vérification n'est envoyé et le bandeau de vérification est masqué. Un administrateur marque alors les adresses comme vérifiées (voir ci-dessous).
 - Aucune alerte de sécurité n'est envoyée.
+- Aucun rappel de consentement bancaire n'est envoyé : les utilisateurs voient toujours le bandeau dans l'application.
 
 ## Vérification des adresses e-mail
 
@@ -344,6 +348,75 @@ Une adresse devient vérifiée quand :
 
 Les utilisateurs ne peuvent pas changer d'adresse e-mail après l'inscription.
 
+## Synchronisation bancaire (Enable Banking)
+
+![Onglet Synchro bancaire](images/fr/admin-bank-sync.png)
+
+La synchronisation bancaire importe d'elle-même les opérations bancaires des utilisateurs, en lecture seule, via [Enable Banking](https://enablebanking.com), un prestataire agréé d'information sur les comptes (DSP2). Bilan ne parle jamais directement aux banques : l'instance a une application Enable Banking, configurée dans **Administration > Synchro bancaire**, et chaque utilisateur connecte sa propre banque depuis la page **Comptes** (voir [Synchronisation bancaire](user-guide.fr.md#synchronisation-bancaire) dans le guide de l'utilisateur). La fonctionnalité reste masquée pour les utilisateurs tant qu'aucune configuration n'est enregistrée avec **Proposer la synchronisation bancaire aux utilisateurs** cochée.
+
+### Mode production restreint
+
+Le mode **production restreint** d'Enable Banking, gratuit, est prévu pour vos propres comptes : il ne donne accès qu'aux comptes liés dans l'espace de contrôle de l'application, ceux du propriétaire de l'application et de son foyer. Il convient à une instance personnelle ou familiale. Proposer la synchronisation bancaire à d'autres personnes demande un contrat avec Enable Banking ; Bilan ne vérifie pas qui l'utilise. La possibilité pour un autre membre du foyer de lier ses propres comptes dans votre espace de contrôle n'a pas encore été vérifiée.
+
+### Créer l'application Enable Banking
+
+1. Inscrivez-vous sur [Enable Banking](https://enablebanking.com) et, dans son espace de contrôle, créez une application dans l'environnement **Production** (mode restreint).
+2. Conservez l'identifiant de l'application et la clé privée (un fichier PEM) obtenus à la création.
+3. Déclarez l'[URL de redirection](#url-de-redirection) affichée par Bilan comme URL de redirection autorisée de l'application.
+4. Liez vos comptes bancaires dans l'espace de contrôle (« Activate by linking accounts »). L'application reste inactive tant qu'aucun compte n'est lié, et en mode restreint Bilan ne reçoit que les comptes liés : un compte non lié n'apparaît jamais quand vous connectez la banque.
+
+### Configurer
+
+| Champ                                                 | Description                                                                                                                                                                                                 |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Identifiant de l'application                          | L'identifiant de l'application Enable Banking                                                                                                                                                               |
+| Clé privée (PEM)                                      | Collez toute la clé privée RSA, lignes `BEGIN` et `END` comprises. Elle est chiffrée et n'est jamais réaffichée. Laissez vide pour conserver la clé enregistrée (même identifiant d'application seulement). |
+| Proposer la synchronisation bancaire aux utilisateurs | Décochée, la fonctionnalité est masquée pour les utilisateurs et les synchronisations en arrière-plan s'arrêtent                                                                                            |
+| Fréquence de synchronisation                          | Toutes les 6 heures (par défaut), 12 ou 24 heures. Voir [Fréquence de synchronisation](#fréquence-de-synchronisation).                                                                                      |
+
+Cliquez sur **Enregistrer**. Une clé qui n'est pas une clé privée RSA au format PEM est refusée, de même qu'une clé vide quand aucune clé n'est encore enregistrée ou que l'identifiant d'application a changé.
+
+### URL de redirection
+
+Une fois l'accès autorisé à la banque, Enable Banking renvoie le navigateur vers Bilan à l'adresse `<APP_URL>/api/bank-sync/callback`. L'onglet affiche l'URL exacte, avec un bouton pour la copier : déclarez-la telle quelle dans l'application Enable Banking.
+
+- Elle doit être en **HTTPS** : Enable Banking refuse les URL `http://` pour une application de production.
+- Seul le navigateur de l'utilisateur la suit : Enable Banking n'appelle jamais votre serveur, donc une instance sur un réseau privé, ou derrière un certificat d'une autorité interne, fonctionne tant que le navigateur lui fait confiance.
+- Pour utiliser une autre URL (par exemple une instance de développement dont l'`APP_URL` est en HTTP simple, derrière un proxy HTTPS), renseignez `BANK_SYNC_REDIRECT_URL` dans le fichier d'environnement : voir [Synchronisation bancaire](self-hosting.fr.md#synchronisation-bancaire) dans le guide d'auto-hébergement. L'onglet affiche alors cette URL.
+
+Quand l'URL envoyée par Bilan n'est pas déclarée, les utilisateurs voient « Enable Banking refuse l'adresse de retour : enregistrez exactement celle affichée dans Administration › Synchronisation bancaire. » Comparez l'URL déclarée avec celle de l'onglet, caractère par caractère.
+
+### Tester la connexion
+
+**Tester la connexion** utilise la configuration enregistrée, même désactivée : le test lit l'application et compte les banques disponibles en France. Vous pouvez lancer 5 tests par minute.
+
+| Message                                                        | Signification                                                                             |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Application « … » (PRODUCTION), active : N banques disponibles | Prête                                                                                     |
+| L'application n'est pas encore active                          | Aucun compte n'est encore lié dans l'espace de contrôle : liez-les, puis relancez le test |
+| Enable Banking refuse la signature                             | L'identifiant de l'application et la clé privée ne correspondent pas                      |
+| Enable Banking ne trouve pas cette application                 | Identifiant d'application erroné                                                          |
+| Enable Banking est injoignable depuis le serveur               | Le serveur n'a pas d'accès sortant à `api.enablebanking.com` (pare-feu, proxy, DNS)       |
+| Enable Banking a renvoyé une erreur                            | Toute autre réponse : réessayez plus tard                                                 |
+
+Le test n'utilise pas l'URL de redirection : une URL de redirection erronée n'apparaît que lorsqu'un utilisateur connecte une banque.
+
+### Fréquence de synchronisation
+
+Le service `cron` appelle la tâche de synchronisation bancaire toutes les heures (voir [Tâches planifiées](self-hosting.fr.md#tâches-planifiées)). Chaque passage synchronise, l'une après l'autre, les connexions dont la dernière synchronisation est plus ancienne que la **Fréquence de synchronisation**, et envoie les rappels d'expiration du consentement.
+
+Beaucoup de banques limitent ces accès en arrière-plan, faits en l'absence de l'utilisateur, à **4 par jour et par compte**. Une synchronisation en arrière-plan d'un compte fait un appel pour le solde et un ou plusieurs appels pour les opérations. Quand une banque en refuse un (limite atteinte), la connexion attend 6 heures avant sa prochaine synchronisation en arrière-plan, et l'onglet affiche « Une banque a limité les accès le … » pendant une semaine : choisissez un intervalle plus long si cela se répète. Les synchronisations lancées par un utilisateur (connexion, reconnexion, **Synchroniser**) se font en sa présence et ne comptent pas dans cette limite.
+
+Une connexion qui échoue 3 fois de suite (hors limite d'accès, consentement expiré, ou problème propre à l'instance comme une application inactive ou l'absence de réseau) passe **En erreur** : les synchronisations en arrière-plan l'ignorent jusqu'à ce que son propriétaire clique sur **Synchroniser**. Entre deux échecs, la tentative suivante attend chaque fois 3 heures de plus.
+
+### Supprimer la configuration
+
+**Supprimer la configuration** efface l'identifiant de l'application et la clé. La synchronisation bancaire est indisponible tant qu'une nouvelle configuration n'est pas enregistrée : les connexions des utilisateurs sont conservées mais ne se synchronisent plus. Pour suspendre la fonctionnalité sans perdre la clé, décochez plutôt **Proposer la synchronisation bancaire aux utilisateurs**.
+
+### Confidentialité
+
+La clé privée, la session Enable Banking de chaque connexion et les identifiants de comptes de la banque sont chiffrés avec `DATA_ENCRYPTION_KEY` ; les IBAN renvoyés par la banque ne sont conservés que sous forme d'empreinte à clé, pour reconnaître un compte quand l'utilisateur reconnecte sa banque. Aucun d'eux n'apparaît dans le journal d'audit, les messages d'erreur ou les pages. Une connexion n'est visible que par l'utilisateur qui l'a créée, pas par les administrateurs. Supprimer un utilisateur supprime aussi ses sessions Enable Banking.
+
 ## Journal d'audit
 
 ![Onglet Journal d'audit](images/fr/admin-audit.png)
@@ -356,9 +429,10 @@ Chaque changement d'état est journalisé, les lectures ne le sont pas. Cela com
 
 - l'authentification : connexions (mot de passe, clé d'accès, étape de double authentification, SSO) et échecs de connexion, inscriptions, changements et réinitialisations de mot de passe, double authentification, régénérations de codes de secours, appareils de confiance oubliés, clés d'accès, sessions révoquées, identités SSO liées et déliées, vérifications d'adresse ;
 - les utilisateurs : création par un administrateur, changements de rôle, désactivation, réactivation, adresse marquée comme vérifiée, suppression ;
-- les paramètres : chaque paramètre de l'application, les modifications et tests SMTP, les fournisseurs d'authentification ;
+- les paramètres : chaque paramètre de l'application, les modifications et tests SMTP et de la synchronisation bancaire, les fournisseurs d'authentification ;
 - les jetons d'invitation, les foyers et leurs invitations ;
-- l'activité financière des utilisateurs : comptes bancaires et partages, transactions, imports, catégories, règles, budgets, liaisons ;
+- l'activité financière des utilisateurs : comptes bancaires et partages, transactions, imports, catégories, règles, budgets, liaisons, connexions bancaires (connectées, reconnectées, associées, expirées, déconnectées) ;
+- chaque passage de la synchronisation bancaire qui avait quelque chose à faire (`bank_sync.cron`, par **système**), avec ses compteurs ;
 - les échecs d'envoi d'e-mails de sécurité et les purges du journal.
 
 Une connexion SSO est journalisée en `auth.login.success` avec `method: sso` et la clé du fournisseur. La première connexion SSO d'une identité qui crée un compte n'est journalisée que comme inscription (`auth.register.success`). Une connexion SSO refusée (identité non liée, inscription fermée, compte désactivé, erreur du fournisseur) est journalisée en `auth.login.failed` avec le code d'erreur de Better Auth (`other` pour un code inattendu). Une connexion annulée chez le fournisseur ne l'est pas, ni un refus survenu avant que Bilan lise la demande de connexion.
