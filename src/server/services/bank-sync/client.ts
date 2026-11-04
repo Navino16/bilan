@@ -18,6 +18,7 @@ export const BANK_SYNC_ERROR_CODES = [
   "APP_INACTIVE",
   "UNAUTHORIZED",
   "NOT_FOUND",
+  "REDIRECT_NOT_ALLOWED",
   "NETWORK",
   "HTTP",
 ] as const;
@@ -93,6 +94,7 @@ function errorCode(
 ): BankSyncErrorCode {
   if (status === 429 || body.error === "ASPSP_RATE_LIMIT_EXCEEDED") return "RATE_LIMITED";
   if (body.error === "EXPIRED_SESSION") return "EXPIRED_SESSION";
+  if (body.error === "REDIRECT_URI_NOT_ALLOWED") return "REDIRECT_NOT_ALLOWED";
   if (status === 401 || status === 403) {
     const inactive =
       typeof body.message === "string" && /application is not active/i.test(body.message);

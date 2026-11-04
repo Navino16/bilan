@@ -27,6 +27,8 @@ const spec = {
   SEARCH_TOKEN_KEY: base64Key32(),
   // Optional: enables the token-guarded cron routes. Unset → they 404 (inert).
   CRON_SECRET: str({ default: "" }),
+  // Optional: callback URL registered at Enable Banking when it differs from APP_URL (HTTP dev, proxy).
+  BANK_SYNC_REDIRECT_URL: str({ default: "" }),
   // Request header carrying the client IP, as set by the reverse proxy (docs/self-hosting.md).
   TRUSTED_IP_HEADER: headerName({ default: "x-forwarded-for" }),
 } satisfies Record<string, ValidatorSpec<unknown>>;
