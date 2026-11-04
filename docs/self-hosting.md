@@ -61,7 +61,8 @@ The database lives in the named volume `bilan_mariadb_data`.
 
 ### 2. Fill in the env files
 
-Every variable of `app.env` and `db.env` is mandatory, except `TRUSTED_IP_HEADER`:
+Every variable of `app.env` and `db.env` is mandatory, except `TRUSTED_IP_HEADER` and
+`BANK_SYNC_REDIRECT_URL`:
 
 | File      | Variable                                                                | Value                                                                         |
 | --------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
@@ -69,6 +70,7 @@ Every variable of `app.env` and `db.env` is mandatory, except `TRUSTED_IP_HEADER
 | `app.env` | `AUTH_SECRET`, `DATA_ENCRYPTION_KEY`, `SEARCH_TOKEN_KEY`, `CRON_SECRET` | `openssl rand -base64 32`, one value each                                     |
 | `app.env` | `DATABASE_URL`                                                          | `mysql://bilan:<MARIADB_PASSWORD>@mariadb:3306/bilan`                         |
 | `app.env` | `TRUSTED_IP_HEADER` (optional)                                          | See [Client IP behind the reverse proxy](#client-ip-behind-the-reverse-proxy) |
+| `app.env` | `BANK_SYNC_REDIRECT_URL` (optional)                                     | Leave empty, unless [Bank sync](#bank-sync) says otherwise                    |
 | `db.env`  | `MARIADB_ROOT_PASSWORD`, `MARIADB_PASSWORD`                             | `openssl rand -hex 24` each (hex, because it goes into `DATABASE_URL`)        |
 
 `DATA_ENCRYPTION_KEY` and `SEARCH_TOKEN_KEY` must decode to 32 bytes: the app refuses to start
@@ -259,13 +261,14 @@ Rate-limit counters live in the app's memory: they are lost when the `app` conta
 
 ### Scheduled jobs
 
-Three token-guarded routes do the periodic work (times in UTC):
+Four token-guarded routes do the periodic work (times in UTC):
 
-| Route                          | Schedule (UTC) | Effect                                                                    |
-| ------------------------------ | -------------- | ------------------------------------------------------------------------- |
-| `POST /api/cron/roll-budgets`  | 00:05 daily    | Creates the next period of every ended recurring budget                   |
-| `POST /api/cron/purge-audit`   | 03:00 daily    | Deletes audit-log entries older than 12 months                            |
-| `POST /api/cron/purge-imports` | hourly         | Deletes abandoned import batches older than 24 h (and their partial rows) |
+| Route                          | Schedule (UTC) | Effect                                                                                                                            |
+| ------------------------------ | -------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/cron/roll-budgets`  | 00:05 daily    | Creates the next period of every ended recurring budget                                                                           |
+| `POST /api/cron/purge-audit`   | 03:00 daily    | Deletes audit-log entries older than 12 months                                                                                    |
+| `POST /api/cron/purge-imports` | hourly         | Deletes abandoned import batches older than 24 h (and their partial rows), and bank authorizations left unfinished for 15 minutes |
+| `POST /api/cron/bank-sync`     | hourly, at :20 | Syncs the bank connections that are due and mails the consent reminders (see [Bank sync](#bank-sync))                             |
 
 #### The `cron` service
 
@@ -276,6 +279,8 @@ It reads only `CRON_SECRET` from `app.env`.
   `CRON_SECRET` shows up as a restart loop in `docker compose ps`.
 - Each call logs one line, `OK <route> <body>` or `ERROR <route> <error>`:
   `docker compose -f docker-compose.prod.yml logs cron`.
+- It gives `bank-sync` up to 15 minutes to answer (60 seconds for the other routes): a run
+  syncs every due connection one after the other.
 - After a host reboot Docker restarts every container at once: the `cron` service may log a few
   `ERROR purge-imports … Connection refused` and restart until the app is up, then settles by
   itself.
@@ -292,6 +297,7 @@ CRON_SECRET=<the value from app.env>
 5 0 * * * curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" https://bilan.example.com/api/cron/roll-budgets
 0 3 * * * curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" https://bilan.example.com/api/cron/purge-audit
 0 * * * * curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" https://bilan.example.com/api/cron/purge-imports
+20 * * * * curl -fsS -m 900 -X POST -H "Authorization: Bearer $CRON_SECRET" https://bilan.example.com/api/cron/bank-sync
 ```
 
 #### Check the secret
@@ -304,6 +310,32 @@ curl -i -X POST -H "Authorization: Bearer <secret>" <APP_URL>/api/cron/purge-imp
 - `401`: wrong secret.
 - `404`: `CRON_SECRET` is unset in the app.
 
+### Bank sync
+
+Bank sync goes through an Enable Banking application that an administrator configures in the
+app (see [Bank sync](admin-guide.md#bank-sync-enable-banking) in the administration guide).
+On the server side it needs:
+
+- **Outgoing HTTPS** from the `app` container to `api.enablebanking.com`. The banks are never
+  called directly.
+- **The `bank-sync` job** of the [`cron` service](#scheduled-jobs). Without it, accounts only
+  sync when their owner connects a bank or clicks **Sync now**, and no consent reminder is
+  mailed.
+- **A redirect URL over HTTPS.** After the user authorizes access at their bank, the browser
+  comes back to `<APP_URL>/api/bank-sync/callback`, the URL the administrator registers at
+  Enable Banking. Only the browser follows it: Enable Banking never calls your server, so an
+  instance reachable only on a private network, or with a certificate from an internal CA,
+  works.
+
+`BANK_SYNC_REDIRECT_URL` replaces that URL when the one derived from `APP_URL` can't be
+registered, for example a development instance whose `APP_URL` is plain `http://` (Enable
+Banking only accepts HTTPS for a production application), served through an HTTPS proxy. The
+override must still lead to this app's `/api/bank-sync/callback`, on the host name users sign in
+on: the callback reads the user's Bilan session, and without it the user is told their session
+ended. The admin page shows the URL in use. When Enable Banking refuses the URL Bilan sends
+(`REDIRECT_URI_NOT_ALLOWED`), users see "Enable Banking refuses the redirect URL": the
+registered URL and the one on the admin page differ.
+
 ## Backup and restore
 
 ### What to back up
@@ -314,7 +346,7 @@ only exist in `app.env`.
 | Item                              | Why                                                                                                                                                                                                                                                   |
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Database dump (`bilan` database)  | All the data.                                                                                                                                                                                                                                         |
-| `app.env`                         | `DATA_ENCRYPTION_KEY` encrypts transaction labels and notes, IBANs, merchant aliases, signup and invitation links and the stored SMTP and SSO secrets; `SEARCH_TOKEN_KEY` builds the search index and the link lookups; `AUTH_SECRET` encrypts 2FA secrets. Without them a restored dump is unreadable. |
+| `app.env`                         | `DATA_ENCRYPTION_KEY` encrypts transaction labels and notes, IBANs, merchant aliases, signup and invitation links and the stored SMTP and SSO secrets, and the bank sync key and sessions; `SEARCH_TOKEN_KEY` builds the search index and the link lookups; `AUTH_SECRET` encrypts 2FA secrets. Without them a restored dump is unreadable. |
 | `db.env`                          | The database passwords, which `DATABASE_URL` in `app.env` must match.                                                                                                                                                                                 |
 | `keyring/keyfile`                 | MariaDB at-rest encryption key: without it the data volume itself can't be read. A dump is plain SQL, so restoring one does not need it.                                                                                                              |
 | `docker-compose.prod.yml`, `.env` | The stack definition and the `BILAN_VERSION` you run.                                                                                                                                                                                                 |

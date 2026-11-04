@@ -17,4 +17,4 @@ export DATABASE_URL="mysql://app:app_password@localhost:3307/$DB"
 
 npx prisma migrate deploy
 NODE_ENV=test npx tsx scripts/seed-e2e.ts
-npx tsx scripts/seed-dev-user.ts
+SEED_BANK_SYNC=1 npx tsx scripts/seed-dev-user.ts

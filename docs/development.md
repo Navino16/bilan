@@ -105,14 +105,22 @@ The images in `docs/images/{en,fr}/` are taken on a clean dataset, not on your d
 It needs a `.env` (`npm run setup`) and the test database (`docker compose up -d mariadb-test`).
 
 1. `npm run docs:db` rebuilds the `budget_docs` database on the `mariadb-test` container
-   (e2e users + the demo account).
+   (e2e users + the demo account). `SEED_BANK_SYNC=1` adds a fictitious bank sync setup: an
+   Enable Banking configuration with a zero application id and a key generated on the spot,
+   a "Banque Fictive" connection whose consent ends in 10 days, mapped to the checking account
+   (balance matching, 2 pending operations), and the Livret A kept up to date from transfers.
 2. Serve a production build on that database, with an `APP_URL` on the same host and port:
 
    ```bash
    npm run build
    DATABASE_URL=mysql://app:app_password@localhost:3307/budget_docs \
-     APP_URL=http://localhost:3301 npx next start -p 3301
+     APP_URL=http://localhost:3301 CRON_SECRET= \
+     BANK_SYNC_REDIRECT_URL=https://bilan.example.com/api/bank-sync/callback \
+     npx next start -p 3301
    ```
+
+   Leave `CRON_SECRET` empty, so nothing calls Enable Banking with the fake configuration;
+   the redirect URL only changes what the admin page shows.
 
 3. `DOCS_BASE_URL=http://localhost:3301 npm run docs:screenshots` captures every page in
    English and French (`scripts/docs-screenshots.ts`).

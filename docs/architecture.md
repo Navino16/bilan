@@ -808,7 +808,7 @@ Deleting a series template promotes its oldest instance to template and re-paren
 model ImportBatch {
   id            String   @id @default(cuid())
   accountId     String                                // upload account (PDF/OFX products may map to others: metadata.accountIds)
-  source        String                                // CSV | PDF | OFX
+  source        String                                // CSV | PDF | OFX | SYNC (bank sync, §5.15)
   filename      String?
   filenameHash  String?                               // SHA-256 of the filename
   status        String                                // PARSING | REVIEW | COMMITTING | COMPLETED | REVERTED | FAILED
@@ -833,6 +833,8 @@ model ImportBatch {
 | Commit | `COMMITTING` → `COMPLETED` | Trimmed to `{ fileSizeBytes, bank?, accountIds, ruleHits?, balanceAdjustments? }` — the plaintext payload is dropped (`lib/import-status.ts`). A commit importing nothing fails. |
 | Undo | `COMPLETED` → `REVERTED` | Revert deletes the batch's transactions, decrements `CategorizationRule.hits` from `ruleHits`, dissolves undersized links, puts back the opening balances the import adjusted unless changed since (`services/imports/revert.ts`). Requires write access on every account in `accountIds` and in `balanceAdjustments`. |
 | Discard / purge | — | Uncommitted batches (`PARSING`, `REVIEW`, `FAILED`) can be discarded; stale ones (and crashed `COMMITTING` ones, with their rows) are purged. |
+
+Bank syncs write `SYNC` batches straight from `COMMITTING` to `COMPLETED` (a sync that imports nothing deletes its batch). They are not listed in the recent imports and can't be reverted: synced rows are deleted one by one, with tombstones (§5.15).
 
 ### 4.8 Group H — Settings, Preferences, Audit
 
@@ -915,7 +917,7 @@ model UserPreference {
 | Decision | Detail |
 |---|---|
 | Owner XOR | For `Category`, `Budget`, `CategorizationRule`: exactly one of `userId` or `groupId`. Enforced in the service layer only (no DB CHECK: MariaDB error 1901). |
-| Application encryption | AES-256-GCM: `Transaction.labelEnc/rawLabelEnc/noteEnc`, `BankAccount.ibanEnc`, `MerchantAlias.keyEnc/nameEnc`, `AuthProvider.clientSecretEnc`, `SmtpConfig.passwordEnc`. `AppSetting.isSecret` exists but no setting uses it. |
+| Application encryption | AES-256-GCM: `Transaction.labelEnc/rawLabelEnc/noteEnc`, `BankAccount.ibanEnc`, `MerchantAlias.keyEnc/nameEnc`, `AuthProvider.clientSecretEnc`, `SmtpConfig.passwordEnc`, `BankSyncConfig.privateKeyEnc`, `BankConnection.sessionIdEnc`, `BankConnectionAccount.uidEnc`. `AppSetting.isSecret` exists but no setting uses it. |
 | Scalable search | HMAC blind indexes on full values (`labelHash`, `rawLabelHash`, `ibanHash`, `MerchantAlias.keyHash`) + `TransactionSearchToken` (one HMAC per word prefix of 3–12 chars, label and raw label). |
 | Transaction dedup | Unique `(accountId, externalId)`. Imported rows: `externalId` = SHA-256 of day + amount + raw label (whitespace runs collapsed, trimmed), with an occurrence index for identical rows in one file. Manual entries: no `externalId`, no certain dedup; they can back a probable duplicate (§5.5). |
 | Cascade deletes | User → accounts → transactions → tokens/link memberships/assignments; User → categories, rules, budgets, merchant aliases, memberships, sent invitations, preference, auth tables. Group → members/invitations/shares/categories/rules/budgets. Budget → lines/assignments. Category → rules. |
@@ -924,6 +926,78 @@ model UserPreference {
 | Indexes | All hashes (`labelHash`, `rawLabelHash`, `tokenHash`, `ibanHash`, `(accountId, merchantKeyHash, categoryId, type, amount, date)`), `(tokenHash, transactionId)` unique, `(accountId, date, createdAt)`, `(accountId, categoryId)`, `(categoryId, date)`, `(userId/groupId, periodStart)`, audit `(action/entity/userId, createdAt)`. |
 | No soft delete | Hard deletes only (simpler for RGPD). `archived` flag for non-deleted but inactive entities (accounts, groups, budgets). Imports are undone by revert, which deletes their transactions. |
 | Grants in `Verification` | Password-reset tokens (hashed), trusted devices and step-up grants are `Verification` rows keyed by identifier prefix — no dedicated tables. |
+
+### 4.10 Group I — Bank sync (#381)
+
+Accounts sync from the bank through Enable Banking's AIS API (PSD2, restricted production mode, §5.15). One application per instance; one connection per user and bank consent.
+
+```prisma
+model BankSyncConfig {                        // singleton, id "default"
+  applicationId     String
+  privateKeyEnc     String    @db.Text        // RSA private key (PEM), AES-256-GCM
+  enabled           Boolean   @default(false)
+  syncIntervalHours Int       @default(6)     // 6 | 12 | 24 (lib/bank-sync.ts SYNC_INTERVALS)
+  lastRateLimitedAt DateTime?                 // last bank 429, shown to the admin for 7 days
+  updatedById       String?
+}
+
+model BankConnection {                        // one consent (Enable Banking session)
+  userId           String                     // owner; only they see or sync it
+  aspspName        String                     // bank name as listed by Enable Banking
+  aspspCountry     String   @db.VarChar(2)
+  sessionIdEnc     String   @db.Text
+  validUntil       DateTime                   // consent end
+  status           String   @default("ACTIVE")  // ACTIVE | EXPIRED | REVOKED | ERROR
+  lastSyncAt       DateTime?
+  lastError        String?                    // error code only
+  syncStartedAt    DateTime?                  // claim against concurrent syncs
+  failureCount     Int      @default(0)
+  retryAfter       DateTime?
+  reminderSentDays Int?                       // smallest reminder threshold already mailed
+}
+
+model BankConnectionAccount {                 // one bank account of a connection
+  connectionId        String
+  uidEnc              String   @db.Text       // Enable Banking account uid
+  ibanHash            String?                 // hmacExact(normalized IBAN): matches accounts across reconnects
+  name                String
+  currency            String   @db.VarChar(3)
+  accountId           String?                 // Bilan account; null = ignored. SetNull on account delete
+  syncFrom            DateTime?               // user's "Import from"
+  lastSyncedDate      DateTime?               // last day fully fetched
+  bookedBalance       Decimal? @db.Decimal(12, 2)   // CLBD, and its day
+  bookedBalanceDate   DateTime?
+  expectedBalance     Decimal? @db.Decimal(12, 2)   // XPCD, and its day
+  expectedBalanceDate DateTime?
+  pendingCount        Int      @default(0)    // PDNG rows of the last fetch, not imported
+  pendingTotal        Decimal  @default(0) @db.Decimal(12, 2)
+}
+
+model BankAuthRequest {                       // authorization in progress, 15 min
+  stateHash    String   @unique               // hmacExact(state); the raw state only travels in URLs
+  userId       String
+  aspspName    String
+  aspspCountry String   @db.VarChar(2)
+  reconnectOf  String?                        // connection being renewed
+  createdAt    DateTime @default(now())
+}
+
+model SyncTombstone {                         // synced rows or mirror legs the user deleted
+  accountId  String
+  externalId String
+  @@id([accountId, externalId])
+}
+
+model SavingsMirrorSource {                   // source accounts of a savings mirror (BankAccount.mirrorPattern)
+  savingsAccountId String
+  sourceAccountId  String
+  @@id([savingsAccountId, sourceAccountId])
+}
+```
+
+- An account is mapped by at most one `ACTIVE` connection, and only by its owner: enforced in `bank-sync/mapping.ts` (no unique index, since a revoked or expired connection keeps its rows).
+- A user's connections cascade with the user; deleting a user (admin or RGPD) first reads their sessions and revokes them at Enable Banking once the deletion committed. The RGPD export lists connections and their account names, never session ids, uids or IBAN hashes.
+- `BankAccount.mirrorPattern` (savings accounts only) is the label pattern of the savings mirror (§5.15); `SavingsMirrorSource` holds its sources, all owned by the savings account's owner.
 
 ---
 
@@ -1133,7 +1207,35 @@ An uncommitted batch (`PARSING`, `REVIEW`, `FAILED`) is discarded when the user 
 The `cron` container calls `POST /api/cron/<job>` with `Authorization: Bearer $CRON_SECRET` (unset → the routes 404, wrong token → 401). Schedule (UTC, `docker/cron/crontab`):
 - `roll-budgets`, daily 00:05: creates the next instance of every ended, non-archived recurring budget that has none yet, in bulk inserts (`rollRecurringBudgets`, a constant number of queries, #304; idempotent; audit `budget.created` with `system: true`).
 - `purge-audit`, daily 03:00: deletes audit entries older than 12 months (`audit.purged`).
-- `purge-imports`, hourly: deletes uncommitted batches, and batches stuck in `COMMITTING`, older than 24 h with their partial rows (`import.purged`).
+- `purge-imports`, hourly: deletes uncommitted batches, and batches stuck in `COMMITTING`, older than 24 h with their partial rows (`import.purged`), and bank authorization requests older than 15 min.
+- `bank-sync`, hourly at :20: background bank syncs and consent reminders (§5.15). `docker/cron/run.sh` waits up to 900 s for its answer (60 s for the others).
+
+### 5.15 Bank sync (#381)
+
+Services in `server/services/bank-sync/`; the Enable Banking client (`client.ts`) signs an RS256 JWT with the application's key (`kid` = application id, 1 h), takes an injectable `fetch`, and maps every failure to a code (`EXPIRED_SESSION`, `RATE_LIMITED`, `APP_INACTIVE`, `UNAUTHORIZED`, `NOT_FOUND`, `REDIRECT_NOT_ALLOWED`, `NETWORK`, `HTTP`); response bodies are never logged.
+
+**Admin configuration** (`config.ts`, `/admin/bank-sync`, `admin.security.write`): application id, RSA private key (checked with `createPrivateKey`, kept for a blank field only under the same application id), `enabled`, sync interval. The redirect URL is `BANK_SYNC_REDIRECT_URL` or `new URL("/api/bank-sync/callback", APP_URL)`. The test calls `GET /application` then `GET /aspsps?country=FR` (5 / min). `enabled = false` hides the feature and stops the cron; deleting the row makes it unavailable, connections stay.
+
+**Connect** (`connect.ts`):
+1. The bank picker lists `GET /aspsps?country=…` banks with a `personal` PSU type (cached 24 h per country).
+2. `startBankAuth` stores a `BankAuthRequest` (HMAC of a random 32-byte state) and calls `POST /auth` with `valid_until` = the bank's maximum consent minus 1 h; the browser goes to the bank.
+3. The bank sends the browser to `GET /api/bank-sync/callback?state&code`. `completeBankAuth` looks the state up: unknown → `UNKNOWN_STATE`, another signed-in user → `WRONG_USER` (the request is left for its owner), else the request is consumed; older than 15 min → `EXPIRED_STATE`, `error` or no code → `DENIED`. Then `POST /sessions`: the connection stores the encrypted session id and, per account, the encrypted uid and the IBAN's HMAC. The answer is always a redirect to `/<locale>/accounts?bankSync=<code>` or the mapping page.
+4. Mapping (`mapping.ts`, `/accounts/bank-sync/<id>`): each bank account goes to an owned, non-archived Bilan account, a new checking account, or is ignored; EUR only; an account or IBAN already mapped by another active connection is refused (`ALREADY_SYNCED`). `syncFrom` defaults to the account's last transaction day. Saving runs the initial fetch of the mapped accounts at once, user-present.
+
+**Sync engine** (`sync.ts`, `rows.ts`): per account, `GET /accounts/<uid>/balances` then `GET /accounts/<uid>/transactions?date_from=` with continuation pages (50 pages max, resumed from the last day for up to 4 rounds; a cut fetch reports `truncated`). The window starts at max(`syncFrom`, `lastSyncedDate` − 7 days, today − 3 years). `BOOK` rows only: `PDNG` ones are counted into `pendingCount`/`pendingTotal`. Labels go through `normalizeBankLabel` (LCL: the statement line of the remittance text, as in its OFX, #392). Rows are inserted through `insertRows` into an `ImportBatch` of source `SYNC`, so certain and probable duplicates (§5.5), rules, auto-links and savings mirrors apply as for a file; tombstoned `externalId`s are excluded. An account with no earlier transaction that starts syncing gets its opening balance set so Bilan matches the booked balance (`account.initial_balance_adjusted`), unless the fetch was truncated.
+- One sync per connection at a time: `syncStartedAt` is claimed with a conditional update (taken over after 30 min); a second caller gets `BUSY`. Two accounts of a connection run in parallel.
+- Failures: `RATE_LIMITED` → `retryAfter` + 6 h and `BankSyncConfig.lastRateLimitedAt`; `EXPIRED_SESSION` (or `validUntil` passed) → `EXPIRED`; instance errors (`APP_INACTIVE`, `UNAUTHORIZED`, `NETWORK`) only set `lastError`; any other code increments `failureCount` with a `failureCount × 3 h` backoff, and the third makes the connection `ERROR` (background runs skip it; **Sync now** retries it).
+- User-present fetches (mapping, reconnect, **Sync now**) send `Psu-Ip-Address` / `Psu-User-Agent`: banks don't count them in their limit of about 4 background accesses a day per account, and some (LCL) only serve history older than 90 days to them, right after the consent. Background runs omit them and stay within the 7-day overlap.
+- **Sync now** (`status.ts`): owner only, 1 / 10 min per user and connection, refunded when no bank call was made.
+- Cron `POST /api/cron/bank-sync` (hourly, §5.14): if enabled, syncs one after the other the `ACTIVE` connections with a mapped account, past `retryAfter`, whose `lastSyncAt` is older than the interval (5 min slack) or whose consent ended; then mails the reminders. A run with work logs `bank_sync.cron` (system) with its counts.
+
+**Consent lifecycle**: `consentState` warns from 14 days before `validUntil` (banner on the dashboard and the accounts page, owner only). `sendConsentReminders` mails the owner at 14 and 3 days (needs SMTP; once per threshold, claimed on `reminderSentDays`, released if the mail fails). Reconnect starts a new authorization with `reconnectOf`: the new accounts are matched to the old ones by IBAN hash (or a name + currency unique on both sides) and carry their mapping, `syncFrom`, `lastSyncedDate` and balances; the old connection becomes `REVOKED` and its session is deleted at Enable Banking. With everything carried, the callback syncs at once and skips the mapping page. Disconnect sets `REVOKED` and deletes the session best effort; synced rows stay.
+
+**Bank balance check** (`balance.ts`): for each owned account mapped on a non-revoked connection, the booked balance (CLBD) at its day against Bilan's balance at the end of that day; the gap links to the account's transactions of the 7 days before. The expected balance (XPCD, pending included) is only displayed.
+
+**Deleting synced rows**: deleting a transaction of a `SYNC` batch, or a mirror leg, writes a `SyncTombstone`, so no later sync or import brings it back. `SYNC` batches are not listed in recent imports and can't be reverted (`NOT_REVERTIBLE`).
+
+**Savings mirror legs** (`links/mirror.ts`): for savings accounts a bank doesn't expose. After each committed batch (sync or file) and its auto-links, each new `TRANSFER` row of a source account, still unlinked, whose decrypted label contains the savings account's pattern (folded, case-insensitive; the longest pattern wins) gets an opposite leg on the savings account, labelled `Virement depuis/vers <source>`, with `externalId` = `mirror:` + SHA-256 of the source's account id and `externalId`, then the pair is linked and its month aligned. An unlinked opposite row within the auto-link window (4 days, not an ignored pair) is linked instead. Tombstones keep deleted legs deleted; rows imported before the pattern was set are not mirrored; interest stays manual.
 
 ---
 
@@ -1226,6 +1328,9 @@ In-memory fixed-window counters (`server/auth/rate-limit.ts`), one store per pro
 | Invitation accept (code) | 10 / 15min | User |
 | Verification e-mail resend | 3 / 1h | User; only sent mails count |
 | SMTP test | 5 / 1min | User |
+| Bank sync test (admin) | 5 / 1min | User |
+| Bank authorization start | 10 / 10min | User |
+| Bank **Sync now** | 1 / 10min | User + connection; refunded when no bank call was made |
 
 Better Auth's own in-memory per-IP limiter also runs on `/api/auth/*` in production (its defaults: 100 / 10 s, 3 / 10 s on sign-in). Imports and the other API routes are not rate-limited.
 
@@ -1249,7 +1354,8 @@ Over the limit: the Better Auth sign-in and 2FA endpoints answer HTTP 429 + `Ret
 - Imports: `import.created/committed/discarded/reverted`, `import.purged` (cron).
 - Categories & rules: `category.created/updated/deleted`, `rule.created/updated/deleted/enabled/disabled/applied/exported/imported`.
 - Budgets: `budget.created/updated/archived/unarchived/deleted`, `budget.assignment.create/delete`.
-- Settings: `settings.<key>.update` (app settings, e.g. `settings.registration_mode.update`), `settings.smtp.update/delete/test`, `settings.auth_provider.create/update/delete`.
+- Settings: `settings.<key>.update` (app settings, e.g. `settings.registration_mode.update`), `settings.smtp.update/delete/test`, `settings.auth_provider.create/update/delete`, `settings.bankSync.update/delete/test`.
+- Bank sync: `bank_sync.connection.created/reconnected/revoked/expired`, `bank_sync.mapping.saved`, `account.initial_balance_adjusted`, `account.mirror_updated`, `link.mirrorCreated`, `bank_sync.cron` (system, only when a run had work). Metadata hold the bank name and counts, never session ids, uids or IBANs.
 - Admin signup tokens: `signup_token.created/revoked/deleted`.
 - System: `mail.security.failed` (a security or verification mail that couldn't be sent), `audit.purged` (cron).
 
@@ -1324,6 +1430,10 @@ Sent when SMTP is configured, in the user's locale, with the time, client IP and
 ### 6.16 Better Auth HTTP surface
 
 Better Auth endpoints that Server Actions wrap (sign-up, password change/reset, 2FA enable/disable, session listing/revocation, verification resend) or that the app doesn't use (profile update, account unlinking/linking, IdP token access, the admin plugin's endpoints, `/change-email`) are disabled (`disabledPaths`), so the rate limits, permission checks and audit above can't be bypassed (#200, #204, #243). No implicit account linking by e-mail: an SSO identity signs in only once linked or SSO-created. Password-reset tokens are stored hashed in the verification table. The OpenAPI reference is mounted outside production only.
+
+### 6.17 Bank sync secrets
+
+The Enable Banking private key, session ids and account uids are encrypted with `DATA_ENCRYPTION_KEY` (§6.1); IBANs returned by the bank are only kept as `hmacExact` with `SEARCH_TOKEN_KEY`, to match accounts across reconnects; the OAuth `state` is stored as its HMAC. None reach logs, audit metadata, error messages or client props: errors carry a code, `lastError` stores a code, and client types (`SyncedAccountInfo`, `BankBalanceCheck`, `BankConnectionSummary`) have no uid, IBAN or session field. The callback only acts for the user who started the authorization, within 15 minutes, once per state. Every Enable Banking call has a 30 s timeout.
 
 ---
 
@@ -1412,10 +1522,11 @@ icons, docs:db, docs:screenshots
 | `DATA_ENCRYPTION_KEY`, `SEARCH_TOKEN_KEY` | base64, must decode to 32 bytes |
 | `CRON_SECRET` | optional; unset → the `/api/cron/*` routes answer 404 |
 | `TRUSTED_IP_HEADER` | optional header name, default `x-forwarded-for` (client IP set by the reverse proxy) |
+| `BANK_SYNC_REDIRECT_URL` | optional; replaces `<APP_URL>/api/bank-sync/callback` as the redirect URL sent to Enable Banking (e.g. an `http://` dev `APP_URL`, which Enable Banking refuses). Must reach this app's callback on the host users sign in on (it reads their session) |
 
 Templates: `.env.example` (development) and `app.env.example` / `db.env.example` (production compose). `scripts/init.sh` creates `.env` from `.env.example` and fills `AUTH_SECRET`, `DATA_ENCRYPTION_KEY` and `SEARCH_TOKEN_KEY` with `openssl rand -base64 32`. `CRON_SECRET` is left empty in dev. The test database URL is set in `tests/setup.ts`.
 
-Everything else (SSO providers, SMTP, registration mode, password policy, app name…) is configured in the admin UI and stored in `AppSetting` / `AuthProvider`.
+Everything else (SSO providers, SMTP, bank sync, registration mode, password policy, app name…) is configured in the admin UI and stored in `AppSetting` / `AuthProvider` / `SmtpConfig` / `BankSyncConfig`.
 
 ### 8.2 Docker Compose (development)
 
@@ -1490,7 +1601,7 @@ As shipped (operator guide: `docs/self-hosting.md`):
 - `docker-compose.prod.yml` runs the published `ghcr.io/navino16/bilan` image (`prod` target, `linux/amd64` + `linux/arm64`, tag `${BILAN_VERSION:-latest}`, host port `${BILAN_PORT:-3000}`) with three services:
   - `mariadb`: at-rest encryption, keyring bind-mounted from `./keyring`, port not published.
   - `app`: applies pending migrations, seeds roles, permissions and default settings, then serves.
-  - `cron`: same image, runs as root with busybox `crond` (`docker/cron/`). It writes `CRON_SECRET` to a file and calls `purge-imports` once, exiting if that fails (a wrong secret shows as a restart loop). Then, in UTC: `roll-budgets` daily at 00:05, `purge-audit` daily at 03:00, `purge-imports` hourly. It exits without `CRON_SECRET`.
+  - `cron`: same image, runs as root with busybox `crond` (`docker/cron/`). It writes `CRON_SECRET` to a file and calls `purge-imports` once, exiting if that fails (a wrong secret shows as a restart loop). Then, in UTC: `roll-budgets` daily at 00:05, `purge-audit` daily at 03:00, `purge-imports` hourly, `bank-sync` hourly at :20 (900 s timeout). It exits without `CRON_SECRET`.
 - No bundled reverse proxy: the operator puts their own TLS proxy (Caddy, Traefik, nginx…) in front of the app port and sets `TRUSTED_IP_HEADER` if needed. The app sends HSTS and the other security headers. Rate limiting is in-app and in memory.
 - Secrets come from env files next to the compose file (`app.env`, `db.env`), not Docker secrets. `db.env` keeps the MariaDB root password out of the app and cron containers.
 - No dedicated health endpoint: the `app` healthcheck fetches `/fr/login`, which needs the database (a fresh install redirects it to `/fr/setup`).

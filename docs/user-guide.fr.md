@@ -12,13 +12,14 @@ Ce guide présente l’application du point de vue de l’utilisateur. L’insta
 2. [Comptes](#comptes)
 3. [Transactions](#transactions)
 4. [Importer des relevés](#importer-des-relevés)
-5. [Catégories, règles et marchands](#catégories-règles-et-marchands)
-6. [Liens entre transactions](#liens-entre-transactions)
-7. [Budgets](#budgets)
-8. [Foyers](#foyers)
-9. [Tableau de bord et analyses](#tableau-de-bord-et-analyses)
-10. [Sécurité du compte](#sécurité-du-compte)
-11. [Vos données](#vos-données)
+5. [Synchronisation bancaire](#synchronisation-bancaire)
+6. [Catégories, règles et marchands](#catégories-règles-et-marchands)
+7. [Liens entre transactions](#liens-entre-transactions)
+8. [Budgets](#budgets)
+9. [Foyers](#foyers)
+10. [Tableau de bord et analyses](#tableau-de-bord-et-analyses)
+11. [Sécurité du compte](#sécurité-du-compte)
+12. [Vos données](#vos-données)
 
 ## Premiers pas
 
@@ -292,6 +293,101 @@ Mauvais fichier, mauvais compte ? Annulez tout l’import :
 Bilan indique combien de transactions seront supprimées, et prévient si certaines sont liées à d’autres transactions, affectées à un budget ou modifiées depuis l’import. Si l’import a calé le solde initial d’un compte, la fenêtre indique qu’il reviendra à sa valeur précédente. Si vous l’avez modifié vous-même depuis, il est laissé tel quel et la fenêtre vous le dit. Cliquez sur **Supprimer les transactions** pour confirmer.
 
 Toutes les transactions de cet import sont supprimées, y compris celles modifiées depuis. L’import reste dans l’historique avec le statut **Annulé**, et vous pouvez réimporter le même fichier ensuite. Il n’y a pas de délai, mais il faut un accès en écriture à chaque compte concerné par l’import.
+
+## Synchronisation bancaire
+
+La synchronisation bancaire tient vos comptes à jour d’elle-même depuis votre banque, en lecture seule, via Enable Banking, un prestataire agréé d’information sur les comptes. Elle n’apparaît que si l’administrateur de votre instance l’a configurée : la page **Comptes** affiche alors un bouton **Connecter ma banque**. Bilan ne peut ni faire de paiement ni rien modifier à votre banque.
+
+### Connecter votre banque
+
+1. Sur **Comptes**, cliquez sur **Connecter ma banque**.
+2. Choisissez le **Pays** et votre banque (tapez une partie de son nom pour la chercher). Chaque banque indique la durée de l’accès : « Accès valable jusqu’à 180 jours », par exemple.
+3. Cliquez sur **Continuer vers la banque**, connectez-vous à votre banque et autorisez l’accès.
+4. Votre banque vous renvoie vers Bilan, sur la page où vous associez les comptes. Faites-le tout de suite : voir [Associer les comptes](#associer-les-comptes).
+
+Terminez l’autorisation en moins de 15 minutes ; au-delà, connectez la banque à nouveau. Si vous refusez l’accès à la banque, rien n’est connecté.
+
+### Associer les comptes
+
+![Association des comptes d’une banque](images/fr/bank-mapping.png)
+
+Pour chaque compte renvoyé par la banque, choisissez ce que Bilan en fait :
+
+- un **Compte Bilan** à tenir à jour : l’un de vos propres comptes, non archivé. Les comptes partagés avec vous ne sont pas proposés. Un compte déjà synchronisé par votre autre connexion affiche « (déjà synchronisé) » et ne peut pas être choisi.
+- **Créer un nouveau compte** : un compte courant qui porte le nom du compte de la banque (vous pouvez le changer).
+- **Ignorer ce compte** : rien n’en est importé.
+
+Seuls les comptes en euros peuvent être synchronisés. Un compte de la banque déjà synchronisé par une autre de vos connexions affiche « Déjà synchronisé par votre autre connexion. »
+
+**Importer depuis le** fixe le début de l’historique. Par défaut, c’est le jour de la dernière opération du compte ; pour un compte vide, tout l’historique fourni par la banque (3 ans au plus).
+
+Cliquez sur **Associer et importer** : l’historique est importé tout de suite, et Bilan indique combien de transactions chaque compte a reçues. Comme pour un import de fichier :
+
+- les lignes déjà présentes dans le compte sont écartées, de même que les doublons probables (même jour et même montant qu’une transaction déjà là, importée ou saisie à la main). Connecter une banque sur un compte rempli à partir de relevés ne pose donc pas de problème : ce qui est là reste, seul ce qui manque est ajouté. Contrairement à un import de fichier, il n’y a pas d’aperçu pour cocher à nouveau un doublon probable ;
+- vos [règles](#règles) catégorisent les nouvelles transactions, et les virements entre vos comptes sont [liés](#liens-automatiques) ;
+- pour LCL, le libellé est celui imprimé sur le relevé, comme dans ses fichiers OFX, donc vos règles s’appliquent de la même façon.
+
+Quand le compte n’a aucune transaction avant le début de l’import (un compte nouveau ou vide), Bilan [cale aussi son solde initial](#caler-le-solde-initial) pour que son solde corresponde à celui de la banque.
+
+Si la banque n’a pas envoyé tout l’historique demandé, le récapitulatif signale que des transactions peuvent manquer. Pour modifier l’association plus tard, cliquez sur **Associer les comptes** à côté de la banque, dans **Connexions bancaires** en bas de la page **Comptes**.
+
+#### Tout l’historique juste après la connexion
+
+Certaines banques, dont LCL, ne donnent les opérations de plus de 90 jours que juste après l’autorisation de l’accès, pendant que vous êtes sur la page : les synchronisations faites en arrière-plan n’atteignent ensuite que les 90 derniers jours. Tout l’historique est donc importé quand vous associez les comptes juste après la connexion (ou la [reconnexion](#reconnecter-ou-déconnecter)). Si vous voulez des années d’historique, associez les comptes dès votre retour de la banque, et réglez **Importer depuis le** à ce moment-là.
+
+### Rester à jour
+
+![Page des comptes avec un compte synchronisé](images/fr/accounts.png)
+
+Une fois les comptes associés, Bilan synchronise chaque connexion en arrière-plan plusieurs fois par jour (l’administrateur en règle la fréquence). La carte d’un compte synchronisé affiche « Synchronisé il y a 2 heures · *banque* ». Chaque synchronisation relit les 7 derniers jours, pour rattraper les opérations que la banque comptabilise en retard ; ce qui est déjà là est écarté.
+
+- **Synchroniser** synchronise tout de suite les comptes de la connexion. C’est possible une fois toutes les 10 minutes par banque (« Cette banque a déjà été synchronisée il y a moins de 10 minutes »).
+- Les **opérations en attente** (un paiement par carte que la banque n’a pas encore comptabilisé) ne sont pas importées : le compte affiche « 2 opérations en attente, −35,40 € », et chacune arrive une fois comptabilisée par la banque.
+- Si la banque limite les accès pour la journée, ou si Enable Banking ne répond pas, l’erreur s’affiche sur la carte du compte et Bilan réessaie plus tard. Après 3 synchronisations en échec d’affilée, la connexion passe **En erreur** et seul **Synchroniser** la relance.
+
+Vous seul voyez l’état de synchronisation de vos comptes : les membres du foyer avec qui vous partagez un compte voient ses transactions, pas votre connexion bancaire.
+
+### Contrôle du solde bancaire
+
+À chaque synchronisation, la banque donne aussi le solde du compte. Sur la carte du compte synchronisé :
+
+- **Conforme à la banque au** *date* : le solde de la banque et celui de Bilan ce jour-là sont identiques.
+- **Écart avec la banque au** *date* : la différence (banque moins Bilan). Cliquez dessus pour ouvrir les transactions du compte de la semaine qui précède ce jour.
+- **Solde prévu par la banque au** *date* : affiché quand la banque le donne. Il comprend les opérations en attente, que Bilan n’importe pas, et peut donc différer du solde comptabilisé : le contrôle ne compare que le solde comptabilisé.
+
+Un écart signifie en général qu’il manque des opérations dans Bilan (une transaction synchronisée que vous avez supprimée, un doublon probable qui n’en était pas un), qu’une opération a été saisie à la main sans exister à la banque, ou que le solde initial est faux.
+
+### Reconnecter ou déconnecter
+
+Le consentement donné à la banque dure un temps limité, souvent 180 jours. La section **Connexions bancaires** de la page **Comptes** liste vos banques, avec les comptes qu’elles synchronisent et « Accès valable jusqu’au … ».
+
+- **À partir de 14 jours avant la fin**, un bandeau sur le tableau de bord et la page **Comptes** vous prévient, avec un bouton **Reconnecter**. Si l’instance envoie des e-mails, vous en recevez aussi un 14 jours et 3 jours avant.
+- **Reconnecter** vous emmène à la banque pour autoriser à nouveau l’accès. Bilan reconnaît vos comptes et garde leur association : vous revenez sur **Comptes** avec « Banque reconnectée », et la synchronisation se lance aussitôt. Si un compte ne peut pas être rapproché de la connexion précédente, la page d’association s’ouvre à la place.
+- **Une fois expirée**, la connexion affiche **Expirée** et ses comptes ne se synchronisent plus. Rien n’est supprimé : reconnectez-la pour reprendre.
+- **Déconnecter** arrête la synchronisation des comptes de la banque et supprime l’accès de Bilan à la banque. Les transactions déjà synchronisées sont conservées.
+
+### Supprimer des transactions synchronisées
+
+Vous pouvez supprimer une transaction synchronisée comme n’importe quelle autre. Elle ne revient pas à la synchronisation suivante. Les synchronisations n’apparaissent pas dans **Imports récents** sur la page **Importer** et ne s’annulent pas en bloc.
+
+### Les comptes d’épargne que votre banque ne remonte pas
+
+![Compte d’épargne tenu à jour par les virements](images/fr/account-mirror.png)
+
+Certaines banques ne partagent pas leurs comptes d’épargne (un Livret A chez LCL, par exemple). Bilan peut quand même tenir un tel compte à jour à partir des virements que vous lui faites :
+
+1. Ouvrez **Modifier** dans le menu du compte d’épargne (comptes de type **Épargne** seulement, dont vous êtes propriétaire).
+2. Sous **Tenu à jour par les virements**, cochez les **Comptes sources** : vos comptes d’où partent les virements.
+3. Vérifiez le **Motif du libellé** : par défaut, le nom du compte en majuscules, recherché n’importe où dans le libellé, sans tenir compte de la casse ni des accents.
+4. Cliquez sur **Enregistrer**.
+
+Après chaque synchronisation bancaire ou import de fichier sur un compte source, chaque nouveau virement dont le libellé contient le motif, et qui n’est pas encore lié, ajoute l’opération inverse sur le compte d’épargne (« Virement depuis … » ou « Virement vers … »), [liée](#liens-entre-transactions) à lui. Quand le compte d’épargne a déjà l’opération inverse (même montant, 4 jours d’écart au plus, non liée), Bilan la lie au lieu d’en ajouter une.
+
+- Un compte d’épargne a un seul motif de libellé, pour tous ses comptes sources.
+- Seules les transactions importées ou synchronisées après le réglage sont reportées : l’historique existant ne change pas.
+- Les intérêts restent une saisie manuelle.
+- Si vous supprimez une opération ajoutée par Bilan, elle ne revient pas.
+- Décochez tous les comptes sources pour désactiver le report.
 
 ## Catégories, règles et marchands
 
@@ -700,7 +796,7 @@ Allez dans **Données** dans la barre latérale.
 ### Exporter
 
 - **Transactions (CSV)** : les transactions des comptes que vous voyez, avec date, montant, type, libellé, compte, catégorie et, quand il diffère du mois réel, le mois d’affectation. Par défaut, le fichier les contient toutes ; pour le restreindre, choisissez une période (**Du**, **Au**) ou un **Compte** au-dessus des boutons. Le fichier s’ouvre dans un tableur et peut être réimporté dans Bilan. En français, il utilise le point-virgule comme séparateur et la virgule décimale.
-- **Toutes mes données (JSON)** : tout ce qui vous appartient, pour vos archives ou pour changer d’outil : profil, vos propres comptes (IBAN compris), leurs transactions avec notes et libellés d’origine, catégories, règles, noms de marchands, budgets, foyers, liens, historique des imports et votre journal d’activité récent. Les comptes que d’autres partagent avec vous n’y figurent pas. Comme il contient vos IBAN complets, il vous demande de confirmer votre identité comme pour [voir un IBAN](#voir-liban) si votre connexion date de plus de 10 minutes.
+- **Toutes mes données (JSON)** : tout ce qui vous appartient, pour vos archives ou pour changer d’outil : profil, vos propres comptes (IBAN compris), leurs transactions avec notes et libellés d’origine, catégories, règles, noms de marchands, budgets, foyers, liens, historique des imports, connexions bancaires (sans leur accès à la banque) et votre journal d’activité récent. Les comptes que d’autres partagent avec vous n’y figurent pas. Comme il contient vos IBAN complets, il vous demande de confirmer votre identité comme pour [voir un IBAN](#voir-liban) si votre connexion date de plus de 10 minutes.
 
 ### Supprimer votre compte
 
@@ -709,5 +805,6 @@ Cliquez sur **Supprimer mon compte**, saisissez votre **Mot de passe** (ou votre
 - vos comptes et leurs transactions sont supprimés, y compris ceux partagés avec un foyer : les autres membres les perdent aussi ;
 - pour chaque foyer dont vous êtes propriétaire, un autre membre devient propriétaire ; un foyer sans autre membre est supprimé ;
 - les catégories, règles et budgets propres au foyer sont conservés.
+- vos connexions bancaires sont déconnectées : Bilan supprime son accès à la banque.
 
 Astuce : exportez vos données d’abord si vous voulez en garder une copie.
