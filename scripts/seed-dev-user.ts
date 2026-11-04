@@ -1,3 +1,4 @@
+import { generateKeyPairSync, randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { seedRolesAndPermissions, seedAppSettings } from "../prisma/seed";
@@ -13,6 +14,13 @@ import { shareAccountWithGroup } from "@/server/services/accounts/sharing";
 import { createLink } from "@/server/services/links";
 import { deleteUser } from "@/server/services/rgpd";
 import { grantRole } from "@/server/services/users/roles";
+import { accountBalances, setSavingsMirror } from "@/server/services/accounts";
+import { normalizeIban } from "@/server/services/accounts/iban";
+import { BANK_SYNC_SINGLETON_ID } from "@/server/services/bank-sync/config";
+import { encrypt } from "@/server/crypto/encryption";
+import { hmacExact } from "@/server/crypto/hmac";
+import { dataKey, searchKey } from "@/server/crypto/keys";
+import { dayEnd, dayStart } from "@/lib/period";
 import type { TransactionType } from "@/lib/validation/transaction";
 
 // Dev convenience: a SUPER_ADMIN user with ~12 months of realistic data ending
@@ -355,6 +363,75 @@ async function resetUser(userId: string): Promise<void> {
   await deleteUser(userId);
 }
 
+// Docs data set only (SEED_BANK_SYNC=1, scripts/docs-db.sh): a fictitious Enable Banking app and
+// connection. The docs server runs no cron, so the throwaway key never reaches Enable Banking.
+async function seedBankSync(
+  userId: string,
+  accounts: { courant: string; livret: string },
+  today: Date,
+): Promise<void> {
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const config = {
+    applicationId: "00000000-0000-0000-0000-000000000000",
+    privateKeyEnc: encrypt(privateKey.export({ type: "pkcs8", format: "pem" }).toString(), dataKey),
+    enabled: true,
+    syncIntervalHours: 6,
+    updatedById: userId,
+  };
+  await db.bankSyncConfig.upsert({
+    where: { id: BANK_SYNC_SINGLETON_ID },
+    create: { id: BANK_SYNC_SINGLETON_ID, ...config },
+    update: config,
+  });
+
+  const day = isoDay(today);
+  const courant = await db.bankAccount.findUniqueOrThrow({
+    where: { id: accounts.courant },
+    select: { id: true, initialBalance: true },
+  });
+  const booked = (await accountBalances([courant], { asOf: dayEnd(day) })).get(courant.id) ?? 0;
+  const pendingTotal = -35.4;
+  const now = Date.now();
+  await db.bankConnection.create({
+    data: {
+      userId,
+      aspspName: "Banque Fictive",
+      aspspCountry: "FR",
+      sessionIdEnc: encrypt(randomUUID(), dataKey),
+      // Within the 14-day notice, so the consent banner shows.
+      validUntil: new Date(now + 10 * 86_400_000),
+      lastSyncAt: new Date(now - 2 * 3_600_000),
+      accounts: {
+        create: [
+          {
+            uidEnc: encrypt(randomUUID(), dataKey),
+            ibanHash: hmacExact(normalizeIban("FR7630006000011234567890189"), searchKey),
+            name: "COMPTE DE DEPOT",
+            currency: "EUR",
+            accountId: courant.id,
+            lastSyncedDate: dayStart(day),
+            bookedBalance: booked,
+            bookedBalanceDate: dayStart(day),
+            expectedBalance: Math.round((booked + pendingTotal) * 100) / 100,
+            expectedBalanceDate: dayStart(day),
+            pendingCount: 2,
+            pendingTotal,
+          },
+          {
+            uidEnc: encrypt(randomUUID(), dataKey),
+            name: "COMPTE EPARGNE LOGEMENT",
+            currency: "EUR",
+          },
+        ],
+      },
+    },
+  });
+  await setSavingsMirror(userId, accounts.livret, {
+    sourceAccountIds: [accounts.courant],
+    pattern: "LIVRET A",
+  });
+}
+
 async function main(): Promise<void> {
   await seedRolesAndPermissions(db);
   await seedAppSettings(db);
@@ -573,9 +650,12 @@ async function main(): Promise<void> {
     actor,
   );
 
+  const bankSync = process.env.SEED_BANK_SYNC === "1";
+  if (bankSync) await seedBankSync(userId, accountIds, today);
+
   console.log(
     `Seeded ${EMAIL} (password ${PASSWORD}): 3 accounts, ${created} transactions over ${MONTHS} months, ` +
-      `${links} links, ${rules.length} rules, household "Foyer Martin"${member ? ` (+ ${MEMBER_EMAIL})` : ""}, 3 budgets.`,
+      `${links} links, ${rules.length} rules, household "Foyer Martin"${member ? ` (+ ${MEMBER_EMAIL})` : ""}, 3 budgets${bankSync ? ', bank connection "Banque Fictive"' : ""}.`,
   );
 }
 
