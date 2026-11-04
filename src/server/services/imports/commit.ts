@@ -13,6 +13,7 @@ import { deriveType } from "./derive-type";
 import { ImportAccessError } from "./errors";
 import { findProbableDuplicates } from "./probable";
 import { autoLinkTransfers } from "@/server/services/links/auto";
+import { mirrorSavingsLegs } from "@/server/services/links/mirror";
 import type { CommitSummary, NormalizedRow } from "./types";
 
 // Dedups against existing `(accountId, externalId)` rows (and in-file dupes), skips
@@ -243,7 +244,8 @@ export async function finalizeBatch(
   };
 }
 
-// Links the batch's transfer legs for each account owner; the import stands even if it fails.
+// Links the batch's transfer legs for each account owner, then adds savings mirror legs;
+// the import stands even if it fails.
 async function autoLinkImported(batchId: string, accountIds: string[]): Promise<void> {
   try {
     const [range, owners] = await Promise.all([
@@ -261,6 +263,7 @@ async function autoLinkImported(batchId: string, accountIds: string[]): Promise<
     const from = range._min.date ?? undefined;
     const to = range._max.date ?? undefined;
     for (const { ownerId } of owners) await autoLinkTransfers(ownerId, { from, to });
+    await mirrorSavingsLegs(batchId);
   } catch (e) {
     console.error("auto-link after import failed", batchId, e);
   }

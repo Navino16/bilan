@@ -1,6 +1,7 @@
 import { db } from "@/server/db";
 import { canWriteAccount } from "@/server/services/accounts/sharing";
 import { dissolveUndersizedLinks } from "@/server/services/links/dissolve";
+import { isMirrorExternalId } from "@/server/services/links/mirror";
 import { TransactionAccessError } from "./index";
 
 export const MAX_DELETE_IDS = 500;
@@ -81,9 +82,10 @@ export async function deleteTransactions(
     if (deleted !== ids.length) throw new TransactionAccessError("NOT_FOUND");
     const linkIds = [...new Set(memberships.map((m) => m.linkId))];
     const linksDissolved = await dissolveUndersizedLinks(tx, linkIds);
-    // Later syncs never re-insert a synced row the user deleted (design §Deleting synced rows).
+    // Later syncs and imports never re-insert a synced row or a mirror leg the user deleted
+    // (design §Deleting synced rows).
     const tombstones = rows.flatMap((r) =>
-      r.importBatch?.source === "SYNC" && r.externalId
+      (r.importBatch?.source === "SYNC" || isMirrorExternalId(r.externalId)) && r.externalId
         ? [{ accountId: r.accountId, externalId: r.externalId }]
         : [],
     );
