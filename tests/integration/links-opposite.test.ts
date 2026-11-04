@@ -119,9 +119,13 @@ describe("createOppositeTransaction", () => {
       [source, id].sort(),
     );
     const audit = await db.auditLog.findFirstOrThrow({
-      where: { action: "link.oppositeCreated", entityId: id },
+      where: { action: "link.oppositeCreated", entityId: linkId },
     });
-    expect(audit).toMatchObject({ userId: owner, metadata: { sourceId: source, linkId } });
+    expect(audit).toMatchObject({
+      userId: owner,
+      entity: "TransactionLink",
+      metadata: { sourceId: source, legId: id },
+    });
   });
 
   it("an incoming transfer takes the money out of the target", async () => {

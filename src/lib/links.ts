@@ -261,3 +261,15 @@ export function collapseLinkedRows<T extends CollapsibleRow>(rows: T[]): T[] {
 
   return out;
 }
+
+type TargetAccount = { id: string; owned: boolean; archived: boolean; type: string };
+
+// Where the opposite of a transaction can be created (#404); a lone savings account is preselected.
+export function oppositeTargets<A extends TargetAccount>(
+  accounts: A[],
+  sourceAccountId: string,
+): { targets: A[]; preselected: string } {
+  const targets = accounts.filter((a) => a.owned && !a.archived && a.id !== sourceAccountId);
+  const savings = targets.filter((a) => a.type === "SAVINGS");
+  return { targets, preselected: savings.length === 1 ? savings[0].id : "" };
+}

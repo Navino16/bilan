@@ -58,9 +58,9 @@ export async function createOppositeTransaction(input: {
   await logEvent({
     userId: input.userId,
     action: "link.oppositeCreated",
-    entity: "Transaction",
-    entityId: leg.id,
-    metadata: { sourceId: source.id, linkId: leg.linkId },
+    entity: "TransactionLink",
+    entityId: leg.linkId,
+    metadata: { sourceId: source.id, legId: leg.id },
   });
   return { id: leg.id, linkId: leg.linkId };
 }

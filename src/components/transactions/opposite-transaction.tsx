@@ -17,30 +17,22 @@ const ERRORS = new Set([
   "TARGET_FORBIDDEN",
 ]);
 
-export function oppositeTargets(
-  accounts: Record<string, AccountMeta>,
-  sourceAccountId: string,
-): ({ id: string } & AccountMeta)[] {
-  return Object.entries(accounts)
-    .filter(([id, a]) => a.owned && !a.archived && id !== sourceAccountId)
-    .map(([id, a]) => ({ id, ...a }));
-}
-
 // Remount per transaction (key) so the preselection follows the row.
 export function OppositeTransaction({
   transactionId,
   amount,
   targets,
+  preselected,
 }: {
   transactionId: string;
   amount: number;
   targets: ({ id: string } & AccountMeta)[];
+  preselected: string;
 }) {
   const t = useTranslations("transactions.opposite");
   const locale = useLocale();
   const router = useRouter();
-  const savings = targets.filter((a) => a.type === "SAVINGS");
-  const [target, setTarget] = useState(savings.length === 1 ? savings[0].id : "");
+  const [target, setTarget] = useState(preselected);
   const [error, setError] = useState<string | null>(null);
   const [pending, startCreate] = useTransition();
   const nf = new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" });

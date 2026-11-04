@@ -21,7 +21,8 @@ import { Pill, overline } from "./bits";
 import { TransactionEditForm } from "./transaction-edit-form";
 import { AssignedMonthBadge, AssignedMonthField } from "./assigned-month";
 import { useLinkErrorMessage } from "./link-error";
-import { OppositeTransaction, oppositeTargets } from "./opposite-transaction";
+import { OppositeTransaction } from "./opposite-transaction";
+import { oppositeTargets } from "@/lib/links";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Link2, Pencil, Trash2, Unlink } from "lucide-react";
 import { formatPeriodLabel } from "@/lib/period";
@@ -236,8 +237,13 @@ export function TransactionDetail({
         : "archived"
       : null;
   const linkSummary = item?.linked && link?.txId === item.id ? link.summary : null;
-  const targets =
-    item && !item.linked && acc?.writable ? oppositeTargets(accounts, item.accountId) : [];
+  const opposite =
+    item && !item.linked && acc?.writable
+      ? oppositeTargets(
+          Object.entries(accounts).map(([id, a]) => ({ id, ...a })),
+          item.accountId,
+        )
+      : null;
 
   return (
     <Sheet
@@ -385,13 +391,14 @@ export function TransactionDetail({
                     </Button>
                   </Field>
                 )}
-                {targets.length > 0 && (
+                {opposite && opposite.targets.length > 0 && (
                   <Field label={tOpposite("field")}>
                     <OppositeTransaction
                       key={item.id}
                       transactionId={item.id}
                       amount={item.amount}
-                      targets={targets}
+                      targets={opposite.targets}
+                      preselected={opposite.preselected}
                     />
                   </Field>
                 )}

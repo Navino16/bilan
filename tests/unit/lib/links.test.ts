@@ -9,6 +9,7 @@ import {
   labelWords,
   pairScore,
   findAutoLinkPairs,
+  oppositeTargets,
   AUTO_LINK_WINDOW_DAYS,
   type AutoLinkCandidate,
 } from "@/lib/links";
@@ -388,5 +389,48 @@ describe("collapseLinkedRows", () => {
     expect(out[0].id).toBe("a"); // primary = largest |amount|
     expect(out[0].amount).toBe(-20); // net
     expect(out[0].categoryId).toBe("groc"); // primary's category
+  });
+});
+
+describe("oppositeTargets (#404)", () => {
+  const acc = (id: string, type: string, over: { owned?: boolean; archived?: boolean } = {}) => ({
+    id,
+    type,
+    owned: over.owned ?? true,
+    archived: over.archived ?? false,
+  });
+
+  it("offers the user's own active accounts but the source's, preselecting a lone savings", () => {
+    const { targets, preselected } = oppositeTargets(
+      [
+        acc("src", "CHECKING"),
+        acc("joint", "CHECKING"),
+        acc("livret", "SAVINGS"),
+        acc("old", "SAVINGS", { archived: true }),
+        acc("shared", "SAVINGS", { owned: false }),
+      ],
+      "src",
+    );
+    expect(targets.map((a) => a.id)).toEqual(["joint", "livret"]);
+    expect(preselected).toBe("livret");
+  });
+
+  it("preselects nothing with no or several savings accounts", () => {
+    const none = oppositeTargets([acc("src", "CHECKING"), acc("joint", "CHECKING")], "src");
+    expect(none.preselected).toBe("");
+    const two = oppositeTargets(
+      [acc("src", "CHECKING"), acc("a", "SAVINGS"), acc("b", "SAVINGS")],
+      "src",
+    );
+    expect(two.preselected).toBe("");
+  });
+
+  it("never preselects the source's own savings account", () => {
+    const { targets, preselected } = oppositeTargets(
+      [acc("livret", "SAVINGS"), acc("courant", "CHECKING")],
+      "livret",
+    );
+    expect(targets.map((a) => a.id)).toEqual(["courant"]);
+    expect(preselected).toBe("");
   });
 });
