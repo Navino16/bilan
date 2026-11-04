@@ -228,19 +228,20 @@ model BankSyncConfig {
 
 // One user consent at Enable Banking (design §Data model).
 model BankConnection {
-  id            String    @id @default(cuid())
-  userId        String
-  aspspName     String
-  aspspCountry  String    @db.VarChar(2)
-  sessionIdEnc  String    @db.Text
-  validUntil    DateTime
-  status        String    @default("ACTIVE") // ACTIVE | EXPIRED | REVOKED | ERROR
-  lastSyncAt    DateTime?
-  lastError     String? // error code only (design §Security and privacy)
-  syncStartedAt DateTime? // claim against concurrent syncs
-  failureCount  Int       @default(0) // consecutive failed syncs
-  retryAfter    DateTime? // background syncs wait until then after a rate limit
-  createdAt     DateTime  @default(now())
+  id               String    @id @default(cuid())
+  userId           String
+  aspspName        String
+  aspspCountry     String    @db.VarChar(2)
+  sessionIdEnc     String    @db.Text
+  validUntil       DateTime
+  status           String    @default("ACTIVE") // ACTIVE | EXPIRED | REVOKED | ERROR
+  lastSyncAt       DateTime?
+  lastError        String? // error code only (design §Security and privacy)
+  syncStartedAt    DateTime? // claim against concurrent syncs
+  failureCount     Int       @default(0) // consecutive failed syncs
+  retryAfter       DateTime? // background syncs wait until then after a rate limit
+  reminderSentDays Int? // smallest REMINDER_DAYS threshold already mailed
+  createdAt        DateTime  @default(now())
 
   user     User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   accounts BankConnectionAccount[]

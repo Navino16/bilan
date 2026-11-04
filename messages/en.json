@@ -389,7 +389,8 @@
         "UNKNOWN_STATE": "This return from the bank is unknown or already used. Connect the bank again.",
         "EXPIRED_STATE": "The authorization took more than 15 minutes. Connect the bank again.",
         "WRONG_USER": "This authorization was started by another user.",
-        "DENIED": "Access to the accounts was refused at the bank. Nothing was connected."
+        "DENIED": "Access to the accounts was refused at the bank. Nothing was connected.",
+        "RECONNECTED": "Bank reconnected: your accounts are synced again."
       },
       "status": {
         "synced": "Synced {ago} · {bank}",
@@ -405,6 +406,7 @@
         "overline": "Banks",
         "title": "Bank connections",
         "validUntil": "Access valid until {date}",
+        "expiredOn": "Access expired on {date}",
         "mapped": "Synced: {names}",
         "unmapped": "No account mapped",
         "map": "Map accounts",
@@ -454,6 +456,20 @@
           "UNSUPPORTED_CURRENCY": "Only euro accounts can be synced.",
           "BUSY": "A sync of this bank is already running. Try again in a moment."
         }
+      },
+      "reconnect": {
+        "submit": "Reconnect",
+        "submitting": "Redirecting…"
+      },
+      "disconnect": {
+        "submit": "Disconnect",
+        "submitting": "Disconnecting…",
+        "title": "Disconnect {bank}?",
+        "body": "Bilan stops syncing these accounts and deletes its access at the bank. The transactions already synced stay."
+      },
+      "consent": {
+        "expires": "Your {bank} bank connection expires on {date} ({days, plural, one {# day} other {# days}} left). Reconnect it to keep your accounts synced.",
+        "expired": "Your {bank} bank connection has expired: its accounts no longer sync. Reconnect it."
       }
     }
   },
@@ -2271,7 +2287,9 @@
         "bank_sync": {
           "connection": {
             "created": "Bank connected",
-            "expired": "Bank connection expired"
+            "expired": "Bank connection expired",
+            "reconnected": "Bank reconnected",
+            "revoked": "Bank disconnected"
           },
           "mapping": {
             "saved": "Bank accounts mapped"

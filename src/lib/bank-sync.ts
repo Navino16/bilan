@@ -33,3 +33,16 @@ export type SyncInterval = (typeof SYNC_INTERVALS)[number];
 export function isSyncInterval(value: unknown): value is SyncInterval {
   return (SYNC_INTERVALS as readonly unknown[]).includes(value);
 }
+
+// From this many days before the consent ends, the owner is warned (design §Consent lifecycle).
+export const CONSENT_WARN_DAYS = 14;
+const DAY_MS = 86_400_000;
+
+export type ConsentState = { daysLeft: number; warn: boolean; expired: boolean };
+
+export function consentState(validUntil: Date, now: Date): ConsentState {
+  const left = validUntil.getTime() - now.getTime();
+  const expired = left <= 0;
+  const daysLeft = expired ? 0 : Math.ceil(left / DAY_MS);
+  return { daysLeft, warn: !expired && daysLeft <= CONSENT_WARN_DAYS, expired };
+}
