@@ -1037,6 +1037,21 @@
       "field": "Link",
       "startFrom": "Link to other transactions"
     },
+    "opposite": {
+      "field": "Create the opposite transaction on…",
+      "choose": "Choose an account",
+      "create": "Create",
+      "hint": "Adds {amount} on the chosen account, linked to this transaction.",
+      "failed": "Couldn’t create the opposite transaction. Try again.",
+      "error": {
+        "ALREADY_LINKED": "This transaction is already linked.",
+        "FORBIDDEN": "You can’t edit this transaction.",
+        "NOT_FOUND": "This transaction no longer exists. Reload the page.",
+        "SAME_ACCOUNT": "Choose another account than this transaction’s.",
+        "TARGET_ARCHIVED": "This account is archived.",
+        "TARGET_FORBIDDEN": "Choose one of your own accounts."
+      }
+    },
     "suggestions": {
       "title": "Link suggestions",
       "subtitle": "{count, plural, =0 {No suggestions} one {# suggested pair} other {# suggested pairs}}",
@@ -2299,7 +2314,8 @@
           "deleted": "Link deleted",
           "suggestionIgnored": "Link suggestion ignored",
           "suggestionRestored": "Link suggestion restored",
-          "mirrorCreated": "Savings mirror legs created"
+          "mirrorCreated": "Savings mirror legs created",
+          "oppositeCreated": "Opposite transaction created"
         },
         "mail": {
           "security": {

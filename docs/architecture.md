@@ -1144,6 +1144,8 @@ The budget detail lists the latest 100 counted transactions in full to everyone 
 2. Click transactions to select (2+; none already in a link). Picks survive filter changes, but only visible ones are acted on, except the transaction a selection was started from (detail panel "Link to other transactions"), which stays included and is named in the selection bar while hidden.
 3. Confirm: `createLinkAction` → `links.createLink({ transactionIds, userId })` → requires WRITE on every account involved → creates `TransactionLink` + `TransactionLinkMember[]` (audit `link.created`). Unlinking (`deleteLink`) also needs WRITE on every member's account.
 
+**Opposite transaction** (#404): the detail panel of an unlinked transaction on a writable account offers the actor's own active accounts (a lone savings one preselected). `createOppositeTransactionAction` → `links/opposite.createOppositeTransaction` refuses a source the actor can't read (`NOT_FOUND`) or write (`FORBIDDEN`), the source's own account (`SAME_ACCOUNT`), a target the actor doesn't own (`TARGET_FORBIDDEN`) or archived (`TARGET_ARCHIVED`), and a linked source (`ALREADY_LINKED`). It creates the opposite `TRANSFER` leg (no category, no `externalId`, labelled like mirror legs) and its manual (`auto = false`) link in one DB transaction through `links/leg.createLinkedTransferLeg`, shared with the savings mirror: a concurrent link of the source fails the unique member and leaves no leg. Then `alignNewLinkMonth`, audit `link.oppositeCreated`.
+
 **Auto suggestions**: `links.suggestPairs(userId)`:
 1. Load the 5 000 most recent visible transactions not in any link.
 2. For each `+X` (largest first), find an unused `-X` within `±UserPreference.linkWindowDays` days, closest date first; each transaction is used in at most one pair.
@@ -1350,7 +1352,7 @@ Over the limit: the Better Auth sign-in and 2FA endpoints answer HTTP 429 + `Ret
 - Users (admin): `user.created_by_admin`, `user.deleted`, `user.disabled/enabled`, `user.role.granted`, `user.role.changed`, `user.email_verified`; data export `user.data.exported/export_failed`.
 - Accounts: `account.created/updated/archived/unarchived/deleted`, `account.share.create/revoke`, `account.iban.revealed/reveal_failed`.
 - Groups: `group.created/updated/deleted`, `group.member.removed`, `group.member.role_changed`, `group.invitation.create/resend/accept/decline/revoke`.
-- Transactions & links: `transaction.created/updated/deleted/recategorized`, `link.created/deleted`, `link.suggestionIgnored/suggestionRestored`.
+- Transactions & links: `transaction.created/updated/deleted/recategorized`, `link.created/deleted`, `link.oppositeCreated`, `link.suggestionIgnored/suggestionRestored`.
 - Imports: `import.created/committed/discarded/reverted`, `import.purged` (cron).
 - Categories & rules: `category.created/updated/deleted`, `rule.created/updated/deleted/enabled/disabled/applied/exported/imported`.
 - Budgets: `budget.created/updated/archived/unarchived/deleted`, `budget.assignment.create/delete`.

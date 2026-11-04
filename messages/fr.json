@@ -1037,6 +1037,21 @@
       "field": "Lien",
       "startFrom": "Lier à d’autres transactions"
     },
+    "opposite": {
+      "field": "Créer la transaction inverse sur…",
+      "choose": "Choisir un compte",
+      "create": "Créer",
+      "hint": "Ajoute {amount} sur le compte choisi, liée à cette transaction.",
+      "failed": "Impossible de créer la transaction inverse. Réessayez.",
+      "error": {
+        "ALREADY_LINKED": "Cette transaction est déjà liée.",
+        "FORBIDDEN": "Vous ne pouvez pas modifier cette transaction.",
+        "NOT_FOUND": "Cette transaction n’existe plus. Rechargez la page.",
+        "SAME_ACCOUNT": "Choisissez un autre compte que celui de cette transaction.",
+        "TARGET_ARCHIVED": "Ce compte est archivé.",
+        "TARGET_FORBIDDEN": "Choisissez l’un de vos propres comptes."
+      }
+    },
     "suggestions": {
       "title": "Suggestions de liens",
       "subtitle": "{count, plural, =0 {Aucune suggestion} one {# paire suggérée} other {# paires suggérées}}",
@@ -2299,7 +2314,8 @@
           "deleted": "Liaison supprimée",
           "suggestionIgnored": "Suggestion de liaison ignorée",
           "suggestionRestored": "Suggestion de liaison restaurée",
-          "mirrorCreated": "Opérations miroir d’épargne créées"
+          "mirrorCreated": "Opérations miroir d’épargne créées",
+          "oppositeCreated": "Transaction inverse créée"
         },
         "mail": {
           "security": {

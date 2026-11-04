@@ -10,6 +10,7 @@ import {
   restoreSuggestion,
   type LinkSummary,
 } from "@/server/services/links";
+import { createOppositeTransaction } from "@/server/services/links/opposite";
 import {
   PreferenceInputError,
   updateLinkSuggestionSettings,
@@ -39,6 +40,26 @@ export async function createLinkAction(
   if (ids.length < 2) return { ok: false, error: "TOO_FEW" };
   try {
     const { id } = await createLink({ transactionIds: ids, userId: user.id });
+    return { ok: true, id };
+  } catch (e) {
+    return { ok: false, error: mapError(e) };
+  }
+}
+
+export async function createOppositeTransactionAction(
+  _prev: LinkActionState,
+  formData: FormData,
+): Promise<LinkActionState> {
+  const user = await requireSession();
+  const transactionId = String(formData.get("transactionId") ?? "");
+  const targetAccountId = String(formData.get("targetAccountId") ?? "");
+  if (!transactionId || !targetAccountId) return { ok: false, error: "INVALID" };
+  try {
+    const { id } = await createOppositeTransaction({
+      transactionId,
+      targetAccountId,
+      userId: user.id,
+    });
     return { ok: true, id };
   } catch (e) {
     return { ok: false, error: mapError(e) };
