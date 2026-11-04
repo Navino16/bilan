@@ -5,10 +5,10 @@ import { decrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
 import { logEvent } from "@/server/services/audit";
 import { matchRule } from "@/server/services/categorization/match";
-import { buildSecureFields } from "@/server/services/transactions/secure-fields";
 import { AUTO_LINK_WINDOW_DAYS, pairKeyOf } from "@/lib/links";
 import { toMirrorMatchType, type MirrorMatchType } from "@/lib/validation/account";
 import { alignNewLinkMonth, type MonthLeg } from "./month";
+import { createLinkedTransferLeg } from "./leg";
 
 const DAY_MS = 86_400_000;
 export const MIRROR_PREFIX = "mirror:";
@@ -174,7 +174,14 @@ async function mirrorOne(
         return "linked";
       }
       if (legExists) return "skipped";
-      const leg = await createLeg(source, savings, sourceName, externalId);
+      const leg = await createLinkedTransferLeg({
+        source,
+        accountId: savings.id,
+        sourceName,
+        actorId: savings.ownerId,
+        auto: true,
+        externalId,
+      });
       await alignNewLinkMonth([source, leg]);
       return "created";
     } catch (e) {
@@ -239,40 +246,4 @@ async function linkPair(source: MonthLeg, other: MonthLeg, ownerId: string): Pro
     },
   });
   await alignNewLinkMonth([source, other]);
-}
-
-async function createLeg(
-  source: SourceRow,
-  savings: Savings,
-  sourceName: string,
-  externalId: string,
-): Promise<MonthLeg> {
-  const amount = -source.amount;
-  const label = amount > 0 ? `Virement depuis ${sourceName}` : `Virement vers ${sourceName}`;
-  const { tokens, ...secure } = buildSecureFields({ label, rawLabel: label });
-  return db.$transaction(async (tx) => {
-    const leg = await tx.transaction.create({
-      data: {
-        accountId: savings.id,
-        date: source.date,
-        amount,
-        type: "TRANSFER",
-        ...secure,
-        externalId,
-        createdById: savings.ownerId,
-      },
-      select: { id: true, date: true, type: true, periodDate: true, periodManual: true },
-    });
-    await tx.transactionSearchToken.createMany({
-      data: tokens.map((tokenHash) => ({ transactionId: leg.id, tokenHash })),
-    });
-    await tx.transactionLink.create({
-      data: {
-        auto: true,
-        createdById: savings.ownerId,
-        members: { create: [{ transactionId: source.id }, { transactionId: leg.id }] },
-      },
-    });
-    return leg;
-  });
 }

@@ -79,6 +79,8 @@ export default async function TransactionsPage({
     color: a.color,
     bankName: a.bankName,
     writable: a.access !== "READ",
+    owned: a.access === "OWNER",
+    type: a.type,
     archived: a.archived,
   }));
   const formAccounts = writableActiveAccounts(accounts).map((a) => ({ id: a.id, name: a.name }));

@@ -50,6 +50,8 @@ export type AccountOption = {
   color: string | null;
   bankName: string | null;
   writable: boolean;
+  owned: boolean;
+  type: string;
   archived: boolean;
 };
 
@@ -143,6 +145,8 @@ export function TransactionList({
         color: a.color,
         bankName: a.bankName,
         writable: a.writable,
+        owned: a.owned,
+        type: a.type,
         archived: a.archived,
       },
     ]),

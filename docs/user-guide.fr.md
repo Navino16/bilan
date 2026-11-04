@@ -177,6 +177,7 @@ Cliquez sur une transaction pour ouvrir son détail :
 - **Mois d’affectation** : le mois pour lequel la transaction compte. Voir [Compter une transaction dans un autre mois](#compter-une-transaction-dans-un-autre-mois).
 - **Note** : votre commentaire, ajouté avec **Modifier**.
 - **Liée à** : affiché quand la transaction fait partie d’un [lien](#liens-entre-transactions).
+- **Créer la transaction inverse sur…** : ajoute l’autre côté d’un virement sur un autre de vos comptes. Voir [Créer l’autre côté d’un virement](#créer-lautre-côté-dun-virement).
 - **Comptée dans** : chaque budget actif qui compte la transaction, avec la ligne où elle tombe, ou **Hors budget** / **Rentrées hors budget** quand aucune ligne ne la prend. C’est le même rapprochement que sur la page du budget ; cliquez sur une entrée pour ouvrir ce budget.
 - **Assigner à un budget** : voir [Inclure ou exclure une transaction](#inclure-ou-exclure-une-transaction).
 - **Supprimer la transaction** en bas.
@@ -391,6 +392,7 @@ Après chaque synchronisation bancaire ou import de fichier sur un compte source
 - Les intérêts restent une saisie manuelle.
 - Si vous supprimez une opération ajoutée par Bilan, elle ne revient pas.
 - Décochez tous les comptes sources pour désactiver le report.
+- Quand un libellé ne dit pas vers quel compte part un virement, [créez son autre côté](#créer-lautre-côté-dun-virement) depuis le détail de la transaction.
 
 ## Catégories, règles et marchands
 
@@ -495,6 +497,14 @@ Les transactions liées restent dans la liste avec l’étiquette **Liée**.
 - **À la main** : [sélectionnez](#sélectionner-plusieurs-transactions) deux transactions ou plus et cliquez sur **Lier**. Vous pouvez aussi ouvrir une transaction et cliquer sur **Lier à d’autres transactions** : elle est sélectionnée, et le reste pendant que vous cherchez ou filtrez les autres (la barre de sélection la rappelle).
 
 Il faut un accès en écriture à chaque compte concerné.
+
+### Créer l’autre côté d’un virement
+
+Quand un seul côté d’un virement est dans Bilan (l’autre compte n’est pas synchronisé, ou le libellé ne dit pas vers quel compte l’argent est parti), ouvrez la transaction, choisissez l’autre compte sous **Créer la transaction inverse sur…** et cliquez sur **Créer**. Bilan ajoute le montant opposé sur ce compte, à la même date, en virement libellé « Virement depuis … » ou « Virement vers … » suivi du nom du compte de la première transaction, et lie les deux.
+
+- C’est proposé pour une transaction pas encore liée, sur un compte que vous pouvez modifier.
+- L’autre compte doit être l’un de vos propres comptes actifs. Quand un seul d’entre eux est un compte d’épargne, il est choisi d’office.
+- La nouvelle transaction n’a pas de catégorie. Quand la première est un virement dont le mois a été choisi à la main, la nouvelle prend ce mois.
 
 ### Liens automatiques
 

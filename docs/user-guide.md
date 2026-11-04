@@ -177,6 +177,7 @@ Click a transaction to open its details:
 - **Assigned month**: the month the transaction counts in. See [Count a transaction in another month](#count-a-transaction-in-another-month).
 - **Note**: your own comment, added with **Edit**.
 - **Linked to**: shown when the transaction is part of a [link](#links-transfers-and-refunds).
+- **Create the opposite transaction on…**: adds the other side of a transfer on another of your accounts. See [Create the other side of a transfer](#create-the-other-side-of-a-transfer).
 - **Counted in**: each active budget that counts the transaction, with the line it lands in, or **Out of budget** / **Unplanned income** when no line takes it. It is the same matching as the budget's own page; click an entry to open that budget.
 - **Assign to a budget**: see [Include or exclude a transaction](#include-or-exclude-a-transaction).
 - **Delete transaction** at the bottom.
@@ -391,6 +392,7 @@ After each bank sync or file import on a source account, each new transfer whose
 - Interest stays a manual entry.
 - If you delete an operation Bilan added, it doesn't come back.
 - Untick every source account to turn it off.
+- When a label doesn't tell which account a transfer went to, [create its other side](#create-the-other-side-of-a-transfer) from the transaction's details.
 
 ## Categories, rules and merchants
 
@@ -495,6 +497,14 @@ Linked transactions stay in the list with a **Linked** tag.
 - **By hand**: [select](#select-several-transactions) two or more transactions and click **Link**. You can also open a transaction and click **Link to other transactions**: it is selected, and stays selected while you search or filter for the others (the selection bar names it).
 
 Linking requires write access to every account involved.
+
+### Create the other side of a transfer
+
+When only one side of a transfer is in Bilan (the other account isn't synced, or the label doesn't tell which account the money went to), open the transaction, pick the other account under **Create the opposite transaction on…** and click **Create**. Bilan adds the opposite amount on that account, on the same date, as a transfer labelled "Virement depuis …" or "Virement vers …" followed by the first transaction's account name, and links the two.
+
+- It is offered for a transaction that isn't linked yet, on an account you can edit.
+- The other account must be one of your own active accounts. When exactly one of them is a savings account, it is picked for you.
+- The new transaction has no category. When the first one is a transfer with a month picked by hand, the new one takes that month.
 
 ### Automatic links
 

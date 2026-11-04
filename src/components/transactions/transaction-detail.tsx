@@ -21,6 +21,8 @@ import { Pill, overline } from "./bits";
 import { TransactionEditForm } from "./transaction-edit-form";
 import { AssignedMonthBadge, AssignedMonthField } from "./assigned-month";
 import { useLinkErrorMessage } from "./link-error";
+import { OppositeTransaction } from "./opposite-transaction";
+import { oppositeTargets } from "@/lib/links";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Link2, Pencil, Trash2, Unlink } from "lucide-react";
 import { formatPeriodLabel } from "@/lib/period";
@@ -51,6 +53,8 @@ export type AccountMeta = {
   color: string | null;
   bankName: string | null;
   writable: boolean;
+  owned: boolean;
+  type: string;
   archived: boolean;
 };
 export type { AssignableBudget };
@@ -98,6 +102,7 @@ export function TransactionDetail({
   const tb = useTranslations("budgets.assign");
   const td = useTranslations("transactions.delete");
   const tLink = useTranslations("transactions.link");
+  const tOpposite = useTranslations("transactions.opposite");
   const linkErrorMessage = useLinkErrorMessage();
   const locale = useLocale();
   const router = useRouter();
@@ -232,6 +237,13 @@ export function TransactionDetail({
         : "archived"
       : null;
   const linkSummary = item?.linked && link?.txId === item.id ? link.summary : null;
+  const opposite =
+    item && !item.linked && acc?.writable
+      ? oppositeTargets(
+          Object.entries(accounts).map(([id, a]) => ({ id, ...a })),
+          item.accountId,
+        )
+      : null;
 
   return (
     <Sheet
@@ -377,6 +389,17 @@ export function TransactionDetail({
                       <Link2 />
                       {tLink("startFrom")}
                     </Button>
+                  </Field>
+                )}
+                {opposite && opposite.targets.length > 0 && (
+                  <Field label={tOpposite("field")}>
+                    <OppositeTransaction
+                      key={item.id}
+                      transactionId={item.id}
+                      amount={item.amount}
+                      targets={opposite.targets}
+                      preselected={opposite.preselected}
+                    />
                   </Field>
                 )}
                 {linkSummary && (

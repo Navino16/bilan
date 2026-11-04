@@ -134,6 +134,70 @@ test.describe("transaction links", () => {
     ).toHaveCount(0);
   });
 
+  test("creates the opposite transaction on another account from the detail (#404)", async ({
+    page,
+  }) => {
+    const stamp = Date.now();
+    const livret = `Livret opp ${stamp}`;
+    const label = `VIR OPP ${stamp}`;
+    await page.goto("/fr/accounts");
+    await expect(async () => {
+      await page.getByRole("button", { name: /nouveau compte/i }).click();
+      await expect(page.locator('input[name="name"]')).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 20_000 });
+    await page.getByRole("dialog").getByRole("button", { name: "Épargne" }).click();
+    await page.fill('input[name="name"]', livret);
+    await page.getByRole("button", { name: /créer le compte/i }).click();
+    await expect(page.getByText(livret).first()).toBeVisible({ timeout: 15_000 });
+
+    try {
+      await page.goto(`/fr/transactions?search=${stamp}`);
+      await expect(async () => {
+        await page.getByRole("button", { name: /nouvelle transaction/i }).click();
+        await expect(page.locator('input[name="date"]')).toBeVisible();
+      }).toPass();
+      await page.locator("#tx-account").selectOption({ label: "E2E Courant" });
+      await page.fill('input[name="date"]', "2026-03-04");
+      await page.fill('input[name="amount"]', "-42");
+      await page.fill('input[name="label"]', label);
+      await page.getByRole("button", { name: /^ajouter$/i }).click();
+      const row = page.locator('[data-slot="transaction-row"]').filter({ hasText: label }).first();
+      await expect(row).toBeVisible({ timeout: 15_000 });
+
+      await row.click();
+      const opposite = page.locator('[data-slot="opposite-transaction"]');
+      await expect(opposite).toContainText("Ajoute 42,00");
+      await opposite
+        .getByLabel("Créer la transaction inverse sur…")
+        .selectOption({ label: livret });
+      await opposite.getByRole("button", { name: /^créer$/i }).click();
+
+      const summary = page.locator('[data-slot="link-summary"]');
+      await expect(summary).toContainText("Virement depuis E2E Courant", { timeout: 15_000 });
+      await expect(summary).toContainText(livret);
+      await expect(summary).toContainText("42,00");
+      await expect(opposite).toBeHidden();
+
+      await page.getByRole("button", { name: /supprimer la transaction/i }).click();
+      const dialog = page.locator('[data-slot="delete-transactions-dialog"]');
+      await dialog.getByRole("button", { name: /^supprimer$/i }).click();
+      await expect(row).toBeHidden({ timeout: 15_000 });
+    } finally {
+      await page.goto("/fr/accounts");
+      await page
+        .locator('[data-slot="card"]')
+        .filter({ hasText: livret })
+        .last()
+        .getByRole("button", { name: /^actions pour/i })
+        .click();
+      await page.getByRole("menuitem", { name: /supprimer/i }).click();
+      const dialog = page.getByRole("dialog");
+      await dialog.getByLabel(/saisissez/i).fill(livret);
+      await dialog.getByRole("button", { name: /supprimer définitivement/i }).click();
+      await expect(page.getByText(livret)).toHaveCount(0, { timeout: 15_000 });
+    }
+  });
+
   test("accepts a suggested pair and persists an ignore", async ({ page }) => {
     const stamp = Date.now();
     const exp = `Sugg exp ${stamp}`;
