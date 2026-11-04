@@ -402,6 +402,11 @@
         "truncated": "The bank did not send every transaction requested: some may be missing.",
         "tooSoon": "This bank was already synced less than 10 minutes ago."
       },
+      "balance": {
+        "matches": "Matches the bank on {date}",
+        "gap": "Gap with the bank on {date}: {amount}",
+        "expected": "Balance expected by the bank on {date}: {amount}"
+      },
       "connections": {
         "overline": "Banks",
         "title": "Bank connections",

@@ -402,6 +402,11 @@
         "truncated": "La banque n’a pas envoyé toutes les opérations demandées : certaines peuvent manquer.",
         "tooSoon": "Cette banque a déjà été synchronisée il y a moins de 10 minutes."
       },
+      "balance": {
+        "matches": "Conforme à la banque au {date}",
+        "gap": "Écart avec la banque au {date} : {amount}",
+        "expected": "Solde prévu par la banque au {date} : {amount}"
+      },
       "connections": {
         "overline": "Banques",
         "title": "Connexions bancaires",

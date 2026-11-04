@@ -7,6 +7,7 @@ import { listGroupsForUser } from "@/server/services/groups";
 import { isBankSyncAvailable } from "@/server/services/bank-sync/config";
 import { listBankConnections } from "@/server/services/bank-sync/connect";
 import { listSyncedAccounts } from "@/server/services/bank-sync/status";
+import { listBankBalanceChecks } from "@/server/services/bank-sync/balance";
 import { flattenCategories } from "@/components/transactions/category-tree";
 import { AccountList } from "@/components/accounts/account-list";
 import { AccountForm } from "@/components/accounts/account-form";
@@ -37,10 +38,11 @@ export default async function AccountsPage({
   const accounts = await listVisibleForUser(user.id, { includeArchived: true });
   const categories = flattenCategories(await listForUser(user.id));
   const groups = (await listGroupsForUser(user.id)).map((g) => ({ id: g.id, name: g.name }));
-  const [bankSync, connections, synced] = await Promise.all([
+  const [bankSync, connections, synced, balanceChecks] = await Promise.all([
     isBankSyncAvailable(),
     listBankConnections(user.id),
     listSyncedAccounts(user.id),
+    listBankBalanceChecks(user.id),
   ]);
   const result = sp.bankSync;
   const resultKey = result && t.has(`bankSync.result.${result}`) ? result : "FAILED";
@@ -78,6 +80,7 @@ export default async function AccountsPage({
       <AccountList
         accounts={accounts}
         synced={bankSync ? synced : {}}
+        balanceChecks={bankSync ? balanceChecks : {}}
         groups={groups}
         categories={categories}
       />
