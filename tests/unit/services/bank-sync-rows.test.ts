@@ -13,65 +13,94 @@ const day = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
 describe("toSyncRows", () => {
   it("maps a booked debit with a multi-part label", () => {
-    const { rows } = toSyncRows([
-      tx({
-        transaction_amount: { amount: "12.50", currency: "EUR" },
-        credit_debit_indicator: "DBIT",
-        booking_date: "2026-10-05",
-        value_date: "2026-10-04",
-        remittance_information: ["CB  CAFE  TEST ", "FACT 0410"],
-      }),
-    ]);
+    const { rows } = toSyncRows(
+      [
+        tx({
+          transaction_amount: { amount: "12.50", currency: "EUR" },
+          credit_debit_indicator: "DBIT",
+          booking_date: "2026-10-05",
+          value_date: "2026-10-04",
+          remittance_information: ["CB  CAFE  TEST ", "FACT 0410"],
+        }),
+      ],
+      "Banque Fictive",
+    );
     expect(rows).toEqual([
       { date: day("2026-10-05"), amount: -12.5, rawLabel: "CB CAFE TEST FACT 0410" },
     ]);
   });
 
   it("falls back on the value date for a credit", () => {
-    const { rows } = toSyncRows([
-      tx({
-        transaction_amount: { amount: "1500.00", currency: "EUR" },
-        credit_debit_indicator: "CRDT",
-        value_date: "2026-10-01",
-        remittance_information: ["VIR SALAIRE TEST"],
-      }),
-    ]);
+    const { rows } = toSyncRows(
+      [
+        tx({
+          transaction_amount: { amount: "1500.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT",
+          value_date: "2026-10-01",
+          remittance_information: ["VIR SALAIRE TEST"],
+        }),
+      ],
+      "Banque Fictive",
+    );
     expect(rows).toEqual([{ date: day("2026-10-01"), amount: 1500, rawLabel: "VIR SALAIRE TEST" }]);
   });
 
-  it("counts pending rows without importing them", () => {
-    const r = toSyncRows([
-      tx({
-        transaction_amount: { amount: "35.40", currency: "EUR" },
-        credit_debit_indicator: "DBIT",
-        status: "PDNG",
-        booking_date: "2026-11-02",
-      }),
-      tx({
-        transaction_amount: { amount: "10.00", currency: "EUR" },
-        credit_debit_indicator: "CRDT",
-        status: "PDNG",
-        booking_date: "2026-11-02",
-      }),
+  it("normalizes the label with the connection's bank rules", () => {
+    const { rows } = toSyncRows(
+      [
+        tx({
+          transaction_amount: { amount: "4.20", currency: "EUR" },
+          credit_debit_indicator: "DBIT",
+          booking_date: "2026-10-06",
+          remittance_information: ["CARTE\n1234567\nCB  CAFE TEST 05/10/26\nJEAN TEST\n\n\n"],
+        }),
+      ],
+      "LCL",
+    );
+    expect(rows).toEqual([
+      { date: day("2026-10-06"), amount: -4.2, rawLabel: "CB  CAFE TEST 05/10/26" },
     ]);
+  });
+
+  it("counts pending rows without importing them", () => {
+    const r = toSyncRows(
+      [
+        tx({
+          transaction_amount: { amount: "35.40", currency: "EUR" },
+          credit_debit_indicator: "DBIT",
+          status: "PDNG",
+          booking_date: "2026-11-02",
+        }),
+        tx({
+          transaction_amount: { amount: "10.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT",
+          status: "PDNG",
+          booking_date: "2026-11-02",
+        }),
+      ],
+      "Banque Fictive",
+    );
     expect(r).toEqual({ rows: [], pendingCount: 2, pendingTotal: -25.4 });
   });
 
   it("drops a row without a date and labels an empty remittance with a dash", () => {
-    const { rows } = toSyncRows([
-      tx({ credit_debit_indicator: "DBIT", remittance_information: ["NO DATE TEST"] }),
-      tx({
-        transaction_amount: { amount: "3.00", currency: "EUR" },
-        credit_debit_indicator: "DBIT",
-        booking_date: "2026-10-07",
-        remittance_information: [],
-      }),
-      tx({
-        transaction_amount: { amount: "4.00", currency: "EUR" },
-        credit_debit_indicator: "DBIT",
-        booking_date: "2026-10-08",
-      }),
-    ]);
+    const { rows } = toSyncRows(
+      [
+        tx({ credit_debit_indicator: "DBIT", remittance_information: ["NO DATE TEST"] }),
+        tx({
+          transaction_amount: { amount: "3.00", currency: "EUR" },
+          credit_debit_indicator: "DBIT",
+          booking_date: "2026-10-07",
+          remittance_information: [],
+        }),
+        tx({
+          transaction_amount: { amount: "4.00", currency: "EUR" },
+          credit_debit_indicator: "DBIT",
+          booking_date: "2026-10-08",
+        }),
+      ],
+      "Banque Fictive",
+    );
     expect(rows).toEqual([
       { date: day("2026-10-07"), amount: -3, rawLabel: "—" },
       { date: day("2026-10-08"), amount: -4, rawLabel: "—" },

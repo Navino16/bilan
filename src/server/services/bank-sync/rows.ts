@@ -1,7 +1,7 @@
 import { round2 } from "@/lib/budgets";
 import { dayStart, isValidIsoDay, toIsoDay } from "@/lib/period";
 import type { NormalizedRow } from "@/server/services/imports/types";
-import { normalizeKeyLabel } from "@/server/services/transactions/secure-fields";
+import { normalizeBankLabel } from "@/server/services/bank-sync/labels";
 import type { EbBalance, EbTransaction } from "@/server/services/bank-sync/types";
 
 export const SYNC_OVERLAP_DAYS = 7;
@@ -14,7 +14,10 @@ const signed = (t: EbTransaction) =>
   (t.credit_debit_indicator === "DBIT" ? -1 : 1) * Number(t.transaction_amount.amount);
 
 // Booked rows only; pending ones are summed for the account (design §Pending rows).
-export function toSyncRows(txs: EbTransaction[]): {
+export function toSyncRows(
+  txs: EbTransaction[],
+  aspspName: string,
+): {
   rows: NormalizedRow[];
   pendingCount: number;
   pendingTotal: number;
@@ -33,7 +36,7 @@ export function toSyncRows(txs: EbTransaction[]): {
     if (t.status !== "BOOK") continue;
     const day = t.booking_date ?? t.value_date;
     if (!isValidIsoDay(day)) continue;
-    const label = normalizeKeyLabel((t.remittance_information ?? []).join(" "));
+    const label = normalizeBankLabel((t.remittance_information ?? []).join("\n"), aspspName);
     rows.push({ date: dayStart(day), amount: round2(amount), rawLabel: label || EMPTY_LABEL });
   }
   return { rows, pendingCount, pendingTotal: round2(pendingTotal) };

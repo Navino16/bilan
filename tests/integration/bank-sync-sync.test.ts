@@ -310,7 +310,7 @@ describe("syncConnection", () => {
   it("does not stamp a link remapped while its sync ran", async () => {
     const stale = await db.bankConnectionAccount.findUniqueOrThrow({
       where: { id: linkId },
-      include: { connection: { select: { userId: true } } },
+      include: { connection: { select: { userId: true, aspspName: true } } },
     });
     const elsewhere = await db.bankAccount.create({
       data: { ownerId: owner, name: "Elsewhere", type: "CHECKING" },
