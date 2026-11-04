@@ -220,6 +220,7 @@ CREATE TABLE `BankConnection` (
     `syncStartedAt` DATETIME(3) NULL,
     `failureCount` INTEGER NOT NULL DEFAULT 0,
     `retryAfter` DATETIME(3) NULL,
+    `reminderSentDays` INTEGER NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     INDEX `BankConnection_userId_idx`(`userId`),
