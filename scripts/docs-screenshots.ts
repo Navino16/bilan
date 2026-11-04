@@ -117,7 +117,27 @@ function rulesFile(): { name: string; mimeType: string; buffer: Buffer } {
 const SHOTS: Shot[] = [
   { name: "dashboard", path: "/dashboard", fullPage: true },
   { name: "insights", path: "/insights", fullPage: true },
-  { name: "accounts", path: "/accounts" },
+  { name: "accounts", path: "/accounts", fullPage: true },
+  {
+    name: "account-mirror",
+    path: "/accounts",
+    prepare: async (page) => {
+      await clickUntilVisible(
+        page.getByRole("button", { name: /^(Actions for|Actions pour) Livret A$/ }),
+        page.getByRole("menuitem", { name: /^(Edit|Modifier)$/ }),
+      );
+      await clickUntilVisible(
+        page.getByRole("menuitem", { name: /^(Edit|Modifier)$/ }),
+        page.getByRole("dialog").locator('[data-slot="savings-mirror"]'),
+      );
+    },
+    cleanup: (page) => page.keyboard.press("Escape"),
+  },
+  {
+    name: "bank-mapping",
+    path: "/accounts",
+    prepare: (page) => gotoLink(page, page.locator('main a[href*="/accounts/bank-sync/"]').first()),
+  },
   { name: "transactions", path: "/transactions" },
   {
     name: "transaction-detail",
@@ -209,6 +229,7 @@ const SHOTS: Shot[] = [
   { name: "admin-signup-tokens", path: "/admin/signup-tokens", fullPage: true },
   { name: "admin-auth-providers", path: "/admin/auth-providers", fullPage: true },
   { name: "admin-smtp", path: "/admin/smtp", fullPage: true },
+  { name: "admin-bank-sync", path: "/admin/bank-sync", fullPage: true },
   { name: "admin-app-settings", path: "/admin/app-settings", fullPage: true },
   { name: "admin-audit", path: "/admin/audit", fullPage: true, maxHeight: 2400 },
   { name: "mobile-dashboard", path: "/dashboard", mobile: true },
