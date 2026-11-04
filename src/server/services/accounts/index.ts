@@ -7,6 +7,7 @@ import { logEvent } from "@/server/services/audit";
 import { accountInputSchema, type AccountInput } from "@/lib/schemas/account";
 import { isValidIban, normalizeIban, maskIban } from "./iban";
 import { displayName } from "@/lib/validation/name";
+import { MIRROR_PATTERN_MAX } from "@/lib/validation/account";
 
 // Thrown for both authorization failures and invalid business input so callers
 // (Server Actions) can map any of them to a single user-facing error state.
@@ -28,7 +29,10 @@ export type VisibleAccount = {
   access: AccountAccess;
   sharedCount: number; // groups this account is shared with (owner view only; 0 otherwise)
   ownerName: string | null; // null when the viewer owns it
+  mirror: SavingsMirror | null; // owner view only
 };
+
+export type SavingsMirror = { sourceAccountIds: string[]; pattern: string };
 
 // Current balance per account: opening balance + sum of its transactions.
 export async function accountBalances(
@@ -114,6 +118,7 @@ export async function updateAccount(
       icon: data.icon ?? null,
       initialBalance: data.initialBalance,
       ...iban,
+      ...(data.type !== "SAVINGS" && { mirrorPattern: null, mirrorSources: { deleteMany: {} } }),
     },
   });
   await logEvent({
@@ -122,6 +127,65 @@ export async function updateAccount(
     entity: "BankAccount",
     entityId: id,
   });
+}
+
+// Sources and label pattern of a savings account kept up to date from transfers
+// (design §Savings mirror legs); `null` turns it off.
+export async function setSavingsMirror(
+  actorId: string,
+  savingsAccountId: string,
+  input: SavingsMirror | null,
+): Promise<void> {
+  const account = await ownedOrThrow(savingsAccountId, actorId);
+  const sourceIds = [...new Set(input?.sourceAccountIds ?? [])];
+  const pattern = input?.pattern.trim() ?? "";
+  if (input) {
+    if (account.type !== "SAVINGS") throw new AccountAccessError("INVALID_MIRROR");
+    if (!pattern || pattern.length > MIRROR_PATTERN_MAX) {
+      throw new AccountAccessError("INVALID_MIRROR");
+    }
+    if (sourceIds.length === 0 || sourceIds.includes(savingsAccountId)) {
+      throw new AccountAccessError("INVALID_MIRROR");
+    }
+    const owned = await db.bankAccount.count({
+      where: { id: { in: sourceIds }, ownerId: actorId },
+    });
+    if (owned !== sourceIds.length) throw new AccountAccessError("INVALID_MIRROR");
+  }
+  await db.$transaction([
+    db.savingsMirrorSource.deleteMany({ where: { savingsAccountId } }),
+    db.savingsMirrorSource.createMany({
+      data: sourceIds.map((sourceAccountId) => ({ savingsAccountId, sourceAccountId })),
+    }),
+    db.bankAccount.update({
+      where: { id: savingsAccountId },
+      data: { mirrorPattern: input ? pattern : null },
+    }),
+  ]);
+  await logEvent({
+    userId: actorId,
+    action: "account.mirror_updated",
+    entity: "BankAccount",
+    entityId: savingsAccountId,
+    metadata: { sources: sourceIds.length },
+  });
+}
+
+export async function getSavingsMirror(
+  actorId: string,
+  savingsAccountId: string,
+): Promise<SavingsMirror | null> {
+  const account = await ownedOrThrow(savingsAccountId, actorId);
+  if (!account.mirrorPattern) return null;
+  const sources = await db.savingsMirrorSource.findMany({
+    where: { savingsAccountId },
+    select: { sourceAccountId: true },
+    orderBy: { sourceAccountId: "asc" },
+  });
+  return {
+    sourceAccountIds: sources.map((s) => s.sourceAccountId),
+    pattern: account.mirrorPattern,
+  };
 }
 
 export async function archiveAccount(id: string, actor: { id: string }): Promise<void> {
@@ -186,7 +250,10 @@ export async function listVisibleForUser(
   const archived = opts.includeArchived ? {} : { archived: false };
   const owned = await db.bankAccount.findMany({
     where: { ownerId: userId, ...archived },
-    include: { _count: { select: { shares: true } } },
+    include: {
+      _count: { select: { shares: true } },
+      mirrorSources: { select: { sourceAccountId: true }, orderBy: { sourceAccountId: "asc" } },
+    },
     orderBy: { createdAt: "desc" },
   });
   const shared = await db.bankAccount.findMany({
@@ -218,6 +285,12 @@ export async function listVisibleForUser(
     access: "OWNER",
     sharedCount: a._count.shares,
     ownerName: null,
+    mirror: a.mirrorPattern
+      ? {
+          sourceAccountIds: a.mirrorSources.map((m) => m.sourceAccountId),
+          pattern: a.mirrorPattern,
+        }
+      : null,
   }));
 
   const sharedView: VisibleAccount[] = shared.map((a) => ({
@@ -234,6 +307,7 @@ export async function listVisibleForUser(
     access: a.shares.some((s) => s.permission === "WRITE") ? "WRITE" : "READ",
     sharedCount: 0,
     ownerName: displayName(a.owner),
+    mirror: null,
   }));
 
   return [...ownedView, ...sharedView];

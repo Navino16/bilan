@@ -277,6 +277,15 @@ CREATE TABLE `SyncTombstone` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
+CREATE TABLE `SavingsMirrorSource` (
+    `savingsAccountId` VARCHAR(191) NOT NULL,
+    `sourceAccountId` VARCHAR(191) NOT NULL,
+
+    INDEX `SavingsMirrorSource_sourceAccountId_idx`(`sourceAccountId`),
+    PRIMARY KEY (`savingsAccountId`, `sourceAccountId`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
 CREATE TABLE `AppSetting` (
     `key` VARCHAR(191) NOT NULL,
     `value` JSON NOT NULL,
@@ -337,6 +346,7 @@ CREATE TABLE `BankAccount` (
     `color` VARCHAR(191) NULL DEFAULT '#2563eb',
     `icon` VARCHAR(191) NULL,
     `archived` BOOLEAN NOT NULL DEFAULT false,
+    `mirrorPattern` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     INDEX `BankAccount_ownerId_idx`(`ownerId`),
@@ -659,6 +669,12 @@ ALTER TABLE `BankAuthRequest` ADD CONSTRAINT `BankAuthRequest_userId_fkey` FOREI
 
 -- AddForeignKey
 ALTER TABLE `SyncTombstone` ADD CONSTRAINT `SyncTombstone_accountId_fkey` FOREIGN KEY (`accountId`) REFERENCES `BankAccount`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `SavingsMirrorSource` ADD CONSTRAINT `SavingsMirrorSource_savingsAccountId_fkey` FOREIGN KEY (`savingsAccountId`) REFERENCES `BankAccount`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `SavingsMirrorSource` ADD CONSTRAINT `SavingsMirrorSource_sourceAccountId_fkey` FOREIGN KEY (`sourceAccountId`) REFERENCES `BankAccount`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `BankAccount` ADD CONSTRAINT `BankAccount_ownerId_fkey` FOREIGN KEY (`ownerId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

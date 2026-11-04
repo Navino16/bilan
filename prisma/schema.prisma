@@ -300,6 +300,18 @@ model SyncTombstone {
   @@id([accountId, externalId])
 }
 
+// A source account whose matching transfers get a mirror leg on the savings account.
+model SavingsMirrorSource {
+  savingsAccountId String
+  sourceAccountId  String
+
+  savings BankAccount @relation("MirrorSavings", fields: [savingsAccountId], references: [id], onDelete: Cascade)
+  source  BankAccount @relation("MirrorSource", fields: [sourceAccountId], references: [id], onDelete: Cascade)
+
+  @@id([savingsAccountId, sourceAccountId])
+  @@index([sourceAccountId])
+}
+
 // TLS: implicit TLS (465); STARTTLS: upgrade required (587); NONE: unencrypted local relay.
 enum SmtpSecurity {
   TLS
@@ -360,6 +372,8 @@ model BankAccount {
   color          String?  @default("#2563eb")
   icon           String?
   archived       Boolean  @default(false)
+  // Label pattern of the source transfers a savings account mirrors (design §Savings mirror legs).
+  mirrorPattern  String?
   createdAt      DateTime @default(now())
 
   owner            User                    @relation("AccountOwner", fields: [ownerId], references: [id], onDelete: Cascade)
@@ -371,6 +385,8 @@ model BankAccount {
   attachedBudgets  Budget[]                @relation("BudgetAccount")
   bankLinks        BankConnectionAccount[]
   syncTombstones   SyncTombstone[]
+  mirrorSources    SavingsMirrorSource[]   @relation("MirrorSavings")
+  mirroredBy       SavingsMirrorSource[]   @relation("MirrorSource")
 
   @@index([ownerId])
   @@index([ibanHash])
