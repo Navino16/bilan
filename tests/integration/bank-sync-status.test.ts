@@ -3,6 +3,7 @@ import { db } from "@/server/db";
 import { encrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
 import { createEnableBankingClient } from "@/server/services/bank-sync/client";
+import { listBankConnections } from "@/server/services/bank-sync/connect";
 import { listSyncedAccounts, syncNow } from "@/server/services/bank-sync/status";
 import {
   clearBankSyncConfig,
@@ -146,6 +147,27 @@ describe("listSyncedAccounts", () => {
 
   it("shows nothing to a member who sees the account through a share", async () => {
     expect(await listSyncedAccounts(member)).toEqual({});
+  });
+});
+
+describe("listBankConnections", () => {
+  it("lists the owner's unrevoked connections with their consent state", async () => {
+    const at = new Date("2027-04-20T09:00:00.000Z");
+    const list = await listBankConnections(owner, at);
+    expect(list).toEqual([
+      {
+        id: connectionId,
+        aspspName: "Banque Fictive",
+        aspspCountry: "FR",
+        status: "ACTIVE",
+        validUntil: new Date("2027-05-02T09:00:00.000Z"),
+        consent: { daysLeft: 12, warn: true, expired: false },
+        mappedAccounts: ["Courant"],
+      },
+    ]);
+    expect(list.some((c) => c.id === revokedId)).toBe(false);
+    expect(JSON.stringify(list)).not.toMatch(/sess-|uid-|hash-of/);
+    expect(await listBankConnections(member, at)).toEqual([]);
   });
 });
 

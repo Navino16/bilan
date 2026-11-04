@@ -12,6 +12,7 @@ import { AccountList } from "@/components/accounts/account-list";
 import { AccountForm } from "@/components/accounts/account-form";
 import { BankConnectDialog } from "@/components/accounts/bank-connect-dialog";
 import { BankConnections } from "@/components/accounts/bank-connections";
+import { BankConsentBanner } from "@/components/accounts/bank-consent-banner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shell/page-header";
@@ -66,17 +67,21 @@ export default async function AccountsPage({
         }
       />
       {result && (
-        <Alert variant="destructive" data-slot="bank-sync-result">
+        <Alert
+          variant={resultKey === "RECONNECTED" ? "default" : "destructive"}
+          data-slot="bank-sync-result"
+        >
           <AlertDescription>{t(`bankSync.result.${resultKey as "FAILED"}`)}</AlertDescription>
         </Alert>
       )}
+      {bankSync && <BankConsentBanner connections={connections} />}
       <AccountList
         accounts={accounts}
         synced={bankSync ? synced : {}}
         groups={groups}
         categories={categories}
       />
-      {connections.length > 0 && <BankConnections connections={connections} />}
+      {connections.length > 0 && <BankConnections connections={connections} available={bankSync} />}
     </div>
   );
 }

@@ -12,7 +12,12 @@ import {
   withRefund,
 } from "@/server/auth/rate-limit";
 import { requestOrigin } from "@/server/http/client-ip";
-import { listBanks, startBankAuth, type BankOption } from "@/server/services/bank-sync/connect";
+import {
+  disconnectBank,
+  listBanks,
+  startBankAuth,
+  type BankOption,
+} from "@/server/services/bank-sync/connect";
 import { BankSyncError, type BankSyncFlowCode } from "@/server/services/bank-sync/errors";
 import { saveBankMapping } from "@/server/services/bank-sync/mapping";
 import { syncNow } from "@/server/services/bank-sync/status";
@@ -173,4 +178,16 @@ export async function syncNowAction(connectionId: string): Promise<SyncNowState>
     (r) => r.calledBank,
   );
   return outcome.allowed ? outcome.result.state : { ok: false, error: "RATE_LIMITED_LOCAL" };
+}
+
+export async function disconnectBankAction(
+  connectionId: string,
+): Promise<{ ok: true } | { ok: false; error: BankSyncFlowCode | "FAILED" }> {
+  const user = await requireSession();
+  try {
+    await disconnectBank(user.id, connectionId);
+  } catch (e) {
+    return { ok: false, error: flowCode(e, "bank disconnect") };
+  }
+  return { ok: true };
 }

@@ -39,6 +39,7 @@ export async function DashboardView({
   accounts,
   landings,
   locale,
+  notice,
 }: {
   data: DashboardData;
   period: Period;
@@ -48,6 +49,7 @@ export async function DashboardView({
   accounts: VisibleAccount[];
   landings: CurrentLanding[];
   locale: string;
+  notice?: React.ReactNode;
 }) {
   const t = await getTranslations("dashboard");
   const money = new Intl.NumberFormat(locale, {
@@ -192,6 +194,8 @@ export async function DashboardView({
         {period.month && <BaselineSelect value={comparison.baseline} />}
         <ComparisonNote comparison={comparison} locale={locale} />
       </div>
+
+      {notice}
 
       <AccountsOverview accounts={accounts} landings={landings} locale={locale} />
 

@@ -389,7 +389,8 @@
         "UNKNOWN_STATE": "Ce retour de la banque est inconnu ou déjà utilisé. Reconnectez la banque.",
         "EXPIRED_STATE": "L’autorisation a pris plus de 15 minutes. Reconnectez la banque.",
         "WRONG_USER": "Cette autorisation a été lancée par un autre utilisateur.",
-        "DENIED": "L’accès aux comptes a été refusé à la banque. Rien n’a été connecté."
+        "DENIED": "L’accès aux comptes a été refusé à la banque. Rien n’a été connecté.",
+        "RECONNECTED": "Banque reconnectée : vos comptes sont de nouveau synchronisés."
       },
       "status": {
         "synced": "Synchronisé {ago} · {bank}",
@@ -405,6 +406,7 @@
         "overline": "Banques",
         "title": "Connexions bancaires",
         "validUntil": "Accès valable jusqu’au {date}",
+        "expiredOn": "Accès expiré depuis le {date}",
         "mapped": "Synchronisés : {names}",
         "unmapped": "Aucun compte associé",
         "map": "Associer les comptes",
@@ -454,6 +456,20 @@
           "UNSUPPORTED_CURRENCY": "Seuls les comptes en euros peuvent être synchronisés.",
           "BUSY": "Une synchronisation de cette banque est déjà en cours. Réessayez dans un instant."
         }
+      },
+      "reconnect": {
+        "submit": "Reconnecter",
+        "submitting": "Redirection…"
+      },
+      "disconnect": {
+        "submit": "Déconnecter",
+        "submitting": "Déconnexion…",
+        "title": "Déconnecter {bank} ?",
+        "body": "Bilan arrête de synchroniser ces comptes et supprime son accès à la banque. Les transactions déjà synchronisées sont conservées."
+      },
+      "consent": {
+        "expires": "Votre connexion bancaire {bank} expire le {date} ({days, plural, one {encore # jour} other {encore # jours}}). Reconnectez-la pour que vos comptes restent synchronisés.",
+        "expired": "Votre connexion bancaire {bank} a expiré : ses comptes ne se synchronisent plus. Reconnectez-la."
       }
     }
   },
@@ -2271,7 +2287,9 @@
         "bank_sync": {
           "connection": {
             "created": "Banque connectée",
-            "expired": "Connexion bancaire expirée"
+            "expired": "Connexion bancaire expirée",
+            "reconnected": "Banque reconnectée",
+            "revoked": "Banque déconnectée"
           },
           "mapping": {
             "saved": "Comptes bancaires associés"

@@ -7,9 +7,12 @@ import { getCurrentBudget, listCurrentLandings } from "@/server/services/budgets
 import { listVisibleForUser } from "@/server/services/accounts";
 import { getOnboardingState } from "@/server/services/onboarding";
 import { getAppName } from "@/server/services/settings/app-settings";
+import { isBankSyncAvailable } from "@/server/services/bank-sync/config";
+import { listBankConnections } from "@/server/services/bank-sync/connect";
 import { parsePeriodParams, clampPeriodToNow, parseBaseline, comparisonFor } from "@/lib/period";
 import { DashboardView } from "@/components/dashboard/dashboard-view";
 import { WelcomeCard } from "@/components/onboarding/welcome-card";
+import { BankConsentBanner } from "@/components/accounts/bank-consent-banner";
 import { PageHeader } from "@/components/shell/page-header";
 import { pageTitle } from "@/i18n/metadata";
 
@@ -46,7 +49,7 @@ export default async function DashboardPage({
 
   const period = clampPeriodToNow(parsePeriodParams({ from: sp.from, to: sp.to }));
   const comparison = comparisonFor(period, parseBaseline(sp.vs, period));
-  const [data, categories, budget, accounts, landings] = await Promise.all([
+  const [data, categories, budget, accounts, landings, bankConnections] = await Promise.all([
     getDashboard(user.id, period, comparison),
     // Display only: shared accounts carry their owner's categories too.
     Promise.all([listForUser(user.id), listForeignCategories(user.id)]).then(([own, foreign]) => [
@@ -56,10 +59,12 @@ export default async function DashboardPage({
     getCurrentBudget(user.id),
     listVisibleForUser(user.id),
     listCurrentLandings(user.id),
+    isBankSyncAvailable().then((on) => (on ? listBankConnections(user.id) : [])),
   ]);
 
   return (
     <DashboardView
+      notice={<BankConsentBanner connections={bankConnections} />}
       data={data}
       period={period}
       comparison={comparison}

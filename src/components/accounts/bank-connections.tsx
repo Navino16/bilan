@@ -3,10 +3,18 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { SectionCard } from "@/components/shell/section-card";
+import { BankDisconnectButton } from "@/components/accounts/bank-disconnect-button";
+import { BankReconnectButton } from "@/components/accounts/bank-reconnect-button";
 import { formatDate } from "@/lib/format";
 import type { BankConnectionSummary } from "@/server/services/bank-sync/connect";
 
-export async function BankConnections({ connections }: { connections: BankConnectionSummary[] }) {
+export async function BankConnections({
+  connections,
+  available,
+}: {
+  connections: BankConnectionSummary[];
+  available: boolean;
+}) {
   const t = await getTranslations("accounts.bankSync.connections");
   const locale = await getLocale();
   return (
@@ -26,16 +34,36 @@ export async function BankConnections({ connections }: { connections: BankConnec
                   ? t("mapped", { names: c.mappedAccounts.join(", ") })
                   : t("unmapped")}
               </p>
-              <p className="text-muted-foreground text-xs">
-                {t("validUntil", { date: formatDate(c.validUntil, locale) })}
+              <p
+                className={
+                  c.consent.warn || c.consent.expired
+                    ? "text-destructive text-xs"
+                    : "text-muted-foreground text-xs"
+                }
+              >
+                {c.consent.expired
+                  ? t("expiredOn", { date: formatDate(c.validUntil, locale) })
+                  : t("validUntil", { date: formatDate(c.validUntil, locale) })}
               </p>
             </div>
-            <Link
-              href={`/${locale}/accounts/bank-sync/${c.id}`}
-              className={buttonVariants({ variant: "outline", size: "sm" })}
-            >
-              {t("map")}
-            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              {c.status === "ACTIVE" && !c.consent.expired && (
+                <Link
+                  href={`/${locale}/accounts/bank-sync/${c.id}`}
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
+                >
+                  {t("map")}
+                </Link>
+              )}
+              {available && (
+                <BankReconnectButton
+                  connectionId={c.id}
+                  aspspName={c.aspspName}
+                  country={c.aspspCountry}
+                />
+              )}
+              <BankDisconnectButton connectionId={c.id} aspspName={c.aspspName} />
+            </div>
           </li>
         ))}
       </ul>
