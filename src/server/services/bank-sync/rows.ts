@@ -1,6 +1,7 @@
 import { round2 } from "@/lib/budgets";
 import { dayStart, isValidIsoDay, toIsoDay } from "@/lib/period";
 import type { NormalizedRow } from "@/server/services/imports/types";
+import { normalizeDate } from "@/server/services/imports/csv-parse";
 import { normalizeKeyLabel } from "@/server/services/transactions/secure-fields";
 import type { EbBalance, EbTransaction } from "@/server/services/bank-sync/types";
 
@@ -9,9 +10,25 @@ export const FIRST_FETCH_YEARS = 3;
 
 const DAY_MS = 86_400_000;
 const EMPTY_LABEL = "—";
+const LABEL_DATE = /\b\d{2}\/\d{2}\/(?:\d{4}|\d{2})\b/g;
+const LABEL_DATE_MAX_DAYS = 31;
 
 const signed = (t: EbTransaction) =>
   (t.credit_debit_indicator === "DBIT" ? -1 : 1) * Number(t.transaction_amount.amount);
+
+// Card payments are booked days after the purchase dated in their label; file imports
+// use the purchase date, so the probable-duplicate check needs it too (#390).
+function rowDate(day: string, label: string): Date {
+  const booked = dayStart(day);
+  let best = booked;
+  for (const [raw] of label.matchAll(LABEL_DATE)) {
+    const d = normalizeDate(raw);
+    if (!d) continue;
+    const lag = booked.getTime() - d.getTime();
+    if (lag >= 0 && lag <= LABEL_DATE_MAX_DAYS * DAY_MS) best = d;
+  }
+  return best;
+}
 
 // Booked rows only; pending ones are summed for the account (design §Pending rows).
 export function toSyncRows(txs: EbTransaction[]): {
@@ -34,7 +51,11 @@ export function toSyncRows(txs: EbTransaction[]): {
     const day = t.booking_date ?? t.value_date;
     if (!isValidIsoDay(day)) continue;
     const label = normalizeKeyLabel((t.remittance_information ?? []).join(" "));
-    rows.push({ date: dayStart(day), amount: round2(amount), rawLabel: label || EMPTY_LABEL });
+    rows.push({
+      date: rowDate(day, label),
+      amount: round2(amount),
+      rawLabel: label || EMPTY_LABEL,
+    });
   }
   return { rows, pendingCount, pendingTotal: round2(pendingTotal) };
 }

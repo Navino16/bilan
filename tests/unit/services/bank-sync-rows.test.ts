@@ -79,6 +79,35 @@ describe("toSyncRows", () => {
   });
 });
 
+describe("toSyncRows card date in the label (#390)", () => {
+  const dated = (label: string, booking_date: string) =>
+    toSyncRows([
+      tx({
+        transaction_amount: { amount: "9.90", currency: "EUR" },
+        credit_debit_indicator: "DBIT",
+        booking_date,
+        remittance_information: [label],
+      }),
+    ]).rows[0];
+
+  it.each([
+    ["CB TEST SHOP 30/10/26", "2026-11-02", "2026-10-30"],
+    ["CB TEST SHOP 30/12/26", "2027-01-02", "2026-12-30"],
+    ["CB TEST SHOP 30/10/2026", "2026-11-02", "2026-10-30"],
+    ["CB TEST SHOP 02/11/26", "2026-11-02", "2026-11-02"],
+    ["CB TEST SHOP 02/10/26", "2026-11-02", "2026-10-02"],
+    ["CB TEST SHOP 01/10/26 31/10/26", "2026-11-02", "2026-10-31"],
+    ["CB TEST SHOP 31/10/26 05/11/26", "2026-11-02", "2026-10-31"],
+    ["CB TEST SHOP 03/11/26", "2026-11-02", "2026-11-02"],
+    ["CB TEST SHOP 23/09/26", "2026-11-02", "2026-11-02"],
+    ["CB TEST SHOP 20/08", "2026-09-02", "2026-09-02"],
+    ["CB TEST SHOP 31/02/26", "2026-03-02", "2026-03-02"],
+    ["CB TEST SHOP 130/10/26", "2026-11-02", "2026-11-02"],
+  ])("%s booked %s → %s", (label, booked, expected) => {
+    expect(dated(label, booked)).toEqual({ date: day(expected), amount: -9.9, rawLabel: label });
+  });
+});
+
 describe("syncWindowStart", () => {
   const now = new Date("2026-11-03T10:00:00.000Z");
 
