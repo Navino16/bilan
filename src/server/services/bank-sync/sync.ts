@@ -44,7 +44,7 @@ export type ConnectionSyncResult =
   | { status: "BUSY" }
   | { status: "FAILED"; code: BankSyncErrorCode };
 
-type SyncLink = BankConnectionAccount & { connection: { userId: string } };
+type SyncLink = BankConnectionAccount & { connection: { userId: string; aspspName: string } };
 
 const MAX_FETCH_ROUNDS = 4;
 
@@ -141,7 +141,10 @@ export async function syncAccount(
 
   const balances = pickBalances(await client.balances(uid, opts.psu), now);
   const fetched = await fetchTransactions(client, uid, syncWindowStart(link, now), opts.psu);
-  const { rows, pendingCount, pendingTotal } = toSyncRows(fetched.transactions);
+  const { rows, pendingCount, pendingTotal } = toSyncRows(
+    fetched.transactions,
+    link.connection.aspspName,
+  );
 
   let imported = 0;
   let skipped = 0;
@@ -348,7 +351,7 @@ export async function syncConnection(
         connectionId,
         accountId: opts.accountIds ? { in: opts.accountIds } : { not: null },
       },
-      include: { connection: { select: { userId: true } } },
+      include: { connection: { select: { userId: true, aspspName: true } } },
       orderBy: { id: "asc" },
     });
     const accounts = await mapLimit(links, SYNC_ACCOUNT_CONCURRENCY, (link) =>
