@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { bucketRow, lineFlow, type MatchLine, type MatchRow } from "@/lib/budget-match";
+import {
+  bucketRow,
+  lineFlow,
+  namingCategoryId,
+  type MatchLine,
+  type MatchRow,
+} from "@/lib/budget-match";
 import { budgetLanding } from "@/lib/budgets";
 
 const expense = (categoryId: string, subtree: string[] = []): MatchLine => ({
@@ -140,5 +146,15 @@ describe("budgetLanding", () => {
         outLater: 60,
       }).spendingToCome,
     ).toBe(60);
+  });
+});
+
+describe("namingCategoryId", () => {
+  it("names a line after its category unless a label or a transfer names it", () => {
+    expect(namingCategoryId({ kind: "EXPENSE", label: null, categoryId: "c" })).toBe("c");
+    expect(namingCategoryId({ kind: "INCOME", label: null, categoryId: "c" })).toBe("c");
+    expect(namingCategoryId({ kind: "EXPENSE", label: "Food", categoryId: "c" })).toBeNull();
+    expect(namingCategoryId({ kind: "TRANSFER", label: null, categoryId: null })).toBeNull();
+    expect(namingCategoryId({ kind: "EXPENSE", label: null, categoryId: null })).toBeNull();
   });
 });
