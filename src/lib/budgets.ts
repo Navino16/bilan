@@ -64,7 +64,8 @@ export type LeftToSpend = {
 // Spending side of a budget (#408): what each spending line, and an attached budget's margin
 // against its out-of-budget rows, still allows; an overrun eats none of the others. Saving
 // more than planned on a savings transfer isn't spending (design item 6). The lines of an
-// unattached budget may share rows: `spentOnce` is then its spending counted once (#345).
+// unattached budget may share rows: `spentOnce` is then its spending counted once (#345),
+// `left` staying per line.
 export function leftToSpend(
   lines: {
     kind: BudgetLineKind;

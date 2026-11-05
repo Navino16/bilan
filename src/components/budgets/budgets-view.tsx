@@ -193,7 +193,7 @@ export function BudgetsView({
                         {b.percent === null ? "—" : formatPercent(b.percent / 100, locale)}
                       </span>
                     </div>
-                    {/* A margin makes out-of-budget spending one more line, already in the spent total (#408). */}
+                    {/* Without a margin, out of budget stays apart from the spent total (#408). */}
                     {b.outOfBudget && b.outOfBudget.planned == null && b.outOfBudget.spent > 0 && (
                       <div
                         data-slot="budget-card-out"

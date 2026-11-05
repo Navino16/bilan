@@ -91,6 +91,7 @@ test.describe("budgets", () => {
     await page.goto("/fr/budgets");
     const card = page.locator('[data-slot="budget-card"]').filter({ hasText: budgetName });
     await expect(card).toContainText("0,00 € / 200,00 €", { timeout: 15_000 });
+    await expect(card).not.toContainText("-80,00");
     await expect(card.locator('[data-slot="budget-card-out"]')).toHaveCount(0);
     await card.click();
     await expect(page.getByRole("heading", { name: budgetName })).toBeVisible({ timeout: 15_000 });
