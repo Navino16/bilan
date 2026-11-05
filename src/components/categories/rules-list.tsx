@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { History, Pencil, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CategoryChip, Pill, SegmentedTabs } from "@/components/transactions/bits";
-import type { FlatCategory } from "@/components/transactions/category-tree";
+import { categoryIndex, type FlatCategory } from "@/components/transactions/category-tree";
 import type { RuleMatchType } from "@/lib/validation/rule";
 import { deleteRuleAction, toggleRuleAction } from "@/server/transport/actions/rules";
 import { ConfirmDialog } from "@/components/shell/confirm-dialog";
@@ -56,6 +56,9 @@ export function RulesList({
   const [sort, setSort] = useState<"priority" | "hits">("priority");
   // Rules arrive in priority order; the stable sort keeps it as the tie-breaker.
   const sorted = sort === "hits" ? [...rules].sort((a, b) => b.hits - a.hits) : rules;
+  const catMeta = categoryIndex(categories);
+  const categoryOf = (r: RuleRow) =>
+    catMeta[r.categoryId] ?? { name: r.categoryName ?? "—", color: r.categoryColor };
 
   function remove(id: string) {
     const fd = new FormData();
@@ -132,8 +135,7 @@ export function RulesList({
                     setApplying({
                       id: r.id,
                       pattern: r.pattern,
-                      categoryName: r.categoryName ?? "—",
-                      categoryColor: r.categoryColor,
+                      category: categoryOf(r),
                     })
                   }
                 >
@@ -174,7 +176,7 @@ export function RulesList({
               </Button>
             </span>
           );
-          const target = <CategoryChip name={r.categoryName ?? "—"} color={r.categoryColor} />;
+          const target = <CategoryChip category={categoryOf(r)} />;
           const scope = r.groupName ?? t("scopePersonal");
           const toggleBox = (
             <input

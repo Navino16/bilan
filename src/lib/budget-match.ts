@@ -41,6 +41,15 @@ function mostSpecific(matched: number[], lines: MatchLine[]): number | undefined
 
 // One bucket per row: transfer lines first, then category lines, then out of budget
 // (outflows) or unplanned income (inflows). A transfer leg is never a refund.
+// The category a line is named after, when no label or transfer counterpart names it.
+export function namingCategoryId(l: {
+  kind: BudgetLineKind;
+  label: string | null;
+  categoryId: string | null;
+}): string | null {
+  return l.label || l.kind === "TRANSFER" ? null : l.categoryId;
+}
+
 export function bucketRow(row: MatchRow, lines: MatchLine[]): RowBucket {
   const flow = row.amount < 0 ? "out" : "in";
   const legAccounts =

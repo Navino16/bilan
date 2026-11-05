@@ -3,6 +3,7 @@ export type CategoryOption = {
   name: string;
   depth: number;
   color: string | null; // own colour, or the nearest ancestor's
+  parents: string[]; // ancestor names, root first
   parentId: string | null;
   groupId: string | null;
 };
@@ -19,14 +20,20 @@ type NodeLike = {
 // Depth-first, so a node's subtree is the contiguous run of deeper rows after it.
 export function categoryOptions(tree: NodeLike[]): CategoryOption[] {
   const out: CategoryOption[] = [];
-  const walk = (nodes: NodeLike[], depth: number, inheritedColor: string | null) => {
+  const walk = (
+    nodes: NodeLike[],
+    depth: number,
+    inheritedColor: string | null,
+    parents: string[],
+  ) => {
     for (const n of nodes) {
       const color = n.color ?? inheritedColor;
-      out.push({ id: n.id, name: n.name, depth, color, parentId: n.parentId, groupId: n.groupId });
-      walk(n.children, depth + 1, color);
+      const { id, name, parentId, groupId } = n;
+      out.push({ id, name, depth, color, parents, parentId, groupId });
+      walk(n.children, depth + 1, color, [...parents, name]);
     }
   };
-  walk(tree, 0, null);
+  walk(tree, 0, null, []);
   return out;
 }
 

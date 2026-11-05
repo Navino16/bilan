@@ -404,6 +404,8 @@ La page **Catégories** a trois onglets : **Catégories**, **Règles** et **Marc
 
 Bilan vous fournit au départ des catégories et sous-catégories, modifiables et supprimables comme les vôtres.
 
+Ailleurs que sur cette page, une sous-catégorie s’affiche avec son chemin, par exemple **🩺 Santé › Remboursements**, pour distinguer deux sous-catégories du même nom. Sans symbole propre, elle reprend celui de son parent.
+
 Pour en créer une :
 
 1. Cliquez sur **Nouvelle catégorie**.

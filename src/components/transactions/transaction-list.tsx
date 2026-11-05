@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { CategoryAvatar, CategoryChip, Pill } from "./bits";
 import { AssignedMonthBadge } from "./assigned-month";
 import { type FlatCategory } from "./category-tree";
-import { categoryIndex } from "./category-tree";
+import { categoryIndex, categoryPath, type CategoryMeta } from "./category-tree";
 import { CreateRuleDialog } from "./create-rule-dialog";
 import {
   TransactionDetail,
@@ -95,8 +95,7 @@ export function TransactionList({
   const [rule, setRule] = useState<{
     pattern: string;
     categoryId: string;
-    categoryName: string;
-    categoryColor: string | null;
+    category: CategoryMeta;
   } | null>(null);
 
   const tLink = useTranslations("transactions.link");
@@ -184,8 +183,7 @@ export function TransactionList({
           onOpenChange={(o) => !o && setRule(null)}
           pattern={rule.pattern}
           categoryId={rule.categoryId}
-          categoryName={rule.categoryName}
-          categoryColor={rule.categoryColor}
+          category={rule.category}
         />
       )}
     </>
@@ -236,12 +234,7 @@ export function TransactionList({
         const pattern = proposeRule(it.rawLabel || it.label)?.pattern;
         const meta = catMeta[categoryId];
         if (pattern && meta) {
-          setRule({
-            pattern,
-            categoryId,
-            categoryName: meta.name,
-            categoryColor: meta.color,
-          });
+          setRule({ pattern, categoryId, category: meta });
         }
       }
     });
@@ -344,7 +337,7 @@ export function TransactionList({
                     </span>
                     <span className="min-w-0">
                       {meta ? (
-                        <CategoryChip name={meta.name} color={meta.color} />
+                        <CategoryChip category={meta} emoji={false} />
                       ) : (
                         <span className="text-muted-foreground text-xs">{t("noCategory")}</span>
                       )}
@@ -380,7 +373,7 @@ export function TransactionList({
                       </span>
                       <span className="text-muted-foreground block truncate text-xs">
                         {rowDate(it) ? `${rowDate(it)} · ` : ""}
-                        {meta?.name ? `${meta.name} · ` : ""}
+                        {meta ? `${categoryPath(meta)} · ` : ""}
                         {it.accountName}
                       </span>
                     </span>

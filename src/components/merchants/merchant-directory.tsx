@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { removeMerchantAliasAction } from "@/server/transport/actions/merchants";
 import type { MerchantDirectory as Directory, MerchantTotal } from "@/lib/insights";
 import type { FlatCategory } from "@/components/transactions/category-tree";
+import { CategoryLabel } from "@/components/transactions/bits";
 import { MerchantNameDialog, type MerchantTarget } from "./merchant-name-dialog";
 
 const PAGE = 12;
@@ -42,7 +43,7 @@ export function MerchantDirectory({
     currency: "EUR",
     maximumFractionDigits: 0,
   });
-  const catName = new Map(categories.map((c) => [c.id, c.name]));
+  const catById = new Map(categories.map((c) => [c.id, c]));
   const names = directory.renamed.map((m) => m.label);
 
   const q = fold(query.trim());
@@ -96,7 +97,10 @@ export function MerchantDirectory({
               </span>
             ))
           ) : (
-            <span>{(m.categoryId && catName.get(m.categoryId)) || t("noCategory")}</span>
+            <CategoryLabel
+              category={m.categoryId ? catById.get(m.categoryId) : undefined}
+              fallback={t("noCategory")}
+            />
           )}
           <span>· {t("count", { count: m.count })}</span>
         </div>

@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
-import { overline } from "@/components/transactions/bits";
+import { CategoryLabel, overline } from "@/components/transactions/bits";
 import { PeriodNav } from "@/components/dashboard/period-nav";
 import { PeriodPicker } from "@/components/dashboard/period-picker";
 import { ComparisonNote } from "@/components/dashboard/comparison-note";
@@ -25,7 +25,7 @@ import {
 import { transactionsHref, type TransactionsLinkFilter } from "@/lib/transaction-filters";
 import { formatPercent } from "@/lib/format";
 import type { CategoryChange, CategoryHistory, InsightsData } from "@/lib/insights";
-import type { FlatCategory } from "@/components/transactions/category-tree";
+import { categoryPath, type FlatCategory } from "@/components/transactions/category-tree";
 
 const TOP_CHANGES = 6;
 
@@ -60,8 +60,14 @@ export async function InsightsView({
   const pctLabel = (current: number, prev: number) =>
     prev ? formatPercent((current - prev) / prev, locale, { signed: true }) : t("new");
   const catById = new Map(categories.map((c) => [c.id, c]));
-  const catName = (id: string | null) =>
-    (id ? catById.get(id)?.name : undefined) ?? t("noCategory");
+  const catOf = (id: string | null) => (id ? catById.get(id) : undefined);
+  const catName = (id: string | null) => {
+    const c = catOf(id);
+    return c ? categoryPath(c) : t("noCategory");
+  };
+  const catLabel = (id: string | null) => (
+    <CategoryLabel category={catOf(id)} fallback={t("noCategory")} className="flex-1" />
+  );
   const label = formatPeriodLabel(period, locale);
   const averaged = comparison.months.length > 0;
   const reference = averaged ? monthsSpan(comparison.months) : comparison.previous;
@@ -178,9 +184,7 @@ export async function InsightsView({
               >
                 <div className="flex items-center gap-2 text-sm">
                   <Dot color={changeColors[i]} />
-                  <span className="min-w-0 flex-1 truncate" title={catName(c.categoryId)}>
-                    {catName(c.categoryId)}
-                  </span>
+                  {catLabel(c.categoryId)}
                   <span className="font-semibold tabular-nums" style={{ color: tone(c.diff) }}>
                     {signed.format(c.diff)}
                   </span>
@@ -301,9 +305,7 @@ export async function InsightsView({
                     className={`flex items-center gap-2 text-sm ${ROW_LINK}`}
                   >
                     <Dot color={incomeColors[i]} />
-                    <span className="min-w-0 flex-1 truncate" title={catName(inc.categoryId)}>
-                      {catName(inc.categoryId)}
-                    </span>
+                    {catLabel(inc.categoryId)}
                     <span className="tabular-nums">{money.format(inc.current)}</span>
                     <span className="text-muted-foreground w-16 text-right text-[11.5px] tabular-nums">
                       {inc.current === inc.previous ? "=" : pctLabel(inc.current, inc.previous)}

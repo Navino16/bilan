@@ -38,7 +38,7 @@ import { createBudgetAction, updateBudgetAction } from "@/server/transport/actio
 import { useActionForm } from "@/components/forms/use-action-form";
 import { FieldError } from "@/components/forms/field-error";
 import { NativeSelect } from "@/components/ui/native-select";
-import { indentedName } from "@/components/transactions/category-tree";
+import { categoryPath } from "@/components/transactions/category-tree";
 import type { CategoryOption } from "@/components/categories/category-options";
 import type { BudgetAccountOption } from "@/server/services/budgets";
 
@@ -492,7 +492,7 @@ function BudgetFormBody({
                   </option>
                   {scopeCategories.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {indentedName(c.name, c.depth)}
+                      {categoryPath(c)}
                     </option>
                   ))}
                 </NativeSelect>

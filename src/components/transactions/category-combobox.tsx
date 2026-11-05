@@ -9,7 +9,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { FlatCategory } from "./category-tree";
+import { CategoryLabel } from "./bits";
+import type { CategoryMeta, FlatCategory } from "./category-tree";
 
 // Styled category chooser matching the filter dropdown (colored dots + indented
 // hierarchy). Works as a form field via a hidden input named `name`, and calls
@@ -31,7 +32,7 @@ export function CategoryCombobox({
   categories: FlatCategory[];
   defaultValue?: string | null;
   // Shown for a starting value the user can't pick (another user's category).
-  unlisted?: { name: string; color: string | null };
+  unlisted?: CategoryMeta;
   onChange?: (id: string) => void;
 }) {
   const t = useTranslations("transactions");
@@ -69,15 +70,8 @@ export function CategoryCombobox({
             />
           }
         >
-          {current && (
-            <span
-              aria-hidden
-              className="size-2.5 shrink-0 rounded-full"
-              style={{ background: current.color ?? "var(--cat-other)" }}
-            />
-          )}
-          <span id={valueId} className="flex-1 truncate text-left">
-            {current?.name ?? t("noCategory")}
+          <span id={valueId} className="flex min-w-0 flex-1 text-left">
+            <CategoryLabel category={current} fallback={t("noCategory")} dot />
           </span>
           <ChevronDown className="text-muted-foreground size-4 shrink-0" />
         </DropdownMenuTrigger>

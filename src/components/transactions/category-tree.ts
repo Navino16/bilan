@@ -8,6 +8,8 @@ export type FlatCategory = {
   color: string | null;
   icon: string | null;
   rootId: string;
+  // Ancestor names, root first.
+  parents: string[];
 };
 
 type CategoryNodeLike = {
@@ -27,47 +29,48 @@ export function flattenCategories(tree: CategoryNodeLike[]): FlatCategory[] {
   const walk = (
     nodes: CategoryNodeLike[],
     depth: number,
-    inherited: { color: string | null; icon: string | null; rootId: string | null },
+    inherited: {
+      color: string | null;
+      icon: string | null;
+      rootId: string | null;
+      parents: string[];
+    },
   ) => {
     for (const n of nodes) {
       const color = n.color ?? inherited.color;
       const icon = n.icon ?? inherited.icon;
       const rootId = inherited.rootId ?? n.id;
-      out.push({ id: n.id, name: n.name, depth, color, icon, rootId });
-      walk(n.children, depth + 1, { color, icon, rootId });
+      const { parents } = inherited;
+      out.push({ id: n.id, name: n.name, depth, color, icon, rootId, parents });
+      walk(n.children, depth + 1, { color, icon, rootId, parents: [...parents, n.name] });
     }
   };
-  walk(tree, 0, { color: null, icon: null, rootId: null });
+  walk(tree, 0, { color: null, icon: null, rootId: null, parents: [] });
   return out;
 }
 
-export type CategoryMeta = { name: string; color: string | null; icon: string | null };
+export type CategoryMeta = {
+  name: string;
+  color: string | null;
+  icon: string | null;
+  parents: string[];
+};
 
 // id → display metadata, for resolving a transaction's categoryId to a chip.
 export function categoryIndex(flat: FlatCategory[]): Record<string, CategoryMeta> {
   const index: Record<string, CategoryMeta> = {};
-  for (const c of flat) index[c.id] = { name: c.name, color: c.color, icon: c.icon };
+  for (const { id, name, color, icon, parents } of flat) index[id] = { name, color, icon, parents };
   return index;
 }
 
-export const PATH_SEPARATOR = " > ";
+export const PATH_SEPARATOR = " › ";
 
-// Root-first "A > B" for a category of a depth-first flattened list: its ancestors are the
-// nearest earlier entries one level up.
-export function categoryPathLabel(flat: FlatCategory[], id: string): string | null {
-  const index = flat.findIndex((c) => c.id === id);
-  if (index < 0) return null;
-  const names = [flat[index].name];
-  for (let i = index - 1, depth = flat[index].depth; i >= 0 && depth > 0; i--) {
-    if (flat[i].depth === depth - 1) {
-      names.unshift(flat[i].name);
-      depth--;
-    }
-  }
-  return names.join(PATH_SEPARATOR);
+// Root-first "Parent › Child", the plain-text form of a category's display name.
+export function categoryPath(category: { name: string; parents?: readonly string[] }): string {
+  return [...(category.parents ?? []), category.name].join(PATH_SEPARATOR);
 }
 
-// Indents a name for a native <option>, where leading spaces would be collapsed.
-export function indentedName(name: string, depth: number): string {
-  return `${"   ".repeat(depth)}${name}`;
+export function categoryPathLabel(flat: FlatCategory[], id: string): string | null {
+  const category = flat.find((c) => c.id === id);
+  return category ? categoryPath(category) : null;
 }

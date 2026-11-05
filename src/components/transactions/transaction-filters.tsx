@@ -16,11 +16,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SegmentedTabs, overline } from "./bits";
+import { CategoryLabel, SegmentedTabs, overline } from "./bits";
 import { PeriodPicker } from "@/components/dashboard/period-picker";
 import { useNavigationTransition } from "@/components/shell/navigation-pending";
 import { useSelectionMode } from "./selection-mode";
-import type { FlatCategory } from "./category-tree";
+import { categoryPath, type FlatCategory } from "./category-tree";
 import {
   DEFAULT_SORT,
   FILTER_PARAMS,
@@ -195,10 +195,8 @@ export function TransactionFilters({
 
   const dir = (params.get("dir") ?? "") as Direction;
   const activeCat = params.get("categoryId") ?? "";
-  const activeCatName =
-    activeCat === UNCATEGORIZED
-      ? t("noCategory")
-      : (categories.find((c) => c.id === activeCat)?.name ?? t("allCategories"));
+  const activeCategory = categories.find((c) => c.id === activeCat);
+  const activeCatName = activeCat === UNCATEGORIZED ? t("noCategory") : t("allCategories");
   const activeAccount = params.get("accountId") ?? "";
   const activeType = params.get("type") ?? "";
   const min = params.get("min") ?? "";
@@ -263,9 +261,9 @@ export function TransactionFilters({
         {directionTabs}
         <DropdownMenu>
           <DropdownMenuTrigger render={<button type="button" className={trigger} />}>
-            <Tag className="size-3.5" />
-            <span data-slot="category-filter-label" className="max-w-44 truncate">
-              {activeCatName}
+            {!activeCategory?.icon && <Tag className="size-3.5" />}
+            <span data-slot="category-filter-label" className="flex max-w-44 min-w-0">
+              <CategoryLabel category={activeCategory} fallback={activeCatName} />
             </span>
             <ChevronDown className="size-3.5" />
           </DropdownMenuTrigger>
@@ -397,7 +395,7 @@ export function TransactionFilters({
               <option value={UNCATEGORIZED}>{t("noCategory")}</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {`${"  ".repeat(c.depth)}${c.name}`}
+                  {categoryPath(c)}
                 </option>
               ))}
             </NativeSelect>

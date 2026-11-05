@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { namingCategoryId } from "@/lib/budget-match";
 import type { BudgetMatchLine } from "@/server/services/budgets";
 
 type NameOf = (id: string) => string | undefined;
@@ -19,7 +20,8 @@ export function useBudgetLineLabel() {
         account: name ?? t("line.hidden"),
       });
     }
-    const categoryName = line.categoryId ? category(line.categoryId) : undefined;
+    const categoryId = namingCategoryId(line);
+    const categoryName = categoryId ? category(categoryId) : undefined;
     if (categoryName) return categoryName;
     const accountName = line.accountId ? account(line.accountId) : undefined;
     if (accountName) return accountName;

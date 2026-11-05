@@ -40,7 +40,7 @@ import { useActionForm, type ActionForm } from "@/components/forms/use-action-fo
 import { FieldError } from "@/components/forms/field-error";
 import { NativeSelect } from "@/components/ui/native-select";
 import { CategoryChip, overline } from "@/components/transactions/bits";
-import { indentedName } from "@/components/transactions/category-tree";
+import { categoryPath } from "@/components/transactions/category-tree";
 import { pickableCategories, type CategoryOption } from "./category-options";
 
 export type EditableCategory = {
@@ -263,7 +263,14 @@ function CategoryFields({
         </span>
         <div className="min-w-0">
           <div className={cn(overline, "mb-0.5")}>{t("preview")}</div>
-          <CategoryChip name={name.trim() || t("previewName")} color={shownColor} />
+          <CategoryChip
+            category={{
+              name: name.trim() || t("previewName"),
+              color: shownColor,
+              parents: parent ? [...parent.parents, parent.name] : [],
+            }}
+            emoji={false}
+          />
         </div>
       </div>
 
@@ -295,7 +302,7 @@ function CategoryFields({
           <option value="">{t("noParent")}</option>
           {parents.map((p) => (
             <option key={p.id} value={p.id}>
-              {indentedName(p.name, p.depth)}
+              {categoryPath(p)}
             </option>
           ))}
         </NativeSelect>

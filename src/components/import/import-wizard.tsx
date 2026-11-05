@@ -1437,8 +1437,7 @@ export function ImportWizard({
           onOpenChange={(o) => !o && setRuleOffer(null)}
           pattern={proposeRule(ruleOffer.row.rawLabel)?.pattern ?? ""}
           categoryId={offeredCategory.id}
-          categoryName={offeredCategory.name}
-          categoryColor={offeredCategory.color}
+          category={offeredCategory}
           superseded={ruleOffer.row.rule}
           onSaved={() => void reapplyRules()}
         />

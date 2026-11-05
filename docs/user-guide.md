@@ -404,6 +404,8 @@ The **Categories** page has three tabs: **Categories**, **Rules** and **Merchant
 
 Bilan starts you with a set of categories and sub-categories that you can edit or delete like your own.
 
+Outside this page, a sub-category shows with its path, such as **🩺 Health › Reimbursements**, so two sub-categories with the same name stay apart. Without its own symbol, it shows its parent's.
+
 To create one:
 
 1. Click **New category**.

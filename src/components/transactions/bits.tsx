@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Tag } from "lucide-react";
 import { categoryGlyphColor, categoryTileColor } from "@/lib/category-appearance";
 import { cn } from "@/lib/utils";
+import { categoryPath, PATH_SEPARATOR } from "./category-tree";
 
 // Editorial label used across the design (uppercase, wide tracking, meta tone).
 export const overline =
@@ -49,15 +50,73 @@ export function CategoryAvatar({
   );
 }
 
-export function CategoryChip({ name, color }: { name: string; color?: string | null }) {
+export type CategoryLabelData = {
+  name: string;
+  color?: string | null;
+  icon?: string | null;
+  parents?: readonly string[];
+};
+
+// "<emoji> Parent › Child" (#416): the muted parent path truncates before the child name.
+// `dot` shows the colour dot when there is no emoji to show.
+export function CategoryLabel({
+  category,
+  fallback,
+  emoji = true,
+  dot = false,
+  className,
+}: {
+  category: CategoryLabelData | null | undefined;
+  fallback?: string;
+  emoji?: boolean;
+  dot?: boolean;
+  className?: string;
+}) {
+  if (!category) return <span className={cn("min-w-0 truncate", className)}>{fallback}</span>;
+  const parents = category.parents ?? [];
+  const showEmoji = emoji && !!category.icon;
   return (
-    <span className="border-border inline-flex max-w-full items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs">
-      <span
-        aria-hidden
-        className="size-2 shrink-0 rounded-full"
-        style={{ background: color ?? "var(--cat-other)" }}
-      />
-      <span className="truncate">{name}</span>
+    <span
+      data-slot="category-label"
+      title={categoryPath(category)}
+      className={cn("inline-flex min-w-0 items-center gap-1 overflow-hidden", className)}
+    >
+      {showEmoji ? (
+        <span aria-hidden className="shrink-0">
+          {category.icon}
+        </span>
+      ) : (
+        dot && (
+          <span
+            aria-hidden
+            className="mr-0.5 size-2 shrink-0 rounded-full"
+            style={{ background: category.color ?? "var(--cat-other)" }}
+          />
+        )
+      )}
+      {parents.length > 0 && (
+        <>
+          <span className="text-muted-foreground min-w-0 truncate">
+            {`${parents.join(PATH_SEPARATOR)}${PATH_SEPARATOR.trimEnd()}`}
+          </span>{" "}
+        </>
+      )}
+      <span className="max-w-full shrink-0 truncate">{category.name}</span>
+    </span>
+  );
+}
+
+// Inside a row that already has a CategoryAvatar, `emoji={false}` keeps the dot.
+export function CategoryChip({
+  category,
+  emoji = true,
+}: {
+  category: CategoryLabelData;
+  emoji?: boolean;
+}) {
+  return (
+    <span className="border-border inline-flex max-w-full items-center rounded-full border px-2 py-0.5 text-xs">
+      <CategoryLabel category={category} emoji={emoji} dot />
     </span>
   );
 }
