@@ -2,13 +2,13 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { AssignedMonthBadge } from "@/components/transactions/assigned-month";
-import { overline, CategoryAvatar } from "@/components/transactions/bits";
+import { overline, CategoryAvatar, CategoryLabel } from "@/components/transactions/bits";
 import { Donut, MiniBars } from "./charts";
 import { PeriodNav } from "./period-nav";
 import { PeriodPicker } from "./period-picker";
 import type { DashboardData } from "@/server/services/dashboard";
 import type { Comparison, Period } from "@/lib/period";
-import type { FlatCategory } from "@/components/transactions/category-tree";
+import { categoryPath, type FlatCategory } from "@/components/transactions/category-tree";
 import { formatPeriodLabel, toIsoDay } from "@/lib/period";
 import { formatDayMonth, formatMoney, formatMonthYear, formatPercent } from "@/lib/format";
 import { PageHeader } from "@/components/shell/page-header";
@@ -77,8 +77,8 @@ export async function DashboardView({
       ? formatMonthYear(`${day}T00:00:00.000Z`, locale, { month: "short" })
       : formatDayMonth(`${day}T00:00:00.000Z`, locale);
   const peak = data.trace.peak;
-  const peakCatName =
-    (peak?.categoryId ? catById.get(peak.categoryId)?.name : undefined) ?? t("noCategory");
+  const peakCat = peak?.categoryId ? catById.get(peak.categoryId) : undefined;
+  const peakCatName = peakCat ? categoryPath(peakCat) : t("noCategory");
 
   const months = comparison.months.length;
   const noReference = comparison.elapsedDays
@@ -160,7 +160,8 @@ export async function DashboardView({
   const slices = [
     ...named.map((c, i) => ({
       key: c.categoryId ?? "none",
-      name: (c.categoryId ? catById.get(c.categoryId)?.name : undefined) ?? t("noCategory"),
+      category: c.categoryId ? catById.get(c.categoryId) : undefined,
+      name: t("noCategory"),
       amount: c.amount,
       color: namedColors[i],
     })),
@@ -168,6 +169,7 @@ export async function DashboardView({
       ? [
           {
             key: "others",
+            category: undefined,
             name: t("otherCategories", { count: data.byCategory.length - named.length }),
             amount: data.byCategory.slice(named.length).reduce((s, c) => s + c.amount, 0),
             color: OTHERS_COLOR,
@@ -245,7 +247,7 @@ export async function DashboardView({
                       className="size-2.5 shrink-0 rounded-full"
                       style={{ background: s.color }}
                     />
-                    <span className="flex-1 truncate">{s.name}</span>
+                    <CategoryLabel category={s.category} fallback={s.name} className="flex-1" />
                     <span className="tabular-nums">{money.format(s.amount)}</span>
                     <span className="text-muted-foreground w-10 text-right text-[11.5px] tabular-nums">
                       {formatPercent(s.amount / data.totals.expense, locale)}
@@ -327,7 +329,8 @@ export async function DashboardView({
                         <AssignedMonthBadge date={r.date} periodDate={r.periodDate} />
                       </div>
                       <div className="text-muted-foreground truncate text-[11.5px]">
-                        {formatDayMonth(r.date, locale)} · {meta?.name ?? t("noCategory")}
+                        {formatDayMonth(r.date, locale)} ·{" "}
+                        {meta ? categoryPath(meta) : t("noCategory")}
                       </div>
                     </div>
                     <span className="text-muted-foreground hidden max-w-40 truncate text-[11.5px] sm:block">

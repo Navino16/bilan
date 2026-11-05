@@ -8,10 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { BudgetDetail as BudgetDetailData, BudgetDetailLine } from "@/server/services/budgets";
-import type { FlatCategory } from "@/components/transactions/category-tree";
-import { CategoryAvatar, overline } from "@/components/transactions/bits";
+import { categoryPath, type FlatCategory } from "@/components/transactions/category-tree";
+import { CategoryAvatar, CategoryLabel, overline } from "@/components/transactions/bits";
 import { transactionsHref } from "@/lib/transaction-filters";
-import { lineFlow } from "@/lib/budget-match";
+import { lineFlow, namingCategoryId } from "@/lib/budget-match";
 import { BudgetBar, lineDisplay } from "./budget-status";
 import { BudgetActions, toEditableBudget, type BudgetFormOptions } from "./budget-actions";
 import { BudgetSummary } from "./budget-summary";
@@ -45,10 +45,14 @@ export function BudgetDetail({
   const budgetLineLabel = useBudgetLineLabel();
   const lineLabel = (line: BudgetDetailLine) =>
     budgetLineLabel(line, {
-      category: (id) => categories[id]?.name,
+      category: (id) => (categories[id] ? categoryPath(categories[id]) : undefined),
       account: (id) => accounts[id],
       lineCount: detail.lines.length,
     });
+  const namingCategory = (line: BudgetDetailLine) => {
+    const id = namingCategoryId(line);
+    return id ? categories[id] : undefined;
+  };
 
   function remainingText(line: BudgetDetailLine): string {
     const incoming = lineFlow(line) === "in";
@@ -64,13 +68,18 @@ export function BudgetDetail({
 
   const lineCard = (line: BudgetDetailLine) => {
     const display = lineDisplay(line);
+    const category = namingCategory(line);
     return (
       <li key={line.id} data-slot="budget-line">
         <Card className="gap-3 p-4">
           <div className="flex items-center justify-between gap-2">
-            <span className="min-w-0 truncate font-medium" title={lineLabel(line)}>
-              {lineLabel(line)}
-            </span>
+            {category ? (
+              <CategoryLabel category={category} className="font-medium" />
+            ) : (
+              <span className="min-w-0 truncate font-medium" title={lineLabel(line)}>
+                {lineLabel(line)}
+              </span>
+            )}
             <Badge style={display.badge.style} className="border-transparent">
               {t(display.badge.key)}
             </Badge>
@@ -357,7 +366,7 @@ export function BudgetDetail({
                     </div>
                     <div className="text-muted-foreground truncate text-[11.5px]">
                       {formatDayMonth(tx.date, locale)}
-                      {meta ? ` · ${meta.name}` : ""}
+                      {meta ? ` · ${categoryPath(meta)}` : ""}
                       {tx.accountName ? ` · ${tx.accountName}` : ""}
                     </div>
                   </div>

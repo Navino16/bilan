@@ -153,8 +153,7 @@ function RuleForm({
         {
           id: res.id,
           pattern,
-          categoryName: category?.name ?? "",
-          categoryColor: category?.color ?? null,
+          category: category ?? { name: "" },
         },
         preview.preview,
       );

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
-import { SegmentedTabs } from "@/components/transactions/bits";
+import { CategoryLabel, SegmentedTabs } from "@/components/transactions/bits";
 import { categorySliceColors } from "@/lib/chart-colors";
 import { historyRows, type CategoryHistory, type HistoryMonth } from "@/lib/insights";
 import { monthPeriod } from "@/lib/period";
@@ -33,8 +33,6 @@ export function CategoryHistoryCard({
   const { months, rows } = historyRows(history, Number(span), TOP_CATEGORIES);
 
   const catById = new Map(categories.map((c) => [c.id, c]));
-  const catName = (id: string | null) =>
-    (id ? catById.get(id)?.name : undefined) ?? t("noCategory");
   // Colored on the 12-month ranking so a category keeps its shade when the span changes.
   const ranked = historyRows(history, history.months.length, Infinity).rows;
   const rankedColors = categorySliceColors(ranked, catById, DEFAULT_CATEGORY_COLOR);
@@ -78,6 +76,7 @@ export function CategoryHistoryCard({
           <div className="flex flex-col gap-3">
             {rows.map((r) => {
               const max = Math.max(...r.values);
+              const cat = r.categoryId ? catById.get(r.categoryId) : undefined;
               return (
                 <div
                   key={r.categoryId ?? "none"}
@@ -89,9 +88,7 @@ export function CategoryHistoryCard({
                     className={`flex items-center gap-2 text-sm ${ROW_LINK}`}
                   >
                     <Dot color={colorOf(r.categoryId)} />
-                    <span className="min-w-0 flex-1 truncate" title={catName(r.categoryId)}>
-                      {catName(r.categoryId)}
-                    </span>
+                    <CategoryLabel category={cat} fallback={t("noCategory")} className="flex-1" />
                     <span className="text-muted-foreground text-[11.5px]">
                       {t("historyAverage")}
                     </span>

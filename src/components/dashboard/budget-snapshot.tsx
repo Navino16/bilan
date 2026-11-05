@@ -3,13 +3,13 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { overline } from "@/components/transactions/bits";
+import { CategoryLabel, overline } from "@/components/transactions/bits";
 import { OrdinalText } from "@/components/ordinal-text";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import type { getCurrentBudget } from "@/server/services/budgets";
 import { BudgetBar, lineDisplay, statusStyle } from "@/components/budgets/budget-status";
 import { formatDateRange, formatDayMonth, formatMoney } from "@/lib/format";
-import { lineFlow } from "@/lib/budget-match";
+import { lineFlow, namingCategoryId } from "@/lib/budget-match";
 
 export type CurrentBudget = Awaited<ReturnType<typeof getCurrentBudget>>;
 
@@ -78,6 +78,7 @@ export async function BudgetSnapshot({
       <div className="flex flex-col gap-3.5">
         {lines.slice(0, LINES_SHOWN).map((l) => {
           const cat = l.categoryId ? categories.get(l.categoryId) : undefined;
+          const namedBy = cat && namingCategoryId(l) ? cat : undefined;
           const counterpart = l.counterpartAccountId
             ? accountNames[l.counterpartAccountId]
             : undefined;
@@ -99,11 +100,17 @@ export async function BudgetSnapshot({
             <div key={l.id} className="space-y-1.5">
               <div className="flex items-center justify-between gap-2 text-sm">
                 <div className="flex min-w-0 items-center gap-2">
-                  <span
-                    className="size-2 shrink-0 rounded-full"
-                    style={{ background: cat?.color ?? "var(--muted-foreground)" }}
-                  />
-                  <span className="truncate">{name}</span>
+                  {namedBy ? (
+                    <CategoryLabel category={namedBy} dot />
+                  ) : (
+                    <>
+                      <span
+                        className="size-2 shrink-0 rounded-full"
+                        style={{ background: cat?.color ?? "var(--muted-foreground)" }}
+                      />
+                      <span className="truncate">{name}</span>
+                    </>
+                  )}
                   {l.status === "OVER" && lineDisplay(l).overrun === "over" && (
                     <Badge style={statusStyle("OVER")} className="border-transparent">
                       {t("status.OVER")}

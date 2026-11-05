@@ -43,6 +43,17 @@ describe("categoryOptions", () => {
       ["g", 0, null],
     ]);
   });
+
+  it("tags each option with its root-first ancestor names", () => {
+    expect(categoryOptions(tree).map((c) => [c.id, c.parents])).toEqual([
+      ["a", []],
+      ["a1", ["a"]],
+      ["a11", ["a", "a1"]],
+      ["a2", ["a"]],
+      ["b", []],
+      ["g", []],
+    ]);
+  });
 });
 
 describe("pickableCategories", () => {

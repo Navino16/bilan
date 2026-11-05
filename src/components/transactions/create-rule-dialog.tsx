@@ -28,7 +28,8 @@ import {
   type RuleApplyTarget,
 } from "@/components/categories/rule-apply-step";
 import { RULE_MATCH_TYPES, type RuleMatchType } from "@/lib/validation/rule";
-import { CategoryChip, SegmentedTabs, overline } from "./bits";
+import { CategoryChip, SegmentedTabs, overline, type CategoryLabelData } from "./bits";
+import { categoryPath } from "./category-tree";
 
 // The rule that suggested another category; the dialog offers to retarget it when manageable.
 export type SupersededRule = {
@@ -47,8 +48,7 @@ export function CreateRuleDialog({
   onOpenChange,
   pattern,
   categoryId,
-  categoryName,
-  categoryColor,
+  category,
   superseded,
   onSaved,
 }: {
@@ -56,8 +56,7 @@ export function CreateRuleDialog({
   onOpenChange: (open: boolean) => void;
   pattern: string;
   categoryId: string;
-  categoryName: string;
-  categoryColor: string | null;
+  category: CategoryLabelData;
   superseded?: SupersededRule | null;
   onSaved?: () => void;
 }) {
@@ -103,8 +102,7 @@ export function CreateRuleDialog({
         target: {
           id: res.id,
           pattern: retarget ? superseded.pattern : pat,
-          categoryName,
-          categoryColor,
+          category,
         },
         preview: preview.preview,
       });
@@ -132,10 +130,10 @@ export function CreateRuleDialog({
         <p className="text-muted-foreground text-sm leading-relaxed">
           {t.rich(retarget ? "rulePrompt.bodyRetarget" : "rulePrompt.body", {
             pattern: retarget ? superseded.pattern : pat,
-            category: categoryName,
+            category: categoryPath(category),
             chip: () => (
-              <span className="mx-0.5 inline-flex align-middle">
-                <CategoryChip name={categoryName} color={categoryColor} />
+              <span className="mx-0.5 inline-flex max-w-full align-middle">
+                <CategoryChip category={category} />
               </span>
             ),
           })}

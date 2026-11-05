@@ -12,15 +12,15 @@ import { useRouter } from "next/navigation";
 import { Check, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CategoryChip, overline } from "@/components/transactions/bits";
+import { CategoryChip, overline, type CategoryLabelData } from "@/components/transactions/bits";
+import { categoryPath } from "@/components/transactions/category-tree";
 import type { RuleApplicationPreview } from "@/server/services/categorization/apply";
 import { applyRuleAction, previewRuleApplicationAction } from "@/server/transport/actions/rules";
 
 export type RuleApplyTarget = {
   id: string;
   pattern: string;
-  categoryName: string;
-  categoryColor: string | null;
+  category: CategoryLabelData;
 };
 
 // After a save, the step is only worth a click when rows would move or a stronger rule keeps some.
@@ -208,8 +208,8 @@ export function RuleApplyStep({
   const apply = useCallback(() => applyRuleAction(rule.id), [rule.id]);
 
   const chip = () => (
-    <span className="mx-0.5 inline-flex align-middle">
-      <CategoryChip name={rule.categoryName} color={rule.categoryColor} />
+    <span className="mx-0.5 inline-flex max-w-full align-middle">
+      <CategoryChip category={rule.category} />
     </span>
   );
   const overlineKey =
@@ -227,13 +227,13 @@ export function RuleApplyStep({
       intro={(preview) =>
         t.rich("intro", {
           pattern: rule.pattern,
-          category: rule.categoryName,
+          category: categoryPath(rule.category),
           matched: preview.matched,
           chip,
         })
       }
       moving={(preview) =>
-        t.rich("moving", { count: preview.moving, category: rule.categoryName, chip })
+        t.rich("moving", { count: preview.moving, category: categoryPath(rule.category), chip })
       }
       load={load}
       apply={apply}

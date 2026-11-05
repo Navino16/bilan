@@ -21,7 +21,7 @@ import {
   getCategoryDeletionImpactAction,
 } from "@/server/transport/actions/categories";
 import type { CategoryDeletionImpact } from "@/server/services/categories";
-import { indentedName } from "@/components/transactions/category-tree";
+import { categoryPath } from "@/components/transactions/category-tree";
 import type { CategoryOption } from "./category-options";
 
 const IMPACT_KEYS = ["subcategories", "transactions", "rules", "budgetLines"] as const;
@@ -103,7 +103,7 @@ export function CategoryDeleteDialog({
               <option value="">{t("noTarget")}</option>
               {targets.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {indentedName(c.name, c.depth)}
+                  {categoryPath(c)}
                 </option>
               ))}
             </NativeSelect>

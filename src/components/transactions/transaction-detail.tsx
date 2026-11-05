@@ -14,10 +14,9 @@ import {
   listBudgetMatchesForTxAction,
 } from "@/server/transport/actions/budgets";
 import { deleteLinkAction, getLinkSummaryAction } from "@/server/transport/actions/links";
-import { type FlatCategory } from "./category-tree";
-import type { CategoryMeta } from "./category-tree";
+import { categoryPath, type CategoryMeta, type FlatCategory } from "./category-tree";
 import { CategoryCombobox } from "./category-combobox";
-import { Pill, overline } from "./bits";
+import { CategoryLabel, Pill, overline } from "./bits";
 import { TransactionEditForm } from "./transaction-edit-form";
 import { AssignedMonthBadge, AssignedMonthField } from "./assigned-month";
 import { useLinkErrorMessage } from "./link-error";
@@ -321,14 +320,12 @@ export function TransactionDetail({
                       data-slot="category-readonly"
                       className="border-border bg-muted/40 flex h-8 items-center gap-2 rounded-lg border px-2.5 text-sm"
                     >
-                      {category && (
-                        <span
-                          aria-hidden
-                          className="size-2.5 shrink-0 rounded-full"
-                          style={{ background: category.color ?? "var(--cat-other)" }}
-                        />
-                      )}
-                      <span className="flex-1 truncate">{category?.name ?? t("noCategory")}</span>
+                      <CategoryLabel
+                        category={category}
+                        fallback={t("noCategory")}
+                        dot
+                        className="flex-1"
+                      />
                       <span className="text-muted-foreground text-xs">{t("readOnly")}</span>
                     </div>
                   )}
@@ -478,7 +475,10 @@ export function TransactionDetail({
                                   : m.lines
                                       .map((l) =>
                                         budgetLineLabel(l, {
-                                          category: (id) => matches.names[id],
+                                          category: (id) =>
+                                            categoryMeta[id]
+                                              ? categoryPath(categoryMeta[id])
+                                              : matches.names[id],
                                           account: (id) => matches.names[id],
                                           lineCount: m.lineCount,
                                         }),
