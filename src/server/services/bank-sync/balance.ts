@@ -2,10 +2,10 @@ import { db } from "@/server/db";
 import { accountBalances } from "@/server/services/accounts";
 import { dayEnd, toIsoDay } from "@/lib/period";
 
-// Client-safe; gap = bank − Bilan, both booked-only at `bookedDate` (design §Bank balance check).
+// Client-safe; gap = bank − Bilan, both booked-only at `date` (design §Bank balance check).
 export type BankBalanceCheck = {
-  bookedBalance: number;
-  bookedDate: string;
+  bankBalance: number;
+  date: string;
   bilanBalance: number;
   gap: number;
   expectedBalance: number | null;
@@ -31,6 +31,7 @@ export async function listBankBalanceChecks(
       bookedBalanceDate: true,
       expectedBalance: true,
       expectedBalanceDate: true,
+      pendingTotal: true,
       connection: { select: { status: true } },
       account: { select: { id: true, initialBalance: true } },
     },
@@ -45,9 +46,24 @@ export async function listBankBalanceChecks(
     picked.set(id, link);
   }
 
+  // The bank can book a pending row with a booking date its CLBD was computed before (LCL), so
+  // XPCD minus the pending rows of the same sync is the safer booked reference when given.
+  const reference = new Map<string, { amount: number; day: string }>();
+  for (const [id, link] of picked) {
+    reference.set(
+      id,
+      link.expectedBalance !== null && link.expectedBalanceDate
+        ? {
+            amount: (cents(Number(link.expectedBalance)) - cents(Number(link.pendingTotal))) / 100,
+            day: toIsoDay(link.expectedBalanceDate),
+          }
+        : { amount: Number(link.bookedBalance), day: toIsoDay(link.bookedBalanceDate!) },
+    );
+  }
+
   const byDay = new Map<string, { id: string; initialBalance: unknown }[]>();
-  for (const link of picked.values()) {
-    const day = toIsoDay(link.bookedBalanceDate!);
+  for (const [id, link] of picked) {
+    const { day } = reference.get(id)!;
     byDay.set(day, [...(byDay.get(day) ?? []), link.account!]);
   }
   const bilan = new Map<string, number>();
@@ -60,13 +76,13 @@ export async function listBankBalanceChecks(
 
   const out: Record<string, BankBalanceCheck> = {};
   for (const [id, link] of picked) {
-    const bookedBalance = Number(link.bookedBalance);
+    const { amount: bankBalance, day } = reference.get(id)!;
     const bilanBalance = bilan.get(id)!;
     out[id] = {
-      bookedBalance,
-      bookedDate: toIsoDay(link.bookedBalanceDate!),
+      bankBalance,
+      date: day,
       bilanBalance,
-      gap: (cents(bookedBalance) - cents(bilanBalance)) / 100,
+      gap: (cents(bankBalance) - cents(bilanBalance)) / 100,
       expectedBalance: link.expectedBalance === null ? null : Number(link.expectedBalance),
       expectedDate: link.expectedBalanceDate ? toIsoDay(link.expectedBalanceDate) : null,
     };

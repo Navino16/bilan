@@ -352,9 +352,9 @@ Vous seul voyez l’état de synchronisation de vos comptes : les membres du foy
 
 À chaque synchronisation, la banque donne aussi le solde du compte. Sur la carte du compte synchronisé :
 
-- **Conforme à la banque au** *date* : le solde de la banque et celui de Bilan ce jour-là sont identiques.
+- **Conforme à la banque au** *date* : le solde de la banque et celui de Bilan ce jour-là sont identiques. Bilan compare le solde prévu par la banque moins les opérations en attente (pas encore importées), ou le solde comptabilisé quand la banque ne donne pas de solde prévu.
 - **Écart avec la banque au** *date* : la différence (banque moins Bilan). Cliquez dessus pour ouvrir les transactions du compte de la semaine qui précède ce jour.
-- **Solde prévu par la banque au** *date* : affiché quand la banque le donne. Il comprend les opérations en attente, que Bilan n’importe pas, et peut donc différer du solde comptabilisé : le contrôle ne compare que le solde comptabilisé.
+- **Solde prévu par la banque au** *date* : affiché quand la banque le donne. Il comprend les opérations en attente, que Bilan n’importe pas, et peut donc différer du solde de Bilan tant qu’il y en a.
 
 Un écart signifie en général qu’il manque des opérations dans Bilan (une transaction synchronisée que vous avez supprimée, un doublon probable qui n’en était pas un), qu’une opération a été saisie à la main sans exister à la banque, ou que le solde initial est faux.
 

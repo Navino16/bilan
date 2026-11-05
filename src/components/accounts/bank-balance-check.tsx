@@ -10,7 +10,7 @@ const signedMoney = (n: number, locale: string) => `${n > 0 ? "+" : ""}${formatM
 export function BankBalanceCheck({ accountId, check }: { accountId: string; check: BalanceCheck }) {
   const t = useTranslations("accounts.bankSync.balance");
   const locale = useLocale();
-  const date = formatDate(check.bookedDate, locale);
+  const date = formatDate(check.date, locale);
   return (
     <div className="space-y-1 pt-1 text-xs" data-slot="bank-balance-check">
       {check.gap === 0 ? (
@@ -23,7 +23,7 @@ export function BankBalanceCheck({ accountId, check }: { accountId: string; chec
         </div>
       ) : (
         <Link
-          href={balanceGapLink(locale, accountId, check.bookedDate)}
+          href={balanceGapLink(locale, accountId, check.date)}
           data-slot="bank-balance-gap"
           className="flex items-center gap-1 underline-offset-2 hover:underline"
           style={{ color: "var(--warning-text)" }}
