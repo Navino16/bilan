@@ -183,6 +183,37 @@ describe("getDashboard link-aware totals", () => {
       where: { accountId, date: { gte: period.from, lte: period.to } },
     });
   });
+
+  it("evaluates a link whose members fall in different months as a whole", async () => {
+    // Balanced pair across July/August, unbalanced pair (primary −80 in September).
+    await tx("2026-07-31T00:00:00.000Z", 187, "VIR RECU", null);
+    await tx("2026-08-01T00:00:00.000Z", -187, "VIR RENDU", catA);
+    await tx("2026-08-31T00:00:00.000Z", 30, "REMB PARTIAL", null);
+    await tx("2026-09-01T00:00:00.000Z", -80, "CB PARTIAL", catB);
+    const all = await db.transaction.findMany({
+      where: { accountId, date: { gte: new Date("2026-07-01"), lt: new Date("2026-10-01") } },
+      select: { id: true, amount: true },
+    });
+    const find = (amt: number) => all.find((r) => Number(r.amount) === amt)!.id;
+    await createLink({ transactionIds: [find(187), find(-187)], userId: owner });
+    await createLink({ transactionIds: [find(-80), find(30)], userId: owner });
+
+    const totals = async (month: number) => {
+      const period = monthPeriod(2026, month);
+      return getDashboard(owner, period, comparisonFor(period, "prev", later));
+    };
+    try {
+      expect((await totals(7)).totals).toMatchObject({ income: 0, expense: 0, count: 1 });
+      expect((await totals(8)).totals).toMatchObject({ income: 0, expense: 0, count: 2 });
+      const september = await totals(9);
+      expect(september.totals).toMatchObject({ income: 0, expense: 50, count: 1 });
+      expect(september.byCategory).toEqual([{ categoryId: catB, amount: 50 }]);
+    } finally {
+      await db.transactionLinkMember.deleteMany({});
+      await db.transactionLink.deleteMany({});
+      await db.transaction.deleteMany({ where: { id: { in: all.map((r) => r.id) } } });
+    }
+  });
 });
 
 describe("net savings", () => {
