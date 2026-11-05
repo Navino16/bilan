@@ -94,14 +94,15 @@ export function CategoryLabel({
           />
         )
       )}
-      {parents.length > 0 && (
-        <>
+      {/* No gap inside: once the parent path shrinks to nothing, the child gets the full width. */}
+      <span className="flex min-w-0">
+        {parents.length > 0 && (
           <span className="text-muted-foreground min-w-0 truncate">
-            {`${parents.join(PATH_SEPARATOR)}${PATH_SEPARATOR.trimEnd()}`}
-          </span>{" "}
-        </>
-      )}
-      <span className="max-w-full shrink-0 truncate">{category.name}</span>
+            {`${parents.join(PATH_SEPARATOR)}${PATH_SEPARATOR.trimEnd()}\u00a0`}
+          </span>
+        )}
+        <span className="max-w-full shrink-0 truncate">{category.name}</span>
+      </span>
     </span>
   );
 }
