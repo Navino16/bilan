@@ -82,9 +82,11 @@ export function CategoryLabel({
       className={cn("inline-flex min-w-0 items-center gap-1 overflow-hidden", className)}
     >
       {showEmoji ? (
-        <span aria-hidden className="shrink-0">
-          {category.icon}
-        </span>
+        <>
+          <span aria-hidden className="shrink-0">
+            {category.icon}
+          </span>{" "}
+        </>
       ) : (
         dot && (
           <span
