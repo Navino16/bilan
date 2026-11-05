@@ -164,18 +164,46 @@ export async function loadRows(
     }),
     linkIdsWhere(where),
   ]);
-  const collapsed = collapseLinkedRows(
-    rows.map((r) => ({
-      id: r.id,
-      amount: Number(r.amount),
-      date: realDates ? r.date : r.periodDate,
-      categoryId: r.categoryId,
-      accountId: r.accountId,
-      type: r.type,
-      labelEnc: withLabels ? r.labelEnc : null,
-      linkId: linkIds.get(r.id) ?? null,
-    })),
-  );
+  // Link members outside the period only net their link: a group counts in the period that
+  // holds its primary, like budgets (#412).
+  const loadedIds = new Set(rows.map((r) => r.id));
+  const partners = linkIds.size
+    ? await db.transaction.findMany({
+        where: {
+          AND: [
+            { accountId: { in: accountIds } },
+            opts.where ?? {},
+            { OR: [{ periodDate: { lt: period.from } }, { periodDate: { gt: period.to } }] },
+            { linkMembership: { linkId: { in: [...new Set(linkIds.values())] } } },
+          ],
+        },
+        select: {
+          id: true,
+          amount: true,
+          periodDate: !realDates,
+          date: realDates,
+          categoryId: true,
+          accountId: true,
+          type: true,
+          labelEnc: withLabels,
+          linkMembership: { select: { linkId: true } },
+        },
+      })
+    : [];
+  const toRow = (r: (typeof rows)[number], linkId: string | null): AggRow => ({
+    id: r.id,
+    amount: Number(r.amount),
+    date: realDates ? r.date : r.periodDate,
+    categoryId: r.categoryId,
+    accountId: r.accountId,
+    type: r.type,
+    labelEnc: withLabels ? r.labelEnc : null,
+    linkId,
+  });
+  const collapsed = collapseLinkedRows([
+    ...rows.map((r) => toRow(r, linkIds.get(r.id) ?? null)),
+    ...partners.map((r) => toRow(r, r.linkMembership!.linkId)),
+  ]).filter((r) => loadedIds.has(r.id));
   return { rows: collapsed, count: rows.length };
 }
 
