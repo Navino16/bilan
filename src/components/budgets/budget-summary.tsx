@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { overline } from "@/components/transactions/bits";
 import { OrdinalText } from "@/components/ordinal-text";
 import type { BudgetDetail } from "@/server/services/budgets";
-import { leftToSpend, round2 } from "@/lib/budgets";
+import { round2 } from "@/lib/budgets";
 import { formatDayMonth, formatMoney, formatMonthName, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -30,10 +30,6 @@ export function BudgetSummary({
   const money = (n: number) => formatMoney(n, locale);
   const out = detail.outOfBudget;
   const margin = out?.planned ?? null;
-  const spend = leftToSpend(
-    detail.lines,
-    out && margin != null ? { planned: margin, spent: out.spent } : null,
-  );
   const deficit = round2(detail.plannedTotal - detail.incomePlanned);
   const { landing } = detail;
   const fromSavings = detail.unplannedIncome?.fromSavings ?? 0;
@@ -54,9 +50,9 @@ export function BudgetSummary({
       <div className="space-y-3">
         <div className="flex items-baseline justify-between gap-3">
           <div className={cn(overline, "min-w-0 truncate")}>{title}</div>
-          {spend.percent != null && (
+          {detail.percent != null && (
             <div className="text-muted-foreground shrink-0 text-xs tabular-nums">
-              {t("summary.percentSpent", { percent: formatPercent(spend.percent / 100, locale) })}
+              {t("summary.percentSpent", { percent: formatPercent(detail.percent / 100, locale) })}
             </div>
           )}
         </div>
@@ -66,21 +62,21 @@ export function BudgetSummary({
             className="font-display text-3xl leading-tight tabular-nums"
             data-slot="budget-left-to-spend"
           >
-            {money(spend.left)}
+            {money(detail.leftToSpend)}
           </div>
         </div>
         <div className="bg-muted h-2 w-full overflow-hidden rounded-full" aria-hidden>
           <div
             className="h-full rounded-full"
             style={{
-              width: `${Math.min(100, spend.percent ?? 100)}%`,
-              background: spend.status === "OVER" ? "var(--expense)" : "var(--primary)",
+              width: `${Math.min(100, detail.percent ?? 100)}%`,
+              background: detail.status === "OVER" ? "var(--expense)" : "var(--primary)",
             }}
           />
         </div>
         <div className="text-muted-foreground flex flex-wrap justify-between gap-x-3 text-sm tabular-nums">
-          <span>{t("summary.spent", { amount: money(spend.spent) })}</span>
-          <span>{t("summary.planned", { amount: money(spend.planned) })}</span>
+          <span>{t("summary.spent", { amount: money(detail.spentTotal) })}</span>
+          <span>{t("summary.planned", { amount: money(detail.plannedTotal) })}</span>
         </div>
       </div>
 
@@ -151,7 +147,7 @@ export function BudgetSummary({
           </div>
           <dl className="space-y-1.5 text-sm">
             <SummaryRow label={t("summary.balanceToday")} value={money(landing.balance)} />
-            {Math.abs(landing.spendingToCome - spend.left) < 0.005 ? (
+            {Math.abs(landing.spendingToCome - detail.leftToSpend) < 0.005 ? (
               <SummaryRow
                 label={t("summary.leftToSpend")}
                 value={MINUS + money(landing.spendingToCome)}

@@ -5,6 +5,7 @@ import { AUTO_LINK_WINDOW_DAYS, collapseLinkedRows, pairKeyOf } from "@/lib/link
 import { bucketRow, lineFlow, type MatchLine, type RowBucket } from "@/lib/budget-match";
 import {
   budgetLanding,
+  leftToSpend,
   lineStatus,
   round2,
   type BudgetLanding,
@@ -323,6 +324,7 @@ export type AttachedSummary = {
   lines: AttachedLineStatus[];
   plannedTotal: number;
   spentTotal: number;
+  leftToSpend: number;
   percent: number | null;
   status: LineStatus["status"];
   incomePlanned: number;
@@ -331,19 +333,17 @@ export type AttachedSummary = {
   unplannedIncome: { received: number; count: number; fromSavings: number };
 };
 
-// Spending side = outgoing lines + out of budget; income side = incoming lines + unplanned
-// income. Saving more than planned doesn't push the budget's status over (design item 6).
+// Spending side = outgoing lines + the out-of-budget margin, out-of-budget spending staying
+// apart without one; income side = incoming lines + unplanned income (#408).
 export function summarizeAttached(
   lines: BudgetLineSpec[],
   margin: number | null,
   spend: AttachedSpend,
   ctx: TransferContext,
 ): AttachedSummary {
-  let plannedTotal = margin ?? 0;
-  let savedOnTop = 0;
   let incomePlanned = 0;
   let incomeReceived = spend.unplanned.reduce((s, r) => s + r.amount, 0);
-  let spentSum = -spend.out.reduce((s, r) => s + r.amount, 0);
+  const outSpent = round2(-spend.out.reduce((s, r) => s + r.amount, 0));
   const statuses = lines.map((l, i) => {
     const counterpartSavings =
       l.counterpartAccountId != null && ctx.accountTypes.get(l.counterpartAccountId) === "SAVINGS";
@@ -352,25 +352,23 @@ export function summarizeAttached(
       incomeReceived += spend.lineSums[i];
       return { ...lineStatus(l.plannedAmount, round2(spend.lineSums[i])), counterpartSavings };
     }
-    const spent = round2(-spend.lineSums[i]);
-    plannedTotal += l.plannedAmount;
-    spentSum += spent;
-    if (counterpartSavings && l.kind === "TRANSFER")
-      savedOnTop += Math.max(spent - l.plannedAmount, 0);
-    return { ...lineStatus(l.plannedAmount, spent), counterpartSavings };
+    return { ...lineStatus(l.plannedAmount, round2(-spend.lineSums[i])), counterpartSavings };
   });
-  const spentTotal = round2(spentSum);
-  const { percent, status } = lineStatus(round2(plannedTotal), round2(spentTotal - savedOnTop));
+  const spending = leftToSpend(
+    lines.map((l, i) => ({ ...l, ...statuses[i] })),
+    margin == null ? null : { planned: margin, spent: outSpent },
+  );
   return {
     lines: statuses,
-    plannedTotal: round2(plannedTotal),
-    spentTotal,
-    percent,
-    status,
+    plannedTotal: spending.planned,
+    spentTotal: spending.spent,
+    leftToSpend: spending.left,
+    percent: spending.percent,
+    status: spending.status,
     incomePlanned: round2(incomePlanned),
     incomeReceived: round2(incomeReceived),
     outOfBudget: {
-      spent: round2(-spend.out.reduce((s, r) => s + r.amount, 0)),
+      spent: outSpent,
       count: spend.out.length,
       planned: margin,
       unmatchedTransfers: spend.unmatchedTransfers,

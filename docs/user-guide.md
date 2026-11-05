@@ -564,7 +564,7 @@ A transfer line is set once, in the budget of the account the money leaves. The 
 
 **Out of budget** is always the last line. It collects what the account paid that no other line takes: uncategorized transactions, categories without a line, unplanned transfers. You can give it an optional **Margin** for the unexpected. Click it to list those transactions; click a transaction to open it in **Transactions**, where you can recategorize it or include it elsewhere. When a transfer is left there because it isn't linked yet, a link to the link suggestions appears.
 
-**Unplanned income** lists the money received that no Income or Transfer line takes. What came from a savings account shows as **Taken from savings this period**. The **Income** section total includes it, as the **Expenses** total includes out of budget.
+**Unplanned income** lists the money received that no Income or Transfer line takes. What came from a savings account shows as **Taken from savings this period**. The **Income** section total includes it. The **Spending** total counts out of budget only when the budget has a margin, as one more line; without one, it stays apart from the total.
 
 #### Where the account lands
 
@@ -594,6 +594,8 @@ Each line and the budget as a whole show a status:
 | **Over budget**    | more than the planned amount            |
 
 Tip: **Reached** needs the exact amount, to the cent. Until then the percentage stays below 100 % (99.6 % is shown as 99 %), and any overspend shows at least 101 %. A line planned at 0 € stays **On track** while nothing is spent; any spending puts it **Over budget**, with no percentage (—).
+
+A budget's card in the list shows the same spent figure, percentage and status as the top of its details. Without a margin, out-of-budget spending shows apart, on its own **Out of budget** row.
 
 Click a budget to open its details: each line with "… left" or "Over by …", **See transactions** for category lines, and the list of transactions **Counted in this budget**.
 
@@ -627,7 +629,7 @@ From a transaction's details, under **Assign to a budget**:
 
 **Counted in**, just above, updates right away: an excluded transaction leaves that budget, an included one joins it.
 
-An included transaction that matches no line counts in the budget total, under a separate **Out of budget** card: it never changes a line.
+An included transaction that matches no line counts in the budget under a separate **Out of budget** card, apart from the spent total: it never changes a line.
 
 ### Household budgets
 

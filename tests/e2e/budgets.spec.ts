@@ -90,7 +90,8 @@ test.describe("budgets", () => {
     const budgetName = await includeIntoNewBudget(page, "80");
     await page.goto("/fr/budgets");
     const card = page.locator('[data-slot="budget-card"]').filter({ hasText: budgetName });
-    await expect(card).toContainText("-80,00 € / 200,00 €", { timeout: 15_000 });
+    await expect(card).toContainText("0,00 € / 200,00 €", { timeout: 15_000 });
+    await expect(card.locator('[data-slot="budget-card-out"]')).toHaveCount(0);
     await card.click();
     await expect(page.getByRole("heading", { name: budgetName })).toBeVisible({ timeout: 15_000 });
     const outOfBudget = page.locator('[data-slot="budget-out-of-budget"]');
@@ -305,6 +306,10 @@ test.describe("budgets", () => {
 
     const landing = page.locator('[data-slot="landing-card"]').filter({ hasText: account });
     await expect(landing).toContainText("388,00", { timeout: 15_000 });
+    const card = page.locator('[data-slot="budget-card"]').filter({ hasText: name });
+    await expect(card).toContainText("0,00 € / 100,00 €");
+    await expect(card).not.toContainText("12,00 € / 100,00 €");
+    await expect(card.locator('[data-slot="budget-card-out"]')).toContainText("12,00");
     await page.goto("/fr/dashboard");
     const onDashboard = page
       .locator('[data-slot="dashboard-account"]')
@@ -315,7 +320,9 @@ test.describe("budgets", () => {
     await landingLink.click();
     await expect(page.getByRole("heading", { name })).toBeVisible({ timeout: 15_000 });
     await expect(page.locator('[data-slot="budget-income"]')).toBeVisible();
-    await expect(page.locator('[data-slot="budget-spending"]')).toBeVisible();
+    const spending = page.locator('[data-slot="budget-spending"]');
+    await expect(spending).toContainText("0,00 € / 100,00 €");
+    await expect(spending).not.toContainText("12,00 € / 100,00 €");
     const outOfBudget = page.locator('[data-slot="budget-out-of-budget"]');
     await expect(outOfBudget).toContainText("12,00");
     const summary = page.locator('[data-slot="budget-summary"]');

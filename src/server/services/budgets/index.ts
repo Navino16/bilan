@@ -22,7 +22,7 @@ import { collapseLinkedRows } from "@/lib/links";
 import type { RowBucket } from "@/lib/budget-match";
 import { linkIdsWhere } from "@/server/services/links/members";
 import {
-  budgetPlannedTotal,
+  leftToSpend,
   lineStatus,
   nextPeriod,
   periodEndFor,
@@ -358,10 +358,12 @@ export type BudgetListItem = {
   periodStart: Date;
   periodEnd: Date;
   recurring: boolean;
+  // leftToSpend() figures (#408), as on the budget detail's summary card.
   plannedTotal: number;
   spentTotal: number;
   percent: number | null;
   status: BudgetStatus;
+  outOfBudget: OutOfBudget | null;
   incomePlanned: number;
   incomeReceived: number;
   unplannedIncome: UnplannedIncome | null;
@@ -454,6 +456,7 @@ export async function listBudgetsForUser(
       spentTotal: e.spentTotal,
       percent: e.percent,
       status: e.status,
+      outOfBudget: e.outOfBudget,
       incomePlanned: e.incomePlanned,
       incomeReceived: e.incomeReceived,
       unplannedIncome: e.unplannedIncome,
@@ -728,6 +731,7 @@ type BudgetEvaluation = {
   lines: BudgetDetailLine[];
   plannedTotal: number;
   spentTotal: number;
+  leftToSpend: number;
   percent: number | null;
   status: BudgetStatus;
   incomePlanned: number;
@@ -820,25 +824,31 @@ async function evaluateBudgets(
         loaded.get(b.id)!,
         subtrees,
       );
-      const plannedTotal = budgetPlannedTotal(specs.filter((l) => l.kind === "EXPENSE"));
-      const { spent, percent, status } = lineStatus(plannedTotal, round2(-totalSum));
+      const lines = specs.map((l, i) => ({
+        ...detailLine(l),
+        ...lineStatus(l.plannedAmount, round2(-lineSums[i])),
+        counterpartSavings: false,
+      }));
+      const outSum = outOfBudget.reduce((sum, r) => sum + r.amount, 0);
+      const spending = leftToSpend(
+        lines.filter((l) => l.kind === "EXPENSE"),
+        null,
+        round2(outSum - totalSum),
+      );
       return {
-        lines: specs.map((l, i) => ({
-          ...detailLine(l),
-          ...lineStatus(l.plannedAmount, round2(-lineSums[i])),
-          counterpartSavings: false,
-        })),
-        plannedTotal,
-        spentTotal: spent,
-        percent,
-        status,
+        lines,
+        plannedTotal: spending.planned,
+        spentTotal: spending.spent,
+        leftToSpend: spending.left,
+        percent: spending.percent,
+        status: spending.status,
         incomePlanned: 0,
         incomeReceived: 0,
         outOfBudget:
           outOfBudget.length === 0
             ? null
             : {
-                spent: round2(-outOfBudget.reduce((sum, r) => sum + r.amount, 0)),
+                spent: round2(-outSum),
                 count: outOfBudget.length,
                 planned: null,
                 unmatchedTransfers: 0,
@@ -892,6 +902,9 @@ export type BudgetDetail = {
   lines: BudgetDetailLine[];
   plannedTotal: number;
   spentTotal: number;
+  leftToSpend: number;
+  percent: number | null;
+  status: BudgetStatus;
   // Attached: rows no line takes, with the optional margin. Unattached: INCLUDEs no line matches (#345).
   outOfBudget: OutOfBudget | null;
   unplannedIncome: UnplannedIncome | null; // attached only
@@ -1101,6 +1114,9 @@ export async function getBudgetDetail(
     lines: e.lines,
     plannedTotal: e.plannedTotal,
     spentTotal: e.spentTotal,
+    leftToSpend: e.leftToSpend,
+    percent: e.percent,
+    status: e.status,
     outOfBudget: e.outOfBudget,
     unplannedIncome: e.unplannedIncome,
     incomePlanned: e.incomePlanned,

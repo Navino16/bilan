@@ -79,6 +79,16 @@ describe("leftToSpend", () => {
     expect(leftToSpend([paid], null)).toMatchObject({ spent: 250, left: 0, status: "OVER" });
   });
 
+  it("takes the spending counted once when lines share rows", () => {
+    expect(leftToSpend([line(100, 40), line(900, 55)], null, 55)).toEqual({
+      planned: 1000,
+      spent: 55,
+      left: 905,
+      percent: 5,
+      status: "OK",
+    });
+  });
+
   it("has no percent when nothing is planned but something is spent", () => {
     expect(leftToSpend([], { planned: 0, spent: 12 })).toMatchObject({ left: 0, percent: null });
     expect(leftToSpend([], null)).toMatchObject({ planned: 0, left: 0, percent: 0 });

@@ -63,7 +63,8 @@ export type LeftToSpend = {
 
 // Spending side of a budget (#408): what each spending line, and an attached budget's margin
 // against its out-of-budget rows, still allows; an overrun eats none of the others. Saving
-// more than planned on a savings transfer isn't spending (design item 6).
+// more than planned on a savings transfer isn't spending (design item 6). The lines of an
+// unattached budget may share rows: `spentOnce` is then its spending counted once (#345).
 export function leftToSpend(
   lines: {
     kind: BudgetLineKind;
@@ -73,6 +74,7 @@ export function leftToSpend(
     counterpartSavings: boolean;
   }[],
   margin: { planned: number; spent: number } | null,
+  spentOnce?: number,
 ): LeftToSpend {
   const envelopes = [
     ...lines
@@ -87,7 +89,7 @@ export function leftToSpend(
     ...(margin ? [margin] : []),
   ];
   const planned = envelopes.reduce((s, e) => s + e.planned, 0);
-  const spent = envelopes.reduce((s, e) => s + e.spent, 0);
+  const spent = spentOnce ?? envelopes.reduce((s, e) => s + e.spent, 0);
   const left = envelopes.reduce((s, e) => s + Math.max(e.planned - e.spent, 0), 0);
   const status = lineStatus(round2(planned), round2(spent));
   return {
