@@ -693,7 +693,6 @@
       "transferFrom": "Virement ← {account}",
       "attachedHint": "Chaque ligne prend les transactions de ce compte dans sa catégorie, ou ses virements vers ou depuis le compte choisi. Le reste va hors budget."
     },
-    "plannedTotal": "Total prévu",
     "save": "Enregistrer",
     "saving": "Enregistrement…",
     "createCta": "Créer le budget",
@@ -721,9 +720,6 @@
       "OVER": "Dépassé"
     },
     "detail": {
-      "spent": "Dépensé",
-      "balance": "Solde",
-      "balancePlanned": "prévu {amount}",
       "planned": "Prévu",
       "remaining": "Reste {amount}",
       "overBy": "Dépassé de {amount}",
@@ -813,6 +809,25 @@
       "EXPECTED": "Attendu",
       "RECEIVED": "Reçu",
       "SAVED": "Épargne en plus"
+    },
+    "summary": {
+      "month": "{elided, select, yes {Budget d’{month}} other {Budget de {month}}}",
+      "year": "Budget {year}",
+      "period": "Budget de la période",
+      "percentSpent": "{percent} dépensé",
+      "leftToSpend": "Reste à dépenser",
+      "spent": "{amount} dépensés",
+      "planned": "sur {amount} prévus",
+      "outOfBudget": "Hors budget · {count, plural, one {# opération} other {# opérations}}",
+      "seeTransactions": "Voir les opérations",
+      "deficit": "Plan en déficit de {deficit} : {income} de rentrées prévues pour {planned} de dépenses",
+      "accountOn": "{account} au {date}",
+      "balanceToday": "Solde aujourd’hui",
+      "toPay": "À payer",
+      "toPayHint": "ce qui doit encore sortir du compte",
+      "toReceive": "À recevoir",
+      "endOfMonth": "Fin de mois",
+      "endOfPeriod": "Fin de période"
     },
     "landing": {
       "title": "Où j’atterris",

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   budgetPlannedTotal,
   groupBudgetSeries,
+  leftToSpend,
   lineStatus,
   nextPeriod,
   periodEndFor,
@@ -13,6 +14,74 @@ describe("budgetPlannedTotal", () => {
   it("sums line planned amounts, rounded to cents", () => {
     expect(budgetPlannedTotal([{ plannedAmount: 100 }, { plannedAmount: 49.9 }])).toBe(149.9);
     expect(budgetPlannedTotal([])).toBe(0);
+  });
+});
+
+describe("leftToSpend", () => {
+  const line = (
+    plannedAmount: number,
+    spent: number,
+    over: Partial<{
+      kind: "EXPENSE" | "INCOME" | "TRANSFER";
+      direction: "OUT" | "IN";
+      counterpartSavings: boolean;
+    }> = {},
+  ) => ({
+    kind: "EXPENSE" as const,
+    direction: null,
+    counterpartSavings: false,
+    plannedAmount,
+    spent,
+    ...over,
+  });
+
+  it("sums what the spending lines still allow, an overrun eating none of the others", () => {
+    expect(leftToSpend([line(100, 150), line(200, 50.5)], null)).toEqual({
+      planned: 300,
+      spent: 200.5,
+      left: 149.5,
+      percent: 66,
+      status: "OK",
+    });
+  });
+
+  it("leaves income lines out", () => {
+    const income = line(2000, 1500, { kind: "INCOME" });
+    const transferIn = line(300, 0, { kind: "TRANSFER", direction: "IN" });
+    expect(leftToSpend([income, transferIn, line(100, 20)], null)).toMatchObject({
+      planned: 100,
+      spent: 20,
+      left: 80,
+    });
+  });
+
+  it("counts the margin as an envelope for out-of-budget spending", () => {
+    expect(leftToSpend([line(100, 40)], { planned: 50, spent: 70 })).toMatchObject({
+      planned: 150,
+      spent: 110,
+      left: 60,
+      percent: 73,
+    });
+  });
+
+  it("doesn't count saving more than planned as spending", () => {
+    const saved = line(100, 250, {
+      kind: "TRANSFER",
+      direction: "OUT",
+      counterpartSavings: true,
+    });
+    expect(leftToSpend([saved, line(100, 0)], null)).toMatchObject({
+      spent: 100,
+      left: 100,
+      percent: 50,
+    });
+    const paid = line(100, 250, { kind: "TRANSFER", direction: "OUT" });
+    expect(leftToSpend([paid], null)).toMatchObject({ spent: 250, left: 0, status: "OVER" });
+  });
+
+  it("has no percent when nothing is planned but something is spent", () => {
+    expect(leftToSpend([], { planned: 0, spent: 12 })).toMatchObject({ left: 0, percent: null });
+    expect(leftToSpend([], null)).toMatchObject({ planned: 0, left: 0, percent: 0 });
   });
 });
 

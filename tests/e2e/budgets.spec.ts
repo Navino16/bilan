@@ -79,6 +79,11 @@ test.describe("budgets", () => {
     await expect(page.getByText("60,00", { exact: false }).first()).toBeVisible({
       timeout: 15_000,
     });
+    const summary = page.locator('[data-slot="budget-summary"]');
+    await expect(summary.locator('[data-slot="budget-left-to-spend"]')).toContainText("140,00");
+    await expect(summary).toContainText("30 % dépensé");
+    await expect(summary.locator('[data-slot="budget-summary-out"]')).toHaveCount(0);
+    await expect(summary.locator('[data-slot="budget-summary-account"]')).toHaveCount(0);
   });
 
   test("an included income that matches no line shows out of budget (#345)", async ({ page }) => {
@@ -92,6 +97,8 @@ test.describe("budgets", () => {
     await expect(outOfBudget).toContainText("Hors budget");
     await expect(outOfBudget).toContainText("-80,00 €");
     await expect(outOfBudget).toContainText("1 transaction incluse sans ligne correspondante");
+    const summary = page.locator('[data-slot="budget-summary"]');
+    await expect(summary.locator('[data-slot="budget-summary-out"]')).toHaveCount(0);
   });
 
   test("renews a recurring budget, groups its periods, navigates, edits and deletes it", async ({
@@ -311,7 +318,16 @@ test.describe("budgets", () => {
     await expect(page.locator('[data-slot="budget-spending"]')).toBeVisible();
     const outOfBudget = page.locator('[data-slot="budget-out-of-budget"]');
     await expect(outOfBudget).toContainText("12,00");
-    await outOfBudget.getByRole("link").first().click();
+    const summary = page.locator('[data-slot="budget-summary"]');
+    await expect(summary.locator('[data-slot="budget-left-to-spend"]')).toContainText("100,00");
+    const landsAt = summary.locator('[data-slot="budget-summary-account"]');
+    await expect(landsAt).toContainText(`${account} au`, { ignoreCase: true });
+    await expect(landsAt).toContainText("388,00");
+    await expect(landsAt).toContainText("Solde aujourd’hui488,00");
+    await expect(landsAt).toContainText("Reste à dépenser");
+    const outRow = summary.locator('[data-slot="budget-summary-out"]');
+    await expect(outRow).toContainText("12,00");
+    await outRow.getByRole("link", { name: "Voir les opérations" }).click();
     await expect(page).toHaveURL(/\?show=out$/);
     const rows = page.locator('[data-slot="budget-transaction-row"]');
     await expect(rows).toHaveCount(1);
@@ -336,7 +352,7 @@ test.describe("budgets", () => {
     const lines = page.locator('[data-slot="budget-line-row"]');
     await lines.nth(0).getByLabel("Type").selectOption({ label: "Rentrée" });
     await lines.nth(0).getByLabel("Catégorie").selectOption({ index: 1 });
-    await lines.nth(0).getByLabel("Montant prévu").fill("2000");
+    await lines.nth(0).getByLabel("Montant prévu").fill("200");
     await page.getByRole("button", { name: /ajouter une ligne/i }).click();
     await lines.nth(1).getByLabel("Type").selectOption({ label: "Virement" });
     await lines.nth(1).getByLabel("Autre compte").selectOption({ label: savings });
@@ -361,7 +377,13 @@ test.describe("budgets", () => {
 
     await card.click();
     await expect(page.getByRole("heading", { name })).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator('[data-slot="budget-income"]')).toContainText("0,00 € / 2 000,00 €");
+    await expect(page.locator('[data-slot="budget-income"]')).toContainText("0,00 € / 200,00 €");
+    const summary = page.locator('[data-slot="budget-summary"]');
+    await expect(summary.locator('[data-slot="budget-left-to-spend"]')).toContainText("350,00");
+    await expect(summary.locator('[data-slot="budget-summary-deficit"]')).toContainText(
+      /Plan en déficit de 150,00\s€ : 200,00\s€ de rentrées prévues pour 350,00\s€ de dépenses/,
+    );
+    await expect(summary.locator('[data-slot="budget-summary-account"]')).toHaveCount(0);
     await deleteBudget(page, name);
     await deleteAccount(page, savings);
   });

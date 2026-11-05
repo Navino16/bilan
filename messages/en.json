@@ -693,7 +693,6 @@
       "transferFrom": "Transfer ← {account}",
       "attachedHint": "Each line takes this account’s transactions of its category, or its transfers to or from the chosen account. Everything else goes out of budget."
     },
-    "plannedTotal": "Planned total",
     "save": "Save",
     "saving": "Saving…",
     "createCta": "Create budget",
@@ -721,9 +720,6 @@
       "OVER": "Over budget"
     },
     "detail": {
-      "spent": "Spent",
-      "balance": "Balance",
-      "balancePlanned": "planned {amount}",
       "planned": "Planned",
       "remaining": "{amount} left",
       "overBy": "Over by {amount}",
@@ -813,6 +809,25 @@
       "EXPECTED": "Expected",
       "RECEIVED": "Received",
       "SAVED": "Saved on top"
+    },
+    "summary": {
+      "month": "{month} budget",
+      "year": "{year} budget",
+      "period": "Period budget",
+      "percentSpent": "{percent} spent",
+      "leftToSpend": "Left to spend",
+      "spent": "{amount} spent",
+      "planned": "of {amount} planned",
+      "outOfBudget": "Out of budget · {count, plural, one {# transaction} other {# transactions}}",
+      "seeTransactions": "See the transactions",
+      "deficit": "Plan in deficit of {deficit}: {income} of planned income for {planned} of planned spending",
+      "accountOn": "{account} on {date}",
+      "balanceToday": "Balance today",
+      "toPay": "To pay",
+      "toPayHint": "what still has to leave the account",
+      "toReceive": "To receive",
+      "endOfMonth": "End of month",
+      "endOfPeriod": "End of period"
     },
     "landing": {
       "title": "Where I land",

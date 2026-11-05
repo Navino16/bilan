@@ -129,6 +129,11 @@ export function formatMonthYear(
   return formatWith(f, value, locale);
 }
 
+// "novembre" / "November".
+export function formatMonthName(value: DateInput, locale: string): string {
+  return formatWith(dateFormat("month-name", locale, "UTC", { month: "long" }), value, locale);
+}
+
 // `ratio` is a fraction (0.39 → "39 %" / "39%").
 export function formatPercent(
   ratio: number,
