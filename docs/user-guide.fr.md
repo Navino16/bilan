@@ -564,7 +564,7 @@ Une ligne de virement se saisit une seule fois, dans le budget du compte d’où
 
 **Hors budget** est toujours la dernière ligne. Elle reprend ce que le compte a payé et qu’aucune autre ligne ne prend : transactions sans catégorie, catégories sans ligne, virements imprévus. Vous pouvez lui donner une **Marge** facultative pour l’imprévu. Cliquez dessus pour lister ces transactions ; cliquez sur une transaction pour l’ouvrir dans **Transactions**, où vous pouvez la recatégoriser ou l’inclure ailleurs. Quand un virement y reste parce qu’il n’est pas encore lié, un lien vers les suggestions de liens apparaît.
 
-**Rentrées hors budget** liste l’argent reçu qu’aucune ligne de rentrée ou de virement ne prend. Ce qui vient d’un compte d’épargne s’affiche en **Puisé dans l’épargne sur la période**. Le total de la section **Rentrées** les inclut, comme celui des **Dépenses** inclut le hors budget.
+**Rentrées hors budget** liste l’argent reçu qu’aucune ligne de rentrée ou de virement ne prend. Ce qui vient d’un compte d’épargne s’affiche en **Puisé dans l’épargne sur la période**. Le total de la section **Rentrées** les inclut. Celui des **Dépenses** ne compte le hors budget qu’avec une marge, comme une ligne de plus ; sans marge, il reste à part du total.
 
 #### Où le compte atterrit
 
@@ -594,6 +594,8 @@ Chaque ligne, et le budget dans son ensemble, affiche un statut :
 | **Dépassé**         | plus que le montant prévu                    |
 
 Astuce : **Atteint** demande le montant exact, au centime près. D’ici là, le pourcentage reste sous 100 % (99,6 % s’affiche 99 %), et tout dépassement affiche au moins 101 %. Une ligne prévue à 0 € reste **Dans le budget** tant que rien n’est dépensé ; la moindre dépense la passe en **Dépassé**, sans pourcentage (—).
+
+La carte d’un budget dans la liste affiche le même montant dépensé, le même pourcentage et le même statut que le haut de son détail. Sans marge, les dépenses hors budget s’affichent à part, sur leur propre ligne **Hors budget**.
 
 Cliquez sur un budget pour ouvrir son détail : chaque ligne avec « Reste … » ou « Dépassé de … », **Voir les transactions** pour les lignes de catégorie, et la liste des transactions **Comptées dans ce budget**.
 
@@ -627,7 +629,7 @@ Depuis le détail d’une transaction, sous **Assigner à un budget** :
 
 **Comptée dans**, juste au-dessus, se met à jour aussitôt : une transaction exclue quitte ce budget, une transaction incluse le rejoint.
 
-Une transaction incluse qui ne correspond à aucune ligne compte dans le total du budget, sous une carte **Hors budget** à part : elle ne modifie aucune ligne.
+Une transaction incluse qui ne correspond à aucune ligne compte dans le budget sous une carte **Hors budget** à part, hors du total dépensé : elle ne modifie aucune ligne.
 
 ### Budgets de foyer
 

@@ -275,7 +275,7 @@ describe("getBudgetDetail / computeLine", () => {
     const detail = await getBudgetDetail(id, owner);
     // The account line takes both expenses and no income; the catch-all only what no line matched.
     expect(detail.lines.map((l) => l.spent)).toEqual([40, 0, 55]);
-    expect(detail.spentTotal).toBe(55);
+    expect(detail).toMatchObject({ spentTotal: 55, leftToSpend: 1405, percent: 3 });
 
     const alone = await createBudget(
       { ...baseInput, lines: [{ plannedAmount: 500 }] },
@@ -423,7 +423,7 @@ describe("getBudgetDetail / computeLine", () => {
       const detail = await getBudgetDetail(id, owner);
       expect(detail.transactions).toEqual([masked(t.date)]);
       expect(detail.transactionCount).toBe(1);
-      expect(detail.spentTotal).toBe(12);
+      expect(detail.outOfBudget?.spent).toBe(12);
       expect(JSON.stringify(detail)).not.toContain(t.id);
     });
 
@@ -475,7 +475,7 @@ describe("getBudgetDetail / computeLine", () => {
       const detail = await getBudgetDetail(id, owner);
       expect(detail.transactions).toEqual([masked(t.date)]);
       expect(detail.transactionCount).toBe(1);
-      expect(detail.spentTotal).toBe(12);
+      expect(detail.outOfBudget?.spent).toBe(12);
     });
   });
 
@@ -510,7 +510,7 @@ describe("getBudgetDetail / computeLine", () => {
       planned: null,
       unmatchedTransfers: 0,
     });
-    expect(detail.spentTotal).toBe(55);
+    expect(detail.spentTotal).toBe(30);
   });
 
   it("listBudgetsForUser reports the same spend and status as the detail", async () => {
@@ -562,7 +562,7 @@ describe("assignTransaction", () => {
 
     await assignTransaction({ budgetId: id, transactionId: t, mode: "INCLUDE" }, { id: owner });
     detail = await getBudgetDetail(id, owner);
-    expect(detail.spentTotal).toBe(25);
+    expect(detail.spentTotal).toBe(0);
     expect(detail.outOfBudget).toEqual({
       spent: 25,
       count: 1,
@@ -815,7 +815,7 @@ describe("hardening (group scope, dedup, links, out-of-period, canManage)", () =
     expect(detail.spentTotal).toBe(50);
   });
 
-  it("#2 spentTotal counts a tx once and an INCLUDE with no matching line goes out of budget (#345)", async () => {
+  it("#2 an INCLUDE with no matching line goes out of budget, apart from spentTotal (#345)", async () => {
     const t = await txOn(accountId, "2026-03-07T00:00:00.000Z", -50, null); // no category
     const { id } = await createBudget(
       {
@@ -837,7 +837,7 @@ describe("hardening (group scope, dedup, links, out-of-period, canManage)", () =
       planned: null,
       unmatchedTransfers: 0,
     });
-    expect(detail.spentTotal).toBe(50);
+    expect(detail.spentTotal).toBe(0);
   });
 
   it("an included income matching no line stays out of every line (#345)", async () => {
@@ -860,7 +860,7 @@ describe("hardening (group scope, dedup, links, out-of-period, canManage)", () =
       planned: null,
       unmatchedTransfers: 0,
     });
-    expect(detail.spentTotal).toBe(-260);
+    expect(detail.spentTotal).toBe(40);
     expect(detail.transactionCount).toBe(2);
   });
 
@@ -884,7 +884,7 @@ describe("hardening (group scope, dedup, links, out-of-period, canManage)", () =
     );
     await assignTransaction({ budgetId: id, transactionId: t, mode: "INCLUDE" }, { id: owner });
     const detail = await getBudgetDetail(id, owner);
-    expect(detail.spentTotal).toBe(25);
+    expect(detail.transactionCount).toBe(1);
     expect(detail.outOfBudget).toEqual({
       spent: 25,
       count: 1,

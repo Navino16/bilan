@@ -381,6 +381,15 @@ describe("an attached budget by line kind", () => {
     expect(d.transactionCount).toBe(5);
   });
 
+  it("keeps out-of-budget spending apart from the spent total without a margin (#410)", async () => {
+    const { id } = await envelope({ outOfBudgetPlanned: undefined });
+    const d = await getBudgetDetail(id, owner);
+    expect(d.outOfBudget).toMatchObject({ spent: 12, planned: null });
+    expect(d).toMatchObject({ plannedTotal: 830, spentTotal: 820, leftToSpend: 10, percent: 98 });
+    const item = (await listBudgetsForUser(owner)).find((b) => b.id === id)!;
+    expect(item).toMatchObject({ spentTotal: 820, percent: 98, status: d.status });
+  });
+
   it("flags an unlinked leg with a same-amount row on another account", async () => {
     await tx(courant, "2026-03-10", -50);
     await tx(livret, "2026-03-12", 50);
@@ -513,7 +522,8 @@ describe("an attached budget by line kind", () => {
       { id: owner },
     );
     const d = await getBudgetDetail(id, owner);
-    expect(d.spentTotal).toBe(150);
+    expect(d.lines[0].spent).toBe(150);
+    expect(d.spentTotal).toBe(100);
     expect(d.lines[0].counterpartSavings).toBe(true);
     expect((await listBudgetsForUser(owner)).find((b) => b.id === id)?.status).not.toBe("OVER");
   });

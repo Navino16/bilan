@@ -193,6 +193,18 @@ export function BudgetsView({
                         {b.percent === null ? "—" : formatPercent(b.percent / 100, locale)}
                       </span>
                     </div>
+                    {/* Without a margin, out of budget stays apart from the spent total (#408). */}
+                    {b.outOfBudget && b.outOfBudget.planned == null && b.outOfBudget.spent > 0 && (
+                      <div
+                        data-slot="budget-card-out"
+                        className="text-muted-foreground flex items-center justify-between text-sm tabular-nums"
+                      >
+                        <span>{t("detail.outOfBudget")}</span>
+                        <span style={{ color: "var(--expense-text)" }}>
+                          {nf.format(b.outOfBudget.spent)}
+                        </span>
+                      </div>
+                    )}
                     {b.accountId && (
                       <div
                         data-slot="budget-card-income"
