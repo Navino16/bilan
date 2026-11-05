@@ -87,11 +87,13 @@ beforeAll(async () => {
       validUntil,
       accounts: {
         create: [
+          // CLBD missing a row the bank booked later with an earlier date, as LCL does.
           link(courant, 1, {
-            bookedBalance: 800,
+            bookedBalance: 750,
             bookedBalanceDate: day("2026-10-31"),
-            expectedBalance: 812.5,
+            expectedBalance: 862.5,
             expectedBalanceDate: day("2026-11-03"),
+            pendingTotal: 12.5,
           }),
           link(livret, 2, { bookedBalance: 0.3, bookedBalanceDate: day("2026-10-31") }),
           link(noBooked, 3),
@@ -137,14 +139,14 @@ afterAll(async () => {
 });
 
 describe("listBankBalanceChecks", () => {
-  it("compares the bank's booked balance with Bilan's at the same day", async () => {
+  it("compares the expected balance minus pending rows with Bilan's at its day", async () => {
     const checks = await listBankBalanceChecks(owner);
     expect(checks[courant]).toEqual({
-      bookedBalance: 800,
-      bookedDate: "2026-10-31",
-      bilanBalance: 800,
+      bankBalance: 850,
+      date: "2026-11-03",
+      bilanBalance: 850,
       gap: 0,
-      expectedBalance: 812.5,
+      expectedBalance: 862.5,
       expectedDate: "2026-11-03",
     });
   });
@@ -152,24 +154,24 @@ describe("listBankBalanceChecks", () => {
   it("reports the gap as bank minus Bilan", async () => {
     await db.bankConnectionAccount.update({
       where: { id: courantLink },
-      data: { bookedBalance: 750 },
+      data: { expectedBalance: 812.5 },
     });
     try {
       const checks = await listBankBalanceChecks(owner);
-      expect(checks[courant]).toMatchObject({ bookedBalance: 750, bilanBalance: 800, gap: -50 });
+      expect(checks[courant]).toMatchObject({ bankBalance: 800, bilanBalance: 850, gap: -50 });
     } finally {
       await db.bankConnectionAccount.update({
         where: { id: courantLink },
-        data: { bookedBalance: 800 },
+        data: { expectedBalance: 862.5 },
       });
     }
   });
 
-  it("counts rows of the balance day, not later ones, with no float drift", async () => {
+  it("falls back to the booked balance at its day, not later rows, with no float drift", async () => {
     const checks = await listBankBalanceChecks(owner);
     expect(checks[livret]).toEqual({
-      bookedBalance: 0.3,
-      bookedDate: "2026-10-31",
+      bankBalance: 0.3,
+      date: "2026-10-31",
       bilanBalance: 0.3,
       gap: 0,
       expectedBalance: null,

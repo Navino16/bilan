@@ -352,9 +352,9 @@ Only you see the sync status of your accounts: household members you share an ac
 
 At each sync, the bank also gives the account's balance. On the synced account's card:
 
-- **Matches the bank on** *date*: the bank's balance and Bilan's balance on that day are the same.
+- **Matches the bank on** *date*: the bank's balance and Bilan's balance on that day are the same. Bilan compares the balance the bank expects minus the pending operations (they are not imported yet), or the booked balance when the bank doesn't give an expected one.
 - **Gap with the bank on** *date*: the difference (bank minus Bilan). Click it to open the account's transactions for the week up to that day.
-- **Balance expected by the bank on** *date*: shown when the bank gives it. It includes the pending operations, which Bilan doesn't import, so it can differ from the booked balance: the check only compares the booked balance.
+- **Balance expected by the bank on** *date*: shown when the bank gives it. It includes the pending operations, which Bilan doesn't import, so it can differ from Bilan's balance while some are pending.
 
 A gap usually means operations are missing in Bilan (a synced transaction you deleted, a probable duplicate that was not one) or were entered by hand without existing at the bank, or that the opening balance is wrong.
 
