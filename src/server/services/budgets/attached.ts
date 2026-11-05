@@ -26,6 +26,7 @@ export type BudgetRow = {
 
 export type LoadedBudgetRows = {
   rows: BudgetRow[];
+  netOnly: Set<string>; // other members of the loaded rows' links, only there to net them
   excluded: Set<string>;
   includedIds: Set<string>;
   scope: Set<string>; // account ids the budget's owner scope draws from
@@ -237,6 +238,12 @@ export async function loadTransferContext(
   return ctx;
 }
 
+// Rows a budget counts once its links are collapsed: a link counts in the budgets that load its
+// primary member, never through a member pulled in from another month (#412).
+export function countedLinkRows({ rows, netOnly, excluded }: LoadedBudgetRows): BudgetRow[] {
+  return collapseLinkedRows(rows).filter((r) => !netOnly.has(r.id) && !excluded.has(r.id));
+}
+
 export type AttachedSpend = {
   lineSums: number[]; // signed
   lineSumsOnAccount: number[]; // signed, rows on the budget's account dated ≤ now (design §E)
@@ -254,7 +261,7 @@ export type AttachedSpend = {
 export function computeAttachedSpend(
   b: { id: string; accountId: string },
   lines: BudgetLineSpec[],
-  { rows, excluded }: LoadedBudgetRows,
+  loaded: LoadedBudgetRows,
   subtrees: Map<string, Set<string>>,
   ctx: TransferContext,
   now: Date,
@@ -280,8 +287,7 @@ export function computeAttachedSpend(
     counted: [],
     bucketOf: new Map(),
   };
-  for (const r of collapseLinkedRows(rows)) {
-    if (excluded.has(r.id)) continue;
+  for (const r of countedLinkRows(loaded)) {
     const c = rowCtx.get(r.id) ?? { partners: [], pending: [] };
     const bucket = bucketRow(
       {

@@ -487,6 +487,8 @@ A transfer between two of your accounts appears twice: money out of one, money i
 - linked transactions that cancel out (a transfer, a full refund) are left out of the dashboard and budget totals;
 - otherwise (a partial refund, for example), the link counts once, for the difference.
 
+In budgets, a link is evaluated as a whole even when its transactions fall in different months: one that cancels out is left out of every month, otherwise the difference counts in the month and category of its largest transaction.
+
 Linked transactions stay in the list with a **Linked** tag.
 
 ### Link transactions
