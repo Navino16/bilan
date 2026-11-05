@@ -12,11 +12,9 @@ import type { FlatCategory } from "@/components/transactions/category-tree";
 import { CategoryAvatar, overline } from "@/components/transactions/bits";
 import { transactionsHref } from "@/lib/transaction-filters";
 import { lineFlow } from "@/lib/budget-match";
-import { round2 } from "@/lib/budgets";
-import { cn } from "@/lib/utils";
 import { BudgetBar, lineDisplay } from "./budget-status";
 import { BudgetActions, toEditableBudget, type BudgetFormOptions } from "./budget-actions";
-import { LandingCard } from "./landing-cards";
+import { BudgetSummary } from "./budget-summary";
 import { useBudgetLineLabel } from "./line-label";
 import { PageHeader } from "@/components/shell/page-header";
 import { formatDateRange, formatDayMonth } from "@/lib/format";
@@ -43,8 +41,6 @@ export function BudgetDetail({
   const nf = new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" });
   const period = { from: detail.periodStart, to: detail.periodEnd };
   const attached = detail.accountId != null;
-  const balance = round2(detail.incomeReceived - detail.spentTotal);
-  const plannedBalance = round2(detail.incomePlanned - detail.plannedTotal);
   const base = `/${locale}/budgets/${detail.id}`;
   const budgetLineLabel = useBudgetLineLabel();
   const lineLabel = (line: BudgetDetailLine) =>
@@ -192,41 +188,11 @@ export function BudgetDetail({
         }
       />
 
-      <Card className="flex-row items-center justify-between p-4">
-        <div>
-          <div className="text-muted-foreground text-xs">{t("detail.spent")}</div>
-          <div className="font-display text-2xl leading-none">{nf.format(detail.spentTotal)}</div>
-        </div>
-        {attached && (
-          <div className="text-center" data-slot="budget-balance">
-            <div className="text-muted-foreground text-xs">{t("detail.balance")}</div>
-            <div
-              className={cn(
-                "font-display text-2xl leading-none",
-                balance < 0 && "text-destructive",
-              )}
-            >
-              {nf.format(balance)}
-            </div>
-            <div className="text-muted-foreground mt-1 text-xs">
-              {t("detail.balancePlanned", { amount: nf.format(plannedBalance) })}
-            </div>
-          </div>
-        )}
-        <div className="text-right">
-          <div className="text-muted-foreground text-xs">{t("plannedTotal")}</div>
-          <div className="font-display text-2xl leading-none">{nf.format(detail.plannedTotal)}</div>
-        </div>
-      </Card>
-
-      {detail.landing && detail.accountId && (
-        <LandingCard
-          accountName={accounts[detail.accountId] ?? ""}
-          landing={detail.landing}
-          periodEnd={detail.periodEnd}
-          fromSavings={detail.unplannedIncome?.fromSavings ?? 0}
-        />
-      )}
+      <BudgetSummary
+        detail={detail}
+        accountName={detail.accountId ? (accounts[detail.accountId] ?? "") : ""}
+        outHref={`${base}?show=out`}
+      />
 
       {detail.forecast && (
         <Card className="gap-1 p-4" data-slot="budget-forecast">

@@ -9,6 +9,7 @@ import {
   formatDayMonth,
   formatLongDay,
   formatMoney,
+  formatMonthName,
   formatMonthRange,
   ordinalSegments,
   formatMonthYear,
@@ -78,6 +79,14 @@ describe("formatDateRange", () => {
     const to = new Date(Date.UTC(2026, 9, 16));
     expect(formatDateRange(oct11, to, "fr")).toBe("11–16 oct. 2026");
     expect(formatDateRange(oct11, to, "en")).toBe("Oct 11 – 16, 2026");
+  });
+});
+
+describe("formatMonthName", () => {
+  it("formats the month alone, in UTC", () => {
+    expect(formatMonthName(oct1, "fr")).toBe("octobre");
+    expect(formatMonthName(oct1, "en")).toBe("October");
+    expect(formatMonthName(new Date("2026-11-30T23:59:59.999Z"), "en")).toBe("November");
   });
 });
 

@@ -566,11 +566,9 @@ Une ligne de virement se saisit une seule fois, dans le budget du compte d’où
 
 **Rentrées hors budget** liste l’argent reçu qu’aucune ligne de rentrée ou de virement ne prend. Ce qui vient d’un compte d’épargne s’affiche en **Puisé dans l’épargne sur la période**. Le total de la section **Rentrées** les inclut, comme celui des **Dépenses** inclut le hors budget.
 
-En haut de la page, le **Solde** donne les rentrées moins les dépenses de la période, avec en dessous le solde prévu par les lignes.
-
 #### Où le compte atterrit
 
-Pendant la période en cours, la page **Budgets** commence par **Où j’atterris** : une carte par compte dont le budget est en cours (le tableau de bord l’affiche sous le solde de chaque compte). Son solde en fin de période est :
+Pendant la période en cours, la page **Budgets** commence par **Où j’atterris** : une carte par compte dont le budget est en cours (le tableau de bord l’affiche sous le solde de chaque compte, et le détail du budget en haut de la page). Son solde en fin de période est :
 
 > solde d’aujourd’hui + rentrées encore attendues − dépenses encore à venir
 
@@ -598,6 +596,13 @@ Chaque ligne, et le budget dans son ensemble, affiche un statut :
 Astuce : **Atteint** demande le montant exact, au centime près. D’ici là, le pourcentage reste sous 100 % (99,6 % s’affiche 99 %), et tout dépassement affiche au moins 101 %. Une ligne prévue à 0 € reste **Dans le budget** tant que rien n’est dépensé ; la moindre dépense la passe en **Dépassé**, sans pourcentage (—).
 
 Cliquez sur un budget pour ouvrir son détail : chaque ligne avec « Reste … » ou « Dépassé de … », **Voir les transactions** pour les lignes de catégorie, et la liste des transactions **Comptées dans ce budget**.
+
+En haut du détail, une carte résume la période :
+
+- **Reste à dépenser** : ce que les lignes de dépense permettent encore (une ligne déjà dépassée compte pour 0), avec le pourcentage dépensé. Sous la barre, ce que ces lignes ont dépensé sur le total prévu. Sur un budget sur un compte, la marge Hors budget compte comme une ligne de plus, et épargner plus que prévu sur un virement vers l’épargne ne compte pas comme une dépense.
+- **Hors budget · … opérations**, quand quelque chose a été dépensé hors des lignes : le montant, avec la marge s’il y en a une. **Voir les opérations** les liste.
+- **Plan en déficit de …**, quand le budget prévoit des rentrées et prévoit de dépenser plus.
+- Pendant la période en cours, un budget sur un compte ajoute où le compte atterrit en fin de période (voir [Où le compte atterrit](#où-le-compte-atterrit)) : **Solde aujourd’hui**, **Reste à dépenser**, **À recevoir** et **Fin de mois** (**Fin de période** pour une période autre qu’un mois civil). Quand ce qui doit encore sortir du compte diffère du reste à dépenser (une transaction déjà datée plus tard dans la période, une autre venant d’un autre compte), cette ligne devient **À payer**.
 
 Pendant la période en cours, un budget sans compte affiche **Solde prévu au …** : le solde actuel de vos comptes courants, moins ce que les lignes prévoient encore de dépenser (une ligne dépassée compte pour 0). Les comptes d’épargne et les revenus à venir n’entrent pas dans le calcul. Un budget sur un compte affiche son atterrissage à la place (voir [Où le compte atterrit](#où-le-compte-atterrit)). L’un ou l’autre s’affiche aussi sur la carte du budget en cours du tableau de bord.
 

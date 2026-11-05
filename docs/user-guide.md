@@ -566,11 +566,9 @@ A transfer line is set once, in the budget of the account the money leaves. The 
 
 **Unplanned income** lists the money received that no Income or Transfer line takes. What came from a savings account shows as **Taken from savings this period**. The **Income** section total includes it, as the **Expenses** total includes out of budget.
 
-At the top of the page, the **Balance** shows the period's income minus its spending, with the balance the lines plan for below it.
-
 #### Where the account lands
 
-During the current period, the **Budgets** page opens with **Where I land**: one card per account with a budget in progress (the dashboard shows it under each account's balance). Its balance at the period's end is:
+During the current period, the **Budgets** page opens with **Where I land**: one card per account with a budget in progress (the dashboard shows it under each account's balance, and the budget's details at the top of the page). Its balance at the period's end is:
 
 > today's balance + income still expected − spending still to come
 
@@ -598,6 +596,13 @@ Each line and the budget as a whole show a status:
 Tip: **Reached** needs the exact amount, to the cent. Until then the percentage stays below 100 % (99.6 % is shown as 99 %), and any overspend shows at least 101 %. A line planned at 0 € stays **On track** while nothing is spent; any spending puts it **Over budget**, with no percentage (—).
 
 Click a budget to open its details: each line with "… left" or "Over by …", **See transactions** for category lines, and the list of transactions **Counted in this budget**.
+
+At the top of the details, one card sums up the period:
+
+- **Left to spend**: what the spending lines still allow (a line already over counts as 0), with the percentage spent. Below the bar, what these lines spent out of the planned total. On a budget on an account, the Out-of-budget margin counts as one more line, and saving more than planned on a transfer to savings isn't counted as spent.
+- **Out of budget · … transactions**, when something was spent outside the lines: the amount, with the margin if there is one. **See the transactions** lists them.
+- **Plan in deficit of …**, when the budget plans income and plans to spend more than it.
+- During the current period, a budget on an account adds where the account lands at the end of the period (see [Where the account lands](#where-the-account-lands)): **Balance today**, **Left to spend**, **To receive** and **End of month** (**End of period** for a period other than a calendar month). When what still has to leave the account differs from what is left to spend (a transaction already dated later in the period, one from another account), that row reads **To pay**.
 
 During the current period, a budget with no account shows **Projected balance on …**: the current balance of your checking accounts, minus what the lines still plan to spend (an over-budget line counts as 0). Savings accounts and income still to come are left out. A budget on an account shows its landing instead (see [Where the account lands](#where-the-account-lands)). Either figure also shows on the dashboard's current budget card.
 

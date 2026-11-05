@@ -1,6 +1,7 @@
 // Pure budget math — no DB. Amounts are euros as numbers; compare with epsilon.
 
-import type { BudgetPeriodType } from "@/lib/validation/budget";
+import { lineFlow } from "@/lib/budget-match";
+import type { BudgetLineKind, BudgetPeriodType, TransferDirection } from "@/lib/validation/budget";
 
 const EPSILON = 0.005;
 
@@ -50,6 +51,52 @@ export function lineStatus(plannedAmount: number, spent: number): LineStatus {
         ? 100
         : Math.min(99, Math.floor(ratio));
   return { ...amounts, remaining, percent, status };
+}
+
+export type LeftToSpend = {
+  planned: number;
+  spent: number;
+  left: number;
+  percent: number | null;
+  status: BudgetStatus;
+};
+
+// Spending side of a budget (#408): what each spending line, and an attached budget's margin
+// against its out-of-budget rows, still allows; an overrun eats none of the others. Saving
+// more than planned on a savings transfer isn't spending (design item 6).
+export function leftToSpend(
+  lines: {
+    kind: BudgetLineKind;
+    direction: TransferDirection | null;
+    plannedAmount: number;
+    spent: number;
+    counterpartSavings: boolean;
+  }[],
+  margin: { planned: number; spent: number } | null,
+): LeftToSpend {
+  const envelopes = [
+    ...lines
+      .filter((l) => lineFlow(l) === "out")
+      .map((l) => ({
+        planned: l.plannedAmount,
+        spent:
+          l.kind === "TRANSFER" && l.counterpartSavings
+            ? Math.min(l.spent, l.plannedAmount)
+            : l.spent,
+      })),
+    ...(margin ? [margin] : []),
+  ];
+  const planned = envelopes.reduce((s, e) => s + e.planned, 0);
+  const spent = envelopes.reduce((s, e) => s + e.spent, 0);
+  const left = envelopes.reduce((s, e) => s + Math.max(e.planned - e.spent, 0), 0);
+  const status = lineStatus(round2(planned), round2(spent));
+  return {
+    planned: status.plannedAmount,
+    spent: status.spent,
+    left: round2(left),
+    percent: status.percent,
+    status: status.status,
+  };
 }
 
 const DAY = 86_400_000;
