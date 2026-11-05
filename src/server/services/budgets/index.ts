@@ -18,7 +18,6 @@ import {
   CategoryAccessError,
   withDescendants,
 } from "@/server/services/categories";
-import { collapseLinkedRows } from "@/lib/links";
 import type { RowBucket } from "@/lib/budget-match";
 import { linkIdsWhere } from "@/server/services/links/members";
 import {
@@ -41,6 +40,7 @@ import {
   attachedLanding,
   budgetMirrors,
   computeAttachedSpend,
+  countedLinkRows,
   loadTransferContext,
   summarizeAttached,
   type AttachedSpend,
@@ -622,11 +622,13 @@ async function loadBudgetRows(budgets: BudgetRef[]): Promise<Map<string, LoadedB
     }));
   }
 
+  const membersOf = await linkMembersOf(rows);
   const loaded = new Map<string, LoadedBudgetRows>(
     budgets.map((b) => [
       b.id,
       {
         rows: [],
+        netOnly: new Set(),
         excluded: new Set(),
         includedIds: new Set(),
         scope: scopes.get(scopeKey(b)) ?? new Set(),
@@ -650,8 +652,51 @@ async function loadBudgetRows(budgets: BudgetRef[]): Promise<Map<string, LoadedB
         l.includedIds.has(r.id) ||
         l.excluded.has(r.id),
     );
+    const ids = new Set(l.rows.map((r) => r.id));
+    const includedLinks = new Set(
+      l.rows.flatMap((r) => (r.linkId && l.includedIds.has(r.id) ? [r.linkId] : [])),
+    );
+    for (const linkId of new Set(l.rows.flatMap((r) => (r.linkId ? [r.linkId] : [])))) {
+      const members = membersOf.get(linkId)!;
+      for (const m of members) {
+        if (ids.has(m.id) || !accounts.has(m.accountId)) continue;
+        l.rows.push(m);
+        if (!includedLinks.has(linkId)) l.netOnly.add(m.id);
+      }
+      // An INCLUDE on any member brings the whole link in, whichever member ends up primary.
+      if (includedLinks.has(linkId)) for (const m of members) l.includedIds.add(m.id);
+    }
   }
   return loaded;
+}
+
+// Every member of the links among `rows`; the ones not loaded come from one query (#412).
+async function linkMembersOf(rows: BudgetRow[]): Promise<Map<string, BudgetRow[]>> {
+  const out = new Map<string, BudgetRow[]>();
+  for (const r of rows) if (r.linkId) out.set(r.linkId, [...(out.get(r.linkId) ?? []), r]);
+  if (out.size === 0) return out;
+  const loadedIds = new Set(rows.map((r) => r.id));
+  const members = await db.transactionLinkMember.findMany({
+    where: { linkId: { in: [...out.keys()] } },
+    select: {
+      linkId: true,
+      transaction: {
+        select: {
+          id: true,
+          amount: true,
+          date: true,
+          periodDate: true,
+          categoryId: true,
+          accountId: true,
+        },
+      },
+    },
+  });
+  for (const { linkId, transaction: t } of members) {
+    if (loadedIds.has(t.id)) continue;
+    out.get(linkId)!.push({ ...t, amount: Number(t.amount), linkId });
+  }
+  return out;
 }
 
 // An attached budget draws from its account only, and only while its scope still holds it
@@ -742,7 +787,7 @@ type BudgetEvaluation = {
   counted: BudgetRow[];
   // Lines (or out/unplanned) each counted row lands in; an unattached budget's row may hit several.
   bucketsOf: Map<string, RowBucket[]>;
-  rows: BudgetRow[]; // loaded, before collapsing links
+  rows: BudgetRow[]; // loaded with their links' other members, before collapsing links
   shown: { out: BudgetRow[]; unplanned: BudgetRow[] };
   attached: { specs: BudgetLineSpec[]; spend: AttachedSpend } | null;
 };
@@ -937,7 +982,7 @@ export type BudgetTransaction = {
 // matches no line counts in the total and in the out-of-budget sum, never in a line.
 async function computeBudgetSpend(
   b: { lines: LineFilter[] },
-  { rows, excluded, includedIds }: LoadedBudgetRows,
+  loaded: LoadedBudgetRows,
   subtrees?: Map<string, Set<string>>,
 ): Promise<{
   lineSums: number[];
@@ -949,7 +994,7 @@ async function computeBudgetSpend(
   // Collapse links across the WHOLE loaded scope first, so a linked group split
   // across categories nets correctly (the offsetting member is not dropped by a
   // per-line filter). Each surviving row carries its primary's category/account.
-  const collapsed = collapseLinkedRows(rows);
+  const collapsed = countedLinkRows(loaded);
   const lineSubtrees = subtrees ?? (await withDescendants(lineCategoryIds([b])));
   const filters: LineMatcher[] = b.lines.map((l) => ({
     kind: l.kind,
@@ -964,9 +1009,8 @@ async function computeBudgetSpend(
   const counted: BudgetRow[] = [];
   const bucketsOf = new Map<string, RowBucket[]>();
   for (const r of collapsed) {
-    if (excluded.has(r.id)) continue;
     const matchedIdx = matchingLines(r, filters);
-    if (matchedIdx.length === 0 && !includedIds.has(r.id)) continue; // not in this budget
+    if (matchedIdx.length === 0 && !loaded.includedIds.has(r.id)) continue; // not in this budget
     counted.push(r);
     totalSum += r.amount; // counted once toward the total
     if (matchedIdx.length === 0) outOfBudget.push(r);
@@ -1387,9 +1431,28 @@ export async function listBudgetMatchesForTx(
 ): Promise<TxBudgetMatches> {
   const [{ groupIds }, tx] = await Promise.all([
     budgetScopeForUser(viewerId),
-    db.transaction.findUnique({ where: { id: transactionId }, select: { periodDate: true } }),
+    db.transaction.findUnique({
+      where: { id: transactionId },
+      select: {
+        id: true,
+        periodDate: true,
+        linkMembership: {
+          select: {
+            link: {
+              select: {
+                members: { select: { transaction: { select: { id: true, periodDate: true } } } },
+              },
+            },
+          },
+        },
+      },
+    }),
   ]);
   if (!tx) return { matches: [], names: {} };
+  const members = tx.linkMembership?.link.members.map((m) => m.transaction) ?? [tx];
+  const periodDates = [...new Set(members.map((m) => m.periodDate.getTime()))].map(
+    (t) => new Date(t),
+  );
   const budgets = await db.budget.findMany({
     where: {
       archived: false,
@@ -1397,8 +1460,8 @@ export async function listBudgetMatchesForTx(
         { OR: [{ userId: viewerId }, { groupId: { in: groupIds } }] },
         {
           OR: [
-            { periodStart: { lte: tx.periodDate }, periodEnd: { gte: tx.periodDate } },
-            { assignments: { some: { transactionId } } },
+            ...periodDates.map((d) => ({ periodStart: { lte: d }, periodEnd: { gte: d } })),
+            { assignments: { some: { transactionId: { in: members.map((m) => m.id) } } } },
           ],
         },
       ],

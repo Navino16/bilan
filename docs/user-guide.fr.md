@@ -487,6 +487,8 @@ Un virement entre deux de vos comptes apparaît deux fois : une sortie d’un c�
 - des transactions liées qui s’annulent (un virement, un remboursement complet) sont écartées des totaux du tableau de bord et des budgets ;
 - sinon (un remboursement partiel par exemple), le lien compte une seule fois, pour la différence.
 
+Dans les budgets, un lien est évalué en entier même quand ses transactions tombent dans des mois différents : s’il s’annule, il est écarté de tous les mois, sinon la différence compte dans le mois et la catégorie de sa plus grosse transaction.
+
 Les transactions liées restent dans la liste avec l’étiquette **Liée**.
 
 ### Lier des transactions
