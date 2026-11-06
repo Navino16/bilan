@@ -415,7 +415,8 @@ To create one:
 5. Pick a **Symbol**, or enter any character or emoji with **+**.
 6. Optionally turn on **Count toward the next month**: see [Count a transaction in another month](#count-a-transaction-in-another-month).
 7. Optionally turn on **Counts as savings**: spending in this category and its sub-categories counts toward the dashboard's **Net savings** instead of its expenses (money put aside on an account Bilan doesn't track, such as a brokerage account or a child's savings book). It is on for the default **Savings** category.
-8. Click **Create category**.
+8. Optionally turn on **Counts neither as spending nor as income**: transactions in this category and its sub-categories are left out of the dashboard and insights, for transfers between your own accounts that Bilan can't link (a joint account it doesn't track, for example). It wins over **Counts as savings** and is on for the default **Bank › Internal transfer** category.
+9. Click **Create category**.
 
 To delete a category, open its **⋮** menu and choose **Delete**. Its sub-categories are deleted too. If transactions, rules or budget lines use it, choose where to move them with **Move to**. With **No category**, transactions become uncategorized and the rules and budget lines are deleted.
 
@@ -723,7 +724,7 @@ The dashboard and insights cover every account you can see: your own, the ones s
 
 On both pages, pick **This month**, **Last month**, **Quarter**, **Year** or **Custom**, and use the arrows to move to the previous or next period. You can go as far as next month, marked as upcoming: it shows the transactions [assigned to it](#count-a-transaction-in-another-month) in advance.
 
-For a single month, **Compared with** lets you compare against **the previous month** or the 3-, 6- or 12-month average. Other periods are compared with the previous period of the same length.
+For a single month, **Compared with** lets you compare against **the previous month** or the 3-, 6- or 12-month average. The dashboard starts on the previous month, insights on the 3-month average, so a one-off expense last month doesn't skew every change. Other periods are compared with the previous period of the same length.
 
 While the period is still running, Bilan compares it with the same number of days of the comparison period, and a note says so.
 
@@ -737,7 +738,7 @@ Tip: transfers between your own accounts are linked automatically and left out o
 - **Income** and **Expenses**, each with its change against the comparison. Spending in categories that [count as savings](#categories) is not an expense: it only counts in net savings.
 - **Net savings**: linked transfers into your savings accounts minus those out of them, plus spending in categories that count as savings, with its change against the comparison.
 - **Left to spend**, while the period is in progress: what your current budgets still allow, the same figure as each budget's summary, added up. Without a budget in progress, and for a past period, this card shows the **Net balance** (income minus expenses) instead.
-- **To do**, only when something needs it: the uncategorized expenses and income of the period that aren't linked, with their total. Click one to open those transactions and categorize them.
+- **To do**, only when something needs it: the uncategorized expenses and income of the period that aren't linked, with their total. Click one to open those transactions and categorize them. A last line counts the unlinked operations in a category that [counts neither as spending nor as income](#categories): a transfer whose other leg is missing. Link it, or ignore it if the other account isn't in Bilan.
 - **Current budgets**, while the period is in progress: one row per budget in progress, with what is left to spend, how much of the plan is spent and its out-of-budget spending. Click a row to open the budget.
 - **Spending pace**: your spending added up day by day (by month over a quarter or a year), the dashed line being the comparison period, or the average month. While the period is running, the curve stops at today; above it, how much you have spent so far and how it compares with the same date of the comparison.
 - **Spending by category**: a donut with the six largest categories, the rest grouped.
@@ -747,9 +748,12 @@ Tip: transfers between your own accounts are linked automatically and left out o
 
 ![Insights](images/en/insights.png)
 
-- **Biggest increase** and **Biggest decrease**: the categories whose spending changed most.
-- **What changed**: the six categories with the largest change, from the comparison amount to the current one.
-- **Category history**: monthly spending of your top six categories over **6 months** or **12 months**, with the monthly average. The current month is hatched.
+![Insights on a phone](images/en/mobile-insights.png)
+
+Insights count income and spending like the dashboard: spending in categories that count as savings, and categories that count neither as spending nor as income, are left out.
+
+- **Income and spending**: your income and spending for each of the last 12 months, the current month hatched while it runs. Above, the monthly averages (complete months only) and your net savings over the 12 months (income minus spending). A note says how many months your spending went above your income.
+- **By category**: your spending per category, the biggest change first. Each row shows the change, the comparison amount → the current one, and a 12-month chart on the category's own scale: the dashed line is its monthly average, the period's bars are darker. Click a row to see its sub-categories and their changes. Categories whose spending barely moves (rent, subscriptions…) are grouped under **Stable** at the bottom. Uncategorized spending isn't a category: a line above the list gives its amount, **To sort** opens it.
 - **Top merchants**: where your money goes. The pencil renames a merchant (see [Merchants](#merchants)).
 - **Income by category**.
 

@@ -1,12 +1,15 @@
+import { db } from "@/server/db";
 import { visibleAccountIds } from "@/server/services/accounts";
 import { aliasMap, listAliasGroups, merchantRowsOf } from "@/server/services/merchants";
 import { round2 } from "@/lib/budgets";
 import {
-  categoryChanges,
+  categoryTrends,
   incomeByCategory,
-  monthlyCategoryTotals,
+  insightsOverview,
   topMerchants,
-  type CategoryHistory,
+  uncategorizedSpending,
+  type CategoryBranch,
+  type HistoryWindow,
   type InsightsData,
 } from "@/lib/insights";
 import {
@@ -17,47 +20,41 @@ import {
   type Comparison,
   type Period,
 } from "@/lib/period";
-import { firstTransactionDate, loadRows, referenceRows } from "./index";
+import { firstTransactionDate, loadRows, referenceRows, type AggRow } from "./index";
+import { countedRow, savingsScope } from "./savings";
 
 const TOP_MERCHANTS = 6;
 const HISTORY_MONTHS = 12;
 
-export async function getInsights(
-  userId: string,
-  period: Period,
-  comparison: Comparison,
-): Promise<InsightsData> {
-  const accountIds = await visibleAccountIds(userId);
-  // Savings categories stay in: insights break every flow down by category (spec §5.16).
-  const [current, prev, aliases] = await Promise.all([
-    loadRows(accountIds, period, { withLabels: true }),
-    referenceRows(accountIds, period, comparison),
-    listAliasGroups(userId),
-  ]);
-
-  const income = incomeByCategory(current.rows, prev);
-  return {
-    changes: categoryChanges(current.rows, prev),
-    merchants: topMerchants(merchantRowsOf(current.rows), TOP_MERCHANTS, aliasMap(aliases)),
-    aliasGroups: aliases,
-    income,
-    incomeTotal: round2(income.reduce((s, i) => s + i.current, 0)),
-  };
+// The root and root child of each category, walking up the tree a level per query.
+async function branchesOf(ids: Set<string>): Promise<Map<string, CategoryBranch>> {
+  const parentOf = new Map<string, string | null>();
+  let pending = [...ids];
+  while (pending.length > 0) {
+    const rows = await db.category.findMany({
+      where: { id: { in: pending } },
+      select: { id: true, parentId: true },
+    });
+    for (const r of rows) parentOf.set(r.id, r.parentId);
+    pending = [
+      ...new Set(
+        rows.flatMap((r) => (r.parentId && !parentOf.has(r.parentId) ? [r.parentId] : [])),
+      ),
+    ];
+  }
+  const out = new Map<string, CategoryBranch>();
+  for (const id of ids) {
+    if (!parentOf.has(id)) continue;
+    const path = [id];
+    for (let p = parentOf.get(id); p && !path.includes(p); p = parentOf.get(p)) path.push(p);
+    out.set(id, { root: path[path.length - 1], child: path[path.length - 2] ?? id });
+  }
+  return out;
 }
 
-// One load over the whole window so links spanning two months collapse like on the dashboard.
-export async function getCategoryHistory(
-  userId: string,
-  period: Period,
-  now: Date = new Date(),
-): Promise<CategoryHistory> {
+function historyWindow(period: Period, first: Date | null, now: Date): HistoryWindow {
   const months = historyMonths(period, HISTORY_MONTHS, now);
   const last = months[months.length - 1];
-  const accountIds = await visibleAccountIds(userId);
-  const [{ rows }, first] = await Promise.all([
-    loadRows(accountIds, monthsSpan(months)),
-    firstTransactionDate(accountIds),
-  ]);
   const dataStart = first
     ? months.findIndex((m) => monthPeriod(m.year, m.month).to >= first)
     : months.length;
@@ -65,6 +62,42 @@ export async function getCategoryHistory(
     months,
     inProgress: periodInProgress(monthPeriod(last.year, last.month), now),
     dataStart: dataStart === -1 ? months.length : dataStart,
-    series: monthlyCategoryTotals(rows, months),
+  };
+}
+
+// Same rows as the dashboard: links collapsed, savings-category and neutral rows left out
+// (spec §5.17). The 12-month window is one load so links spanning two months collapse.
+export async function getInsights(
+  userId: string,
+  period: Period,
+  comparison: Comparison,
+  now: Date = new Date(),
+): Promise<InsightsData> {
+  const accountIds = await visibleAccountIds(userId);
+  const scope = await savingsScope(userId, accountIds);
+  const keep = (r: AggRow) => countedRow(scope, r);
+  const window = historyWindow(period, await firstTransactionDate(accountIds), now);
+  const [current, reference, history, aliases] = await Promise.all([
+    loadRows(accountIds, period, { withLabels: true }),
+    referenceRows(accountIds, period, comparison, keep),
+    loadRows(accountIds, monthsSpan(window.months)),
+    listAliasGroups(userId),
+  ]);
+  const rows = current.rows.filter(keep);
+  const historyRows = history.rows.filter(keep);
+  const ids = new Set(
+    [...rows, ...reference, ...historyRows].flatMap((r) => (r.categoryId ? [r.categoryId] : [])),
+  );
+  const branches = await branchesOf(ids);
+
+  const income = incomeByCategory(rows, reference);
+  return {
+    overview: insightsOverview(historyRows, window),
+    categories: categoryTrends(rows, reference, historyRows, window, branches),
+    uncategorized: uncategorizedSpending(rows),
+    merchants: topMerchants(merchantRowsOf(rows), TOP_MERCHANTS, aliasMap(aliases)),
+    aliasGroups: aliases,
+    income,
+    incomeTotal: round2(income.reduce((s, i) => s + i.current, 0)),
   };
 }

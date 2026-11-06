@@ -28,7 +28,13 @@ export async function seedDefaultCategories(
     ids.set(parent.key, created.id);
     for (const child of parent.children) {
       const { id } = await db.category.create({
-        data: { name: child.name, parentId: created.id, userId, isDefault: true },
+        data: {
+          name: child.name,
+          parentId: created.id,
+          neutral: child.neutral ?? false,
+          userId,
+          isDefault: true,
+        },
       });
       ids.set(`${parent.key}.${child.key}`, id);
     }

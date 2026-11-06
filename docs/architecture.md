@@ -559,6 +559,7 @@ model Category {
   isDefault Boolean  @default(false)
   shiftDays Int?                                      // transactions in the month's last N days count toward the next one (#341)
   savings   Boolean  @default(false)                  // subtree counted in the dashboard's net savings (#353)
+  neutral   Boolean  @default(false)                  // subtree counted neither as spending nor as income; wins over savings (#420)
   createdAt DateTime @default(now())
 
   transactions Transaction[]
@@ -1247,11 +1248,21 @@ Services in `server/services/bank-sync/`; the Enable Banking client (`client.ts`
 
 `dashboard.getDashboard(userId, period, comparison, now)` loads the period's rows with links collapsed (`loadRows`, on `periodDate`) and the whole reference side once (`loadReference`: the previous period, or the recorded months of an N-month average). The KPIs compare with that reference cut to the same date while the period is in progress (`sameDateRows`); insights share it through `referenceRows`.
 
-- **Savings**: the unlinked rows of `Category.savings` subtrees outside `SAVINGS` accounts (`savings.savedByCategory`) count in net savings only. They are dropped from income, expenses, the by-category donut and the pace, on both sides of the comparison. Insights keep them in their per-category figures.
+- **Savings**: the unlinked rows of `Category.savings` subtrees outside `SAVINGS` accounts (`savings.savedByCategory`) count in net savings only. They are dropped from income, expenses, the by-category donut and the pace, on both sides of the comparison.
+- **Neutral** (#420): rows of `Category.neutral` subtrees (internal transfers) count nowhere: not in income, expenses, the donut, the pace, nor net savings. A subtree both savings and neutral is neutral (`SavingsScope.categoryIds` excludes it). `savings.countedRow` is the filter the dashboard and insights share.
 - **KPIs**: income, expenses, net savings and, while the period is in progress (`comparison.elapsedDays`) with at least one budget in progress today, **left to spend** = Σ `leftToSpend` of `budgets.listCurrentBudgets` (the figure of each budget's summary card, #408). Otherwise the fourth card is the net (income − expenses).
-- **To do**: unlinked uncategorized rows dated (`date`, as the transactions list filters) in the period, per direction, linking to `/transactions?categoryId=none&dir=…`. Hidden when empty. Internal transfers are not listed: no category flag marks them, and banks type salaries and refunds as `TRANSFER` too.
+- **To do**: unlinked uncategorized rows dated (`date`, as the transactions list filters) in the period, per direction, linking to `/transactions?categoryId=none&dir=…`, and the unlinked rows of neutral subtrees (a transfer leg missing its counterpart), amounts summed in absolute value. That line links to `/transactions?categoryId=…` when one neutral category holds them all (the topmost flagged one, else none: the list has no "unlinked" filter). Hidden when empty.
+- **Comparison**: no `?vs` means the previous month, as the pace curve then compares with a real month; insights default to the 3-month average (§5.17).
 - **Current budgets**: `listCurrentBudgets` rows (left to spend, percent of the planned total, out-of-budget spending), shown while the period is in progress.
 - **Spending pace** (`lib/pace.ts`): cumulative spending per day, or per month beyond 45 days, stopping at today's bucket while in progress. The reference curve covers the whole reference at the same offsets: day or month from the previous period's start, or day of the month weighted 1/N for an average; rows past the last bucket land on it. The headline difference is the Spending KPI's (same-date reference), hidden when the reference holds nothing.
+
+### 5.17 Insights (#420)
+
+`dashboard/insights.getInsights(userId, period, comparison, now)` counts the dashboard's rows (`countedRow`: no savings-category nor neutral rows) against `referenceRows`, plus one `loadRows` over a 12-month window ending at the period's last month (capped at the current month), so links spanning two months collapse. Without `?vs`, a month compares with the **3-month average** (`period.INSIGHTS_BASELINE`): one-offs weigh less than against a single month. Other periods compare with the previous one.
+
+- **Overview** (`lib/insights.insightsOverview`): income and spending per month of the window. Averages and "spending above income N months out of M" cover the complete months since the first transaction (`completeMonths`: the month in progress and the months before any data left out); the net is income − spending over every month shown.
+- **By category** (`categoryTrends`): spending per root category, current vs reference, sorted by absolute change. Each row carries its 12-month series and average, and its children (each root child with its own subtree summed in, the root's own rows under the root id). A root whose complete months vary by a coefficient of variation below 0.15 (`STABLE_CV`, at least 3 months) is **stable** and listed last, in a collapsed group. Uncategorized spending is not a row: one line links to `/transactions?categoryId=none&dir=out`.
+- **Top merchants** and **income by category** keep their figures, over the counted rows.
 
 ## 6. Security Implementation
 
@@ -1649,6 +1660,7 @@ Text-contrast tokens (`--ink-3`, `--warning-text`, `--expense-text`) are darker 
 - **Native light/dark theme** with a toggle (light / dark / system), stored per browser in the `bilan-theme` cookie (no cookie = system). The server renders the theme class, so there is no flash on load (`src/lib/theme.ts`).
 - **Density locked to cozy**, not exposed in user or admin settings.
 - **Dashboard layout: editorial**. The page header has a serif period title, a period picker and prev/next navigation. Below come the account balances, a KPI row, the to-do and current budgets, the spending pace curve, a category donut with amounts and %, and recent transactions (§5.16).
+- **Insights layout**: the same header with the comparison select, then a 12-month income/spending overview, one "By category" card (change, reference → current, a mini chart per row, subcategories on click, stable categories grouped last), top merchants and income by category (§5.17).
 - **Budget visualization: horizontal bar**, aware of overspending. The fill is income-green while OK, warning from 80% and when the budget is exactly reached, and expense when over (`lineStatus` in `src/lib/budgets.ts`).
 - **One budget creation entry point**, in the page header (plus the empty state's call to action).
 - **Navigation**:
@@ -1668,7 +1680,7 @@ The Bilan look is implemented through **shadcn/ui** themed with the Bilan tokens
 
 - **Theming**: the "Shadcn bridge" block in `globals.css` maps the Bilan tokens onto shadcn's variables (`--background`, `--foreground`, `--primary`, `--card`, `--border`, `--ring`, `--chart-1…5`, `--sidebar-*`, `--radius`…) for light and dark. `@theme inline` exposes them to Tailwind v4.
 - **Primitives**: the shadcn components in `src/components/ui/` (Button, Card, Dialog, Sheet, Dropdown menu, Input, Label, Switch, Badge, Alert, Avatar, Radio group, native select…). They use the `base-nova` style, built on **Base UI** (`@base-ui/react`), which provides their accessibility. Icons come from lucide.
-- **Charts**: dependency-free SVG components (`src/components/dashboard/charts.tsx`: donut, spending pace curve), coloured with the category palette. There is no Recharts.
+- **Charts**: dependency-free SVG components (`src/components/dashboard/charts.tsx`: donut, spending pace curve), coloured with the category palette, and CSS bars for insights (`src/components/insights/`: paired income/spending bars, per-category mini bars on their own scale with a dashed average). The month in progress is hatched with `--card` stripes. There is no Recharts.
 - **Bilan-specific pieces**, built on these primitives and the tokens: the large serif amounts, the category colour chip, the overspending-aware budget bar.
 
 > Stack note (§2.1): the fonts are **Newsreader + IBM Plex Sans + IBM Plex Mono**, loaded with `next/font` and wired into the `--font-*` variables.

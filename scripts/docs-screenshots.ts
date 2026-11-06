@@ -234,6 +234,7 @@ const SHOTS: Shot[] = [
   { name: "admin-audit", path: "/admin/audit", fullPage: true, maxHeight: 2400 },
   { name: "mobile-dashboard", path: "/dashboard", mobile: true },
   { name: "mobile-transactions", path: "/transactions", mobile: true },
+  { name: "mobile-insights", path: "/insights", mobile: true, fullPage: true, maxHeight: 1900 },
 ];
 
 async function settle(page: Page) {
@@ -253,7 +254,7 @@ async function capture(
   if (shot.fullPage) {
     const height = await page.evaluate(() => document.documentElement.scrollHeight);
     await page.setViewportSize({
-      width: DESKTOP.viewport.width,
+      width: page.viewportSize()?.width ?? DESKTOP.viewport.width,
       height: Math.min(height, shot.maxHeight ?? Infinity),
     });
   }

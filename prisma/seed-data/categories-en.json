@@ -175,7 +175,8 @@
       },
       {
         "key": "transfers",
-        "name": "Internal transfer"
+        "name": "Internal transfer",
+        "neutral": true
       }
     ]
   },

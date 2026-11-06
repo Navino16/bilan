@@ -40,6 +40,7 @@ describe("seedDefaultCategories", () => {
     expect(revenus.color).toBe("var(--cat-income)");
     const salaire = all.find((c) => c.name === "Salaire")!;
     expect(salaire.parentId).toBe(revenus.id);
+    expect(all.filter((c) => c.neutral).map((c) => c.name)).toEqual(["Virement interne"]);
   });
 
   it("seeds the default rules on the user's own default categories", async () => {
@@ -314,7 +315,15 @@ describe("category savings flag", () => {
 
   it("defaults to false", async () => {
     const { id } = await createCategory({ name: "Loisirs" }, { id: owner });
-    expect((await db.category.findUniqueOrThrow({ where: { id } })).savings).toBe(false);
+    const created = await db.category.findUniqueOrThrow({ where: { id } });
+    expect([created.savings, created.neutral]).toEqual([false, false]);
+  });
+
+  it("sets and clears the neutral flag", async () => {
+    const { id } = await createCategory({ name: "Virements", neutral: true }, { id: owner });
+    expect((await db.category.findUniqueOrThrow({ where: { id } })).neutral).toBe(true);
+    await updateCategory(id, { name: "Virements" }, { id: owner });
+    expect((await db.category.findUniqueOrThrow({ where: { id } })).neutral).toBe(false);
   });
 });
 

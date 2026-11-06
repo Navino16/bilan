@@ -380,6 +380,14 @@ describe("parseBaseline", () => {
       "prev",
     );
   });
+
+  it("falls back to the page's default on a month, never on another period", () => {
+    expect(parseBaseline(undefined, monthPeriod(2026, 10), "avg3")).toBe("avg3");
+    expect(parseBaseline("prev", monthPeriod(2026, 10), "avg3")).toBe("prev");
+    expect(
+      parseBaseline(undefined, presetPeriod("this-year", new Date(Date.UTC(2026, 9, 5))), "avg3"),
+    ).toBe("prev");
+  });
 });
 
 describe("comparisonFor", () => {

@@ -22,7 +22,7 @@ import {
   paceGranularity,
   type SpendingPace,
 } from "@/lib/pace";
-import { netSavings, savedByCategory, savingsScope, type SavingsScope } from "./savings";
+import { countedRow, netSavings, savingsScope, type SavingsScope } from "./savings";
 
 export type DashboardTotals = { income: number; expense: number; net: number; count: number };
 export type TodoCount = { count: number; amount: number };
@@ -35,6 +35,9 @@ export type DashboardData = {
   savings: { current: number; previous: number };
   // Unlinked uncategorized operations dated in the period (a linked one is already accounted for).
   uncategorized: { out: TodoCount; in: TodoCount };
+  // Unlinked operations in a neutral subtree: a transfer leg missing its counterpart.
+  // `categoryId` is the neutral category holding them all, when there is one.
+  neutral: TodoCount & { categoryId: string | null };
 };
 
 function round2(n: number): number {
@@ -185,8 +188,10 @@ export async function referenceRows(
   accountIds: string[],
   period: Period,
   comparison: Comparison,
+  keep: (row: AggRow) => boolean = () => true,
 ): Promise<AmountRow[]> {
-  return sameDateRows(await loadReference(accountIds, period, comparison), comparison);
+  const reference = await loadReference(accountIds, period, comparison);
+  return sameDateRows({ ...reference, rows: reference.rows.filter(keep) }, comparison);
 }
 
 // Net savings of the reference side, averaged like `referenceRows`: recorded months only,
@@ -267,6 +272,52 @@ async function uncategorizedCounts(
   return { out, in: inflow };
 }
 
+// Amounts summed in absolute value: both legs of a transfer are money to account for.
+async function unlinkedNeutral(
+  scope: SavingsScope,
+  period: Period,
+): Promise<DashboardData["neutral"]> {
+  const none = { count: 0, amount: 0, categoryId: null };
+  if (scope.neutralIds.size === 0) return none;
+  const where = {
+    accountId: { in: scope.accountIds },
+    categoryId: { in: [...scope.neutralIds] },
+    date: { gte: period.from, lte: period.to },
+    linkMembership: { is: null },
+  };
+  const [out, inflow] = await Promise.all(
+    [{ lt: 0 }, { gt: 0 }].map((amount) =>
+      db.transaction.groupBy({
+        by: ["categoryId"],
+        where: { ...where, amount },
+        _count: true,
+        _sum: { amount: true },
+      }),
+    ),
+  );
+  const groups = [...out, ...inflow];
+  if (groups.length === 0) return none;
+  const ids = new Set(groups.map((g) => g.categoryId!));
+  const parents = new Map(
+    (
+      await db.category.findMany({
+        where: { id: { in: [...scope.neutralIds] } },
+        select: { id: true, parentId: true },
+      })
+    ).map((c) => [c.id, c.parentId]),
+  );
+  const topOf = (id: string): string => {
+    const parent = parents.get(id);
+    return parent && scope.neutralIds.has(parent) ? topOf(parent) : id;
+  };
+  const tops = new Set([...ids].map(topOf));
+  return {
+    count: groups.reduce((n, g) => n + g._count, 0),
+    amount: round2(groups.reduce((s, g) => s + Math.abs(Number(g._sum.amount ?? 0)), 0)),
+    categoryId: ids.size === 1 ? [...ids][0] : tops.size === 1 ? [...tops][0] : null,
+  };
+}
+
 export async function getDashboard(
   userId: string,
   period: Period,
@@ -281,8 +332,7 @@ export async function getDashboard(
     savingsScope(userId, accountIds),
     uncategorizedCounts(accountIds, period),
   ]);
-  // Savings-category rows only count in Saved.
-  const counted = (rows: AggRow[]) => rows.filter((r) => !savedByCategory(scope, r));
+  const counted = (rows: AggRow[]) => rows.filter((r) => countedRow(scope, r));
   const rows = counted(loaded.rows);
   const referenceSide = { ...reference, rows: counted(reference.rows) };
   const totals = totalsOf(rows, loaded.count);
@@ -296,10 +346,11 @@ export async function getDashboard(
     .map(([categoryId, amount]) => ({ categoryId, amount: round2(amount) }))
     .sort((a, b) => b.amount - a.amount);
 
-  const [savedNow, savedBefore, { items: recent }] = await Promise.all([
+  const [savedNow, savedBefore, { items: recent }, neutral] = await Promise.all([
     netSavings(scope, period),
     savingsReference(scope, comparison),
     listTransactions(userId, { from: period.from, to: period.to, take: 6 }),
+    unlinkedNeutral(scope, period),
   ]);
 
   return {
@@ -310,5 +361,6 @@ export async function getDashboard(
     recent,
     savings: { current: savedNow, previous: savedBefore },
     uncategorized,
+    neutral,
   };
 }

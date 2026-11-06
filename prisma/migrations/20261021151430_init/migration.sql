@@ -429,6 +429,7 @@ CREATE TABLE `Category` (
     `isDefault` BOOLEAN NOT NULL DEFAULT false,
     `shiftDays` INTEGER NULL,
     `savings` BOOLEAN NOT NULL DEFAULT false,
+    `neutral` BOOLEAN NOT NULL DEFAULT false,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     INDEX `Category_userId_idx`(`userId`),

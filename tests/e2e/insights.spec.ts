@@ -7,7 +7,7 @@ test.describe("insights", () => {
     "Mobile click-driven nav refinement deferred to Phase 8.3",
   );
 
-  test("renders the what-changed block for a past period, without the in-progress note", async ({
+  test("renders the overview and by-category cards for a past period, without the in-progress note", async ({
     page,
   }) => {
     // The changes block needs spending in the period: seed one expense.
@@ -36,12 +36,14 @@ test.describe("insights", () => {
       await expect(heading).toBeVisible();
     }).toPass();
 
-    await expect(page.locator('[data-slot="insights-changes"]')).toBeVisible();
+    await expect(page.locator('[data-slot="insights-overview"]')).toBeVisible();
+    await expect(page.locator('[data-slot="overview-month"]')).toHaveCount(12);
+    await expect(page.locator('[data-slot="insights-categories"]')).toBeVisible();
     await expect(page.locator('[data-slot="insights-merchants"]')).toBeVisible();
     await expect(page.locator('[data-slot="period-in-progress"]')).toHaveCount(0);
   });
 
-  test("drills down from a category row and a merchant row to the filtered list", async ({
+  test("drills down from the uncategorized line and a merchant row to the filtered list", async ({
     page,
   }) => {
     const label = `Drilldown ${Date.now()}`;
@@ -61,9 +63,7 @@ test.describe("insights", () => {
 
     const insights = "/fr/insights?from=2025-11-01&to=2025-11-30";
     await page.goto(insights, { waitUntil: "domcontentloaded", timeout: 90_000 });
-    const uncategorized = page.locator('[data-slot="insights-changes"] a', {
-      hasText: "Sans catégorie",
-    });
+    const uncategorized = page.locator('[data-slot="insights-uncategorized"]');
     await expect(async () => {
       await expect(uncategorized).toBeVisible();
     }).toPass();
@@ -83,38 +83,9 @@ test.describe("insights", () => {
     await expect(page.getByText(label).first()).toBeVisible();
   });
 
-  test("shows the category history over 12 months, or 6 with the toggle", async ({ page }) => {
-    await page.goto("/fr/accounts");
-    await expect(async () => {
-      await page
-        .getByRole("button", { name: /saisir une transaction/i })
-        .first()
-        .click();
-      await expect(page.locator('input[name="label"]')).toBeVisible();
-    }).toPass();
-    await page.fill('input[name="date"]', "2026-02-10");
-    await page.fill('input[name="amount"]', "-18");
-    await page.fill('input[name="label"]', `History ${Date.now()}`);
-    await page.getByRole("button", { name: /^ajouter$/i }).click();
-    await expect(page.locator('input[name="label"]')).toBeHidden();
-
-    await page.goto("/fr/insights?from=2026-03-01&to=2026-03-31", {
-      waitUntil: "domcontentloaded",
-      timeout: 90_000,
-    });
-    const card = page.locator('[data-slot="insights-history"]');
-    const firstRowBars = card
-      .locator('[data-slot="history-row"]')
-      .first()
-      .locator('[data-slot="history-bar"]');
-    await expect(async () => {
-      await expect(firstRowBars).toHaveCount(12);
-    }).toPass();
-    await card.getByRole("button", { name: "6 mois" }).click();
-    await expect(firstRowBars).toHaveCount(6);
-  });
-
-  test("compares with an N-month average, kept while browsing months", async ({ page }) => {
+  test("compares with the 3-month average by default, another baseline kept while browsing", async ({
+    page,
+  }) => {
     await page.goto("/fr/insights?from=2026-03-01&to=2026-03-31", {
       waitUntil: "domcontentloaded",
       timeout: 90_000,
@@ -128,22 +99,26 @@ test.describe("insights", () => {
       const el = document.querySelector('[data-slot="baseline-select"]');
       return !!el && Object.keys(el).some((k) => k.startsWith("__reactProps"));
     });
-    await baseline.selectOption("avg3");
-    await expect(page).toHaveURL(/vs=avg3/, { timeout: 60_000 });
-    await expect(page.locator('[data-slot="insights-changes"]')).toContainText(
+    await expect(baseline).toHaveValue("avg3");
+    await expect(page.locator('[data-slot="insights-categories"]')).toContainText(
       /moyenne déc\.\s2025\s–\sfévr\.\s2026/,
+    );
+    await baseline.selectOption("prev");
+    await expect(page).toHaveURL(/vs=prev/, { timeout: 60_000 });
+    await expect(page.locator('[data-slot="insights-categories"]')).toContainText(
+      /mars 2026 vs février 2026/i,
     );
 
     await page.getByRole("button", { name: "Période précédente" }).click();
-    await expect(page).toHaveURL(/from=2026-02-01.*vs=avg3|vs=avg3.*from=2026-02-01/, {
+    await expect(page).toHaveURL(/from=2026-02-01.*vs=prev|vs=prev.*from=2026-02-01/, {
       timeout: 60_000,
     });
-    await expect(baseline).toHaveValue("avg3");
+    await expect(baseline).toHaveValue("prev");
 
     await page.goto("/fr/insights?from=2026-01-01&to=2026-03-31&vs=avg3", {
       waitUntil: "domcontentloaded",
     });
-    await expect(page.locator('[data-slot="insights-changes"]')).toBeVisible();
+    await expect(page.locator('[data-slot="insights-categories"]')).toBeVisible();
     await expect(baseline).toHaveCount(0);
   });
 

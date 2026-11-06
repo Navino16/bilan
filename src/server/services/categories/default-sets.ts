@@ -9,7 +9,7 @@ export type DefaultCategory = {
   icon?: string;
   color?: string;
   savings?: boolean;
-  children: { key: string; name: string }[];
+  children: { key: string; name: string; neutral?: boolean }[];
 };
 
 // `category` is a key path, "parent" or "parent.child", shared by both locales.

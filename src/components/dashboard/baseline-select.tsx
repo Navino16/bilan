@@ -7,7 +7,13 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { useNavigationTransition } from "@/components/shell/navigation-pending";
 import { BASELINES, type Baseline } from "@/lib/period";
 
-export function BaselineSelect({ value }: { value: Baseline }) {
+export function BaselineSelect({
+  value,
+  fallback = "prev",
+}: {
+  value: Baseline;
+  fallback?: Baseline;
+}) {
   const t = useTranslations("dashboard");
   const router = useRouter();
   const pathname = usePathname();
@@ -18,7 +24,7 @@ export function BaselineSelect({ value }: { value: Baseline }) {
 
   function change(next: Baseline) {
     const query = new URLSearchParams(params.toString());
-    if (next === "prev") query.delete("vs");
+    if (next === fallback) query.delete("vs");
     else query.set("vs", next);
     startTransition(() => {
       setShown(next);

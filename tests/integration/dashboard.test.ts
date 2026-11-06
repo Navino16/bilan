@@ -334,3 +334,86 @@ describe("net savings", () => {
     expect(data.totals.expense).toBe(0);
   });
 });
+
+describe("neutral categories", () => {
+  const user = "dash_neutral";
+  let courant: string;
+  let joint: string;
+  let bank: string;
+  let internal: string;
+  let placement: string;
+  let groceries: string;
+
+  async function row(account: string, day: string, amount: number, categoryId: string) {
+    const s = buildSecureFields({ label: "VIR", rawLabel: "VIR" });
+    const r = await db.transaction.create({
+      data: {
+        accountId: account,
+        date: new Date(`${day}T00:00:00.000Z`),
+        amount,
+        type: "TRANSFER",
+        labelEnc: s.labelEnc,
+        labelHash: s.labelHash,
+        rawLabelEnc: s.rawLabelEnc,
+        rawLabelHash: s.rawLabelHash,
+        categoryId,
+        createdById: user,
+      },
+    });
+    return r.id;
+  }
+
+  beforeAll(async () => {
+    await db.user.deleteMany({ where: { id: user } });
+    await db.user.create({ data: { id: user, email: "dash-neutral@bilan.local" } });
+    const account = async (name: string) =>
+      (await db.bankAccount.create({ data: { ownerId: user, name, type: "CHECKING" } })).id;
+    courant = await account("Courant");
+    joint = await account("Joint");
+    const cat = async (name: string, data: object = {}) =>
+      (await db.category.create({ data: { userId: user, name, ...data } })).id;
+    bank = await cat("Banque", { neutral: true });
+    internal = await cat("Virement interne", { parentId: bank });
+    const savings = await cat("Épargne", { savings: true });
+    placement = await cat("Placement", { parentId: savings, neutral: true });
+    groceries = await cat("Courses");
+  });
+
+  afterAll(async () => {
+    const accounts = [courant, joint];
+    await db.transactionLink.deleteMany({
+      where: { members: { some: { transaction: { accountId: { in: accounts } } } } },
+    });
+    await db.transaction.deleteMany({ where: { accountId: { in: accounts } } });
+    await db.category.deleteMany({ where: { userId: user, parentId: { not: null } } });
+    await db.category.deleteMany({ where: { userId: user } });
+    await db.bankAccount.deleteMany({ where: { ownerId: user } });
+    await db.user.deleteMany({ where: { id: user } });
+  });
+
+  it("leaves neutral subtrees out of income, spending and savings, and lists the unlinked rows", async () => {
+    await row(courant, "2026-06-03", -200, internal);
+    await row(courant, "2026-06-04", 50, bank);
+    await row(courant, "2026-06-05", -30, placement);
+    await row(courant, "2026-06-06", -20, groceries);
+    const out = await row(courant, "2026-06-07", -100, internal);
+    const into = await row(joint, "2026-06-07", 100, internal);
+    await createLink({ transactionIds: [out, into], userId: user });
+
+    const june = monthPeriod(2026, 6);
+    const data = await getDashboard(user, june, comparisonFor(june, "prev", later));
+    expect([data.totals.income, data.totals.expense]).toEqual([0, 20]);
+    expect(data.byCategory).toEqual([{ categoryId: groceries, amount: 20 }]);
+    expect(data.savings.current).toBe(0);
+    // Two neutral subtrees: no single category to filter the list on.
+    expect(data.neutral).toEqual({ count: 3, amount: 280, categoryId: null });
+  });
+
+  it("points the to-do at the neutral category holding every unlinked row", async () => {
+    await row(courant, "2026-07-03", -200, internal);
+    await row(joint, "2026-07-04", 150, bank);
+    const july = monthPeriod(2026, 7);
+    const data = await getDashboard(user, july, comparisonFor(july, "prev", later));
+    expect(data.neutral).toEqual({ count: 2, amount: 350, categoryId: bank });
+  });
+});

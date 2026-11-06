@@ -18,3 +18,6 @@ export function Dot({ color }: { color: string }) {
     <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ background: color }} />
   );
 }
+
+// Marks the month in progress on a bar.
+export const HATCH = "repeating-linear-gradient(135deg, transparent 0 3px, var(--card) 3px 5px)";

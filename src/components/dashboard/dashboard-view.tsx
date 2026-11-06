@@ -214,7 +214,12 @@ export async function DashboardView({
       </div>
 
       <div className="grid grid-cols-1 gap-4 empty:hidden md:grid-cols-2 md:gap-5 md:[&>*:only-child]:col-span-2">
-        <TodoCard uncategorized={data.uncategorized} period={period} locale={locale} />
+        <TodoCard
+          uncategorized={data.uncategorized}
+          neutral={data.neutral}
+          period={period}
+          locale={locale}
+        />
         <CurrentBudgets budgets={current} locale={locale} />
       </div>
 

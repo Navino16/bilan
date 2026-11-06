@@ -1,15 +1,15 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
-import { CategoryLabel, overline } from "@/components/transactions/bits";
+import { CategoryLabel } from "@/components/transactions/bits";
 import { PeriodNav } from "@/components/dashboard/period-nav";
 import { PeriodPicker } from "@/components/dashboard/period-picker";
 import { ComparisonNote } from "@/components/dashboard/comparison-note";
 import { PageHeader } from "@/components/shell/page-header";
-import { DivergingBar } from "./diverging-bar";
 import { CardTitle, Dot, ROW_LINK } from "./bits";
+import { OverviewCard } from "./overview-card";
+import { CategoryTrends, type ChangeView, type TrendView } from "./category-trends";
 import { DEFAULT_CATEGORY_COLOR } from "@/lib/category-appearance";
-import { CategoryHistoryCard } from "./category-history";
 import { MerchantNameDialog } from "@/components/merchants/merchant-name-dialog";
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ import { BaselineSelect } from "@/components/dashboard/baseline-select";
 import { categorySliceColors } from "@/lib/chart-colors";
 import {
   formatPeriodLabel,
+  INSIGHTS_BASELINE,
+  monthPeriod,
   monthsSpan,
   toIsoDay,
   type Comparison,
@@ -24,21 +26,17 @@ import {
 } from "@/lib/period";
 import { transactionsHref, type TransactionsLinkFilter } from "@/lib/transaction-filters";
 import { formatPercent } from "@/lib/format";
-import type { CategoryChange, CategoryHistory, InsightsData } from "@/lib/insights";
+import type { CategoryChange, InsightsData } from "@/lib/insights";
 import { categoryPath, type FlatCategory } from "@/components/transactions/category-tree";
-
-const TOP_CHANGES = 6;
 
 export async function InsightsView({
   data,
-  history,
   period,
   comparison,
   categories,
   locale,
 }: {
   data: InsightsData;
-  history: CategoryHistory;
   period: Period;
   comparison: Comparison;
   categories: FlatCategory[];
@@ -50,12 +48,6 @@ export async function InsightsView({
     style: "currency",
     currency: "EUR",
     maximumFractionDigits: 0,
-  });
-  const signed = new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-    signDisplay: "exceptZero",
   });
   const pctLabel = (current: number, prev: number) =>
     prev ? formatPercent((current - prev) / prev, locale, { signed: true }) : t("new");
@@ -71,25 +63,48 @@ export async function InsightsView({
   const label = formatPeriodLabel(period, locale);
   const averaged = comparison.months.length > 0;
   const reference = averaged ? monthsSpan(comparison.months) : comparison.previous;
-  const changesSub = averaged
-    ? t("changesSubAvg", {
-        current: label,
-        months: formatPeriodLabel(reference, locale),
-      })
-    : t("changesSub", {
-        current: label,
-        previous: formatPeriodLabel(reference, locale),
-      });
-  const tone = (diff: number) => (diff > 0 ? "var(--expense)" : "var(--income)");
+  const trendsSub = averaged
+    ? t("categoriesSubAvg", { current: label, months: formatPeriodLabel(reference, locale) })
+    : t("categoriesSub", { current: label, previous: formatPeriodLabel(reference, locale) });
   const txHref = (filter: TransactionsLinkFilter, p: Period = period) =>
     transactionsHref(locale, p, filter);
-  // A category that dropped to zero has nothing to show now: link to where it was spent.
-  const changeHref = (c: CategoryChange) =>
-    txHref({ categoryId: c.categoryId, dir: "out" }, c.current ? period : reference);
 
-  const changes = data.changes.slice(0, TOP_CHANGES);
-  const changeColors = categorySliceColors(changes, catById, DEFAULT_CATEGORY_COLOR);
-  const maxDiff = Math.max(0, ...changes.map((c) => Math.abs(c.diff)));
+  // Under its root, a subcategory shows its path below the root only.
+  const childLabel = (id: string) => {
+    const c = catById.get(id);
+    return c && { ...c, parents: c.parents.slice(1) };
+  };
+  // A category that dropped to zero has nothing to show now: link to where it was spent.
+  const changeViews = (changes: CategoryChange[], under?: string): ChangeView[] => {
+    const colors = categorySliceColors(changes, catById, DEFAULT_CATEGORY_COLOR);
+    return changes.map((c, i) => ({
+      ...c,
+      color: colors[i],
+      href: txHref({ categoryId: c.categoryId, dir: "out" }, c.current ? period : reference),
+      category: under && c.categoryId !== under ? childLabel(c.categoryId) : catOf(c.categoryId),
+    }));
+  };
+  const roots = changeViews(data.categories);
+  const trends: TrendView[] = data.categories.map((c, i) => ({
+    ...c,
+    ...roots[i],
+    children: changeViews(c.children, c.categoryId),
+  }));
+  const { overview } = data;
+  const monthLabel = (m: { year: number; month: number }) =>
+    new Intl.DateTimeFormat(locale, { month: "long", year: "numeric", timeZone: "UTC" }).format(
+      new Date(Date.UTC(m.year, m.month - 1, 1)),
+    );
+  const monthLabels = overview.months.map((m, i) =>
+    overview.inProgress && i === overview.months.length - 1
+      ? t("historyInProgress", { month: monthLabel(m) })
+      : monthLabel(m),
+  );
+  const highlight = overview.months.map((m) => {
+    const p = monthPeriod(m.year, m.month);
+    return p.to >= period.from && p.from <= period.to;
+  });
+
   // One color per category (not per row): several merchants often share one.
   const merchantCats = [...new Set(data.merchants.map((m) => m.categoryId))];
   const merchantCatColors = categorySliceColors(
@@ -102,44 +117,6 @@ export async function InsightsView({
   const aliasNames = data.aliasGroups.map((g) => g.name);
   const aliasKeys = new Map(data.aliasGroups.map((g) => [g.name, g.keys]));
   const incomeColors = categorySliceColors(data.income, catById, DEFAULT_CATEGORY_COLOR);
-
-  const tile = (key: "biggestIncrease" | "biggestDecrease", c: CategoryChange | undefined) => {
-    const card = (
-      <Card
-        className={`h-full gap-1.5 p-4 ${c ? "group-hover:bg-muted/50 transition-colors" : ""}`}
-      >
-        <div className={overline}>{t(key)}</div>
-        {c ? (
-          <>
-            <div
-              data-slot="insights-tile-amount"
-              className="font-display text-xl wrap-anywhere tabular-nums sm:text-2xl"
-              style={{ color: tone(c.diff) }}
-            >
-              {signed.format(c.diff)}
-            </div>
-            <div className="text-muted-foreground line-clamp-2 text-[11.5px]">
-              {catName(c.categoryId)} · {pctLabel(c.current, c.previous)}
-            </div>
-          </>
-        ) : (
-          <div className="text-muted-foreground font-display text-xl sm:text-2xl">
-            {t("noChange")}
-          </div>
-        )}
-      </Card>
-    );
-    return c ? (
-      <Link
-        href={changeHref(c)}
-        className="group focus-visible:ring-ring/50 rounded-xl focus-visible:ring-3 focus-visible:outline-none"
-      >
-        {card}
-      </Link>
-    ) : (
-      card
-    );
-  };
 
   return (
     <div className="space-y-6">
@@ -155,55 +132,33 @@ export async function InsightsView({
             </div>
           }
         />
-        {period.month && <BaselineSelect value={comparison.baseline} />}
+        {period.month && (
+          <BaselineSelect value={comparison.baseline} fallback={INSIGHTS_BASELINE} />
+        )}
         <ComparisonNote comparison={comparison} locale={locale} />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        {tile(
-          "biggestIncrease",
-          data.changes.find((c) => c.diff > 0),
-        )}
-        {tile(
-          "biggestDecrease",
-          data.changes.find((c) => c.diff < 0),
-        )}
-      </div>
+      <OverviewCard overview={overview} locale={locale} />
 
-      <Card className="gap-4 p-6" data-slot="insights-changes">
-        <CardTitle over={t("changesOverline")} title={t("changesTitle")} sub={changesSub} />
-        {changes.length === 0 ? (
-          <p className="text-muted-foreground text-sm">{t("noData")}</p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {changes.map((c, i) => (
-              <Link
-                key={c.categoryId ?? "none"}
-                href={changeHref(c)}
-                className={`flex flex-col gap-1.5 ${ROW_LINK}`}
-              >
-                <div className="flex items-center gap-2 text-sm">
-                  <Dot color={changeColors[i]} />
-                  {catLabel(c.categoryId)}
-                  <span className="font-semibold tabular-nums" style={{ color: tone(c.diff) }}>
-                    {signed.format(c.diff)}
-                  </span>
-                  <span className="text-muted-foreground w-16 text-right text-[11.5px] tabular-nums">
-                    {pctLabel(c.current, c.previous)}
-                  </span>
-                </div>
-                <DivergingBar value={c.diff} max={maxDiff} />
-                <div className="text-muted-foreground text-[11px] tabular-nums">
-                  {averaged && `${t("historyAverage")} `}
-                  {money.format(c.previous)} → {money.format(c.current)}
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
+      <Card className="gap-4 p-4.5 md:p-6" data-slot="insights-categories">
+        <CardTitle over={t("categoriesOverline")} title={t("categoriesTitle")} sub={trendsSub} />
+        <CategoryTrends
+          trends={trends}
+          uncategorized={
+            data.uncategorized > 0
+              ? {
+                  amount: data.uncategorized,
+                  href: txHref({ categoryId: null, dir: "out" }),
+                }
+              : null
+          }
+          months={monthLabels}
+          highlight={highlight}
+          inProgress={overview.inProgress}
+          averaged={averaged}
+          locale={locale}
+        />
       </Card>
-
-      <CategoryHistoryCard history={history} categories={categories} locale={locale} />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <Card className="gap-4 p-6" data-slot="insights-merchants">

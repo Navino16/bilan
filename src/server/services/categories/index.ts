@@ -27,6 +27,7 @@ export type CategoryNode = {
   isDefault: boolean;
   shiftDays: number | null;
   savings: boolean;
+  neutral: boolean;
   children: CategoryNode[];
 };
 
@@ -91,6 +92,7 @@ export async function createCategory(
       parentId: data.parentId ?? null,
       shiftDays: data.shiftDays ?? null,
       savings: data.savings ?? false,
+      neutral: data.neutral ?? false,
       userId: data.groupId ? null : actor.id,
       groupId: data.groupId ?? null,
     },
@@ -170,6 +172,7 @@ export async function updateCategory(
         parentId,
         shiftDays,
         savings: data.savings ?? false,
+        neutral: data.neutral ?? false,
       },
     });
     if (shiftDays !== existing.shiftDays) await syncAutoPeriodDates({ categoryIds: [id] }, tx);
@@ -311,6 +314,7 @@ function buildTree(
     isDefault: boolean;
     shiftDays: number | null;
     savings: boolean;
+    neutral: boolean;
   }[],
 ): CategoryNode[] {
   const byId = new Map<string, CategoryNode>();
@@ -326,6 +330,7 @@ function buildTree(
       isDefault: r.isDefault,
       shiftDays: r.shiftDays,
       savings: r.savings,
+      neutral: r.neutral,
       children: [],
     });
   }

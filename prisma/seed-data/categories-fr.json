@@ -175,7 +175,8 @@
       },
       {
         "key": "transfers",
-        "name": "Virement interne"
+        "name": "Virement interne",
+        "neutral": true
       }
     ]
   },

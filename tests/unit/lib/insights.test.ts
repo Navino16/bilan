@@ -1,42 +1,19 @@
 import { describe, it, expect } from "vitest";
 import {
   averageMonthRows,
-  categoryChanges,
-  historyRows,
+  categoryTrends,
   incomeByCategory,
+  insightsOverview,
+  isStable,
   monthlyCategoryTotals,
   topMerchants,
-  type CategoryHistory,
+  uncategorizedSpending,
+  type CategoryBranch,
+  type HistoryWindow,
   type MerchantRow,
 } from "@/lib/insights";
 
 const d = (day: number) => new Date(Date.UTC(2026, 2, day));
-
-describe("categoryChanges", () => {
-  it("sorts by absolute diff and drops unchanged categories", () => {
-    const cur = [
-      { amount: -700, categoryId: "rent" },
-      { amount: -50, categoryId: "food" },
-      { amount: -10, categoryId: "fun" },
-      { amount: 900, categoryId: "pay" },
-    ];
-    const prev = [
-      { amount: -500, categoryId: "rent" },
-      { amount: -300, categoryId: "food" },
-      { amount: -10, categoryId: "fun" },
-    ];
-    expect(categoryChanges(cur, prev)).toEqual([
-      { categoryId: "food", current: 50, previous: 300, diff: -250 },
-      { categoryId: "rent", current: 700, previous: 500, diff: 200 },
-    ]);
-  });
-
-  it("includes categories only present in the previous period", () => {
-    expect(categoryChanges([], [{ amount: -20, categoryId: null }])).toEqual([
-      { categoryId: null, current: 0, previous: 20, diff: -20 },
-    ]);
-  });
-});
 
 describe("incomeByCategory", () => {
   it("keeps current income categories, highest first, with the previous amount", () => {
@@ -209,50 +186,115 @@ describe("monthlyCategoryTotals", () => {
   });
 });
 
-const round = (n: number) => Math.round(n * 100) / 100;
+const at = (y: number, m: number, day = 10) => new Date(Date.UTC(y, m - 1, day));
+const window12 = (inProgress = false, dataStart = 0): HistoryWindow => ({
+  months: Array.from({ length: 12 }, (_, i) => ({ year: 2026, month: i + 1 })),
+  inProgress,
+  dataStart,
+});
 
-describe("historyRows", () => {
-  const months = Array.from({ length: 12 }, (_, i) => ({ year: 2026, month: i + 1 }));
-  const history = (inProgress: boolean, dataStart = 0): CategoryHistory => ({
-    months,
-    inProgress,
-    dataStart,
-    series: [
-      { categoryId: "rent", values: Array(12).fill(800) },
-      { categoryId: "food", values: [900, 900, 900, 900, 900, 900, 300, 300, 300, 300, 300, 30] },
-      { categoryId: "trip", values: [0, 0, 0, 0, 0, 600, 0, 0, 0, 0, 0, 0] },
-      { categoryId: "fun", values: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 40, 0] },
-    ],
+describe("isStable", () => {
+  it("is stable below a 0.15 coefficient of variation", () => {
+    expect(isStable([800, 800, 810, 790])).toBe(true);
+    expect(isStable([900, 300, 600])).toBe(false);
   });
 
-  it("keeps the last months, ranked by total, dropping categories with no spending", () => {
-    const { months: shown, rows } = historyRows(history(false), 6, 10);
-    expect(shown).toEqual(months.slice(6));
-    expect(rows.map((r) => r.categoryId)).toEqual(["rent", "food", "fun"]);
-    expect(rows[1]).toEqual({
-      categoryId: "food",
-      values: [300, 300, 300, 300, 300, 30],
-      total: 1530,
-      average: 255,
-    });
+  it("needs three months with spending", () => {
+    expect(isStable([800, 800])).toBe(false);
+    expect(isStable([0, 0, 0])).toBe(false);
+  });
+});
+
+describe("insightsOverview", () => {
+  const rows = [
+    { amount: 2000, categoryId: "pay", date: at(2026, 10) },
+    { amount: -2500, categoryId: "rent", date: at(2026, 10) },
+    { amount: 2000, categoryId: "pay", date: at(2026, 11) },
+    { amount: -500, categoryId: "food", date: at(2026, 11) },
+    { amount: 1000, categoryId: "pay", date: at(2026, 12) },
+    { amount: -100, categoryId: "food", date: at(2026, 12) },
+    { amount: -40, categoryId: "food", date: at(2027, 1) },
+  ];
+
+  it("sums income and spending per month, averaged over the complete months since the data", () => {
+    const o = insightsOverview(rows, window12(true, 9));
+    expect(o.flows.slice(9)).toEqual([
+      { income: 2000, expense: 2500 },
+      { income: 2000, expense: 500 },
+      { income: 1000, expense: 100 },
+    ]);
+    expect(o.flows[0]).toEqual({ income: 0, expense: 0 });
+    expect(o.complete).toBe(2);
+    expect(o.average).toEqual({ income: 2000, expense: 1500 });
+    expect(o.spendingAbove).toBe(1);
+    expect(o.net).toBe(1900);
+  });
+});
+
+describe("categoryTrends", () => {
+  const branches = new Map<string, CategoryBranch>([
+    ["food", { root: "food", child: "food" }],
+    ["groceries", { root: "food", child: "groceries" }],
+    ["organic", { root: "food", child: "groceries" }],
+    ["restaurants", { root: "food", child: "restaurants" }],
+    ["rent", { root: "rent", child: "rent" }],
+    ["fun", { root: "fun", child: "fun" }],
+  ]);
+  const history = [
+    ...[1, 2, 3, 4, 5, 6].map((m) => ({ amount: -800, categoryId: "rent", date: at(2026, m) })),
+    ...[1, 2, 3, 4, 5, 6].map((m) => ({
+      amount: m % 2 ? -100 : -400,
+      categoryId: "groceries",
+      date: at(2026, m),
+    })),
+    { amount: -60, categoryId: null, date: at(2026, 6) },
+  ];
+  const window: HistoryWindow = { ...window12(), months: window12().months.slice(0, 6) };
+  const current = [
+    { amount: -300, categoryId: "groceries" },
+    { amount: -50, categoryId: "organic" },
+    { amount: -80, categoryId: "restaurants" },
+    { amount: -800, categoryId: "rent" },
+    { amount: -60, categoryId: null },
+    { amount: 2000, categoryId: "pay" },
+  ];
+  const reference = [
+    { amount: -200, categoryId: "groceries" },
+    { amount: -20, categoryId: "food" },
+    { amount: -790, categoryId: "rent" },
+    { amount: -30, categoryId: "fun" },
+  ];
+
+  it("ranks root categories by change, stable ones last, without the uncategorized", () => {
+    const trends = categoryTrends(current, reference, history, window, branches);
+    expect(trends.map((t) => [t.categoryId, t.diff, t.stable])).toEqual([
+      ["food", 210, false],
+      ["fun", -30, false],
+      ["rent", 10, true],
+    ]);
+    expect(trends[0]).toMatchObject({ current: 430, reference: 220, average: 250 });
+    expect(trends[0].values).toEqual([100, 400, 100, 400, 100, 400]);
   });
 
-  it("leaves the month in progress out of the average", () => {
-    const { rows } = historyRows(history(true), 6, 10);
-    expect(rows.find((r) => r.categoryId === "food")?.average).toBe(300);
+  it("breaks a root down by its children, deeper levels summed into them", () => {
+    const [food] = categoryTrends(current, reference, history, window, branches);
+    expect(food.children).toEqual([
+      { categoryId: "groceries", current: 350, reference: 200, diff: 150 },
+      { categoryId: "restaurants", current: 80, reference: 0, diff: 80 },
+      { categoryId: "food", current: 0, reference: 20, diff: -20 },
+    ]);
   });
+});
 
-  it("leaves the months before the first transaction out of the average", () => {
-    const { rows } = historyRows(history(false, 9), 12, 10);
-    const food = rows.find((r) => r.categoryId === "food")!;
-    expect(food.values).toHaveLength(12);
-    expect(food.average).toBe(round(630 / 3));
-    expect(rows.find((r) => r.categoryId === "rent")?.average).toBe(800);
-  });
-
-  it("limits the number of rows", () => {
-    const { rows } = historyRows(history(false), 12, 2);
-    expect(rows.map((r) => r.categoryId)).toEqual(["rent", "food"]);
+describe("uncategorizedSpending", () => {
+  it("sums the spending without a category", () => {
+    expect(
+      uncategorizedSpending([
+        { amount: -12.5, categoryId: null },
+        { amount: 40, categoryId: null },
+        { amount: -9, categoryId: "food" },
+      ]),
+    ).toBe(12.5);
   });
 });
 
@@ -265,9 +307,10 @@ describe("averageMonthRows", () => {
   ];
 
   it("weights each row by 1/N so category sums become monthly averages", () => {
-    expect(categoryChanges([], averageMonthRows(rows, 2, null))).toEqual([
-      { categoryId: "rent", current: 0, previous: 250, diff: -250 },
-      { categoryId: "food", current: 0, previous: 50, diff: -50 },
+    expect(averageMonthRows(rows, 2, null)).toEqual([
+      { amount: -20, categoryId: "food" },
+      { amount: -30, categoryId: "food" },
+      { amount: -250, categoryId: "rent" },
     ]);
   });
 
