@@ -1588,7 +1588,18 @@
     "stable": "Stables",
     "stableCount": "{count, plural, one {# catégorie aux dépenses régulières} other {# catégories aux dépenses régulières}}",
     "uncategorized": "{amount} sans catégorie",
-    "toSort": "À trier"
+    "toSort": "À trier",
+    "recurringOverline": "Chaque mois",
+    "recurringTitle": "Prélèvements récurrents",
+    "recurringSub": "Payés environ chaque mois sur les 6 derniers mois",
+    "recurringPerMonth": "par mois",
+    "recurringExtra": "dont {amount} de nouveaux et de hausses",
+    "recurringNew": "nouveau",
+    "recurringIncrease": "hausse",
+    "recurringStopped": "arrêté ?",
+    "recurringLast": "dernier le {date}",
+    "recurringLastAmount": "dernier le {date} : <up>{amount}</up>",
+    "noRecurring": "Aucun paiement récurrent trouvé sur les 6 derniers mois."
   },
   "settings": {
     "data": {

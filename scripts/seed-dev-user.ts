@@ -67,7 +67,8 @@ type Tx = {
   pairKey?: string; // rows sharing a key become one link
 };
 
-function monthTransactions(y: number, m0: number): Tx[] {
+// `back`: months before the current one.
+function monthTransactions(y: number, m0: number, back: number): Tx[] {
   const last = new Date(Date.UTC(y, m0 + 1, 0)).getUTCDate();
   const day = (d: number) => new Date(Date.UTC(y, m0, Math.min(d, last)));
   const anyDay = () => day(int(1, last));
@@ -186,7 +187,7 @@ function monthTransactions(y: number, m0: number): Tx[] {
   add({
     account: "courant",
     date: day(8),
-    amount: -13.49,
+    amount: back <= 1 ? -15.99 : -13.49,
     label: "CB NETFLIX.COM",
     type: "CARD",
     category: "Abonnements",
@@ -199,6 +200,25 @@ function monthTransactions(y: number, m0: number): Tx[] {
     type: "CARD",
     category: "Abonnements",
   });
+  // Pushed, not added (see above): a new subscription and one that stopped, for insights.
+  if (back <= 2)
+    out.push({
+      account: "courant",
+      date: day(1),
+      amount: -8.99,
+      label: "CB DISNEY PLUS",
+      type: "CARD",
+      category: "Abonnements",
+    });
+  if (back >= 3)
+    out.push({
+      account: "courant",
+      date: day(5),
+      amount: -29.99,
+      label: "PRLV BASIC FIT",
+      type: "DIRECT_DEBIT",
+      category: "Loisirs",
+    });
   if (m0 !== 7)
     add({
       account: "courant",
@@ -506,7 +526,7 @@ async function main(): Promise<void> {
   const txs: Tx[] = [];
   for (let back = MONTHS - 1; back >= 0; back--) {
     const ref = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - back, 1));
-    txs.push(...monthTransactions(ref.getUTCFullYear(), ref.getUTCMonth()));
+    txs.push(...monthTransactions(ref.getUTCFullYear(), ref.getUTCMonth(), back));
   }
   // A balanced purchase + refund pair, three months back.
   const refundMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 3, 10));

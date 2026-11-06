@@ -1588,7 +1588,18 @@
     "stable": "Stable",
     "stableCount": "{count, plural, one {# category with steady spending} other {# categories with steady spending}}",
     "uncategorized": "{amount} uncategorized",
-    "toSort": "To sort"
+    "toSort": "To sort",
+    "recurringOverline": "Every month",
+    "recurringTitle": "Recurring payments",
+    "recurringSub": "Paid about every month over the last 6 months",
+    "recurringPerMonth": "a month",
+    "recurringExtra": "including {amount} from new payments and price increases",
+    "recurringNew": "new",
+    "recurringIncrease": "price increase",
+    "recurringStopped": "stopped?",
+    "recurringLast": "last {date}",
+    "recurringLastAmount": "last {date}: <up>{amount}</up>",
+    "noRecurring": "No recurring payment found over the last 6 months."
   },
   "settings": {
     "data": {
