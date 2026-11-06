@@ -166,11 +166,12 @@ test.describe("responsive layout (#167)", () => {
       test.describe("as a user", () => {
         test.use({ storageState: "tests/e2e/.auth/owner.json" });
 
-        test("the budget snapshot's full amounts fit the card", async ({ page }) => {
+        test("the dashboard's full amounts fit their cards", async ({ page }) => {
           await page.goto("/fr/dashboard", { waitUntil: "domcontentloaded", timeout: 90_000 });
-          const snapshot = page.locator('[data-slot="budget-snapshot"]');
-          await expect(snapshot).toBeVisible();
-          expect(await page.evaluate(fitsInside('[data-slot="budget-snapshot"]'))).toBe(true);
+          await expect(page.locator('[data-slot="spending-pace"]')).toBeVisible();
+          for (const slot of ["kpi-card", "spending-pace", "dashboard-budgets"]) {
+            expect(await page.evaluate(fitsInside(`[data-slot="${slot}"]`))).toBe(true);
+          }
           await expect
             .poll(() =>
               page.evaluate(

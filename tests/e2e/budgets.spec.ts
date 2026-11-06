@@ -316,6 +316,12 @@ test.describe("budgets", () => {
       .locator('[data-slot="dashboard-account"]')
       .filter({ hasText: account });
     await expect(onDashboard).toContainText("488,00");
+    const current = page.locator('[data-slot="dashboard-budget"]').filter({ hasText: name });
+    await expect(current.locator('[data-slot="dashboard-budget-left"]')).toContainText(
+      /100,00\s€ restants/,
+    );
+    await expect(current.locator('[data-slot="dashboard-budget-out"]')).toContainText("12,00");
+    await expect(page.getByText("Reste à dépenser", { exact: true })).toBeVisible();
     const landingLink = onDashboard.locator('[data-slot="dashboard-account-landing"]');
     await expect(landingLink).toContainText("388,00");
     await landingLink.click();
@@ -394,11 +400,6 @@ test.describe("budgets", () => {
     await expect(summary.locator('[data-slot="budget-summary-account"]')).toHaveCount(0);
     await deleteBudget(page, name);
     await deleteAccount(page, savings);
-  });
-
-  test("the dashboard shows a budget snapshot", async ({ page }) => {
-    await page.goto("/fr/dashboard");
-    await expect(page.locator('[data-slot="budget-snapshot"]')).toBeVisible();
   });
 });
 

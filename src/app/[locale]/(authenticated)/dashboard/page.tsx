@@ -3,7 +3,7 @@ import { requireSession } from "@/server/auth/permissions";
 import { listForUser, listForeignCategories } from "@/server/services/categories";
 import { flattenCategories } from "@/components/transactions/category-tree";
 import { getDashboard } from "@/server/services/dashboard";
-import { getCurrentBudget, listCurrentLandings } from "@/server/services/budgets";
+import { currentLandings, listCurrentBudgets } from "@/server/services/budgets";
 import { listVisibleForUser } from "@/server/services/accounts";
 import { getOnboardingState } from "@/server/services/onboarding";
 import { getAppName } from "@/server/services/settings/app-settings";
@@ -49,16 +49,15 @@ export default async function DashboardPage({
 
   const period = clampPeriodToNow(parsePeriodParams({ from: sp.from, to: sp.to }));
   const comparison = comparisonFor(period, parseBaseline(sp.vs, period));
-  const [data, categories, budget, accounts, landings, bankConnections] = await Promise.all([
+  const [data, categories, budgets, accounts, bankConnections] = await Promise.all([
     getDashboard(user.id, period, comparison),
     // Display only: shared accounts carry their owner's categories too.
     Promise.all([listForUser(user.id), listForeignCategories(user.id)]).then(([own, foreign]) => [
       ...flattenCategories(own),
       ...flattenCategories(foreign),
     ]),
-    getCurrentBudget(user.id),
+    listCurrentBudgets(user.id),
     listVisibleForUser(user.id),
-    listCurrentLandings(user.id),
     isBankSyncAvailable().then((on) => (on ? listBankConnections(user.id) : [])),
   ]);
 
@@ -69,9 +68,9 @@ export default async function DashboardPage({
       period={period}
       comparison={comparison}
       categories={categories}
-      budget={budget}
+      budgets={budgets}
       accounts={accounts}
-      landings={landings}
+      landings={currentLandings(budgets)}
       locale={locale}
     />
   );
