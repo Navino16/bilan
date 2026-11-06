@@ -56,8 +56,15 @@ describe("recurringPayments", () => {
   it("needs roughly monthly intervals", () => {
     const weekly = [1, 8, 15, 22, 29].map((d) => row("CB GYM", 10, at(9, d)));
     expect(detect(weekly).payments).toEqual([]);
-    const quarterly = [4, 7, 10].map((m) => row("PRLV URSSAF", 300, at(m, 5)));
-    expect(detect(quarterly).payments).toEqual([]);
+    const sixWeekly = [at(5, 1), at(6, 15), at(7, 30), at(9, 13)].map((d) =>
+      row("PRLV URSSAF", 300, d),
+    );
+    expect(detect(sixWeekly).payments).toEqual([]);
+  });
+
+  it("keeps a series going over one skipped month", () => {
+    const rows = monthly("CB NAVIGO MOIS", [86.4], [6, 7, 9, 10], 1);
+    expect(detect(rows).payments[0]).toMatchObject({ count: 4, flags: [] });
   });
 
   it("tolerates a few days of drift between payments", () => {
@@ -68,9 +75,9 @@ describe("recurringPayments", () => {
   it("keeps amounts within the tolerance of the median together", () => {
     const rows = monthly("PRLV EDF", [60, 52, 70, 64], [7, 8, 9, 10]);
     expect(detect(rows).payments[0]).toMatchObject({ usual: 62, count: 4 });
-    // 20 € is far below a 60 € median: it starts another series, too short to show.
-    const off = monthly("PRLV EDF", [60, 60, 20, 60], [7, 8, 9, 10]);
-    expect(detect(off).payments).toEqual([]);
+    // 20 € is far below a 60 € median: it stays out of the series.
+    const off = monthly("PRLV EDF", [60, 60, 20, 60, 60], [6, 7, 8, 9, 10]);
+    expect(detect(off).payments[0]).toMatchObject({ usual: 60, count: 4 });
   });
 
   it("splits one merchant's payments into several series by amount", () => {
@@ -86,6 +93,13 @@ describe("recurringPayments", () => {
       [3, 10, 17, 24].map((d) => row("CB LIDL", 50, at(m, d))),
     );
     expect(detect(rows).payments).toEqual([]);
+  });
+
+  it("leaves out a merchant whose series hold under 80 % of its payments", () => {
+    const series = monthly("CB CAFE", [5], [5, 6, 7, 8, 9, 10]);
+    const others = [12, 30, 4, 22, 45, 9].map((a, i) => row("CB CAFE", a, at(i + 5, 20)));
+    expect(detect([...series, ...others]).payments).toEqual([]);
+    expect(detect([...series, ...others.slice(0, 1)]).payments).toHaveLength(1);
   });
 
   it("ignores income and transfers", () => {
@@ -117,10 +131,13 @@ describe("recurringPayments", () => {
 
   it("is not new when the merchant was paid before, or nothing was recorded before", () => {
     const before = [
-      row("CB DISNEY PLUS", 30, at(5, 2)),
+      ...monthly("CB DISNEY PLUS", [30], [5, 6, 7]),
       ...monthly("CB DISNEY PLUS", [8.99], [8, 9, 10]),
     ];
-    expect(detect(before).payments[0].flags).toEqual([]);
+    expect(detect(before).payments.map((p) => [p.usual, p.flags])).toEqual([
+      [8.99, []],
+      [30, ["stopped"]],
+    ]);
     const fresh = recurringPayments(monthly("CB DISNEY PLUS", [8.99], [8, 9, 10]), asOf, at(8, 1));
     expect(fresh.payments[0].flags).toEqual([]);
   });

@@ -5,15 +5,20 @@ import { merchantLabel } from "@/lib/merchant";
 // Detection rules: spec §5.17.
 export const RECURRING_MONTHS = 6;
 export const RECURRING_MIN_COUNT = 3;
-export const RECURRING_GAP_DAYS = { min: 20, max: 40 };
-// A payment joins a series from −25 % to +50 % of its median: a price increase stays in it.
-export const RECURRING_AMOUNT_RANGE = { below: 0.25, above: 0.5 };
+// Days between two payments of a series: a month, or two when one month was skipped, ± 5 days.
+export const RECURRING_GAP = { months: [1, 2], days: 5 };
+// A payment joins a series between 2/3 and 1.5 times its median.
+export const RECURRING_AMOUNT_FACTOR = 1.5;
+// A shop, not a bill: its series hold under 80 % of its payments, or it is paid 3 times or more
+// per month it appears in.
+export const RECURRING_COVERAGE = 0.8;
+export const MAX_PER_MONTH = 3;
+export const STOPPED_AFTER_DAYS = 40;
 export const INCREASE_THRESHOLD = { share: 0.05, min: 1 };
 export const NEW_MONTHS = 2;
-// A merchant paid this often per month it appears in is a shop, not a bill.
-const MAX_PER_MONTH = 3;
 
 const DAY = 86_400_000;
+const MONTH_DAYS = 30.44;
 
 export type RecurringFlag = "new" | "increase" | "stopped";
 export type RecurringPayment = {
@@ -39,6 +44,8 @@ type Occurrence = Pick<MerchantPart, "label" | "date" | "categoryId"> & { amount
 
 const days = (from: Date, to: Date) => Math.round((to.getTime() - from.getTime()) / DAY);
 const monthOf = (d: Date) => d.getUTCFullYear() * 12 + d.getUTCMonth();
+const monthlyGap = (gap: number) =>
+  RECURRING_GAP.months.some((m) => Math.abs(gap - m * MONTH_DAYS) <= RECURRING_GAP.days);
 
 export function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
@@ -54,12 +61,9 @@ function seriesOf(occurrences: Occurrence[]): Occurrence[][] {
     let best: Occurrence[] | undefined;
     let bestDiff = Infinity;
     for (const s of series) {
-      const gap = days(s[s.length - 1].date, o.date);
-      if (gap < RECURRING_GAP_DAYS.min || gap > RECURRING_GAP_DAYS.max) continue;
-      const usual = median(s.map((x) => x.amount));
-      const { below, above } = RECURRING_AMOUNT_RANGE;
-      if (o.amount < usual * (1 - below) || o.amount > usual * (1 + above)) continue;
-      const diff = Math.abs(o.amount - usual);
+      if (!monthlyGap(days(s[s.length - 1].date, o.date))) continue;
+      const diff = Math.abs(Math.log(o.amount / median(s.map((x) => x.amount))));
+      if (diff > Math.log(RECURRING_AMOUNT_FACTOR)) continue;
       if (diff < bestDiff) {
         best = s;
         bestDiff = diff;
@@ -98,24 +102,26 @@ export function recurringPayments(
 
   const payments: RecurringPayment[] = [];
   for (const [id, parts] of groups) {
-    const months = new Set(parts.map((p) => monthOf(p.date)));
-    if (parts.length >= MAX_PER_MONTH * months.size) continue;
     const sorted = parts
       .map((p) => ({ label: p.label, date: p.date, categoryId: p.categoryId, amount: p.total }))
       .sort((a, b) => a.date.getTime() - b.date.getTime());
-    for (const s of seriesOf(sorted)) {
+    const months = new Set(sorted.map((o) => monthOf(o.date))).size;
+    if (sorted.length >= MAX_PER_MONTH * months) continue;
+    const series = seriesOf(sorted);
+    if (series.reduce((n, s) => n + s.length, 0) < RECURRING_COVERAGE * sorted.length) continue;
+    for (const s of series) {
       const first = s[0];
       const last = s[s.length - 1];
       const usual = round2(median(s.map((o) => o.amount)));
       const flags: RecurringFlag[] = [];
-      if (days(last.date, asOf) > RECURRING_GAP_DAYS.max) {
+      if (days(last.date, asOf) > STOPPED_AFTER_DAYS) {
         flags.push("stopped");
       } else {
         const fresh =
           monthOf(first.date) >= monthOf(asOf) - NEW_MONTHS &&
           sorted[0] === first &&
           dataStart !== null &&
-          days(dataStart, first.date) >= RECURRING_GAP_DAYS.max;
+          days(dataStart, first.date) >= STOPPED_AFTER_DAYS;
         if (fresh) flags.push("new");
         const { share, min } = INCREASE_THRESHOLD;
         if (last.amount - usual > Math.max(usual * share, min)) flags.push("increase");
