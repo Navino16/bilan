@@ -416,6 +416,8 @@ To create one:
 6. Optionally turn on **Count toward the next month**: see [Count a transaction in another month](#count-a-transaction-in-another-month).
 7. Optionally turn on **Counts as savings**: spending in this category and its sub-categories counts toward the dashboard's **Net savings** instead of its expenses (money put aside on an account Bilan doesn't track, such as a brokerage account or a child's savings book). It is on for the default **Savings** category.
 8. Optionally turn on **Counts neither as spending nor as income**: transactions in this category and its sub-categories are left out of the dashboard and insights, for transfers between your own accounts that Bilan can't link (a joint account it doesn't track, for example). It wins over **Counts as savings** and is on for the default **Bank › Internal transfer** category.
+
+   A sub-category shows both options as set by its parent category: when a parent counts as savings or as neither, the switch is on, locked, and names that parent.
 9. Click **Create category**.
 
 To delete a category, open its **⋮** menu and choose **Delete**. Its sub-categories are deleted too. If transactions, rules or budget lines use it, choose where to move them with **Move to**. With **No category**, transactions become uncategorized and the rules and budget lines are deleted.

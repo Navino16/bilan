@@ -6,6 +6,9 @@ export type CategoryOption = {
   parents: string[]; // ancestor names, root first
   parentId: string | null;
   groupId: string | null;
+  // Name of the nearest self-or-ancestor carrying the flag, which subcategories inherit.
+  savingsFrom: string | null;
+  neutralFrom: string | null;
 };
 
 type NodeLike = {
@@ -14,26 +17,30 @@ type NodeLike = {
   color: string | null;
   parentId: string | null;
   groupId: string | null;
+  savings?: boolean;
+  neutral?: boolean;
   children: NodeLike[];
 };
+
+type Inherited = Pick<CategoryOption, "color" | "parents" | "savingsFrom" | "neutralFrom">;
 
 // Depth-first, so a node's subtree is the contiguous run of deeper rows after it.
 export function categoryOptions(tree: NodeLike[]): CategoryOption[] {
   const out: CategoryOption[] = [];
-  const walk = (
-    nodes: NodeLike[],
-    depth: number,
-    inheritedColor: string | null,
-    parents: string[],
-  ) => {
+  const walk = (nodes: NodeLike[], depth: number, up: Inherited) => {
     for (const n of nodes) {
-      const color = n.color ?? inheritedColor;
       const { id, name, parentId, groupId } = n;
-      out.push({ id, name, depth, color, parents, parentId, groupId });
-      walk(n.children, depth + 1, color, [...parents, name]);
+      const own: Inherited = {
+        color: n.color ?? up.color,
+        parents: up.parents,
+        savingsFrom: n.savings ? name : up.savingsFrom,
+        neutralFrom: n.neutral ? name : up.neutralFrom,
+      };
+      out.push({ id, name, depth, parentId, groupId, ...own });
+      walk(n.children, depth + 1, { ...own, parents: [...up.parents, name] });
     }
   };
-  walk(tree, 0, null, []);
+  walk(tree, 0, { color: null, parents: [], savingsFrom: null, neutralFrom: null });
   return out;
 }
 

@@ -939,6 +939,8 @@
     "savingsHint": "Its spending counts toward the dashboard's net savings, subcategories included.",
     "neutral": "Counts neither as spending nor as income",
     "neutralHint": "Left out of income and spending on the dashboard and insights, subcategories included: for transfers between your own accounts.",
+    "inheritedFrom": "Inherited from “{name}”.",
+    "overriddenByNeutral": "No effect: “{name}” counts neither as spending nor as income.",
     "shiftDays": "Number of days"
   },
   "transactions": {
