@@ -1601,7 +1601,16 @@
     "recurringStopped": "arrêté ?",
     "recurringLast": "dernier le {date}",
     "recurringLastAmount": "dernier le {date} : <up>{amount}</up>",
-    "noRecurring": "Aucun paiement récurrent trouvé sur les 6 derniers mois."
+    "noRecurring": "Aucun paiement récurrent trouvé sur les 6 derniers mois.",
+    "exceptionalOverline": "Ponctuel",
+    "exceptionalTitle": "Dépenses exceptionnelles",
+    "exceptionalSub": "Au-dessus de la moyenne mensuelle de leur catégorie, dès {amount}",
+    "exceptionalShare": "{share} des dépenses de la période",
+    "exceptionalMeta": "{date} · moy. {average}",
+    "exceptionalAverageTitle": "Moyenne mensuelle de la catégorie : {amount}",
+    "exceptionalShowAll": "Tout afficher ({count, number})",
+    "exceptionalShowLess": "Afficher moins",
+    "noExceptional": "Aucune dépense exceptionnelle sur cette période."
   },
   "settings": {
     "data": {

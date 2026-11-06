@@ -1,6 +1,7 @@
 import { round2 } from "@/lib/budgets";
 import { merchantKey, merchantLabel } from "@/lib/merchant";
 import type { Period } from "@/lib/period";
+import type { ExceptionalExpenses } from "@/lib/exceptional";
 import type { RecurringPayments } from "@/lib/recurring";
 
 // `label` is what is shown (the alias, else the latest bank label); `search` stays a bank
@@ -57,6 +58,7 @@ export type InsightsData = {
   uncategorized: number;
   // `window` is the span the series were looked for in.
   recurring: RecurringPayments & { window: Period };
+  exceptional: ExceptionalExpenses;
   merchants: MerchantTotal[];
   aliasGroups: MerchantAliasGroup[];
   income: IncomeByCategory[];
@@ -65,7 +67,7 @@ export type InsightsData = {
 
 export type AmountRow = { amount: number; categoryId: string | null };
 export type DatedRow = AmountRow & { date: Date };
-export type MerchantRow = AmountRow & { label: string; date: Date; type: string };
+export type MerchantRow = AmountRow & { id?: string; label: string; date: Date; type: string };
 
 // Coefficient of variation below which a category is grouped as stable (#420).
 export const STABLE_CV = 0.15;
@@ -125,7 +127,7 @@ export function completeMonths<T>(values: T[], window: HistoryWindow): T[] {
   return (window.inProgress ? values.slice(0, -1) : values).slice(window.dataStart);
 }
 
-const mean = (values: number[]) =>
+export const mean = (values: number[]) =>
   values.length ? values.reduce((s, v) => s + v, 0) / values.length : 0;
 
 export function isStable(values: number[]): boolean {
@@ -178,6 +180,21 @@ function changesOf(
     );
 }
 
+// Each root category's monthly spending, its subtree summed in.
+export function rootSeries(
+  history: DatedRow[],
+  months: HistoryMonth[],
+  branches: ReadonlyMap<string, CategoryBranch>,
+): Map<string | null, number[]> {
+  const rootOf = (id: string | null) => (id === null ? null : (branches.get(id)?.root ?? null));
+  return new Map(
+    monthlyCategoryTotals(
+      history.map((r) => ({ ...r, categoryId: rootOf(r.categoryId) })),
+      months,
+    ).map((s) => [s.categoryId, s.values]),
+  );
+}
+
 // Spending per root category against the reference, biggest change first and the stable ones
 // last. Uncategorized rows are left out (spec §5.17).
 export function categoryTrends(
@@ -204,12 +221,7 @@ export function categoryTrends(
   for (const b of branches.values()) {
     childrenOf.set(b.root, (childrenOf.get(b.root) ?? new Set()).add(b.child));
   }
-  const series = new Map(
-    monthlyCategoryTotals(
-      history.map((r) => ({ ...r, categoryId: branchOf(r.categoryId)?.root ?? null })),
-      window.months,
-    ).map((s) => [s.categoryId, s.values]),
-  );
+  const series = rootSeries(history, window.months, branches);
   const trends = changesOf(rootCur, rootRef, new Set([...rootCur.keys(), ...rootRef.keys()])).map(
     (c) => {
       const values = series.get(c.categoryId) ?? window.months.map(() => 0);
@@ -239,8 +251,9 @@ export function averageMonthRows(
 }
 
 // One merchant's spending over some rows: a single row, or rows summed in SQL (#296).
-// `label` and `date` are those of the part's latest row.
+// `label` and `date` are those of the part's latest row; `id` is the row's, for a single row.
 export type MerchantPart = {
+  id?: string;
   key: string;
   label: string;
   date: Date;
@@ -275,6 +288,7 @@ export function merchantParts(rows: MerchantRow[]): MerchantPart[] {
     const key = merchantKey(r.label);
     if (key) {
       parts.push({
+        id: r.id,
         key,
         label: r.label,
         date: r.date,

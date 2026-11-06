@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { median, recurringPayments } from "@/lib/recurring";
+import { median, recurringIds, recurringPayments } from "@/lib/recurring";
 import type { MerchantRow } from "@/lib/insights";
 
 const at = (month: number, day: number) => new Date(Date.UTC(2026, month - 1, day));
@@ -193,5 +193,18 @@ describe("recurringPayments", () => {
     const rows = monthly("CB SPOTIFY", [11.12], [8, 9, 10, 11]);
     const { payments } = recurringPayments(rows, at(9, 30), dataStart);
     expect(payments).toEqual([]);
+  });
+});
+
+describe("recurringIds", () => {
+  it("returns the rows of the recurring series only", () => {
+    const withId = (r: MerchantRow, id: string): MerchantRow => ({ ...r, id });
+    const series = monthly("PRLV EDF", [60, 60, 60, 60, 20], [6, 7, 8, 9, 10]).map((r, i) =>
+      withId(r, `edf-${i}`),
+    );
+    const oneOff = withId(row("CB NORAUTO", 244, at(10, 12)), "norauto");
+    expect(recurringIds([...series, oneOff], asOf)).toEqual(
+      new Set(["edf-0", "edf-1", "edf-2", "edf-3"]),
+    );
   });
 });

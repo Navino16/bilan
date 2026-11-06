@@ -219,6 +219,35 @@ function monthTransactions(y: number, m0: number, back: number): Tx[] {
       type: "DIRECT_DEBIT",
       category: "Loisirs",
     });
+  // Pushed too: one-off purchases for the exceptional expenses of insights.
+  if (back === 1)
+    out.push({
+      account: "courant",
+      date: day(14),
+      amount: -389,
+      label: "CB BOULANGER",
+      type: "CARD",
+      category: "High-tech",
+    });
+  if (back === 0)
+    out.push(
+      {
+        account: "joint",
+        date: day(1),
+        amount: -89,
+        label: "CB AUTOSUR CONTROLE TECHNIQUE",
+        type: "CARD",
+        category: "Entretien véhicule",
+      },
+      {
+        account: "joint",
+        date: day(3),
+        amount: -240,
+        label: "CB IKEA",
+        type: "CARD",
+        category: "Maison",
+      },
+    );
   if (m0 !== 7)
     add({
       account: "courant",
