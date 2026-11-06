@@ -69,21 +69,26 @@ export async function InsightsView({
   const txHref = (filter: TransactionsLinkFilter, p: Period = period) =>
     transactionsHref(locale, p, filter);
 
+  // Under its root, a subcategory shows its path below the root only.
+  const childLabel = (id: string) => {
+    const c = catById.get(id);
+    return c && { ...c, parents: c.parents.slice(1) };
+  };
   // A category that dropped to zero has nothing to show now: link to where it was spent.
-  const changeViews = (changes: CategoryChange[]): ChangeView[] => {
+  const changeViews = (changes: CategoryChange[], under?: string): ChangeView[] => {
     const colors = categorySliceColors(changes, catById, DEFAULT_CATEGORY_COLOR);
     return changes.map((c, i) => ({
       ...c,
       color: colors[i],
       href: txHref({ categoryId: c.categoryId, dir: "out" }, c.current ? period : reference),
-      category: catOf(c.categoryId),
+      category: under && c.categoryId !== under ? childLabel(c.categoryId) : catOf(c.categoryId),
     }));
   };
   const roots = changeViews(data.categories);
   const trends: TrendView[] = data.categories.map((c, i) => ({
     ...c,
     ...roots[i],
-    children: changeViews(c.children),
+    children: changeViews(c.children, c.categoryId),
   }));
   const { overview } = data;
   const monthLabel = (m: { year: number; month: number }) =>

@@ -1575,7 +1575,7 @@
     "overviewSpending": "Spending",
     "overviewNet": "Net savings",
     "overviewNetSub": "income − spending, 12 months",
-    "perMonth": "per month on average",
+    "perMonth": "monthly average",
     "overviewBar": "{month}: income {income}, spending {spending}",
     "overviewAbove": "Spending above income {count, plural, one {# month} other {# months}} out of {total}",
     "overviewEmpty": "Nothing recorded over these 12 months.",

@@ -1575,7 +1575,7 @@
     "overviewSpending": "Dépenses",
     "overviewNet": "Épargne nette",
     "overviewNetSub": "rentrées − dépenses, 12 mois",
-    "perMonth": "par mois en moyenne",
+    "perMonth": "moyenne mensuelle",
     "overviewBar": "{month} : rentrées {income}, dépenses {spending}",
     "overviewAbove": "Dépenses supérieures aux rentrées {count, plural, one {# mois} other {# mois}} sur {total}",
     "overviewEmpty": "Rien d’enregistré sur ces 12 mois.",
