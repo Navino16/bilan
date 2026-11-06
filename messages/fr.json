@@ -1610,7 +1610,15 @@
     "exceptionalAverageTitle": "Moyenne mensuelle de la catégorie : {amount}",
     "exceptionalShowAll": "Tout afficher ({count, number})",
     "exceptionalShowLess": "Afficher moins",
-    "noExceptional": "Aucune dépense exceptionnelle sur cette période."
+    "noExceptional": "Aucune dépense exceptionnelle sur cette période.",
+    "budgetsOverline": "Budgets",
+    "budgetsTitle": "Budgets dans le temps",
+    "budgetsSub": "Les 12 dernières périodes de chaque budget récurrent, jusqu’à aujourd’hui",
+    "budgetsLegendReached": "Bientôt atteint ou atteint",
+    "budgetsLegendInProgress": "En cours",
+    "budgetsCell": "{period}{inProgress, select, true { (en cours)} other {}} : {status}, {spent} sur {planned}",
+    "budgetsOver": "{over, plural, =0 {Jamais dépassé} other {Dépassé # fois}} sur {finished, plural, one {# période} other {# périodes}}",
+    "budgetsGap": "{gap} en moyenne par rapport au prévu"
   },
   "settings": {
     "data": {

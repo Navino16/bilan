@@ -3,6 +3,7 @@ import { merchantKey, merchantLabel } from "@/lib/merchant";
 import type { Period } from "@/lib/period";
 import type { ExceptionalExpenses } from "@/lib/exceptional";
 import type { RecurringPayments } from "@/lib/recurring";
+import type { BudgetSeriesHistory } from "@/lib/budget-history";
 
 // `label` is what is shown (the alias, else the latest bank label); `search` stays a bank
 // label so the transactions link still matches; `keys` are the merchant keys grouped.
@@ -63,6 +64,8 @@ export type InsightsData = {
   aliasGroups: MerchantAliasGroup[];
   income: IncomeByCategory[];
   incomeTotal: number;
+  // Whatever the period: the latest periods up to now.
+  budgets: BudgetSeriesHistory[];
 };
 
 export type AmountRow = { amount: number; categoryId: string | null };

@@ -10,6 +10,7 @@ import { CardTitle, Dot, ROW_LINK } from "./bits";
 import { OverviewCard } from "./overview-card";
 import { RecurringCard } from "./recurring-card";
 import { ExceptionalCard } from "./exceptional-card";
+import { BudgetsCard } from "./budgets-card";
 import { CategoryTrends, type ChangeView, type TrendView } from "./category-trends";
 import { DEFAULT_CATEGORY_COLOR } from "@/lib/category-appearance";
 import { MerchantNameDialog } from "@/components/merchants/merchant-name-dialog";
@@ -290,6 +291,8 @@ export async function InsightsView({
           )}
         </Card>
       </div>
+
+      <BudgetsCard series={data.budgets} locale={locale} />
     </div>
   );
 }

@@ -19,6 +19,7 @@ import {
   withDescendants,
 } from "@/server/services/categories";
 import type { RowBucket } from "@/lib/budget-match";
+import { recentSeriesPeriods, seriesSummary, type BudgetSeriesHistory } from "@/lib/budget-history";
 import { linkIdsWhere } from "@/server/services/links/members";
 import {
   leftToSpend,
@@ -1229,6 +1230,52 @@ export async function listCurrentBudgets(
       outOfBudget: e.outOfBudget,
       landing: e.landing,
       unplannedIncome: e.unplannedIncome,
+    };
+  });
+}
+
+// The latest periods of each series the user reads (insights, spec §5.17), all evaluated in
+// one batch with the list's figures.
+export async function listBudgetSeriesHistory(
+  userId: string,
+  now: Date = new Date(),
+): Promise<BudgetSeriesHistory[]> {
+  const { groupIds } = await budgetScopeForUser(userId);
+  const rows = await db.budget.findMany({
+    where: {
+      archived: false,
+      periodStart: { lte: now },
+      OR: [{ userId }, { groupId: { in: groupIds } }],
+    },
+    include: { lines: true },
+    orderBy: { name: "asc" },
+  });
+  const series = recentSeriesPeriods(rows, now);
+  const budgets = series.flat();
+  if (budgets.length === 0) return [];
+  const evaluations = await evaluateBudgets(budgets, { userId, groupIds }, now);
+  const byId = new Map(budgets.map((b, i) => [b.id, evaluations[i]]));
+  return series.map((members) => {
+    const periods = members.map((b) => {
+      const e = byId.get(b.id)!;
+      return {
+        id: b.id,
+        periodStart: b.periodStart,
+        periodEnd: b.periodEnd,
+        planned: e.plannedTotal,
+        spent: e.spentTotal,
+        percent: e.percent,
+        status: e.status,
+        inProgress: b.periodEnd >= now,
+      };
+    });
+    const latest = members[members.length - 1];
+    return {
+      id: latest.id,
+      name: latest.name,
+      group: latest.groupId !== null,
+      periods,
+      ...seriesSummary(periods),
     };
   });
 }
