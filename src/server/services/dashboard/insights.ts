@@ -12,6 +12,7 @@ import {
   type HistoryWindow,
   type InsightsData,
 } from "@/lib/insights";
+import { recurringPayments, RECURRING_MONTHS } from "@/lib/recurring";
 import {
   historyMonths,
   monthPeriod,
@@ -76,11 +77,14 @@ export async function getInsights(
   const accountIds = await visibleAccountIds(userId);
   const scope = await savingsScope(userId, accountIds);
   const keep = (r: AggRow) => countedRow(scope, r);
-  const window = historyWindow(period, await firstTransactionDate(accountIds), now);
-  const [current, reference, history, aliases] = await Promise.all([
+  const first = await firstTransactionDate(accountIds);
+  const window = historyWindow(period, first, now);
+  const recentSpan = monthsSpan(historyMonths(period, RECURRING_MONTHS, now));
+  const [current, reference, history, recent, aliases] = await Promise.all([
     loadRows(accountIds, period, { withLabels: true }),
     referenceRows(accountIds, period, comparison, keep),
     loadRows(accountIds, monthsSpan(window.months)),
+    loadRows(accountIds, recentSpan, { withLabels: true, realDates: true }),
     listAliasGroups(userId),
   ]);
   const rows = current.rows.filter(keep);
@@ -91,11 +95,17 @@ export async function getInsights(
   const branches = await branchesOf(ids);
 
   const income = incomeByCategory(rows, reference);
+  const asOf = new Date(Math.min(period.to.getTime(), now.getTime()));
+  const aliasByKey = aliasMap(aliases);
   return {
     overview: insightsOverview(historyRows, window),
     categories: categoryTrends(rows, reference, historyRows, window, branches),
     uncategorized: uncategorizedSpending(rows),
-    merchants: topMerchants(merchantRowsOf(rows), TOP_MERCHANTS, aliasMap(aliases)),
+    recurring: {
+      ...recurringPayments(merchantRowsOf(recent.rows.filter(keep)), asOf, first, aliasByKey),
+      window: recentSpan,
+    },
+    merchants: topMerchants(merchantRowsOf(rows), TOP_MERCHANTS, aliasByKey),
     aliasGroups: aliases,
     income,
     incomeTotal: round2(income.reduce((s, i) => s + i.current, 0)),

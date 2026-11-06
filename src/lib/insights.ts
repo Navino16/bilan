@@ -1,5 +1,7 @@
 import { round2 } from "@/lib/budgets";
 import { merchantKey, merchantLabel } from "@/lib/merchant";
+import type { Period } from "@/lib/period";
+import type { RecurringPayments } from "@/lib/recurring";
 
 // `label` is what is shown (the alias, else the latest bank label); `search` stays a bank
 // label so the transactions link still matches; `keys` are the merchant keys grouped.
@@ -53,6 +55,8 @@ export type InsightsData = {
   overview: InsightsOverview;
   categories: CategoryTrend[];
   uncategorized: number;
+  // `window` is the span the series were looked for in.
+  recurring: RecurringPayments & { window: Period };
   merchants: MerchantTotal[];
   aliasGroups: MerchantAliasGroup[];
   income: IncomeByCategory[];

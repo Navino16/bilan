@@ -8,6 +8,7 @@ import { ComparisonNote } from "@/components/dashboard/comparison-note";
 import { PageHeader } from "@/components/shell/page-header";
 import { CardTitle, Dot, ROW_LINK } from "./bits";
 import { OverviewCard } from "./overview-card";
+import { RecurringCard } from "./recurring-card";
 import { CategoryTrends, type ChangeView, type TrendView } from "./category-trends";
 import { DEFAULT_CATEGORY_COLOR } from "@/lib/category-appearance";
 import { MerchantNameDialog } from "@/components/merchants/merchant-name-dialog";
@@ -159,6 +160,13 @@ export async function InsightsView({
           locale={locale}
         />
       </Card>
+
+      <RecurringCard
+        recurring={data.recurring}
+        categoryOf={catOf}
+        hrefOf={(search) => txHref({ search, dir: "out" }, data.recurring.window)}
+        locale={locale}
+      />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <Card className="gap-4 p-6" data-slot="insights-merchants">
