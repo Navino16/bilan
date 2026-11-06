@@ -14,7 +14,7 @@ import {
   listAssignmentsForTx,
   rollRecurring,
   rollRecurringBudgets,
-  getCurrentBudget,
+  listCurrentBudgets,
   listRollableTemplates,
   BudgetAccessError,
 } from "@/server/services/budgets";
@@ -479,13 +479,24 @@ describe("getBudgetDetail / computeLine", () => {
     });
   });
 
-  it("picks the personal budget in progress for the dashboard", async () => {
-    await createBudget({ ...baseInput, groupId, name: "Foyer" }, { id: owner });
-    const { id } = await createBudget({ ...baseInput, name: "Perso" }, { id: owner });
-    const current = await getCurrentBudget(owner, new Date("2026-03-15T12:00:00.000Z"));
-    expect(current?.detail.id).toBe(id);
-    expect(current?.others).toBe(1);
-    expect(await getCurrentBudget(owner, new Date("2027-01-01T00:00:00.000Z"))).toBeNull();
+  it("lists every budget in progress with the summary card's left to spend", async () => {
+    await tx("2026-03-04T00:00:00.000Z", -120, catId);
+    const foyer = await createBudget({ ...baseInput, groupId, name: "Foyer" }, { id: owner });
+    const perso = await createBudget({ ...baseInput, name: "Perso" }, { id: owner });
+    const now = new Date("2026-03-15T12:00:00.000Z");
+    const current = await listCurrentBudgets(owner, now);
+    expect(current.map((b) => b.name)).toEqual(["Foyer", "Perso"]);
+    for (const { id } of [foyer, perso]) {
+      const detail = await getBudgetDetail(id, owner, { now });
+      expect(current.find((b) => b.id === id)).toMatchObject({
+        leftToSpend: detail.leftToSpend,
+        plannedTotal: detail.plannedTotal,
+        spentTotal: detail.spentTotal,
+        percent: detail.percent,
+      });
+    }
+    expect(current[1].leftToSpend).toBe(180);
+    expect(await listCurrentBudgets(owner, new Date("2027-01-01T00:00:00.000Z"))).toEqual([]);
   });
 
   it("EXCLUDE removes a matching tx; INCLUDE adds a non-matching one", async () => {
@@ -944,7 +955,7 @@ describe("archive / description / line labels", () => {
     expect(archived.map((b) => b.id)).toEqual([id]);
     expect(archived[0]).toMatchObject({ archived: true, canManage: true, rollable: false });
     expect((await listAssignableBudgets(owner)).map((b) => b.id)).not.toContain(id);
-    expect(await getCurrentBudget(owner, new Date("2026-03-15T12:00:00.000Z"))).toBeNull();
+    expect(await listCurrentBudgets(owner, new Date("2026-03-15T12:00:00.000Z"))).toEqual([]);
     expect((await getBudgetDetail(id, owner)).archived).toBe(true);
 
     await unarchiveBudget(id, { id: owner });
@@ -1117,10 +1128,5 @@ describe("forecast (#347)", () => {
     } finally {
       await db.bankAccount.update({ where: { id: checking }, data: { archived: false } });
     }
-  });
-
-  it("reaches the dashboard's current budget", async () => {
-    const current = await getCurrentBudget(user, inMarch.now);
-    expect(current?.detail.forecast?.endBalance).toBe(-100);
   });
 });

@@ -28,9 +28,10 @@ export async function getInsights(
   comparison: Comparison,
 ): Promise<InsightsData> {
   const accountIds = await visibleAccountIds(userId);
+  // Savings categories stay in: insights break every flow down by category (spec §5.16).
   const [current, prev, aliases] = await Promise.all([
     loadRows(accountIds, period, { withLabels: true }),
-    referenceRows(accountIds, comparison),
+    referenceRows(accountIds, period, comparison),
     listAliasGroups(userId),
   ]);
 

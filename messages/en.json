@@ -778,13 +778,6 @@
       "title": "Projected balance on {date}",
       "breakdown": "Current checking balance {balance}, minus {remaining} left to spend. Income still to come isn’t included."
     },
-    "snapshot": {
-      "overline": "Budget in progress",
-      "none": "No budget in progress.",
-      "detail": "Details",
-      "others": "{count, plural, one {# other budget in progress} other {# other budgets in progress}}",
-      "moreLines": "{count, plural, one {# more line} other {# more lines}}"
-    },
     "plannedTotalValue": "Planned total: {amount}",
     "description": "Description",
     "descriptionPlaceholder": "Optional: what is this budget for?",
@@ -1455,7 +1448,8 @@
       "income": "Income",
       "expense": "Expenses",
       "net": "Net balance",
-      "savings": "Net savings"
+      "savings": "Net savings",
+      "leftToSpend": "Left to spend"
     },
     "vsPrev": "{arrow} {pct} vs previous period",
     "noPrev": "Nothing in the previous period",
@@ -1465,13 +1459,7 @@
     "noExpenses": "No spending this period.",
     "noCategory": "Uncategorized",
     "daily": "Daily",
-    "dayByDay": "Day-by-day spending",
     "monthly": "Monthly",
-    "monthByMonth": "Monthly spending",
-    "avgPerDay": "Avg / day",
-    "avgPerMonth": "Avg / month",
-    "peakDay": "Biggest day",
-    "peakMonth": "Biggest month",
     "recent": "Recent transactions",
     "seeAll": "See all",
     "noRecent": "No transactions this period.",
@@ -1501,7 +1489,38 @@
     "rangeEnd": "Period end",
     "rangeReversed": "The end must be after the start.",
     "otherCategories": "{count, plural, one {Other category} other {# other categories}}",
-    "upcoming": "Upcoming period: only transactions assigned to it appear."
+    "upcoming": "Upcoming period: only transactions assigned to it appear.",
+    "acrossBudgets": "{count, plural, one {across # current budget} other {across # current budgets}}",
+    "todo": {
+      "overline": "To do",
+      "title": "Needs attention",
+      "uncategorizedOut": "{count, plural, one {# uncategorized expense} other {# uncategorized expenses}}",
+      "uncategorizedIn": "{count, plural, one {# uncategorized income} other {# uncategorized incomes}}"
+    },
+    "currentBudgets": {
+      "overline": "Current budgets",
+      "title": "{count, plural, one {# budget} other {# budgets}}",
+      "left": "{amount} left",
+      "ofPlanned": "{percent} of {planned}",
+      "outOfBudget": "Out of budget: {amount}"
+    },
+    "pace": {
+      "title": "Spending pace",
+      "headline": "{amount} by {date}",
+      "less": "{amount} less than {reference}",
+      "more": "{amount} more than {reference}",
+      "same": "Same as {reference}",
+      "refPrev": "the previous period",
+      "refPrevSameDate": "the previous period at the same date",
+      "refAvg": "the {months}-month average",
+      "refAvgSameDate": "the {months}-month average at the same date",
+      "legendCurrent": "This period",
+      "legendPrev": "Previous period",
+      "legendAvg": "{months}-month average",
+      "tip": "{date}: {amount}",
+      "tipRef": "{date}: {amount} (ref. {reference})",
+      "tipRefOnly": "{date}: ref. {reference}"
+    }
   },
   "merchants": {
     "tab": "Merchants",

@@ -1178,84 +1178,70 @@ export async function getBudgetDetail(
   };
 }
 
-// The budget shown on the dashboard: one whose period contains `now`, personal
-// budgets first, then the latest started. `others` counts the remaining ones.
-export async function getCurrentBudget(
+export type CurrentBudget = Pick<
+  BudgetListItem,
+  | "id"
+  | "name"
+  | "accountId"
+  | "periodStart"
+  | "periodEnd"
+  | "plannedTotal"
+  | "spentTotal"
+  | "percent"
+  | "status"
+  | "outOfBudget"
+  | "landing"
+  | "unplannedIncome"
+> & { leftToSpend: number };
+
+// Every budget the user reads whose period contains `now`, evaluated together like the list
+// (#299): the dashboard's current budgets and account landings (design §E).
+export async function listCurrentBudgets(
   userId: string,
   now: Date = new Date(),
-): Promise<{
-  detail: BudgetDetail;
-  others: number;
-  accountNames: Record<string, string>;
-} | null> {
-  const { groupIds } = await budgetScopeForUser(userId);
-  const current = await db.budget.findMany({
-    where: {
-      archived: false,
-      periodStart: { lte: now },
-      periodEnd: { gte: now },
-      OR: [{ userId }, { groupId: { in: groupIds } }],
-    },
-    select: { id: true, groupId: true },
-    orderBy: { periodStart: "desc" },
-  });
-  if (current.length === 0) return null;
-  const first = current.find((b) => !b.groupId) ?? current[0];
-  const detail = await getBudgetDetail(first.id, userId, { withTransactions: false, now });
-  const names = await readableAccountNames(userId);
-  const accountNames = Object.fromEntries(
-    detail.lines.flatMap((l) =>
-      [l.accountId, l.counterpartAccountId].flatMap((id) =>
-        id && names.has(id) ? [[id, names.get(id)!]] : [],
-      ),
-    ),
-  );
-  return { detail, others: current.length - 1, accountNames };
-}
-
-export type CurrentLanding = Pick<BudgetListItem, "id" | "periodEnd" | "unplannedIncome"> & {
-  accountId: string;
-  accountName: string;
-  landing: BudgetLanding;
-};
-
-// The landing of every account-attached budget the user reads whose period contains `now`
-// (design §E, dashboard), evaluated together like the list (#299).
-export async function listCurrentLandings(
-  userId: string,
-  now: Date = new Date(),
-): Promise<CurrentLanding[]> {
+): Promise<CurrentBudget[]> {
   const { groupIds } = await budgetScopeForUser(userId);
   const rows = await db.budget.findMany({
     where: {
       archived: false,
-      accountId: { not: null },
       periodStart: { lte: now },
       periodEnd: { gte: now },
       OR: [{ userId }, { groupId: { in: groupIds } }],
     },
     include: { lines: true },
-    orderBy: { periodStart: "desc" },
+    orderBy: [{ periodStart: "desc" }, { name: "asc" }],
   });
   if (rows.length === 0) return [];
-  const [evaluations, names] = await Promise.all([
-    evaluateBudgets(rows, { userId, groupIds }, now),
-    readableAccountNames(userId),
-  ]);
-  return rows.flatMap((b, i) => {
-    const { landing, unplannedIncome } = evaluations[i];
-    if (!landing || !b.accountId) return [];
-    return [
-      {
-        id: b.id,
-        accountId: b.accountId,
-        accountName: names.get(b.accountId) ?? "",
-        periodEnd: b.periodEnd,
-        landing,
-        unplannedIncome,
-      },
-    ];
+  const evaluations = await evaluateBudgets(rows, { userId, groupIds }, now);
+  return rows.map((b, i) => {
+    const e = evaluations[i];
+    return {
+      id: b.id,
+      name: b.name,
+      accountId: b.accountId,
+      periodStart: b.periodStart,
+      periodEnd: b.periodEnd,
+      plannedTotal: e.plannedTotal,
+      spentTotal: e.spentTotal,
+      leftToSpend: e.leftToSpend,
+      percent: e.percent,
+      status: e.status,
+      outOfBudget: e.outOfBudget,
+      landing: e.landing,
+      unplannedIncome: e.unplannedIncome,
+    };
   });
+}
+
+export type CurrentLanding = Pick<BudgetListItem, "id" | "periodEnd" | "unplannedIncome"> & {
+  accountId: string;
+  landing: BudgetLanding;
+};
+
+export function currentLandings(budgets: CurrentBudget[]): CurrentLanding[] {
+  return budgets.flatMap(({ id, accountId, periodEnd, landing, unplannedIncome }) =>
+    landing && accountId ? [{ id, accountId, periodEnd, landing, unplannedIncome }] : [],
+  );
 }
 
 export async function assignTransaction(

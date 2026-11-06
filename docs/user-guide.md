@@ -414,7 +414,7 @@ To create one:
 4. Pick a **Color**. The **+** button opens a custom colour picker. A sub-category can use its parent's colour.
 5. Pick a **Symbol**, or enter any character or emoji with **+**.
 6. Optionally turn on **Count toward the next month**: see [Count a transaction in another month](#count-a-transaction-in-another-month).
-7. Optionally turn on **Counts as savings**: spending in this category and its sub-categories counts toward the dashboard's **Net savings** (money put aside on an account Bilan doesn't track, such as a brokerage account or a child's savings book). It is on for the default **Savings** category.
+7. Optionally turn on **Counts as savings**: spending in this category and its sub-categories counts toward the dashboard's **Net savings** instead of its expenses (money put aside on an account Bilan doesn't track, such as a brokerage account or a child's savings book). It is on for the default **Savings** category.
 8. Click **Create category**.
 
 To delete a category, open its **⋮** menu and choose **Delete**. Its sub-categories are deleted too. If transactions, rules or budget lines use it, choose where to move them with **Move to**. With **No category**, transactions become uncategorized and the rules and budget lines are deleted.
@@ -610,7 +610,7 @@ At the top of the details, one card sums up the period:
 - **Plan in deficit of …**, when the budget plans income and plans to spend more than it.
 - During the current period, a budget on an account adds where the account lands at the end of the period (see [Where the account lands](#where-the-account-lands)): **Balance today**, **Left to spend**, **To receive** and **End of month** (**End of period** for a period other than a calendar month). When what still has to leave the account differs from what is left to spend (a transaction already dated later in the period, one from another account), that row reads **To pay**.
 
-During the current period, a budget with no account shows **Projected balance on …**: the current balance of your checking accounts, minus what the lines still plan to spend (an over-budget line counts as 0). Savings accounts and income still to come are left out. A budget on an account shows its landing instead (see [Where the account lands](#where-the-account-lands)). Either figure also shows on the dashboard's current budget card.
+During the current period, a budget with no account shows **Projected balance on …**: the current balance of your checking accounts, minus what the lines still plan to spend (an over-budget line counts as 0). Savings accounts and income still to come are left out. A budget on an account shows its landing instead (see [Where the account lands](#where-the-account-lands)).
 
 ### Renew a recurring budget
 
@@ -734,11 +734,13 @@ Tip: transfers between your own accounts are linked automatically and left out o
 ![Dashboard](images/en/dashboard.png)
 
 - **Account balances**: the current balance of each non-archived account and their total, whatever the selected period. **Accounts** opens the accounts page. Under the balance of an account whose [budget](#where-the-account-lands) is in progress, **On …:** gives its balance at the period's end; hover it for the breakdown, click it to open the budget.
-- **Income**, **Expenses** and **Net balance**, each with its change against the comparison.
-- **Net savings**: linked transfers into your savings accounts minus those out of them, plus spending in categories that [count as savings](#categories), with its change against the comparison.
+- **Income** and **Expenses**, each with its change against the comparison. Spending in categories that [count as savings](#categories) is not an expense: it only counts in net savings.
+- **Net savings**: linked transfers into your savings accounts minus those out of them, plus spending in categories that count as savings, with its change against the comparison.
+- **Left to spend**, while the period is in progress: what your current budgets still allow, the same figure as each budget's summary, added up. Without a budget in progress, and for a past period, this card shows the **Net balance** (income minus expenses) instead.
+- **To do**, only when something needs it: the uncategorized expenses and income of the period that aren't linked, with their total. Click one to open those transactions and categorize them.
+- **Current budgets**, while the period is in progress: one row per budget in progress, with what is left to spend, how much of the plan is spent and its out-of-budget spending. Click a row to open the budget.
+- **Spending pace**: your spending added up day by day (by month over a quarter or a year), the dashed line being the comparison period, or the average month. While the period is running, the curve stops at today; above it, how much you have spent so far and how it compares with the same date of the comparison.
 - **Spending by category**: a donut with the six largest categories, the rest grouped.
-- **Day-by-day spending** (periods up to 45 days) or **Monthly spending** (longer periods), with the average and the biggest day or month.
-- **Budget in progress**: your current budget, line by line. Click **Details** to open it.
 - **Recent transactions**: the latest six in the period. **See all** opens the full list.
 
 ### Insights

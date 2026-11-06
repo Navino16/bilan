@@ -44,38 +44,33 @@ test.describe("dashboard", () => {
   test("below md the KPIs form a 2×2 grid", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/fr/dashboard");
-    const [income, expense, net, savings] = await kpiRects(page);
+    const [income, expense, savings, fourth] = await kpiRects(page);
     expect(Math.abs(income.y - expense.y)).toBeLessThan(1);
     expect(expense.x).toBeGreaterThan(income.right);
-    expect(net.y).toBeGreaterThan(income.bottom);
-    expect(Math.abs(net.x - income.x)).toBeLessThan(1);
-    expect(Math.abs(savings.y - net.y)).toBeLessThan(1);
-    expect(Math.abs(savings.right - expense.right)).toBeLessThan(1);
+    expect(savings.y).toBeGreaterThan(income.bottom);
+    expect(Math.abs(savings.x - income.x)).toBeLessThan(1);
+    expect(Math.abs(fourth.y - savings.y)).toBeLessThan(1);
+    expect(Math.abs(fourth.right - expense.right)).toBeLessThan(1);
   });
 
   test("from md up the KPIs sit in a single row", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/fr/dashboard");
-    const [income, expense, net, savings] = await kpiRects(page);
+    const [income, expense, savings, fourth] = await kpiRects(page);
     expect(Math.abs(income.y - expense.y)).toBeLessThan(1);
-    expect(Math.abs(expense.y - net.y)).toBeLessThan(1);
-    expect(Math.abs(net.y - savings.y)).toBeLessThan(1);
+    expect(Math.abs(expense.y - savings.y)).toBeLessThan(1);
+    expect(Math.abs(savings.y - fourth.y)).toBeLessThan(1);
     expect(expense.x).toBeGreaterThan(income.right);
-    expect(net.x).toBeGreaterThan(expense.right);
-    expect(savings.x).toBeGreaterThan(net.right);
+    expect(savings.x).toBeGreaterThan(expense.right);
+    expect(fourth.x).toBeGreaterThan(savings.right);
   });
 
   test("renders the KPI row and month label, and navigates months", async ({ page }) => {
     await page.goto("/fr/dashboard");
     await expect(page.getByText("Revenus", { exact: true })).toBeVisible();
     await expect(page.getByText("Dépenses", { exact: true })).toBeVisible();
-    await expect(page.getByText("Solde net", { exact: true })).toBeVisible();
     await expect(page.getByText("Épargne nette", { exact: true })).toBeVisible();
-    await expect(page.locator('[data-slot="kpi-note"]').nth(3)).not.toContainText("%");
-    // The net can change sign, so its comparison is an amount, never a percentage.
     await expect(page.locator('[data-slot="kpi-note"]').nth(2)).not.toContainText("%");
-    // The net amount is always signed (or exactly 0).
-    await expect(page.locator('[data-slot="kpi-amount"]').nth(2)).toHaveText(/^([+\-−]|0\s)/);
 
     // The default view is the current month; next month stays reachable (#341).
     await expect(page.getByRole("button", { name: "Période suivante" })).toBeEnabled();
@@ -87,6 +82,13 @@ test.describe("dashboard", () => {
       await page.getByRole("button", { name: "Période précédente" }).click();
       await expect(page).toHaveURL(/\?from=.*&to=/);
     }).toPass();
+
+    // A finished month shows its net instead of what is left to spend.
+    await expect(page.getByText("Solde net", { exact: true })).toBeVisible();
+    // The net can change sign, so its comparison is an amount, never a percentage.
+    await expect(page.locator('[data-slot="kpi-note"]').nth(3)).not.toContainText("%");
+    // The net amount is always signed (or exactly 0).
+    await expect(page.locator('[data-slot="kpi-amount"]').nth(3)).toHaveText(/^([+\-−]|0\s)/);
 
     // From a hydrated page, stepping forward then back must return to the same
     // month — the whole-month ?from/?to range round-trips to a month period, so
@@ -141,18 +143,16 @@ test.describe("dashboard", () => {
     await expect(page.getByText("Revenus", { exact: true })).toBeVisible();
   });
 
-  test("shows the average and peak-bucket stats once there is spending", async ({ page }) => {
-    // Seed a current-month expense so the trace has a non-empty peak.
-    const label = `Loyer ${Date.now()}`;
-    const now = new Date();
-    const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-15`;
+  test("shows the spending pace and an uncategorized expense to do", async ({ page }) => {
+    const label = `Rythme ${Date.now()}`;
+    const today = new Date().toISOString().slice(0, 10);
     await page.goto("/fr/transactions");
     // Open the dialog, retrying until the form shows (hydration race on load).
     await expect(async () => {
       await page.getByRole("button", { name: /nouvelle transaction/i }).click();
       await expect(page.locator('input[name="date"]')).toBeVisible();
     }).toPass();
-    await page.fill('input[name="date"]', day);
+    await page.fill('input[name="date"]', today);
     await page.fill('input[name="amount"]', "-1234");
     await page.fill('input[name="label"]', label);
     await page.getByRole("button", { name: /^ajouter$/i }).click();
@@ -161,8 +161,19 @@ test.describe("dashboard", () => {
     ).toBeVisible({ timeout: 15_000 });
 
     await page.goto("/fr/dashboard");
-    await expect(page.getByText("Moy. / jour")).toBeVisible();
-    await expect(page.getByText("Plus gros jour")).toBeVisible();
+    const pace = page.locator('[data-slot="spending-pace"]');
+    await expect(pace).toContainText("Rythme des dépenses");
+    await expect(pace.locator('[data-slot="pace-headline"]')).toContainText(" au ");
+    await expect(pace.locator('[data-slot="pace-current"]')).toHaveCount(1);
+    await expect(pace.locator('[data-slot="pace-today"]')).toHaveCount(1);
+
+    const todo = page.locator('[data-slot="dashboard-todo-item"]', {
+      hasText: "sans catégorie",
+    });
+    await expect(todo.first()).toBeVisible();
+    await todo.filter({ hasText: "dépense" }).click();
+    await expect(page).toHaveURL(/categoryId=none/);
+    await expect(page).toHaveURL(/dir=out/);
   });
 
   test("the year preset shows just the year and steps year by year", async ({ page }) => {
@@ -178,8 +189,8 @@ test.describe("dashboard", () => {
     await expect(heading).toHaveText(/^\d{4}$/);
     const thisYear = Number(await heading.textContent());
 
-    // A year-long trace switches from day-by-day to month-by-month.
-    await expect(page.getByText("Dépenses par mois")).toBeVisible();
+    // Over a year the pace goes month by month.
+    await expect(page.locator('[data-slot="spending-pace"]')).toContainText("Mensuel");
 
     // Previous arrow steps a full calendar year back (still "YYYY").
     await page.getByRole("button", { name: "Période précédente" }).click();

@@ -6,7 +6,8 @@ import {
   createBudget,
   getBudgetDetail,
   listBudgetsForUser,
-  listCurrentLandings,
+  currentLandings,
+  listCurrentBudgets,
   rollRecurring,
   rollRecurringBudgets,
   unarchiveBudget,
@@ -657,13 +658,12 @@ describe("landing", () => {
       { id: stranger },
     );
 
-    const lands = await listCurrentLandings(owner, now);
+    const lands = currentLandings(await listCurrentBudgets(owner, now));
     expect(lands.map((l) => l.id).sort()).toEqual([id, household.id].sort());
     const detail = await getBudgetDetail(id, owner, { now });
     expect(lands.find((l) => l.id === id)).toEqual({
       id,
       accountId: courant,
-      accountName: "Courant",
       periodEnd: detail.periodEnd,
       landing: detail.landing,
       unplannedIncome: detail.unplannedIncome,
@@ -674,12 +674,20 @@ describe("landing", () => {
       spendingToCome: 180,
       endBalance: -180,
     });
-    expect((await listCurrentLandings(member, now)).map((l) => l.id)).toEqual([household.id]);
-    expect((await listCurrentLandings(stranger, now)).map((l) => l.id)).toEqual([other.id]);
+    expect(currentLandings(await listCurrentBudgets(member, now)).map((l) => l.id)).toEqual([
+      household.id,
+    ]);
+    expect(currentLandings(await listCurrentBudgets(stranger, now)).map((l) => l.id)).toEqual([
+      other.id,
+    ]);
 
     await archiveBudget(id, { id: owner });
-    expect((await listCurrentLandings(owner, now)).map((l) => l.id)).toEqual([household.id]);
-    expect(await listCurrentLandings(owner, new Date("2026-05-15T12:00:00.000Z"))).toEqual([]);
+    expect(currentLandings(await listCurrentBudgets(owner, now)).map((l) => l.id)).toEqual([
+      household.id,
+    ]);
+    expect(
+      currentLandings(await listCurrentBudgets(owner, new Date("2026-05-15T12:00:00.000Z"))),
+    ).toEqual([]);
   });
 
   it("has no landing outside the period, unattached, archived, or once the account is unshared", async () => {

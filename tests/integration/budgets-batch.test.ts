@@ -6,7 +6,8 @@ import {
   getBudgetDetail,
   listBudgetsForUser,
   listBudgetMatchesForTx,
-  listCurrentLandings,
+  currentLandings,
+  listCurrentBudgets,
 } from "@/server/services/budgets";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
 import { createLink } from "@/server/services/links";
@@ -223,7 +224,7 @@ describe("listBudgetsForUser batch loading (#299)", () => {
       );
     const queriesOfLandings = async () => {
       const before = await questions();
-      const lands = await listCurrentLandings(owner, now);
+      const lands = currentLandings(await listCurrentBudgets(owner, now));
       return { lands, queries: (await questions()) - before - 1 };
     };
     await tx(personal, "2023-03-05", -10, food);

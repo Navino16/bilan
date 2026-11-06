@@ -3,23 +3,26 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { AssignedMonthBadge } from "@/components/transactions/assigned-month";
 import { overline, CategoryAvatar, CategoryLabel } from "@/components/transactions/bits";
-import { Donut, MiniBars } from "./charts";
+import { Donut } from "./charts";
 import { PeriodNav } from "./period-nav";
 import { PeriodPicker } from "./period-picker";
 import type { DashboardData } from "@/server/services/dashboard";
 import type { Comparison, Period } from "@/lib/period";
 import { categoryPath, type FlatCategory } from "@/components/transactions/category-tree";
 import { formatPeriodLabel, toIsoDay } from "@/lib/period";
-import { formatDayMonth, formatMoney, formatMonthYear, formatPercent } from "@/lib/format";
+import { formatDayMonth, formatMoney, formatPercent } from "@/lib/format";
 import { PageHeader } from "@/components/shell/page-header";
 import { categorySliceColors } from "@/lib/chart-colors";
 import { DEFAULT_CATEGORY_COLOR } from "@/lib/category-appearance";
 import { BaselineSelect } from "./baseline-select";
 import { ComparisonNote } from "./comparison-note";
-import { BudgetSnapshot, type CurrentBudget } from "./budget-snapshot";
 import { AccountsOverview } from "./accounts-overview";
+import { CurrentBudgets } from "./current-budgets";
+import { SpendingPace } from "./spending-pace";
+import { TodoCard } from "./todo-card";
 import type { VisibleAccount } from "@/server/services/accounts";
-import type { CurrentLanding } from "@/server/services/budgets";
+import type { CurrentBudget, CurrentLanding } from "@/server/services/budgets";
+import { round2 } from "@/lib/budgets";
 
 const OTHERS_COLOR = "var(--ink-4)";
 const DONUT_SLICES = 6;
@@ -35,7 +38,7 @@ export async function DashboardView({
   period,
   comparison,
   categories,
-  budget,
+  budgets,
   accounts,
   landings,
   locale,
@@ -45,7 +48,7 @@ export async function DashboardView({
   period: Period;
   comparison: Comparison;
   categories: FlatCategory[];
-  budget: CurrentBudget;
+  budgets: CurrentBudget[];
   accounts: VisibleAccount[];
   landings: CurrentLanding[];
   locale: string;
@@ -59,26 +62,6 @@ export async function DashboardView({
   });
   const catById = new Map(categories.map((c) => [c.id, c]));
   const label = formatPeriodLabel(period, locale);
-
-  // The trace buckets by day (short spans) or by month (quarter/year); the title,
-  // axis labels and the avg/peak stats follow suit.
-  const isMonthlyTrace = data.trace.granularity === "month";
-  const monthShort = new Intl.DateTimeFormat(locale, { month: "short", timeZone: "UTC" });
-  const traceAxis = (p?: { date: string }) =>
-    !p
-      ? ""
-      : isMonthlyTrace
-        ? monthShort.format(new Date(`${p.date}T00:00:00.000Z`))
-        : p.date.slice(8, 10);
-  const tracePoints = data.trace.points;
-
-  const peakDate = (day: string) =>
-    isMonthlyTrace
-      ? formatMonthYear(`${day}T00:00:00.000Z`, locale, { month: "short" })
-      : formatDayMonth(`${day}T00:00:00.000Z`, locale);
-  const peak = data.trace.peak;
-  const peakCat = peak?.categoryId ? catById.get(peak.categoryId) : undefined;
-  const peakCatName = peakCat ? categoryPath(peakCat) : t("noCategory");
 
   const months = comparison.months.length;
   const noReference = comparison.elapsedDays
@@ -103,6 +86,32 @@ export async function DashboardView({
     signDisplay: "exceptZero",
   });
 
+  const inProgress = comparison.elapsedDays !== null;
+  // Only a period in progress has budgets left to spend (spec §5.16); otherwise the net.
+  const current = inProgress ? budgets : [];
+  const netKpi = {
+    key: "net",
+    amount: signedMoney.format(data.totals.net),
+    note: hasPrevious
+      ? t(months ? "vsAvgAmount" : "vsPrevAmount", {
+          arrow: netDiff > 0 ? "↗" : netDiff < 0 ? "↘" : "=",
+          amount: signedMoney.format(netDiff),
+          months,
+        })
+      : noReference,
+    tone:
+      data.totals.net > 0
+        ? "var(--income)"
+        : data.totals.net < 0
+          ? "var(--expense)"
+          : "var(--foreground)",
+  };
+  const leftKpi = {
+    key: "leftToSpend",
+    amount: money.format(round2(current.reduce((s, b) => s + b.leftToSpend, 0))),
+    note: t("acrossBudgets", { count: current.length }),
+    tone: "var(--foreground)",
+  };
   const kpis = [
     {
       key: "income",
@@ -115,23 +124,6 @@ export async function DashboardView({
       amount: money.format(data.totals.expense),
       note: pctNote(delta(data.totals.expense, data.previous.expense)),
       tone: "var(--expense)",
-    },
-    {
-      key: "net",
-      amount: signedMoney.format(data.totals.net),
-      note: hasPrevious
-        ? t(months ? "vsAvgAmount" : "vsPrevAmount", {
-            arrow: netDiff > 0 ? "↗" : netDiff < 0 ? "↘" : "=",
-            amount: signedMoney.format(netDiff),
-            months,
-          })
-        : noReference,
-      tone:
-        data.totals.net > 0
-          ? "var(--income)"
-          : data.totals.net < 0
-            ? "var(--expense)"
-            : "var(--foreground)",
     },
     {
       key: "savings",
@@ -150,7 +142,8 @@ export async function DashboardView({
             ? "var(--expense)"
             : "var(--foreground)",
     },
-  ] as const;
+    current.length > 0 ? leftKpi : netKpi,
+  ];
 
   // Beyond 6 categories the 6th slice groups the rest, so the arcs add up to the
   // total like the legend's percentages do.
@@ -220,8 +213,23 @@ export async function DashboardView({
         ))}
       </div>
 
-      {/* Donut + breakdown */}
+      <div className="grid grid-cols-1 gap-4 empty:hidden md:grid-cols-2 md:gap-5 md:[&>*:only-child]:col-span-2">
+        <TodoCard uncategorized={data.uncategorized} period={period} locale={locale} />
+        <CurrentBudgets budgets={current} locale={locale} />
+      </div>
+
       <div className="grid grid-cols-1 gap-4 md:gap-5 xl:grid-cols-[1.4fr_1fr]">
+        <SpendingPace
+          pace={data.pace}
+          spent={data.totals.expense}
+          referenceSpent={data.previous.expense}
+          hasReference={hasPrevious}
+          comparison={comparison}
+          locale={locale}
+          className="xl:order-last"
+        />
+
+        {/* Donut + breakdown */}
         <Card className="gap-4 p-4.5 md:p-6">
           <div>
             <div className={overline}>{t("breakdown")}</div>
@@ -258,97 +266,57 @@ export async function DashboardView({
             </div>
           )}
         </Card>
+      </div>
 
-        {/* Expense trace (day-by-day or month-by-month) */}
-        <Card className="gap-4 p-4.5 md:p-6">
-          <div>
-            <div className={overline}>{t(isMonthlyTrace ? "monthly" : "daily")}</div>
-            <div className="font-display text-xl">
-              {t(isMonthlyTrace ? "monthByMonth" : "dayByDay")}
-            </div>
-          </div>
-          {!peak ? (
-            <p className="text-muted-foreground text-sm">{t("noExpenses")}</p>
+      {/* Recent transactions */}
+      <Card className="gap-0 overflow-hidden p-0">
+        <div className="flex items-center justify-between p-5">
+          <div className="font-display text-xl">{t("recent")}</div>
+          <Link
+            href={`/${locale}/transactions?${range}`}
+            className="text-primary text-sm hover:underline"
+          >
+            {t("seeAll")}
+          </Link>
+        </div>
+        <div className="border-t">
+          {data.recent.length === 0 ? (
+            <p className="text-muted-foreground p-5 text-sm">{t("noRecent")}</p>
           ) : (
-            <MiniBars
-              values={tracePoints.map((p) => p.amount)}
-              axis={[traceAxis(tracePoints[0]), traceAxis(tracePoints[tracePoints.length - 1])]}
-            />
-          )}
-          {peak && (
-            <div className="grid grid-cols-2 gap-3 border-t pt-3">
-              <div className="space-y-0.5">
-                <div className={overline}>{t(isMonthlyTrace ? "avgPerMonth" : "avgPerDay")}</div>
-                <div className="font-display text-xl tabular-nums">
-                  {money.format(data.trace.avg)}
-                </div>
-              </div>
-              <div className="space-y-0.5">
-                <div className={overline}>{t(isMonthlyTrace ? "peakMonth" : "peakDay")}</div>
-                <div className="font-display text-xl tabular-nums">{money.format(peak.amount)}</div>
-                <div className="text-muted-foreground truncate text-[11.5px]">
-                  {peakDate(peak.date)}
-                  {` · ${peakCatName}`}
-                </div>
-              </div>
-            </div>
-          )}
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 md:gap-5 xl:grid-cols-[1fr_1.2fr]">
-        <BudgetSnapshot budget={budget} categories={catById} locale={locale} />
-
-        {/* Recent transactions */}
-        <Card className="gap-0 overflow-hidden p-0">
-          <div className="flex items-center justify-between p-5">
-            <div className="font-display text-xl">{t("recent")}</div>
-            <Link
-              href={`/${locale}/transactions?${range}`}
-              className="text-primary text-sm hover:underline"
-            >
-              {t("seeAll")}
-            </Link>
-          </div>
-          <div className="border-t">
-            {data.recent.length === 0 ? (
-              <p className="text-muted-foreground p-5 text-sm">{t("noRecent")}</p>
-            ) : (
-              data.recent.map((r) => {
-                const meta = r.categoryId ? catById.get(r.categoryId) : undefined;
-                return (
-                  <div
-                    key={r.id}
-                    data-slot="dashboard-recent-row"
-                    className="flex items-center gap-3 border-b px-5 py-2.5 last:border-b-0"
-                  >
-                    <CategoryAvatar category={meta} size={28} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span className="truncate text-sm">{r.label}</span>
-                        <AssignedMonthBadge date={r.date} periodDate={r.periodDate} />
-                      </div>
-                      <div className="text-muted-foreground truncate text-[11.5px]">
-                        {formatDayMonth(r.date, locale)} ·{" "}
-                        {meta ? categoryPath(meta) : t("noCategory")}
-                      </div>
+            data.recent.map((r) => {
+              const meta = r.categoryId ? catById.get(r.categoryId) : undefined;
+              return (
+                <div
+                  key={r.id}
+                  data-slot="dashboard-recent-row"
+                  className="flex items-center gap-3 border-b px-5 py-2.5 last:border-b-0"
+                >
+                  <CategoryAvatar category={meta} size={28} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate text-sm">{r.label}</span>
+                      <AssignedMonthBadge date={r.date} periodDate={r.periodDate} />
                     </div>
-                    <span className="text-muted-foreground hidden max-w-40 truncate text-[11.5px] sm:block">
-                      {r.accountName}
-                    </span>
-                    <span
-                      className="text-sm font-medium tabular-nums"
-                      style={r.amount > 0 ? { color: "var(--income)" } : undefined}
-                    >
-                      {formatMoney(r.amount, locale)}
-                    </span>
+                    <div className="text-muted-foreground truncate text-[11.5px]">
+                      {formatDayMonth(r.date, locale)} ·{" "}
+                      {meta ? categoryPath(meta) : t("noCategory")}
+                    </div>
                   </div>
-                );
-              })
-            )}
-          </div>
-        </Card>
-      </div>
+                  <span className="text-muted-foreground hidden max-w-40 truncate text-[11.5px] sm:block">
+                    {r.accountName}
+                  </span>
+                  <span
+                    className="text-sm font-medium tabular-nums"
+                    style={r.amount > 0 ? { color: "var(--income)" } : undefined}
+                  >
+                    {formatMoney(r.amount, locale)}
+                  </span>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </Card>
     </div>
   );
 }
