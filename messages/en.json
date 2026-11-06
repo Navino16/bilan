@@ -1601,7 +1601,16 @@
     "recurringStopped": "stopped?",
     "recurringLast": "last {date}",
     "recurringLastAmount": "last {date}: <up>{amount}</up>",
-    "noRecurring": "No recurring payment found over the last 6 months."
+    "noRecurring": "No recurring payment found over the last 6 months.",
+    "exceptionalOverline": "One-offs",
+    "exceptionalTitle": "Exceptional expenses",
+    "exceptionalSub": "Above their category’s monthly average, from {amount}",
+    "exceptionalShare": "{share} of the period’s spending",
+    "exceptionalMeta": "{date} · avg. {average}",
+    "exceptionalAverageTitle": "Category’s monthly average: {amount}",
+    "exceptionalShowAll": "Show all ({count, number})",
+    "exceptionalShowLess": "Show less",
+    "noExceptional": "No exceptional expense this period."
   },
   "settings": {
     "data": {

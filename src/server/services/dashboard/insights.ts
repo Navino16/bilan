@@ -12,7 +12,8 @@ import {
   type HistoryWindow,
   type InsightsData,
 } from "@/lib/insights";
-import { recurringPayments, RECURRING_MONTHS } from "@/lib/recurring";
+import { exceptionalExpenses } from "@/lib/exceptional";
+import { recurringIds, recurringPayments, RECURRING_MONTHS } from "@/lib/recurring";
 import {
   historyMonths,
   monthPeriod,
@@ -67,7 +68,8 @@ function historyWindow(period: Period, first: Date | null, now: Date): HistoryWi
 }
 
 // Same rows as the dashboard: links collapsed, savings-category and neutral rows left out
-// (spec §5.17). The 12-month window is one load so links spanning two months collapse.
+// (spec §5.17). The 12-month window is one load so links spanning two months collapse. The
+// period's rows carry their real dates: exceptional expenses show and link to them.
 export async function getInsights(
   userId: string,
   period: Period,
@@ -81,7 +83,7 @@ export async function getInsights(
   const window = historyWindow(period, first, now);
   const recentSpan = monthsSpan(historyMonths(period, RECURRING_MONTHS, now));
   const [current, reference, history, recent, aliases] = await Promise.all([
-    loadRows(accountIds, period, { withLabels: true }),
+    loadRows(accountIds, period, { withLabels: true, realDates: true }),
     referenceRows(accountIds, period, comparison, keep),
     loadRows(accountIds, monthsSpan(window.months)),
     loadRows(accountIds, recentSpan, { withLabels: true, realDates: true }),
@@ -97,15 +99,27 @@ export async function getInsights(
   const income = incomeByCategory(rows, reference);
   const asOf = new Date(Math.min(period.to.getTime(), now.getTime()));
   const aliasByKey = aliasMap(aliases);
+  const spendingRows = merchantRowsOf(rows);
+  const recentRows = merchantRowsOf(recent.rows.filter(keep));
+  const spending = rows.reduce((s, r) => s + Math.max(0, -r.amount), 0);
   return {
     overview: insightsOverview(historyRows, window),
     categories: categoryTrends(rows, reference, historyRows, window, branches),
     uncategorized: uncategorizedSpending(rows),
     recurring: {
-      ...recurringPayments(merchantRowsOf(recent.rows.filter(keep)), asOf, first, aliasByKey),
+      ...recurringPayments(recentRows, asOf, first, aliasByKey),
       window: recentSpan,
     },
-    merchants: topMerchants(merchantRowsOf(rows), TOP_MERCHANTS, aliasByKey),
+    exceptional: exceptionalExpenses(
+      spendingRows,
+      historyRows,
+      window,
+      branches,
+      recurringIds(recentRows, asOf, aliasByKey),
+      spending,
+      aliasByKey,
+    ),
+    merchants: topMerchants(spendingRows, TOP_MERCHANTS, aliasByKey),
     aliasGroups: aliases,
     income,
     incomeTotal: round2(income.reduce((s, i) => s + i.current, 0)),

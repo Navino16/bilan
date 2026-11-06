@@ -39,6 +39,7 @@ test.describe("insights", () => {
     await expect(page.locator('[data-slot="insights-overview"]')).toBeVisible();
     await expect(page.locator('[data-slot="overview-month"]')).toHaveCount(12);
     await expect(page.locator('[data-slot="insights-categories"]')).toBeVisible();
+    await expect(page.locator('[data-slot="insights-exceptional"]')).toBeVisible();
     await expect(page.locator('[data-slot="insights-recurring"]')).toBeVisible();
     await expect(page.locator('[data-slot="insights-merchants"]')).toBeVisible();
     await expect(page.locator('[data-slot="period-in-progress"]')).toHaveCount(0);

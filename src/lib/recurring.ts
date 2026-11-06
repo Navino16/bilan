@@ -40,7 +40,7 @@ export type RecurringPayments = {
   extra: number;
 };
 
-type Occurrence = Pick<MerchantPart, "label" | "date" | "categoryId"> & { amount: number };
+type Occurrence = Pick<MerchantPart, "id" | "label" | "date" | "categoryId"> & { amount: number };
 
 const days = (from: Date, to: Date) => Math.round((to.getTime() - from.getTime()) / DAY);
 const monthOf = (d: Date) => d.getUTCFullYear() * 12 + d.getUTCMonth();
@@ -78,15 +78,20 @@ function seriesOf(occurrences: Occurrence[]): Occurrence[][] {
 const rank = (p: RecurringPayment) =>
   p.flags.includes("stopped") ? 2 : p.flags.length > 0 ? 0 : 1;
 
-// Spending that comes back about every month at the same merchant, over the RECURRING_MONTHS
-// calendar months ending at `asOf`. `dataStart` is the first recorded transaction: a series is
-// only new when data was recorded before it.
-export function recurringPayments(
+type MerchantSeries = {
+  id: string;
+  parts: MerchantPart[];
+  sorted: Occurrence[];
+  series: Occurrence[][];
+};
+
+// The series of each merchant over the RECURRING_MONTHS calendar months ending at `asOf`, shops
+// left out.
+function merchantSeries(
   rows: MerchantRow[],
   asOf: Date,
-  dataStart: Date | null,
-  aliases: ReadonlyMap<string, string> = new Map(),
-): RecurringPayments {
+  aliases: ReadonlyMap<string, string>,
+): MerchantSeries[] {
   const since = new Date(
     Date.UTC(asOf.getUTCFullYear(), asOf.getUTCMonth() - (RECURRING_MONTHS - 1), 1),
   );
@@ -100,15 +105,50 @@ export function recurringPayments(
     groups.set(id, group);
   }
 
-  const payments: RecurringPayment[] = [];
+  const out: MerchantSeries[] = [];
   for (const [id, parts] of groups) {
     const sorted = parts
-      .map((p) => ({ label: p.label, date: p.date, categoryId: p.categoryId, amount: p.total }))
+      .map((p) => ({
+        id: p.id,
+        label: p.label,
+        date: p.date,
+        categoryId: p.categoryId,
+        amount: p.total,
+      }))
       .sort((a, b) => a.date.getTime() - b.date.getTime());
     const months = new Set(sorted.map((o) => monthOf(o.date))).size;
     if (sorted.length >= MAX_PER_MONTH * months) continue;
     const series = seriesOf(sorted);
     if (series.reduce((n, s) => n + s.length, 0) < RECURRING_COVERAGE * sorted.length) continue;
+    out.push({ id, parts, sorted, series });
+  }
+  return out;
+}
+
+// The rows (by id) that belong to a recurring series.
+export function recurringIds(
+  rows: MerchantRow[],
+  asOf: Date,
+  aliases: ReadonlyMap<string, string> = new Map(),
+): Set<string> {
+  return new Set(
+    merchantSeries(rows, asOf, aliases).flatMap((m) =>
+      m.series.flatMap((s) => s.flatMap((o) => (o.id ? [o.id] : []))),
+    ),
+  );
+}
+
+// Spending that comes back about every month at the same merchant, over the RECURRING_MONTHS
+// calendar months ending at `asOf`. `dataStart` is the first recorded transaction: a series is
+// only new when data was recorded before it.
+export function recurringPayments(
+  rows: MerchantRow[],
+  asOf: Date,
+  dataStart: Date | null,
+  aliases: ReadonlyMap<string, string> = new Map(),
+): RecurringPayments {
+  const payments: RecurringPayment[] = [];
+  for (const { id, parts, sorted, series } of merchantSeries(rows, asOf, aliases)) {
     for (const s of series) {
       const first = s[0];
       const last = s[s.length - 1];

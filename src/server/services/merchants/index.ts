@@ -35,6 +35,7 @@ export function merchantRowsOf(rows: AggRow[]): MerchantRow[] {
   return rows
     .filter((r) => r.amount < 0 && r.type !== "TRANSFER" && r.labelEnc)
     .map((r) => ({
+      id: r.id,
       amount: r.amount,
       categoryId: r.categoryId,
       date: r.date,
