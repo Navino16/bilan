@@ -6,121 +6,36 @@ import { linkIdsWhere } from "@/server/services/links/members";
 import { listTransactions, type TransactionListItem } from "@/server/services/transactions";
 import { collapseLinkedRows, type CollapsibleRow } from "@/lib/links";
 import { averageMonthRows, type AmountRow } from "@/lib/insights";
-import { monthPeriod, monthsSpan, type Comparison, type Period } from "@/lib/period";
-import { netSavings } from "./savings";
+import {
+  monthPeriod,
+  monthsSpan,
+  periodInProgress,
+  previousPeriod,
+  toIsoDay,
+  type Comparison,
+  type Period,
+} from "@/lib/period";
+import {
+  bucketCount,
+  bucketIndex,
+  cumulativeSpending,
+  paceGranularity,
+  type SpendingPace,
+} from "@/lib/pace";
+import { netSavings, savedByCategory, savingsScope, type SavingsScope } from "./savings";
 
 export type DashboardTotals = { income: number; expense: number; net: number; count: number };
-export type TracePoint = { date: string; amount: number };
-// The highest-spend bucket: its date, amount, and the category that drove it.
-export type TracePeak = { date: string; amount: number; categoryId: string | null };
-// The expense trace adapts its bucket size to the period length so a year or
-// quarter doesn't render 365 one-pixel bars: ≤ ~6 weeks → one bucket per day,
-// longer → one per calendar month. `avg` is the mean spend per bucket and `peak`
-// is the biggest bucket (null when nothing was spent).
-export type DashboardTrace = {
-  granularity: "day" | "month";
-  points: TracePoint[];
-  avg: number;
-  peak: TracePeak | null;
-};
+export type TodoCount = { count: number; amount: number };
 export type DashboardData = {
   totals: DashboardTotals;
   previous: Pick<DashboardTotals, "income" | "expense" | "net">;
   byCategory: { categoryId: string | null; amount: number }[];
-  trace: DashboardTrace;
+  pace: SpendingPace;
   recent: TransactionListItem[];
   savings: { current: number; previous: number };
+  // Uncategorized operations dated in the period, as the transactions list filters them.
+  uncategorized: { out: TodoCount; in: TodoCount };
 };
-
-// Above this span the daily trace becomes unreadable → switch to monthly buckets.
-const DAILY_TRACE_MAX_DAYS = 45;
-
-type ExpenseRow = { amount: number; date: Date; categoryId: string | null };
-
-// Mean spend per bucket + the biggest bucket and the category that drove it.
-// Buckets in the future or before the first transaction don't dilute the average.
-function summarize(
-  granularity: "day" | "month",
-  points: TracePoint[],
-  rows: ExpenseRow[],
-  keyOf: (d: Date) => string,
-  now: Date,
-  first: Date | null,
-): DashboardTrace {
-  const elapsed = points.filter((p) => p.date <= keyOf(now) && (!first || p.date >= keyOf(first)));
-  const avg = elapsed.length
-    ? round2(elapsed.reduce((s, p) => s + p.amount, 0) / elapsed.length)
-    : 0;
-
-  const top = points.reduce<TracePoint | null>((a, p) => (a && a.amount >= p.amount ? a : p), null);
-  let peak: TracePeak | null = null;
-  if (top && top.amount > 0) {
-    const byCat = new Map<string | null, number>();
-    for (const r of rows) {
-      if (keyOf(r.date) === top.date) {
-        byCat.set(r.categoryId, (byCat.get(r.categoryId) ?? 0) - Number(r.amount));
-      }
-    }
-    const topCat = [...byCat.entries()].reduce<[string | null, number] | null>(
-      (a, e) => (a && a[1] >= e[1] ? a : e),
-      null,
-    );
-    peak = { date: top.date, amount: top.amount, categoryId: topCat ? topCat[0] : null };
-  }
-
-  return { granularity, points, avg, peak };
-}
-
-// One bucket per UTC day of the period.
-function dailyTrace(
-  rows: ExpenseRow[],
-  period: Period,
-  now: Date,
-  first: Date | null,
-): DashboardTrace {
-  const dayKey = (d: Date) => d.toISOString().slice(0, 10);
-  const byDay = new Map<string, number>();
-  for (let t = period.from.getTime(); t <= period.to.getTime(); t += 86_400_000) {
-    byDay.set(dayKey(new Date(t)), 0);
-  }
-  for (const r of rows) {
-    const k = dayKey(r.date);
-    if (byDay.has(k)) byDay.set(k, byDay.get(k)! - Number(r.amount));
-  }
-  const points = [...byDay.entries()].map(([date, amount]) => ({ date, amount: round2(amount) }));
-  points.sort((a, b) => a.date.localeCompare(b.date));
-  return summarize("day", points, rows, dayKey, now, first);
-}
-
-// One bucket per calendar month spanned by the period (keyed by its 1st day).
-function monthlyTrace(
-  rows: ExpenseRow[],
-  period: Period,
-  now: Date,
-  first: Date | null,
-): DashboardTrace {
-  const monthKey = (y: number, m: number) => `${y}-${String(m + 1).padStart(2, "0")}-01`;
-  const dateKey = (d: Date) => monthKey(d.getUTCFullYear(), d.getUTCMonth());
-  const byMonth = new Map<string, number>();
-  let y = period.from.getUTCFullYear();
-  let m = period.from.getUTCMonth();
-  const endY = period.to.getUTCFullYear();
-  const endM = period.to.getUTCMonth();
-  while (y < endY || (y === endY && m <= endM)) {
-    byMonth.set(monthKey(y, m), 0);
-    if (++m > 11) {
-      m = 0;
-      y++;
-    }
-  }
-  for (const r of rows) {
-    const k = dateKey(r.date);
-    if (byMonth.has(k)) byMonth.set(k, byMonth.get(k)! - Number(r.amount));
-  }
-  const points = [...byMonth.entries()].map(([date, amount]) => ({ date, amount: round2(amount) }));
-  points.sort((a, b) => a.date.localeCompare(b.date));
-  return summarize("month", points, rows, dateKey, now, first);
-}
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -233,38 +148,53 @@ function totalsOf(rows: { amount: number }[], count: number): DashboardTotals {
   };
 }
 
-// The side the period is compared with: the previous period, or one average month
-// built from a single load over the N months (links collapse across month boundaries).
-export async function referenceRows(
+// The whole reference side: the previous period, or the months averaged that hold data (`average`
+// of them; months before the first transaction hold no data, not zero spending).
+type Reference = { rows: AggRow[]; average: number | null };
+
+async function loadReference(
   accountIds: string[],
+  period: Period,
   comparison: Comparison,
-): Promise<AmountRow[]> {
+): Promise<Reference> {
   const { months, elapsedDays } = comparison;
-  if (months.length === 0) return (await loadRows(accountIds, comparison.previous)).rows;
+  if (months.length === 0) {
+    return { rows: (await loadRows(accountIds, previousPeriod(period))).rows, average: null };
+  }
   const [{ rows }, first] = await Promise.all([
     loadRows(accountIds, monthsSpan(months)),
     firstTransactionDate(accountIds),
   ]);
-  // Months before the first transaction hold no data, not zero spending; while the
-  // period is in progress only their first `elapsedDays` days are compared.
+  // While the period is in progress, only each month's first `elapsedDays` days are compared.
   const recorded = months.filter((m) => {
     const { from, to } = monthPeriod(m.year, m.month);
     const end = elapsedDays ? new Date(from.getTime() + elapsedDays * 86_400_000 - 1) : to;
     return first && end >= first;
   });
-  return recorded.length ? averageMonthRows(rows, recorded.length, elapsedDays) : [];
+  return { rows, average: recorded.length };
+}
+
+// What the period is compared with: the reference cut to the same date while in progress.
+function sameDateRows(reference: Reference, comparison: Comparison): AmountRow[] {
+  const { rows, average } = reference;
+  if (average === null) return rows.filter((r) => r.date <= comparison.previous.to);
+  return average ? averageMonthRows(rows, average, comparison.elapsedDays) : [];
+}
+
+export async function referenceRows(
+  accountIds: string[],
+  period: Period,
+  comparison: Comparison,
+): Promise<AmountRow[]> {
+  return sameDateRows(await loadReference(accountIds, period, comparison), comparison);
 }
 
 // Net savings of the reference side, averaged like `referenceRows`: recorded months only,
 // each cut to the elapsed days while the period is in progress.
-async function savingsReference(
-  userId: string,
-  accountIds: string[],
-  comparison: Comparison,
-): Promise<number> {
+async function savingsReference(scope: SavingsScope, comparison: Comparison): Promise<number> {
   const { months, elapsedDays } = comparison;
-  if (months.length === 0) return netSavings(userId, accountIds, comparison.previous);
-  const first = await firstTransactionDate(accountIds);
+  if (months.length === 0) return netSavings(scope, comparison.previous);
+  const first = await firstTransactionDate(scope.accountIds);
   const windows = months
     .map((m) => monthPeriod(m.year, m.month))
     .map((p) =>
@@ -272,8 +202,68 @@ async function savingsReference(
     )
     .filter((p) => first && p.to >= first);
   if (windows.length === 0) return 0;
-  const sums = await Promise.all(windows.map((p) => netSavings(userId, accountIds, p)));
+  const sums = await Promise.all(windows.map((p) => netSavings(scope, p)));
   return round2(sums.reduce((a, b) => a + b, 0) / windows.length);
+}
+
+// Cumulative spending of the period against the whole reference at the same offsets: the same
+// day of an averaged month, else the same day or month of the previous period.
+function spendingPace(
+  rows: AggRow[],
+  reference: Reference,
+  period: Period,
+  now: Date,
+): SpendingPace {
+  const granularity = paceGranularity(period);
+  const buckets = bucketCount(period, granularity);
+  const inProgress = periodInProgress(period, now);
+  const current = cumulativeSpending(
+    rows,
+    (d) => bucketIndex(d, period.from, granularity),
+    buckets,
+  );
+  const refStart = previousPeriod(period).from;
+  const hasReference = reference.rows.length > 0 && reference.average !== 0;
+  return {
+    granularity,
+    start: toIsoDay(period.from),
+    buckets,
+    asOf: toIsoDay(inProgress ? now : period.to),
+    current: inProgress
+      ? current.slice(0, bucketIndex(now, period.from, granularity) + 1)
+      : current,
+    reference: hasReference
+      ? cumulativeSpending(
+          reference.rows,
+          reference.average === null
+            ? (d) => bucketIndex(d, refStart, granularity)
+            : (d) => d.getUTCDate() - 1,
+          buckets,
+          reference.average === null ? 1 : 1 / reference.average,
+        )
+      : null,
+  };
+}
+
+async function uncategorizedCounts(
+  accountIds: string[],
+  period: Period,
+): Promise<DashboardData["uncategorized"]> {
+  const count = async (amount: Prisma.DecimalFilter<"Transaction">): Promise<TodoCount> => {
+    const { _count, _sum } = await db.transaction.aggregate({
+      where: {
+        accountId: { in: accountIds },
+        categoryId: null,
+        date: { gte: period.from, lte: period.to },
+        amount,
+      },
+      _count: true,
+      _sum: { amount: true },
+    });
+    return { count: _count, amount: round2(Math.abs(Number(_sum.amount ?? 0))) };
+  };
+  const [out, inflow] = await Promise.all([count({ lt: 0 }), count({ gt: 0 })]);
+  return { out, in: inflow };
 }
 
 export async function getDashboard(
@@ -284,50 +274,40 @@ export async function getDashboard(
 ): Promise<DashboardData> {
   const accountIds = await visibleAccountIds(userId);
 
-  // Independent queries for the two periods → run them together.
-  const [current, previousLoaded, first, savedNow, savedBefore] = await Promise.all([
+  const [loaded, reference, scope, uncategorized] = await Promise.all([
     loadRows(accountIds, period),
-    referenceRows(accountIds, comparison),
-    firstTransactionDate(accountIds),
-    netSavings(userId, accountIds, period),
-    savingsReference(userId, accountIds, comparison),
+    loadReference(accountIds, period, comparison),
+    savingsScope(userId, accountIds),
+    uncategorizedCounts(accountIds, period),
   ]);
-  const totals = totalsOf(current.rows, current.count);
-  const prev = totalsOf(previousLoaded, 0);
+  // Savings-category rows only count in Saved.
+  const counted = (rows: AggRow[]) => rows.filter((r) => !savedByCategory(scope, r));
+  const rows = counted(loaded.rows);
+  const referenceSide = { ...reference, rows: counted(reference.rows) };
+  const totals = totalsOf(rows, loaded.count);
+  const prev = totalsOf(sameDateRows(referenceSide, comparison), 0);
 
-  // Expenses (post-collapse) for by-category + trace.
-  const expenseRows: ExpenseRow[] = current.rows
-    .filter((r) => r.amount < 0)
-    .map((r) => ({ amount: r.amount, date: r.date, categoryId: r.categoryId }));
-
-  // By category, highest spend first.
   const byCat = new Map<string | null, number>();
-  for (const r of expenseRows) {
-    byCat.set(r.categoryId, (byCat.get(r.categoryId) ?? 0) - Number(r.amount));
+  for (const r of rows) {
+    if (r.amount < 0) byCat.set(r.categoryId, (byCat.get(r.categoryId) ?? 0) - r.amount);
   }
   const byCategory = [...byCat.entries()]
     .map(([categoryId, amount]) => ({ categoryId, amount: round2(amount) }))
     .sort((a, b) => b.amount - a.amount);
 
-  // Day-by-day for short spans, month-by-month for longer ones (quarter/year).
-  const spanDays = Math.round((period.to.getTime() - period.from.getTime() + 1) / 86_400_000);
-  const trace =
-    spanDays > DAILY_TRACE_MAX_DAYS
-      ? monthlyTrace(expenseRows, period, now, first)
-      : dailyTrace(expenseRows, period, now, first);
-
-  const { items: recent } = await listTransactions(userId, {
-    from: period.from,
-    to: period.to,
-    take: 6,
-  });
+  const [savedNow, savedBefore, { items: recent }] = await Promise.all([
+    netSavings(scope, period),
+    savingsReference(scope, comparison),
+    listTransactions(userId, { from: period.from, to: period.to, take: 6 }),
+  ]);
 
   return {
     totals,
     previous: { income: prev.income, expense: prev.expense, net: prev.net },
     byCategory,
-    trace,
+    pace: spendingPace(rows, referenceSide, period, now),
     recent,
     savings: { current: savedNow, previous: savedBefore },
+    uncategorized,
   };
 }

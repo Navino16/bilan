@@ -78,39 +78,43 @@ describe("getDashboard", () => {
     expect(data.byCategory[1]).toEqual({ categoryId: catA, amount: 50 });
   });
 
-  it("returns a per-day expense trace and recent transactions for a month", async () => {
+  it("returns the cumulative spending pace against the previous month, and recent transactions", async () => {
     const period = monthPeriod(2026, 3);
-    const data = await getDashboard(owner, period, comparisonFor(period, "prev", later));
-    expect(data.trace.granularity).toBe("day");
-    const day2 = data.trace.points.find((d) => d.date === "2026-03-02");
-    expect(day2?.amount).toBe(50);
-    expect(data.trace.points).toHaveLength(31); // one entry per day of March
+    const data = await getDashboard(owner, period, comparisonFor(period, "prev", later), later);
+    const { pace } = data;
+    expect(pace).toMatchObject({ granularity: "day", start: "2026-03-01", buckets: 31 });
+    expect(pace.asOf).toBe("2026-03-31");
+    expect(pace.current).toHaveLength(31);
+    expect([pace.current[0], pace.current[1], pace.current[4], pace.current[30]]).toEqual([
+      0, 50, 750, 750,
+    ]);
+    // February by day offset, its 28 days spread over March's 31 buckets.
+    expect(pace.reference).toHaveLength(31);
+    expect([pace.reference![10], pace.reference![11], pace.reference![30]]).toEqual([0, 500, 500]);
     expect(data.recent.length).toBeGreaterThan(0);
     expect(data.recent[0].label).toBeTruthy(); // decrypted
   });
 
-  it("reports the average per bucket and the peak bucket with its top category", async () => {
-    const period = monthPeriod(2026, 3);
-    const data = await getDashboard(owner, period, comparisonFor(period, "prev", later));
-    expect(data.trace.avg).toBeCloseTo(750 / 31, 2); // total expense / days in March
-    expect(data.trace.peak).toEqual({ date: "2026-03-05", amount: 700, categoryId: catB });
-  });
-
-  it("aggregates the trace by month for periods longer than ~6 weeks", async () => {
+  it("goes by month over a quarter, without a reference when the previous one is empty", async () => {
     const q1 = {
       from: new Date("2026-01-01T00:00:00.000Z"),
       to: new Date("2026-03-31T23:59:59.999Z"),
       year: null,
       month: null,
     };
-    const data = await getDashboard(owner, q1, comparisonFor(q1, "prev", later));
-    expect(data.trace.granularity).toBe("month");
-    expect(data.trace.points).toHaveLength(3); // Jan, Feb, Mar
-    expect(data.trace.points.find((p) => p.date === "2026-01-01")?.amount).toBe(0);
-    expect(data.trace.points.find((p) => p.date === "2026-02-01")?.amount).toBe(500);
-    expect(data.trace.points.find((p) => p.date === "2026-03-01")?.amount).toBe(750);
-    expect(data.trace.avg).toBeCloseTo((500 + 750) / 2, 2); // nothing recorded before Feb
-    expect(data.trace.peak).toEqual({ date: "2026-03-01", amount: 750, categoryId: catB });
+    const { pace } = await getDashboard(owner, q1, comparisonFor(q1, "prev", later), later);
+    expect(pace).toMatchObject({ granularity: "month", buckets: 3, asOf: "2026-03-31" });
+    expect(pace.current).toEqual([0, 500, 1250]);
+    expect(pace.reference).toBeNull();
+  });
+
+  it("counts the uncategorized operations of the period per direction", async () => {
+    const period = monthPeriod(2026, 3);
+    const data = await getDashboard(owner, period, comparisonFor(period, "prev", later), later);
+    expect(data.uncategorized).toEqual({
+      out: { count: 0, amount: 0 },
+      in: { count: 1, amount: 2000 },
+    });
   });
 });
 
@@ -123,15 +127,20 @@ describe("getDashboard comparison baselines", () => {
     expect(data.previous).toEqual({ income: 1000, expense: 500, net: 500 });
   });
 
-  it("averages the trace over the days elapsed so far", async () => {
-    const data = await getDashboard(
-      owner,
-      period,
-      comparisonFor(period, "prev", later),
-      new Date("2026-03-10T12:00:00Z"),
-    );
-    expect(data.trace.points).toHaveLength(31);
-    expect(data.trace.avg).toBeCloseTo(750 / 10, 2);
+  it("stops the pace at today while the month is in progress", async () => {
+    const now = new Date("2026-03-10T12:00:00Z");
+    const { pace } = await getDashboard(owner, period, comparisonFor(period, "prev", now), now);
+    expect(pace.asOf).toBe("2026-03-10");
+    expect(pace.current).toHaveLength(10);
+    expect(pace.current[9]).toBe(750);
+    // The reference stays whole, past today.
+    expect(pace.reference![30]).toBe(500);
+  });
+
+  it("averages the reference pace over the recorded months", async () => {
+    const { pace } = await getDashboard(owner, period, comparisonFor(period, "avg3", later), later);
+    // Only February holds data: the average is February itself, by day of the month.
+    expect([pace.reference![10], pace.reference![11]]).toEqual([0, 500]);
   });
 
   it("cuts the previous month to the same days while the month is in progress", async () => {
@@ -295,8 +304,10 @@ describe("net savings", () => {
 
     const data = await dashboard();
     expect(data.savings.current).toBe(250);
-    // The linked transfers stay out of income and expenses.
-    expect([data.totals.income, data.totals.expense]).toEqual([0, 50]);
+    // The linked transfers stay out of income and expenses, savings-category spending too.
+    expect([data.totals.income, data.totals.expense]).toEqual([0, 0]);
+    expect(data.byCategory).toEqual([]);
+    expect(data.pace.current[30]).toBe(0);
   });
 
   it("averages savings over recorded months cut to the elapsed days", async () => {
@@ -308,6 +319,7 @@ describe("net savings", () => {
     );
     // March up to the 5th: +300 into the livret and 50 to the kids' savings; no data before March.
     expect(data.savings.previous).toBe(350);
+    expect(data.previous.expense).toBe(0);
   });
 
   it("counts a savings-category transfer once while its savings leg is unlinked", async () => {
@@ -317,5 +329,6 @@ describe("net savings", () => {
     const data = await getDashboard(saver, may, comparisonFor(may, "prev", later));
     // Only the checking row counts (savings-category spending); an unlinked savings leg doesn't.
     expect(data.savings.current).toBe(80);
+    expect(data.totals.expense).toBe(0);
   });
 });

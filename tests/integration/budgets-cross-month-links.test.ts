@@ -6,7 +6,8 @@ import {
   getBudgetDetail,
   listBudgetMatchesForTx,
   listBudgetsForUser,
-  listCurrentLandings,
+  currentLandings,
+  listCurrentBudgets,
 } from "@/server/services/budgets";
 import type { BudgetInput } from "@/lib/schemas/budget";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
@@ -230,7 +231,7 @@ describe("a link whose members fall in different months (#412)", () => {
     const { apr } = await marchAndApril({ outOfBudgetPlanned: 100 });
     const d = await getBudgetDetail(apr, owner, { now });
     expect(d.landing).toMatchObject({ balance: 1000, spendingToCome: 200, endBalance: 800 });
-    const [landing] = await listCurrentLandings(owner, now);
+    const [landing] = currentLandings(await listCurrentBudgets(owner, now));
     expect(landing.landing).toEqual(d.landing);
   });
 

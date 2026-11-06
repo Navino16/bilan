@@ -30,7 +30,7 @@ export async function getInsights(
   const accountIds = await visibleAccountIds(userId);
   const [current, prev, aliases] = await Promise.all([
     loadRows(accountIds, period, { withLabels: true }),
-    referenceRows(accountIds, comparison),
+    referenceRows(accountIds, period, comparison),
     listAliasGroups(userId),
   ]);
 

@@ -22,20 +22,46 @@ async function savingsCategoryIds(userId: string, ownerIds: string[]): Promise<s
   return [...new Set([...subtrees.values()].flatMap((s) => [...s]))];
 }
 
+export type SavingsScope = {
+  accountIds: string[];
+  savingsAccountIds: Set<string>;
+  categoryIds: Set<string>;
+};
+
+export async function savingsScope(userId: string, accountIds: string[]): Promise<SavingsScope> {
+  const accounts = accountIds.length
+    ? await db.bankAccount.findMany({
+        where: { id: { in: accountIds } },
+        select: { id: true, type: true, ownerId: true },
+      })
+    : [];
+  const savingsAccountIds = new Set(accounts.filter((a) => a.type === "SAVINGS").map((a) => a.id));
+  const categoryIds =
+    accounts.length > savingsAccountIds.size
+      ? await savingsCategoryIds(userId, [...new Set(accounts.map((a) => a.ownerId))])
+      : [];
+  return { accountIds, savingsAccountIds, categoryIds: new Set(categoryIds) };
+}
+
+// The unlinked rows outside savings accounts that `netSavings` counts by category: they show
+// in Saved only, never in income or spending.
+export function savedByCategory(
+  scope: SavingsScope,
+  row: { accountId: string; categoryId: string | null; linkId: string | null },
+): boolean {
+  return (
+    row.linkId === null &&
+    row.categoryId !== null &&
+    scope.categoryIds.has(row.categoryId) &&
+    !scope.savingsAccountIds.has(row.accountId)
+  );
+}
+
 // Net savings over the period (spec A): transfers linked into savings accounts minus those
 // out of them, plus unlinked spending in savings categories (money saved outside Bilan).
-export async function netSavings(
-  userId: string,
-  accountIds: string[],
-  period: Period,
-): Promise<number> {
-  if (accountIds.length === 0) return 0;
-  const accounts = await db.bankAccount.findMany({
-    where: { id: { in: accountIds } },
-    select: { id: true, type: true, ownerId: true },
-  });
-  const savingsIds = accounts.filter((a) => a.type === "SAVINGS").map((a) => a.id);
-  const otherIds = accounts.filter((a) => a.type !== "SAVINGS").map((a) => a.id);
+export async function netSavings(scope: SavingsScope, period: Period): Promise<number> {
+  const savingsIds = [...scope.savingsAccountIds];
+  const otherIds = scope.accountIds.filter((id) => !scope.savingsAccountIds.has(id));
   const periodDate = { gte: period.from, lte: period.to };
 
   let transferred = 0;
@@ -59,16 +85,12 @@ export async function netSavings(
   }
 
   let spent = 0;
-  const categoryIds =
-    otherIds.length > 0
-      ? await savingsCategoryIds(userId, [...new Set(accounts.map((a) => a.ownerId))])
-      : [];
-  if (categoryIds.length > 0) {
+  if (otherIds.length > 0 && scope.categoryIds.size > 0) {
     const { _sum } = await db.transaction.aggregate({
       where: {
         accountId: { in: otherIds },
         periodDate,
-        categoryId: { in: categoryIds },
+        categoryId: { in: [...scope.categoryIds] },
         linkMembership: { is: null },
       },
       _sum: { amount: true },
