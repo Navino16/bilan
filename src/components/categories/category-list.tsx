@@ -26,6 +26,7 @@ type Node = {
   groupId: string | null;
   shiftDays: number | null;
   savings: boolean;
+  neutral: boolean;
   children: Node[];
 };
 
@@ -56,6 +57,7 @@ function Row({
     groupId: node.groupId,
     shiftDays: node.shiftDays,
     savings: node.savings,
+    neutral: node.neutral,
   };
 
   return (

@@ -1,12 +1,6 @@
 import { round2 } from "@/lib/budgets";
 import { merchantKey, merchantLabel } from "@/lib/merchant";
 
-export type CategoryChange = {
-  categoryId: string | null;
-  current: number;
-  previous: number;
-  diff: number;
-};
 // `label` is what is shown (the alias, else the latest bank label); `search` stays a bank
 // label so the transactions link still matches; `keys` are the merchant keys grouped.
 export type MerchantTotal = {
@@ -21,29 +15,57 @@ export type MerchantTotal = {
 export type MerchantAliasGroup = { name: string; keys: string[] };
 export type MerchantDirectory = { renamed: MerchantTotal[]; others: MerchantTotal[] };
 export type IncomeByCategory = { categoryId: string | null; current: number; previous: number };
+
+export type HistoryMonth = { year: number; month: number };
+export type CategorySeries = { categoryId: string | null; values: number[] };
+// The charts' months, oldest first. `inProgress` flags the last one as partial. `dataStart` is
+// the index of the first month with any transaction: the months before it are empty because
+// nothing was recorded yet, not because nothing was spent.
+export type HistoryWindow = { months: HistoryMonth[]; inProgress: boolean; dataStart: number };
+
+export type MonthFlows = { income: number; expense: number };
+export type InsightsOverview = HistoryWindow & {
+  flows: MonthFlows[];
+  // `average`, `complete` and `spendingAbove` cover the complete months since the data starts.
+  average: MonthFlows;
+  complete: number;
+  spendingAbove: number;
+  // Income minus spending over every month shown.
+  net: number;
+};
+
+export type CategoryChange = {
+  categoryId: string;
+  current: number;
+  reference: number;
+  diff: number;
+};
+export type CategoryTrend = CategoryChange & {
+  values: number[];
+  average: number;
+  stable: boolean;
+  children: CategoryChange[];
+};
+// Where a category sits: its root, and the root's child holding it (the root itself for a root).
+export type CategoryBranch = { root: string; child: string };
+
 export type InsightsData = {
-  changes: CategoryChange[];
+  overview: InsightsOverview;
+  categories: CategoryTrend[];
+  uncategorized: number;
   merchants: MerchantTotal[];
   aliasGroups: MerchantAliasGroup[];
   income: IncomeByCategory[];
   incomeTotal: number;
 };
 
-export type HistoryMonth = { year: number; month: number };
-export type CategorySeries = { categoryId: string | null; values: number[] };
-// Monthly spending per category, oldest month first. `inProgress` flags the last month as partial.
-// `dataStart` is the index of the first month with any transaction: the months
-// before it are empty because nothing was recorded yet, not because nothing was spent.
-export type CategoryHistory = {
-  months: HistoryMonth[];
-  inProgress: boolean;
-  dataStart: number;
-  series: CategorySeries[];
-};
-export type HistoryRow = CategorySeries & { total: number; average: number };
-
 export type AmountRow = { amount: number; categoryId: string | null };
+export type DatedRow = AmountRow & { date: Date };
 export type MerchantRow = AmountRow & { label: string; date: Date; type: string };
+
+// Coefficient of variation below which a category is grouped as stable (#420).
+export const STABLE_CV = 0.15;
+const STABLE_MIN_MONTHS = 3;
 
 function sumByCategory(rows: AmountRow[], side: "expense" | "income"): Map<string | null, number> {
   const out = new Map<string | null, number>();
@@ -55,24 +77,6 @@ function sumByCategory(rows: AmountRow[], side: "expense" | "income"): Map<strin
 }
 
 const byId = (a: string | null, b: string | null) => (a ?? "").localeCompare(b ?? "");
-
-export function categoryChanges(current: AmountRow[], previous: AmountRow[]): CategoryChange[] {
-  const cur = sumByCategory(current, "expense");
-  const prev = sumByCategory(previous, "expense");
-  return [...new Set([...cur.keys(), ...prev.keys()])]
-    .map((categoryId) => {
-      const c = round2(cur.get(categoryId) ?? 0);
-      const p = round2(prev.get(categoryId) ?? 0);
-      return { categoryId, current: c, previous: p, diff: round2(c - p) };
-    })
-    .filter((x) => x.diff !== 0)
-    .sort(
-      (a, b) =>
-        Math.abs(b.diff) - Math.abs(a.diff) ||
-        b.current - a.current ||
-        byId(a.categoryId, b.categoryId),
-    );
-}
 
 export function incomeByCategory(current: AmountRow[], previous: AmountRow[]): IncomeByCategory[] {
   const cur = sumByCategory(current, "income");
@@ -86,15 +90,21 @@ export function incomeByCategory(current: AmountRow[], previous: AmountRow[]): I
     .sort((a, b) => b.current - a.current || byId(a.categoryId, b.categoryId));
 }
 
-export function monthlyCategoryTotals(
-  rows: (AmountRow & { date: Date })[],
-  months: HistoryMonth[],
-): CategorySeries[] {
+export function uncategorizedSpending(rows: AmountRow[]): number {
+  return round2(sumByCategory(rows, "expense").get(null) ?? 0);
+}
+
+function monthIndex(months: HistoryMonth[]): (d: Date) => number | undefined {
   const index = new Map(months.map((m, i) => [m.year * 12 + m.month - 1, i]));
+  return (d) => index.get(d.getUTCFullYear() * 12 + d.getUTCMonth());
+}
+
+export function monthlyCategoryTotals(rows: DatedRow[], months: HistoryMonth[]): CategorySeries[] {
+  const indexOf = monthIndex(months);
   const out = new Map<string | null, number[]>();
   for (const r of rows) {
     if (r.amount >= 0) continue;
-    const i = index.get(r.date.getUTCFullYear() * 12 + r.date.getUTCMonth());
+    const i = indexOf(r.date);
     if (i === undefined) continue;
     const values = out.get(r.categoryId) ?? months.map(() => 0);
     values[i] -= r.amount;
@@ -105,42 +115,123 @@ export function monthlyCategoryTotals(
     .sort((a, b) => byId(a.categoryId, b.categoryId));
 }
 
+// The complete months since the data starts: the month in progress and the months before
+// any data would drag an average down.
+export function completeMonths<T>(values: T[], window: HistoryWindow): T[] {
+  return (window.inProgress ? values.slice(0, -1) : values).slice(window.dataStart);
+}
+
+const mean = (values: number[]) =>
+  values.length ? values.reduce((s, v) => s + v, 0) / values.length : 0;
+
+export function isStable(values: number[]): boolean {
+  const m = mean(values);
+  if (values.length < STABLE_MIN_MONTHS || m <= 0) return false;
+  return Math.sqrt(mean(values.map((v) => (v - m) ** 2))) / m < STABLE_CV;
+}
+
+export function insightsOverview(rows: DatedRow[], window: HistoryWindow): InsightsOverview {
+  const indexOf = monthIndex(window.months);
+  const sums = window.months.map(() => ({ income: 0, expense: 0 }));
+  for (const r of rows) {
+    const i = indexOf(r.date);
+    if (i === undefined) continue;
+    if (r.amount >= 0) sums[i].income += r.amount;
+    else sums[i].expense -= r.amount;
+  }
+  const flows = sums.map((f) => ({ income: round2(f.income), expense: round2(f.expense) }));
+  const complete = completeMonths(flows, window);
+  return {
+    ...window,
+    flows,
+    average: {
+      income: round2(mean(complete.map((f) => f.income))),
+      expense: round2(mean(complete.map((f) => f.expense))),
+    },
+    complete: complete.length,
+    spendingAbove: complete.filter((f) => f.expense > f.income).length,
+    net: round2(flows.reduce((s, f) => s + f.income - f.expense, 0)),
+  };
+}
+
+function changesOf(
+  current: Map<string, number>,
+  reference: Map<string, number>,
+  ids: Iterable<string>,
+): CategoryChange[] {
+  return [...ids]
+    .map((categoryId) => {
+      const c = round2(current.get(categoryId) ?? 0);
+      const r = round2(reference.get(categoryId) ?? 0);
+      return { categoryId, current: c, reference: r, diff: round2(c - r) };
+    })
+    .filter((x) => x.current > 0 || x.reference > 0)
+    .sort(
+      (a, b) =>
+        Math.abs(b.diff) - Math.abs(a.diff) ||
+        b.current - a.current ||
+        a.categoryId.localeCompare(b.categoryId),
+    );
+}
+
+// Spending per root category against the reference, biggest change first and the stable ones
+// last. Uncategorized rows are left out (spec §5.17).
+export function categoryTrends(
+  current: AmountRow[],
+  reference: AmountRow[],
+  history: DatedRow[],
+  window: HistoryWindow,
+  branches: ReadonlyMap<string, CategoryBranch>,
+): CategoryTrend[] {
+  const branchOf = (id: string | null) => (id === null ? undefined : branches.get(id));
+  const sums = (rows: AmountRow[], key: (b: CategoryBranch) => string) => {
+    const out = new Map<string, number>();
+    for (const [id, amount] of sumByCategory(rows, "expense")) {
+      const b = branchOf(id);
+      if (b) out.set(key(b), (out.get(key(b)) ?? 0) + amount);
+    }
+    return out;
+  };
+  const rootCur = sums(current, (b) => b.root);
+  const rootRef = sums(reference, (b) => b.root);
+  const childCur = sums(current, (b) => b.child);
+  const childRef = sums(reference, (b) => b.child);
+  const childrenOf = new Map<string, Set<string>>();
+  for (const b of branches.values()) {
+    childrenOf.set(b.root, (childrenOf.get(b.root) ?? new Set()).add(b.child));
+  }
+  const series = new Map(
+    monthlyCategoryTotals(
+      history.map((r) => ({ ...r, categoryId: branchOf(r.categoryId)?.root ?? null })),
+      window.months,
+    ).map((s) => [s.categoryId, s.values]),
+  );
+  const trends = changesOf(rootCur, rootRef, new Set([...rootCur.keys(), ...rootRef.keys()])).map(
+    (c) => {
+      const values = series.get(c.categoryId) ?? window.months.map(() => 0);
+      const complete = completeMonths(values, window);
+      return {
+        ...c,
+        values,
+        average: round2(mean(complete)),
+        stable: isStable(complete),
+        children: changesOf(childCur, childRef, childrenOf.get(c.categoryId) ?? []),
+      };
+    },
+  );
+  return [...trends.filter((t) => !t.stable), ...trends.filter((t) => t.stable)];
+}
+
 // Rows of an N-month window as one "average month": each amount weighs 1/N. `lastDay`
 // keeps only days 1..lastDay of each month, to match a month in progress.
 export function averageMonthRows(
-  rows: (AmountRow & { date: Date })[],
+  rows: DatedRow[],
   months: number,
   lastDay: number | null,
 ): AmountRow[] {
   return rows
     .filter((r) => lastDay === null || r.date.getUTCDate() <= lastDay)
     .map((r) => ({ amount: r.amount / months, categoryId: r.categoryId }));
-}
-
-// The average covers whole months since the first transaction only: the month in
-// progress and the months before any data would drag it down.
-export function historyRows(
-  history: CategoryHistory,
-  count: number,
-  limit: number,
-): { months: HistoryMonth[]; rows: HistoryRow[] } {
-  const start = Math.max(0, history.months.length - count);
-  const skip = Math.max(0, history.dataStart - start);
-  const rows = history.series
-    .map(({ categoryId, values }) => {
-      const shown = values.slice(start);
-      const whole = (history.inProgress ? shown.slice(0, -1) : shown).slice(skip);
-      return {
-        categoryId,
-        values: shown,
-        total: round2(shown.reduce((s, v) => s + v, 0)),
-        average: whole.length ? round2(whole.reduce((s, v) => s + v, 0) / whole.length) : 0,
-      };
-    })
-    .filter((r) => r.total > 0)
-    .sort((a, b) => b.total - a.total || byId(a.categoryId, b.categoryId))
-    .slice(0, limit);
-  return { months: history.months.slice(start), rows };
 }
 
 // One merchant's spending over some rows: a single row, or rows summed in SQL (#296).

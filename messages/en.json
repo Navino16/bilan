@@ -937,6 +937,8 @@
     "shiftHint": "Transactions from the last days of the month count toward the next month, like a salary paid at the end of the month.",
     "savings": "Counts as savings",
     "savingsHint": "Its spending counts toward the dashboard's net savings, subcategories included.",
+    "neutral": "Counts neither as spending nor as income",
+    "neutralHint": "Left out of income and spending on the dashboard and insights, subcategories included: for transfers between your own accounts.",
     "shiftDays": "Number of days"
   },
   "transactions": {
@@ -1495,7 +1497,8 @@
       "overline": "To do",
       "title": "Needs attention",
       "uncategorizedOut": "{count, plural, one {# uncategorized expense} other {# uncategorized expenses}}",
-      "uncategorizedIn": "{count, plural, one {# uncategorized income} other {# uncategorized incomes}}"
+      "uncategorizedIn": "{count, plural, one {# uncategorized income} other {# uncategorized incomes}}",
+      "unlinkedNeutral": "{count, plural, one {# unlinked operation in a neutral category} other {# unlinked operations in a neutral category}}"
     },
     "currentBudgets": {
       "overline": "Current budgets",
@@ -1555,12 +1558,6 @@
     "pageTitle": "Insights",
     "noData": "No spending this period.",
     "noCategory": "Uncategorized",
-    "biggestIncrease": "Biggest increase",
-    "biggestDecrease": "Biggest decrease",
-    "noChange": "None",
-    "changesOverline": "Changes",
-    "changesTitle": "What changed",
-    "changesSub": "{current} vs {previous} · spending by category",
     "merchantsOverline": "Where the money goes",
     "merchantsTitle": "Top merchants",
     "merchantsCount": "{count, number}×",
@@ -1570,15 +1567,28 @@
     "incomeTotal": "{amount} this period",
     "noIncome": "No income this period.",
     "new": "new",
-    "historyOverline": "Trends",
-    "historyTitle": "Category history",
-    "historySub": "Monthly average over whole months",
     "historyAverage": "avg.",
-    "historyMonths": "{count, plural, one {# month} other {# months}}",
     "historyInProgress": "{month} (in progress)",
-    "historyBar": "{month}: {amount}",
-    "historyEmpty": "No spending over these {count} months.",
-    "changesSubAvg": "{current} vs average of {months} · spending by category"
+    "overviewOverline": "Last 12 months",
+    "overviewTitle": "Income and spending",
+    "overviewIncome": "Income",
+    "overviewSpending": "Spending",
+    "overviewNet": "Net savings",
+    "overviewNetSub": "income − spending, 12 months",
+    "perMonth": "per month on average",
+    "overviewBar": "{month}: income {income}, spending {spending}",
+    "overviewAbove": "Spending above income {count, plural, one {# month} other {# months}} out of {total}",
+    "overviewEmpty": "Nothing recorded over these 12 months.",
+    "categoriesOverline": "Spending",
+    "categoriesTitle": "By category",
+    "categoriesSub": "{current} vs {previous}",
+    "categoriesSubAvg": "{current} vs average of {months}",
+    "trendAverage": "12-month average: {amount}",
+    "seeTransactions": "See the transactions",
+    "stable": "Stable",
+    "stableCount": "{count, plural, one {# category with steady spending} other {# categories with steady spending}}",
+    "uncategorized": "{amount} uncategorized",
+    "toSort": "To sort"
   },
   "settings": {
     "data": {

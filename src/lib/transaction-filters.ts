@@ -66,7 +66,7 @@ export function parseTransactionFilters(
 }
 
 export type TransactionsLinkFilter = {
-  dir: "in" | "out";
+  dir?: "in" | "out";
   categoryId?: string | null;
   accountId?: string | null;
   search?: string;
@@ -77,11 +77,8 @@ export function transactionsHref(
   period: { from: Date; to: Date },
   filter: TransactionsLinkFilter,
 ): string {
-  const params = new URLSearchParams({
-    from: toIsoDay(period.from),
-    to: toIsoDay(period.to),
-    dir: filter.dir,
-  });
+  const params = new URLSearchParams({ from: toIsoDay(period.from), to: toIsoDay(period.to) });
+  if (filter.dir) params.set("dir", filter.dir);
   if (filter.categoryId !== undefined) {
     params.set("categoryId", filter.categoryId ?? UNCATEGORIZED);
   }

@@ -52,6 +52,7 @@ export type EditableCategory = {
   groupId: string | null;
   shiftDays: number | null;
   savings: boolean;
+  neutral: boolean;
 };
 
 export type ScopeGroup = { id: string; name: string; role: GroupRole };
@@ -195,6 +196,7 @@ function CategoryFields({
   const [icon, setIcon] = useState(category?.icon ?? "");
   const [shiftOn, setShiftOn] = useState(category?.shiftDays != null);
   const [savings, setSavings] = useState(category?.savings ?? false);
+  const [neutral, setNeutral] = useState(category?.neutral ?? false);
   const [customColor, setCustomColor] = useState(
     category?.color && !paletteKeyOf(category.color) ? category.color : null,
   );
@@ -552,8 +554,29 @@ function CategoryFields({
           <span className="block text-sm font-medium">{t("savings")}</span>
           <span className={cn(hintClass, "block")}>{t("savingsHint")}</span>
         </span>
-        <Switch checked={savings} onCheckedChange={setSavings} />
+        <Switch
+          checked={savings}
+          onCheckedChange={(on) => {
+            setSavings(on);
+            if (on) setNeutral(false);
+          }}
+        />
         <input type="hidden" name="savings" value={savings ? "on" : ""} />
+      </label>
+
+      <label className="flex items-center justify-between gap-4">
+        <span>
+          <span className="block text-sm font-medium">{t("neutral")}</span>
+          <span className={cn(hintClass, "block")}>{t("neutralHint")}</span>
+        </span>
+        <Switch
+          checked={neutral}
+          onCheckedChange={(on) => {
+            setNeutral(on);
+            if (on) setSavings(false);
+          }}
+        />
+        <input type="hidden" name="neutral" value={neutral ? "on" : ""} />
       </label>
     </>
   );

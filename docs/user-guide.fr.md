@@ -415,7 +415,8 @@ Pour en créer une :
 5. Choisissez un **Symbole**, ou saisissez n’importe quel caractère ou emoji avec **+**.
 6. Activez si besoin **Compter dans le mois suivant** : voir [Compter une transaction dans un autre mois](#compter-une-transaction-dans-un-autre-mois).
 7. Activez si besoin **Compte comme de l’épargne** : les dépenses de cette catégorie et de ses sous-catégories comptent dans l’**Épargne nette** du tableau de bord au lieu de ses dépenses (de l’argent mis de côté sur un compte que Bilan ne suit pas, comme un compte-titres ou le livret d’un enfant). C’est activé pour la catégorie **Épargne** par défaut.
-8. Cliquez sur **Créer la catégorie**.
+8. Activez si besoin **Ne compte ni en dépense ni en rentrée** : les transactions de cette catégorie et de ses sous-catégories sont exclues du tableau de bord et des analyses, pour les virements entre vos propres comptes que Bilan ne peut pas lier (un compte joint qu’il ne suit pas, par exemple). Cette option l’emporte sur **Compte comme de l’épargne** et est activée pour la catégorie **Banque › Virement interne** par défaut.
+9. Cliquez sur **Créer la catégorie**.
 
 Pour supprimer une catégorie, ouvrez son menu **⋮** et choisissez **Supprimer**. Ses sous-catégories sont supprimées aussi. Si des transactions, des règles ou des lignes de budget l’utilisent, choisissez où les rattacher avec **Déplacer vers**. Avec **Aucune catégorie**, les transactions deviennent non catégorisées et les règles et lignes de budget sont supprimées.
 
@@ -723,7 +724,7 @@ Le tableau de bord et les analyses portent sur tous les comptes que vous voyez :
 
 Sur les deux pages, choisissez **Ce mois**, **Mois dernier**, **Trimestre**, **Année** ou **Personnalisé**, et utilisez les flèches pour passer à la période précédente ou suivante. Vous pouvez aller jusqu’au mois prochain, signalé comme à venir : il montre les transactions qui lui sont déjà [affectées](#compter-une-transaction-dans-un-autre-mois).
 
-Pour un mois seul, **Comparé à** permet de comparer avec **le mois précédent** ou la moyenne sur 3, 6 ou 12 mois. Les autres périodes sont comparées à la période précédente de même durée.
+Pour un mois seul, **Comparé à** permet de comparer avec **le mois précédent** ou la moyenne sur 3, 6 ou 12 mois. Le tableau de bord part du mois précédent, les analyses de la moyenne sur 3 mois, pour qu’une dépense exceptionnelle le mois dernier ne fausse pas toutes les évolutions. Les autres périodes sont comparées à la période précédente de même durée.
 
 Tant que la période est en cours, Bilan la compare au même nombre de jours de la période de comparaison, et une note l’indique.
 
@@ -737,7 +738,7 @@ Astuce : les virements entre vos propres comptes sont liés automatiquement et r
 - **Revenus** et **Dépenses**, chacun avec son évolution par rapport à la comparaison. Les dépenses des catégories qui [comptent comme de l’épargne](#catégories) ne sont pas des dépenses : elles ne comptent que dans l’épargne nette.
 - **Épargne nette** : les virements liés vers vos comptes d’épargne moins ceux qui en sortent, plus les dépenses des catégories qui comptent comme de l’épargne, avec son évolution par rapport à la comparaison.
 - **Reste à dépenser**, pendant la période en cours : ce que vos budgets en cours permettent encore, le même montant que le résumé de chaque budget, additionné. Sans budget en cours, et pour une période passée, cette carte affiche le **Solde net** (revenus moins dépenses) à la place.
-- **À faire**, seulement s’il y a quelque chose à traiter : les dépenses et rentrées sans catégorie de la période qui ne sont pas liées, avec leur total. Cliquez sur l’une d’elles pour ouvrir ces transactions et les catégoriser.
+- **À faire**, seulement s’il y a quelque chose à traiter : les dépenses et rentrées sans catégorie de la période qui ne sont pas liées, avec leur total. Cliquez sur l’une d’elles pour ouvrir ces transactions et les catégoriser. Une dernière ligne compte les opérations non liées d’une catégorie qui [ne compte ni en dépense ni en rentrée](#catégories) : un virement dont l’autre jambe manque. Liez-la, ou ignorez-la si l’autre compte n’est pas dans Bilan.
 - **Budgets en cours**, pendant la période en cours : une ligne par budget en cours, avec ce qu’il reste à dépenser, la part du prévu déjà dépensée et ses dépenses hors budget. Cliquez sur une ligne pour ouvrir le budget.
 - **Rythme des dépenses** : vos dépenses cumulées jour après jour (mois après mois sur un trimestre ou une année), la ligne pointillée étant la période de comparaison, ou le mois moyen. Tant que la période est en cours, la courbe s’arrête à aujourd’hui ; au-dessus, ce que vous avez dépensé jusqu’ici et l’écart avec la même date de la comparaison.
 - **Dépenses par catégorie** : un anneau avec les six plus grosses catégories, le reste regroupé.
@@ -747,9 +748,12 @@ Astuce : les virements entre vos propres comptes sont liés automatiquement et r
 
 ![Analyses](images/fr/insights.png)
 
-- **Plus forte hausse** et **Plus forte baisse** : les catégories dont les dépenses ont le plus changé.
-- **Ce qui a changé** : les six catégories qui ont le plus évolué, du montant de comparaison au montant actuel.
-- **Historique par catégorie** : les dépenses mensuelles de vos six principales catégories sur **6 mois** ou **12 mois**, avec la moyenne mensuelle. Le mois en cours est hachuré.
+![Analyses sur téléphone](images/fr/mobile-insights.png)
+
+Les analyses comptent les rentrées et les dépenses comme le tableau de bord : les dépenses des catégories qui comptent comme de l’épargne, et les catégories qui ne comptent ni en dépense ni en rentrée, en sont exclues.
+
+- **Rentrées et dépenses** : vos rentrées et vos dépenses de chacun des 12 derniers mois, le mois en cours hachuré tant qu’il court. Au-dessus, les moyennes mensuelles (mois complets seulement) et votre épargne nette sur les 12 mois (rentrées moins dépenses). Une note indique combien de mois vos dépenses ont dépassé vos rentrées.
+- **Par catégorie** : vos dépenses par catégorie, la plus forte évolution d’abord. Chaque ligne montre l’évolution, le montant de comparaison → le montant actuel, et un graphique sur 12 mois à l’échelle de la catégorie : le pointillé est sa moyenne mensuelle, les barres de la période sont plus foncées. Cliquez sur une ligne pour voir ses sous-catégories et leur évolution. Les catégories dont les dépenses bougent peu (loyer, abonnements…) sont regroupées sous **Stables**, en bas. Les dépenses sans catégorie ne sont pas une catégorie : une ligne au-dessus de la liste donne leur montant, **À trier** les ouvre.
 - **Top marchands** : où part votre argent. Le crayon renomme un marchand (voir [Marchands](#marchands)).
 - **Revenus par catégorie**.
 

@@ -281,7 +281,7 @@ test.describe("responsive layout (#167)", () => {
         await expectNoPageOverflow(page, "group detail at 320px");
       });
 
-      test("at 320px insights tiles, group rows and the transaction list are not clipped", async ({
+      test("at 320px insights figures, group rows and the transaction list are not clipped", async ({
         page,
       }) => {
         test.setTimeout(120_000);
@@ -289,10 +289,8 @@ test.describe("responsive layout (#167)", () => {
 
         await page.goto("/fr/insights", { waitUntil: "domcontentloaded", timeout: 90_000 });
         await expect(page.locator("main h1")).toBeVisible();
-        const tiles = page
-          .locator('[data-slot="card"]')
-          .filter({ has: page.locator('[data-slot="insights-tile-amount"]') });
-        for (const tile of await tiles.all()) await expectFits(tile, "insights tile amount");
+        const stats = page.locator('[data-slot="overview-stat"]');
+        for (const stat of await stats.all()) await expectFits(stat, "insights overview figure");
         await expectNoPageOverflow(page, "/fr/insights at 320px");
 
         await page.goto("/fr/groups/e2e-shared-group", {

@@ -486,6 +486,8 @@ model Category {
   shiftDays Int?
   // Counted in the dashboard's net savings, with its subtree.
   savings   Boolean  @default(false)
+  // Counts neither as spending nor as income, with its subtree; wins over `savings` (#420).
+  neutral   Boolean  @default(false)
   createdAt DateTime @default(now())
 
   @@index([userId])

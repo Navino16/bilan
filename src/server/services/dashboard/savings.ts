@@ -7,12 +7,16 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-// Categories flagged "counts as savings" that may tag these accounts' rows, with their subtrees.
-async function savingsCategoryIds(userId: string, ownerIds: string[]): Promise<string[]> {
+// Categories carrying `flag` that may tag these accounts' rows, with their subtrees.
+async function flaggedCategoryIds(
+  userId: string,
+  ownerIds: string[],
+  flag: "savings" | "neutral",
+): Promise<string[]> {
   const groupIds = (await groupMemberships(userId)).map((m) => m.groupId);
   const flagged = await db.category.findMany({
     where: {
-      savings: true,
+      [flag]: true,
       OR: [{ userId: { in: [userId, ...ownerIds] } }, { groupId: { in: groupIds } }],
     },
     select: { id: true },
@@ -25,7 +29,9 @@ async function savingsCategoryIds(userId: string, ownerIds: string[]): Promise<s
 export type SavingsScope = {
   accountIds: string[];
   savingsAccountIds: Set<string>;
+  // Savings subtrees minus the neutral ones.
   categoryIds: Set<string>;
+  neutralIds: Set<string>;
 };
 
 export async function savingsScope(userId: string, accountIds: string[]): Promise<SavingsScope> {
@@ -36,11 +42,18 @@ export async function savingsScope(userId: string, accountIds: string[]): Promis
       })
     : [];
   const savingsAccountIds = new Set(accounts.filter((a) => a.type === "SAVINGS").map((a) => a.id));
-  const categoryIds =
-    accounts.length > savingsAccountIds.size
-      ? await savingsCategoryIds(userId, [...new Set(accounts.map((a) => a.ownerId))])
-      : [];
-  return { accountIds, savingsAccountIds, categoryIds: new Set(categoryIds) };
+  const ownerIds = [...new Set(accounts.map((a) => a.ownerId))];
+  const [savingsIds, neutralIds] = await Promise.all([
+    accounts.length > savingsAccountIds.size ? flaggedCategoryIds(userId, ownerIds, "savings") : [],
+    accounts.length ? flaggedCategoryIds(userId, ownerIds, "neutral") : [],
+  ]);
+  const neutral = new Set(neutralIds);
+  return {
+    accountIds,
+    savingsAccountIds,
+    categoryIds: new Set(savingsIds.filter((id) => !neutral.has(id))),
+    neutralIds: neutral,
+  };
 }
 
 // The unlinked rows outside savings accounts that `netSavings` counts by category: they show
@@ -54,6 +67,18 @@ export function savedByCategory(
     row.categoryId !== null &&
     scope.categoryIds.has(row.categoryId) &&
     !scope.savingsAccountIds.has(row.accountId)
+  );
+}
+
+// What the dashboard and insights count as income or spending: neither savings-category rows
+// nor rows in a neutral subtree (spec §5.16).
+export function countedRow(
+  scope: SavingsScope,
+  row: { accountId: string; categoryId: string | null; linkId: string | null },
+): boolean {
+  return (
+    !savedByCategory(scope, row) &&
+    !(row.categoryId !== null && scope.neutralIds.has(row.categoryId))
   );
 }
 

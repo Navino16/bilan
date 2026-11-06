@@ -23,6 +23,7 @@ function parse(formData: FormData) {
     groupId: formData.get("groupId") ?? "",
     shiftDays: formData.get("shiftDays") ?? "",
     savings: formData.get("savings") === "on",
+    neutral: formData.get("neutral") === "on",
   });
 }
 

@@ -937,6 +937,8 @@
     "shiftHint": "Les transactions des derniers jours du mois comptent pour le mois suivant, comme un salaire versé en fin de mois.",
     "savings": "Compte comme de l'épargne",
     "savingsHint": "Ses dépenses comptent dans l'épargne nette du dashboard, sous-catégories comprises.",
+    "neutral": "Ne compte ni en dépense ni en rentrée",
+    "neutralHint": "Exclue des rentrées et dépenses du dashboard et des analyses, sous-catégories comprises : pour les virements entre vos comptes.",
     "shiftDays": "Nombre de jours"
   },
   "transactions": {
@@ -1495,7 +1497,8 @@
       "overline": "À faire",
       "title": "À traiter",
       "uncategorizedOut": "{count, plural, one {# dépense sans catégorie} other {# dépenses sans catégorie}}",
-      "uncategorizedIn": "{count, plural, one {# rentrée sans catégorie} other {# rentrées sans catégorie}}"
+      "uncategorizedIn": "{count, plural, one {# rentrée sans catégorie} other {# rentrées sans catégorie}}",
+      "unlinkedNeutral": "{count, plural, one {# opération non liée dans une catégorie neutre} other {# opérations non liées dans une catégorie neutre}}"
     },
     "currentBudgets": {
       "overline": "Budgets en cours",
@@ -1555,12 +1558,6 @@
     "pageTitle": "Analyses",
     "noData": "Aucune dépense sur cette période.",
     "noCategory": "Sans catégorie",
-    "biggestIncrease": "Plus forte hausse",
-    "biggestDecrease": "Plus forte baisse",
-    "noChange": "Aucune",
-    "changesOverline": "Évolution",
-    "changesTitle": "Ce qui a changé",
-    "changesSub": "{current} vs {previous} · dépenses par catégorie",
     "merchantsOverline": "Où part l’argent",
     "merchantsTitle": "Top marchands",
     "merchantsCount": "{count, number}×",
@@ -1570,15 +1567,28 @@
     "incomeTotal": "{amount} sur la période",
     "noIncome": "Aucun revenu sur cette période.",
     "new": "nouveau",
-    "historyOverline": "Tendances",
-    "historyTitle": "Historique par catégorie",
-    "historySub": "Moyenne mensuelle sur les mois complets",
     "historyAverage": "moy.",
-    "historyMonths": "{count, plural, one {# mois} other {# mois}}",
     "historyInProgress": "{month} (en cours)",
-    "historyBar": "{month} : {amount}",
-    "historyEmpty": "Aucune dépense sur ces {count} mois.",
-    "changesSubAvg": "{current} vs moyenne {months} · dépenses par catégorie"
+    "overviewOverline": "12 derniers mois",
+    "overviewTitle": "Rentrées et dépenses",
+    "overviewIncome": "Rentrées",
+    "overviewSpending": "Dépenses",
+    "overviewNet": "Épargne nette",
+    "overviewNetSub": "rentrées − dépenses, 12 mois",
+    "perMonth": "par mois en moyenne",
+    "overviewBar": "{month} : rentrées {income}, dépenses {spending}",
+    "overviewAbove": "Dépenses supérieures aux rentrées {count, plural, one {# mois} other {# mois}} sur {total}",
+    "overviewEmpty": "Rien d’enregistré sur ces 12 mois.",
+    "categoriesOverline": "Dépenses",
+    "categoriesTitle": "Par catégorie",
+    "categoriesSub": "{current} vs {previous}",
+    "categoriesSubAvg": "{current} vs moyenne {months}",
+    "trendAverage": "Moyenne sur 12 mois : {amount}",
+    "seeTransactions": "Voir les opérations",
+    "stable": "Stables",
+    "stableCount": "{count, plural, one {# catégorie aux dépenses régulières} other {# catégories aux dépenses régulières}}",
+    "uncategorized": "{amount} sans catégorie",
+    "toSort": "À trier"
   },
   "settings": {
     "data": {

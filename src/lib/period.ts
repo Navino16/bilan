@@ -187,10 +187,17 @@ export const BASELINES = ["prev", "avg3", "avg6", "avg12"] as const;
 export type Baseline = (typeof BASELINES)[number];
 
 // Averages only make sense against whole months: other periods fall back to "prev".
-export function parseBaseline(value: string | undefined, p: Period): Baseline {
-  if (!p.month || !BASELINES.includes(value as Baseline)) return "prev";
-  return value as Baseline;
+export function parseBaseline(
+  value: string | undefined,
+  p: Period,
+  fallback: Baseline = "prev",
+): Baseline {
+  if (!p.month) return "prev";
+  return BASELINES.includes(value as Baseline) ? (value as Baseline) : fallback;
 }
+
+// Insights smooth one-offs out against an average; the dashboard follows the previous month (spec §5.17).
+export const INSIGHTS_BASELINE: Baseline = "avg3";
 
 export type Comparison = {
   baseline: Baseline;
