@@ -254,7 +254,7 @@ async function capture(
   if (shot.fullPage) {
     const height = await page.evaluate(() => document.documentElement.scrollHeight);
     await page.setViewportSize({
-      width: DESKTOP.viewport.width,
+      width: page.viewportSize()?.width ?? DESKTOP.viewport.width,
       height: Math.min(height, shot.maxHeight ?? Infinity),
     });
   }
