@@ -7,6 +7,8 @@ type Node = {
   color: string | null;
   parentId: string | null;
   groupId: string | null;
+  savings?: boolean;
+  neutral?: boolean;
   children: Node[];
 };
 
@@ -52,6 +54,21 @@ describe("categoryOptions", () => {
       ["a2", ["a"]],
       ["b", []],
       ["g", []],
+    ]);
+  });
+});
+
+describe("categoryOptions flags", () => {
+  it("names the nearest self-or-ancestor carrying each flag", () => {
+    const flagged = [
+      { ...node("s", {}, [{ ...node("s1", { parentId: "s" }), neutral: true }]), savings: true },
+      { ...node("n", {}, [node("n1", { parentId: "n" })]), neutral: true },
+    ];
+    expect(categoryOptions(flagged).map((c) => [c.id, c.savingsFrom, c.neutralFrom])).toEqual([
+      ["s", "s", null],
+      ["s1", "s", "s1"],
+      ["n", null, "n"],
+      ["n1", null, "n"],
     ]);
   });
 });

@@ -230,6 +230,10 @@ function CategoryFields({
   const parent = parents.find((p) => p.id === parentId);
   const checkedColor = color ?? (mode === "create" && !parent ? DEFAULT_CATEGORY_COLOR : null);
   const shownColor = checkedColor ?? parent?.color ?? UNSET_COLOR;
+  // Neutral wins over savings (spec §5.16), so a neutral subtree shows savings off.
+  const neutralFrom = parent?.neutralFrom ?? null;
+  const savingsFrom = parent?.savingsFrom ?? null;
+  const neutralOn = neutralFrom != null || neutral;
   const symbolDraftInvalid = symbolDraft.trim() !== "" && !singleGrapheme(symbolDraft);
   const symbolDraftId = `${ids}-symbol-draft`;
   const symbolErrorId = `${ids}-symbol-error`;
@@ -549,35 +553,63 @@ function CategoryFields({
         <FieldError form={form} name="shiftDays" />
       </div>
 
-      <label className="flex items-center justify-between gap-4">
-        <span>
-          <span className="block text-sm font-medium">{t("savings")}</span>
-          <span className={cn(hintClass, "block")}>{t("savingsHint")}</span>
-        </span>
-        <Switch
-          checked={savings}
-          onCheckedChange={(on) => {
-            setSavings(on);
-            if (on) setNeutral(false);
-          }}
-        />
-        <input type="hidden" name="savings" value={savings ? "on" : ""} />
-      </label>
+      <FlagSwitch
+        label={t("savings")}
+        hint={
+          neutralFrom
+            ? t("overriddenByNeutral", { name: neutralFrom })
+            : savingsFrom && !neutralOn
+              ? t("inheritedFrom", { name: savingsFrom })
+              : t("savingsHint")
+        }
+        name="savings"
+        checked={!neutralOn && (savingsFrom != null || savings)}
+        locked={neutralFrom != null || (savingsFrom != null && !neutralOn)}
+        onCheckedChange={(on) => {
+          setSavings(on);
+          if (on) setNeutral(false);
+        }}
+      />
 
-      <label className="flex items-center justify-between gap-4">
-        <span>
-          <span className="block text-sm font-medium">{t("neutral")}</span>
-          <span className={cn(hintClass, "block")}>{t("neutralHint")}</span>
-        </span>
-        <Switch
-          checked={neutral}
-          onCheckedChange={(on) => {
-            setNeutral(on);
-            if (on) setSavings(false);
-          }}
-        />
-        <input type="hidden" name="neutral" value={neutral ? "on" : ""} />
-      </label>
+      <FlagSwitch
+        label={t("neutral")}
+        hint={neutralFrom ? t("inheritedFrom", { name: neutralFrom }) : t("neutralHint")}
+        name="neutral"
+        checked={neutralOn}
+        locked={neutralFrom != null}
+        onCheckedChange={(on) => {
+          setNeutral(on);
+          if (on) setSavings(false);
+        }}
+      />
     </>
+  );
+}
+
+// A locked flag is decided by an ancestor and is not stored on the subcategory.
+function FlagSwitch({
+  label,
+  hint,
+  name,
+  checked,
+  locked,
+  onCheckedChange,
+}: {
+  label: string;
+  hint: string;
+  name: string;
+  checked: boolean;
+  locked: boolean;
+  onCheckedChange: (on: boolean) => void;
+}) {
+  return (
+    <label className="flex items-center justify-between gap-4">
+      <span>
+        <span className="block text-sm font-medium">{label}</span>
+        <span className={cn(hintClass, "block")}>{hint}</span>
+      </span>
+      <Switch checked={checked} disabled={locked} onCheckedChange={onCheckedChange} />
+      <input type="hidden" name={name} value={checked && !locked ? "on" : ""} />
+    </label>
   );
 }

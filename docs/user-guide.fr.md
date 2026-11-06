@@ -416,6 +416,8 @@ Pour en créer une :
 6. Activez si besoin **Compter dans le mois suivant** : voir [Compter une transaction dans un autre mois](#compter-une-transaction-dans-un-autre-mois).
 7. Activez si besoin **Compte comme de l’épargne** : les dépenses de cette catégorie et de ses sous-catégories comptent dans l’**Épargne nette** du tableau de bord au lieu de ses dépenses (de l’argent mis de côté sur un compte que Bilan ne suit pas, comme un compte-titres ou le livret d’un enfant). C’est activé pour la catégorie **Épargne** par défaut.
 8. Activez si besoin **Ne compte ni en dépense ni en rentrée** : les transactions de cette catégorie et de ses sous-catégories sont exclues du tableau de bord et des analyses, pour les virements entre vos propres comptes que Bilan ne peut pas lier (un compte joint qu’il ne suit pas, par exemple). Cette option l’emporte sur **Compte comme de l’épargne** et est activée pour la catégorie **Banque › Virement interne** par défaut.
+
+   Une sous-catégorie affiche ces deux options telles que sa catégorie parente les définit : quand un parent compte comme de l’épargne ou ne compte ni en dépense ni en rentrée, l’interrupteur est activé, verrouillé, et nomme ce parent.
 9. Cliquez sur **Créer la catégorie**.
 
 Pour supprimer une catégorie, ouvrez son menu **⋮** et choisissez **Supprimer**. Ses sous-catégories sont supprimées aussi. Si des transactions, des règles ou des lignes de budget l’utilisent, choisissez où les rattacher avec **Déplacer vers**. Avec **Aucune catégorie**, les transactions deviennent non catégorisées et les règles et lignes de budget sont supprimées.

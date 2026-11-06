@@ -939,6 +939,8 @@
     "savingsHint": "Ses dépenses comptent dans l'épargne nette du dashboard, sous-catégories comprises.",
     "neutral": "Ne compte ni en dépense ni en rentrée",
     "neutralHint": "Exclue des rentrées et dépenses du dashboard et des analyses, sous-catégories comprises : pour les virements entre vos comptes.",
+    "inheritedFrom": "Hérité de « {name} ».",
+    "overriddenByNeutral": "Sans effet : « {name} » ne compte ni en dépense ni en rentrée.",
     "shiftDays": "Nombre de jours"
   },
   "transactions": {
