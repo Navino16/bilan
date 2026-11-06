@@ -634,19 +634,20 @@ async function main(): Promise<void> {
   const member = await db.user.findUnique({ where: { email: MEMBER_EMAIL } });
   if (member) await db.groupMember.create({ data: { groupId, userId: member.id, role: "MEMBER" } });
 
-  // Last month's recurring budget on the checking account, rolled into this month; its
-  // transfer to the joint account shows as a mirror in the household budget.
+  // The checking account's recurring budget, rolled month after month over the history into
+  // this month (insights' budgets over time); its transfer to the joint account shows as a
+  // mirror in the household budget.
   const monthBounds = (offset: number) => ({
     start: isoDay(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + offset, 1))),
     end: isoDay(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + offset + 1, 0))),
   });
-  const prev = monthBounds(-1);
+  const first = monthBounds(1 - MONTHS);
   const { id: template } = await createBudget(
     {
       name: "Budget mensuel",
       periodType: "MONTH",
-      periodStart: prev.start,
-      periodEnd: prev.end,
+      periodStart: first.start,
+      periodEnd: first.end,
       recurring: true,
       accountId: accountIds.courant,
       outOfBudgetPlanned: 250,
@@ -674,7 +675,8 @@ async function main(): Promise<void> {
     },
     actor,
   );
-  await rollRecurring(template, actor);
+  let latest = template;
+  for (let i = 1; i < MONTHS; i++) latest = (await rollRecurring(latest, actor)).id!;
   const cur = monthBounds(0);
   await createBudget(
     {

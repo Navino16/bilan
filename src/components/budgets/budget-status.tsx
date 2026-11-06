@@ -18,7 +18,7 @@ export function statusStyle(status: BudgetStatus): { color: string; background: 
   }
 }
 
-const BAR_FILL: Record<BudgetStatus, string> = {
+export const BAR_FILL: Record<BudgetStatus, string> = {
   OVER: "var(--expense)",
   WARN: "var(--warning)",
   REACHED: "var(--warning)",

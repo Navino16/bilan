@@ -1610,7 +1610,15 @@
     "exceptionalAverageTitle": "Category’s monthly average: {amount}",
     "exceptionalShowAll": "Show all ({count, number})",
     "exceptionalShowLess": "Show less",
-    "noExceptional": "No exceptional expense this period."
+    "noExceptional": "No exceptional expense this period.",
+    "budgetsOverline": "Budgets",
+    "budgetsTitle": "Budgets over time",
+    "budgetsSub": "The last 12 periods of each recurring budget, up to today",
+    "budgetsLegendReached": "Almost reached or reached",
+    "budgetsLegendInProgress": "In progress",
+    "budgetsCell": "{period}{inProgress, select, true { (in progress)} other {}}: {status}, {spent} of {planned}",
+    "budgetsOver": "{over, plural, =0 {Never over} one {Over once} other {Over # times}} in {finished, plural, one {# period} other {# periods}}",
+    "budgetsGap": "{gap} vs planned on average"
   },
   "settings": {
     "data": {
