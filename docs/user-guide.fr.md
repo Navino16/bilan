@@ -414,7 +414,7 @@ Pour en créer une :
 4. Choisissez une **Couleur**. Le bouton **+** ouvre un sélecteur de couleur libre. Une sous-catégorie peut reprendre la couleur de son parent.
 5. Choisissez un **Symbole**, ou saisissez n’importe quel caractère ou emoji avec **+**.
 6. Activez si besoin **Compter dans le mois suivant** : voir [Compter une transaction dans un autre mois](#compter-une-transaction-dans-un-autre-mois).
-7. Activez si besoin **Compte comme de l’épargne** : les dépenses de cette catégorie et de ses sous-catégories comptent dans l’**Épargne nette** du dashboard (de l’argent mis de côté sur un compte que Bilan ne suit pas, comme un compte-titres ou le livret d’un enfant). C’est activé pour la catégorie **Épargne** par défaut.
+7. Activez si besoin **Compte comme de l’épargne** : les dépenses de cette catégorie et de ses sous-catégories comptent dans l’**Épargne nette** du tableau de bord au lieu de ses dépenses (de l’argent mis de côté sur un compte que Bilan ne suit pas, comme un compte-titres ou le livret d’un enfant). C’est activé pour la catégorie **Épargne** par défaut.
 8. Cliquez sur **Créer la catégorie**.
 
 Pour supprimer une catégorie, ouvrez son menu **⋮** et choisissez **Supprimer**. Ses sous-catégories sont supprimées aussi. Si des transactions, des règles ou des lignes de budget l’utilisent, choisissez où les rattacher avec **Déplacer vers**. Avec **Aucune catégorie**, les transactions deviennent non catégorisées et les règles et lignes de budget sont supprimées.
@@ -610,7 +610,7 @@ En haut du détail, une carte résume la période :
 - **Plan en déficit de …**, quand le budget prévoit des rentrées et prévoit de dépenser plus.
 - Pendant la période en cours, un budget sur un compte ajoute où le compte atterrit en fin de période (voir [Où le compte atterrit](#où-le-compte-atterrit)) : **Solde aujourd’hui**, **Reste à dépenser**, **À recevoir** et **Fin de mois** (**Fin de période** pour une période autre qu’un mois civil). Quand ce qui doit encore sortir du compte diffère du reste à dépenser (une transaction déjà datée plus tard dans la période, une autre venant d’un autre compte), cette ligne devient **À payer**.
 
-Pendant la période en cours, un budget sans compte affiche **Solde prévu au …** : le solde actuel de vos comptes courants, moins ce que les lignes prévoient encore de dépenser (une ligne dépassée compte pour 0). Les comptes d’épargne et les revenus à venir n’entrent pas dans le calcul. Un budget sur un compte affiche son atterrissage à la place (voir [Où le compte atterrit](#où-le-compte-atterrit)). L’un ou l’autre s’affiche aussi sur la carte du budget en cours du tableau de bord.
+Pendant la période en cours, un budget sans compte affiche **Solde prévu au …** : le solde actuel de vos comptes courants, moins ce que les lignes prévoient encore de dépenser (une ligne dépassée compte pour 0). Les comptes d’épargne et les revenus à venir n’entrent pas dans le calcul. Un budget sur un compte affiche son atterrissage à la place (voir [Où le compte atterrit](#où-le-compte-atterrit)).
 
 ### Renouveler un budget récurrent
 
@@ -734,11 +734,13 @@ Astuce : les virements entre vos propres comptes sont liés automatiquement et r
 ![Tableau de bord](images/fr/dashboard.png)
 
 - **Solde des comptes** : le solde actuel de chaque compte non archivé et leur total, quelle que soit la période choisie. **Comptes** ouvre la page des comptes. Sous le solde d’un compte dont le [budget](#où-le-compte-atterrit) est en cours, **Au … :** donne son solde en fin de période ; survolez-le pour le détail, cliquez pour ouvrir le budget.
-- **Revenus**, **Dépenses** et **Solde net**, chacun avec son évolution par rapport à la comparaison.
-- **Épargne nette** : les virements liés vers vos comptes d’épargne moins ceux qui en sortent, plus les dépenses des catégories qui [comptent comme de l’épargne](#catégories), avec son évolution par rapport à la comparaison.
+- **Revenus** et **Dépenses**, chacun avec son évolution par rapport à la comparaison. Les dépenses des catégories qui [comptent comme de l’épargne](#catégories) ne sont pas des dépenses : elles ne comptent que dans l’épargne nette.
+- **Épargne nette** : les virements liés vers vos comptes d’épargne moins ceux qui en sortent, plus les dépenses des catégories qui comptent comme de l’épargne, avec son évolution par rapport à la comparaison.
+- **Reste à dépenser**, pendant la période en cours : ce que vos budgets en cours permettent encore, le même montant que le résumé de chaque budget, additionné. Sans budget en cours, et pour une période passée, cette carte affiche le **Solde net** (revenus moins dépenses) à la place.
+- **À faire**, seulement s’il y a quelque chose à traiter : les dépenses et rentrées sans catégorie de la période qui ne sont pas liées, avec leur total. Cliquez sur l’une d’elles pour ouvrir ces transactions et les catégoriser.
+- **Budgets en cours**, pendant la période en cours : une ligne par budget en cours, avec ce qu’il reste à dépenser, la part du prévu déjà dépensée et ses dépenses hors budget. Cliquez sur une ligne pour ouvrir le budget.
+- **Rythme des dépenses** : vos dépenses cumulées jour après jour (mois après mois sur un trimestre ou une année), la ligne pointillée étant la période de comparaison, ou le mois moyen. Tant que la période est en cours, la courbe s’arrête à aujourd’hui ; au-dessus, ce que vous avez dépensé jusqu’ici et l’écart avec la même date de la comparaison.
 - **Dépenses par catégorie** : un anneau avec les six plus grosses catégories, le reste regroupé.
-- **Dépenses jour par jour** (périodes jusqu’à 45 jours) ou **Dépenses par mois** (périodes plus longues), avec la moyenne et le plus gros jour ou mois.
-- **Budget en cours** : votre budget du moment, ligne par ligne. Cliquez sur **Détail** pour l’ouvrir.
 - **Transactions récentes** : les six dernières de la période. **Tout voir** ouvre la liste complète.
 
 ### Analyses
