@@ -38,8 +38,8 @@ export async function SpendingPace({
   const monthly = pace.granularity === "month";
   const bucketDate = (i: number) => {
     const d = isoDate(pace.start);
-    if (monthly) d.setUTCMonth(d.getUTCMonth() + i);
-    else d.setUTCDate(d.getUTCDate() + i);
+    if (monthly) return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + i, 1));
+    d.setUTCDate(d.getUTCDate() + i);
     return d;
   };
   const bucketLabel = (i: number) =>
@@ -67,6 +67,12 @@ export async function SpendingPace({
       : t("pace.tipRef", { date, amount: money.format(cur), reference: money.format(ref) });
   });
 
+  const headline = t("pace.headline", {
+    amount: money.format(spent),
+    date: formatDayMonth(isoDate(pace.asOf), locale),
+  });
+  const empty = !pace.reference && pace.current.every((v) => v === 0);
+
   return (
     <Card className={cn("gap-4 p-4.5 md:p-6", className)} data-slot="spending-pace">
       <div>
@@ -75,10 +81,7 @@ export async function SpendingPace({
       </div>
       <div className="space-y-0.5">
         <div className="font-display text-2xl tabular-nums" data-slot="pace-headline">
-          {t("pace.headline", {
-            amount: money.format(spent),
-            date: formatDayMonth(isoDate(pace.asOf), locale),
-          })}
+          {headline}
         </div>
         {hasReference && (
           <div
@@ -97,26 +100,33 @@ export async function SpendingPace({
           </div>
         )}
       </div>
-      <PaceChart
-        current={pace.current}
-        reference={pace.reference}
-        buckets={pace.buckets}
-        tips={tips}
-        axis={[bucketLabel(0), bucketLabel(pace.buckets - 1)]}
-        marker={sameDate}
-      />
-      <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-[11.5px]">
-        <span className="flex items-center gap-1.5">
-          <span className="bg-primary h-0.5 w-4 rounded-full" aria-hidden />
-          {t("pace.legendCurrent")}
-        </span>
-        {pace.reference && (
-          <span className="flex items-center gap-1.5">
-            <span className="w-4 border-t-[1.5px] border-dashed border-current" aria-hidden />
-            {months ? t("pace.legendAvg", { months }) : t("pace.legendPrev")}
-          </span>
-        )}
-      </div>
+      {empty ? (
+        <p className="text-muted-foreground text-sm">{t("noExpenses")}</p>
+      ) : (
+        <>
+          <PaceChart
+            current={pace.current}
+            reference={pace.reference}
+            buckets={pace.buckets}
+            tips={tips}
+            axis={[bucketLabel(0), bucketLabel(pace.buckets - 1)]}
+            marker={sameDate}
+            label={headline}
+          />
+          <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-[11.5px]">
+            <span className="flex items-center gap-1.5">
+              <span className="bg-primary h-0.5 w-4 rounded-full" aria-hidden />
+              {t("pace.legendCurrent")}
+            </span>
+            {pace.reference && (
+              <span className="flex items-center gap-1.5">
+                <span className="w-4 border-t-[1.5px] border-dashed border-current" aria-hidden />
+                {months ? t("pace.legendAvg", { months }) : t("pace.legendPrev")}
+              </span>
+            )}
+          </div>
+        </>
+      )}
     </Card>
   );
 }

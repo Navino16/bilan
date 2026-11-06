@@ -77,6 +77,7 @@ export function PaceChart({
   tips,
   axis,
   marker,
+  label,
   width = 380,
   height = 120,
 }: {
@@ -87,6 +88,7 @@ export function PaceChart({
   tips: string[];
   axis: [string, string];
   marker: boolean;
+  label: string;
   width?: number;
   height?: number;
 }) {
@@ -106,6 +108,8 @@ export function PaceChart({
           viewBox={`0 0 ${width} ${height}`}
           preserveAspectRatio="none"
           className="overflow-visible"
+          role="img"
+          aria-label={label}
           data-slot="pace-chart"
         >
           <line
