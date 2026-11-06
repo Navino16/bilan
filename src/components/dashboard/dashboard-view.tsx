@@ -223,6 +223,7 @@ export async function DashboardView({
           pace={data.pace}
           spent={data.totals.expense}
           referenceSpent={data.previous.expense}
+          hasReference={hasPrevious}
           comparison={comparison}
           locale={locale}
           className="xl:order-last"

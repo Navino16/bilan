@@ -33,7 +33,7 @@ export type DashboardData = {
   pace: SpendingPace;
   recent: TransactionListItem[];
   savings: { current: number; previous: number };
-  // Uncategorized operations dated in the period, as the transactions list filters them.
+  // Unlinked uncategorized operations dated in the period (a linked one is already accounted for).
   uncategorized: { out: TodoCount; in: TodoCount };
 };
 
@@ -255,6 +255,7 @@ async function uncategorizedCounts(
         accountId: { in: accountIds },
         categoryId: null,
         date: { gte: period.from, lte: period.to },
+        linkMembership: { is: null },
         amount,
       },
       _count: true,

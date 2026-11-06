@@ -184,6 +184,8 @@ describe("getDashboard link-aware totals", () => {
     expect(data.totals.count).toBe(4);
     // The collapsed −50 lands on catB (the primary's category).
     expect(data.byCategory).toEqual([{ categoryId: catB, amount: 50 }]);
+    // Linked refunds are accounted for: nothing left to categorize.
+    expect(data.uncategorized.in).toEqual({ count: 0, amount: 0 });
 
     // Cleanup so other tests' assumptions about the dataset hold.
     await db.transactionLinkMember.deleteMany({});

@@ -15,6 +15,7 @@ export async function SpendingPace({
   pace,
   spent,
   referenceSpent,
+  hasReference,
   comparison,
   locale,
   className,
@@ -22,6 +23,8 @@ export async function SpendingPace({
   pace: Pace;
   spent: number;
   referenceSpent: number;
+  // As for the KPIs: no difference against a reference holding nothing at the same date.
+  hasReference: boolean;
   comparison: Comparison;
   locale: string;
   className?: string;
@@ -77,7 +80,7 @@ export async function SpendingPace({
             date: formatDayMonth(isoDate(pace.asOf), locale),
           })}
         </div>
-        {pace.reference && (
+        {hasReference && (
           <div
             className="text-[12.5px]"
             data-slot="pace-diff"
