@@ -234,7 +234,7 @@ const SHOTS: Shot[] = [
   { name: "admin-audit", path: "/admin/audit", fullPage: true, maxHeight: 2400 },
   { name: "mobile-dashboard", path: "/dashboard", mobile: true },
   { name: "mobile-transactions", path: "/transactions", mobile: true },
-  { name: "mobile-insights", path: "/insights", mobile: true, fullPage: true, maxHeight: 1900 },
+  { name: "mobile-insights", path: "/insights", mobile: true, fullPage: true },
 ];
 
 async function settle(page: Page) {
