@@ -158,7 +158,7 @@ Sur téléphone, touchez **Filtres**, ajustez, puis touchez **Voir … transacti
 
 ### Rechercher
 
-Tapez dans **Rechercher (mots-clés)…**. La recherche porte sur le début des mots du libellé :
+Tapez dans **Rechercher…**. La recherche porte sur le début des mots du libellé :
 
 - « lec » trouve « LECLERC », mais « clerc » ne trouve rien.
 - Les mots de moins de 3 lettres sont ignorés.
