@@ -34,6 +34,10 @@ const spec = {
 } satisfies Record<string, ValidatorSpec<unknown>>;
 
 export function parseEnv(source: Record<string, string | undefined>) {
+  // envalid 9 treats a blank value as unset; a blank proxy header is a misconfiguration, not the default.
+  if (source.TRUSTED_IP_HEADER?.trim() === "") {
+    throw new Error("Invalid environment variables: TRUSTED_IP_HEADER");
+  }
   return cleanEnv(source, spec, { reporter: throwingReporter });
 }
 
