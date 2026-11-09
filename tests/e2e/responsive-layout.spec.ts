@@ -326,8 +326,14 @@ test.describe("responsive layout (#167)", () => {
             const ctx = document.createElement("canvas").getContext("2d")!;
             ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
             const box = getComputedStyle(el);
-            const room =
-              el.clientWidth - parseFloat(box.paddingLeft) - parseFloat(box.paddingRight);
+            // From the border box: Chromium 158 already leaves the padding out of an input's clientWidth.
+            const insets = [
+              box.borderLeftWidth,
+              box.borderRightWidth,
+              box.paddingLeft,
+              box.paddingRight,
+            ].reduce((sum, v) => sum + parseFloat(v), 0);
+            const room = el.getBoundingClientRect().width - insets;
             return ctx.measureText(el.placeholder).width <= room;
           }),
         ).toBe(true);
