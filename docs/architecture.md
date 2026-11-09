@@ -1395,7 +1395,7 @@ Sign-ins are audited alike whatever the method (#258): `auth.login.success` / `a
 
 ### 6.9 Env validation at boot
 
-`src/env.ts` uses `envalid`. Validates `NODE_ENV`, `APP_URL` (URL), `DATABASE_URL`, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY` and `SEARCH_TOKEN_KEY` (each must decode from base64 to 32 bytes); optional `CRON_SECRET` (unset → cron routes 404) and `TRUSTED_IP_HEADER` (default `x-forwarded-for`). Parsed on first access, which `instrumentation.ts` triggers at server start (DB seed); any missing or malformed value throws `Invalid environment variables: …`.
+`src/env.ts` uses `envalid`. Validates `NODE_ENV`, `APP_URL` (URL), `DATABASE_URL`, `AUTH_SECRET`, `DATA_ENCRYPTION_KEY` and `SEARCH_TOKEN_KEY` (each must decode from base64 to 32 bytes); optional `CRON_SECRET` (unset → cron routes 404) and `TRUSTED_IP_HEADER` (default `x-forwarded-for`). Parsed on first access, which `instrumentation.ts` triggers at server start (DB seed); any missing or malformed value throws `Invalid environment variables: …`. A blank value counts as unset (envalid 9), except a blank `TRUSTED_IP_HEADER`, which is rejected.
 
 ### 6.10 Dependencies & CI
 
