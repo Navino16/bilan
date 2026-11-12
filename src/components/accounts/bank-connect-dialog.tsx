@@ -16,7 +16,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { overline } from "@/components/transactions/bits";
 import { useActionForm } from "@/components/forms/use-action-form";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useFrozenWhileOpen } from "@/hooks/use-frozen-while-open";
@@ -97,7 +96,6 @@ function ConnectForm({ onClose }: { onClose: () => void }) {
   return (
     <form {...form.formProps} className="flex min-h-0 flex-col">
       <DialogHeader className="space-y-2 px-6 pt-5 pb-3 text-left max-md:px-5">
-        <span className={overline}>{t("dialog.overline")}</span>
         <DialogTitle className="font-display text-2xl leading-tight">
           {t("dialog.title")}
         </DialogTitle>

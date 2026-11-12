@@ -39,7 +39,7 @@ export default async function AdminLayout({
     <ClientMessages scope="admin" locale={locale}>
       <div className="space-y-8">
         <div className="space-y-4">
-          <PageHeader overline={t("overline")} title={t("title")} />
+          <PageHeader title={t("title")} />
           <AdminNav items={items} />
         </div>
         {children}

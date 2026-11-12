@@ -131,7 +131,6 @@ export function ReviewStep({
   return (
     <>
       <DialogHeader className={headerClass}>
-        <span className={overline}>{t("reviewOverline")}</span>
         <DialogTitle className="font-display text-2xl leading-tight">
           {t("reviewTitle")}
         </DialogTitle>

@@ -66,7 +66,7 @@ export function PendingInvitations({ invitations }: { invitations: PendingForUse
   if (invitations.length === 0) return null;
 
   return (
-    <SectionCard flush overline={t("forYouOverline")} title={t("pendingForYou")}>
+    <SectionCard flush title={t("pendingForYou")}>
       {error && (
         <div className="border-b px-4 py-3 sm:px-6">
           <Alert variant="destructive">

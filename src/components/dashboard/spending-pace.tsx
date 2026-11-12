@@ -1,6 +1,5 @@
 import { getTranslations } from "next-intl/server";
 import { Card } from "@/components/ui/card";
-import { overline } from "@/components/transactions/bits";
 import { PaceChart } from "./charts";
 import { cn } from "@/lib/utils";
 import { formatDayMonth, formatMonthYear } from "@/lib/format";
@@ -75,10 +74,7 @@ export async function SpendingPace({
 
   return (
     <Card className={cn("gap-4 p-4.5 md:p-6", className)} data-slot="spending-pace">
-      <div>
-        <div className={overline}>{t(monthly ? "monthly" : "daily")}</div>
-        <div className="font-display text-xl">{t("pace.title")}</div>
-      </div>
+      <div className="font-display text-xl">{t("pace.title")}</div>
       <div className="space-y-0.5">
         <div className="font-display text-2xl tabular-nums" data-slot="pace-headline">
           {headline}

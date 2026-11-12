@@ -1,9 +1,9 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
-import { overline } from "@/components/transactions/bits";
 import { BudgetBar } from "@/components/budgets/budget-status";
 import { formatMoney, formatPercent } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import type { CurrentBudget } from "@/server/services/budgets";
 
 // One compact row per budget in progress, with the figures of its summary card (#408).
@@ -16,13 +16,17 @@ export async function CurrentBudgets({
 }) {
   if (budgets.length === 0) return null;
   const t = await getTranslations("dashboard.currentBudgets");
+  // Columns follow the count so a row never ends on a lone hole: 1, 2, 3, 2×2, then 3.
+  const columns =
+    budgets.length === 1
+      ? ""
+      : budgets.length === 2 || budgets.length === 4
+        ? "md:grid-cols-2"
+        : "md:grid-cols-2 lg:grid-cols-3";
   return (
     <Card className="gap-3 p-4.5 md:p-6" data-slot="dashboard-budgets">
-      <div>
-        <div className={overline}>{t("overline")}</div>
-        <div className="font-display text-xl">{t("title", { count: budgets.length })}</div>
-      </div>
-      <div className="flex flex-col gap-1">
+      <div className="font-display text-xl">{t("overline")}</div>
+      <div className={cn("grid grid-cols-1 gap-x-8 gap-y-1", columns)}>
         {budgets.map((b) => (
           <Link
             key={b.id}

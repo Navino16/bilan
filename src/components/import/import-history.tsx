@@ -1,6 +1,5 @@
 import { getTranslations } from "next-intl/server";
 import { Card } from "@/components/ui/card";
-import { overline } from "@/components/transactions/bits";
 import type { ImportHistoryItem } from "@/server/services/imports/revert";
 import { LocalDateTime } from "@/components/shell/local-date-time";
 import { ImportHistoryActions } from "./import-history-actions";
@@ -26,7 +25,6 @@ export async function ImportHistory({ items }: { items: ImportHistoryItem[] }) {
   return (
     <Card className="gap-4 p-6 text-left" data-slot="import-history">
       <div>
-        <div className={overline}>{t("overline")}</div>
         <div className="font-display text-xl">{t("title")}</div>
       </div>
       {items.length === 0 ? (

@@ -33,7 +33,6 @@ export default async function GroupsPage({ params }: { params: Promise<{ locale:
   return (
     <div className="space-y-6">
       <PageHeader
-        overline={t("overline")}
         title={t("title")}
         subtitle={t("subtitle")}
         actions={
@@ -57,7 +56,7 @@ export default async function GroupsPage({ params }: { params: Promise<{ locale:
         </Alert>
       )}
       <GroupList groups={groups} />
-      <SectionCard overline={ti("joinOverline")} title={ti("joinByCode")}>
+      <SectionCard title={ti("joinByCode")}>
         <JoinByCode />
       </SectionCard>
     </div>

@@ -19,7 +19,7 @@ export default async function AdminBankSyncPage() {
   const cfg = await getBankSyncConfig();
 
   return (
-    <SectionCard overline={t("overline")} title={t("title")} hint={t("subtitle")}>
+    <SectionCard title={t("title")} hint={t("subtitle")}>
       <BankSyncForm
         defaults={
           cfg

@@ -253,7 +253,6 @@
   "accounts": {
     "overline": "Wealth",
     "title": "Accounts",
-    "new": "New",
     "create": "New account",
     "createTitle": "Add an account",
     "createSubtitle": "The account becomes visible in imports, budgets and sharing.",
@@ -361,7 +360,6 @@
     "bankSync": {
       "connect": "Connect my bank",
       "dialog": {
-        "overline": "Bank sync",
         "title": "Connect my bank",
         "intro": "Pick your bank: you will authorize it to share your accounts with Bilan, read-only, through Enable Banking. You then come back here to map the accounts.",
         "country": "Country",
@@ -426,7 +424,6 @@
         "expected": "Balance expected by the bank on {date}: {amount}"
       },
       "connections": {
-        "overline": "Banks",
         "title": "Bank connections",
         "validUntil": "Access valid until {date}",
         "expiredOn": "Access expired on {date}",
@@ -498,7 +495,6 @@
   },
   "rules": {
     "pageTitle": "Categories & rules",
-    "overline": "Organization",
     "tabCategories": "Categories",
     "tabRules": "Rules",
     "new": "New rule",
@@ -577,7 +573,6 @@
       "cancel": "Cancel",
       "close": "Close",
       "back": "Back",
-      "exportOverline": "Rules",
       "exportTitle": "Export rules",
       "exportIntro": "The file holds the patterns and the category names, never your transactions.",
       "exportScope": "Rules to export",
@@ -585,7 +580,6 @@
       "download": "Download",
       "exporting": "Preparing export…",
       "exportFailed": "The export failed. Please try again.",
-      "importOverline": "Rules",
       "importTitle": "Import rules",
       "fileLabel": "Rules file",
       "fileHint": "A file exported from Bilan (.json, up to {size} and {max} rules).",
@@ -593,7 +587,6 @@
       "target": "Import into",
       "reading": "Reading the file…",
       "next": "Continue",
-      "reviewOverline": "Import",
       "reviewTitle": "Review the import",
       "reviewIntro": "{count, plural, one {# rule} other {# rules}} in {file}, imported into {scope}.",
       "categoriesTitle": "Categories to resolve",
@@ -622,7 +615,6 @@
       "nothing": "Nothing to import: every rule already exists or is skipped.",
       "importButton": "Import",
       "importing": "Importing…",
-      "resultOverline": "Import complete",
       "resultTitle": "Rules imported",
       "resultCreated": "{count, plural, one {rule created} other {rules created}}",
       "resultCategoriesCreated": "{count, plural, one {category created} other {categories created}}",
@@ -638,7 +630,6 @@
     }
   },
   "budgets": {
-    "overline": "Planning",
     "pageTitle": "Budgets",
     "create": "New budget",
     "createTitle": "New budget",
@@ -874,7 +865,6 @@
       "outcomeMove": "Transactions, rules and budget lines will be moved to “{name}”.",
       "outcomeNone": "Transactions will become uncategorized; rules and budget lines will be deleted."
     },
-    "overlineNew": "New",
     "createHint": "You can attach categorization rules after creating it.",
     "editHint": "Linked transactions, rules and budgets follow the change.",
     "preview": "Preview",
@@ -1156,7 +1146,6 @@
   },
   "import": {
     "title": "Import a statement",
-    "overline": "Import",
     "steps": {
       "file": "File",
       "read": "Reading",
@@ -1241,7 +1230,6 @@
       "ACCOUNT_ARCHIVED": "This account is archived: unarchive it to import into it."
     },
     "history": {
-      "overline": "History",
       "title": "Recent imports",
       "empty": "No imports yet.",
       "rows": "{imported, plural, one {# transaction imported} other {# transactions imported}} · {skipped, plural, one {# duplicate skipped} other {# duplicates skipped}}",
@@ -1329,13 +1317,10 @@
     }
   },
   "groups": {
-    "overline": "Sharing",
     "detailOverline": "Household",
-    "membersOverline": "Access",
     "title": "Households",
     "subtitle": "Share accounts and budgets with your household.",
     "empty": "No households yet. Create one to share your accounts.",
-    "new": "New",
     "create": "New household",
     "createTitle": "Create a household",
     "createSubtitle": "Then invite members and share accounts.",
@@ -1385,9 +1370,6 @@
     "removeTitle": "Remove {name}?"
   },
   "invitations": {
-    "overline": "Invitations",
-    "forYouOverline": "For you",
-    "joinOverline": "Invitation code",
     "invite": "Invite",
     "email": "Email address",
     "emailPlaceholder": "member@example.com",
@@ -1457,13 +1439,10 @@
     },
     "vsPrev": "{arrow} {pct} vs previous period",
     "noPrev": "Nothing in the previous period",
-    "breakdown": "Breakdown",
     "byCategory": "Spending by category",
     "spentThisPeriod": "spent this period",
     "noExpenses": "No spending this period.",
     "noCategory": "Uncategorized",
-    "daily": "Daily",
-    "monthly": "Monthly",
     "recent": "Recent transactions",
     "seeAll": "See all",
     "noRecent": "No transactions this period.",
@@ -1496,7 +1475,6 @@
     "upcoming": "Upcoming period: only transactions assigned to it appear.",
     "acrossBudgets": "{count, plural, one {across # current budget} other {across # current budgets}}",
     "todo": {
-      "overline": "To do",
       "title": "Needs attention",
       "uncategorizedOut": "{count, plural, one {# uncategorized expense} other {# uncategorized expenses}}",
       "uncategorizedIn": "{count, plural, one {# uncategorized income} other {# uncategorized incomes}}",
@@ -1504,7 +1482,6 @@
     },
     "currentBudgets": {
       "overline": "Current budgets",
-      "title": "{count, plural, one {# budget} other {# budgets}}",
       "left": "{amount} left",
       "ofPlanned": "{percent} of {planned}",
       "outOfBudget": "Out of budget: {amount}"
@@ -1556,15 +1533,12 @@
     "noCategory": "Uncategorized"
   },
   "insights": {
-    "overline": "Insights",
     "pageTitle": "Insights",
     "noData": "No spending this period.",
     "noCategory": "Uncategorized",
-    "merchantsOverline": "Where the money goes",
     "merchantsTitle": "Top merchants",
     "merchantsCount": "{count, number}×",
     "noMerchants": "No merchants this period.",
-    "incomeOverline": "Income",
     "incomeTitle": "Income by category",
     "incomeTotal": "{amount} this period",
     "noIncome": "No income this period.",
@@ -1581,8 +1555,7 @@
     "overviewBar": "{month}: income {income}, spending {spending}",
     "overviewAbove": "Spending above income {count, plural, one {# month} other {# months}} out of {total}",
     "overviewEmpty": "Nothing recorded over these 12 months.",
-    "categoriesOverline": "Spending",
-    "categoriesTitle": "By category",
+    "categoriesTitle": "Spending by category",
     "categoriesSub": "{current} vs {previous}",
     "categoriesSubAvg": "{current} vs average of {months}",
     "trendAverage": "12-month average: {amount}",
@@ -1591,7 +1564,6 @@
     "stableCount": "{count, plural, one {# category with steady spending} other {# categories with steady spending}}",
     "uncategorized": "{amount} uncategorized",
     "toSort": "To sort",
-    "recurringOverline": "Every month",
     "recurringTitle": "Recurring payments",
     "recurringSub": "Paid about every month over the last 6 months",
     "recurringPerMonth": "a month",
@@ -1602,7 +1574,6 @@
     "recurringLast": "last {date}",
     "recurringLastAmount": "last {date}: <up>{amount}</up>",
     "noRecurring": "No recurring payment found over the last 6 months.",
-    "exceptionalOverline": "One-offs",
     "exceptionalTitle": "Exceptional expenses",
     "exceptionalSub": "Above their category’s monthly average, from {amount}",
     "exceptionalShare": "{share} of the period’s spending",
@@ -1611,7 +1582,6 @@
     "exceptionalShowAll": "Show all ({count, number})",
     "exceptionalShowLess": "Show less",
     "noExceptional": "No exceptional expense this period.",
-    "budgetsOverline": "Budgets",
     "budgetsTitle": "Budgets over time",
     "budgetsSub": "The last 12 periods of each recurring budget, up to today",
     "budgetsLegendReached": "Almost reached or reached",
@@ -1622,10 +1592,8 @@
   },
   "settings": {
     "data": {
-      "overline": "Account",
       "title": "Data",
       "subtitle": "Export your data or permanently delete your account.",
-      "exportOverline": "Export",
       "exportTitle": "Export my data",
       "exportHint": "Download your transactions as CSV, or your full data (GDPR) as JSON.",
       "exportCsv": "Transactions (CSV)",
@@ -1665,7 +1633,6 @@
       "exportFiltersHint": "Leave empty to export everything. The JSON export always contains all your data."
     },
     "security": {
-      "overline": "Account",
       "title": "Security",
       "subtitle": "Strengthen your account’s protection.",
       "adminRequired": {
@@ -1713,7 +1680,6 @@
         "FAILED": "Something went wrong. Please try again."
       },
       "passwordCard": {
-        "overline": "Password",
         "title": "Change password",
         "hint": "Used to sign in and to confirm sensitive actions.",
         "edit": "Change",
@@ -1740,7 +1706,6 @@
         }
       },
       "sessionsCard": {
-        "overline": "Sessions",
         "title": "Signed-in devices",
         "hint": "Sign out a device you don’t recognize or no longer use.",
         "thisDevice": "This device",
@@ -1845,7 +1810,6 @@
     }
   },
   "admin": {
-    "overline": "Instance",
     "title": "Administration",
     "nav": {
       "users": "Users",
@@ -1873,9 +1837,7 @@
         "FAILED": "Creation failed. Please try again.",
         "FORBIDDEN": "You can’t create a user with this role."
       },
-      "createOverline": "New account",
       "createHint": "They receive an email with a link to set their password (requires SMTP).",
-      "listOverline": "Accounts",
       "count": "{count, plural, =0 {No accounts} one {# account} other {# accounts}}",
       "roleFor": "{user}’s role",
       "roleError": {
@@ -1950,9 +1912,7 @@
         "STILL_ACTIVE": "Revoke this token before deleting it.",
         "FAILED": "Failed. Try again."
       },
-      "createOverline": "Sign-up",
       "createHint": "A token lets someone sign up when registration is invite-only. Share the signup link copied from the list.",
-      "listOverline": "Invitations",
       "token": "Token",
       "usesCol": "Uses",
       "status": "Status",
@@ -2043,7 +2003,6 @@
         "FAILED": "Save failed.",
         "PASSWORD_REQUIRED": "Enter the password: it is only kept when the host, port, encryption and username are unchanged."
       },
-      "overline": "Email",
       "test": "Send a test email",
       "testing": "Sending…",
       "testHint": "The test uses the saved settings, even when disabled, and mails your own address.",
@@ -2067,7 +2026,6 @@
       "removeBody": "No email will be sent (invitations, password resets, security alerts) until a new configuration is saved."
     },
     "bankSync": {
-      "overline": "Bank",
       "title": "Bank sync",
       "subtitle": "Enable Banking application that imports transactions from the bank.",
       "intro": "In restricted production mode, Enable Banking only gives access to the accounts linked in its control panel: those of the application owner and their household.",
@@ -2154,8 +2112,6 @@
         "TYPE_LOCKED": "A provider’s type can’t be changed. Create a new one instead.",
         "GOOGLE_EXISTS": "A Google provider already exists."
       },
-      "listOverline": "Sign-in",
-      "addOverline": "New",
       "addHint": "OpenID Connect or Google sign-in. Password sign-in is set in the Settings tab.",
       "delete": "Delete",
       "deleting": "Deleting…",
@@ -2175,7 +2131,6 @@
       "colUser": "User",
       "system": "system",
       "filter": "Filter",
-      "overline": "Traceability",
       "all": "All",
       "from": "From",
       "to": "To",

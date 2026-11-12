@@ -55,13 +55,12 @@ export default async function AdminUsersPage({
 
   return (
     <div className="space-y-6">
-      <SectionCard overline={t("createOverline")} title={t("createTitle")} hint={t("createHint")}>
+      <SectionCard title={t("createTitle")} hint={t("createHint")}>
         <CreateUserForm roles={creatableRoles(viewerIsSuperAdmin)} />
       </SectionCard>
 
       <SectionCard
         flush
-        overline={t("listOverline")}
         title={t("listTitle")}
         hint={q ? t("matchCount", { count: total }) : t("count", { count: total })}
       >

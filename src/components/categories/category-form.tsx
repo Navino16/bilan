@@ -112,8 +112,7 @@ export function CategoryForm({
   const body = (
     <>
       <DialogHeader className="border-border shrink-0 border-b px-6 pt-5 pb-4 text-left max-md:px-5">
-        <span className={overline}>{mode === "create" ? t("overlineNew") : t("edit")}</span>
-        <DialogTitle className="font-display mt-1 text-2xl leading-tight">
+        <DialogTitle className="font-display text-2xl leading-tight">
           {mode === "create" ? t("createTitle") : t("editTitle")}
         </DialogTitle>
         <DialogDescription className="text-xs">
@@ -398,7 +397,7 @@ function CategoryFields({
               <span
                 title={c.label}
                 className={cn(
-                  "block size-7 cursor-pointer rounded-lg border-2 border-transparent transition-transform hover:scale-105 max-md:size-10",
+                  "hover:border-foreground/30 block size-7 cursor-pointer rounded-lg border-2 border-transparent transition-colors max-md:size-10",
                   "peer-checked:border-foreground",
                   focusRing,
                 )}

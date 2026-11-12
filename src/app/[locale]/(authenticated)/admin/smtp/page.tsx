@@ -15,7 +15,7 @@ export default async function AdminSmtpPage() {
   const cfg = await getSmtpConfig();
 
   return (
-    <SectionCard overline={t("overline")} title={t("title")} hint={t("subtitle")}>
+    <SectionCard title={t("title")} hint={t("subtitle")}>
       <SmtpForm
         defaults={
           cfg

@@ -27,11 +27,7 @@ export async function BudgetsCard({
   if (series.length === 0) return null;
   const t = await getTranslations("insights");
   const tb = await getTranslations("budgets");
-  const money = new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency: "EUR",
-    trailingZeroDisplay: "stripIfInteger",
-  });
+  const money = new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" });
   const gapFormat = new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "EUR",
@@ -47,7 +43,7 @@ export async function BudgetsCard({
 
   return (
     <Card className="gap-4 p-4.5 md:p-6" data-slot="insights-budgets">
-      <CardTitle over={t("budgetsOverline")} title={t("budgetsTitle")} sub={t("budgetsSub")} />
+      <CardTitle title={t("budgetsTitle")} sub={t("budgetsSub")} />
       <ul className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 text-[11.5px]">
         {legend.map((l) => (
           <li key={l.label} className="flex items-center gap-1.5">

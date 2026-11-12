@@ -2,7 +2,6 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { ChevronRight, Tag, Unlink } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { overline } from "@/components/transactions/bits";
 import { formatMoney } from "@/lib/format";
 import { transactionsHref } from "@/lib/transaction-filters";
 import type { Period } from "@/lib/period";
@@ -54,12 +53,12 @@ export async function TodoCard({
   ];
   if (items.length === 0) return null;
   return (
-    <Card className="gap-3 p-4.5 md:p-6" data-slot="dashboard-todo">
-      <div>
-        <div className={overline}>{t("overline")}</div>
-        <div className="font-display text-xl">{t("title")}</div>
-      </div>
-      <div className="flex flex-col gap-2">
+    <Card
+      className="gap-3 p-4.5 md:flex-row md:items-center md:gap-6 md:px-6 md:py-4"
+      data-slot="dashboard-todo"
+    >
+      <div className="font-display shrink-0 text-xl">{t("title")}</div>
+      <div className="flex min-w-0 flex-col gap-2 md:flex-1">
         {items.map(({ key, icon: Icon, label, amount, href }) => {
           const body = (
             <>

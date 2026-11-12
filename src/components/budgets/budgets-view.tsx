@@ -72,7 +72,6 @@ export function BudgetsView({
   return (
     <div className="space-y-5">
       <PageHeader
-        overline={t("overline")}
         title={t("pageTitle")}
         actions={
           <BudgetForm

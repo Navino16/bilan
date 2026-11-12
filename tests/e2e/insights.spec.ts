@@ -31,7 +31,7 @@ test.describe("insights", () => {
     });
 
     // Absorb the dev-server cold-compile race on the first load.
-    const heading = page.getByRole("heading", { level: 1, name: /analyses/i });
+    const heading = page.getByRole("heading", { level: 1, name: /mars 2026/i });
     await expect(async () => {
       await expect(heading).toBeVisible();
     }).toPass();

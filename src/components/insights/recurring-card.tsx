@@ -25,11 +25,7 @@ export async function RecurringCard({
   locale: string;
 }) {
   const t = await getTranslations("insights");
-  const money = new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency: "EUR",
-    trailingZeroDisplay: "stripIfInteger",
-  });
+  const money = new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" });
   const day = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" });
   const { payments, monthly, extra } = recurring;
   const flagLabel: Record<RecurringFlag, string> = {
@@ -40,11 +36,7 @@ export async function RecurringCard({
 
   return (
     <Card className="gap-4 p-4.5 md:p-6" data-slot="insights-recurring">
-      <CardTitle
-        over={t("recurringOverline")}
-        title={t("recurringTitle")}
-        sub={t("recurringSub")}
-      />
+      <CardTitle title={t("recurringTitle")} sub={t("recurringSub")} />
       {payments.length === 0 ? (
         <p className="text-muted-foreground text-sm">{t("noRecurring")}</p>
       ) : (
