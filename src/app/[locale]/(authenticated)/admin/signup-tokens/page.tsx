@@ -55,11 +55,11 @@ export default async function AdminSignupTokensPage({
         </Alert>
       )}
 
-      <SectionCard overline={t("createOverline")} title={t("createTitle")} hint={t("createHint")}>
+      <SectionCard title={t("createTitle")} hint={t("createHint")}>
         <SignupTokenCreateForm />
       </SectionCard>
 
-      <SectionCard flush overline={t("listOverline")} title={t("listTitle")}>
+      <SectionCard flush title={t("listTitle")}>
         {tokens.length > 0 && (
           <div className={`${listHeader} hidden gap-3 md:grid ${cols}`}>
             <span>{t("token")}</span>

@@ -125,9 +125,8 @@ export async function InsightsView({
     <div className="space-y-6">
       <div className="space-y-3">
         <PageHeader
-          overline={t("overline")}
-          title={t("pageTitle")}
-          subtitle={label}
+          overline={t("pageTitle")}
+          title={label}
           actions={
             <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
               <PeriodPicker from={toIsoDay(period.from)} to={toIsoDay(period.to)} />
@@ -144,7 +143,7 @@ export async function InsightsView({
       <OverviewCard overview={overview} locale={locale} />
 
       <Card className="gap-4 p-4.5 md:p-6" data-slot="insights-categories">
-        <CardTitle over={t("categoriesOverline")} title={t("categoriesTitle")} sub={trendsSub} />
+        <CardTitle title={t("categoriesTitle")} sub={trendsSub} />
         <CategoryTrends
           trends={trends}
           uncategorized={
@@ -181,7 +180,7 @@ export async function InsightsView({
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <Card className="gap-4 p-6" data-slot="insights-merchants">
-          <CardTitle over={t("merchantsOverline")} title={t("merchantsTitle")} />
+          <CardTitle title={t("merchantsTitle")} />
           {data.merchants.length === 0 ? (
             <p className="text-muted-foreground text-sm">{t("noMerchants")}</p>
           ) : (
@@ -248,7 +247,6 @@ export async function InsightsView({
 
         <Card className="gap-4 p-6" data-slot="insights-income">
           <CardTitle
-            over={t("incomeOverline")}
             title={t("incomeTitle")}
             sub={
               data.income.length

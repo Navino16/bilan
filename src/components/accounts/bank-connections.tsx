@@ -18,7 +18,7 @@ export async function BankConnections({
   const t = await getTranslations("accounts.bankSync.connections");
   const locale = await getLocale();
   return (
-    <SectionCard overline={t("overline")} title={t("title")}>
+    <SectionCard title={t("title")}>
       <ul className="divide-border divide-y" data-slot="bank-connections">
         {connections.map((c) => (
           <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 py-3">

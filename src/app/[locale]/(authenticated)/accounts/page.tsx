@@ -50,7 +50,6 @@ export default async function AccountsPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        overline={t("overline")}
         title={t("title")}
         actions={
           <div className="flex flex-wrap gap-2">

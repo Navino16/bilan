@@ -86,6 +86,9 @@ export async function DashboardView({
     signDisplay: "exceptZero",
   });
 
+  const trendTone = (change: number | undefined, goodWhenUp = true) =>
+    !change ? undefined : change > 0 === goodWhenUp ? "var(--income)" : "var(--expense)";
+
   const inProgress = comparison.elapsedDays !== null;
   // Only a period in progress has budgets left to spend (spec §5.16); otherwise the net.
   const current = inProgress ? budgets : [];
@@ -99,31 +102,26 @@ export async function DashboardView({
           months,
         })
       : noReference,
-    tone:
-      data.totals.net > 0
-        ? "var(--income)"
-        : data.totals.net < 0
-          ? "var(--expense)"
-          : "var(--foreground)",
+    noteTone: hasPrevious ? trendTone(netDiff) : undefined,
   };
   const leftKpi = {
     key: "leftToSpend",
     amount: money.format(round2(current.reduce((s, b) => s + b.leftToSpend, 0))),
     note: t("acrossBudgets", { count: current.length }),
-    tone: "var(--foreground)",
+    noteTone: undefined,
   };
   const kpis = [
     {
       key: "income",
       amount: money.format(data.totals.income),
       note: pctNote(delta(data.totals.income, data.previous.income)),
-      tone: "var(--income)",
+      noteTone: trendTone(delta(data.totals.income, data.previous.income)?.pct),
     },
     {
       key: "expense",
       amount: money.format(data.totals.expense),
       note: pctNote(delta(data.totals.expense, data.previous.expense)),
-      tone: "var(--expense)",
+      noteTone: trendTone(delta(data.totals.expense, data.previous.expense)?.pct, false),
     },
     {
       key: "savings",
@@ -135,12 +133,7 @@ export async function DashboardView({
             months,
           })
         : noReference,
-      tone:
-        data.savings.current > 0
-          ? "var(--income)"
-          : data.savings.current < 0
-            ? "var(--expense)"
-            : "var(--foreground)",
+      noteTone: hasPrevious ? trendTone(savingsDiff) : undefined,
     },
     current.length > 0 ? leftKpi : netKpi,
   ];
@@ -201,19 +194,22 @@ export async function DashboardView({
             <div className={overline}>{t(`kpi.${k.key}`)}</div>
             <div
               className="font-display text-[1.375rem] leading-none tabular-nums md:text-3xl"
-              style={{ color: k.tone }}
               data-slot="kpi-amount"
             >
               {k.amount}
             </div>
-            <div className="text-muted-foreground text-[11.5px]" data-slot="kpi-note">
+            <div
+              className="text-muted-foreground text-xs"
+              style={{ color: k.noteTone }}
+              data-slot="kpi-note"
+            >
               {k.note}
             </div>
           </Card>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 empty:hidden md:grid-cols-2 md:gap-5 md:[&>*:only-child]:col-span-2">
+      <div className="flex flex-col gap-4 empty:hidden md:gap-5">
         <TodoCard
           uncategorized={data.uncategorized}
           neutral={data.neutral}
@@ -236,10 +232,7 @@ export async function DashboardView({
 
         {/* Donut + breakdown */}
         <Card className="gap-4 p-4.5 md:p-6">
-          <div>
-            <div className={overline}>{t("breakdown")}</div>
-            <div className="font-display text-xl">{t("byCategory")}</div>
-          </div>
+          <div className="font-display text-xl">{t("byCategory")}</div>
           {data.totals.expense === 0 ? (
             <p className="text-muted-foreground text-sm">{t("noExpenses")}</p>
           ) : (

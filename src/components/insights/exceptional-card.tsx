@@ -23,11 +23,7 @@ export async function ExceptionalCard({
   locale: string;
 }) {
   const t = await getTranslations("insights");
-  const money = new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency: "EUR",
-    trailingZeroDisplay: "stripIfInteger",
-  });
+  const money = new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" });
   const rounded = new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "EUR",
@@ -69,7 +65,6 @@ export async function ExceptionalCard({
   return (
     <Card className="gap-4 p-4.5 md:p-6" data-slot="insights-exceptional">
       <CardTitle
-        over={t("exceptionalOverline")}
         title={t("exceptionalTitle")}
         sub={t("exceptionalSub", { amount: rounded.format(EXCEPTIONAL_MIN_AMOUNT) })}
       />

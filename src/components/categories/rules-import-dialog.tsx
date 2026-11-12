@@ -17,7 +17,6 @@ import {
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useFrozenWhileOpen } from "@/hooks/use-frozen-while-open";
-import { overline } from "@/components/transactions/bits";
 import type { FlatCategory } from "@/components/transactions/category-tree";
 import { formatBytes, formatCount } from "@/lib/format";
 import { canManageInGroup } from "@/lib/validation/group";
@@ -185,7 +184,6 @@ function FileStep({
   return (
     <>
       <DialogHeader className={headerClass}>
-        <span className={overline}>{t("importOverline")}</span>
         <DialogTitle className="font-display text-2xl leading-tight">
           {t("importTitle")}
         </DialogTitle>
@@ -260,7 +258,6 @@ function ResultStep({
   return (
     <>
       <DialogHeader className={headerClass}>
-        <span className={overline}>{t("resultOverline")}</span>
         <DialogTitle className="font-display text-2xl leading-tight">
           {t("resultTitle")}
         </DialogTitle>

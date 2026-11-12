@@ -765,7 +765,6 @@ export function ImportWizard({
   return (
     <div className="space-y-5">
       <PageHeader
-        overline={t("overline")}
         title={t("title")}
         subtitle={t("formats")}
         actions={

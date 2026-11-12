@@ -189,8 +189,8 @@ test.describe("dashboard", () => {
     await expect(heading).toHaveText(/^\d{4}$/);
     const thisYear = Number(await heading.textContent());
 
-    // Over a year the pace goes month by month.
-    await expect(page.locator('[data-slot="spending-pace"]')).toContainText("Mensuel");
+    // Over a year the pace goes month by month: its axis is labelled with months.
+    await expect(page.locator('[data-slot="spending-pace"]')).toContainText(`janv. ${thisYear}`);
 
     // Previous arrow steps a full calendar year back (still "YYYY").
     await page.getByRole("button", { name: "Période précédente" }).click();

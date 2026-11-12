@@ -75,10 +75,10 @@ export function DataControls({
 
   return (
     <div className="space-y-6">
-      <PageHeader overline={t("overline")} title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       {/* Export */}
-      <SectionCard overline={t("exportOverline")} title={t("exportTitle")} hint={t("exportHint")}>
+      <SectionCard title={t("exportTitle")} hint={t("exportHint")}>
         <fieldset data-slot="export-filters" className="space-y-3">
           <legend className="text-sm font-medium">{t("exportFilters")}</legend>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

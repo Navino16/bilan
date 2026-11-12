@@ -15,7 +15,6 @@ import {
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { useFrozenWhileOpen } from "@/hooks/use-frozen-while-open";
-import { overline } from "@/components/transactions/bits";
 import { DownloadButton } from "@/components/settings/download-button";
 import type { ScopeGroup } from "./category-form";
 
@@ -60,7 +59,6 @@ function RulesExportForm({ groups, onClose }: { groups: ScopeGroup[]; onClose: (
   return (
     <>
       <DialogHeader className="space-y-2 px-6 pt-5 pb-3 text-left max-md:px-5">
-        <span className={overline}>{t("exportOverline")}</span>
         <DialogTitle className="font-display text-2xl leading-tight">
           {t("exportTitle")}
         </DialogTitle>

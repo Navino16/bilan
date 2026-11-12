@@ -18,7 +18,7 @@ export function SectionCard({
   className,
   children,
 }: {
-  overline: React.ReactNode;
+  overline?: React.ReactNode;
   title: React.ReactNode;
   hint?: React.ReactNode;
   action?: React.ReactNode;
@@ -29,7 +29,7 @@ export function SectionCard({
   const heading = (
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0">
-        <div className={overlineClass}>{overline}</div>
+        {overline && <div className={overlineClass}>{overline}</div>}
         <h2 className="font-display text-xl">{title}</h2>
         {hint && <p className="text-muted-foreground mt-1 text-sm">{hint}</p>}
       </div>

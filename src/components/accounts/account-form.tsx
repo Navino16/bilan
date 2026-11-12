@@ -140,9 +140,6 @@ export function AccountForm({
   const body = (
     <>
       <DialogHeader className="border-border shrink-0 border-b px-6 pt-5 pb-4 text-left">
-        <span className="text-muted-foreground text-[0.7rem] font-medium tracking-[0.14em] uppercase">
-          {mode === "create" ? t("new") : t("edit")}
-        </span>
         <DialogTitle className="font-display text-2xl">
           {mode === "create" ? t("createTitle") : t("editTitle")}
         </DialogTitle>
@@ -165,7 +162,7 @@ export function AccountForm({
                   onClick={() => setType(value)}
                   aria-pressed={type === value}
                   className={cn(
-                    "h-7 flex-1 rounded-md text-xs font-medium transition-all",
+                    "h-7 flex-1 rounded-md text-xs font-medium transition-[color,background-color,box-shadow]",
                     type === value
                       ? "bg-card text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground",
@@ -272,8 +269,10 @@ export function AccountForm({
                   onClick={() => setColor(hex)}
                   style={{ backgroundColor: hex }}
                   className={cn(
-                    "size-7 rounded-md border-2 transition-transform",
-                    color === hex ? "border-foreground" : "border-transparent hover:scale-105",
+                    "size-7 rounded-md border-2 transition-colors",
+                    color === hex
+                      ? "border-foreground"
+                      : "hover:border-foreground/30 border-transparent",
                   )}
                 />
               ))}

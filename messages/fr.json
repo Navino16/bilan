@@ -253,7 +253,6 @@
   "accounts": {
     "overline": "Patrimoine",
     "title": "Comptes",
-    "new": "Nouveau",
     "create": "Nouveau compte",
     "createTitle": "Ajouter un compte",
     "createSubtitle": "Le compte devient visible dans les imports, les budgets et le partage.",
@@ -361,7 +360,6 @@
     "bankSync": {
       "connect": "Connecter ma banque",
       "dialog": {
-        "overline": "Synchronisation bancaire",
         "title": "Connecter ma banque",
         "intro": "Choisissez votre banque : vous allez l’autoriser à partager vos comptes avec Bilan, en lecture seule, via Enable Banking. Vous revenez ensuite ici pour associer les comptes.",
         "country": "Pays",
@@ -426,7 +424,6 @@
         "expected": "Solde prévu par la banque au {date} : {amount}"
       },
       "connections": {
-        "overline": "Banques",
         "title": "Connexions bancaires",
         "validUntil": "Accès valable jusqu’au {date}",
         "expiredOn": "Accès expiré depuis le {date}",
@@ -498,7 +495,6 @@
   },
   "rules": {
     "pageTitle": "Catégories & règles",
-    "overline": "Organisation",
     "tabCategories": "Catégories",
     "tabRules": "Règles",
     "new": "Nouvelle règle",
@@ -577,7 +573,6 @@
       "cancel": "Annuler",
       "close": "Fermer",
       "back": "Retour",
-      "exportOverline": "Règles",
       "exportTitle": "Exporter les règles",
       "exportIntro": "Le fichier contient les motifs et les noms de catégories, jamais vos transactions.",
       "exportScope": "Règles à exporter",
@@ -585,7 +580,6 @@
       "download": "Télécharger",
       "exporting": "Préparation de l’export…",
       "exportFailed": "L’export a échoué. Réessayez.",
-      "importOverline": "Règles",
       "importTitle": "Importer des règles",
       "fileLabel": "Fichier de règles",
       "fileHint": "Un fichier exporté depuis Bilan (.json, jusqu’à {size} et {max} règles).",
@@ -593,7 +587,6 @@
       "target": "Importer dans",
       "reading": "Lecture du fichier…",
       "next": "Continuer",
-      "reviewOverline": "Import",
       "reviewTitle": "Vérifier l’import",
       "reviewIntro": "{count, plural, one {# règle} other {# règles}} dans {file}, à importer dans : {scope}.",
       "categoriesTitle": "Catégories à résoudre",
@@ -622,7 +615,6 @@
       "nothing": "Rien à importer : chaque règle existe déjà ou est ignorée.",
       "importButton": "Importer",
       "importing": "Import en cours…",
-      "resultOverline": "Import terminé",
       "resultTitle": "Règles importées",
       "resultCreated": "{count, plural, one {règle créée} other {règles créées}}",
       "resultCategoriesCreated": "{count, plural, one {catégorie créée} other {catégories créées}}",
@@ -638,7 +630,6 @@
     }
   },
   "budgets": {
-    "overline": "Planification",
     "pageTitle": "Budgets",
     "create": "Nouveau budget",
     "createTitle": "Nouveau budget",
@@ -874,7 +865,6 @@
       "outcomeMove": "Les transactions, règles et lignes de budget seront rattachées à « {name} ».",
       "outcomeNone": "Les transactions deviendront non catégorisées ; les règles et les lignes de budget seront supprimées."
     },
-    "overlineNew": "Nouvelle",
     "createHint": "Vous pourrez attacher des règles de catégorisation après création.",
     "editHint": "Les transactions, règles et budgets rattachés suivent la modification.",
     "preview": "Aperçu",
@@ -1156,7 +1146,6 @@
   },
   "import": {
     "title": "Importer un relevé",
-    "overline": "Import",
     "steps": {
       "file": "Fichier",
       "read": "Lecture",
@@ -1241,7 +1230,6 @@
       "ACCOUNT_ARCHIVED": "Ce compte est archivé : désarchivez-le pour y importer des transactions."
     },
     "history": {
-      "overline": "Historique",
       "title": "Imports récents",
       "empty": "Aucun import pour l’instant.",
       "rows": "{imported, plural, one {# transaction importée} other {# transactions importées}} · {skipped, plural, one {# doublon ignoré} other {# doublons ignorés}}",
@@ -1329,13 +1317,10 @@
     }
   },
   "groups": {
-    "overline": "Partage",
     "detailOverline": "Foyer",
-    "membersOverline": "Accès",
     "title": "Foyers",
     "subtitle": "Partagez des comptes et des budgets avec votre foyer.",
     "empty": "Aucun foyer. Créez-en un pour partager vos comptes.",
-    "new": "Nouveau",
     "create": "Nouveau foyer",
     "createTitle": "Créer un foyer",
     "createSubtitle": "Invitez ensuite des membres et partagez des comptes.",
@@ -1385,9 +1370,6 @@
     "removeTitle": "Retirer {name} ?"
   },
   "invitations": {
-    "overline": "Invitations",
-    "forYouOverline": "Pour vous",
-    "joinOverline": "Code d’invitation",
     "invite": "Inviter",
     "email": "Adresse e-mail",
     "emailPlaceholder": "membre@exemple.com",
@@ -1457,13 +1439,10 @@
     },
     "vsPrev": "{arrow} {pct} vs période précédente",
     "noPrev": "Rien sur la période précédente",
-    "breakdown": "Répartition",
     "byCategory": "Dépenses par catégorie",
     "spentThisPeriod": "dépensés sur la période",
     "noExpenses": "Aucune dépense sur cette période.",
     "noCategory": "Sans catégorie",
-    "daily": "Quotidien",
-    "monthly": "Mensuel",
     "recent": "Transactions récentes",
     "seeAll": "Tout voir",
     "noRecent": "Aucune transaction sur cette période.",
@@ -1496,7 +1475,6 @@
     "upcoming": "Période à venir : seules les transactions affectées à cette période apparaissent.",
     "acrossBudgets": "{count, plural, one {sur # budget en cours} other {sur # budgets en cours}}",
     "todo": {
-      "overline": "À faire",
       "title": "À traiter",
       "uncategorizedOut": "{count, plural, one {# dépense sans catégorie} other {# dépenses sans catégorie}}",
       "uncategorizedIn": "{count, plural, one {# rentrée sans catégorie} other {# rentrées sans catégorie}}",
@@ -1504,7 +1482,6 @@
     },
     "currentBudgets": {
       "overline": "Budgets en cours",
-      "title": "{count, plural, one {# budget} other {# budgets}}",
       "left": "{amount} restants",
       "ofPlanned": "{percent} de {planned}",
       "outOfBudget": "Hors budget : {amount}"
@@ -1556,15 +1533,12 @@
     "noCategory": "Sans catégorie"
   },
   "insights": {
-    "overline": "Analyses",
     "pageTitle": "Analyses",
     "noData": "Aucune dépense sur cette période.",
     "noCategory": "Sans catégorie",
-    "merchantsOverline": "Où part l’argent",
     "merchantsTitle": "Top marchands",
     "merchantsCount": "{count, number}×",
     "noMerchants": "Aucun marchand sur cette période.",
-    "incomeOverline": "Entrées",
     "incomeTitle": "Revenus par catégorie",
     "incomeTotal": "{amount} sur la période",
     "noIncome": "Aucun revenu sur cette période.",
@@ -1581,8 +1555,7 @@
     "overviewBar": "{month} : rentrées {income}, dépenses {spending}",
     "overviewAbove": "Dépenses supérieures aux rentrées {count, plural, one {# mois} other {# mois}} sur {total}",
     "overviewEmpty": "Rien d’enregistré sur ces 12 mois.",
-    "categoriesOverline": "Dépenses",
-    "categoriesTitle": "Par catégorie",
+    "categoriesTitle": "Dépenses par catégorie",
     "categoriesSub": "{current} vs {previous}",
     "categoriesSubAvg": "{current} vs moyenne {months}",
     "trendAverage": "Moyenne sur 12 mois : {amount}",
@@ -1591,7 +1564,6 @@
     "stableCount": "{count, plural, one {# catégorie aux dépenses régulières} other {# catégories aux dépenses régulières}}",
     "uncategorized": "{amount} sans catégorie",
     "toSort": "À trier",
-    "recurringOverline": "Chaque mois",
     "recurringTitle": "Prélèvements récurrents",
     "recurringSub": "Payés environ chaque mois sur les 6 derniers mois",
     "recurringPerMonth": "par mois",
@@ -1602,7 +1574,6 @@
     "recurringLast": "dernier le {date}",
     "recurringLastAmount": "dernier le {date} : <up>{amount}</up>",
     "noRecurring": "Aucun paiement récurrent trouvé sur les 6 derniers mois.",
-    "exceptionalOverline": "Ponctuel",
     "exceptionalTitle": "Dépenses exceptionnelles",
     "exceptionalSub": "Au-dessus de la moyenne mensuelle de leur catégorie, dès {amount}",
     "exceptionalShare": "{share} des dépenses de la période",
@@ -1611,7 +1582,6 @@
     "exceptionalShowAll": "Tout afficher ({count, number})",
     "exceptionalShowLess": "Afficher moins",
     "noExceptional": "Aucune dépense exceptionnelle sur cette période.",
-    "budgetsOverline": "Budgets",
     "budgetsTitle": "Budgets dans le temps",
     "budgetsSub": "Les 12 dernières périodes de chaque budget récurrent, jusqu’à aujourd’hui",
     "budgetsLegendReached": "Bientôt atteint ou atteint",
@@ -1622,10 +1592,8 @@
   },
   "settings": {
     "data": {
-      "overline": "Compte",
       "title": "Données",
       "subtitle": "Exportez vos données ou supprimez définitivement votre compte.",
-      "exportOverline": "Export",
       "exportTitle": "Exporter mes données",
       "exportHint": "Téléchargez vos transactions au format CSV, ou l’intégralité de vos données (RGPD) au format JSON.",
       "exportCsv": "Transactions (CSV)",
@@ -1665,7 +1633,6 @@
       "exportFiltersHint": "Laissez vide pour tout exporter. L’export JSON contient toujours l’intégralité de vos données."
     },
     "security": {
-      "overline": "Compte",
       "title": "Sécurité",
       "subtitle": "Renforcez la protection de votre compte.",
       "adminRequired": {
@@ -1713,7 +1680,6 @@
         "FAILED": "Une erreur est survenue. Réessayez."
       },
       "passwordCard": {
-        "overline": "Mot de passe",
         "title": "Changer le mot de passe",
         "hint": "Utilisé pour vous connecter et pour confirmer les actions sensibles.",
         "edit": "Modifier",
@@ -1740,7 +1706,6 @@
         }
       },
       "sessionsCard": {
-        "overline": "Sessions",
         "title": "Appareils connectés",
         "hint": "Déconnectez un appareil que vous ne reconnaissez pas ou que vous n’utilisez plus.",
         "thisDevice": "Cet appareil",
@@ -1845,7 +1810,6 @@
     }
   },
   "admin": {
-    "overline": "Instance",
     "title": "Administration",
     "nav": {
       "users": "Utilisateurs",
@@ -1873,9 +1837,7 @@
         "FAILED": "Échec de la création. Réessayez.",
         "FORBIDDEN": "Vous ne pouvez pas créer un utilisateur avec ce rôle."
       },
-      "createOverline": "Nouveau compte",
       "createHint": "La personne reçoit par e-mail un lien pour définir son mot de passe (SMTP requis).",
-      "listOverline": "Comptes",
       "count": "{count, plural, =0 {Aucun compte} one {# compte} other {# comptes}}",
       "roleFor": "Rôle de {user}",
       "roleError": {
@@ -1950,9 +1912,7 @@
         "STILL_ACTIVE": "Révoquez ce jeton avant de le supprimer.",
         "FAILED": "Échec. Réessayez."
       },
-      "createOverline": "Inscription",
       "createHint": "Un jeton permet de créer un compte lorsque l’inscription est sur invitation. Partagez le lien d’inscription copié depuis la liste.",
-      "listOverline": "Invitations",
       "token": "Jeton",
       "usesCol": "Utilisations",
       "status": "Statut",
@@ -2043,7 +2003,6 @@
         "FAILED": "Échec de l’enregistrement.",
         "PASSWORD_REQUIRED": "Saisissez le mot de passe : il n’est conservé que si l’hôte, le port, le chiffrement et l’utilisateur sont inchangés."
       },
-      "overline": "E-mails",
       "test": "Envoyer un e-mail de test",
       "testing": "Envoi…",
       "testHint": "Le test utilise la configuration enregistrée, même désactivée, et l’envoie à votre adresse.",
@@ -2067,7 +2026,6 @@
       "removeBody": "Plus aucun e-mail ne sera envoyé (invitations, réinitialisations, alertes de sécurité) tant qu’une nouvelle configuration n’est pas enregistrée."
     },
     "bankSync": {
-      "overline": "Banque",
       "title": "Synchronisation bancaire",
       "subtitle": "Application Enable Banking qui importe les opérations depuis la banque.",
       "intro": "En mode production restreint, Enable Banking ne donne accès qu’aux comptes liés dans son espace de contrôle : ceux du propriétaire de l’application et de son foyer.",
@@ -2154,8 +2112,6 @@
         "TYPE_LOCKED": "Le type d’un fournisseur ne peut pas être modifié. Créez-en un nouveau.",
         "GOOGLE_EXISTS": "Un fournisseur Google existe déjà."
       },
-      "listOverline": "Connexion",
-      "addOverline": "Nouveau",
       "addHint": "Connexion via OpenID Connect ou Google. La connexion par mot de passe se règle dans l’onglet Paramètres.",
       "delete": "Supprimer",
       "deleting": "Suppression…",
@@ -2175,7 +2131,6 @@
       "colUser": "Utilisateur",
       "system": "système",
       "filter": "Filtrer",
-      "overline": "Traçabilité",
       "all": "Toutes",
       "from": "Du",
       "to": "Au",

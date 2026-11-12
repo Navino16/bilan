@@ -97,7 +97,6 @@ export default async function GroupDetailPage({
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <SectionCard
           flush
-          overline={t("membersOverline")}
           title={t("members")}
           action={
             <Badge variant="secondary">{t("memberCount", { count: group.members.length })}</Badge>
@@ -111,7 +110,7 @@ export default async function GroupDetailPage({
           />
         </SectionCard>
 
-        <SectionCard flush overline={t("overline")} title={ta("sharedAccounts")}>
+        <SectionCard flush title={ta("sharedAccounts")}>
           {sharedAccounts.length === 0 ? (
             <p className="text-muted-foreground px-4 py-5 text-sm sm:px-6">
               {ta("noSharedAccounts")}
@@ -151,7 +150,7 @@ export default async function GroupDetailPage({
       </div>
 
       {canEdit && (
-        <SectionCard flush overline={ti("overline")} title={ti("invite")}>
+        <SectionCard flush title={ti("invite")}>
           <div className="border-b px-4 py-4 sm:px-6">
             <InviteForm groupId={group.id} />
           </div>

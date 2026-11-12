@@ -64,7 +64,7 @@ export default async function AdminAuditPage({
   const entityOptions: string[] = [...AUDIT_ENTITIES];
 
   return (
-    <SectionCard flush overline={t("overline")} title={t("title")} hint={t("count", { total })}>
+    <SectionCard flush title={t("title")} hint={t("count", { total })}>
       <form
         method="get"
         className="grid gap-3 border-b px-4 py-4 sm:grid-cols-2 sm:px-6 xl:grid-cols-[repeat(5,minmax(0,1fr))_auto]"

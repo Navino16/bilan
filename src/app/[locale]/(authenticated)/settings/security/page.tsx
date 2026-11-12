@@ -76,7 +76,7 @@ export default async function SecuritySettingsPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader overline={t("overline")} title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       {adminBlocked && (
         <Alert data-slot="admin-two-factor-banner">
@@ -87,11 +87,7 @@ export default async function SecuritySettingsPage({
       )}
 
       {hasPassword && (
-        <SectionCard
-          overline={t("passwordCard.overline")}
-          title={t("passwordCard.title")}
-          hint={t("passwordCard.hint")}
-        >
+        <SectionCard title={t("passwordCard.title")} hint={t("passwordCard.hint")}>
           <PasswordControls minLength={minPasswordLength} />
         </SectionCard>
       )}
@@ -125,11 +121,7 @@ export default async function SecuritySettingsPage({
         </SectionCard>
       )}
 
-      <SectionCard
-        overline={t("sessionsCard.overline")}
-        title={t("sessionsCard.title")}
-        hint={t("sessionsCard.hint")}
-      >
+      <SectionCard title={t("sessionsCard.title")} hint={t("sessionsCard.hint")}>
         <SessionsControls sessions={sessions} />
       </SectionCard>
 

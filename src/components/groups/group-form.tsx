@@ -60,9 +60,6 @@ export function GroupForm({
   const body = (
     <>
       <DialogHeader className="border-border shrink-0 border-b px-6 pt-5 pb-4 text-left">
-        <span className="text-muted-foreground text-[0.7rem] font-medium tracking-[0.14em] uppercase">
-          {mode === "create" ? t("new") : t("edit")}
-        </span>
         <DialogTitle className="font-display text-2xl">
           {mode === "create" ? t("createTitle") : t("editTitle")}
         </DialogTitle>

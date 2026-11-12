@@ -28,9 +28,7 @@ export default async function AdminAuthProvidersPage() {
 
   return (
     <div className="space-y-6">
-      {providers.length === 0 && (
-        <SectionCard overline={t("listOverline")} title={t("listTitle")} hint={t("empty")} />
-      )}
+      {providers.length === 0 && <SectionCard title={t("listTitle")} hint={t("empty")} />}
       {providers.map((p, i) => {
         const defaults: AuthProviderDefaults = {
           key: p.key,
@@ -61,7 +59,7 @@ export default async function AdminAuthProvidersPage() {
         );
       })}
 
-      <SectionCard overline={t("addOverline")} title={t("addTitle")} hint={t("addHint")}>
+      <SectionCard title={t("addTitle")} hint={t("addHint")}>
         <AuthProviderForm appName={appName} />
       </SectionCard>
     </div>
