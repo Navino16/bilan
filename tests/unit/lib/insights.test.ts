@@ -102,6 +102,12 @@ describe("topMerchants", () => {
     expect(tie[0].categoryId).toBe("tech");
   });
 
+  it("leaves out the rows it is given to skip, such as recurring payments", () => {
+    const rent = { ...row("PRLV FONCIA LOYER", -700, 5, "rent", "DIRECT_DEBIT"), id: "rent" };
+    const out = topMerchants([rent, row("CB LIDL", -40, 3)], 6, new Map(), new Set(["rent"]));
+    expect(out.map((m) => m.label)).toEqual(["LIDL"]);
+  });
+
   it("limits the result", () => {
     const rows = ["A", "B", "C"].map((m, i) => row(`CB SHOP${m}`, -(i + 1), i + 1));
     expect(topMerchants(rows, 2).map((m) => m.label)).toEqual(["SHOPC", "SHOPB"]);
@@ -274,6 +280,14 @@ describe("categoryTrends", () => {
     ]);
     expect(trends[0]).toMatchObject({ current: 430, reference: 220, average: 250 });
     expect(trends[0].values).toEqual([100, 400, 100, 400, 100, 400]);
+  });
+
+  it("does not group a category as stable when the period moves away from the reference", () => {
+    const moved = current.map((r) => (r.categoryId === "rent" ? { ...r, amount: -1600 } : r));
+    const rent = categoryTrends(moved, reference, history, window, branches).find(
+      (t) => t.categoryId === "rent",
+    );
+    expect(rent).toMatchObject({ diff: 810, stable: false });
   });
 
   it("breaks a root down by its children, deeper levels summed into them", () => {

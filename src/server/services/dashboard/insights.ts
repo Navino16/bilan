@@ -11,12 +11,14 @@ import {
   topMerchants,
   uncategorizedSpending,
   type CategoryBranch,
+  type HistoryMonth,
   type HistoryWindow,
   type InsightsData,
 } from "@/lib/insights";
 import { exceptionalExpenses } from "@/lib/exceptional";
 import { recurringIds, recurringPayments, RECURRING_MONTHS } from "@/lib/recurring";
 import {
+  addMonths,
   historyMonths,
   monthPeriod,
   monthsSpan,
@@ -56,17 +58,30 @@ async function branchesOf(ids: Set<string>): Promise<Map<string, CategoryBranch>
   return out;
 }
 
+function dataStartOf(months: HistoryMonth[], first: Date | null): number {
+  const i = first ? months.findIndex((m) => monthPeriod(m.year, m.month).to >= first) : -1;
+  return i === -1 ? months.length : i;
+}
+
 function historyWindow(period: Period, first: Date | null, now: Date): HistoryWindow {
   const months = historyMonths(period, HISTORY_MONTHS, now);
   const last = months[months.length - 1];
-  const dataStart = first
-    ? months.findIndex((m) => monthPeriod(m.year, m.month).to >= first)
-    : months.length;
   return {
     months,
     inProgress: periodInProgress(monthPeriod(last.year, last.month), now),
-    dataStart: dataStart === -1 ? months.length : dataStart,
+    dataStart: dataStartOf(months, first),
   };
+}
+
+// The HISTORY_MONTHS complete months before the period: what its exceptional expenses are
+// judged against, the period itself left out.
+function baselineWindow(period: Period, first: Date | null): HistoryWindow {
+  const year = period.from.getUTCFullYear();
+  const month = period.from.getUTCMonth() + 1;
+  const months = Array.from({ length: HISTORY_MONTHS }, (_, i) =>
+    addMonths(year, month, i - HISTORY_MONTHS),
+  );
+  return { months, inProgress: false, dataStart: dataStartOf(months, first) };
 }
 
 // Same rows as the dashboard: links collapsed, savings-category and neutral rows left out
@@ -83,11 +98,13 @@ export async function getInsights(
   const keep = (r: AggRow) => countedRow(scope, r);
   const first = await firstTransactionDate(accountIds);
   const window = historyWindow(period, first, now);
+  const baseline = baselineWindow(period, first);
   const recentSpan = monthsSpan(historyMonths(period, RECURRING_MONTHS, now));
-  const [current, reference, history, recent, aliases, budgets, rule] = await Promise.all([
+  const [current, reference, history, before, recent, aliases, budgets, rule] = await Promise.all([
     loadRows(accountIds, period, { withLabels: true, realDates: true }),
     referenceRows(accountIds, period, comparison, keep),
     loadRows(accountIds, monthsSpan(window.months)),
+    loadRows(accountIds, monthsSpan(baseline.months)),
     loadRows(accountIds, recentSpan, { withLabels: true, realDates: true }),
     listAliasGroups(userId),
     listBudgetSeriesHistory(userId, now),
@@ -95,8 +112,11 @@ export async function getInsights(
   ]);
   const rows = current.rows.filter(keep);
   const historyRows = history.rows.filter(keep);
+  const baselineRows = before.rows.filter(keep);
   const ids = new Set(
-    [...rows, ...reference, ...historyRows].flatMap((r) => (r.categoryId ? [r.categoryId] : [])),
+    [...rows, ...reference, ...historyRows, ...baselineRows].flatMap((r) =>
+      r.categoryId ? [r.categoryId] : [],
+    ),
   );
   const branches = await branchesOf(ids);
 
@@ -106,6 +126,7 @@ export async function getInsights(
   const spendingRows = merchantRowsOf(rows);
   const recentRows = merchantRowsOf(recent.rows.filter(keep));
   const spending = rows.reduce((s, r) => s + Math.max(0, -r.amount), 0);
+  const recurring = recurringIds(recentRows, asOf, aliasByKey);
   return {
     overview: insightsOverview(historyRows, window),
     categories: categoryTrends(rows, reference, historyRows, window, branches),
@@ -116,15 +137,15 @@ export async function getInsights(
     },
     exceptional: exceptionalExpenses(
       spendingRows,
-      historyRows,
-      window,
+      baselineRows,
+      baseline,
       branches,
-      recurringIds(recentRows, asOf, aliasByKey),
+      recurring,
       spending,
       rule,
       aliasByKey,
     ),
-    merchants: topMerchants(spendingRows, TOP_MERCHANTS, aliasByKey),
+    merchants: topMerchants(spendingRows, TOP_MERCHANTS, aliasByKey, recurring),
     aliasGroups: aliases,
     income,
     incomeTotal: round2(income.reduce((s, i) => s + i.current, 0)),

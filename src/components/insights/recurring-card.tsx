@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { CategoryLabel, type CategoryLabelData } from "@/components/transactions/bits";
 import { cn } from "@/lib/utils";
 import type { InsightsData } from "@/lib/insights";
-import type { RecurringFlag } from "@/lib/recurring";
+import { recurringCurrent, type RecurringFlag } from "@/lib/recurring";
 import { CardTitle, ROW_LINK } from "./bits";
 
 const FLAG_STYLE: Record<RecurringFlag, { color: string; background: string }> = {
@@ -79,7 +79,7 @@ export async function RecurringCard({
                         </span>
                       ))}
                       <span className="ml-auto shrink-0 pl-1 font-semibold tabular-nums">
-                        {money.format(p.usual)}
+                        {money.format(recurringCurrent(p))}
                       </span>
                     </div>
                     <div className="text-muted-foreground flex items-center gap-2 text-[11.5px]">
@@ -89,14 +89,9 @@ export async function RecurringCard({
                         className="flex-1"
                       />
                       <span className="shrink-0 tabular-nums">
+                        {p.months === 2 && `${t("recurringEveryTwoMonths")} · `}
                         {increased
-                          ? t.rich("recurringLastAmount", {
-                              date: day.format(p.lastDate),
-                              amount: money.format(p.last),
-                              up: (chunks) => (
-                                <span style={{ color: "var(--expense-text)" }}>{chunks}</span>
-                              ),
-                            })
+                          ? t("recurringUsual", { amount: money.format(p.usual) })
                           : t("recurringLast", { date: day.format(p.lastDate) })}
                       </span>
                     </div>

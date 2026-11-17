@@ -103,9 +103,10 @@ describe("getInsights exceptional expenses", () => {
   it("lists the period's expenses above their category's average, recurring, refunded, transfer, savings and neutral rows left out", async () => {
     const { exceptional } = await insights();
     expect(exceptional.expenses.map((e) => [e.label, e.amount, e.average, e.categoryId])).toEqual([
-      // Entretien has one month of history: judged against Transport, (60×9 + 150 + 300) / 10.
-      ["NORAUTO", 300, 99, upkeep],
-      ["DARTY", 150, 15, tech],
+      // Averages over the months before October. Entretien has none: judged against Transport.
+      ["NORAUTO", 300, 60, upkeep],
+      // High-tech's first spending: nothing before it.
+      ["DARTY", 150, 0, tech],
     ]);
     expect(exceptional.rule).toEqual({ minAmount: 50, factor: 2 });
     expect(exceptional.expenses[0].date).toEqual(new Date("2026-10-12T00:00:00.000Z"));
@@ -116,7 +117,7 @@ describe("getInsights exceptional expenses", () => {
 
   it("follows the user's rule", async () => {
     await updateExceptionalRule(owner, { minAmount: 50, factor: 1 }, "fr");
-    // Carburant: (60×9 + 150) / 10 = 69, under 90 € once the multiple is 1.
+    // Carburant: 60 € a month before October, under 90 € once the multiple is 1.
     expect((await insights()).exceptional.expenses.map((e) => e.label)).toEqual([
       "NORAUTO",
       "DARTY",
@@ -126,7 +127,7 @@ describe("getInsights exceptional expenses", () => {
     expect((await insights()).exceptional.expenses.map((e) => e.label)).toEqual(["NORAUTO"]);
   });
 
-  it("finds nothing in the first month, its own average", async () => {
+  it("finds nothing in the first month: no month before it to compare with", async () => {
     const { exceptional } = await insights(monthPeriod(2026, 1));
     expect(exceptional.expenses).toEqual([]);
   });

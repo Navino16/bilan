@@ -233,7 +233,7 @@ export function categoryTrends(
         ...c,
         values,
         average: round2(mean(complete)),
-        stable: isStable(complete),
+        stable: isStable(complete) && Math.abs(c.diff) <= STABLE_CV * c.reference,
         children: changesOf(childCur, childRef, childrenOf.get(c.categoryId) ?? []),
       };
     },
@@ -261,6 +261,8 @@ export type MerchantPart = {
   label: string;
   date: Date;
   categoryId: string | null;
+  // A single row's transaction type.
+  type?: string;
   count: number;
   total: number;
 };
@@ -275,13 +277,16 @@ type MerchantGroup = {
 };
 
 // Transfers are excluded: unlinked internal moves ("VIR LIVRET A") would top the list.
-// Merchants sharing an alias (merchant key → display name) are summed as one.
+// Merchants sharing an alias (merchant key → display name) are summed as one. `leaveOut` holds
+// row ids to skip: the recurring payments, already listed on their own (spec §5.17).
 export function topMerchants(
   rows: MerchantRow[],
   limit: number,
   aliases: ReadonlyMap<string, string> = new Map(),
+  leaveOut: ReadonlySet<string> = new Set(),
 ): MerchantTotal[] {
-  return mergeMerchantParts(merchantParts(rows), limit, aliases);
+  const kept = rows.filter((r) => !r.id || !leaveOut.has(r.id));
+  return mergeMerchantParts(merchantParts(kept), limit, aliases);
 }
 
 export function merchantParts(rows: MerchantRow[]): MerchantPart[] {
@@ -296,6 +301,7 @@ export function merchantParts(rows: MerchantRow[]): MerchantPart[] {
         label: r.label,
         date: r.date,
         categoryId: r.categoryId,
+        type: r.type,
         count: 1,
         total: -r.amount,
       });
