@@ -104,6 +104,7 @@ export async function getInsights(
   const spendingRows = merchantRowsOf(rows);
   const recentRows = merchantRowsOf(recent.rows.filter(keep));
   const spending = rows.reduce((s, r) => s + Math.max(0, -r.amount), 0);
+  const recurring = recurringIds(recentRows, asOf, aliasByKey);
   return {
     overview: insightsOverview(historyRows, window),
     categories: categoryTrends(rows, reference, historyRows, window, branches),
@@ -117,11 +118,11 @@ export async function getInsights(
       historyRows,
       window,
       branches,
-      recurringIds(recentRows, asOf, aliasByKey),
+      recurring,
       spending,
       aliasByKey,
     ),
-    merchants: topMerchants(spendingRows, TOP_MERCHANTS, aliasByKey),
+    merchants: topMerchants(spendingRows, TOP_MERCHANTS, aliasByKey, recurring),
     aliasGroups: aliases,
     income,
     incomeTotal: round2(income.reduce((s, i) => s + i.current, 0)),

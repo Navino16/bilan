@@ -102,6 +102,12 @@ describe("topMerchants", () => {
     expect(tie[0].categoryId).toBe("tech");
   });
 
+  it("leaves out the rows it is given to skip, such as recurring payments", () => {
+    const rent = { ...row("PRLV FONCIA LOYER", -700, 5, "rent", "DIRECT_DEBIT"), id: "rent" };
+    const out = topMerchants([rent, row("CB LIDL", -40, 3)], 6, new Map(), new Set(["rent"]));
+    expect(out.map((m) => m.label)).toEqual(["LIDL"]);
+  });
+
   it("limits the result", () => {
     const rows = ["A", "B", "C"].map((m, i) => row(`CB SHOP${m}`, -(i + 1), i + 1));
     expect(topMerchants(rows, 2).map((m) => m.label)).toEqual(["SHOPC", "SHOPB"]);
