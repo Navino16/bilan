@@ -233,7 +233,7 @@ export function categoryTrends(
         ...c,
         values,
         average: round2(mean(complete)),
-        stable: isStable(complete),
+        stable: isStable(complete) && Math.abs(c.diff) <= STABLE_CV * c.reference,
         children: changesOf(childCur, childRef, childrenOf.get(c.categoryId) ?? []),
       };
     },
@@ -261,6 +261,8 @@ export type MerchantPart = {
   label: string;
   date: Date;
   categoryId: string | null;
+  // A single row's transaction type.
+  type?: string;
   count: number;
   total: number;
 };
@@ -299,6 +301,7 @@ export function merchantParts(rows: MerchantRow[]): MerchantPart[] {
         label: r.label,
         date: r.date,
         categoryId: r.categoryId,
+        type: r.type,
         count: 1,
         total: -r.amount,
       });

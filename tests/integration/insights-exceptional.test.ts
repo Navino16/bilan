@@ -101,11 +101,11 @@ describe("getInsights exceptional expenses", () => {
   it("lists the period's expenses above their category's average, recurring, refunded, transfer, savings and neutral rows left out", async () => {
     const { exceptional } = await insights();
     expect(exceptional.expenses.map((e) => [e.label, e.amount, e.average, e.categoryId])).toEqual([
-      // Entretien has one month of history: judged against Transport, (60×9 + 150 + 300) / 10.
-      ["NORAUTO", 300, 99, upkeep],
-      ["DARTY", 150, 15, tech],
-      // Carburant: (60×9 + 150) / 10.
-      ["ESSO", 90, 69, fuel],
+      // Averages over the months before October. Entretien has none: judged against Transport.
+      ["NORAUTO", 300, 60, upkeep],
+      // High-tech's first spending: nothing before it.
+      ["DARTY", 150, 0, tech],
+      ["ESSO", 90, 60, fuel],
     ]);
     expect(exceptional.expenses[0].date).toEqual(new Date("2026-10-12T00:00:00.000Z"));
     expect(exceptional.total).toBe(540);
@@ -113,7 +113,7 @@ describe("getInsights exceptional expenses", () => {
     expect(exceptional.share).toBeCloseTo(540 / 770);
   });
 
-  it("finds nothing in the first month, its own average", async () => {
+  it("finds nothing in the first month: no month before it to compare with", async () => {
     const { exceptional } = await insights(monthPeriod(2026, 1));
     expect(exceptional.expenses).toEqual([]);
   });
