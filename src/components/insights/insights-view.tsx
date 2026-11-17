@@ -181,7 +181,7 @@ export async function InsightsView({
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <Card className="gap-4 p-6" data-slot="insights-merchants">
-          <CardTitle title={t("merchantsTitle")} />
+          <CardTitle title={t("merchantsTitle")} sub={t("merchantsSub")} />
           {data.merchants.length === 0 ? (
             <p className="text-muted-foreground text-sm">{t("noMerchants")}</p>
           ) : (

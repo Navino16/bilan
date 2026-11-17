@@ -1537,6 +1537,7 @@
     "noData": "No spending this period.",
     "noCategory": "Uncategorized",
     "merchantsTitle": "Top merchants",
+    "merchantsSub": "Recurring payments left out",
     "merchantsCount": "{count, number}×",
     "noMerchants": "No merchants this period.",
     "incomeTitle": "Income by category",

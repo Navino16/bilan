@@ -1537,6 +1537,7 @@
     "noData": "Aucune dépense sur cette période.",
     "noCategory": "Sans catégorie",
     "merchantsTitle": "Top marchands",
+    "merchantsSub": "Hors prélèvements récurrents",
     "merchantsCount": "{count, number}×",
     "noMerchants": "Aucun marchand sur cette période.",
     "incomeTitle": "Revenus par catégorie",

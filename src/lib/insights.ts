@@ -277,13 +277,16 @@ type MerchantGroup = {
 };
 
 // Transfers are excluded: unlinked internal moves ("VIR LIVRET A") would top the list.
-// Merchants sharing an alias (merchant key → display name) are summed as one.
+// Merchants sharing an alias (merchant key → display name) are summed as one. `leaveOut` holds
+// row ids to skip: the recurring payments, already listed on their own (spec §5.17).
 export function topMerchants(
   rows: MerchantRow[],
   limit: number,
   aliases: ReadonlyMap<string, string> = new Map(),
+  leaveOut: ReadonlySet<string> = new Set(),
 ): MerchantTotal[] {
-  return mergeMerchantParts(merchantParts(rows), limit, aliases);
+  const kept = rows.filter((r) => !r.id || !leaveOut.has(r.id));
+  return mergeMerchantParts(merchantParts(kept), limit, aliases);
 }
 
 export function merchantParts(rows: MerchantRow[]): MerchantPart[] {
