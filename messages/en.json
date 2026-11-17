@@ -1544,6 +1544,7 @@
     "noIncome": "No income this period.",
     "new": "new",
     "historyAverage": "avg.",
+    "historyAverageToDay": "avg. to day {day}:",
     "historyInProgress": "{month} (in progress)",
     "overviewOverline": "Last 12 months",
     "overviewTitle": "Income and spending",

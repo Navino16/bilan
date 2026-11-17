@@ -147,6 +147,17 @@ export function formatPercent(
   }).format(ratio);
 }
 
+// From this many times the reference, a change reads as a multiple: "+1 558 %" says nothing.
+export const MULTIPLE_FROM = 3;
+
+// A change from `reference` (non-zero) to `current`: "+64 %", or "×17" from MULTIPLE_FROM on.
+export function formatChange(current: number, reference: number, locale: string): string {
+  const ratio = current / reference;
+  if (ratio < MULTIPLE_FROM) return formatPercent(ratio - 1, locale, { signed: true });
+  const digits = ratio < 10 ? 1 : 0;
+  return `×${numberFormat(`multiple${digits}`, locale, { maximumFractionDigits: digits }).format(ratio)}`;
+}
+
 // Euros, always with cents (#175: full amounts, no compact notation).
 export function formatMoney(n: number, locale: string): string {
   return numberFormat("money", locale, { style: "currency", currency: "EUR" }).format(n);

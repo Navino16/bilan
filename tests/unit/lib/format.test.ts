@@ -13,6 +13,7 @@ import {
   formatMonthRange,
   ordinalSegments,
   formatMonthYear,
+  formatChange,
   formatPercent,
 } from "@/lib/format";
 import { readAmount } from "@/lib/amount";
@@ -166,6 +167,19 @@ describe("formatPercent", () => {
     expect(formatPercent(0.04, "en", { signed: true })).toBe("+4%");
     expect(formatPercent(-0.04, "en", { signed: true })).toBe("-4%");
     expect(formatPercent(0, "en", { signed: true })).toBe("0%");
+  });
+});
+
+describe("formatChange", () => {
+  it("shows a signed percentage below three times the reference", () => {
+    expect(formatChange(600, 365, "en")).toBe("+64%");
+    expect(formatChange(42, 51, "en")).toBe("-18%");
+  });
+
+  it("shows a multiple from three times the reference", () => {
+    expect(formatChange(319, 19, "en")).toBe("×17");
+    expect(formatChange(96, 30, "fr")).toBe("×3,2");
+    expect(formatChange(90, 30, "en")).toBe("×3");
   });
 });
 

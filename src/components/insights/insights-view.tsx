@@ -158,6 +158,7 @@ export async function InsightsView({
           highlight={highlight}
           inProgress={overview.inProgress}
           averaged={averaged}
+          toDay={averaged ? comparison.elapsedDays : null}
           locale={locale}
         />
       </Card>
