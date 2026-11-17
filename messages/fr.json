@@ -1544,6 +1544,7 @@
     "noIncome": "Aucun revenu sur cette période.",
     "new": "nouveau",
     "historyAverage": "moy.",
+    "historyAverageToDay": "moy. au {day} :",
     "historyInProgress": "{month} (en cours)",
     "overviewOverline": "12 derniers mois",
     "overviewTitle": "Rentrées et dépenses",

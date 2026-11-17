@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ChevronDown, ChevronRight, Tag } from "lucide-react";
 import { CategoryLabel, type CategoryLabelData } from "@/components/transactions/bits";
-import { formatPercent } from "@/lib/format";
+import { formatChange } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { CategoryChange, CategoryTrend } from "@/lib/insights";
 import { Dot, HATCH, ROW_LINK } from "./bits";
@@ -19,7 +19,8 @@ export type ChangeView = CategoryChange & {
 };
 export type TrendView = Omit<CategoryTrend, "children"> & ChangeView & { children: ChangeView[] };
 
-// `months` are the bars' labels; `highlight` flags the bars of the displayed period.
+// `months` are the bars' labels; `highlight` flags the bars of the displayed period. `toDay` is
+// the same-date cut of an averaged comparison while the period is in progress.
 export function CategoryTrends({
   trends,
   uncategorized,
@@ -27,6 +28,7 @@ export function CategoryTrends({
   highlight,
   inProgress,
   averaged,
+  toDay,
   locale,
 }: {
   trends: TrendView[];
@@ -35,6 +37,7 @@ export function CategoryTrends({
   highlight: boolean[];
   inProgress: boolean;
   averaged: boolean;
+  toDay: number | null;
   locale: string;
 }) {
   const t = useTranslations("insights");
@@ -52,15 +55,16 @@ export function CategoryTrends({
     signDisplay: "exceptZero",
   });
   const pct = (c: CategoryChange) =>
-    c.reference
-      ? formatPercent(c.diff / c.reference, locale, { signed: true })
-      : c.current
-        ? t("new")
-        : "";
+    c.reference ? formatChange(c.current, c.reference, locale) : c.current ? t("new") : "";
   const tone = (diff: number) =>
     diff > 0 ? "var(--expense)" : diff < 0 ? "var(--income)" : "var(--muted-foreground)";
+  const basis = !averaged
+    ? ""
+    : toDay
+      ? `${t("historyAverageToDay", { day: toDay })} `
+      : `${t("historyAverage")} `;
   const fromTo = (c: CategoryChange) =>
-    `${averaged ? `${t("historyAverage")} ` : ""}${money.format(c.reference)} → ${money.format(c.current)}`;
+    `${basis}${money.format(c.reference)} → ${money.format(c.current)}`;
   const toggle = (id: string) =>
     setOpen((prev) => {
       const next = new Set(prev);
