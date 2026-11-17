@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { exceptionalExpenses } from "@/lib/exceptional";
+import { exceptionalExpenses, type ExceptionalRule } from "@/lib/exceptional";
 import type { CategoryBranch, DatedRow, HistoryWindow, MerchantRow } from "@/lib/insights";
 
 // November 2025 to October 2026, October being the period.
@@ -46,9 +46,17 @@ const history: DatedRow[] = [
 ];
 const SPENDING = 2000;
 
+// Above the average itself: the rule these cases were written for.
+const AVERAGE = { minAmount: 50, factor: 1 };
+
 const run = (
   rows = period,
-  opts: { recurring?: Set<string>; aliases?: Map<string, string>; window?: HistoryWindow } = {},
+  opts: {
+    recurring?: Set<string>;
+    aliases?: Map<string, string>;
+    window?: HistoryWindow;
+    rule?: ExceptionalRule;
+  } = {},
 ) =>
   exceptionalExpenses(
     rows,
@@ -57,6 +65,7 @@ const run = (
     branches,
     opts.recurring ?? new Set(),
     SPENDING,
+    opts.rule ?? AVERAGE,
     opts.aliases,
   );
 
@@ -81,6 +90,21 @@ describe("exceptionalExpenses", () => {
     });
   });
 
+  it("applies the user's minimum and multiple of the average", () => {
+    // Twice the average: the 90 € fuel (avg. 67.50) drops out.
+    expect(run(period, { rule: { minAmount: 50, factor: 2 } }).expenses.map((e) => e.id)).toEqual([
+      "upkeep-1",
+      "paypal",
+    ]);
+    expect(run(period, { rule: { minAmount: 150, factor: 1 } }).expenses.map((e) => e.id)).toEqual([
+      "upkeep-1",
+    ]);
+    expect(run(period, { rule: { minAmount: 50, factor: 2 } }).rule).toEqual({
+      minAmount: 50,
+      factor: 2,
+    });
+  });
+
   it("judges a subcategory against its own average once it has three months of history", () => {
     const earlier = [8, 9].map((i) => ({ amount: -40, categoryId: "upkeep", date: at(i) }));
     const { expenses } = exceptionalExpenses(
@@ -90,6 +114,7 @@ describe("exceptionalExpenses", () => {
       branches,
       new Set(),
       SPENDING,
+      AVERAGE,
     );
     // Upkeep: (40×2 + 425) / 12 = 42.08, so the 80 € inspection now stands out too.
     expect(expenses.map((e) => [e.id, e.average])).toEqual([
@@ -117,6 +142,11 @@ describe("exceptionalExpenses", () => {
 
   it("finds nothing without a complete month of history", () => {
     const first = { ...window, inProgress: true, dataStart: OCT };
-    expect(run(period, { window: first })).toEqual({ expenses: [], total: 0, share: 0 });
+    expect(run(period, { window: first })).toEqual({
+      expenses: [],
+      total: 0,
+      share: 0,
+      rule: { minAmount: 50, factor: 1 },
+    });
   });
 });

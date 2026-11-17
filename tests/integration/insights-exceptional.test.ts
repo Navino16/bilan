@@ -3,6 +3,7 @@ import { db } from "@/server/db";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
 import { getInsights } from "@/server/services/dashboard/insights";
 import { createLink } from "@/server/services/links";
+import { updateExceptionalRule } from "@/server/services/users/preferences";
 import { comparisonFor, monthPeriod } from "@/lib/period";
 
 const owner = "exceptional_owner";
@@ -36,6 +37,7 @@ async function tx(
 
 async function cleanup() {
   await db.transactionLink.deleteMany({ where: { createdById: owner } });
+  await db.userPreference.deleteMany({ where: { userId: owner } });
   await db.transaction.deleteMany({ where: { account: { ownerId: owner } } });
   await db.category.deleteMany({ where: { userId: owner, parentId: { not: null } } });
   await db.category.deleteMany({ where: { userId: owner } });
@@ -105,12 +107,24 @@ describe("getInsights exceptional expenses", () => {
       ["NORAUTO", 300, 60, upkeep],
       // High-tech's first spending: nothing before it.
       ["DARTY", 150, 0, tech],
-      ["ESSO", 90, 60, fuel],
     ]);
+    expect(exceptional.rule).toEqual({ minAmount: 50, factor: 2 });
     expect(exceptional.expenses[0].date).toEqual(new Date("2026-10-12T00:00:00.000Z"));
-    expect(exceptional.total).toBe(540);
+    expect(exceptional.total).toBe(450);
     // Counted spending: 60 + 90 + 300 + 70 + 150 + 100.
-    expect(exceptional.share).toBeCloseTo(540 / 770);
+    expect(exceptional.share).toBeCloseTo(450 / 770);
+  });
+
+  it("follows the user's rule", async () => {
+    await updateExceptionalRule(owner, { minAmount: 50, factor: 1 }, "fr");
+    // Carburant: 60 € a month before October, under 90 € once the multiple is 1.
+    expect((await insights()).exceptional.expenses.map((e) => e.label)).toEqual([
+      "NORAUTO",
+      "DARTY",
+      "ESSO",
+    ]);
+    await updateExceptionalRule(owner, { minAmount: 200, factor: 1 }, "fr");
+    expect((await insights()).exceptional.expenses.map((e) => e.label)).toEqual(["NORAUTO"]);
   });
 
   it("finds nothing in the first month: no month before it to compare with", async () => {

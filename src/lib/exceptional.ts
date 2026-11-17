@@ -11,8 +11,11 @@ import {
 } from "@/lib/insights";
 import { merchantKey, merchantLabel } from "@/lib/merchant";
 
-// Rules: spec §5.17.
-export const EXCEPTIONAL_MIN_AMOUNT = 50;
+// Rules: spec §5.17. The user picks the minimum and the multiple of the category's average;
+// 2× gave about 2 expenses a month on a year of real data, 1× about 5 (#442).
+export type ExceptionalRule = { minAmount: number; factor: number };
+export const EXCEPTIONAL_DEFAULTS: ExceptionalRule = { minAmount: 50, factor: 2 };
+export const EXCEPTIONAL_FACTOR_RANGE = { min: 1, max: 10 } as const;
 // A subcategory with fewer complete months since its first spending is judged against its root.
 export const LEAF_MIN_MONTHS = 3;
 
@@ -31,10 +34,12 @@ export type ExceptionalExpenses = {
   total: number;
   // Of the period's spending.
   share: number;
+  rule: ExceptionalRule;
 };
 
-// The period's spending rows above their category's monthly average over the history window,
-// recurring ones (`recurring` ids) and transfers left out.
+// The period's spending rows of at least `rule.minAmount` and above `rule.factor` times their
+// category's monthly average over the history window, recurring ones (`recurring` ids) and
+// transfers left out.
 export function exceptionalExpenses(
   rows: MerchantRow[],
   history: DatedRow[],
@@ -42,9 +47,10 @@ export function exceptionalExpenses(
   branches: ReadonlyMap<string, CategoryBranch>,
   recurring: ReadonlySet<string>,
   spending: number,
+  rule: ExceptionalRule,
   aliases: ReadonlyMap<string, string> = new Map(),
 ): ExceptionalExpenses {
-  const none = { expenses: [], total: 0, share: 0 };
+  const none = { expenses: [], total: 0, share: 0, rule };
   if (completeMonths(window.months, window).length === 0) return none;
 
   const zeros = window.months.map(() => 0);
@@ -81,7 +87,7 @@ export function exceptionalExpenses(
     if (!r.id || r.amount >= 0 || r.type === "TRANSFER" || recurring.has(r.id)) continue;
     const amount = -r.amount;
     const average = averageFor(r.categoryId);
-    if (amount < EXCEPTIONAL_MIN_AMOUNT || amount <= average) continue;
+    if (amount < rule.minAmount || amount <= average * rule.factor) continue;
     const search = merchantLabel(r.label) || r.label;
     expenses.push({
       id: r.id,
@@ -98,5 +104,5 @@ export function exceptionalExpenses(
       b.amount - a.amount || b.date.getTime() - a.date.getTime() || a.label.localeCompare(b.label),
   );
   const total = round2(expenses.reduce((s, e) => s + e.amount, 0));
-  return { expenses, total, share: spending > 0 ? total / spending : 0 };
+  return { expenses, total, share: spending > 0 ? total / spending : 0, rule };
 }
