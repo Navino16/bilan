@@ -2,6 +2,7 @@ import { db } from "@/server/db";
 import { visibleAccountIds } from "@/server/services/accounts";
 import { aliasMap, listAliasGroups, merchantRowsOf } from "@/server/services/merchants";
 import { listBudgetSeriesHistory } from "@/server/services/budgets";
+import { getExceptionalRule } from "@/server/services/users/preferences";
 import { round2 } from "@/lib/budgets";
 import {
   categoryTrends,
@@ -83,13 +84,14 @@ export async function getInsights(
   const first = await firstTransactionDate(accountIds);
   const window = historyWindow(period, first, now);
   const recentSpan = monthsSpan(historyMonths(period, RECURRING_MONTHS, now));
-  const [current, reference, history, recent, aliases, budgets] = await Promise.all([
+  const [current, reference, history, recent, aliases, budgets, rule] = await Promise.all([
     loadRows(accountIds, period, { withLabels: true, realDates: true }),
     referenceRows(accountIds, period, comparison, keep),
     loadRows(accountIds, monthsSpan(window.months)),
     loadRows(accountIds, recentSpan, { withLabels: true, realDates: true }),
     listAliasGroups(userId),
     listBudgetSeriesHistory(userId, now),
+    getExceptionalRule(userId),
   ]);
   const rows = current.rows.filter(keep);
   const historyRows = history.rows.filter(keep);
@@ -119,6 +121,7 @@ export async function getInsights(
       branches,
       recurringIds(recentRows, asOf, aliasByKey),
       spending,
+      rule,
       aliasByKey,
     ),
     merchants: topMerchants(spendingRows, TOP_MERCHANTS, aliasByKey),

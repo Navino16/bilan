@@ -52,7 +52,7 @@ export const CLIENT_SCOPES = {
   ],
   groups: ["forms.fieldError", "groups", "invitations", "shell"],
   import: ["import", "onboarding", "rules", "shell", "transactions"],
-  insights: ["dashboard", "insights", "merchants", "shell"],
+  insights: ["dashboard", "forms.fieldError", "insights", "merchants", "shell"],
   settings: ["forms.fieldError", "settings.data", "settings.security", "shell", "stepUp"],
   transactions: ["budgets", "dashboard", "forms.fieldError", "rules", "shell", "transactions"],
 } as const satisfies Record<string, readonly string[]>;

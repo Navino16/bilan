@@ -151,6 +151,8 @@ CREATE TABLE `UserPreference` (
     `linkWindowDays` INTEGER NOT NULL DEFAULT 30,
     `linkMinAmount` DECIMAL(12, 2) NOT NULL DEFAULT 0,
     `dashboardLayout` JSON NULL,
+    `exceptionalMinAmount` DECIMAL(12, 2) NOT NULL DEFAULT 50,
+    `exceptionalFactor` DECIMAL(4, 1) NOT NULL DEFAULT 2,
 
     PRIMARY KEY (`userId`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

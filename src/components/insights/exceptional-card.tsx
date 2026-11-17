@@ -4,10 +4,11 @@ import { Card } from "@/components/ui/card";
 import { CategoryLabel, type CategoryLabelData } from "@/components/transactions/bits";
 import { cn } from "@/lib/utils";
 import { formatPercent } from "@/lib/format";
-import { EXCEPTIONAL_MIN_AMOUNT, type ExceptionalExpense } from "@/lib/exceptional";
+import type { ExceptionalExpense } from "@/lib/exceptional";
 import type { InsightsData } from "@/lib/insights";
 import { CardTitle, ROW_LINK } from "./bits";
 import { ShowAll } from "./show-all";
+import { ExceptionalSettings } from "./exceptional-settings";
 
 const EXCEPTIONAL_SHOWN = 8;
 
@@ -30,7 +31,8 @@ export async function ExceptionalCard({
     maximumFractionDigits: 0,
   });
   const day = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" });
-  const { expenses, total, share } = exceptional;
+  const { expenses, total, share, rule } = exceptional;
+  const factor = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(rule.factor);
 
   const row = (e: ExceptionalExpense) => (
     <li key={e.id} data-slot="exceptional-row">
@@ -64,10 +66,15 @@ export async function ExceptionalCard({
 
   return (
     <Card className="gap-4 p-4.5 md:p-6" data-slot="insights-exceptional">
-      <CardTitle
-        title={t("exceptionalTitle")}
-        sub={t("exceptionalSub", { amount: rounded.format(EXCEPTIONAL_MIN_AMOUNT) })}
-      />
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <CardTitle
+            title={t("exceptionalTitle")}
+            sub={t("exceptionalSub", { factor, amount: rounded.format(rule.minAmount) })}
+          />
+        </div>
+        <ExceptionalSettings rule={rule} />
+      </div>
       {expenses.length === 0 ? (
         <p className="text-muted-foreground text-sm">{t("noExceptional")}</p>
       ) : (

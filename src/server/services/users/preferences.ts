@@ -8,6 +8,11 @@ import {
   type LinkSettingsInput,
 } from "@/lib/schemas/link-settings";
 import { fieldErrorsFromZod, type FieldErrors } from "@/lib/validation/field-errors";
+import { EXCEPTIONAL_DEFAULTS, type ExceptionalRule } from "@/lib/exceptional";
+import {
+  exceptionalSettingsSchema,
+  type ExceptionalSettingsInput,
+} from "@/lib/schemas/exceptional-settings";
 
 // Never overwrites: an existing row holds a locale the user already chose.
 export async function storeSignupLocale(
@@ -70,6 +75,39 @@ export async function updateLinkSuggestionSettings(
   const data = {
     linkWindowDays: parsed.data.windowDays,
     linkMinAmount: parsed.data.minAmount,
+  };
+  await db.userPreference.upsert({
+    where: { userId },
+    create: { userId, locale, ...data },
+    update: data,
+  });
+  return parsed.data;
+}
+
+export async function getExceptionalRule(
+  userId: string,
+  db: PrismaClient = defaultDb,
+): Promise<ExceptionalRule> {
+  const pref = await db.userPreference.findUnique({
+    where: { userId },
+    select: { exceptionalMinAmount: true, exceptionalFactor: true },
+  });
+  if (!pref) return EXCEPTIONAL_DEFAULTS;
+  return { minAmount: Number(pref.exceptionalMinAmount), factor: Number(pref.exceptionalFactor) };
+}
+
+// `locale` only seeds a missing row, as for the link settings.
+export async function updateExceptionalRule(
+  userId: string,
+  input: ExceptionalSettingsInput,
+  locale: Locale,
+  db: PrismaClient = defaultDb,
+): Promise<ExceptionalRule> {
+  const parsed = exceptionalSettingsSchema.safeParse(input);
+  if (!parsed.success) throw new PreferenceInputError(fieldErrorsFromZod(parsed.error, input));
+  const data = {
+    exceptionalMinAmount: parsed.data.minAmount,
+    exceptionalFactor: parsed.data.factor,
   };
   await db.userPreference.upsert({
     where: { userId },

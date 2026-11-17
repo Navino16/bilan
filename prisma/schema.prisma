@@ -175,12 +175,15 @@ model UserRole {
 // ─── App configuration, audit & signup tokens (Phase 1) ──────────────────────
 
 model UserPreference {
-  userId          String  @id
-  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  locale          String  @default("fr")
-  linkWindowDays  Int     @default(30)
-  linkMinAmount   Decimal @default(0) @db.Decimal(12, 2)
-  dashboardLayout Json?
+  userId               String  @id
+  user                 User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  locale               String  @default("fr")
+  linkWindowDays       Int     @default(30)
+  linkMinAmount        Decimal @default(0) @db.Decimal(12, 2)
+  dashboardLayout      Json?
+  // Exceptional expenses rule (spec §5.17).
+  exceptionalMinAmount Decimal @default(50) @db.Decimal(12, 2)
+  exceptionalFactor    Decimal @default(2) @db.Decimal(4, 1)
 }
 
 model AuthProvider {
