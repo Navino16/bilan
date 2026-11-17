@@ -11,8 +11,10 @@ const row = (
   type = "CARD",
 ): MerchantRow => ({ label, amount: -amount, date, categoryId, type });
 // One payment per month, `months` being 1-based months of 2026.
-const monthly = (label: string, amounts: number[], months: number[], day = 8) =>
-  months.map((m, i) => row(label, amounts[i] ?? amounts[amounts.length - 1], at(m, day)));
+const monthly = (label: string, amounts: number[], months: number[], day = 8, type = "CARD") =>
+  months.map((m, i) =>
+    row(label, amounts[i] ?? amounts[amounts.length - 1], at(m, day), "subs", type),
+  );
 
 const asOf = new Date("2026-10-20T00:00:00.000Z");
 const dataStart = at(1, 1);
@@ -41,6 +43,7 @@ describe("recurringPayments", () => {
         last: 13.49,
         lastDate: at(10, 8),
         count: 6,
+        months: 1,
         flags: [],
       },
     ]);
@@ -78,6 +81,40 @@ describe("recurringPayments", () => {
     // 20 € is far below a 60 € median: it stays out of the series.
     const off = monthly("PRLV EDF", [60, 60, 20, 60, 60], [6, 7, 8, 9, 10]);
     expect(detect(off).payments[0]).toMatchObject({ usual: 60, count: 4 });
+  });
+
+  it("keeps a seasonal bill in its series when both payments are direct debits", () => {
+    const amounts = [50, 55, 57, 58, 52, 86.02];
+    const debits = monthly("PRLV EDF", amounts, [5, 6, 7, 8, 9, 10], 10, "DIRECT_DEBIT");
+    expect(detect(debits).payments).toMatchObject([
+      { count: 6, last: 86.02, lastDate: at(10, 10), flags: ["increase"] },
+    ]);
+    // 86.02 € is over 1.5 times the 55 € median: card payments stay apart.
+    const cards = monthly("CB EDF", amounts, [5, 6, 7, 8, 9, 10], 10);
+    expect(detect(cards).payments[0]).toMatchObject({ count: 5, lastDate: at(9, 10) });
+    // A debit far off the usual amount (a yearly adjustment) still stays out.
+    const adjust = monthly(
+      "PRLV EDF",
+      [60, 60, 60, 60, 60, 300],
+      [5, 6, 7, 8, 9, 10],
+      10,
+      "DIRECT_DEBIT",
+    );
+    expect(detect(adjust).payments[0]).toMatchObject({ count: 5 });
+  });
+
+  it("counts a bill paid every two months for half a month, not stopped in between", () => {
+    const rows = [at(5, 5), at(7, 5), at(9, 5)].map((d) => row("PRLV EAU DE PARIS", 60, d));
+    const { payments, monthly: total } = detect(rows);
+    expect(payments).toMatchObject([{ usual: 60, count: 3, months: 2, flags: [] }]);
+    expect(total).toBe(30);
+    // 45 days after its last payment: a monthly series would be stopped.
+    expect(payments[0].lastDate).toEqual(at(9, 5));
+  });
+
+  it("keeps a monthly series with one skipped month monthly", () => {
+    const rows = monthly("CB NAVIGO MOIS", [86.4], [5, 7, 8], 1);
+    expect(detect(rows).payments[0]).toMatchObject({ months: 1 });
   });
 
   it("splits one merchant's payments into several series by amount", () => {
