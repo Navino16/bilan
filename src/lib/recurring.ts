@@ -7,8 +7,10 @@ export const RECURRING_MONTHS = 6;
 export const RECURRING_MIN_COUNT = 3;
 // Days between two payments of a series: a month, or two when one month was skipped, ± 5 days.
 export const RECURRING_GAP = { months: [1, 2], days: 5 };
-// A payment joins a series between 2/3 and 1.5 times its median.
+// A payment joins a series between 2/3 and 1.5 times its median, 2.5 between two direct debits
+// (a seasonal energy bill).
 export const RECURRING_AMOUNT_FACTOR = 1.5;
+export const RECURRING_DEBIT_AMOUNT_FACTOR = 2.5;
 // A shop, not a bill: its series hold under 80 % of its payments, or it is paid 3 times or more
 // per month it appears in.
 export const RECURRING_COVERAGE = 0.8;
@@ -30,22 +32,28 @@ export type RecurringPayment = {
   last: number;
   lastDate: Date;
   count: number;
+  // Months between two payments: 2 when every gap of the series is two months.
+  months: 1 | 2;
   flags: RecurringFlag[];
 };
 export type RecurringPayments = {
   payments: RecurringPayment[];
-  // What the payments still running cost a month now: the last amount of an increased one.
+  // What the payments still running cost a month now, a two-month one counting for half.
   monthly: number;
   // The part of `monthly` from new payments and price increases.
   extra: number;
 };
 
-type Occurrence = Pick<MerchantPart, "id" | "label" | "date" | "categoryId"> & { amount: number };
+type Occurrence = Pick<MerchantPart, "id" | "label" | "date" | "categoryId" | "type"> & {
+  amount: number;
+};
 
 const days = (from: Date, to: Date) => Math.round((to.getTime() - from.getTime()) / DAY);
 const monthOf = (d: Date) => d.getUTCFullYear() * 12 + d.getUTCMonth();
-const monthlyGap = (gap: number) =>
-  RECURRING_GAP.months.some((m) => Math.abs(gap - m * MONTH_DAYS) <= RECURRING_GAP.days);
+const gapOf = (months: number, gap: number) =>
+  Math.abs(gap - months * MONTH_DAYS) <= RECURRING_GAP.days;
+const monthlyGap = (gap: number) => RECURRING_GAP.months.some((m) => gapOf(m, gap));
+const DEBIT = "DIRECT_DEBIT";
 
 export function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
@@ -61,9 +69,12 @@ function seriesOf(occurrences: Occurrence[]): Occurrence[][] {
     let best: Occurrence[] | undefined;
     let bestDiff = Infinity;
     for (const s of series) {
-      if (!monthlyGap(days(s[s.length - 1].date, o.date))) continue;
+      const previous = s[s.length - 1];
+      if (!monthlyGap(days(previous.date, o.date))) continue;
       const diff = Math.abs(Math.log(o.amount / median(s.map((x) => x.amount))));
-      if (diff > Math.log(RECURRING_AMOUNT_FACTOR)) continue;
+      const debits = o.type === DEBIT && previous.type === DEBIT;
+      const factor = debits ? RECURRING_DEBIT_AMOUNT_FACTOR : RECURRING_AMOUNT_FACTOR;
+      if (diff > Math.log(factor)) continue;
       if (diff < bestDiff) {
         best = s;
         bestDiff = diff;
@@ -73,6 +84,10 @@ function seriesOf(occurrences: Occurrence[]): Occurrence[][] {
     else series.push([o]);
   }
   return series.filter((s) => s.length >= RECURRING_MIN_COUNT);
+}
+
+function cadence(s: Occurrence[]): 1 | 2 {
+  return s.slice(1).every((o, i) => gapOf(2, days(s[i].date, o.date))) ? 2 : 1;
 }
 
 const rank = (p: RecurringPayment) =>
@@ -113,6 +128,7 @@ function merchantSeries(
         label: p.label,
         date: p.date,
         categoryId: p.categoryId,
+        type: p.type,
         amount: p.total,
       }))
       .sort((a, b) => a.date.getTime() - b.date.getTime());
@@ -141,6 +157,10 @@ export function recurringIds(
 // Spending that comes back about every month at the same merchant, over the RECURRING_MONTHS
 // calendar months ending at `asOf`. `dataStart` is the first recorded transaction: a series is
 // only new when data was recorded before it.
+// What one payment of the series costs now: the last amount of an increased one.
+export const recurringCurrent = (p: RecurringPayment) =>
+  p.flags.includes("increase") ? p.last : p.usual;
+
 export function recurringPayments(
   rows: MerchantRow[],
   asOf: Date,
@@ -153,8 +173,9 @@ export function recurringPayments(
       const first = s[0];
       const last = s[s.length - 1];
       const usual = round2(median(s.map((o) => o.amount)));
+      const months = cadence(s);
       const flags: RecurringFlag[] = [];
-      if (days(last.date, asOf) > STOPPED_AFTER_DAYS) {
+      if (days(last.date, asOf) > STOPPED_AFTER_DAYS + (months - 1) * MONTH_DAYS) {
         flags.push("stopped");
       } else {
         const fresh =
@@ -176,6 +197,7 @@ export function recurringPayments(
         last: round2(last.amount),
         lastDate: last.date,
         count: s.length,
+        months,
         flags,
       });
     }
@@ -183,9 +205,13 @@ export function recurringPayments(
   payments.sort((a, b) => rank(a) - rank(b) || b.usual - a.usual || a.label.localeCompare(b.label));
 
   const running = payments.filter((p) => !p.flags.includes("stopped"));
-  const now = (p: RecurringPayment) => (p.flags.includes("increase") ? p.last : p.usual);
+  const now = (p: RecurringPayment) => recurringCurrent(p) / p.months;
   const extra = (p: RecurringPayment) =>
-    p.flags.includes("new") ? now(p) : p.flags.includes("increase") ? p.last - p.usual : 0;
+    p.flags.includes("new")
+      ? now(p)
+      : p.flags.includes("increase")
+        ? (p.last - p.usual) / p.months
+        : 0;
   return {
     payments,
     monthly: round2(running.reduce((s, p) => s + now(p), 0)),

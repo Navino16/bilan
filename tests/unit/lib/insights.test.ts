@@ -276,6 +276,14 @@ describe("categoryTrends", () => {
     expect(trends[0].values).toEqual([100, 400, 100, 400, 100, 400]);
   });
 
+  it("does not group a category as stable when the period moves away from the reference", () => {
+    const moved = current.map((r) => (r.categoryId === "rent" ? { ...r, amount: -1600 } : r));
+    const rent = categoryTrends(moved, reference, history, window, branches).find(
+      (t) => t.categoryId === "rent",
+    );
+    expect(rent).toMatchObject({ diff: 810, stable: false });
+  });
+
   it("breaks a root down by its children, deeper levels summed into them", () => {
     const [food] = categoryTrends(current, reference, history, window, branches);
     expect(food.children).toEqual([
