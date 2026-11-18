@@ -225,6 +225,7 @@ const SHOTS: Shot[] = [
   },
   { name: "settings-security", path: "/settings/security", fullPage: true },
   { name: "settings-data", path: "/settings/data" },
+  { name: "settings-ai", path: "/settings/ai", fullPage: true },
   { name: "admin-users", path: "/admin/users", fullPage: true },
   { name: "admin-signup-tokens", path: "/admin/signup-tokens", fullPage: true },
   { name: "admin-auth-providers", path: "/admin/auth-providers", fullPage: true },

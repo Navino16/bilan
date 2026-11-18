@@ -5,19 +5,29 @@ import { hmacExact } from "@/server/crypto/hmac";
 import { searchKey } from "@/server/crypto/keys";
 import { logEvent } from "@/server/services/audit";
 import { fieldErrorsFromZod } from "@/lib/validation/field-errors";
+import {
+  MCP_TOKEN_NAME_MAX,
+  MCP_TOKEN_PREFIX,
+  MCP_TOKEN_SCOPES,
+  type McpTokenScope,
+} from "@/lib/validation/mcp-token";
 import { PreferenceInputError, getMcpEnabled } from "@/server/services/users/preferences";
 import { isMcpInstanceEnabled } from "./switches";
 import type { McpPrincipal } from "./context";
 
-export const MCP_TOKEN_PREFIX = "bilan_pat_";
+export { MCP_TOKEN_PREFIX };
 const VISIBLE_PREFIX_LENGTH = 16;
 const LAST_USED_GRANULARITY_MS = 60_000;
 
 const tokenHash = (token: string) => hmacExact(token, searchKey);
 
+export const mcpTokenFields = {
+  name: z.string().trim().min(1).max(MCP_TOKEN_NAME_MAX),
+  scope: z.enum(MCP_TOKEN_SCOPES, { error: "INVALID" }),
+};
+
 const createSchema = z.object({
-  name: z.string().trim().min(1).max(80),
-  scope: z.enum(["read", "write"], { error: "INVALID" }),
+  ...mcpTokenFields,
   expiresAt: z
     .date()
     .refine((d) => d.getTime() > Date.now(), { error: "PAST" })
@@ -26,7 +36,7 @@ const createSchema = z.object({
 
 export async function createMcpToken(
   userId: string,
-  input: { name: string; scope: "read" | "write"; expiresAt?: Date | null },
+  input: { name: string; scope: McpTokenScope; expiresAt?: Date | null },
 ): Promise<{ id: string; token: string; prefix: string }> {
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) throw new PreferenceInputError(fieldErrorsFromZod(parsed.error, input));
@@ -54,8 +64,8 @@ export async function createMcpToken(
   return { id: row.id, token, prefix };
 }
 
-export function listMcpTokens(userId: string) {
-  return db.mcpToken.findMany({
+export async function listMcpTokens(userId: string, now: Date = new Date()) {
+  const rows = await db.mcpToken.findMany({
     where: { userId, revokedAt: null },
     select: {
       id: true,
@@ -68,7 +78,13 @@ export function listMcpTokens(userId: string) {
     },
     orderBy: { createdAt: "desc" },
   });
+  return rows.map((row) => ({
+    ...row,
+    expired: row.expiresAt !== null && row.expiresAt <= now,
+  }));
 }
+
+export type McpTokenView = Awaited<ReturnType<typeof listMcpTokens>>[number];
 
 export async function revokeMcpToken(userId: string, id: string): Promise<void> {
   const { count } = await db.mcpToken.updateMany({

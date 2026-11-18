@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Check, Link2 } from "lucide-react";
+import { Check, Link2, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,10 +18,12 @@ import {
 export function CopyLinkButton({
   label,
   copiedLabel,
+  icon: Icon = Link2,
   ...target
 }: ({ path: string; url?: never } | { url: string; path?: never }) & {
   label: string;
   copiedLabel: string;
+  icon?: LucideIcon;
 }) {
   const t = useTranslations("shell.copyLink");
   const [copied, setCopied] = useState(false);
@@ -49,7 +51,7 @@ export function CopyLinkButton({
         aria-label={current}
         title={current}
       >
-        {copied ? <Check /> : <Link2 />}
+        {copied ? <Check /> : <Icon />}
       </Button>
       <Dialog open={fallbackUrl !== null} onOpenChange={(open) => !open && setFallbackUrl(null)}>
         <DialogContent data-slot="copy-link-fallback">

@@ -101,8 +101,26 @@ describe("create / list / revoke", () => {
     const list = await listMcpTokens(userId);
     expect(list.map((t) => t.id)).toEqual([a.id]);
     expect(Object.keys(list[0]).sort()).toEqual(
-      ["createdAt", "expiresAt", "id", "lastUsedAt", "name", "prefix", "scope"].sort(),
+      ["createdAt", "expired", "expiresAt", "id", "lastUsedAt", "name", "prefix", "scope"].sort(),
     );
+  });
+
+  it("flags the tokens past their expiry", async () => {
+    const lapsed = await mk();
+    const live = await createMcpToken(userId, {
+      name: "t",
+      scope: "read",
+      expiresAt: new Date(Date.now() + 86_400_000),
+    });
+    await db.mcpToken.update({
+      where: { id: lapsed.id },
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
+    const list = await listMcpTokens(userId);
+    expect(Object.fromEntries(list.map((t) => [t.id, t.expired]))).toEqual({
+      [lapsed.id]: true,
+      [live.id]: false,
+    });
   });
 
   it("revokes only own tokens", async () => {

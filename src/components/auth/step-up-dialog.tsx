@@ -23,7 +23,7 @@ import { loginRedirectPath } from "@/lib/callback-url";
 import type { StepUpMethod } from "@/server/services/users/step-up";
 
 export type StepUpFailure = { ok: false; error: string; retryAfter?: number };
-export type StepUpPurpose = "iban" | "export";
+export type StepUpPurpose = "iban" | "export" | "mcpToken";
 
 const KNOWN_ERRORS = new Set(["BAD_PASSWORD", "RATE_LIMITED", "NOT_FOUND"]);
 

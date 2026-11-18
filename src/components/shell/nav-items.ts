@@ -1,5 +1,6 @@
 import {
   ArrowRightLeft,
+  Bot,
   ChartPie,
   Database,
   KeyRound,
@@ -44,6 +45,7 @@ export const WORKSPACE_NAV: NavItem[] = [
  */
 export const ACCOUNT_NAV: NavItem[] = [
   { key: "security", href: "/settings/security", icon: KeyRound },
+  { key: "ai", href: "/settings/ai", icon: Bot },
   { key: "data", href: "/settings/data", icon: Database },
   { key: "admin", href: "/admin", icon: ShieldCheck, permission: "admin.settings.write" },
 ];
