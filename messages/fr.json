@@ -316,6 +316,9 @@
     "shareSubtitle": "Choisissez les foyers et leur niveau d’accès. Repasser sur Aucun un foyer avec lequel le compte était partagé retire aussi ses transactions incluses ou exclues dans les budgets de ce foyer.",
     "noGroups": "Vous n’appartenez à aucun foyer.",
     "permNone": "Aucun",
+    "allowAi": "Autoriser les assistants IA",
+    "allowAiFor": "Autoriser les assistants IA pour {group}",
+    "allowAiHint": "Les assistants IA des membres d’un foyer coché recevront les opérations de ce compte.",
     "access": {
       "OWNER": "Propriétaire",
       "WRITE": "Écriture",

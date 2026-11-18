@@ -316,6 +316,9 @@
     "shareSubtitle": "Choose households and their access level. Switching a household the account was shared with to None also drops that household’s budget inclusions and exclusions of its transactions.",
     "noGroups": "You don’t belong to any household.",
     "permNone": "None",
+    "allowAi": "Allow AI assistants",
+    "allowAiFor": "Allow AI assistants for {group}",
+    "allowAiHint": "AI assistants of a ticked household’s members will receive this account’s transactions.",
     "access": {
       "OWNER": "Owner",
       "WRITE": "Write",
