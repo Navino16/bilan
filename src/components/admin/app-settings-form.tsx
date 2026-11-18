@@ -64,11 +64,13 @@ function SettingsCard({
 function Field({
   settingKey,
   label,
+  hint,
   errorValues,
   children,
 }: {
   settingKey: string;
   label: string;
+  hint?: string;
   errorValues?: Record<string, number>;
   children: (
     props: { id: string; name: string } & Partial<ReturnType<ActionForm["fieldProps"]>>,
@@ -81,6 +83,7 @@ function Field({
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
       {children({ id, name, ...form?.fieldProps(name) })}
+      {hint && <p className="text-muted-foreground text-xs">{hint}</p>}
       {form && <FieldError form={form} name={name} values={errorValues} />}
     </div>
   );
@@ -92,6 +95,7 @@ export function AppSettingsForm({
   credentialsEnabled,
   minPasswordLength,
   admin2faRequired,
+  mcpEnabled,
   canEditSecurity,
 }: {
   appName: string;
@@ -99,6 +103,7 @@ export function AppSettingsForm({
   credentialsEnabled: boolean;
   minPasswordLength: number;
   admin2faRequired: boolean;
+  mcpEnabled: boolean;
   canEditSecurity: boolean;
 }) {
   const t = useTranslations("admin.settings");
@@ -116,6 +121,7 @@ export function AppSettingsForm({
           credentialsEnabled={credentialsEnabled}
           minPasswordLength={minPasswordLength}
           admin2faRequired={admin2faRequired}
+          mcpEnabled={mcpEnabled}
         />
       )}
     </div>
@@ -127,11 +133,13 @@ function SecurityCards({
   credentialsEnabled,
   minPasswordLength,
   admin2faRequired,
+  mcpEnabled,
 }: {
   registrationMode: string;
   credentialsEnabled: boolean;
   minPasswordLength: number;
   admin2faRequired: boolean;
+  mcpEnabled: boolean;
 }) {
   const t = useTranslations("admin.settings");
   return (
@@ -149,6 +157,14 @@ function SecurityCards({
         <Field settingKey="credentials_enabled" label={t("credentialsEnabled")}>
           {(p) => (
             <NativeSelect {...p} defaultValue={String(credentialsEnabled)}>
+              <option value="true">{t("enabled")}</option>
+              <option value="false">{t("disabled")}</option>
+            </NativeSelect>
+          )}
+        </Field>
+        <Field settingKey="mcp_enabled" label={t("mcpEnabled")} hint={t("mcpEnabledHint")}>
+          {(p) => (
+            <NativeSelect {...p} defaultValue={String(mcpEnabled)}>
               <option value="true">{t("enabled")}</option>
               <option value="false">{t("disabled")}</option>
             </NativeSelect>

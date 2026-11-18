@@ -15,6 +15,7 @@ export const AUDIT_FAMILIES = [
   "mail",
   "audit",
   "bank_sync",
+  "mcp",
 ] as const;
 
 export const AUDIT_ENTITIES = [
@@ -40,6 +41,8 @@ export const AUDIT_ENTITIES = [
   "CategorizationRule",
   "Budget",
   "BudgetAssignment",
+  "McpToken",
+  "UserPreference",
 ] as const;
 
 // i18n key (under `admin.settings`) naming each app setting the admin UI writes.
@@ -49,6 +52,7 @@ export const SETTING_LABELS: Record<string, string> = {
   credentials_enabled: "credentialsEnabled",
   min_password_length: "minPasswordLength",
   "security.admin_2fa_required": "admin2faRequired",
+  mcp_enabled: "mcpEnabled",
 };
 
 const DEDICATED_SETTING_LABELS = new Set(["smtp", "auth_provider", "bankSync"]);

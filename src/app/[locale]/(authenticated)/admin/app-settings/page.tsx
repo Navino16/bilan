@@ -10,12 +10,13 @@ export const generateMetadata = pageTitle("adminAppSettings");
 export default async function AdminAppSettingsPage() {
   const user = await requirePermission("admin.settings.write");
 
-  const [appName, mode, credentials, minPw, admin2fa, canEditSecurity] = await Promise.all([
+  const [appName, mode, credentials, minPw, admin2fa, mcp, canEditSecurity] = await Promise.all([
     appSettings.get<string>("app_name"),
     appSettings.get<string>("registration_mode"),
     appSettings.get<boolean>("credentials_enabled"),
     appSettings.get<number>("min_password_length"),
     appSettings.get<boolean>("security.admin_2fa_required"),
+    appSettings.get<boolean>("mcp_enabled"),
     hasPermission(user.id, "admin.security.write"),
   ]);
 
@@ -26,6 +27,7 @@ export default async function AdminAppSettingsPage() {
       credentialsEnabled={credentials ?? true}
       minPasswordLength={minPw ?? 12}
       admin2faRequired={admin2fa ?? false}
+      mcpEnabled={mcp ?? false}
       canEditSecurity={canEditSecurity}
     />
   );

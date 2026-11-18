@@ -169,6 +169,8 @@ function coerceAppSetting(key: string, raw: string): Coerced {
     case "credentials_enabled":
     case "security.admin_2fa_required":
       return { value: raw.toLowerCase() === "true" || raw.toLowerCase() === "on" || raw === "1" };
+    case "mcp_enabled":
+      return raw === "true" || raw === "false" ? { value: raw === "true" } : { error: "INVALID" };
     case "min_password_length": {
       const n = Number(raw);
       const { min, max } = MIN_PASSWORD_LENGTH_RANGE;

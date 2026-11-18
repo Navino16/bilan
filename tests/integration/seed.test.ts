@@ -32,6 +32,7 @@ describe("seedRolesAndPermissions", () => {
     expect(settings.map((s) => s.key).sort()).toEqual([
       "app_name",
       "credentials_enabled",
+      "mcp_enabled",
       "min_password_length",
       "registration_mode",
       "security.admin_2fa_required",

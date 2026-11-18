@@ -488,6 +488,7 @@ model AccountShare {
   permission  String                                  // READ | WRITE
   createdById String
   createdAt   DateTime @default(now())
+  allowAiAssistants Boolean @default(false)           // account reachable by AI assistants through MCP
 
   account     BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
   group       Group       @relation(fields: [groupId], references: [id], onDelete: Cascade)
@@ -913,6 +914,22 @@ model UserPreference {
   dashboardLayout Json?
   exceptionalMinAmount Decimal @default(50) @db.Decimal(12, 2) // insights: exceptional expenses from this amount
   exceptionalFactor    Decimal @default(2) @db.Decimal(4, 1)   // … and above this multiple of the category's average
+  mcpEnabled      Boolean @default(false)             // the user lets AI assistants connect (MCP)
+}
+
+model McpToken {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String    @db.VarChar(80)
+  prefix     String    @db.VarChar(16)                // first characters, shown in the list
+  tokenHash  String    @unique                        // HMAC of the token, never the token
+  scope      String                                   // read | write
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  @@index([userId])
 }
 ```
 

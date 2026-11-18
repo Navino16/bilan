@@ -1954,6 +1954,8 @@
       "credentialsEnabled": "Password sign-in",
       "minPasswordLength": "Minimum password length",
       "admin2faRequired": "Mandatory admin 2FA",
+      "mcpEnabled": "MCP server for AI assistants",
+      "mcpEnabledHint": "Users still have to turn it on themselves in their preferences.",
       "mode": {
         "OPEN": "Open",
         "INVITE_ONLY": "Invite only",
@@ -2167,7 +2169,8 @@
         "link": "Links",
         "mail": "Emails",
         "audit": "Audit log",
-        "bank_sync": "Bank sync"
+        "bank_sync": "Bank sync",
+        "mcp": "AI assistants (MCP)"
       },
       "entities": {
         "User": "User",
@@ -2191,9 +2194,15 @@
         "Category": "Category",
         "CategorizationRule": "Rule",
         "Budget": "Budget",
-        "BudgetAssignment": "Budget assignment"
+        "BudgetAssignment": "Budget assignment",
+        "McpToken": "MCP token",
+        "UserPreference": "Preferences"
       },
       "actions": {
+        "mcp": {
+          "enabled": "MCP enabled",
+          "disabled": "MCP disabled"
+        },
         "settingUpdated": "Setting “{key}” changed",
         "auth": {
           "login": {

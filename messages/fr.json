@@ -1954,6 +1954,8 @@
       "credentialsEnabled": "Connexion par mot de passe",
       "minPasswordLength": "Longueur minimale du mot de passe",
       "admin2faRequired": "Double authentification obligatoire (admin)",
+      "mcpEnabled": "Serveur MCP pour les assistants IA",
+      "mcpEnabledHint": "Chaque utilisateur doit encore l'activer lui-même dans ses préférences.",
       "mode": {
         "OPEN": "Ouvert",
         "INVITE_ONLY": "Sur invitation",
@@ -2167,7 +2169,8 @@
         "link": "Liaisons",
         "mail": "E-mails",
         "audit": "Journal d’audit",
-        "bank_sync": "Synchronisation bancaire"
+        "bank_sync": "Synchronisation bancaire",
+        "mcp": "Assistants IA (MCP)"
       },
       "entities": {
         "User": "Utilisateur",
@@ -2191,9 +2194,15 @@
         "Category": "Catégorie",
         "CategorizationRule": "Règle",
         "Budget": "Budget",
-        "BudgetAssignment": "Affectation de budget"
+        "BudgetAssignment": "Affectation de budget",
+        "McpToken": "Jeton MCP",
+        "UserPreference": "Préférences"
       },
       "actions": {
+        "mcp": {
+          "enabled": "MCP activé",
+          "disabled": "MCP désactivé"
+        },
         "settingUpdated": "Paramètre « {key} » modifié",
         "auth": {
           "login": {
