@@ -2319,7 +2319,8 @@
           "archived": "Bank account archived",
           "share": {
             "create": "Account shared",
-            "revoke": "Account share removed"
+            "revoke": "Account share removed",
+            "ai": "AI assistant access on a share changed"
           },
           "deleted": "Bank account deleted",
           "unarchived": "Bank account unarchived",

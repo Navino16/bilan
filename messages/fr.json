@@ -2319,7 +2319,8 @@
           "archived": "Compte bancaire archivé",
           "share": {
             "create": "Compte partagé",
-            "revoke": "Partage de compte retiré"
+            "revoke": "Partage de compte retiré",
+            "ai": "Accès des assistants IA sur un partage modifié"
           },
           "deleted": "Compte bancaire supprimé",
           "unarchived": "Compte bancaire désarchivé",

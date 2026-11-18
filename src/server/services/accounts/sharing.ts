@@ -79,6 +79,25 @@ export async function revokeShare(
   });
 }
 
+export async function setShareAiAccess(
+  input: { accountId: string; groupId: string; allow: boolean },
+  actor: { id: string },
+): Promise<void> {
+  await ownedOrThrow(input.accountId, actor.id);
+  const { count } = await db.accountShare.updateMany({
+    where: { accountId: input.accountId, groupId: input.groupId },
+    data: { allowAiAssistants: input.allow },
+  });
+  if (count === 0) throw new AccountAccessError("NOT_FOUND");
+  await logEvent({
+    userId: actor.id,
+    action: "account.share.ai",
+    entity: "AccountShare",
+    entityId: input.accountId,
+    metadata: { groupId: input.groupId, allow: input.allow },
+  });
+}
+
 export async function listSharesForAccount(accountId: string, actor: { id: string }) {
   await ownedOrThrow(accountId, actor.id);
   return db.accountShare.findMany({ where: { accountId }, include: { group: true } });

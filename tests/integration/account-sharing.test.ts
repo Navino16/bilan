@@ -6,6 +6,7 @@ import { buildSecureFields } from "@/server/services/transactions/secure-fields"
 import {
   shareAccountWithGroup,
   revokeShare,
+  setShareAiAccess,
   getEffectiveAccess,
   canWriteAccount,
   listAccountsSharedWithGroup,
@@ -178,5 +179,60 @@ describe("revoking a share (#259 follow-up)", () => {
 
     await db.budget.deleteMany({ where: { id: { in: [budget.id, otherBudget.id, personal.id] } } });
     await db.group.deleteMany({ where: { id: { in: [grp.id, other.id] } } });
+  });
+});
+
+describe("AI assistant access on a share", () => {
+  async function setup() {
+    const acc = await createAccount({ name: "AI", type: "CHECKING" }, ownerId);
+    const grp = await createGroup({ name: "AI grp" }, ownerId);
+    await db.groupMember.create({ data: { groupId: grp.id, userId: memberId, role: "MEMBER" } });
+    await shareAccountWithGroup(
+      { accountId: acc.id, groupId: grp.id, permission: "READ" },
+      { id: ownerId },
+    );
+    return { acc, grp };
+  }
+  const flag = (accountId: string, groupId: string) =>
+    db.accountShare
+      .findUniqueOrThrow({ where: { accountId_groupId: { accountId, groupId } } })
+      .then((s) => s.allowAiAssistants);
+
+  it("lets the owner toggle the flag and audits it", async () => {
+    const { acc, grp } = await setup();
+    expect(await flag(acc.id, grp.id)).toBe(false);
+    await setShareAiAccess({ accountId: acc.id, groupId: grp.id, allow: true }, { id: ownerId });
+    expect(await flag(acc.id, grp.id)).toBe(true);
+    const audit = await db.auditLog.findFirst({
+      where: { action: "account.share.ai", entityId: acc.id },
+    });
+    expect(audit?.metadata).toEqual({ groupId: grp.id, allow: true });
+  });
+
+  it("refuses a non-owner and an unknown share", async () => {
+    const { acc, grp } = await setup();
+    await expect(
+      setShareAiAccess({ accountId: acc.id, groupId: grp.id, allow: true }, { id: memberId }),
+    ).rejects.toMatchObject({ message: "FORBIDDEN" });
+    const other = await createGroup({ name: "AI other" }, ownerId);
+    await expect(
+      setShareAiAccess({ accountId: acc.id, groupId: other.id, allow: true }, { id: ownerId }),
+    ).rejects.toMatchObject({ message: "NOT_FOUND" });
+  });
+
+  it("keeps the flag on a permission change and resets it after a revoke", async () => {
+    const { acc, grp } = await setup();
+    await setShareAiAccess({ accountId: acc.id, groupId: grp.id, allow: true }, { id: ownerId });
+    await shareAccountWithGroup(
+      { accountId: acc.id, groupId: grp.id, permission: "WRITE" },
+      { id: ownerId },
+    );
+    expect(await flag(acc.id, grp.id)).toBe(true);
+    await revokeShare({ accountId: acc.id, groupId: grp.id }, { id: ownerId });
+    await shareAccountWithGroup(
+      { accountId: acc.id, groupId: grp.id, permission: "READ" },
+      { id: ownerId },
+    );
+    expect(await flag(acc.id, grp.id)).toBe(false);
   });
 });
