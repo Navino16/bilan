@@ -22,10 +22,17 @@ function advertised(schema: z.ZodObject): StandardSchemaWithJSON {
   return { "~standard": { ...std, validate: (value: unknown) => ({ value }) } };
 }
 
-const toolError = (code: ToolErrorCode): CallToolResult => ({
+// `detail` only ever describes the caller's own arguments (zod issues), never server state.
+const toolError = (code: ToolErrorCode, detail?: string): CallToolResult => ({
   isError: true,
-  content: [{ type: "text", text: code }],
+  content: [
+    { type: "text", text: code },
+    ...(detail ? [{ type: "text" as const, text: detail }] : []),
+  ],
 });
+
+const describeIssues = (error: z.ZodError) =>
+  error.issues.map((i) => `${i.path.join(".") || "arguments"}: ${i.message}`).join("; ");
 
 async function runTool(
   principal: McpPrincipal,
@@ -33,7 +40,7 @@ async function runTool(
   args: unknown,
 ): Promise<CallToolResult> {
   const parsed = tool.input.safeParse(args ?? {});
-  if (!parsed.success) return toolError("INVALID_INPUT");
+  if (!parsed.success) return toolError("INVALID_INPUT", describeIssues(parsed.error));
   try {
     const structuredContent = await runAsMcp(principal, async () => {
       const [result, categoryPaths] = await Promise.all([

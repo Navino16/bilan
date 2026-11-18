@@ -78,7 +78,7 @@ export async function loadCategoryPaths(userId: string): Promise<Map<string, str
 }
 
 const periodArgs = (defaultBaseline: string) =>
-  z.object({
+  z.strictObject({
     period: periodInput.optional(),
     comparison: comparisonInput.optional().describe(`Defaults to ${defaultBaseline}`),
   });
@@ -89,7 +89,7 @@ export const READ_TOOLS: McpTool[] = [
   readTool({
     name: "list_accounts",
     description: "Bank accounts the user can read (own and shared with AI allowed) with balances.",
-    input: z.object({ includeArchived: z.boolean().default(false) }),
+    input: z.strictObject({ includeArchived: z.boolean().default(false) }),
     categoryPaths: false,
     run: async (userId, { includeArchived }) => ({
       accounts: (await listVisibleForUser(userId, { includeArchived })).map((a) => ({
@@ -146,7 +146,7 @@ export const READ_TOOLS: McpTool[] = [
   readTool({
     name: "get_transaction",
     description: "One transaction with what it is linked to and the budgets it is assigned to.",
-    input: z.object({ id }),
+    input: z.strictObject({ id }),
     run: async (userId, args) => {
       const transaction = await getTransactionForUser(args.id, userId);
       if (!transaction) throw new McpToolError("NOT_FOUND");
@@ -160,20 +160,20 @@ export const READ_TOOLS: McpTool[] = [
   readTool({
     name: "list_categories",
     description: "The categories tree the user can assign (own and households').",
-    input: z.object({}),
+    input: z.strictObject({}),
     categoryPaths: false,
     run: async (userId) => ({ categories: await listForUser(userId) }),
   }),
   readTool({
     name: "list_rules",
     description: "Categorization rules (own and households'), in the order they apply.",
-    input: z.object({}),
+    input: z.strictObject({}),
     run: async (userId) => ({ rules: await listRulesForUser(userId) }),
   }),
   readTool({
     name: "list_budgets",
     description: "Budgets (own and households') with their planned and spent figures.",
-    input: z.object({ archived: z.boolean().default(false) }),
+    input: z.strictObject({ archived: z.boolean().default(false) }),
     run: async (userId, args) => ({
       budgets: await listBudgetsForUser(userId, { archived: args.archived }),
     }),
@@ -181,7 +181,7 @@ export const READ_TOOLS: McpTool[] = [
   readTool({
     name: "get_budget",
     description: "One budget's detail: lines, spent, forecast, optionally its transactions.",
-    input: z.object({ id, withTransactions: z.boolean().default(false) }),
+    input: z.strictObject({ id, withTransactions: z.boolean().default(false) }),
     run: async (userId, args) => ({
       budget: await getBudgetDetail(args.id, userId, { withTransactions: args.withTransactions }),
     }),
@@ -189,13 +189,13 @@ export const READ_TOOLS: McpTool[] = [
   readTool({
     name: "list_merchants",
     description: "Merchants over the whole history with totals; renamed groups list their keys.",
-    input: z.object({}),
+    input: z.strictObject({}),
     run: (userId) => getMerchantDirectory(userId),
   }),
   readTool({
     name: "list_households",
     description: "The user's households, their role and the members' names and roles.",
-    input: z.object({}),
+    input: z.strictObject({}),
     categoryPaths: false,
     run: async (userId) => ({
       households: await Promise.all(
@@ -215,14 +215,14 @@ export const READ_TOOLS: McpTool[] = [
   readTool({
     name: "list_link_suggestions",
     description: "Suggested +X/-X pairs of transactions to link (transfers, refunds).",
-    input: z.object({}),
+    input: z.strictObject({}),
     categoryPaths: false,
     run: async (userId) => ({ suggestions: await suggestPairs(userId) }),
   }),
   readTool({
     name: "get_preferences",
     description: "The user's link suggestion settings and exceptional expense rule.",
-    input: z.object({}),
+    input: z.strictObject({}),
     categoryPaths: false,
     run: async (userId) => {
       const [linkSuggestions, exceptionalRule] = await Promise.all([

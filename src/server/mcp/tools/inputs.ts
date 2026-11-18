@@ -22,7 +22,7 @@ import { McpToolError } from "@/server/mcp/errors";
 const isoDay = (what: string) => z.string().describe(`${what}, YYYY-MM-DD (inclusive)`);
 
 export const periodInput = z
-  .object({
+  .strictObject({
     preset: z.enum(PERIOD_PRESETS).optional(),
     from: isoDay("First day").optional(),
     to: isoDay("Last day").optional(),
@@ -34,7 +34,7 @@ export const comparisonInput = z
   .enum(BASELINES)
   .describe("Reference: previous period, or the average of the last 3/6/12 months");
 
-export const searchInput = z.object({
+export const searchInput = z.strictObject({
   accountId: z.string().optional(),
   categoryId: z
     .string()

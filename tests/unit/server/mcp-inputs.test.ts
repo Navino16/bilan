@@ -56,6 +56,10 @@ describe("toPeriod", () => {
   it("accepts only the known presets", () => {
     expect(periodInput.safeParse({ preset: "next-decade" }).success).toBe(false);
   });
+
+  it("rejects unknown keys instead of dropping them", () => {
+    expect(periodInput.safeParse({ start: "2026-10-01" }).success).toBe(false);
+  });
 });
 
 describe("toComparison", () => {
@@ -81,6 +85,10 @@ describe("searchInput", () => {
     expect(searchInput.safeParse({ take: 1001 }).success).toBe(false);
     expect(searchInput.safeParse({ take: 1000 }).success).toBe(true);
     expect(searchInput.safeParse({ skip: -1 }).success).toBe(false);
+  });
+
+  it("rejects a misspelled filter instead of dropping it", () => {
+    expect(searchInput.safeParse({ category: "c1" }).success).toBe(false);
   });
 
   it("maps day bounds to inclusive UTC instants and rejects invalid ones", () => {

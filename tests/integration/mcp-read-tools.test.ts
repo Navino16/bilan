@@ -386,6 +386,32 @@ describe("MCP read tools", () => {
     const noId = await call("get_transaction", {});
     expect(textOf(noId)).toBe("INVALID_INPUT");
   });
+
+  it("checks the period through the tool path", async () => {
+    const badPreset = await call("get_dashboard", { period: { preset: "next-decade" } });
+    expect(badPreset.isError).toBe(true);
+    expect(textOf(badPreset)).toBe("INVALID_INPUT");
+    const badDay = await call("get_insights", { period: { from: "2026-13-01" } });
+    expect(badDay.isError).toBe(true);
+    expect(textOf(badDay)).toBe("INVALID_PERIOD");
+  });
+
+  it("rejects misplaced or misspelled arguments, naming the unknown key", async () => {
+    const cases: [string, Record<string, unknown>, string][] = [
+      ["get_dashboard", { preset: "last-month" }, "preset"],
+      ["get_dashboard", { from: "2026-01-01", to: "2026-01-31" }, "from"],
+      ["search_transactions", { category: f.categoryId }, "category"],
+      ["get_insights", { period: { start: "2026-01-01" } }, "start"],
+      ["list_merchants", { limit: 5 }, "limit"],
+    ];
+    for (const [name, args, key] of cases) {
+      const r = await call(name, args);
+      expect(r.isError, `${name} ${JSON.stringify(args)}`).toBe(true);
+      expect(textOf(r)).toBe("INVALID_INPUT");
+      const detail = (r.content as { text: string }[])[1]?.text ?? "";
+      expect(detail).toContain(key);
+    }
+  });
 });
 
 describe("search_transactions pagination", () => {
