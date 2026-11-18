@@ -133,6 +133,15 @@ describe("create / list / revoke", () => {
     });
     expect(audit.metadata).toMatchObject({ reason: "password" });
     expect(await revokeAllMcpTokens(userId, "sessions")).toBe(0);
+    expect(
+      await db.auditLog.count({
+        where: {
+          userId,
+          action: "mcp.token.revoked_all",
+          metadata: { path: "$.reason", equals: "sessions" },
+        },
+      }),
+    ).toBe(0);
   });
 });
 
@@ -222,10 +231,20 @@ describe("principalFromToken", () => {
 });
 
 describe("credential lifecycle", () => {
+  const passwordRevocations = () =>
+    db.auditLog.count({
+      where: {
+        userId,
+        action: "mcp.token.revoked_all",
+        metadata: { path: "$.reason", equals: "password" },
+      },
+    });
+
   it("a password change revokes every token", async () => {
     const a = await mk();
     const b = await mk("write");
     const headers = await signIn();
+    const before = await passwordRevocations();
     const res = await changePassword(headers, {
       currentPassword: password,
       newPassword,
@@ -234,16 +253,7 @@ describe("credential lifecycle", () => {
     expect(res.ok).toBe(true);
     expect(await principalFromToken(a.token)).toBeNull();
     expect(await principalFromToken(b.token)).toBeNull();
-    expect(
-      await db.auditLog.count({
-        where: {
-          userId,
-          action: "mcp.token.revoked_all",
-          entityId: null,
-          metadata: { path: "$.reason", equals: "password" },
-        },
-      }),
-    ).toBeGreaterThanOrEqual(1);
+    expect(await passwordRevocations()).toBe(before + 1);
     // restore for the following tests
     const back = await changePassword(await signInWith(newPassword), {
       currentPassword: newPassword,
@@ -251,6 +261,8 @@ describe("credential lifecycle", () => {
       revokeOtherSessions: false,
     });
     expect(back.ok).toBe(true);
+    // No token left to revoke: no audit row.
+    expect(await passwordRevocations()).toBe(before + 1);
   });
 
   it("a password reset revokes every token", async () => {

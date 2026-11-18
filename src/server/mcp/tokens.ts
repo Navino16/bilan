@@ -87,6 +87,7 @@ export async function revokeAllMcpTokens(
     where: { userId, revokedAt: null },
     data: { revokedAt: new Date() },
   });
+  if (count === 0) return 0;
   await logEvent({
     userId,
     action: "mcp.token.revoked_all",
