@@ -1,5 +1,6 @@
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
+import { aiShareWhere } from "@/server/mcp/context";
 import {
   AccountAccessError,
   accountBalances,
@@ -90,7 +91,7 @@ export async function listAccountsSharedWithGroup(
 ): Promise<SharedAccount[]> {
   await requireGroupRole(groupId, actor.id, "MEMBER");
   const shares = await db.accountShare.findMany({
-    where: { groupId, account: { archived: false } },
+    where: { groupId, ...aiShareWhere(), account: { archived: false } },
     include: { account: { include: { owner: true } } },
     orderBy: { createdAt: "desc" },
   });
@@ -116,7 +117,7 @@ export async function getEffectiveAccess(
   if (!acc) return null;
   if (acc.ownerId === userId) return "OWNER";
   const shares = await db.accountShare.findMany({
-    where: { accountId, group: { members: { some: { userId } } } },
+    where: { accountId, ...aiShareWhere(), group: { members: { some: { userId } } } },
   });
   if (shares.length === 0) return null;
   return shares.some((s) => s.permission === "WRITE") ? "WRITE" : "READ";
@@ -133,7 +134,15 @@ export async function writableAccountIds(userId: string): Promise<string[]> {
     where: {
       OR: [
         { ownerId: userId },
-        { shares: { some: { permission: "WRITE", group: { members: { some: { userId } } } } } },
+        {
+          shares: {
+            some: {
+              permission: "WRITE",
+              ...aiShareWhere(),
+              group: { members: { some: { userId } } },
+            },
+          },
+        },
       ],
     },
     select: { id: true },
