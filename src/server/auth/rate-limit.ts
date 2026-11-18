@@ -120,3 +120,5 @@ export const verificationMailLimiter = sharedLimiter("verificationMail", {
   max: 3,
   windowMs: 60 * 60_000,
 });
+// Keyed by MCP principal (client kind and id): every tool call goes through the services.
+export const mcpCallLimiter = sharedLimiter("mcpCall", { max: 120, windowMs: 60_000 });
