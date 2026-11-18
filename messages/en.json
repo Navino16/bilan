@@ -2201,7 +2201,12 @@
       "actions": {
         "mcp": {
           "enabled": "MCP enabled",
-          "disabled": "MCP disabled"
+          "disabled": "MCP disabled",
+          "token": {
+            "created": "MCP token created",
+            "revoked": "MCP token revoked",
+            "revoked_all": "All MCP tokens revoked"
+          }
         },
         "settingUpdated": "Setting “{key}” changed",
         "auth": {

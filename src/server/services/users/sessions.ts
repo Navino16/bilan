@@ -3,6 +3,7 @@ import { getAuth } from "@/server/auth";
 import { logEvent } from "@/server/services/audit";
 import { describeUserAgent } from "@/lib/user-agent";
 import { normalizeIp } from "@/lib/ip";
+import { revokeAllMcpTokens } from "@/server/mcp/tokens";
 import { purgeTrustedDevices } from "./trusted-devices";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -96,6 +97,7 @@ export async function revokeOtherSessions(
   }
   // A trusted browser would otherwise sign back in without its 2FA code (#243).
   await purgeTrustedDevices(me.userId);
+  await revokeAllMcpTokens(me.userId, "sessions");
   await logEvent({ userId: me.userId, action: "auth.session.revoked_others", metadata: { count } });
   return { ok: true, count };
 }

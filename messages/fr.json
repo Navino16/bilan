@@ -2201,7 +2201,12 @@
       "actions": {
         "mcp": {
           "enabled": "MCP activé",
-          "disabled": "MCP désactivé"
+          "disabled": "MCP désactivé",
+          "token": {
+            "created": "Jeton MCP créé",
+            "revoked": "Jeton MCP révoqué",
+            "revoked_all": "Tous les jetons MCP révoqués"
+          }
         },
         "settingUpdated": "Paramètre « {key} » modifié",
         "auth": {
