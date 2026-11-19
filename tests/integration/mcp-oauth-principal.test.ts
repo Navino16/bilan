@@ -3,7 +3,7 @@ import { db } from "@/server/db";
 import { getAuth } from "@/server/auth";
 import { appSettings } from "@/server/services/settings/app-settings";
 import { setMcpEnabled } from "@/server/services/users/preferences";
-import { mcpCallLimiter } from "@/server/auth/rate-limit";
+import { mcpCallLimiter, oauthRegisterLimiter } from "@/server/auth/rate-limit";
 import { handleMcpRequest } from "@/server/mcp/http";
 import { mcpChallenge } from "@/server/mcp/discovery";
 import { READ_TOOLS } from "@/server/mcp/tools/read";
@@ -94,6 +94,7 @@ beforeAll(async () => {
 
 afterEach(async () => {
   for (const key of limiterKeys) mcpCallLimiter.reset(key);
+  oauthRegisterLimiter.reset("unknown");
   await db.user.update({ where: { id: userId }, data: { banned: false } });
   await setMcpEnabled(userId, true, "en");
   await appSettings.set("mcp_enabled", true, userId);
@@ -273,6 +274,47 @@ describe("refused OAuth tokens", () => {
     expect(await res.json()).toEqual({ error: "INSUFFICIENT_SCOPE" });
     expect(res.headers.get("www-authenticate")).toBe(mcpChallenge("insufficient_scope"));
     expect(res.headers.get("cache-control")).toBe("no-store");
+  });
+});
+
+describe("consent-bound tokens (spec §5.18)", () => {
+  it("caps an earlier write token at the scopes of a read-only re-consent", async () => {
+    const write = await grant("bilan:read bilan:write offline_access");
+    expect(await principalFromOAuthToken(write.tokens.access_token)).toMatchObject({
+      scopes: ["bilan:read", "bilan:write"],
+    });
+    const { redirectUris } = await db.oauthClient.findUniqueOrThrow({
+      where: { clientId: write.clientId },
+    });
+    const [redirectUri] = JSON.parse(redirectUris) as string[];
+    const { oauthQuery } = await authorize({
+      clientId: write.clientId,
+      redirectUri,
+      cookie,
+      scope: "bilan:read bilan:write offline_access",
+      extra: { prompt: "consent" },
+    });
+    await consent({ oauthQuery, cookie, scope: "bilan:read offline_access" });
+
+    expect(await principalFromOAuthToken(write.tokens.access_token)).toMatchObject({
+      scopes: ["bilan:read"],
+    });
+    const refreshed = await refreshTokens({
+      clientId: write.clientId,
+      refreshToken: write.tokens.refresh_token!,
+    });
+    expect(await principalFromOAuthToken(refreshed.access_token)).toMatchObject({
+      scopes: ["bilan:read"],
+    });
+  });
+
+  it("refuses a token whose consent is gone", async () => {
+    const { clientId, tokens } = await grant("bilan:read");
+    await db.oauthConsent.deleteMany({ where: { userId, clientId } });
+    expect(
+      await db.oauthAccessToken.findUnique({ where: accessRow(tokens.access_token) }),
+    ).not.toBeNull();
+    expect(await principalFromOAuthToken(tokens.access_token)).toBeNull();
   });
 });
 

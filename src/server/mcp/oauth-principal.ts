@@ -23,19 +23,14 @@ export function stringList(value: string | null): string[] | null {
   }
 }
 
-async function touchConsent(userId: string, clientId: string, now: Date): Promise<void> {
+async function touchConsent(
+  consent: { id: string; lastUsedAt: Date | null },
+  now: Date,
+): Promise<void> {
+  const last = consent.lastUsedAt?.getTime();
+  if (last !== undefined && now.getTime() - last < LAST_USED_GRANULARITY_MS) return;
   try {
-    await db.oauthConsent.updateMany({
-      where: {
-        userId,
-        clientId,
-        OR: [
-          { lastUsedAt: null },
-          { lastUsedAt: { lt: new Date(now.getTime() - LAST_USED_GRANULARITY_MS) } },
-        ],
-      },
-      data: { lastUsedAt: now },
-    });
+    await db.oauthConsent.updateMany({ where: { id: consent.id }, data: { lastUsedAt: now } });
   } catch (e) {
     console.error("[bilan] OAuth consent lastUsedAt update failed", e);
   }
@@ -70,10 +65,19 @@ export async function principalFromOAuthToken(
   if (!resources || (resources.length > 0 && !resources.includes(mcpResourceUrl()))) return null;
   if (!(await isMcpInstanceEnabled()) || !(await getMcpEnabled(row.userId))) return null;
 
-  const scopes = oauthScopesToMcp(stringList(row.scopes) ?? []);
+  // Tokens outlive a re-consent or a concurrent revocation: the live consent caps them.
+  const consent = await db.oauthConsent.findFirst({
+    where: { userId: row.userId, clientId: row.clientId },
+    select: { id: true, scopes: true, lastUsedAt: true },
+  });
+  if (!consent) return null;
+  const consented = stringList(consent.scopes) ?? [];
+  const scopes = oauthScopesToMcp(
+    (stringList(row.scopes) ?? []).filter((s) => consented.includes(s)),
+  );
   if (scopes.length === 0) return "insufficient_scope";
 
-  await touchConsent(row.userId, row.clientId, now);
+  await touchConsent(consent, now);
   return {
     userId: row.userId,
     scopes,

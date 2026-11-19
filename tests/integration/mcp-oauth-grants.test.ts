@@ -31,6 +31,7 @@ vi.mock("@/server/mcp/oauth-grants", async (importOriginal) => {
 });
 
 import { env } from "@/env";
+import { oauthRegisterLimiter } from "@/server/auth/rate-limit";
 import { db } from "@/server/db";
 import { getAuth } from "@/server/auth";
 import { appSettings } from "@/server/services/settings/app-settings";
@@ -163,6 +164,7 @@ beforeAll(async () => {
 
 afterEach(() => {
   grantFailures.remaining = 0;
+  oauthRegisterLimiter.reset("unknown");
   vi.restoreAllMocks();
 });
 
@@ -217,6 +219,19 @@ describe("redirect host", () => {
       "mcp.example.com:8443",
     );
     expect(redirectHost("not a url")).toBeNull();
+  });
+});
+
+describe("hasLiveOAuthGrants", () => {
+  // A re-consent of the same client would revive the orphan token (spec §5.18).
+  it("counts a token whose consent is gone", async () => {
+    const user = await makeUser();
+    const g = await grant(user, "bilan:read");
+    await db.oauthConsent.deleteMany({ where: { userId: user.id } });
+    expect(await resolveMcpPrincipal(g.tokens.access_token)).toBeNull();
+    expect(await hasLiveOAuthGrants(user.id)).toBe(true);
+    expect(await revokeAllOAuthGrants(user.id, "sessions")).toBe(1);
+    expect(await hasLiveOAuthGrants(user.id)).toBe(false);
   });
 });
 
