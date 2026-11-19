@@ -10,7 +10,7 @@ import {
 import { issueCode } from "@/lib/schemas/amount";
 import { parseYearMonth } from "@/lib/assigned-month";
 import {
-  createTransaction,
+  createManualTransaction,
   recategorizeTransaction,
   setTransactionMonth,
   TransactionAccessError,
@@ -21,7 +21,6 @@ import {
   getDeleteImpact,
   type DeleteImpact,
 } from "@/server/services/transactions/delete";
-import { recordHits, suggest } from "@/server/services/categorization";
 
 export type TxActionState = { ok: true; id?: string } | { ok: false; error: string } | null;
 
@@ -46,23 +45,7 @@ export async function createTransactionAction(
   if (!parsed.success)
     return { ok: false, error: issueCode(parsed.error.issues, TRANSACTION_INPUT_ERRORS) };
   try {
-    // If the user didn't pick a category, fall back to the rule engine.
-    let categoryId = parsed.data.categoryId ?? null;
-    let manual = Boolean(parsed.data.categoryId);
-    let ruleId: string | null = null;
-    if (!categoryId) {
-      const s = await suggest(parsed.data.label, { userId: user.id });
-      categoryId = s.categoryId;
-      ruleId = s.ruleId;
-      manual = false;
-    }
-    const { id } = await createTransaction(
-      { ...parsed.data, categoryId: categoryId ?? undefined },
-      { id: user.id },
-      { manuallyCategorized: manual, autoLink: true },
-    );
-    // Best-effort: a failed counter must not report a saved transaction as failed.
-    await recordHits([ruleId]).catch(() => {});
+    const { id } = await createManualTransaction(parsed.data, { id: user.id });
     return { ok: true, id };
   } catch (e) {
     return { ok: false, error: mapError(e) };

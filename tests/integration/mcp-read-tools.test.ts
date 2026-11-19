@@ -213,7 +213,7 @@ describe("MCP read tools", () => {
     });
     try {
       const { tools } = await rw.client.listTools();
-      expect(tools).toHaveLength(ALL_TOOLS.length);
+      expect(tools.map((t) => t.name)).toEqual(expect.arrayContaining(ALL_TOOLS));
       const accounts = data(await rw.client.callTool({ name: "list_accounts", arguments: {} }));
       expect(accounts.accounts.length).toBe(2);
     } finally {

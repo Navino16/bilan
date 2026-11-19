@@ -1,3 +1,4 @@
+import type { z } from "zod";
 import { db } from "@/server/db";
 import { decrypt } from "@/server/crypto/encryption";
 import { hmacForSearch } from "@/server/crypto/hmac";
@@ -127,6 +128,29 @@ export async function createTransaction(
   // Best-effort: a failed link must not report a saved transaction as failed.
   if (opts.autoLink) await autoLinkAround(data.accountId, data.date);
   return { id: tx.id };
+}
+
+// Manual entry (form or MCP): the rule engine picks a category when none is given.
+export async function createManualTransaction(
+  input: z.output<typeof transactionInputSchema>,
+  actor: { id: string },
+): Promise<{ id: string }> {
+  let categoryId = input.categoryId ?? null;
+  let manual = Boolean(input.categoryId);
+  let ruleId: string | null = null;
+  if (!categoryId) {
+    const s = await suggest(input.label, { userId: actor.id });
+    categoryId = s.categoryId;
+    ruleId = s.ruleId;
+    manual = false;
+  }
+  const { id } = await createTransaction({ ...input, categoryId: categoryId ?? undefined }, actor, {
+    manuallyCategorized: manual,
+    autoLink: true,
+  });
+  // Best-effort: a failed counter must not report a saved transaction as failed.
+  await recordHits([ruleId]).catch(() => {});
+  return { id };
 }
 
 // Decrypts a single transaction for a user who can read its account.

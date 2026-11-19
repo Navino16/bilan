@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import type { ToolAnnotations } from "@modelcontextprotocol/server";
 import type { McpTool } from "@/server/mcp/tools/read";
+import { TRANSACTION_WRITE_TOOLS } from "@/server/mcp/tools/write-transactions";
 
 export function writeTool<S extends z.ZodObject>(def: {
   name: string;
@@ -20,4 +21,4 @@ export function writeTool<S extends z.ZodObject>(def: {
   };
 }
 
-export const WRITE_TOOLS: McpTool[] = [];
+export const WRITE_TOOLS: McpTool[] = [...TRANSACTION_WRITE_TOOLS];
