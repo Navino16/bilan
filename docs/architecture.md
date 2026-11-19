@@ -1286,6 +1286,18 @@ Services in `server/services/bank-sync/`; the Enable Banking client (`client.ts`
 - **Top merchants** and **income by category** keep their figures, over the counted rows. Top merchants leave out the rows of recurring series (`recurringIds`, listed in their own card); a period over 6 months keeps its rows before the recurring window.
 - **Budgets over time** (#423, `budgets.listBudgetSeriesHistory`), whatever the period: the series the user reads (as the Budgets page: own and their groups' budgets, archived periods left out), a series being a template and its instances (`parentBudgetId ?? id`, as `groupBudgetSeries`). Each keeps its latest 12 periods started by now (`lib/budget-history.recentSeriesPeriods`) and shows only with at least 2 finished; all are evaluated in one `evaluateBudgets` batch, so each period has the list's figures (the summary card's planned, spent and status, links across months as a whole). `seriesSummary` counts the finished periods `OVER` and averages their spent − planned. The card is hidden without a series.
 
+### 5.18 MCP server (#450)
+
+`POST /api/mcp` (`app/api/mcp/route.ts` → `mcp/http.handleMcpRequest`) speaks MCP Streamable HTTP, **stateless**: a fresh transport and `McpServer` per request, JSON responses, no session. Order of checks: instance switch off (`AppSetting` `mcp_enabled`, default false) → 404; any other method than POST → 405 (`Allow: POST`); no or unknown credential → 401 with `WWW-Authenticate: Bearer realm="bilan"`; `mcpCallLimiter` (120 / min per principal, §6.7) → 429 + `Retry-After`. Errors are JSON, never stack traces.
+
+- **Principal** (`mcp/tokens.principalFromToken`): `Authorization: Bearer bilan_pat_<32 random bytes, base64url>`; only `hmacExact(token, searchKey)` is stored (`McpToken.tokenHash`), the first 16 characters are kept as the visible `prefix`. The token is refused when revoked, expired, its user is banned, the instance switch is off or `UserPreference.mcpEnabled` is off (default false; tokens are kept, not deleted, so switching back on restores them). `lastUsedAt` is updated at most once a minute. Scopes `bilan:read` / `bilan:write` (write implies read) come from the token's `scope`; PR 1 registers read tools only, so a write token reads. The `McpPrincipal` shape also carries an OAuth client kind for the OAuth PR.
+- **Account narrowing** (`mcp/context.ts`): `mcp/server.ts` wraps each tool call in `runAsMcp(principal, …)` (`AsyncLocalStorage`). Services call the same visibility code as the UI; every `AccountShare` lookup spreads `aiShareWhere()`, which adds `allowAiAssistants: true` only inside an MCP call. So the MCP account set is the user's own accounts (always) plus accounts shared with their households whose share carries the flag (set by the owner in the share dialog, `AccountShare.allowAiAssistants`, default false). It applies to everything derived from transactions (dashboard, insights, budget figures, search, link suggestions), not only account lists.
+- **Token lifecycle** (`createMcpToken`, `revokeMcpToken`, `revokeAllMcpTokens`): created from `/settings/ai` behind the step-up of §6.4 (`mcp.token.created`), revoked one by one (`mcp.token.revoked`) or all at once on a password change or reset and on "sign out everywhere" (`mcp.token.revoked_all`, with the reason). Turning the user switch off or an admin disabling the user only makes calls fail. Expiry choices: never, 30, 90, 365 days.
+- **Read tools** (`mcp/tools/read.ts`, over the existing services; `mcp/serialize.ts` turns amounts into euro numbers and dates into ISO strings, resolves category paths): `list_accounts`, `get_dashboard`, `get_insights`, `search_transactions`, `get_transaction`, `list_categories`, `list_rules`, `list_budgets`, `get_budget`, `list_merchants`, `list_households`, `list_link_suggestions`, `get_preferences`. Each description states that labels, notes and merchant names are untrusted external text. Invalid arguments answer `INVALID_INPUT`, service failures their code (`FORBIDDEN`, `NOT_FOUND`…).
+- **Exclusions**: no tool for anything guarded by a step-up or a deletion-impact confirmation (IBAN reveal, export, deletions, import revert), auth and security (password, sessions, tokens), sharing and household membership, administration, bank connection setup, file imports, bank "sync now". No read helper may reveal an IBAN.
+- **UI**: `/settings/ai` (switch with the privacy confirmation, endpoint, token list and creation) through `setMcpEnabledAction`, `createMcpTokenAction`, `revokeMcpTokenAction`; the instance switch lives in the admin settings (super admin only).
+- **Later PRs**: OAuth 2.1 for connector clients, write tools with `via: mcp` audit, a recent-activity list.
+
 ## 6. Security Implementation
 
 ### 6.1 Application encryption (AES-256-GCM)
@@ -1378,8 +1390,9 @@ In-memory fixed-window counters (`server/auth/rate-limit.ts`), one store per pro
 | Bank sync test (admin) | 5 / 1min | User |
 | Bank authorization start | 10 / 10min | User |
 | Bank **Sync now** | 1 / 10min | User + connection; refunded when no bank call was made |
+| MCP calls (`/api/mcp`) | 120 / 1min | MCP principal (token id); 429 + `Retry-After` |
 
-Better Auth's own in-memory per-IP limiter also runs on `/api/auth/*` in production (its defaults: 100 / 10 s, 3 / 10 s on sign-in). Imports and the other API routes are not rate-limited.
+Better Auth's own in-memory per-IP limiter also runs on `/api/auth/*` in production (its defaults: 100 / 10 s, 3 / 10 s on sign-in). Imports and the other API routes (except `/api/mcp`) are not rate-limited.
 
 Each in-memory limiter holds at most 10 000 buckets: expired ones are dropped first, then the oldest (#243).
 

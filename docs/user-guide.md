@@ -19,7 +19,8 @@ This guide walks through the app as a user. Running an instance is covered in th
 9. [Households](#households)
 10. [Dashboard and insights](#dashboard-and-insights)
 11. [Account security](#account-security)
-12. [Your data](#your-data)
+12. [AI assistants](#ai-assistants)
+13. [Your data](#your-data)
 
 ## Getting started
 
@@ -74,7 +75,7 @@ Until you have a transaction, the dashboard shows a **Welcome** card with two st
 On a computer, the sidebar has two groups:
 
 - **Workspace**: Dashboard, Insights, Transactions, Import, Budgets, Accounts, Categories, Households.
-- **Account**: Security, Data, and Administration if you are an administrator.
+- **Account**: Security, AI assistants, Data, and Administration if you are an administrator.
 
 At the top right, the **FR**/**EN** button switches the language. Bilan remembers your choice and also uses it for the e-mails it sends you. Your initials open a menu with **Sign out**.
 
@@ -707,6 +708,8 @@ To hand over a household, an owner sets another member's role to **Owner**. A ho
 - **Write**: everything in Read, plus adding, editing, recategorizing, deleting, importing, linking and unlinking transactions.
 - Only you, the owner, can edit, share, archive or delete the account, and see its IBAN.
 
+Under each household you share with, an **Allow AI assistants** checkbox decides whether the assistants of that household's members receive the account's transactions (see [AI assistants](#ai-assistants)). It is off by default and only you, the owner, can tick it. Without it, the account stays invisible to those assistants even though members can see it in Bilan.
+
 Your private accounts and their transactions are never visible to other members, except a transaction you include in a household budget (see [Household budgets](#household-budgets)). A household budget only counts the accounts shared with that household.
 
 ### Leave or delete a household
@@ -821,6 +824,53 @@ When the instance can send e-mail, Bilan e-mails you after:
 - two-factor authentication being turned off.
 
 The alert gives the date, the sign-in method, the IP address and the device. If it wasn't you, change your password right away. These alerts can't be turned off.
+
+## AI assistants
+
+![AI assistants settings](images/en/settings-ai.png)
+
+Bilan can serve your data to your own AI assistant, so you can ask questions about your accounts, spending and budgets without opening the app. It speaks MCP, a standard protocol: any MCP client can connect, such as Claude Code or Codex. Bilan has no chat of its own and sends nothing to an assistant until you connect one.
+
+Go to **AI assistants** in the sidebar. If the page says it is not available on this instance, an administrator has to turn on the MCP server first (see the [administration guide](admin-guide.md#ai-assistants-mcp-server)).
+
+### Turn it on
+
+Switch on **Allow AI assistants** and confirm. Your transactions' labels, amounts and notes are then decrypted and sent to your assistant's provider (Anthropic, OpenAI…), under its terms. Turning it off makes every token stop working at once. They are kept, so turning it back on restores them.
+
+### Personal tokens
+
+An assistant connects with a personal token, which acts as you.
+
+1. Under **Personal tokens**, click **Create a token**.
+2. Enter a **Name** to recognize it, choose the **Access** (**Read only** or **Read and write**) and the **Expiry** (30 days, 90 days, 1 year or no expiry).
+3. Click **Create the token**. If you signed in more than 10 minutes ago, Bilan asks for your password first, since a token is a credential.
+4. Copy the token: it is shown only once.
+
+In this version assistants can only read your data, whichever access you choose.
+
+The list shows each token's prefix, access, creation, last use and expiry. **Revoke** stops a token at once. Changing or resetting your password, or clicking **Sign out all** under [Signed-in devices](#signed-in-devices), revokes all your tokens: create new ones afterwards.
+
+### Connect a client
+
+The **Connection** card shows the server address, `<your Bilan address>/api/mcp`, with a button to copy it. A client sends the token in an `Authorization: Bearer <token>` header. With Claude Code:
+
+```bash
+claude mcp add --transport http bilan https://bilan.example.com/api/mcp \
+  --header "Authorization: Bearer <token>"
+```
+
+Codex and other clients that accept a server URL and a custom header work the same way: give them the address and that header. Clients that only offer a sign-in flow, such as the claude.ai connectors, are not supported yet.
+
+### What an assistant can see
+
+Everything is limited to what you could see in Bilan, narrowed further:
+
+- your own accounts, always;
+- accounts shared with your households only when their owner ticked **Allow AI assistants** on the share. Balances, the dashboard, insights, budget figures and search only count the accounts an assistant can see.
+
+An assistant can read your accounts and balances, the dashboard and insights for a period, transactions (search and detail, with their links and budget assignments), categories, rules, budgets, merchants, households and members' names, link suggestions and your preferences. It can't see IBANs, and can't change anything, nor reach anything administrative or security-related.
+
+Labels, notes and merchant names come from your banks and from other people: assistants are told to treat them as plain text, never as instructions. Still, only connect assistants you trust.
 
 ## Your data
 

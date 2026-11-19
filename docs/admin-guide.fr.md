@@ -18,6 +18,7 @@ Presque tout se configure dans l'application. Les modifications s'appliquent imm
 - [E-mails (SMTP)](#e-mails-smtp)
 - [Vérification des adresses e-mail](#vérification-des-adresses-e-mail)
 - [Synchronisation bancaire (Enable Banking)](#synchronisation-bancaire-enable-banking)
+- [Assistants IA (serveur MCP)](#assistants-ia-serveur-mcp)
 - [Journal d'audit](#journal-daudit)
 - [Notes de sécurité](#notes-de-sécurité)
 
@@ -46,7 +47,7 @@ Ouvrez **Administration** dans la barre latérale (l'entrée n'apparaît que pou
 | Fournisseurs d'authentification | Fournisseurs SSO (OIDC, Google)                                                             |
 | SMTP                            | Serveur d'envoi des e-mails                                                                 |
 | Synchro bancaire                | Application Enable Banking utilisée pour synchroniser les comptes bancaires                 |
-| Paramètres                      | Nom de l'instance, mode d'inscription, règles de mot de passe et de double authentification |
+| Paramètres                      | Nom de l'instance, mode d'inscription, règles de mot de passe et de double authentification, assistants IA |
 | Journal d'audit                 | Historique des actions effectuées sur l'instance                                            |
 
 ## Rôles et permissions
@@ -417,6 +418,21 @@ Une connexion qui échoue 3 fois de suite (hors limite d'accès, consentement ex
 
 La clé privée, la session Enable Banking de chaque connexion et les identifiants de comptes de la banque sont chiffrés avec `DATA_ENCRYPTION_KEY` ; les IBAN renvoyés par la banque ne sont conservés que sous forme d'empreinte à clé, pour reconnaître un compte quand l'utilisateur reconnecte sa banque. Aucun d'eux n'apparaît dans le journal d'audit, les messages d'erreur ou les pages. Une connexion n'est visible que par l'utilisateur qui l'a créée, pas par les administrateurs. Supprimer un utilisateur supprime aussi ses sessions Enable Banking.
 
+## Assistants IA (serveur MCP)
+
+Bilan peut fournir les données des utilisateurs à leurs propres assistants IA via MCP, un protocole standard (point d'accès `/api/mcp`). La fonction est désactivée par défaut : vous décidez avant que tout utilisateur puisse exposer des données.
+
+**Administration > Paramètres** comporte un paramètre **Serveur MCP pour les assistants IA**, dans la carte **Inscription et connexion** (super administrateurs uniquement), sur **Activée** ou **Désactivée**.
+
+- **Désactivée** (défaut) : le point d'accès répond 404 comme s'il n'existait pas, tous les jetons personnels cessent de fonctionner aussitôt, et les utilisateurs voient un avis sur leur page **Assistants IA**. Les jetons et les choix des utilisateurs sont conservés : le réactiver les rétablit.
+- **Activée** : rien n'est encore exposé. Chaque utilisateur doit encore activer **Autoriser les assistants IA** pour lui-même et créer ses propres jetons, et le propriétaire d'un compte partagé coche **Autoriser les assistants IA** sur le partage pour que les assistants des membres du foyer le reçoivent.
+
+Une fois l'assistant d'un utilisateur connecté, les libellés, montants et notes de ses transactions sont déchiffrés et envoyés au fournisseur de l'assistant. Prévenez vos utilisateurs avant de l'activer.
+
+Les clients joignent le point d'accès à votre adresse publique, `APP_URL` suivie de `/api/mcp` : elle doit être accessible depuis l'endroit où tournent les assistants (un client local fonctionne avec une adresse du réseau local). Chaque jeton est limité à 120 appels par minute.
+
+La création et la révocation des jetons, et l'activation ou la désactivation de la fonction par un utilisateur, apparaissent dans le [journal d'audit](#journal-daudit). Changer de mot de passe ou déconnecter tous les appareils révoque les jetons de l'utilisateur.
+
 ## Journal d'audit
 
 ![Onglet Journal d'audit](images/fr/admin-audit.png)
@@ -433,6 +449,7 @@ Chaque changement d'état est journalisé, les lectures ne le sont pas. Cela com
 - les jetons d'invitation, les foyers et leurs invitations ;
 - l'activité financière des utilisateurs : comptes bancaires et partages, transactions, imports, catégories, règles, budgets, liaisons, connexions bancaires (connectées, reconnectées, associées, expirées, déconnectées) ;
 - chaque passage de la synchronisation bancaire qui avait quelque chose à faire (`bank_sync.cron`, par **système**), avec ses compteurs ;
+- les assistants IA : jetons créés et révoqués, fonction activée ou désactivée par un utilisateur ;
 - les échecs d'envoi d'e-mails de sécurité et les purges du journal.
 
 Une connexion SSO est journalisée en `auth.login.success` avec `method: sso` et la clé du fournisseur. La première connexion SSO d'une identité qui crée un compte n'est journalisée que comme inscription (`auth.register.success`). Une connexion SSO refusée (identité non liée, inscription fermée, compte désactivé, erreur du fournisseur) est journalisée en `auth.login.failed` avec le code d'erreur de Better Auth (`other` pour un code inattendu). Une connexion annulée chez le fournisseur ne l'est pas, ni un refus survenu avant que Bilan lise la demande de connexion.
