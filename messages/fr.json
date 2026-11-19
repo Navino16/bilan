@@ -1888,7 +1888,29 @@
         "endpoint": "Adresse du serveur MCP",
         "copy": "Copier l’adresse",
         "copied": "Adresse copiée",
-        "header": "En-tête : <code></code>"
+        "header": "En-tête : <code></code>",
+        "connector": "Pour claude.ai ou Claude Desktop, ajoutez un connecteur personnalisé avec cette adresse : la connexion passe par votre compte Bilan, sans jeton."
+      },
+      "clients": {
+        "title": "Clients connectés",
+        "hint": "Assistants autorisés depuis votre compte Bilan, sans jeton.",
+        "none": "Aucun client connecté.",
+        "unnamed": "Application sans nom",
+        "scope": {
+          "read": "Lecture seule",
+          "write": "Lecture et écriture"
+        },
+        "authorized": "autorisé le <time></time>",
+        "lastUsed": "dernière utilisation le <time></time>",
+        "neverUsed": "jamais utilisé",
+        "revoke": "Révoquer",
+        "revokeClient": "Révoquer {name}",
+        "confirmTitle": "Révoquer {name} ?",
+        "confirmBody": "{name} perd l’accès immédiatement. Il devra demander une nouvelle autorisation pour se reconnecter.",
+        "error": {
+          "NOT_FOUND": "Ce client est déjà révoqué.",
+          "FAILED": "Impossible de révoquer ce client. Réessayez."
+        }
       },
       "tokens": {
         "title": "Jetons personnels",

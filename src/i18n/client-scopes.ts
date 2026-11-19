@@ -58,6 +58,7 @@ export const CLIENT_SCOPES = {
   settings: [
     "forms.fieldError",
     "settings.ai.access",
+    "settings.ai.clients",
     "settings.ai.connection",
     "settings.ai.tokens",
     "settings.data",

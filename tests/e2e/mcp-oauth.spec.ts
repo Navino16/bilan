@@ -94,6 +94,9 @@ async function captureRedirect(page: Page): Promise<() => Promise<URL>> {
   };
 }
 
+// Set by the approve test, read by the revoke test that follows it.
+const approved: { name: string; accessToken: string } = { name: "", accessToken: "" };
+
 const consentCard = (page: Page) => page.locator('[data-slot="oauth-consent"]');
 
 // The plugin's redirects carry no locale: the proxy picks it from Accept-Language.
@@ -137,6 +140,7 @@ test.describe("MCP OAuth consent (#456)", () => {
   }) => {
     test.setTimeout(90_000);
     const name = `E2E client ${Date.now()}`;
+    approved.name = name;
     const clientId = await registerClient(baseURL!, name);
     const flow = authorizeFlow(clientId, baseURL!, "bilan:read bilan:write offline_access");
     const redirected = await captureRedirect(page);
@@ -173,6 +177,7 @@ test.describe("MCP OAuth consent (#456)", () => {
     });
     expect(tokenRes.status()).toBe(200);
     const tokens = (await tokenRes.json()) as { access_token: string; scope: string };
+    approved.accessToken = tokens.access_token;
     expect(tokens.scope.split(" ").sort()).toEqual(["bilan:read", "offline_access"]);
 
     const mcp = await request.post("/api/mcp", {
@@ -208,6 +213,32 @@ test.describe("MCP OAuth consent (#456)", () => {
       const url = await redirected();
       expect(url.searchParams.get("error")).toBe("access_denied");
       expect(url.searchParams.get("state")).toBe(flow.state);
+    });
+
+    test("lists the connected client, then revokes it and its token stops working", async ({
+      page,
+      request,
+    }) => {
+      expect(approved.accessToken).not.toBe("");
+      await page.goto("/fr/settings/ai", { waitUntil: "networkidle" });
+      const row = page.locator("[data-client-id]").filter({ hasText: approved.name });
+      await expect(row).toContainText("127.0.0.1:43123");
+      await expect(row).toContainText("Lecture seule");
+
+      await row.getByRole("button", { name: `Révoquer ${approved.name}` }).click();
+      const dialog = page.locator('[data-slot="confirm-dialog"]');
+      await expect(dialog).toContainText(`${approved.name} perd l’accès immédiatement.`);
+      await dialog.getByRole("button", { name: "Révoquer" }).click();
+      await expect(row).toHaveCount(0);
+
+      const res = await request.post("/api/mcp", {
+        headers: {
+          authorization: `Bearer ${approved.accessToken}`,
+          accept: "application/json, text/event-stream",
+        },
+        data: { jsonrpc: "2.0", id: 2, method: "tools/list" },
+      });
+      expect(res.status()).toBe(401);
     });
 
     test("shows a self-declared name as plain text", async ({ page, baseURL }) => {

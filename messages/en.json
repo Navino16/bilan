@@ -1888,7 +1888,29 @@
         "endpoint": "MCP server address",
         "copy": "Copy the address",
         "copied": "Address copied",
-        "header": "Header: <code></code>"
+        "header": "Header: <code></code>",
+        "connector": "For claude.ai or Claude Desktop, add a custom connector with this address: it signs in through your Bilan account, no token needed."
+      },
+      "clients": {
+        "title": "Connected clients",
+        "hint": "Assistants authorized from your Bilan account, no token needed.",
+        "none": "No connected client.",
+        "unnamed": "Unnamed app",
+        "scope": {
+          "read": "Read only",
+          "write": "Read and write"
+        },
+        "authorized": "authorized on <time></time>",
+        "lastUsed": "last used <time></time>",
+        "neverUsed": "never used",
+        "revoke": "Revoke",
+        "revokeClient": "Revoke {name}",
+        "confirmTitle": "Revoke {name}?",
+        "confirmBody": "{name} loses access at once. It will have to ask for authorization again to reconnect.",
+        "error": {
+          "NOT_FOUND": "This client is already revoked.",
+          "FAILED": "Couldn’t revoke this client. Try again."
+        }
       },
       "tokens": {
         "title": "Personal tokens",

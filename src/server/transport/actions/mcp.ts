@@ -23,6 +23,7 @@ import {
   grantOAuthConsent,
   parseConsentRequest,
 } from "@/server/mcp/oauth-consent";
+import { revokeOAuthGrant } from "@/server/mcp/oauth-grants";
 import { authHeaders } from "@/server/http/auth-headers";
 import { createMcpToken, mcpTokenFields, revokeMcpToken } from "@/server/mcp/tokens";
 import { MCP_TOKEN_EXPIRY_CHOICES, mcpTokenExpiry } from "@/lib/validation/mcp-token";
@@ -103,6 +104,25 @@ export async function revokeMcpTokenAction(
   if (!parsed.success) return { ok: false, error: "NOT_FOUND" };
   try {
     await revokeMcpToken(user.id, parsed.data);
+    return { ok: true };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error && e.message === "NOT_FOUND" ? "NOT_FOUND" : "FAILED",
+    };
+  }
+}
+
+const clientIdSchema = z.string().min(1).max(191);
+
+export async function revokeOAuthGrantAction(
+  clientId: string,
+): Promise<{ ok: true } | { ok: false; error: "NOT_FOUND" | "FAILED" }> {
+  const user = await requireSession();
+  const parsed = clientIdSchema.safeParse(clientId);
+  if (!parsed.success) return { ok: false, error: "NOT_FOUND" };
+  try {
+    await revokeOAuthGrant(user.id, parsed.data);
     return { ok: true };
   } catch (e) {
     return {
