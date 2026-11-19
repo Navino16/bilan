@@ -17,6 +17,7 @@ import { grantRole } from "@/server/services/users/roles";
 import { accountBalances, setSavingsMirror } from "@/server/services/accounts";
 import { normalizeIban } from "@/server/services/accounts/iban";
 import { BANK_SYNC_SINGLETON_ID } from "@/server/services/bank-sync/config";
+import { createMcpToken } from "@/server/mcp/tokens";
 import { encrypt } from "@/server/crypto/encryption";
 import { hmacExact } from "@/server/crypto/hmac";
 import { dataKey, searchKey } from "@/server/crypto/keys";
@@ -412,6 +413,31 @@ async function resetUser(userId: string): Promise<void> {
   await deleteUser(userId);
 }
 
+// Docs data set only (SEED_MCP=1, scripts/docs-db.sh): MCP enabled, with two personal tokens.
+async function seedMcp(userId: string): Promise<void> {
+  await db.appSetting.upsert({
+    where: { key: "mcp_enabled" },
+    update: { value: true },
+    create: { key: "mcp_enabled", value: true },
+  });
+  await db.userPreference.upsert({
+    where: { userId },
+    update: { mcpEnabled: true },
+    create: { userId, mcpEnabled: true },
+  });
+  const day = 24 * 3600_000;
+  const first = await createMcpToken(userId, {
+    name: "Claude Code (portable)",
+    scope: "read",
+    expiresAt: new Date(Date.now() + 90 * day),
+  });
+  await db.mcpToken.update({
+    where: { id: first.id },
+    data: { lastUsedAt: new Date(Date.now() - 2 * 3600_000) },
+  });
+  await createMcpToken(userId, { name: "Codex", scope: "read" });
+}
+
 // Docs data set only (SEED_BANK_SYNC=1, scripts/docs-db.sh): a fictitious Enable Banking app and
 // connection. The docs server runs no cron, so the throwaway key never reaches Enable Banking.
 async function seedBankSync(
@@ -703,10 +729,12 @@ async function main(): Promise<void> {
 
   const bankSync = process.env.SEED_BANK_SYNC === "1";
   if (bankSync) await seedBankSync(userId, accountIds, today);
+  const mcp = process.env.SEED_MCP === "1";
+  if (mcp) await seedMcp(userId);
 
   console.log(
     `Seeded ${EMAIL} (password ${PASSWORD}): 3 accounts, ${created} transactions over ${MONTHS} months, ` +
-      `${links} links, ${rules.length} rules, household "Foyer Martin"${member ? ` (+ ${MEMBER_EMAIL})` : ""}, 3 budgets${bankSync ? ', bank connection "Banque Fictive"' : ""}.`,
+      `${links} links, ${rules.length} rules, household "Foyer Martin"${member ? ` (+ ${MEMBER_EMAIL})` : ""}, 3 budgets${bankSync ? ', bank connection "Banque Fictive"' : ""}${mcp ? ", MCP enabled with 2 tokens" : ""}.`,
   );
 }
 
