@@ -42,6 +42,7 @@ export const AUDIT_ENTITIES = [
   "Budget",
   "BudgetAssignment",
   "McpToken",
+  "OauthClient",
   "UserPreference",
 ] as const;
 

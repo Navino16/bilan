@@ -2286,6 +2286,7 @@
         "Budget": "Budget",
         "BudgetAssignment": "Affectation de budget",
         "McpToken": "Jeton MCP",
+        "OauthClient": "Client OAuth",
         "UserPreference": "Préférences"
       },
       "actions": {

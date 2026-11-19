@@ -2286,6 +2286,7 @@
         "Budget": "Budget",
         "BudgetAssignment": "Budget assignment",
         "McpToken": "MCP token",
+        "OauthClient": "OAuth client",
         "UserPreference": "Preferences"
       },
       "actions": {

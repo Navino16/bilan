@@ -29,6 +29,7 @@ import { authPlugins } from "./plugins";
 import { onAuthError } from "./auth-errors";
 import { authDb } from "./auth-db";
 import { revokeAllMcpTokensOrAudit } from "@/server/mcp/tokens";
+import { OAUTH_HTTP_PATHS } from "@/server/mcp/oauth-config";
 import { markSsoSignUp } from "./auth-audit";
 import { nameOnCreate, nameOnUpdate } from "./user-name";
 import { RESET_TOKEN_TTL_SEC, sendPasswordResetMail } from "@/server/services/mail/password-reset";
@@ -139,6 +140,9 @@ function pluginEndpointPaths(pluginId: string): string[] {
 }
 
 const ADMIN_PLUGIN_PATHS = pluginEndpointPaths("admin");
+const OAUTH_HIDDEN_PATHS = pluginEndpointPaths("oauth-provider").filter(
+  (p) => !OAUTH_HTTP_PATHS.includes(p),
+);
 
 export async function buildOptions(): Promise<BetterAuthOptions> {
   const credentialsEnabled = (await appSettings.get<boolean>("credentials_enabled")) ?? true;
@@ -234,6 +238,8 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
       // The admin plugin is kept for its ban check; its endpoints would bypass app permissions,
       // the last-super-admin lock and audit (#200).
       ...ADMIN_PLUGIN_PATHS,
+      // Consent goes through a Server Action, client management through Bilan's UI (spec §5.18).
+      ...OAUTH_HIDDEN_PATHS,
     ],
     // Rate limits and session IPs use the proxy-resolved IP, never a raw client header.
     advanced: { ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] } },
