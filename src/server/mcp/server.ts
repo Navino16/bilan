@@ -1,7 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import type { CallToolResult, StandardSchemaWithJSON } from "@modelcontextprotocol/server";
 import type { z } from "zod";
-import { runAsMcp, type McpPrincipal, type McpScope } from "@/server/mcp/context";
+import { mcpWriteLimiter } from "@/server/auth/rate-limit";
+import { mcpLimiterKey, runAsMcp, type McpPrincipal, type McpScope } from "@/server/mcp/context";
 import { toolErrorCode, type ToolErrorCode } from "@/server/mcp/errors";
 import { serialize } from "@/server/mcp/serialize";
 import {
@@ -10,6 +11,7 @@ import {
   loadCategoryPaths,
   type McpTool,
 } from "@/server/mcp/tools/read";
+import { WRITE_TOOLS } from "@/server/mcp/tools/write";
 
 export const hasScope = (principal: Pick<McpPrincipal, "scopes">, scope: McpScope) =>
   principal.scopes.includes(scope) ||
@@ -41,6 +43,9 @@ async function runTool(
 ): Promise<CallToolResult> {
   const parsed = tool.input.safeParse(args ?? {});
   if (!parsed.success) return toolError("INVALID_INPUT", describeIssues(parsed.error));
+  if (tool.scope === "bilan:write" && !mcpWriteLimiter.consume(mcpLimiterKey(principal)).allowed) {
+    return toolError("RATE_LIMITED");
+  }
   try {
     const structuredContent = await runAsMcp(principal, async () => {
       const [result, categoryPaths] = await Promise.all([
@@ -59,7 +64,10 @@ async function runTool(
 }
 
 // One server per authenticated request: only the tools the principal's scopes allow.
-export function buildMcpServer(principal: McpPrincipal, tools: McpTool[] = READ_TOOLS): McpServer {
+export function buildMcpServer(
+  principal: McpPrincipal,
+  tools: McpTool[] = [...READ_TOOLS, ...WRITE_TOOLS],
+): McpServer {
   const server = new McpServer({ name: "bilan", version: "1.0.0" });
   for (const tool of tools) {
     if (!hasScope(principal, tool.scope)) continue;

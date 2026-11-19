@@ -10,7 +10,7 @@ import { TransactionAccessError } from "@/server/services/transactions";
 import { PreferenceInputError } from "@/server/services/users/preferences";
 
 export type ToolErrorCode =
-  "NOT_FOUND" | "FORBIDDEN" | "INVALID_PERIOD" | "INVALID_INPUT" | "FAILED";
+  "NOT_FOUND" | "FORBIDDEN" | "INVALID_PERIOD" | "INVALID_INPUT" | "RATE_LIMITED" | "FAILED";
 
 export class McpToolError extends Error {
   constructor(readonly code: ToolErrorCode) {
