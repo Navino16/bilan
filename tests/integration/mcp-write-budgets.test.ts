@@ -240,10 +240,30 @@ describe("per-share AI rule on household budgets", () => {
       },
       { accountId: f.accounts.sharedAi },
     );
+    const before = await budgetCount();
     expect(await serviceError(asMcp(() => createBudget(input, { id: f.memberId })))).toBe(
       "INVALID_LINE",
     );
     failed(await call("create_budget", input), "INVALID_INPUT");
+    expect(await budgetCount()).toBe(before);
+    const { id } = await createBudget(input, { id: f.memberId });
+    await db.budget.delete({ where: { id } });
+  });
+
+  it("keeps an x line the app already put on a G budget, refuses adding one", async () => {
+    const withX = (await createBudget(household({ accountId: x }), { id: f.memberId })).id;
+    ok(
+      await call("update_budget", { id: withX, ...household({ accountId: x }, { name: "Kept" }) }),
+    );
+    expect((await db.budget.findUniqueOrThrow({ where: { id: withX } })).name).toBe("Kept");
+
+    const without = await groupBudget();
+    failed(
+      await call("update_budget", { id: without, ...household({ accountId: x }) }),
+      "INVALID_INPUT",
+    );
+    const lines = await db.budgetLine.findMany({ where: { budgetId: without } });
+    expect(lines.map((l) => l.accountId)).toEqual([f.accounts.sharedAi]);
   });
 
   it("refuses a budget attached to x over MCP and accepts it outside", async () => {
@@ -296,6 +316,36 @@ describe("per-share AI rule on household budgets", () => {
         ),
       ),
     ).toBe("INVALID_LINE");
+  });
+});
+
+describe("unassign over MCP", () => {
+  it("refuses a transaction the client can't see and leaves no trace", async () => {
+    const budgetId = await groupBudget();
+    await db.budgetAssignment.create({
+      data: {
+        budgetId,
+        transactionId: f.expenses.sharedPlain,
+        mode: "INCLUDE",
+        assignedById: f.ownerId,
+      },
+    });
+    const deletions = () =>
+      db.auditLog.count({ where: { userId: f.memberId, action: "budget.assignment.delete" } });
+    const before = await deletions();
+    failed(
+      await call("unassign_transaction_from_budget", {
+        budgetId,
+        transactionId: f.expenses.sharedPlain,
+      }),
+      "FORBIDDEN",
+    );
+    expect(await db.budgetAssignment.count({ where: { budgetId } })).toBe(1);
+    failed(
+      await call("unassign_transaction_from_budget", { budgetId, transactionId: "nope" }),
+      "NOT_FOUND",
+    );
+    expect(await deletions()).toBe(before);
   });
 });
 

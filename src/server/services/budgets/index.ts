@@ -1469,6 +1469,16 @@ export async function unassignTransaction(
   actor: { id: string },
 ): Promise<void> {
   await readableOrThrow(input.budgetId, actor.id);
+  // The app keeps its lenient unassign; an MCP client may only touch transactions it sees.
+  if (currentMcpPrincipal()) {
+    const txRow = await db.transaction.findUnique({
+      where: { id: input.transactionId },
+      select: { accountId: true },
+    });
+    if (!txRow) throw new BudgetAccessError("NOT_FOUND");
+    if (!(await canReadAccount(actor.id, txRow.accountId)))
+      throw new BudgetAccessError("FORBIDDEN");
+  }
   await db.budgetAssignment
     .delete({
       where: {
