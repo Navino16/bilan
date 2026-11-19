@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { StepUpDialog, type StepUpFailure } from "@/components/auth/step-up-dialog";
+import { passwordStepOutcome } from "@/components/auth/oauth-consent-outcome";
 import { overline } from "@/components/transactions/bits";
 import { approveOAuthConsentAction, denyOAuthConsentAction } from "@/server/transport/actions/mcp";
 import type { ConsentAccess, ConsentRequest } from "@/server/mcp/oauth-consent";
@@ -26,8 +27,6 @@ export type ConsentView =
     };
 
 type Failure = "expired" | "error.FAILED";
-
-const STEP_UP_ERRORS = new Set(["BAD_PASSWORD", "RATE_LIMITED", "REAUTH_REQUIRED"]);
 
 export function OAuthConsent({ view, appName }: { view: ConsentView; appName: string }) {
   const t = useTranslations("auth.consent");
@@ -134,16 +133,13 @@ function ClientRequest({ view }: { view: Extract<ConsentView, { request: Consent
 
   async function approveWithPassword(password: string): Promise<{ ok: true } | StepUpFailure> {
     if (!access) return { ok: false, error: "FAILED" };
-    const res = await approveOAuthConsentAction(
-      { oauthQuery: request.oauthQuery, access },
-      password,
+    const outcome = passwordStepOutcome(
+      await approveOAuthConsentAction({ oauthQuery: request.oauthQuery, access }, password),
     );
-    if (res.ok) {
-      leave(res.url);
-      return { ok: true };
-    }
-    if (STEP_UP_ERRORS.has(res.error)) return res;
-    fail(res.error);
+    if (outcome.next === "retry") return outcome.failure;
+    setReauth(outcome.next === "signIn" ? "SIGN_IN" : null);
+    if (outcome.next === "leave") leave(outcome.url);
+    if (outcome.next === "fail") fail(outcome.error);
     return { ok: true };
   }
 
@@ -238,10 +234,12 @@ function ClientRequest({ view }: { view: Extract<ConsentView, { request: Consent
       </div>
       {reauth && (
         <StepUpDialog
+          key={reauth}
           method={reauth}
           purpose="mcpConsent"
           confirm={approveWithPassword}
-          onConfirmed={() => setReauth(null)}
+          // approveWithPassword picks the next dialog: it may swap to SIGN_IN instead of closing.
+          onConfirmed={() => {}}
           onClose={() => setReauth(null)}
           returnTo={`${pathname}?${request.oauthQuery}`}
         />
