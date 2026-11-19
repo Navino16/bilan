@@ -11,13 +11,7 @@ export type SsoError =
   | "ssoNoEmail";
 
 export type LinkError =
-  | "denied"
-  | "provider"
-  | "expired"
-  | "noEmail"
-  | "emailMismatch"
-  | "linkedElsewhere"
-  | "failed";
+  "denied" | "provider" | "expired" | "noEmail" | "emailMismatch" | "linkedElsewhere" | "failed";
 
 // Refused or cancelled at the IdP (RFC 6749 §4.1.2.1, OIDC Core §3.1.2.6).
 const DENIED = ["access_denied", "login_required", "consent_required", "interaction_required"];

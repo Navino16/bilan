@@ -47,6 +47,7 @@ async function signUp(label: string, headers: Headers = new Headers()) {
     await getAuth()
   ).api.signUpEmail({
     body: { email, password, name: `Verify ${label}` },
+    headers,
   });
   created.push(res.user.id);
   return { id: res.user.id, email };

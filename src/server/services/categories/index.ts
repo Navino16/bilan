@@ -367,9 +367,8 @@ export async function loadAssignableCategories(
 
 // `loadAssignableCategories` as a parent/child forest. Memoized per server
 // render: pages also reach it through listForeignCategories.
-export const listForUser = cache(
-  async (userId: string): Promise<CategoryNode[]> =>
-    buildTree(await loadAssignableCategories(db, userId, await groupMemberships(userId))),
+export const listForUser = cache(async (userId: string): Promise<CategoryNode[]> =>
+  buildTree(await loadAssignableCategories(db, userId, await groupMemberships(userId))),
 );
 
 // Categories the user can't use but meets on the transactions they can see

@@ -6,8 +6,7 @@ const MAX_BUCKETS = 10_000;
 
 // `resetAt` identifies the window the slot was taken from (see refund).
 export type Outcome =
-  | { allowed: true; resetAt: number }
-  | { allowed: false; retryAfterSec: number };
+  { allowed: true; resetAt: number } | { allowed: false; retryAfterSec: number };
 
 export class RateLimiter {
   constructor(

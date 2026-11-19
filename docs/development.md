@@ -184,8 +184,10 @@ on `stress`, so an A/B run needs 3 to 4 GB free on top of the database.
 ## Dependency updates
 
 `npx npm-check-updates` follows `.ncurc.cjs` (TypeScript and `@types/node` stay on their major).
-`better-auth` and `@better-auth/passkey` are pinned with `~`, and the `@better-auth/core`
-override must name the same version: bump all three together, or npm fails with ERESOLVE.
+The whole better-auth family moves together: `better-auth`, `@better-auth/passkey` and
+`@better-auth/oauth-provider` are pinned with `~` to the same version, and the
+`overrides["@better-auth/core"]` entry names that exact version. Bump them all at once, or npm
+fails with ERESOLVE.
 
 ## Releases
 

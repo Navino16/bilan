@@ -12,11 +12,7 @@ type Client = Prisma.TransactionClient | PrismaClient;
 
 export type UserAdminAction = "disable" | "enable" | "delete" | "verify_email";
 export type UserAdminRefusal =
-  | "SELF"
-  | "FORBIDDEN"
-  | "LAST_SUPER_ADMIN"
-  | "NOT_FOUND"
-  | "CONFIRMATION";
+  "SELF" | "FORBIDDEN" | "LAST_SUPER_ADMIN" | "NOT_FOUND" | "CONFIRMATION";
 
 export class UserAdminError extends Error {
   constructor(readonly code: UserAdminRefusal) {

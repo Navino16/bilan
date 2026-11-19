@@ -51,12 +51,7 @@ export type ProviderInput = z.input<typeof providerSchema>;
 type ParsedProvider = z.output<typeof providerSchema>;
 
 export type AuthProviderErrorCode =
-  | "KEY_EXISTS"
-  | "GOOGLE_EXISTS"
-  | "NOT_FOUND"
-  | "SECRET_REQUIRED"
-  | "TYPE_LOCKED"
-  | "LOCKOUT";
+  "KEY_EXISTS" | "GOOGLE_EXISTS" | "NOT_FOUND" | "SECRET_REQUIRED" | "TYPE_LOCKED" | "LOCKOUT";
 
 export class AuthProviderError extends Error {
   constructor(
