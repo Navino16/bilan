@@ -23,7 +23,7 @@ async function rebuilt(req: Request): Promise<Request> {
   });
 }
 
-// Stateless Streamable HTTP (design §1): a fresh transport and server per request.
+// Stateless Streamable HTTP (spec §5.18): a fresh transport and server per request.
 export async function handleMcpRequest(req: Request): Promise<Response> {
   try {
     if (!(await isMcpInstanceEnabled())) return json({ error: "NOT_FOUND" }, 404);

@@ -96,8 +96,8 @@ export async function revokeOtherSessions(
     return { ok: false, error: "FAILED" };
   }
   // A trusted browser would otherwise sign back in without its 2FA code (#243).
-  await purgeTrustedDevices(me.userId);
   await revokeAllMcpTokens(me.userId, "sessions");
+  await purgeTrustedDevices(me.userId);
   await logEvent({ userId: me.userId, action: "auth.session.revoked_others", metadata: { count } });
   return { ok: true, count };
 }

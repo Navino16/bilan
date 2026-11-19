@@ -47,7 +47,7 @@ const createInputSchema = z.object({
 
 const createRefused = { action: "mcp.token.create_failed", entity: "McpToken" };
 
-// A token is a credential: same step-up as reading a secret (design §2). Fields are checked
+// A token is a credential: same step-up as reading a secret (spec §6.4). Fields are checked
 // first so the password is never asked for a form that can't succeed.
 export async function createMcpTokenAction(
   input: { name: string; scope: string; expiresInDays: string },

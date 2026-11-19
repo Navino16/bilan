@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { toIsoDay } from "@/lib/period";
 
 const DATE_ONLY_KEYS = new Set(["date", "periodDate", "periodStart", "periodEnd", "from", "to"]);
-// Raw bank labels and e-mails never leave through MCP, nor any ciphertext or blind index (design §4).
+// Raw bank labels and e-mails never leave through MCP, nor any ciphertext or blind index (spec §5.18).
 const isDropped = (key: string) =>
   key === "rawLabel" || key === "email" || key.endsWith("Enc") || key.endsWith("Hash");
 

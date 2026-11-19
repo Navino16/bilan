@@ -5,9 +5,10 @@ import { getMcpEnabled, setMcpEnabled } from "@/server/services/users/preference
 import { isMcpInstanceEnabled } from "@/server/mcp/switches";
 import { snapshotSetting } from "./support/app-setting-snapshot";
 
+const perms = vi.hoisted(() => ({ security: true }));
 vi.mock("@/server/auth/permissions", () => ({
   requirePermission: async () => ({ id: "mcpsw_admin", email: "mcpsw_admin@bilan.local" }),
-  hasPermission: async () => true,
+  hasPermission: async () => perms.security,
 }));
 
 const { setAppSettingsAction } = await import("@/server/transport/actions/settings");
@@ -80,5 +81,18 @@ describe("instance MCP switch", () => {
       error: "INVALID",
       fieldErrors: { "s:mcp_enabled": "INVALID" },
     });
+  });
+
+  it("is refused to an admin without admin.security.write", async () => {
+    await appSettings.set("mcp_enabled", false, adminId);
+    perms.security = false;
+    try {
+      const fd = new FormData();
+      fd.set("s:mcp_enabled", "true");
+      expect(await setAppSettingsAction(null, fd)).toEqual({ ok: false, error: "FORBIDDEN" });
+      expect(await appSettings.get("mcp_enabled")).toBe(false);
+    } finally {
+      perms.security = true;
+    }
   });
 });

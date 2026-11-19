@@ -82,8 +82,12 @@ function Field({
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
-      {children({ id, name, ...form?.fieldProps(name) })}
-      {hint && <p className="text-muted-foreground text-xs">{hint}</p>}
+      {children({ id, name, ...form?.fieldProps(name, hint ? `${id}-hint` : undefined) })}
+      {hint && (
+        <p id={`${id}-hint`} className="text-muted-foreground text-xs">
+          {hint}
+        </p>
+      )}
       {form && <FieldError form={form} name={name} values={errorValues} />}
     </div>
   );

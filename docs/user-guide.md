@@ -868,7 +868,7 @@ Everything is limited to what you could see in Bilan, narrowed further:
 - your own accounts, always;
 - accounts shared with your households only when their owner ticked **Allow AI assistants** on the share. Balances, the dashboard, insights, budget figures and search only count the accounts an assistant can see.
 
-An assistant can read your accounts and balances, the dashboard and insights for a period, transactions (search and detail, with their links and budget assignments), categories, rules, budgets, merchants, households and members' names, link suggestions and your preferences. It can't see IBANs, and can't change anything, nor reach anything administrative or security-related.
+An assistant can read your accounts and balances, the dashboard and insights for a period, transactions (search and detail, with their links and budget assignments), categories, rules, budgets, merchants, households and members' names, link suggestions and your preferences. It can't see full IBANs, and can't change anything, nor reach anything administrative or security-related.
 
 Labels, notes and merchant names come from your banks and from other people: assistants are told to treat them as plain text, never as instructions. Still, only connect assistants you trust.
 

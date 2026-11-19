@@ -469,14 +469,14 @@ model GroupInvitation {
 }
 
 model AccountShare {
-  id          String   @id @default(cuid())
-  accountId   String
-  groupId     String
-  permission  String // READ | WRITE
-  createdById String
-  createdAt   DateTime @default(now())
+  id                String   @id @default(cuid())
+  accountId         String
+  groupId           String
+  permission        String // READ | WRITE
+  createdById       String
+  createdAt         DateTime @default(now())
   // Lets the account's data reach AI assistants through the MCP server.
-  allowAiAssistants Boolean @default(false)
+  allowAiAssistants Boolean  @default(false)
 
   account BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
   group   Group       @relation(fields: [groupId], references: [id], onDelete: Cascade)

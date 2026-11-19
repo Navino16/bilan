@@ -2043,7 +2043,7 @@
       "minPasswordLength": "Longueur minimale du mot de passe",
       "admin2faRequired": "Double authentification obligatoire (admin)",
       "mcpEnabled": "Serveur MCP pour les assistants IA",
-      "mcpEnabledHint": "Chaque utilisateur doit encore l'activer lui-même dans ses préférences.",
+      "mcpEnabledHint": "Chaque utilisateur doit encore l’activer lui-même dans ses préférences.",
       "mode": {
         "OPEN": "Ouvert",
         "INVITE_ONLY": "Sur invitation",
