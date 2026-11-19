@@ -34,6 +34,16 @@ describe("proxy matcher (#249)", () => {
     expect(proxied("/_next/static/chunks/app.js")).toBe(false);
   });
 
+  it("skips the well-known discovery documents", () => {
+    for (const path of [
+      "/.well-known/oauth-protected-resource",
+      "/.well-known/oauth-protected-resource/api/mcp",
+      "/.well-known/oauth-authorization-server/api/auth",
+    ]) {
+      expect(proxied(path), path).toBe(false);
+    }
+  });
+
   it("runs on pages and on unknown dotted paths", () => {
     for (const path of ["/", "/fr/dashboard", "/does-not-exist.xyz", "/fr/foo.txt", "/foo"]) {
       expect(proxied(path), path).toBe(true);

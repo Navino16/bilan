@@ -829,37 +829,75 @@ L’alerte indique la date, la méthode de connexion, l’adresse IP et l’appa
 
 ![Réglages des assistants IA](images/fr/settings-ai.png)
 
-Bilan peut fournir vos données à votre propre assistant IA, pour poser des questions sur vos comptes, vos dépenses et vos budgets sans ouvrir l’application. Il parle MCP, un protocole standard : tout client MCP peut s’y connecter, comme Claude Code ou Codex. Bilan n’a pas de chat à lui et n’envoie rien à un assistant tant que vous n’en connectez pas un.
+Bilan peut fournir vos données à votre propre assistant IA, pour poser des questions sur vos comptes, vos dépenses et vos budgets sans ouvrir l’application. Il parle MCP, un protocole standard : tout client MCP peut s’y connecter, comme claude.ai, Claude Desktop, Claude Code ou Codex. Bilan n’a pas de chat à lui et n’envoie rien à un assistant tant que vous n’en connectez pas un.
 
 Allez dans **Assistants IA** dans la barre latérale. Si la page indique que la fonction est indisponible sur cette instance, un administrateur doit d’abord activer le serveur MCP (voir le [guide d’administration](admin-guide.fr.md#assistants-ia-serveur-mcp)).
 
 ### L’activer
 
-Activez **Autoriser les assistants IA** et confirmez. Les libellés, montants et notes de vos opérations sont alors déchiffrés et envoyés au fournisseur de votre assistant (Anthropic, OpenAI…), selon ses conditions. Le désactiver arrête aussitôt tous vos jetons. Ils sont conservés : le réactiver les rétablit.
-
-### Jetons personnels
-
-Un assistant se connecte avec un jeton personnel, qui agit en votre nom.
-
-1. Sous **Jetons personnels**, cliquez sur **Créer un jeton**.
-2. Saisissez un **Nom** pour le reconnaître, choisissez l’**Accès** (**Lecture seule** ou **Lecture et écriture**) et l’**Expiration** (30 jours, 90 jours, 1 an ou sans expiration).
-3. Cliquez sur **Créer le jeton**. Si vous vous êtes connecté il y a plus de 10 minutes, Bilan demande d’abord votre mot de passe, car un jeton est un identifiant.
-4. Copiez le jeton : il n’est affiché qu’une fois.
-
-Dans cette version, les assistants peuvent seulement lire vos données, quel que soit l’accès choisi.
-
-La liste donne pour chaque jeton son préfixe, son accès, sa création, sa dernière utilisation et son expiration. **Révoquer** arrête un jeton aussitôt. Changer ou réinitialiser votre mot de passe, ou cliquer sur **Tout déconnecter** sous [Appareils connectés](#appareils-connectés), révoque tous vos jetons : recréez-en ensuite.
+Activez **Autoriser les assistants IA** et confirmez. Les libellés, montants et notes de vos opérations sont alors déchiffrés et envoyés au fournisseur de votre assistant (Anthropic, OpenAI…), selon ses conditions. Le désactiver arrête aussitôt tous vos clients connectés et vos jetons. Ils sont conservés : le réactiver les rétablit.
 
 ### Connecter un client
 
-La carte **Connexion** affiche l’adresse du serveur, `<adresse de votre Bilan>/api/mcp`, avec un bouton pour la copier. Un client envoie le jeton dans un en-tête `Authorization: Bearer <jeton>`. Avec Claude Code :
+La carte **Connexion** affiche l’adresse du serveur, `<adresse de votre Bilan>/api/mcp`, avec un bouton pour la copier. Un client se connecte de l’une de ces deux façons :
+
+- **avec votre compte Bilan** : le client ouvre Bilan dans votre navigateur, vous vous connectez et l’autorisez. Aucun jeton à copier ;
+- **avec un jeton personnel** que vous créez dans Bilan et collez dans les réglages du client (voir [Jetons personnels](#jetons-personnels)).
+
+**claude.ai et Claude Desktop** : ajoutez un connecteur personnalisé avec l’adresse du serveur. Claude ouvre la page de connexion de Bilan, puis la [page d’autorisation](#autoriser-un-client). Ces connecteurs joignent Bilan depuis les serveurs d’Anthropic : ils ne fonctionnent que si votre Bilan est accessible depuis Internet en HTTPS.
+
+**Claude Code**, avec votre compte Bilan :
+
+```bash
+claude mcp add --transport http bilan https://bilan.example.com/api/mcp
+```
+
+Lancez ensuite `/mcp` dans Claude Code, choisissez `bilan` et connectez-vous (ou lancez `claude mcp login bilan` dans un terminal) : le navigateur ouvre la page de connexion de Bilan, puis la page d’autorisation.
+
+**Claude Code**, avec un jeton personnel :
 
 ```bash
 claude mcp add --transport http bilan https://bilan.example.com/api/mcp \
   --header "Authorization: Bearer <jeton>"
 ```
 
-Codex et les autres clients qui acceptent une URL de serveur et un en-tête personnalisé fonctionnent de la même façon : donnez-leur l’adresse et cet en-tête. Les clients qui ne proposent qu’une connexion par autorisation, comme les connecteurs de claude.ai, ne sont pas encore pris en charge.
+Codex et les autres clients qui acceptent une URL de serveur et un en-tête personnalisé fonctionnent de la même façon : donnez-leur l’adresse et l’en-tête `Authorization: Bearer <jeton>`.
+
+### Autoriser un client
+
+![Page d’autorisation](images/fr/oauth-consent.png)
+
+Quand un client se connecte avec votre compte Bilan, Bilan vous demande de vous connecter si ce n’est pas déjà fait (mot de passe, clé d’accès, double authentification et SSO fonctionnent tous), puis affiche la page d’autorisation :
+
+- **Application** : le nom que le client s’est donné, à côté de son **Adresse de retour**, où Bilan vous renvoie une fois votre réponse donnée. N’importe quel client peut choisir son nom ; seule l’adresse de retour est vérifiée. Pour claude.ai et Claude Desktop, c’est `claude.ai`, pour Claude Code une adresse `localhost` ;
+- **Accès demandé** : **Lecture et écriture** ou **Lecture seule**, présélectionné selon la demande du client. **Lecture seule** est proposé quand le client l’a aussi demandé ;
+- quand le client demande à rester connecté : il garde son accès jusqu’à ce que vous le révoquiez, ou après 30 jours sans utilisation ;
+- la note de confidentialité : les données envoyées au fournisseur de l’assistant.
+
+**Autoriser** vous renvoie au client, qui est alors connecté. Si vous vous êtes connecté il y a plus de 10 minutes, Bilan demande d’abord votre mot de passe, car le client obtient un accès durable. **Refuser** vous renvoie sans accès.
+
+La page l’indique à la place quand les assistants IA sont désactivés pour votre compte (activez-les sous [L’activer](#lactiver), puis relancez la connexion depuis le client), quand ils sont désactivés sur l’instance, ou quand la demande a expiré (relancez-la depuis le client).
+
+Un client que vous avez déjà autorisé se reconnecte sans cette page tant que vous êtes connecté à Bilan dans ce navigateur, s’il demande le même accès.
+
+### Clients connectés
+
+**Clients connectés** liste les clients que vous avez autorisés : nom, adresse de retour, accès, date d’autorisation et dernière utilisation. **Révoquer** coupe son accès aussitôt, après une confirmation ; il devra redemander votre autorisation pour se reconnecter.
+
+### Jetons personnels
+
+Un jeton personnel agit en votre nom, pour les clients qui l’envoient dans un en-tête.
+
+1. Sous **Jetons personnels**, cliquez sur **Créer un jeton**.
+2. Saisissez un **Nom** pour le reconnaître, choisissez l’**Accès** (**Lecture seule** ou **Lecture et écriture**) et l’**Expiration** (30 jours, 90 jours, 1 an ou sans expiration).
+3. Cliquez sur **Créer le jeton**. Si vous vous êtes connecté il y a plus de 10 minutes, Bilan demande d’abord votre mot de passe, car un jeton est un identifiant.
+4. Copiez le jeton : il n’est affiché qu’une fois.
+
+La liste donne pour chaque jeton son préfixe, son accès, sa création, sa dernière utilisation et son expiration. **Révoquer** arrête un jeton aussitôt.
+
+Dans cette version, les assistants peuvent seulement lire vos données, quel que soit l’accès choisi.
+
+Changer ou réinitialiser votre mot de passe, ou cliquer sur **Tout déconnecter** sous [Appareils connectés](#appareils-connectés), révoque tous vos jetons et vos clients connectés : recréez des jetons et reconnectez vos clients ensuite.
 
 ### Ce qu’un assistant peut voir
 

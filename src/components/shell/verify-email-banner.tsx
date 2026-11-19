@@ -19,9 +19,10 @@ export function VerifyEmailBanner({ email }: { email: string }) {
 
   function resend() {
     startTransition(async () => {
-      const res = await resendVerificationEmailAction().catch(
-        (): ResendVerificationState => ({ ok: false, error: "FAILED" }),
-      );
+      const res = await resendVerificationEmailAction().catch((): ResendVerificationState => ({
+        ok: false,
+        error: "FAILED",
+      }));
       if (res.ok && res.status === "ALREADY_VERIFIED") return router.refresh();
       setResult(res);
     });

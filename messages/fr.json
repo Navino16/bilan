@@ -124,6 +124,32 @@
       "signUpWith": "S’inscrire avec {name}",
       "startFailed": "Impossible de joindre le fournisseur d’identité. Réessayez.",
       "badOrigin": "Connexion impossible depuis cette adresse. Ouvrez l’application depuis son adresse configurée."
+    },
+    "consent": {
+      "title": "Autoriser l’accès à {appName}",
+      "signedInAs": "Connecté en tant que <strong>{email}</strong>",
+      "client": "Application",
+      "unnamed": "Application sans nom",
+      "redirect": "Adresse de retour",
+      "nameNote": "Ce nom est déclaré par l’application ; seule l’adresse de retour est vérifiée.",
+      "access": "Accès demandé",
+      "choice": {
+        "write": "Lecture et écriture",
+        "read": "Lecture seule"
+      },
+      "offline": "Reste connecté jusqu’à ce que vous le révoquiez, ou après 30 jours sans utilisation.",
+      "privacy": "Les libellés, montants et notes de vos opérations seront déchiffrés et envoyés au fournisseur de cet assistant (Anthropic, OpenAI…), selon ses conditions.",
+      "approve": "Autoriser",
+      "deny": "Refuser",
+      "mcpDisabled": "Les assistants IA sont désactivés pour votre compte. Activez-les dans <link>Paramètres › Assistants IA</link>, puis relancez la connexion depuis votre assistant.",
+      "instanceOff": "Les assistants IA sont désactivés sur cette instance.",
+      "expired": "Cette demande a expiré. Relancez la connexion depuis votre assistant.",
+      "noScope": "Cette application ne demande aucun accès à vos données.",
+      "failed": "L’autorisation n’a pas pu aboutir.",
+      "code": "Code : {code}",
+      "error": {
+        "FAILED": "Une erreur est survenue. Veuillez réessayer."
+      }
     }
   },
   "errors": {
@@ -229,19 +255,22 @@
     "passwordBody": {
       "iban": "Votre connexion date de plus de 10 minutes. Saisissez votre mot de passe pour afficher l’IBAN complet.",
       "export": "Votre connexion date de plus de 10 minutes. Saisissez votre mot de passe pour télécharger toutes vos données, IBAN compris.",
-      "mcpToken": "Votre connexion date de plus de 10 minutes. Saisissez votre mot de passe pour créer un jeton d’accès."
+      "mcpToken": "Votre connexion date de plus de 10 minutes. Saisissez votre mot de passe pour créer un jeton d’accès.",
+      "mcpConsent": "Votre connexion date de plus de 10 minutes. Saisissez votre mot de passe pour autoriser cette application."
     },
     "signInBody": {
       "iban": "Votre connexion date de plus de 10 minutes. Reconnectez-vous pour afficher l’IBAN complet.",
       "export": "Votre connexion date de plus de 10 minutes. Reconnectez-vous pour télécharger toutes vos données, IBAN compris.",
-      "mcpToken": "Votre connexion date de plus de 10 minutes. Reconnectez-vous pour créer un jeton d’accès."
+      "mcpToken": "Votre connexion date de plus de 10 minutes. Reconnectez-vous pour créer un jeton d’accès.",
+      "mcpConsent": "Cette autorisation demande une connexion récente. Reconnectez-vous pour autoriser cette application."
     },
     "signInHint": "Votre session actuelle sera fermée, puis vous reviendrez sur cette page après la connexion.",
     "password": "Mot de passe",
     "confirm": {
       "iban": "Afficher l’IBAN",
       "export": "Télécharger",
-      "mcpToken": "Créer le jeton"
+      "mcpToken": "Créer le jeton",
+      "mcpConsent": "Autoriser"
     },
     "checking": "Vérification…",
     "signInAgain": "Se reconnecter",
@@ -1726,7 +1755,7 @@
           "INVALID": "Remplissez tous les champs.",
           "FAILED": "Impossible de changer le mot de passe. Réessayez.",
           "REVOKE_FAILED": "Votre mot de passe a été modifié, mais vos autres appareils n’ont pas pu être déconnectés.",
-          "TOKENS_FAILED": "Votre mot de passe a été modifié, mais vos jetons d’assistant IA n’ont pas pu être révoqués. Révoquez-les depuis <link>Préférences › Assistants IA</link>."
+          "TOKENS_FAILED": "Votre mot de passe a été modifié, mais l’accès des assistants IA n’a pas pu être révoqué. Révoquez-le depuis <link>Préférences › Assistants IA</link>."
         }
       },
       "sessionsCard": {
@@ -1747,7 +1776,7 @@
           "UNAUTHORIZED": "Votre session a expiré. Reconnectez-vous.",
           "INVALID": "Requête invalide.",
           "FAILED": "Impossible de déconnecter cet appareil. Réessayez.",
-          "TOKENS_FAILED": "Vos autres appareils ont été déconnectés, mais vos jetons d’assistant IA n’ont pas pu être révoqués. Révoquez-les depuis <link>Préférences › Assistants IA</link>."
+          "TOKENS_FAILED": "Vos autres appareils ont été déconnectés, mais l’accès des assistants IA n’a pas pu être révoqué. Révoquez-le depuis <link>Préférences › Assistants IA</link>."
         },
         "signedIn": "Connexion le <time></time>"
       },
@@ -1859,7 +1888,29 @@
         "endpoint": "Adresse du serveur MCP",
         "copy": "Copier l’adresse",
         "copied": "Adresse copiée",
-        "header": "En-tête : <code></code>"
+        "header": "En-tête : <code></code>",
+        "connector": "Pour claude.ai ou Claude Desktop, ajoutez un connecteur personnalisé avec cette adresse : la connexion passe par votre compte Bilan, sans jeton."
+      },
+      "clients": {
+        "title": "Clients connectés",
+        "hint": "Assistants autorisés depuis votre compte Bilan, sans jeton.",
+        "none": "Aucun client connecté.",
+        "unnamed": "Application sans nom",
+        "scope": {
+          "read": "Lecture seule",
+          "write": "Lecture et écriture"
+        },
+        "authorized": "autorisé le <time></time>",
+        "lastUsed": "dernière utilisation le <time></time>",
+        "neverUsed": "jamais utilisé",
+        "revoke": "Révoquer",
+        "revokeClient": "Révoquer {name}",
+        "confirmTitle": "Révoquer {name} ?",
+        "confirmBody": "{name} perd l’accès immédiatement. Il devra demander une nouvelle autorisation pour se reconnecter.",
+        "error": {
+          "NOT_FOUND": "Ce client est déjà révoqué.",
+          "FAILED": "Impossible de révoquer ce client. Réessayez."
+        }
       },
       "tokens": {
         "title": "Jetons personnels",
@@ -2286,6 +2337,7 @@
         "Budget": "Budget",
         "BudgetAssignment": "Affectation de budget",
         "McpToken": "Jeton MCP",
+        "OauthClient": "Client OAuth",
         "UserPreference": "Préférences"
       },
       "actions": {
@@ -2296,8 +2348,16 @@
             "created": "Jeton MCP créé",
             "create_failed": "Création de jeton MCP refusée",
             "revoked": "Jeton MCP révoqué",
-            "revoked_all": "Tous les jetons MCP révoqués",
-            "revoke_failed": "Échec de la révocation des jetons MCP"
+            "revoked_all": "Tous les jetons MCP révoqués"
+          },
+          "client": {
+            "authorized": "Client OAuth autorisé",
+            "authorize_failed": "Autorisation de client OAuth refusée",
+            "revoked": "Client OAuth révoqué",
+            "revoked_all": "Tous les clients OAuth révoqués"
+          },
+          "credentials": {
+            "revoke_failed": "Échec de la révocation de l’accès des assistants IA"
           }
         },
         "settingUpdated": "Paramètre « {key} » modifié",
@@ -2615,6 +2675,7 @@
       "reset": "Mot de passe oublié",
       "resetConfirm": "Nouveau mot de passe",
       "verifyEmail": "Vérification de l’adresse",
+      "consent": "Autorisation",
       "setup": "Installation",
       "forbidden": "Accès refusé",
       "notFound": "Page introuvable",

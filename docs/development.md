@@ -124,7 +124,9 @@ It needs a `.env` (`npm run setup`) and the test database (`docker compose up -d
    the redirect URL only changes what the admin page shows.
 
 3. `DOCS_BASE_URL=http://localhost:3301 npm run docs:screenshots` captures every page in
-   English and French (`scripts/docs-screenshots.ts`).
+   English and French (`scripts/docs-screenshots.ts`). It authorizes a "Claude" OAuth client
+   for the AI assistants page (once: skipped when a connected client is listed) and registers
+   one more per locale for the consent page; the provider allows 5 registrations per minute.
 
 ## Performance benchmark
 
@@ -184,8 +186,10 @@ on `stress`, so an A/B run needs 3 to 4 GB free on top of the database.
 ## Dependency updates
 
 `npx npm-check-updates` follows `.ncurc.cjs` (TypeScript and `@types/node` stay on their major).
-`better-auth` and `@better-auth/passkey` are pinned with `~`, and the `@better-auth/core`
-override must name the same version: bump all three together, or npm fails with ERESOLVE.
+The whole better-auth family moves together: `better-auth`, `@better-auth/passkey` and
+`@better-auth/oauth-provider` are pinned with `~` to the same version, and the
+`overrides["@better-auth/core"]` entry names that exact version. Bump them all at once, or npm
+fails with ERESOLVE.
 
 ## Releases
 

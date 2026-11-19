@@ -1,5 +1,8 @@
 // Error codes Better Auth appends (`?error=`) when an OAuth/OIDC sign-in or link callback fails.
 
+/** Query flag on the SSO sign-in error callback, set apart from the OAuth provider's errors. */
+export const SSO_ERROR_MARK = "sso";
+
 export type SsoError =
   | "disabled"
   | "ssoFailed"
@@ -11,13 +14,7 @@ export type SsoError =
   | "ssoNoEmail";
 
 export type LinkError =
-  | "denied"
-  | "provider"
-  | "expired"
-  | "noEmail"
-  | "emailMismatch"
-  | "linkedElsewhere"
-  | "failed";
+  "denied" | "provider" | "expired" | "noEmail" | "emailMismatch" | "linkedElsewhere" | "failed";
 
 // Refused or cancelled at the IdP (RFC 6749 §4.1.2.1, OIDC Core §3.1.2.6).
 const DENIED = ["access_denied", "login_required", "consent_required", "interaction_required"];

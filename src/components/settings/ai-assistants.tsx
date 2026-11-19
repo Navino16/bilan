@@ -39,6 +39,8 @@ import {
   setMcpEnabledAction,
   type CreateMcpTokenState,
 } from "@/server/transport/actions/mcp";
+import { AiOAuthClients } from "@/components/settings/ai-oauth-clients";
+import type { OAuthGrantView } from "@/server/mcp/oauth-grants";
 import type { McpTokenView } from "@/server/mcp/tokens";
 import type { StepUpMethod } from "@/server/services/users/step-up";
 
@@ -49,16 +51,19 @@ export function AiAssistants({
   enabled,
   endpoint,
   tokens,
+  grants,
 }: {
   locale: string;
   enabled: boolean;
   endpoint: string;
   tokens: McpTokenView[];
+  grants: OAuthGrantView[];
 }) {
   return (
     <>
       <AccessCard locale={locale} enabled={enabled} />
       <ConnectionCard enabled={enabled} endpoint={endpoint} />
+      <AiOAuthClients grants={grants} />
       <TokensCard tokens={tokens} />
     </>
   );
@@ -159,6 +164,7 @@ function ConnectionCard({ enabled, endpoint }: { enabled: boolean; endpoint: str
               ),
             })}
           </p>
+          <p className="text-muted-foreground text-xs">{t("connector")}</p>
         </div>
       ) : (
         <p className="text-muted-foreground text-sm">{t("off")}</p>

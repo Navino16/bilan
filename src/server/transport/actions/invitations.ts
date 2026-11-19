@@ -19,14 +19,10 @@ import {
 export type InvitationActionState = { ok: true } | FormFailure | null;
 // `shareUrl` only when the mail wasn't delivered (SMTP off or failing): shown once to the inviter.
 export type CreateInvitationActionState =
-  | { ok: true; renewed: boolean; shareUrl?: string; mailFailed?: true }
-  | FormFailure
-  | null;
+  { ok: true; renewed: boolean; shareUrl?: string; mailFailed?: true } | FormFailure | null;
 export type DeclineActionState = { ok: true } | { ok: false; error: string; hint?: string } | null;
 export type AcceptActionState =
-  | { ok: true; groupId: string }
-  | { ok: false; error: string; hint?: string }
-  | null;
+  { ok: true; groupId: string } | { ok: false; error: string; hint?: string } | null;
 
 function fail(e: unknown): { ok: false; error: string; hint?: string } {
   if (e instanceof InvitationError)

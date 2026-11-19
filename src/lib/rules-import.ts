@@ -30,9 +30,7 @@ export type ExistingRule = {
 };
 
 export type CategoryDecision =
-  | { action: "create" }
-  | { action: "map"; categoryId: string }
-  | { action: "ignore" };
+  { action: "create" } | { action: "map"; categoryId: string } | { action: "ignore" };
 
 export type ImportDecisions = {
   categories: Record<string, CategoryDecision>;

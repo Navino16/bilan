@@ -126,7 +126,9 @@ test.describe("SSO identities (#204)", () => {
       await anon.goto("/fr/login", { waitUntil: "networkidle", timeout: 30_000 });
       // Same email as the member, but nothing is linked yet: no implicit linking (#200).
       await continueWith.click({ timeout: 2000 });
-      await expect(anon).toHaveURL(/\/fr\/login\?error=account_not_linked/, { timeout: 10_000 });
+      await expect(anon).toHaveURL(/\/fr\/login\?sso=1&error=account_not_linked/, {
+        timeout: 10_000,
+      });
       await expect(anon.getByText(/autre moyen de connexion, puis liez-la/)).toBeVisible();
 
       const row = member.locator(`[data-identity="${key}"]`);

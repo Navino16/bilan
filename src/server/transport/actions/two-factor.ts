@@ -78,8 +78,7 @@ export async function regenerateBackupCodesAction(
 }
 
 export type TrustedDeviceActionState =
-  | { ok: true }
-  | { ok: false; error: RevokeTrustedDeviceError | "INVALID" | "FAILED" };
+  { ok: true } | { ok: false; error: RevokeTrustedDeviceError | "INVALID" | "FAILED" };
 
 export async function revokeTrustedDeviceAction(id: unknown): Promise<TrustedDeviceActionState> {
   const user = await requireSession();

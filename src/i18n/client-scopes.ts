@@ -3,6 +3,7 @@
 export const CLIENT_SCOPES = {
   root: [],
   auth: [
+    "auth.consent",
     "auth.login",
     "auth.passwordVisibility",
     "auth.register",
@@ -12,6 +13,7 @@ export const CLIENT_SCOPES = {
     "auth.twoFactor",
     "forms.fieldError",
     "shell",
+    "stepUp",
   ],
   setup: [
     "admin.smtp.security",
@@ -56,6 +58,7 @@ export const CLIENT_SCOPES = {
   settings: [
     "forms.fieldError",
     "settings.ai.access",
+    "settings.ai.clients",
     "settings.ai.connection",
     "settings.ai.tokens",
     "settings.data",

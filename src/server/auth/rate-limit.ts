@@ -6,8 +6,7 @@ const MAX_BUCKETS = 10_000;
 
 // `resetAt` identifies the window the slot was taken from (see refund).
 export type Outcome =
-  | { allowed: true; resetAt: number }
-  | { allowed: false; retryAfterSec: number };
+  { allowed: true; resetAt: number } | { allowed: false; retryAfterSec: number };
 
 export class RateLimiter {
   constructor(
@@ -122,3 +121,8 @@ export const verificationMailLimiter = sharedLimiter("verificationMail", {
 });
 // Keyed by MCP principal (client kind and id): every tool call goes through the services.
 export const mcpCallLimiter = sharedLimiter("mcpCall", { max: 120, windowMs: 60_000 });
+// Keyed by client IP: open dynamic client registration (spec §5.18).
+export const oauthRegisterLimiter = sharedLimiter("oauthRegister", {
+  max: 20,
+  windowMs: 60 * 60_000,
+});

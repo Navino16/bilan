@@ -13,16 +13,12 @@ import { formatDateTime } from "@/lib/format";
 // notification must not break login / password change) — failures are audited.
 
 export type SecurityEvent =
-  | "new_login"
-  | "password_changed"
-  | "passkey_added"
-  | "two_factor_disabled";
+  "new_login" | "password_changed" | "passkey_added" | "two_factor_disabled";
 
 type Origin = { ip: string | null; userAgent: string | null };
 
 export type SignInMethod =
-  | { kind: "password" | "totp" | "backup_code" | "passkey" }
-  | { kind: "sso"; provider: string };
+  { kind: "password" | "totp" | "backup_code" | "passkey" } | { kind: "sso"; provider: string };
 
 type Copy = {
   date: string;

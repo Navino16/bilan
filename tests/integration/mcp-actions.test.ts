@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from "vitest";
 
 // The Server Actions read the session through next/headers.
 const request = vi.hoisted(() => ({ headers: new Headers() }));
@@ -17,8 +17,10 @@ import { createMcpToken, listMcpTokens } from "@/server/mcp/tokens";
 import {
   createMcpTokenAction,
   revokeMcpTokenAction,
+  revokeOAuthGrantAction,
   setMcpEnabledAction,
 } from "@/server/transport/actions/mcp";
+import { listOAuthGrants } from "@/server/mcp/oauth-grants";
 import { snapshotSetting } from "./support/app-setting-snapshot";
 
 vi.setConfig({ testTimeout: 20_000 });
@@ -190,5 +192,80 @@ describe("revokeMcpTokenAction", () => {
       ok: false,
       error: "NOT_FOUND",
     });
+  });
+});
+
+describe("revokeOAuthGrantAction", () => {
+  const clientIds = [`${tag}-mine`, `${tag}-theirs`];
+
+  async function grant(clientId: string, owner: string): Promise<void> {
+    const now = new Date();
+    await db.oauthClient.upsert({
+      where: { clientId },
+      update: {},
+      create: {
+        id: clientId,
+        clientId,
+        name: clientId,
+        redirectUris: JSON.stringify(["http://127.0.0.1:43123/callback"]),
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+    await db.oauthConsent.create({
+      data: {
+        id: `${clientId}-${owner}`,
+        clientId,
+        userId: owner,
+        scopes: JSON.stringify(["bilan:read"]),
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+  }
+
+  afterAll(async () => {
+    await db.oauthClient.deleteMany({ where: { clientId: { in: clientIds } } });
+  });
+
+  it("revokes one of the user's clients", async () => {
+    await grant(clientIds[0], userId);
+    expect(await revokeOAuthGrantAction(clientIds[0])).toEqual({ ok: true });
+    expect(await listOAuthGrants(userId)).toHaveLength(0);
+  });
+
+  it("answers NOT_FOUND for another user's client and leaves it connected", async () => {
+    await grant(clientIds[1], otherId);
+    expect(await revokeOAuthGrantAction(clientIds[1])).toEqual({ ok: false, error: "NOT_FOUND" });
+    expect(await listOAuthGrants(otherId)).toHaveLength(1);
+  });
+
+  it("answers NOT_FOUND for an over-long or malformed id", async () => {
+    expect(await revokeOAuthGrantAction("x".repeat(300))).toEqual({
+      ok: false,
+      error: "NOT_FOUND",
+    });
+    expect(await revokeOAuthGrantAction(42 as unknown as string)).toEqual({
+      ok: false,
+      error: "NOT_FOUND",
+    });
+  });
+});
+
+describe("unexpected revoke failures", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it.each([
+    ["token", () => vi.spyOn(db.mcpToken, "updateMany"), () => revokeMcpTokenAction("any-id")],
+    [
+      "OAuth client",
+      () => vi.spyOn(db.oauthClient, "findUnique"),
+      () => revokeOAuthGrantAction("any-id"),
+    ],
+  ] as const)("logs the error and answers FAILED for a %s", async (_label, spy, run) => {
+    spy().mockRejectedValue(new Error("db down"));
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await run()).toEqual({ ok: false, error: "FAILED" });
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("[bilan]"), "Error");
   });
 });

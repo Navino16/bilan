@@ -180,6 +180,28 @@ puts in a request header. `TRUSTED_IP_HEADER` in `app.env` names that header:
 The app trusts the header blindly, hence the rule above: nothing but the proxy may reach the
 app port.
 
+### AI assistants over OAuth
+
+When the MCP server is enabled (see the [administration guide](admin-guide.md#ai-assistants-mcp-server)),
+clients such as claude.ai, Claude Desktop or Claude Code connect with the user's Bilan account
+(OAuth 2.1). They find the sign-in flow on their own from the endpoint's address, which sets
+these requirements:
+
+- **Public HTTPS** for the claude.ai and Claude Desktop connectors: they call Bilan from
+  Anthropic's servers. A client running on your network (Claude Code) also works on a LAN
+  address.
+- **`APP_URL` is the exact public origin** (scheme, host and port, no path, as users type
+  it). Clients compare the resource Bilan announces, `APP_URL` followed by `/api/mcp`, with
+  the address they were given, and access tokens are bound to it: after an `APP_URL` change,
+  connected clients have to authorize again.
+- **The reverse proxy passes these paths unchanged**, with the `Authorization` header and
+  `X-Forwarded-Proto`, and no other authentication in front of them (basic auth, an SSO
+  gateway): `/.well-known/oauth-protected-resource` and `/.well-known/oauth-authorization-server`
+  (with their suffixes), `/api/auth/*` and `/api/mcp`. The Caddy and nginx examples above do.
+
+The discovery documents answer `Access-Control-Allow-Origin: *`: browser-based clients read
+them from another origin.
+
 ## First start: the setup wizard
 
 Open `APP_URL`. A fresh install (no user yet) redirects every page to the setup wizard:

@@ -4,7 +4,8 @@ import { getCurrentUser } from "@/server/auth/permissions";
 import { appSettings, getAppName } from "@/server/services/settings/app-settings";
 import { listSsoProviders } from "@/server/services/users/identities";
 import { postLoginPath } from "@/lib/callback-url";
-import { loginSsoError } from "@/lib/sso-errors";
+import { loginSsoError, SSO_ERROR_MARK } from "@/lib/sso-errors";
+import { isOAuthAuthorizeError } from "@/server/mcp/oauth-consent";
 import { isRegistrationClosed } from "@/lib/registration";
 import { LoginForm, type LoginNotice } from "@/components/auth/login-form";
 import { pageTitle } from "@/i18n/metadata";
@@ -24,13 +25,17 @@ export default async function LoginPage({
     deleted?: string;
     error?: string;
     callbackUrl?: string | string[];
+    [SSO_ERROR_MARK]?: string;
   }>;
 }) {
-  const [{ locale }, { reset, deleted, error, callbackUrl }] = await Promise.all([
-    params,
-    searchParams,
-  ]);
+  const [{ locale }, query] = await Promise.all([params, searchParams]);
+  const { reset, deleted, error, callbackUrl } = query;
   setRequestLocale(locale);
+  // The OAuth provider sends the authorizations it refuses here (onAPIError.errorURL); SSO
+  // errors share some codes and are told apart by their mark.
+  if (!query[SSO_ERROR_MARK] && isOAuthAuthorizeError(error)) {
+    redirect(`/${locale}/oauth/consent?error=${error}`);
+  }
   const redirectTo = postLoginPath(callbackUrl, locale);
   if (await getCurrentUser()) {
     // Failed OAuth/OIDC callbacks land here through onAPIError.errorURL, with an `error` code;

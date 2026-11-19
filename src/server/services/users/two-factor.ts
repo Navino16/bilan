@@ -5,18 +5,12 @@ import { logEvent } from "@/server/services/audit";
 import { isCurrentPassword } from "./password";
 
 export type TwoFactorError =
-  | "BAD_PASSWORD"
-  | "BAD_CODE"
-  | "ALREADY_ENABLED"
-  | "NOT_ENABLED"
-  | "FAILED";
+  "BAD_PASSWORD" | "BAD_CODE" | "ALREADY_ENABLED" | "NOT_ENABLED" | "FAILED";
 export type TwoFactorEnrolment = { totpURI: string; backupCodes: string[] };
 type Result<T> = { ok: true; data: T } | { ok: false; error: TwoFactorError };
 
 export type FailedAction =
-  | "auth.2fa.enable_failed"
-  | "auth.2fa.disable_failed"
-  | "auth.2fa.backup_codes_failed";
+  "auth.2fa.enable_failed" | "auth.2fa.disable_failed" | "auth.2fa.backup_codes_failed";
 
 type PasswordInput = { body: { password: string }; headers: Headers };
 type CodeInput = { body: { code: string }; headers: Headers };

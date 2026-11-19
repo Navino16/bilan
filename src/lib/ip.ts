@@ -18,7 +18,7 @@ function hextets(ip: string): number[] | null {
 // RFC 5952 §4: lowercase, no leading zeros, the longest run (≥ 2) of zero groups as "::".
 function compressIpv6(groups: number[]): string {
   let best = { start: -1, len: 0 };
-  for (let i = 0; i < 8; ) {
+  for (let i = 0; i < 8;) {
     if (groups[i] !== 0) {
       i++;
       continue;

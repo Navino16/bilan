@@ -64,9 +64,10 @@ export function TrustedDevicesControls({ devices }: { devices: TrustedDeviceView
   function run(action: () => Promise<TrustedDeviceActionState>) {
     setError(null);
     startTransition(async () => {
-      const res = await action().catch(
-        (): TrustedDeviceActionState => ({ ok: false, error: "FAILED" }),
-      );
+      const res = await action().catch((): TrustedDeviceActionState => ({
+        ok: false,
+        error: "FAILED",
+      }));
       if (!res.ok) setError(res.error);
       router.refresh();
     });

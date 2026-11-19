@@ -11,8 +11,20 @@ import {
   type StepUpConfirmResult,
   type StepUpMethod,
 } from "@/server/services/users/step-up";
-import { PreferenceInputError, setMcpEnabled } from "@/server/services/users/preferences";
+import {
+  PreferenceInputError,
+  getMcpEnabled,
+  setMcpEnabled,
+} from "@/server/services/users/preferences";
 import { isMcpInstanceEnabled } from "@/server/mcp/switches";
+import {
+  consentScope,
+  denyOAuthConsent,
+  grantOAuthConsent,
+  parseConsentRequest,
+} from "@/server/mcp/oauth-consent";
+import { revokeOAuthGrant } from "@/server/mcp/oauth-grants";
+import { authHeaders } from "@/server/http/auth-headers";
 import { createMcpToken, mcpTokenFields, revokeMcpToken } from "@/server/mcp/tokens";
 import { MCP_TOKEN_EXPIRY_CHOICES, mcpTokenExpiry } from "@/lib/validation/mcp-token";
 import { invalidInput, type FormFailure } from "@/lib/validation/field-errors";
@@ -94,9 +106,118 @@ export async function revokeMcpTokenAction(
     await revokeMcpToken(user.id, parsed.data);
     return { ok: true };
   } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error && e.message === "NOT_FOUND" ? "NOT_FOUND" : "FAILED",
+    if (e instanceof Error && e.message === "NOT_FOUND") return { ok: false, error: "NOT_FOUND" };
+    console.error("[bilan] revoke MCP token failed", e instanceof Error ? e.name : typeof e);
+    return { ok: false, error: "FAILED" };
+  }
+}
+
+const clientIdSchema = z.string().min(1).max(191);
+
+export async function revokeOAuthGrantAction(
+  clientId: string,
+): Promise<{ ok: true } | { ok: false; error: "NOT_FOUND" | "FAILED" }> {
+  const user = await requireSession();
+  const parsed = clientIdSchema.safeParse(clientId);
+  if (!parsed.success) return { ok: false, error: "NOT_FOUND" };
+  try {
+    await revokeOAuthGrant(user.id, parsed.data);
+    return { ok: true };
+  } catch (e) {
+    if (e instanceof Error && e.message === "NOT_FOUND") return { ok: false, error: "NOT_FOUND" };
+    console.error("[bilan] revoke OAuth grant failed", e instanceof Error ? e.name : typeof e);
+    return { ok: false, error: "FAILED" };
+  }
+}
+
+export type ApproveOAuthConsentState =
+  | { ok: true; url: string }
+  | { ok: false; error: "REAUTH_REQUIRED"; method: StepUpMethod }
+  | Exclude<StepUpConfirmResult, { ok: true }>
+  | {
+      ok: false;
+      error:
+        | "INSTANCE_DISABLED"
+        | "MCP_DISABLED"
+        | "EXPIRED"
+        | "INVALID"
+        | "NO_SCOPE"
+        | "LOGIN_REQUIRED"
+        | "FAILED";
     };
+
+const oauthQuerySchema = z.string().min(1).max(8192);
+const consentInputSchema = z.object({
+  oauthQuery: oauthQuerySchema,
+  access: z.enum(["read", "write"]),
+});
+
+// A grant with offline_access lives as long as a token: same step-up (spec §2b).
+export async function approveOAuthConsentAction(
+  input: { oauthQuery: string; access: "read" | "write" },
+  password?: unknown,
+): Promise<ApproveOAuthConsentState> {
+  await requireSession();
+  const session = await currentStepUpSession();
+  if (!session) return { ok: false, error: "FAILED" };
+  if (!(await isMcpInstanceEnabled())) return { ok: false, error: "INSTANCE_DISABLED" };
+  const parsed = consentInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "INVALID" };
+  const consent = await parseConsentRequest(new URLSearchParams(parsed.data.oauthQuery));
+  if (!consent.ok) {
+    return { ok: false, error: consent.error === "EXPIRED" ? "EXPIRED" : "INVALID" };
+  }
+  const { request } = consent;
+  if (!(await getMcpEnabled(session.userId))) return { ok: false, error: "MCP_DISABLED" };
+  const scope = consentScope(request.requested, parsed.data.access);
+  if (!scope) return { ok: false, error: "NO_SCOPE" };
+  if (!(await stepUpVia(session))) {
+    if (typeof password !== "string" || !password) {
+      return { ok: false, error: "REAUTH_REQUIRED", method: await stepUpMethod(session.userId) };
+    }
+    const target = {
+      action: "mcp.client.authorize_failed",
+      entity: "OauthClient",
+      entityId: request.clientId,
+    };
+    const step = await confirmStepUp(session, password, target, await auditOrigin());
+    if (!step.ok) return step;
+  }
+  try {
+    return await grantOAuthConsent({
+      userId: session.userId,
+      request,
+      scope,
+      headers: await authHeaders(),
+      audit: { ...(await auditOrigin()), via: await stepUpVia(session) },
+    });
+  } catch (e) {
+    console.error("[bilan] OAuth consent failed", e instanceof Error ? e.name : typeof e);
+    return { ok: false, error: "FAILED" };
+  }
+}
+
+export async function denyOAuthConsentAction(
+  oauthQuery: string,
+): Promise<
+  | { ok: true; url: string }
+  | { ok: false; error: "INSTANCE_DISABLED" | "EXPIRED" | "INVALID" | "FAILED" }
+> {
+  await requireSession();
+  if (!(await isMcpInstanceEnabled())) return { ok: false, error: "INSTANCE_DISABLED" };
+  const parsed = oauthQuerySchema.safeParse(oauthQuery);
+  if (!parsed.success) return { ok: false, error: "INVALID" };
+  const consent = await parseConsentRequest(new URLSearchParams(parsed.data));
+  if (!consent.ok) {
+    return { ok: false, error: consent.error === "EXPIRED" ? "EXPIRED" : "INVALID" };
+  }
+  try {
+    return {
+      ok: true,
+      url: await denyOAuthConsent(consent.request.oauthQuery, await authHeaders()),
+    };
+  } catch (e) {
+    console.error("[bilan] OAuth consent failed", e instanceof Error ? e.name : typeof e);
+    return { ok: false, error: "FAILED" };
   }
 }

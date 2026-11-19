@@ -346,8 +346,9 @@ export async function* userDataJson({
   transactionPages,
 }: ExportParts): AsyncGenerator<string> {
   const { exportedAt, user, preference, accounts, ...rest } = head;
-  yield JSON.stringify({ exportedAt, user, preference, accounts }).slice(0, -1) +
-    ',"transactions":[';
+  yield (
+    JSON.stringify({ exportedAt, user, preference, accounts }).slice(0, -1) + ',"transactions":['
+  );
   let first = true;
   for await (const page of transactionPages()) {
     yield (first ? "" : ",") + page.map((t) => JSON.stringify(t)).join(",");

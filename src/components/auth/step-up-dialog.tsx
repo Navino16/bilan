@@ -23,7 +23,7 @@ import { loginRedirectPath } from "@/lib/callback-url";
 import type { StepUpMethod } from "@/server/services/users/step-up";
 
 export type StepUpFailure = { ok: false; error: string; retryAfter?: number };
-export type StepUpPurpose = "iban" | "export" | "mcpToken";
+export type StepUpPurpose = "iban" | "export" | "mcpToken" | "mcpConsent";
 
 const KNOWN_ERRORS = new Set(["BAD_PASSWORD", "RATE_LIMITED", "NOT_FOUND"]);
 
@@ -45,12 +45,15 @@ export function StepUpDialog({
   confirm,
   onConfirmed,
   onClose,
+  returnTo,
 }: {
   method: StepUpMethod;
   purpose: StepUpPurpose;
   confirm: (password: string) => Promise<{ ok: true } | StepUpFailure>;
   onConfirmed: () => void;
   onClose: () => void;
+  /** Page to come back to after signing in again; the current path by default. */
+  returnTo?: string;
 }) {
   const t = useTranslations("stepUp");
   const errorText = useStepUpErrorText();
@@ -83,7 +86,7 @@ export function StepUpDialog({
       try {
         const res = await authClient.signOut();
         if (res?.error) return setFailure({ ok: false, error: "FAILED" });
-        router.push(loginRedirectPath(locale, pathname));
+        router.push(loginRedirectPath(locale, returnTo ?? pathname));
       } catch {
         setFailure({ ok: false, error: "FAILED" });
       }

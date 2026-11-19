@@ -396,8 +396,7 @@ describe("Google sign-up flag (#200)", () => {
 describe("OIDC discovery at handler build", () => {
   const genericKeys = async () => {
     const plugin = (await buildOptions()).plugins?.find((p) => p.id === "generic-oauth") as
-      | { options: { config: { providerId: string }[] } }
-      | undefined;
+      { options: { config: { providerId: string }[] } } | undefined;
     return plugin?.options.config.map((c) => c.providerId) ?? [];
   };
   const discoveryFetch = (onDiscovery: (signal?: AbortSignal | null) => Promise<Response>) =>

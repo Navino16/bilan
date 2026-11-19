@@ -177,6 +177,167 @@ CREATE TABLE `McpToken` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
+CREATE TABLE `OauthClient` (
+    `id` VARCHAR(191) NOT NULL,
+    `clientId` VARCHAR(191) NOT NULL,
+    `clientSecret` TEXT NULL,
+    `clientDiscoveryId` TEXT NULL,
+    `disabled` BOOLEAN NULL DEFAULT false,
+    `skipConsent` BOOLEAN NULL,
+    `enableEndSession` BOOLEAN NULL,
+    `subjectType` TEXT NULL,
+    `scopes` TEXT NULL,
+    `clientCredentialsScopes` TEXT NULL,
+    `userId` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NULL,
+    `updatedAt` DATETIME(3) NULL,
+    `name` TEXT NULL,
+    `uri` TEXT NULL,
+    `icon` TEXT NULL,
+    `contacts` TEXT NULL,
+    `tos` TEXT NULL,
+    `policy` TEXT NULL,
+    `softwareId` TEXT NULL,
+    `softwareVersion` TEXT NULL,
+    `softwareStatement` TEXT NULL,
+    `redirectUris` TEXT NOT NULL,
+    `postLogoutRedirectUris` TEXT NULL,
+    `backchannelLogoutUri` TEXT NULL,
+    `backchannelLogoutSessionRequired` BOOLEAN NULL,
+    `tokenEndpointAuthMethod` TEXT NULL,
+    `applicationType` TEXT NULL,
+    `jwks` TEXT NULL,
+    `jwksUri` TEXT NULL,
+    `grantTypes` TEXT NULL,
+    `responseTypes` TEXT NULL,
+    `requirePKCE` BOOLEAN NULL,
+    `dpopBoundAccessTokens` BOOLEAN NULL DEFAULT false,
+    `referenceId` TEXT NULL,
+    `metadata` TEXT NULL,
+
+    UNIQUE INDEX `OauthClient_clientId_key`(`clientId`),
+    INDEX `OauthClient_userId_idx`(`userId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `OauthResource` (
+    `id` VARCHAR(191) NOT NULL,
+    `identifier` VARCHAR(191) NOT NULL,
+    `name` TEXT NOT NULL,
+    `accessTokenTtl` INTEGER NULL,
+    `refreshTokenTtl` INTEGER NULL,
+    `signingAlgorithm` TEXT NULL,
+    `signingKeyId` TEXT NULL,
+    `allowedScopes` TEXT NULL,
+    `customClaims` TEXT NULL,
+    `dpopBoundAccessTokensRequired` BOOLEAN NULL DEFAULT false,
+    `disabled` BOOLEAN NULL DEFAULT false,
+    `createdAt` DATETIME(3) NULL,
+    `updatedAt` DATETIME(3) NULL,
+    `policyVersion` INTEGER NULL DEFAULT 1,
+    `metadata` TEXT NULL,
+
+    UNIQUE INDEX `OauthResource_identifier_key`(`identifier`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `OauthClientResource` (
+    `id` VARCHAR(191) NOT NULL,
+    `clientId` VARCHAR(191) NOT NULL,
+    `resourceId` VARCHAR(191) NOT NULL,
+    `metadata` TEXT NULL,
+    `createdAt` DATETIME(3) NULL,
+
+    INDEX `OauthClientResource_resourceId_idx`(`resourceId`),
+    UNIQUE INDEX `OauthClientResource_clientId_resourceId_key`(`clientId`, `resourceId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `OauthRefreshToken` (
+    `id` VARCHAR(191) NOT NULL,
+    `token` VARCHAR(191) NOT NULL,
+    `clientId` VARCHAR(191) NOT NULL,
+    `sessionId` VARCHAR(191) NULL,
+    `userId` VARCHAR(191) NOT NULL,
+    `referenceId` TEXT NULL,
+    `authorizationCodeId` VARCHAR(191) NULL,
+    `resources` TEXT NULL,
+    `requestedUserInfoClaims` TEXT NULL,
+    `expiresAt` DATETIME(3) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL,
+    `revoked` DATETIME(3) NULL,
+    `rotatedAt` DATETIME(3) NULL,
+    `rotationReplayResponse` TEXT NULL,
+    `rotationReplayExpiresAt` DATETIME(3) NULL,
+    `authTime` DATETIME(3) NULL,
+    `confirmation` TEXT NULL,
+    `scopes` TEXT NOT NULL,
+
+    UNIQUE INDEX `OauthRefreshToken_token_key`(`token`),
+    INDEX `OauthRefreshToken_clientId_idx`(`clientId`),
+    INDEX `OauthRefreshToken_sessionId_idx`(`sessionId`),
+    INDEX `OauthRefreshToken_userId_idx`(`userId`),
+    INDEX `OauthRefreshToken_authorizationCodeId_idx`(`authorizationCodeId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `OauthAccessToken` (
+    `id` VARCHAR(191) NOT NULL,
+    `token` VARCHAR(191) NOT NULL,
+    `clientId` VARCHAR(191) NOT NULL,
+    `sessionId` VARCHAR(191) NULL,
+    `userId` VARCHAR(191) NULL,
+    `referenceId` TEXT NULL,
+    `authorizationCodeId` VARCHAR(191) NULL,
+    `resources` TEXT NULL,
+    `requestedUserInfoClaims` TEXT NULL,
+    `refreshId` VARCHAR(191) NULL,
+    `expiresAt` DATETIME(3) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL,
+    `revoked` DATETIME(3) NULL,
+    `confirmation` TEXT NULL,
+    `scopes` TEXT NOT NULL,
+
+    UNIQUE INDEX `OauthAccessToken_token_key`(`token`),
+    INDEX `OauthAccessToken_clientId_idx`(`clientId`),
+    INDEX `OauthAccessToken_sessionId_idx`(`sessionId`),
+    INDEX `OauthAccessToken_userId_idx`(`userId`),
+    INDEX `OauthAccessToken_authorizationCodeId_idx`(`authorizationCodeId`),
+    INDEX `OauthAccessToken_refreshId_idx`(`refreshId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `OauthConsent` (
+    `id` VARCHAR(191) NOT NULL,
+    `clientId` VARCHAR(191) NOT NULL,
+    `userId` VARCHAR(191) NULL,
+    `referenceId` TEXT NULL,
+    `resources` TEXT NULL,
+    `requestedUserInfoClaims` TEXT NULL,
+    `scopes` TEXT NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL,
+    `updatedAt` DATETIME(3) NOT NULL,
+    `lastUsedAt` DATETIME(3) NULL,
+
+    INDEX `OauthConsent_clientId_idx`(`clientId`),
+    INDEX `OauthConsent_userId_idx`(`userId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `OauthClientAssertion` (
+    `id` VARCHAR(191) NOT NULL,
+    `expiresAt` DATETIME(3) NOT NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
 CREATE TABLE `AuthProvider` (
     `id` VARCHAR(191) NOT NULL,
     `type` VARCHAR(191) NOT NULL,
@@ -681,6 +842,42 @@ ALTER TABLE `UserPreference` ADD CONSTRAINT `UserPreference_userId_fkey` FOREIGN
 
 -- AddForeignKey
 ALTER TABLE `McpToken` ADD CONSTRAINT `McpToken_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `OauthClient` ADD CONSTRAINT `OauthClient_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `OauthClientResource` ADD CONSTRAINT `OauthClientResource_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `OauthClient`(`clientId`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `OauthClientResource` ADD CONSTRAINT `OauthClientResource_resourceId_fkey` FOREIGN KEY (`resourceId`) REFERENCES `OauthResource`(`identifier`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `OauthRefreshToken` ADD CONSTRAINT `OauthRefreshToken_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `OauthClient`(`clientId`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `OauthRefreshToken` ADD CONSTRAINT `OauthRefreshToken_sessionId_fkey` FOREIGN KEY (`sessionId`) REFERENCES `Session`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `OauthRefreshToken` ADD CONSTRAINT `OauthRefreshToken_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `OauthAccessToken` ADD CONSTRAINT `OauthAccessToken_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `OauthClient`(`clientId`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `OauthAccessToken` ADD CONSTRAINT `OauthAccessToken_sessionId_fkey` FOREIGN KEY (`sessionId`) REFERENCES `Session`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `OauthAccessToken` ADD CONSTRAINT `OauthAccessToken_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `OauthAccessToken` ADD CONSTRAINT `OauthAccessToken_refreshId_fkey` FOREIGN KEY (`refreshId`) REFERENCES `OauthRefreshToken`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `OauthConsent` ADD CONSTRAINT `OauthConsent_clientId_fkey` FOREIGN KEY (`clientId`) REFERENCES `OauthClient`(`clientId`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `OauthConsent` ADD CONSTRAINT `OauthConsent_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `BankConnection` ADD CONSTRAINT `BankConnection_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

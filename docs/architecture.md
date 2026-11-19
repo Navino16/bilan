@@ -931,7 +931,73 @@ model McpToken {
   revokedAt  DateTime?
   @@index([userId])
 }
+
+// ─── OAuth 2.1 provider for MCP clients (#456, §5.18) ───
+// Tables of @better-auth/oauth-provider, columns as `npx auth generate`; the plugin reads and
+// writes them. List and JSON fields are JSON text (`@db.Text`). Abridged: see prisma/schema.prisma.
+
+model OauthClient {                                    // one per registration (dynamic, unauthenticated)
+  id           String   @id
+  clientId     String   @unique
+  clientSecret String?  @db.Text                       // confidential clients only, encrypted by the plugin
+  disabled     Boolean? @default(false)
+  userId       String?                                 // null: registered by a client, not a user
+  name         String?  @db.Text                       // self-declared, shown with the redirect host
+  redirectUris String   @db.Text
+  scopes, grantTypes, responseTypes, tokenEndpointAuthMethod, applicationType, requirePKCE, …
+  createdAt    DateTime?                               // stale-client purge (7 days without consent)
+}
+
+model OauthResource {                                  // seeded: `${APP_URL}/api/mcp`
+  id String @id; identifier String @unique; name String @db.Text; allowedScopes String? @db.Text; …
+}
+
+model OauthClientResource {                            // per-client resources, not enforced (enforcePerClientResources: false)
+  id String @id; clientId String; resourceId String
+  @@unique([clientId, resourceId])
+}
+
+model OauthAccessToken {
+  id        String    @id
+  token     String    @unique                          // HMAC of the token without `bilan_oat_`
+  clientId  String
+  sessionId String?                                    // ignored by Bilan: grants outlive the session
+  userId    String?
+  refreshId String?                                    // the refresh token that issued it
+  resources String?   @db.Text                         // must hold `${APP_URL}/api/mcp` when set
+  scopes    String    @db.Text
+  expiresAt DateTime                                   // 1 h
+  revoked   DateTime?
+}
+
+model OauthRefreshToken {
+  id        String    @id
+  token     String    @unique                          // HMAC of the token without `bilan_ort_`
+  clientId  String
+  sessionId String?
+  userId    String
+  scopes    String    @db.Text
+  expiresAt DateTime                                   // 30 days, rotated on each use
+  revoked   DateTime?
+  rotatedAt DateTime?                                  // replaying a rotated token revokes the family
+}
+
+model OauthConsent {                                   // one per user and authorized client
+  id         String    @id
+  clientId   String
+  userId     String?
+  scopes     String    @db.Text
+  createdAt  DateTime
+  updatedAt  DateTime                                  // shown as "authorized on"
+  lastUsedAt DateTime?                                 // Bilan-only, at most once a minute
+}
+
+model OauthClientAssertion {                           // replay guard for private_key_jwt client assertions
+  id String @id; expiresAt DateTime
+}
 ```
+
+Authorization codes are `Verification` rows (identifier: HMAC of the code; value: JSON with the signed query, user and session). Clients, tokens and consents cascade from `User`, tokens and consents from `OauthClient`; a token's `sessionId` is set null when its session goes.
 
 ### 4.9 Data-model decisions summary
 
@@ -946,7 +1012,7 @@ model McpToken {
 | FK-less columns | `Group.createdById`, `TransactionLink.createdById`, `IgnoredLinkSuggestion.userId`, `AuditLog.userId`: handled explicitly on user erasure (`services/rgpd`) — group ownership passed on (or group deleted), links and ignored pairs deleted, audit rows anonymised. |
 | Indexes | All hashes (`labelHash`, `rawLabelHash`, `tokenHash`, `ibanHash`, `(accountId, merchantKeyHash, categoryId, type, amount, date)`), `(tokenHash, transactionId)` unique, `(accountId, date, createdAt)`, `(accountId, categoryId)`, `(categoryId, date)`, `(userId/groupId, periodStart)`, audit `(action/entity/userId, createdAt)`. |
 | No soft delete | Hard deletes only (simpler for RGPD). `archived` flag for non-deleted but inactive entities (accounts, groups, budgets). Imports are undone by revert, which deletes their transactions. |
-| Grants in `Verification` | Password-reset tokens (hashed), trusted devices and step-up grants are `Verification` rows keyed by identifier prefix — no dedicated tables. |
+| Grants in `Verification` | Password-reset tokens (hashed), trusted devices, step-up grants and OAuth authorization codes (hashed) are `Verification` rows — no dedicated tables. |
 
 ### 4.10 Group I — Bank sync (#381)
 
@@ -1286,17 +1352,24 @@ Services in `server/services/bank-sync/`; the Enable Banking client (`client.ts`
 - **Top merchants** and **income by category** keep their figures, over the counted rows. Top merchants leave out the rows of recurring series (`recurringIds`, listed in their own card); a period over 6 months keeps its rows before the recurring window.
 - **Budgets over time** (#423, `budgets.listBudgetSeriesHistory`), whatever the period: the series the user reads (as the Budgets page: own and their groups' budgets, archived periods left out), a series being a template and its instances (`parentBudgetId ?? id`, as `groupBudgetSeries`). Each keeps its latest 12 periods started by now (`lib/budget-history.recentSeriesPeriods`) and shows only with at least 2 finished; all are evaluated in one `evaluateBudgets` batch, so each period has the list's figures (the summary card's planned, spent and status, links across months as a whole). `seriesSummary` counts the finished periods `OVER` and averages their spent − planned. The card is hidden without a series.
 
-### 5.18 MCP server (#450)
+### 5.18 MCP server (#450, #456)
 
-`POST /api/mcp` (`app/api/mcp/route.ts` → `mcp/http.handleMcpRequest`) speaks MCP Streamable HTTP, **stateless**: a fresh transport and `McpServer` per request, JSON responses, no session. Order of checks: instance switch off (`AppSetting` `mcp_enabled`, default false) → 404; any other method than POST → 405 (`Allow: POST`); no or unknown credential → 401 with `WWW-Authenticate: Bearer realm="bilan"`; `mcpCallLimiter` (120 / min per principal, §6.7) → 429 + `Retry-After`. Errors are JSON, never stack traces.
+`POST /api/mcp` (`app/api/mcp/route.ts` → `mcp/http.handleMcpRequest`) speaks MCP Streamable HTTP, **stateless**: a fresh transport and `McpServer` per request, JSON responses, no session. Order of checks: instance switch off (`AppSetting` `mcp_enabled`, default false) → 404; any other method than POST → 405 (`Allow: POST`); no or unknown credential → 401 with the OAuth challenge (below); a valid OAuth token without a Bilan scope → 403 `INSUFFICIENT_SCOPE`; `mcpCallLimiter` (120 / min per principal: a token, or an OAuth client and user, §6.7) → 429 + `Retry-After`. Errors are JSON, never stack traces.
 
-- **Principal** (`mcp/tokens.principalFromToken`): `Authorization: Bearer bilan_pat_<32 random bytes, base64url>`; only `hmacExact(token, searchKey)` is stored (`McpToken.tokenHash`), the first 16 characters are kept as the visible `prefix`. The token is refused when revoked, expired, its user is banned, the instance switch is off or `UserPreference.mcpEnabled` is off (default false; tokens are kept, not deleted, so switching back on restores them). `lastUsedAt` is updated at most once a minute. Scopes `bilan:read` / `bilan:write` (write implies read) come from the token's `scope`; PR 1 registers read tools only, so a write token reads. The `McpPrincipal` shape also carries an OAuth client kind for the OAuth PR.
+- **Principal** (`mcp/principal.resolveMcpPrincipal` dispatches on the prefix: `bilan_pat_` → personal token, `bilan_oat_` → OAuth, anything else → refused before any lookup). Personal tokens (`mcp/tokens.principalFromToken`): `Authorization: Bearer bilan_pat_<32 random bytes, base64url>`; only `hmacExact(token, searchKey)` is stored (`McpToken.tokenHash`), the first 16 characters are kept as the visible `prefix`. The token is refused when revoked, expired, its user is banned, the instance switch is off or `UserPreference.mcpEnabled` is off (default false; tokens are kept, not deleted, so switching back on restores them). `lastUsedAt` is updated at most once a minute. Scopes `bilan:read` / `bilan:write` (write implies read) come from the token's `scope`; Only read tools are registered so far, so a write token reads. `McpPrincipal.client` is `{ kind: "token" | "oauth", id, name }`.
 - **Account narrowing** (`mcp/context.ts`): `mcp/server.ts` wraps each tool call in `runAsMcp(principal, …)` (`AsyncLocalStorage`). Services call the same visibility code as the UI; the share lookups that decide account visibility and access spread `aiShareWhere()`, which adds `allowAiAssistants: true` only inside an MCP call. So the MCP account set is the user's own accounts (always) plus accounts shared with their households whose share carries the flag (set by the owner in the share dialog, `AccountShare.allowAiAssistants`, default false). It applies to everything derived from transactions (dashboard, insights, personal budget figures, search, link suggestions), not only account lists. Household budgets are the exception (#453): their spending figures (spent, remaining, insights history) keep the app's household scope and INCLUDEs, and `get_budget` with transactions lists only the rows on accounts in the MCP set, the others summed per line (or out of budget / unplanned) into `privateAccountTotals` entries labelled `Private account` (`private: true`, amount and count only); a linked row is split, its visible members listed with their own sum and the hidden ones added to the private total. Tool output is not localized, so the label is a stable English string. Balance-based figures (forecast, landing), the line/attach guards, the budget account options and the hidden/visible split all use the call-wide MCP account set (`mcpAccountIds()`; `budgetAccountIds` intersects the household's shares with it).
-- **Token lifecycle** (`createMcpToken`, `revokeMcpToken`, `revokeAllMcpTokens`): created from `/settings/ai` behind the step-up of §6.4 (`mcp.token.created`), revoked one by one (`mcp.token.revoked`) or all at once on a password change or reset and on "sign out everywhere" (`mcp.token.revoked_all`, with the reason). A failed bulk revocation is retried once, then audited (`mcp.token.revoke_failed`) and logged; "sign out everywhere" and the settings password form then answer `TOKENS_FAILED`; a password reset's failure isn't reported to the user. Turning the user switch off or an admin disabling the user only makes calls fail. Expiry choices: never, 30, 90, 365 days.
+- **Token lifecycle** (`createMcpToken`, `revokeMcpToken`, `revokeAllMcpTokens`): created from `/settings/ai` behind the step-up of §6.4 (`mcp.token.created`), revoked one by one (`mcp.token.revoked`) or all at once on a password change or reset and on "sign out everywhere" (`mcp.token.revoked_all`, with the reason). The same flows revoke the OAuth grants (`revokeAllMcpCredentialsOrAudit`); a failed bulk revocation is retried once, then audited (`mcp.credentials.revoke_failed`) and logged; "sign out everywhere" and the settings password form then answer `TOKENS_FAILED`; a password reset's failure isn't reported to the user. Turning the user switch off or an admin disabling the user only makes calls fail. Expiry choices: never, 30, 90, 365 days.
 - **Read tools** (`mcp/tools/read.ts`, over the existing services; `mcp/serialize.ts` turns amounts into euro numbers and dates into ISO strings, resolves category paths): `list_accounts`, `get_dashboard`, `get_insights`, `search_transactions`, `get_transaction`, `list_categories`, `list_rules`, `list_budgets`, `get_budget`, `list_merchants`, `list_households`, `list_link_suggestions`, `get_preferences`. Each description states that labels, notes and merchant names are untrusted external text. Invalid arguments answer `INVALID_INPUT`, service failures their code (`FORBIDDEN`, `NOT_FOUND`…).
 - **Exclusions**: no tool for anything guarded by a step-up or a deletion-impact confirmation (IBAN reveal, export, deletions, import revert), auth and security (password, sessions, tokens), sharing and household membership, administration, bank connection setup, file imports, bank "sync now". No read helper may reveal an IBAN.
-- **UI**: `/settings/ai` (switch with the privacy confirmation, endpoint, token list and creation) through `setMcpEnabledAction`, `createMcpTokenAction`, `revokeMcpTokenAction`; the instance switch lives in the admin settings (super admin only).
-- **Later PRs**: OAuth 2.1 for connector clients, write tools with `via: mcp` audit, a recent-activity list.
+- **UI**: `/settings/ai` (switch with the privacy confirmation, endpoint with the connector note, connected clients, token list and creation) through `setMcpEnabledAction`, `createMcpTokenAction`, `revokeMcpTokenAction`, `revokeOAuthGrantAction`; the instance switch lives in the admin settings (super admin only).
+- **OAuth 2.1 provider** (#456, `mcp/oauth-config.ts`): `@better-auth/oauth-provider` in the auth plugins (`mcpOAuthProvider`), issuer `${APP_URL}/api/auth`, one protected resource `${APP_URL}/api/mcp` (an `OauthResource` row the plugin seeds at handler build, `resourceSeedMode: "merge"`, `enforcePerClientResources: false`). Scopes `bilan:read`, `bilan:write` (write implies read), `offline_access`. Grants `authorization_code` (PKCE required) and `refresh_token`; no `client_credentials`. Dynamic registration is open to unauthenticated clients (`clientRegistrationDefaultApplicationType: "infer"`: a native loopback client registers without `application_type`); confidential clients are accepted, their secret encrypted by the plugin. No JWT plugin: access tokens are opaque, `bilan_oat_…` (1 h); refresh tokens `bilan_ort_…` (30 days, rotated on each use; replaying a used one revokes its whole family); codes 10 min. Tokens are stored as `hmacExact(token without its prefix, searchKey)`.
+- **Reachable endpoints**: `/oauth2/authorize`, `/oauth2/token`, `/oauth2/register`, `/oauth2/revoke` only (`OAUTH_HTTP_PATHS`). Every other plugin endpoint (consent, continue, client management, userinfo, introspection…) is in `disabledPaths` and answers 404: consent goes through Bilan's server action alone. `mcpOAuthGuardPlugin` (`auth/mcp-oauth-guard.ts`, a before hook on `/oauth2/*`, HTTP and `auth.api` calls) answers 404 while the instance switch is off, limits `/oauth2/register` to 20 / h per IP (`oauthRegisterLimiter`, §6.7) and, on each registration, purges clients older than 7 days with no consent and no token (`purgeStaleOAuthClients`: never-authorized clients, and revoked ones since a revoke deletes the consent).
+- **Discovery** (`mcp/discovery.ts`; routes under `app/.well-known/`, which the proxy matcher leaves unlocalized): protected-resource metadata (RFC 9728) at `/.well-known/oauth-protected-resource` and `…/api/mcp` (resource, authorization server, scopes, `bearer_methods_supported: ["header"]`, the instance name); authorization-server metadata (RFC 8414) at `/.well-known/oauth-authorization-server` and `…/api/auth`: the plugin's document without the endpoints that answer 404 (introspection, userinfo, end session, JWKS). Any other suffix, or the instance switch off → 404. Public: `Access-Control-Allow-Origin: *`, `Cache-Control: no-store`, an `OPTIONS` preflight (`discoveryPreflight`, 204; 404 like the GET while the instance switch is off). The 401 of `/api/mcp` carries `WWW-Authenticate: Bearer realm="bilan", resource_metadata="${APP_URL}/.well-known/oauth-protected-resource/api/mcp", scope="bilan:read bilan:write offline_access"` (plus `error="invalid_token"` when a token was sent); the 403 carries `error="insufficient_scope", scope="bilan:read"`.
+- **OAuth principal** (`mcp/oauth-principal.principalFromOAuthToken`): Bilan looks the hashed token up itself, with the same checks as a personal token: refused when unknown, revoked, expired, its client disabled, its user banned or gone, the instance or the user switch off. Also refused when its `resources` name another resource than the current `${APP_URL}/api/mcp` (only possible after an `APP_URL` change; a token without a resource is accepted). The plugin's session binding is not applied: a grant outlives the browser session that made it. The token also resolves only while the user's consent for that client exists (`OauthConsent`, the latest one when several), and its scopes are the intersection of the token's and the consent's: a narrowed re-consent caps older tokens, a revoked consent kills them. Scopes: `bilan:write` → read + write, `bilan:read` → read, neither → `insufficient_scope`, decided only once every other check passed. `OauthConsent.lastUsedAt` is updated at most once a minute; a failed update is only logged.
+- **Login and consent** (`app/[locale]/(auth)/oauth/consent`, `components/auth/oauth-consent.tsx`, `mcp/oauth-consent.ts`): the plugin's `loginPage` and `consentPage` are both `${APP_URL}/oauth/consent` (the proxy adds the locale). Signed out, the page sends to `/login` with itself as `callbackUrl` (password, passkey, 2FA and SSO apply; the OAuth query only travels in `callbackUrl`, never as an `oauth_query` sign-in field, so the plugin's after-sign-in hook stays idle; a query over the 2 048 characters `safeCallbackPath` accepts loses the round trip). The signed query is checked with the plugin's `verifyOAuthQueryParams` (`EXPIRED` for a valid signature past `exp`, `INVALID` otherwise, also for an unknown or disabled client). The page shows the client name as text, cut at 80 characters, always next to the return address (`oauth-grants.redirectHost`: the host for http(s), `scheme://host` for another scheme with a host, so `evil://claude.ai` is not `claude.ai`, the scheme alone for a private-use URI without a host such as `com.example.app:/cb`), the requested access preselected (read only offered when the client also asked `bilan:read`, the plugin refusing scopes it didn't ask), the `offline_access` note and the privacy warning; other states: instance off, user switch off (link to settings), expired, no Bilan scope (deny only), and `?error=<code>` for the authorize errors the plugin sends to the login page (the login page forwards them, unless the URL carries `sso=1`, which the SSO buttons add to their error callback, since SSO uses the same codes). `approveOAuthConsentAction` checks, in order: session, instance switch, signed query, user switch, scope, step-up (§6.4: a sign-in under 10 minutes old or the password; `LOGIN_REQUIRED` for a client's `prompt=login` / `max_age` → sign in again), then calls the plugin's `oauth2Consent` server side and audits `mcp.client.authorized` (client id, name, redirect host, scopes, `via`). A failed step-up is audited `mcp.client.authorize_failed`. The browser goes back to the client through `window.location`: a form post would hit the CSP's `form-action 'self'`. `denyOAuthConsentAction` sends the client `access_denied`. A client already consented to with the same scopes gets its code without the page while the browser holds a session.
+- **Grant lifecycle** (`mcp/oauth-grants.ts`): `revokeOAuthGrant` deletes one client's access and refresh tokens, consent and not-yet-exchanged codes for the user (code `Verification` rows matched on their parsed JSON: type, user id, client id) in one transaction; the `OauthClient` row stays (`mcp.client.revoked`, entity `OauthClient`). `revokeAllOAuthGrants` does the same for every client on a password change or reset and on "sign out everywhere" (`mcp.client.revoked_all`, `metadata.reason`), inside `revokeAllMcpCredentialsOrAudit` with the personal tokens. Deleting the user cascades. The user switch off, a banned user or a disabled client only make calls fail. Expired token rows are not purged.
+- **Connected clients** (`components/settings/ai-oauth-clients.tsx`, `listOAuthGrants`): one row per consented client: name (or "Unnamed app"), redirect host, access, authorized date (the consent's `updatedAt`) and last use; **Revoke** asks for confirmation, then `revokeOAuthGrantAction`.
+- **Later PRs**: write tools with `via: mcp` audit, a recent-activity list.
 
 ## 6. Security Implementation
 
@@ -1390,7 +1463,8 @@ In-memory fixed-window counters (`server/auth/rate-limit.ts`), one store per pro
 | Bank sync test (admin) | 5 / 1min | User |
 | Bank authorization start | 10 / 10min | User |
 | Bank **Sync now** | 1 / 10min | User + connection; refunded when no bank call was made |
-| MCP calls (`/api/mcp`) | 120 / 1min | MCP principal (token id); 429 + `Retry-After` |
+| MCP calls (`/api/mcp`) | 120 / 1min | MCP principal (token id, or OAuth client + user); 429 + `Retry-After` |
+| OAuth client registration (`/oauth2/register`, #456) | 20 / 1h | IP; 429 + `Retry-After`. The plugin's own limiter adds 5 / 1min per IP |
 
 Better Auth's own in-memory per-IP limiter also runs on `/api/auth/*` in production (its defaults: 100 / 10 s, 3 / 10 s on sign-in). Imports and the other API routes (except `/api/mcp`) are not rate-limited.
 

@@ -3,7 +3,7 @@ import { getAuth } from "@/server/auth";
 import { logEvent } from "@/server/services/audit";
 import { describeUserAgent } from "@/lib/user-agent";
 import { normalizeIp } from "@/lib/ip";
-import { revokeAllMcpTokensOrAudit } from "@/server/mcp/tokens";
+import { revokeAllMcpCredentialsOrAudit } from "@/server/mcp/tokens";
 import { purgeTrustedDevices } from "./trusted-devices";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -97,9 +97,9 @@ export async function revokeOtherSessions(
     console.error("[bilan] revokeOtherSessions failed", err);
     return { ok: false, error: "FAILED" };
   }
-  const tokensRevoked = await revokeAllMcpTokensOrAudit(me.userId, "sessions");
+  const credentialsRevoked = await revokeAllMcpCredentialsOrAudit(me.userId, "sessions");
   // A trusted browser would otherwise sign back in without its 2FA code (#243).
   await purgeTrustedDevices(me.userId);
   await logEvent({ userId: me.userId, action: "auth.session.revoked_others", metadata: { count } });
-  return tokensRevoked ? { ok: true, count } : { ok: false, error: "TOKENS_FAILED" };
+  return credentialsRevoked ? { ok: true, count } : { ok: false, error: "TOKENS_FAILED" };
 }

@@ -41,8 +41,7 @@ const provider = (enabled: boolean): ProviderInput => ({
 async function handlerProviderIds(route: RouteInstance) {
   const ctx = await (await route.auth.getAuth()).$context;
   const generic = ctx.options.plugins?.find((p) => p.id === "generic-oauth") as
-    | { options: { config: { providerId: string }[] } }
-    | undefined;
+    { options: { config: { providerId: string }[] } } | undefined;
   return [
     ...ctx.socialProviders.map((p) => p.id),
     ...(generic?.options.config.map((c) => c.providerId) ?? []),
