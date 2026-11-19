@@ -1726,7 +1726,7 @@
           "INVALID": "Fill in all the fields.",
           "FAILED": "Couldn’t change the password. Please try again.",
           "REVOKE_FAILED": "Your password was changed, but your other devices couldn’t be signed out.",
-          "TOKENS_FAILED": "Your password was changed, but your AI assistant tokens couldn’t be revoked. Revoke them from <link>Settings › AI assistants</link>."
+          "TOKENS_FAILED": "Your password was changed, but your AI assistant access couldn’t be revoked. Revoke it from <link>Settings › AI assistants</link>."
         }
       },
       "sessionsCard": {
@@ -1747,7 +1747,7 @@
           "UNAUTHORIZED": "Your session has expired. Sign in again.",
           "INVALID": "Invalid request.",
           "FAILED": "Couldn’t sign this device out. Try again.",
-          "TOKENS_FAILED": "Your other devices were signed out, but your AI assistant tokens couldn’t be revoked. Revoke them from <link>Settings › AI assistants</link>."
+          "TOKENS_FAILED": "Your other devices were signed out, but your AI assistant access couldn’t be revoked. Revoke it from <link>Settings › AI assistants</link>."
         },
         "signedIn": "Signed in on <time></time>"
       },
@@ -2297,8 +2297,15 @@
             "created": "MCP token created",
             "create_failed": "MCP token creation refused",
             "revoked": "MCP token revoked",
-            "revoked_all": "All MCP tokens revoked",
-            "revoke_failed": "MCP token revocation failed"
+            "revoked_all": "All MCP tokens revoked"
+          },
+          "client": {
+            "authorized": "OAuth client authorized",
+            "revoked": "OAuth client revoked",
+            "revoked_all": "All OAuth clients revoked"
+          },
+          "credentials": {
+            "revoke_failed": "AI assistant access revocation failed"
           }
         },
         "settingUpdated": "Setting “{key}” changed",

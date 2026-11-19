@@ -13,7 +13,7 @@ export function oauthScopesToMcp(scopes: string[]): McpScope[] {
 }
 
 // The plugin's adapter stores string[] columns as JSON on MariaDB.
-function stringList(value: string | null): string[] | null {
+export function stringList(value: string | null): string[] | null {
   if (!value) return [];
   try {
     const parsed: unknown = JSON.parse(value);

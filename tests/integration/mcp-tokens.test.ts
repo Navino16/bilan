@@ -30,7 +30,7 @@ import {
   listMcpTokens,
   principalFromToken,
   revokeAllMcpTokens,
-  revokeAllMcpTokensOrAudit,
+  revokeAllMcpCredentialsOrAudit,
   revokeMcpToken,
 } from "@/server/mcp/tokens";
 
@@ -231,6 +231,15 @@ describe("principalFromToken", () => {
     expect(after.getTime()).toBeGreaterThan(old.getTime() + 30_000);
   });
 
+  it("still resolves when the lastUsedAt update fails", async () => {
+    const { token } = await mk();
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(db.mcpToken, "update").mockRejectedValueOnce(new Error("db blip"));
+    expect(await principalFromToken(token)).toMatchObject({ userId });
+    expect(errors).toHaveBeenCalled();
+    vi.restoreAllMocks();
+  });
+
   it("is off with the instance switch and survives it coming back", async () => {
     const { token } = await mk();
     await appSettings.set("mcp_enabled", false, userId);
@@ -311,7 +320,7 @@ describe("failed revocation", () => {
     db.auditLog.count({
       where: {
         userId,
-        action: "mcp.token.revoke_failed",
+        action: "mcp.credentials.revoke_failed",
         metadata: { path: "$.reason", equals: reason },
       },
     });
@@ -319,7 +328,7 @@ describe("failed revocation", () => {
     vi.spyOn(db.mcpToken, "updateMany").mockRejectedValue(new Error("db down"));
   const quietErrors = () => vi.spyOn(console, "error").mockImplementation(() => {});
   const loggedFailure = (spy: ReturnType<typeof quietErrors>) =>
-    spy.mock.calls.some((c) => c[0] === "[bilan] MCP token revocation failed");
+    spy.mock.calls.some((c) => c[0] === "[bilan] MCP credential revocation failed");
 
   afterEach(() => vi.restoreAllMocks());
 
@@ -373,7 +382,7 @@ describe("failed revocation", () => {
     const before = await failures("password");
     const errors = quietErrors();
     vi.spyOn(db.auditLog, "create").mockRejectedValueOnce(new Error("audit down"));
-    expect(await revokeAllMcpTokensOrAudit(userId, "password")).toBe(true);
+    expect(await revokeAllMcpCredentialsOrAudit(userId, "password")).toBe(true);
     expect(await principalFromToken(a.token)).toBeNull();
     expect(errors).toHaveBeenCalled();
     expect(await failures("password")).toBe(before);
@@ -383,9 +392,9 @@ describe("failed revocation", () => {
     await mk();
     quietErrors();
     vi.spyOn(db.mcpToken, "updateMany").mockRejectedValue(new Error("x".repeat(2000)));
-    expect(await revokeAllMcpTokensOrAudit(userId, "sessions")).toBe(false);
+    expect(await revokeAllMcpCredentialsOrAudit(userId, "sessions")).toBe(false);
     const row = await db.auditLog.findFirstOrThrow({
-      where: { userId, action: "mcp.token.revoke_failed" },
+      where: { userId, action: "mcp.credentials.revoke_failed" },
       orderBy: { createdAt: "desc" },
     });
     expect((row.metadata as { error: string }).error).toHaveLength(500);

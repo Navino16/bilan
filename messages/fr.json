@@ -1726,7 +1726,7 @@
           "INVALID": "Remplissez tous les champs.",
           "FAILED": "Impossible de changer le mot de passe. Réessayez.",
           "REVOKE_FAILED": "Votre mot de passe a été modifié, mais vos autres appareils n’ont pas pu être déconnectés.",
-          "TOKENS_FAILED": "Votre mot de passe a été modifié, mais vos jetons d’assistant IA n’ont pas pu être révoqués. Révoquez-les depuis <link>Préférences › Assistants IA</link>."
+          "TOKENS_FAILED": "Votre mot de passe a été modifié, mais l’accès des assistants IA n’a pas pu être révoqué. Révoquez-le depuis <link>Préférences › Assistants IA</link>."
         }
       },
       "sessionsCard": {
@@ -1747,7 +1747,7 @@
           "UNAUTHORIZED": "Votre session a expiré. Reconnectez-vous.",
           "INVALID": "Requête invalide.",
           "FAILED": "Impossible de déconnecter cet appareil. Réessayez.",
-          "TOKENS_FAILED": "Vos autres appareils ont été déconnectés, mais vos jetons d’assistant IA n’ont pas pu être révoqués. Révoquez-les depuis <link>Préférences › Assistants IA</link>."
+          "TOKENS_FAILED": "Vos autres appareils ont été déconnectés, mais l’accès des assistants IA n’a pas pu être révoqué. Révoquez-le depuis <link>Préférences › Assistants IA</link>."
         },
         "signedIn": "Connexion le <time></time>"
       },
@@ -2297,8 +2297,15 @@
             "created": "Jeton MCP créé",
             "create_failed": "Création de jeton MCP refusée",
             "revoked": "Jeton MCP révoqué",
-            "revoked_all": "Tous les jetons MCP révoqués",
-            "revoke_failed": "Échec de la révocation des jetons MCP"
+            "revoked_all": "Tous les jetons MCP révoqués"
+          },
+          "client": {
+            "authorized": "Client OAuth autorisé",
+            "revoked": "Client OAuth révoqué",
+            "revoked_all": "Tous les clients OAuth révoqués"
+          },
+          "credentials": {
+            "revoke_failed": "Échec de la révocation de l’accès des assistants IA"
           }
         },
         "settingUpdated": "Paramètre « {key} » modifié",

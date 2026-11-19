@@ -12,6 +12,7 @@ import {
   type McpTokenScope,
 } from "@/lib/validation/mcp-token";
 import { PreferenceInputError, getMcpEnabled } from "@/server/services/users/preferences";
+import { hasLiveOAuthGrants, revokeAllOAuthGrants } from "./oauth-grants";
 import { isMcpInstanceEnabled } from "./switches";
 import type { McpPrincipal } from "./context";
 
@@ -116,9 +117,9 @@ export async function revokeAllMcpTokens(
   return count;
 }
 
-// Credential flows can't leave tokens silently live: one retry, then an audited failure (spec §5.18).
-// Returns false when the tokens may still be valid.
-export async function revokeAllMcpTokensOrAudit(
+// Credential flows can't leave tokens or grants silently live: one retry, then an audited
+// failure (spec §5.18). Returns false when some credential may still be valid.
+export async function revokeAllMcpCredentialsOrAudit(
   userId: string,
   reason: "password" | "sessions",
 ): Promise<boolean> {
@@ -126,19 +127,24 @@ export async function revokeAllMcpTokensOrAudit(
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       await revokeAllMcpTokens(userId, reason);
+      await revokeAllOAuthGrants(userId, reason);
       return true;
     } catch (e) {
       error = e;
     }
   }
-  console.error("[bilan] MCP token revocation failed", error);
+  console.error("[bilan] MCP credential revocation failed", error);
   await logEvent({
     userId,
-    action: "mcp.token.revoke_failed",
-    entity: "McpToken",
+    action: "mcp.credentials.revoke_failed",
     metadata: { reason, error: error instanceof Error ? error.message.slice(0, 500) : "unknown" },
-  }).catch((e) => console.error("[bilan] MCP token revocation audit failed", e));
+  }).catch((e) => console.error("[bilan] MCP credential revocation audit failed", e));
   return false;
+}
+
+export async function hasLiveMcpCredentials(userId: string): Promise<boolean> {
+  const tokens = await db.mcpToken.count({ where: { userId, revokedAt: null } });
+  return tokens > 0 || (await hasLiveOAuthGrants(userId));
 }
 
 export async function principalFromToken(token: string): Promise<McpPrincipal | null> {
@@ -154,7 +160,9 @@ export async function principalFromToken(token: string): Promise<McpPrincipal | 
   if (!(await isMcpInstanceEnabled()) || !(await getMcpEnabled(row.userId))) return null;
 
   if (!row.lastUsedAt || now.getTime() - row.lastUsedAt.getTime() >= LAST_USED_GRANULARITY_MS) {
-    await db.mcpToken.update({ where: { id: row.id }, data: { lastUsedAt: now } });
+    await db.mcpToken
+      .update({ where: { id: row.id }, data: { lastUsedAt: now } })
+      .catch((e) => console.error("[bilan] MCP token lastUsedAt update failed", e));
   }
   return {
     userId: row.userId,

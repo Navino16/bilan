@@ -1,6 +1,7 @@
 import { db } from "@/server/db";
 import { getAuth } from "@/server/auth";
 import { logEvent } from "@/server/services/audit";
+import { hasLiveMcpCredentials } from "@/server/mcp/tokens";
 import { purgeTrustedDevices } from "./trusted-devices";
 
 export type ChangePasswordError =
@@ -89,8 +90,8 @@ export async function changePassword(
     }
     await purgeTrustedDevices(userId);
   }
-  // The account.update hook revoked the MCP tokens (retry + audit included, spec §5.18).
-  if ((await db.mcpToken.count({ where: { userId, revokedAt: null } })) > 0) {
+  // The account.update hook revoked the MCP credentials (retry + audit included, spec §5.18).
+  if (await hasLiveMcpCredentials(userId)) {
     return { ok: false, error: "TOKENS_FAILED" };
   }
   return { ok: true };
