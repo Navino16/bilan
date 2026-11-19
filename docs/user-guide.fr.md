@@ -708,7 +708,7 @@ Pour transmettre un foyer, un propriétaire donne le rôle **Propriétaire** à 
 - **Écriture** : tout ce que permet Lecture, plus ajouter, modifier, recatégoriser, supprimer, importer, lier et délier des transactions.
 - Vous seul, en tant que propriétaire, pouvez modifier, partager, archiver ou supprimer le compte, et voir son IBAN.
 
-Sous chaque foyer avec lequel vous partagez, une case **Autoriser les assistants IA** décide si les assistants des membres de ce foyer reçoivent les transactions du compte (voir [Assistants IA](#assistants-ia)). Elle est décochée par défaut et vous seul, propriétaire, pouvez la cocher. Sans elle, le compte reste invisible pour ces assistants, même si les membres le voient dans Bilan.
+Sous chaque foyer avec lequel vous partagez, une case **Autoriser les assistants IA** décide si les assistants des membres de ce foyer reçoivent les transactions du compte (voir [Assistants IA](#assistants-ia)). Elle est décochée par défaut et vous seul, propriétaire, pouvez la cocher. Sans elle, le compte reste invisible pour ces assistants, même si les membres le voient dans Bilan. Elle décide aussi si ces assistants peuvent mettre le compte dans les budgets de ce foyer ou y inclure ses transactions : la cocher pour un foyer ne permet pas aux assistants d’utiliser le compte dans les budgets d’un autre foyer.
 
 Vos comptes privés et leurs transactions ne sont jamais visibles des autres membres, sauf une transaction que vous incluez dans un budget de foyer (voir [Budgets de foyer](#budgets-de-foyer)). Un budget de foyer ne compte que les comptes partagés avec ce foyer.
 
@@ -829,7 +829,7 @@ L’alerte indique la date, la méthode de connexion, l’adresse IP et l’appa
 
 ![Réglages des assistants IA](images/fr/settings-ai.png)
 
-Bilan peut fournir vos données à votre propre assistant IA, pour poser des questions sur vos comptes, vos dépenses et vos budgets sans ouvrir l’application. Il parle MCP, un protocole standard : tout client MCP peut s’y connecter, comme claude.ai, Claude Desktop, Claude Code ou Codex. Bilan n’a pas de chat à lui et n’envoie rien à un assistant tant que vous n’en connectez pas un.
+Bilan peut fournir vos données à votre propre assistant IA, pour poser des questions sur vos comptes, vos dépenses et vos budgets sans ouvrir l’application et, avec l’accès en lecture et écriture, lui faire mettre à jour vos transactions, liens et budgets. Il parle MCP, un protocole standard : tout client MCP peut s’y connecter, comme claude.ai, Claude Desktop, Claude Code ou Codex. Bilan n’a pas de chat à lui et n’envoie rien à un assistant tant que vous n’en connectez pas un.
 
 Allez dans **Assistants IA** dans la barre latérale. Si la page indique que la fonction est indisponible sur cette instance, un administrateur doit d’abord activer le serveur MCP (voir le [guide d’administration](admin-guide.fr.md#assistants-ia-serveur-mcp)).
 
@@ -884,6 +884,10 @@ Un client que vous avez déjà autorisé se reconnecte sans cette page tant que 
 
 **Clients connectés** liste les clients que vous avez autorisés : nom, adresse de retour, accès, date d’autorisation et dernière utilisation. **Révoquer** coupe son accès aussitôt, après une confirmation ; il devra redemander votre autorisation pour se reconnecter.
 
+### Activité récente
+
+**Activité récente** liste les modifications faites par vos assistants ces 90 derniers jours, les 50 plus récentes, regroupées par jour : l’heure, l’action et le nom du jeton ou du client qui l’a faite. Les lectures n’y figurent pas.
+
 ### Jetons personnels
 
 Un jeton personnel agit en votre nom, pour les clients qui l’envoient dans un en-tête.
@@ -895,7 +899,7 @@ Un jeton personnel agit en votre nom, pour les clients qui l’envoient dans un 
 
 La liste donne pour chaque jeton son préfixe, son accès, sa création, sa dernière utilisation et son expiration. **Révoquer** arrête un jeton aussitôt.
 
-Dans cette version, les assistants peuvent seulement lire vos données, quel que soit l’accès choisi.
+**Lecture seule** permet à l’assistant de lire ; **Lecture et écriture** lui permet aussi de modifier vos données (voir [Ce qu’un assistant peut modifier](#ce-quun-assistant-peut-modifier)).
 
 Changer ou réinitialiser votre mot de passe, ou cliquer sur **Tout déconnecter** sous [Appareils connectés](#appareils-connectés), révoque tous vos jetons et vos clients connectés : recréez des jetons et reconnectez vos clients ensuite.
 
@@ -907,9 +911,23 @@ Tout est limité à ce que vous pouvez voir dans Bilan, avec une restriction de 
 - les comptes partagés avec vos foyers seulement si leur propriétaire a coché **Autoriser les assistants IA** sur le partage. Les soldes, le tableau de bord, les analyses, les chiffres des budgets personnels et la recherche ne comptent que les comptes qu’un assistant peut voir ;
 - les budgets de foyer gardent les mêmes chiffres de dépenses que dans Bilan : les transactions des comptes que l’assistant ne voit pas n’apparaissent que sous la forme d’un montant « Private account » (compte privé) par ligne de budget, sans libellé, date, compte ni marchand.
 
-Un assistant peut lire vos comptes et soldes, le tableau de bord et les analyses d’une période, les transactions (recherche et détail, avec leurs liens et leurs affectations de budget), les catégories, les règles, les budgets, les marchands, les foyers et les noms de leurs membres, les suggestions de liens et vos préférences. Il ne voit pas les IBAN complets, ne peut rien modifier, et n’accède à rien d’administratif ni de lié à la sécurité.
+Un assistant peut lire vos comptes et soldes, le tableau de bord et les analyses d’une période, les transactions (recherche et détail, avec leurs liens et leurs affectations de budget), les catégories, les règles, les budgets, les marchands, les foyers et les noms de leurs membres, les suggestions de liens et vos préférences. Il ne voit pas les IBAN complets et n’accède à rien d’administratif ni de lié à la sécurité.
 
 Les libellés, notes et noms de marchands viennent de vos banques et d’autres personnes : on indique aux assistants de les traiter comme du simple texte, jamais comme des instructions. Ne connectez tout de même que des assistants de confiance.
+
+### Ce qu’un assistant peut modifier
+
+Avec l’accès **Lecture et écriture**, un assistant peut :
+
+- **transactions** : en saisir une à la main (vos règles choisissent la catégorie s’il n’en donne pas), modifier le libellé, la note, la date, le montant ou le type, changer la catégorie, la compter dans un autre mois ;
+- **liens** : lier des transactions, créer l’autre côté d’un virement sur l’un de vos propres comptes, supprimer un lien, ignorer ou rétablir une paire suggérée ;
+- **budgets** : créer et modifier des budgets, les archiver et les désarchiver, lancer dès maintenant la période suivante d’un budget récurrent (avec les mêmes lignes), inclure ou exclure une transaction, retirer une inclusion ou une exclusion.
+
+Il a les mêmes droits que vous dans Bilan, sur les comptes qu’il peut voir (ci-dessus) : modifier une transaction d’un compte partagé demande l’accès **Écriture** sur le partage en plus de **Autoriser les assistants IA**. Il ne peut supprimer ni transactions ni budgets, et ne peut modifier ni les catégories, ni les règles, ni les noms de marchands, ni les préférences, ni les comptes.
+
+Dans un budget de foyer, un assistant ne peut ajouter, aux lignes du budget ou comme son compte, que vos propres comptes et les comptes dont le partage avec ce foyer autorise les assistants IA, et ne peut y inclure que des transactions de ces comptes. Un compte qu’il voit par un autre foyer est refusé. Les comptes déjà dans le budget restent quand il modifie le budget, et exclure une transaction n’est pas restreint.
+
+Chaque jeton ou client connecté peut faire jusqu’à 30 modifications par minute, dans la limite de ses 120 appels par minute. Chaque modification apparaît sous [Activité récente](#activité-récente).
 
 ## Vos données
 

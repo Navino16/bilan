@@ -429,11 +429,11 @@ Bilan can serve users' data to their own AI assistants through MCP, a standard p
 
 Once a user's assistant is connected, their transactions' labels, amounts and notes are decrypted and sent to the assistant's provider. Tell your users before enabling it.
 
-Clients reach the endpoint at your public address, `APP_URL` followed by `/api/mcp`: it must be reachable from where the assistants run (a local client such as Claude Code works against a LAN address). The claude.ai and Claude Desktop connectors call it from Anthropic's servers, so they need a public HTTPS address; the reverse proxy requirements are in [AI assistants over OAuth](self-hosting.md#ai-assistants-over-oauth). Each token, and each connected client of each user, is limited to 120 calls per minute.
+Clients reach the endpoint at your public address, `APP_URL` followed by `/api/mcp`: it must be reachable from where the assistants run (a local client such as Claude Code works against a LAN address). The claude.ai and Claude Desktop connectors call it from Anthropic's servers, so they need a public HTTPS address; the reverse proxy requirements are in [AI assistants over OAuth](self-hosting.md#ai-assistants-over-oauth). Each token, and each connected client of each user, is limited to 120 calls per minute, of which at most 30 may change data.
 
 While the server is enabled, any client can register itself to ask users for access (OAuth dynamic registration), with no administrator involved: 20 registrations per hour per IP address. A registered client gets nothing until a user authorizes it; one no user authorized is deleted after 7 days. A client's access token lasts one hour; a client that asked to stay connected renews it on its own until the user revokes it, or after 30 days without use.
 
-Token creation and revocation, clients authorized and revoked, and users turning the feature on or off appear in the [audit log](#audit-log). Changing a password or signing out every device revokes the user's tokens and connected clients.
+Token creation and revocation, clients authorized and revoked, and users turning the feature on or off appear in the [audit log](#audit-log). So do the changes an assistant makes for a user (see [What is tracked](#what-is-tracked)). Changing a password or signing out every device revokes the user's tokens and connected clients.
 
 ## Audit log
 
@@ -451,7 +451,7 @@ Every change of state is logged, reads are not. This includes:
 - invitation tokens, households and their invitations;
 - users' financial activity: bank accounts and shares, transactions, imports, categories, rules, budgets, links, bank connections (connected, reconnected, mapped, expired, disconnected);
 - each bank sync run that had something to do (`bank_sync.cron`, by **system**), with its counts;
-- AI assistants: tokens created and revoked, clients authorized and revoked, authorizations refused at the password check, the feature turned on or off by a user;
+- AI assistants: tokens created and revoked, clients authorized and revoked, authorizations refused at the password check, the feature turned on or off by a user. A change an assistant makes is logged under the user it acts for, with the same action as in the app; its entry also stores `via: mcp` and the client (personal token or connected client, its id and name). The user sees these entries under **Recent activity** on their **AI assistants** page;
 - failed security e-mails and audit purges.
 
 An SSO sign-in is logged as `auth.login.success` with `method: sso` and the provider key. The first SSO sign-in of an identity that creates an account is logged as the sign-up only (`auth.register.success`). A refused SSO sign-in (identity not linked, sign-up closed, account disabled, provider error) is logged as `auth.login.failed` with Better Auth's error code (`other` for an unexpected one). A sign-in cancelled at the provider is not logged, nor is one refused before Bilan reads the sign-in request.

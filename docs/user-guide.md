@@ -708,7 +708,7 @@ To hand over a household, an owner sets another member's role to **Owner**. A ho
 - **Write**: everything in Read, plus adding, editing, recategorizing, deleting, importing, linking and unlinking transactions.
 - Only you, the owner, can edit, share, archive or delete the account, and see its IBAN.
 
-Under each household you share with, an **Allow AI assistants** checkbox decides whether the assistants of that household's members receive the account's transactions (see [AI assistants](#ai-assistants)). It is off by default and only you, the owner, can tick it. Without it, the account stays invisible to those assistants even though members can see it in Bilan.
+Under each household you share with, an **Allow AI assistants** checkbox decides whether the assistants of that household's members receive the account's transactions (see [AI assistants](#ai-assistants)). It is off by default and only you, the owner, can tick it. Without it, the account stays invisible to those assistants even though members can see it in Bilan. It also decides whether those assistants may put the account in that household's budgets or include its transactions there: ticking it for one household doesn't let assistants use the account in another household's budgets.
 
 Your private accounts and their transactions are never visible to other members, except a transaction you include in a household budget (see [Household budgets](#household-budgets)). A household budget only counts the accounts shared with that household.
 
@@ -829,7 +829,7 @@ The alert gives the date, the sign-in method, the IP address and the device. If 
 
 ![AI assistants settings](images/en/settings-ai.png)
 
-Bilan can serve your data to your own AI assistant, so you can ask questions about your accounts, spending and budgets without opening the app. It speaks MCP, a standard protocol: any MCP client can connect, such as claude.ai, Claude Desktop, Claude Code or Codex. Bilan has no chat of its own and sends nothing to an assistant until you connect one.
+Bilan can serve your data to your own AI assistant, so you can ask questions about your accounts, spending and budgets without opening the app, and, with read and write access, have it update your transactions, links and budgets. It speaks MCP, a standard protocol: any MCP client can connect, such as claude.ai, Claude Desktop, Claude Code or Codex. Bilan has no chat of its own and sends nothing to an assistant until you connect one.
 
 Go to **AI assistants** in the sidebar. If the page says it is not available on this instance, an administrator has to turn on the MCP server first (see the [administration guide](admin-guide.md#ai-assistants-mcp-server)).
 
@@ -884,6 +884,10 @@ A client you have already authorized reconnects without this page while you are 
 
 **Connected clients** lists the clients you authorized: name, return address, access, the date you authorized it and its last use. **Revoke** cuts its access at once, after a confirmation; it will have to ask for your authorization again to reconnect.
 
+### Recent activity
+
+**Recent activity** lists the changes your assistants made in the last 90 days, the 50 most recent, grouped by day: the time, the action and the name of the token or client that made it. Reads don't appear.
+
 ### Personal tokens
 
 A personal token acts as you, for clients that send it in a header.
@@ -895,7 +899,7 @@ A personal token acts as you, for clients that send it in a header.
 
 The list shows each token's prefix, access, creation, last use and expiry. **Revoke** stops a token at once.
 
-In this version assistants can only read your data, whichever access you choose.
+**Read only** lets the assistant read; **Read and write** also lets it change your data (see [What an assistant can change](#what-an-assistant-can-change)).
 
 Changing or resetting your password, or clicking **Sign out all** under [Signed-in devices](#signed-in-devices), revokes all your tokens and connected clients: create new tokens and connect your clients again afterwards.
 
@@ -907,9 +911,23 @@ Everything is limited to what you could see in Bilan, narrowed further:
 - accounts shared with your households only when their owner ticked **Allow AI assistants** on the share. Balances, the dashboard, insights, personal budget figures and search only count the accounts an assistant can see;
 - household budgets keep the same spending figures as in Bilan: the transactions of accounts the assistant can't see show only as one "Private account" amount per budget line, without label, date, account or merchant.
 
-An assistant can read your accounts and balances, the dashboard and insights for a period, transactions (search and detail, with their links and budget assignments), categories, rules, budgets, merchants, households and members' names, link suggestions and your preferences. It can't see full IBANs, and can't change anything, nor reach anything administrative or security-related.
+An assistant can read your accounts and balances, the dashboard and insights for a period, transactions (search and detail, with their links and budget assignments), categories, rules, budgets, merchants, households and members' names, link suggestions and your preferences. It can't see full IBANs, nor reach anything administrative or security-related.
 
 Labels, notes and merchant names come from your banks and from other people: assistants are told to treat them as plain text, never as instructions. Still, only connect assistants you trust.
+
+### What an assistant can change
+
+With **Read and write** access, an assistant can:
+
+- **transactions**: add one by hand (your rules pick the category when it gives none), edit the label, note, date, amount or type, change the category, count it in another month;
+- **links**: link transactions, create the other side of a transfer on one of your own accounts, remove a link, ignore or restore a suggested pair;
+- **budgets**: create and edit budgets, archive and unarchive them, start the next period of a recurring budget now (with the same lines), include or exclude a transaction, remove an inclusion or exclusion.
+
+It has the same rights as you in Bilan, on the accounts it can see (above): changing a transaction on a shared account needs **Write** on the share as well as **Allow AI assistants**. It can't delete transactions or budgets, and can't change categories, rules, merchant names, preferences or accounts.
+
+In a household budget, an assistant may only add your own accounts and accounts whose share to that household allows AI assistants, to the budget's lines or as its account, and may only include transactions from those accounts. An account it sees through another household is refused. Accounts already in the budget stay when it edits the budget, and excluding a transaction is not restricted.
+
+Each token or connected client may make up to 30 changes per minute, within its 120 calls per minute. Every change appears under [Recent activity](#recent-activity).
 
 ## Your data
 
