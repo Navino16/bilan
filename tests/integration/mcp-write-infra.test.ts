@@ -63,13 +63,13 @@ afterAll(async () => {
 });
 
 describe("audit stamp", () => {
-  it("stamps MCP calls with via and client, and keeps the caller's metadata", async () => {
+  it("stamps MCP calls with via, client and the acting user, and keeps the caller's metadata", async () => {
     const p = principal(["bilan:write"]);
     await runAsMcp(p, () => logEvent({ userId, action: "test.in", metadata: { custom: 1 } }));
     await logEvent({ userId, action: "test.out", metadata: { custom: 2 } });
     const [inside] = await auditRows("test.in");
     const [outside] = await auditRows("test.out");
-    expect(inside.metadata).toEqual({ custom: 1, via: "mcp", client: p.client });
+    expect(inside.metadata).toEqual({ custom: 1, via: "mcp", client: p.client, by: userId });
     expect(outside.metadata).toEqual({ custom: 2 });
   });
 });

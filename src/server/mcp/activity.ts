@@ -18,7 +18,7 @@ function clientName(metadata: unknown): string {
   return typeof client?.id === "string" ? client.id : "";
 }
 
-// The user's writes through an AI assistant, stamped by `logEvent` inside `runAsMcp`.
+// The user's own writes through an AI assistant, stamped by `logEvent` inside `runAsMcp`.
 export async function listMcpActivity(
   userId: string,
   now: Date = new Date(),
@@ -27,7 +27,10 @@ export async function listMcpActivity(
     where: {
       userId,
       createdAt: { gte: new Date(now.getTime() - MCP_ACTIVITY_DAYS * 86_400_000) },
-      metadata: { path: "$.via", equals: "mcp" },
+      AND: [
+        { metadata: { path: "$.via", equals: "mcp" } },
+        { metadata: { path: "$.by", equals: userId } },
+      ],
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: MCP_ACTIVITY_LIMIT,

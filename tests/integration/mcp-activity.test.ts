@@ -22,7 +22,7 @@ const mcpRow = (uid: string, action: string, createdAt: Date, name = "Claude") =
       action,
       entity: "Transaction",
       entityId: `tx_${action}`,
-      metadata: { via: "mcp", client: principal(uid, name).client },
+      metadata: { via: "mcp", client: principal(uid, name).client, by: uid },
       createdAt,
     },
   });
@@ -79,6 +79,26 @@ describe("listMcpActivity", () => {
     expect(await listMcpActivity(userId, now)).toEqual([]);
   });
 
+  it("leaves out a row about the user written by another user's call", async () => {
+    await runAsMcp(principal(otherId, "Other"), () =>
+      logEvent({ userId, action: "link.autoCreated", entity: "User", entityId: userId }),
+    );
+    expect(await listMcpActivity(userId)).toEqual([]);
+  });
+
+  it("keeps the MCP stamp over a caller's own via or client", async () => {
+    await runAsMcp(principal(userId, "Claude"), () =>
+      logEvent({ userId, action: "auth.signup", metadata: { via: "setup", client: "x", n: 1 } }),
+    );
+    const row = await db.auditLog.findFirstOrThrow({ where: { userId, action: "auth.signup" } });
+    expect(row.metadata).toEqual({
+      n: 1,
+      via: "mcp",
+      client: principal(userId, "Claude").client,
+      by: userId,
+    });
+  });
+
   it("keeps the last 90 days only", async () => {
     await mcpRow(userId, "budget.create", new Date(now.getTime() - 89 * DAY));
     await mcpRow(userId, "budget.update", new Date(now.getTime() - 91 * DAY));
@@ -91,7 +111,7 @@ describe("listMcpActivity", () => {
       data: Array.from({ length: 60 }, (_, i) => ({
         userId,
         action: `link.create.${i}`,
-        metadata: { via: "mcp", client: principal(userId, "Claude").client },
+        metadata: { via: "mcp", client: principal(userId, "Claude").client, by: userId },
         createdAt: new Date(now.getTime() - (i + 1) * 60_000),
       })),
     });

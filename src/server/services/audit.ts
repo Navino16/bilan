@@ -15,8 +15,10 @@ export async function logEvent(input: {
   userAgent?: string | null;
 }): Promise<void> {
   const principal = currentMcpPrincipal();
+  // `by` is the acting user: a row about another user (an auto-link on the owner's accounts)
+  // must not reach that user's AI activity (spec §5.18).
   const metadata = principal
-    ? { via: "mcp", client: principal.client, ...input.metadata }
+    ? { ...input.metadata, via: "mcp", client: principal.client, by: principal.userId }
     : (input.metadata ?? {});
   await db.auditLog.create({
     data: {
