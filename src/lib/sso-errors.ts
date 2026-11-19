@@ -1,5 +1,8 @@
 // Error codes Better Auth appends (`?error=`) when an OAuth/OIDC sign-in or link callback fails.
 
+/** Query flag on the SSO sign-in error callback, set apart from the OAuth provider's errors. */
+export const SSO_ERROR_MARK = "sso";
+
 export type SsoError =
   | "disabled"
   | "ssoFailed"

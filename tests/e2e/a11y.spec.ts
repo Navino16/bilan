@@ -86,6 +86,12 @@ for (const colorScheme of ["light", "dark"] as const) {
       expect(await seriousViolations(page)).toEqual([]);
     });
 
+    test("the OAuth consent page has no serious violations", async ({ page }) => {
+      await page.goto("/fr/oauth/consent?error=invalid_client");
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      expect(await seriousViolations(page)).toEqual([]);
+    });
+
     // The CI owner has no budget, so WARN/OVER badges are not covered here.
     test.describe("signed in", () => {
       test.use({ storageState: "tests/e2e/.auth/owner.json" });

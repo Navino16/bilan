@@ -30,6 +30,10 @@ export function oauthTokenHash(token: string): string {
 
 const consentUrl = `${appUrl}/oauth/consent`;
 
+export function oauthConsentPageUrl(): string {
+  return consentUrl;
+}
+
 export const mcpOAuthProvider = oauthProvider({
   loginPage: consentUrl,
   consentPage: consentUrl,

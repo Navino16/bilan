@@ -124,6 +124,32 @@
       "signUpWith": "Sign up with {name}",
       "startFailed": "Couldn’t reach the identity provider. Try again.",
       "badOrigin": "Can’t sign in from this address. Open the app from its configured address."
+    },
+    "consent": {
+      "title": "Authorize access to {appName}",
+      "signedInAs": "Signed in as <strong>{email}</strong>",
+      "client": "App",
+      "unnamed": "Unnamed app",
+      "redirect": "Return address",
+      "nameNote": "This name is declared by the app; only the return address is verified.",
+      "access": "Requested access",
+      "choice": {
+        "write": "Read and write",
+        "read": "Read only"
+      },
+      "offline": "Stays connected until you revoke it, or after 30 days without use.",
+      "privacy": "Your transactions’ labels, amounts and notes will be decrypted and sent to this assistant’s provider (Anthropic, OpenAI…), under its terms.",
+      "approve": "Authorize",
+      "deny": "Deny",
+      "mcpDisabled": "AI assistants are turned off for your account. Turn them on in <link>Settings › AI assistants</link>, then start the connection again from your assistant.",
+      "instanceOff": "AI assistants are turned off on this instance.",
+      "expired": "This request has expired. Start the connection again from your assistant.",
+      "noScope": "This app requests no access to your data.",
+      "failed": "The authorization couldn’t be completed.",
+      "code": "Code: {code}",
+      "error": {
+        "FAILED": "Something went wrong. Please try again."
+      }
     }
   },
   "errors": {
@@ -229,19 +255,22 @@
     "passwordBody": {
       "iban": "You signed in more than 10 minutes ago. Enter your password to show the full IBAN.",
       "export": "You signed in more than 10 minutes ago. Enter your password to download all your data, IBANs included.",
-      "mcpToken": "You signed in more than 10 minutes ago. Enter your password to create an access token."
+      "mcpToken": "You signed in more than 10 minutes ago. Enter your password to create an access token.",
+      "mcpConsent": "You signed in more than 10 minutes ago. Enter your password to authorize this app."
     },
     "signInBody": {
       "iban": "You signed in more than 10 minutes ago. Sign in again to show the full IBAN.",
       "export": "You signed in more than 10 minutes ago. Sign in again to download all your data, IBANs included.",
-      "mcpToken": "You signed in more than 10 minutes ago. Sign in again to create an access token."
+      "mcpToken": "You signed in more than 10 minutes ago. Sign in again to create an access token.",
+      "mcpConsent": "This authorization needs a recent sign-in. Sign in again to authorize this app."
     },
     "signInHint": "You’ll be signed out, then come back to this page once you sign in again.",
     "password": "Password",
     "confirm": {
       "iban": "Show IBAN",
       "export": "Download",
-      "mcpToken": "Create the token"
+      "mcpToken": "Create the token",
+      "mcpConsent": "Authorize"
     },
     "checking": "Checking…",
     "signInAgain": "Sign in again",
@@ -2301,6 +2330,7 @@
           },
           "client": {
             "authorized": "OAuth client authorized",
+            "authorize_failed": "OAuth client authorization refused",
             "revoked": "OAuth client revoked",
             "revoked_all": "All OAuth clients revoked"
           },
@@ -2623,6 +2653,7 @@
       "reset": "Forgot password",
       "resetConfirm": "New password",
       "verifyEmail": "Email verification",
+      "consent": "Authorization",
       "setup": "Setup",
       "forbidden": "Access denied",
       "notFound": "Page not found",

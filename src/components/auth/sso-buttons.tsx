@@ -6,7 +6,7 @@ import { LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { signIn } from "@/lib/auth-client";
-import { isOriginError } from "@/lib/sso-errors";
+import { isOriginError, SSO_ERROR_MARK } from "@/lib/sso-errors";
 import type { SsoProviderView } from "@/server/services/users/identities";
 
 // On success the auth client itself navigates to the provider's authorization URL.
@@ -29,8 +29,10 @@ export function SsoButtons({
     setFailed(null);
     startTransition(async () => {
       // Absolute: Better Auth only accepts relative callbacks from a narrow character set.
-      const abs = (path: string) => new URL(path, window.location.origin).href;
-      const urls = { callbackURL: abs(callbackURL), errorCallbackURL: abs(errorCallbackURL) };
+      const abs = (path: string) => new URL(path, window.location.origin);
+      const errorURL = abs(errorCallbackURL);
+      errorURL.searchParams.set(SSO_ERROR_MARK, "1");
+      const urls = { callbackURL: abs(callbackURL).href, errorCallbackURL: errorURL.href };
       const res = await signIn.social({ provider: p.providerId, ...urls });
       if (res.error) setFailed(isOriginError(res.error.code) ? "badOrigin" : "startFailed");
     });
