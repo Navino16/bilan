@@ -4,6 +4,7 @@ import { encrypt, decrypt } from "@/server/crypto/encryption";
 import { hmacForSearch } from "@/server/crypto/hmac";
 import { dataKey, searchKey } from "@/server/crypto/keys";
 import { logEvent } from "@/server/services/audit";
+import { aiShareWhere, currentMcpPrincipal } from "@/server/mcp/context";
 import { accountInputSchema, type AccountInput } from "@/lib/schemas/account";
 import { isValidIban, normalizeIban, maskIban } from "./iban";
 import { displayName } from "@/lib/validation/name";
@@ -238,24 +239,44 @@ export async function isAccountArchived(id: string): Promise<boolean> {
   return acc?.archived ?? false;
 }
 
-// Every account whose history the user can read (owned or shared), archived ones
-// included: archiving hides an account from pickers, not from history (#174).
 // Memoized per server render (React `cache`): a page reaches it through several services.
-export const visibleAccountRefs = cache(
-  async (userId: string): Promise<readonly { id: string; name: string }[]> =>
+// Keyed by the MCP context too, so an MCP call never reuses a non-MCP account set.
+const accountRefs = cache(
+  async (userId: string, inMcp: boolean): Promise<readonly { id: string; name: string }[]> =>
     db.bankAccount.findMany({
       where: {
         OR: [
           { ownerId: userId },
-          { shares: { some: { group: { members: { some: { userId } } } } } },
+          {
+            shares: {
+              some: {
+                ...(inMcp ? { allowAiAssistants: true } : {}),
+                group: { members: { some: { userId } } },
+              },
+            },
+          },
         ],
       },
       select: { id: true, name: true },
     }),
 );
 
+// Every account whose history the user can read (owned or shared), archived ones
+// included: archiving hides an account from pickers, not from history (#174).
+export function visibleAccountRefs(
+  userId: string,
+): Promise<readonly { id: string; name: string }[]> {
+  return accountRefs(userId, currentMcpPrincipal() !== null);
+}
+
 export async function visibleAccountIds(userId: string): Promise<string[]> {
   return (await visibleAccountRefs(userId)).map((a) => a.id);
+}
+
+// The current MCP call's account set (owned + AI-allowed shares), null outside one.
+export async function mcpAccountIds(): Promise<Set<string> | null> {
+  const principal = currentMcpPrincipal();
+  return principal ? new Set(await visibleAccountIds(principal.userId)) : null;
 }
 
 // Owned accounts plus accounts shared via the viewer's groups; archived ones only
@@ -277,11 +298,11 @@ export async function listVisibleForUser(
     where: {
       ...archived,
       ownerId: { not: userId },
-      shares: { some: { group: { members: { some: { userId } } } } },
+      shares: { some: { ...aiShareWhere(), group: { members: { some: { userId } } } } },
     },
     include: {
       owner: true,
-      shares: { where: { group: { members: { some: { userId } } } } },
+      shares: { where: { ...aiShareWhere(), group: { members: { some: { userId } } } } },
     },
     orderBy: { createdAt: "desc" },
   });

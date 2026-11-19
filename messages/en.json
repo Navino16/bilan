@@ -174,6 +174,7 @@
       "groups": "Households",
       "settings": "Settings",
       "security": "Security",
+      "ai": "AI assistants",
       "data": "Data",
       "admin": "Administration"
     },
@@ -199,7 +200,7 @@
       "status": "Page {page, number} of {pageCount, number}"
     },
     "copyLink": {
-      "manual": "Automatic copy isn’t available on this connection. Select the link and copy it."
+      "manual": "Automatic copy isn’t available on this connection. Select the text and copy it."
     },
     "skipToContent": "Skip to main content",
     "mainNav": "Main navigation",
@@ -227,17 +228,20 @@
     "title": "Confirm it’s you",
     "passwordBody": {
       "iban": "You signed in more than 10 minutes ago. Enter your password to show the full IBAN.",
-      "export": "You signed in more than 10 minutes ago. Enter your password to download all your data, IBANs included."
+      "export": "You signed in more than 10 minutes ago. Enter your password to download all your data, IBANs included.",
+      "mcpToken": "You signed in more than 10 minutes ago. Enter your password to create an access token."
     },
     "signInBody": {
       "iban": "You signed in more than 10 minutes ago. Sign in again to show the full IBAN.",
-      "export": "You signed in more than 10 minutes ago. Sign in again to download all your data, IBANs included."
+      "export": "You signed in more than 10 minutes ago. Sign in again to download all your data, IBANs included.",
+      "mcpToken": "You signed in more than 10 minutes ago. Sign in again to create an access token."
     },
     "signInHint": "You’ll be signed out, then come back to this page once you sign in again.",
     "password": "Password",
     "confirm": {
       "iban": "Show IBAN",
-      "export": "Download"
+      "export": "Download",
+      "mcpToken": "Create the token"
     },
     "checking": "Checking…",
     "signInAgain": "Sign in again",
@@ -316,6 +320,9 @@
     "shareSubtitle": "Choose households and their access level. Switching a household the account was shared with to None also drops that household’s budget inclusions and exclusions of its transactions.",
     "noGroups": "You don’t belong to any household.",
     "permNone": "None",
+    "allowAi": "Allow AI assistants",
+    "allowAiFor": "Allow AI assistants for {group}",
+    "allowAiHint": "AI assistants of a ticked household’s members will receive this account’s transactions.",
     "access": {
       "OWNER": "Owner",
       "WRITE": "Write",
@@ -1823,6 +1830,87 @@
           "failed": "Linking didn’t complete. Try again."
         }
       }
+    },
+    "ai": {
+      "title": "AI assistants",
+      "subtitle": "Query your finances from Claude, Codex or another MCP client.",
+      "instanceOff": {
+        "title": "Not available on this instance",
+        "body": "An administrator has to turn on the MCP server in the instance settings first."
+      },
+      "access": {
+        "title": "Assistant access",
+        "switch": "Allow AI assistants",
+        "privacy": "Your transactions’ labels, amounts and notes will be decrypted and sent to your assistant’s provider (Anthropic, OpenAI…), under its terms.",
+        "confirmTitle": "Allow AI assistants",
+        "enable": "Enable",
+        "enabling": "Enabling…",
+        "error": {
+          "INSTANCE_DISABLED": "An administrator has turned off AI assistants on this instance.",
+          "FAILED": "Couldn’t save this change. Try again."
+        }
+      },
+      "connection": {
+        "title": "Connection",
+        "hint": "The MCP server address to give your client, along with a token.",
+        "off": "Turn on AI assistant access to connect a client.",
+        "endpoint": "MCP server address",
+        "copy": "Copy the address",
+        "copied": "Address copied",
+        "header": "Header: <code></code>"
+      },
+      "tokens": {
+        "title": "Personal tokens",
+        "hint": "Each token is shown only once, when it’s created.",
+        "create": "Create a token",
+        "none": "No personal token.",
+        "scope": {
+          "read": "Read only",
+          "write": "Read and write"
+        },
+        "created": "created <time></time>",
+        "lastUsed": "last used <time></time>",
+        "neverUsed": "never used",
+        "expires": "expires <time></time>",
+        "expired": "expired <time></time>",
+        "noExpiry": "no expiry",
+        "revoke": "Revoke",
+        "revokeToken": "Revoke {name}",
+        "error": {
+          "NOT_FOUND": "This token is already revoked.",
+          "FAILED": "Couldn’t revoke this token. Try again."
+        },
+        "form": {
+          "title": "Create a token",
+          "description": "The assistant acts as you, within the access you choose.",
+          "name": "Name",
+          "namePlaceholder": "Claude Code on my laptop",
+          "access": "Access",
+          "accessHint": "Assistants can only read your data for now.",
+          "expiry": "Expiry",
+          "expiryChoice": {
+            "30": "30 days",
+            "90": "90 days",
+            "365": "1 year",
+            "never": "No expiry"
+          },
+          "cancel": "Cancel",
+          "submit": "Create the token",
+          "submitting": "Creating…",
+          "error": {
+            "INVALID": "Check the highlighted fields.",
+            "FAILED": "Couldn’t create the token. Try again."
+          }
+        },
+        "shown": {
+          "title": "Token created",
+          "description": "Copy it now: it won’t be shown again.",
+          "label": "New token",
+          "copy": "Copy the token",
+          "copied": "Token copied",
+          "done": "Done"
+        }
+      }
     }
   },
   "admin": {
@@ -1954,6 +2042,8 @@
       "credentialsEnabled": "Password sign-in",
       "minPasswordLength": "Minimum password length",
       "admin2faRequired": "Mandatory admin 2FA",
+      "mcpEnabled": "MCP server for AI assistants",
+      "mcpEnabledHint": "Users still have to turn it on themselves in their preferences.",
       "mode": {
         "OPEN": "Open",
         "INVITE_ONLY": "Invite only",
@@ -2167,7 +2257,8 @@
         "link": "Links",
         "mail": "Emails",
         "audit": "Audit log",
-        "bank_sync": "Bank sync"
+        "bank_sync": "Bank sync",
+        "mcp": "AI assistants (MCP)"
       },
       "entities": {
         "User": "User",
@@ -2191,9 +2282,21 @@
         "Category": "Category",
         "CategorizationRule": "Rule",
         "Budget": "Budget",
-        "BudgetAssignment": "Budget assignment"
+        "BudgetAssignment": "Budget assignment",
+        "McpToken": "MCP token",
+        "UserPreference": "Preferences"
       },
       "actions": {
+        "mcp": {
+          "enabled": "MCP enabled",
+          "disabled": "MCP disabled",
+          "token": {
+            "created": "MCP token created",
+            "create_failed": "MCP token creation refused",
+            "revoked": "MCP token revoked",
+            "revoked_all": "All MCP tokens revoked"
+          }
+        },
         "settingUpdated": "Setting “{key}” changed",
         "auth": {
           "login": {
@@ -2305,7 +2408,8 @@
           "archived": "Bank account archived",
           "share": {
             "create": "Account shared",
-            "revoke": "Account share removed"
+            "revoke": "Account share removed",
+            "ai": "AI assistant access on a share changed"
           },
           "deleted": "Bank account deleted",
           "unarchived": "Bank account unarchived",
@@ -2493,6 +2597,7 @@
       "group": "Household",
       "joinGroup": "Join a household",
       "security": "Security",
+      "ai": "AI assistants",
       "data": "Data",
       "admin": "Administration",
       "adminUsers": "Users · Administration",

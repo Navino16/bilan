@@ -28,6 +28,7 @@ import {
 import { authPlugins } from "./plugins";
 import { onAuthError } from "./auth-errors";
 import { authDb } from "./auth-db";
+import { revokeAllMcpTokens } from "@/server/mcp/tokens";
 import { markSsoSignUp } from "./auth-audit";
 import { nameOnCreate, nameOnUpdate } from "./user-name";
 import { RESET_TOKEN_TTL_SEC, sendPasswordResetMail } from "@/server/services/mail/password-reset";
@@ -309,6 +310,9 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
           // Skipped for OIDC token refreshes. The mail is not awaited: SMTP can be slow.
           after: async (account, ctx) => {
             if (account.providerId !== "credential") return;
+            await revokeAllMcpTokens(account.userId, "password").catch((e) =>
+              console.error("[bilan] MCP token revocation failed", e),
+            );
             try {
               await logEvent({ userId: account.userId, action: "auth.password.changed" });
               void notifySecurityEvent("password_changed", {
@@ -347,6 +351,9 @@ export async function buildOptions(): Promise<BetterAuthOptions> {
         await markEmailVerified(user.id, "password_reset").catch(() => {});
         await purgeTrustedDevices(user.id).catch((e) =>
           console.error("[bilan] trusted-device purge failed", e),
+        );
+        await revokeAllMcpTokens(user.id, "password").catch((e) =>
+          console.error("[bilan] MCP token revocation failed", e),
         );
         try {
           await logEvent({ userId: user.id, action: "auth.password.changed" });

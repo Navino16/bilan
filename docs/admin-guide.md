@@ -18,6 +18,7 @@ Almost everything is configured in the app. Changes take effect immediately, wit
 - [E-mail (SMTP)](#e-mail-smtp)
 - [E-mail address verification](#e-mail-address-verification)
 - [Bank sync (Enable Banking)](#bank-sync-enable-banking)
+- [AI assistants (MCP server)](#ai-assistants-mcp-server)
 - [Audit log](#audit-log)
 - [Security notes](#security-notes)
 
@@ -46,7 +47,7 @@ Open **Administration** in the sidebar (the entry only appears for administrator
 | Auth providers    | SSO providers (OIDC, Google)                                    |
 | SMTP              | Outgoing e-mail server                                          |
 | Bank sync         | Enable Banking application used to sync bank accounts           |
-| Settings          | Instance name, registration mode, password and 2FA policies     |
+| Settings          | Instance name, registration mode, password and 2FA policies, AI assistants |
 | Audit log         | History of the actions performed on the instance                |
 
 ## Roles and permissions
@@ -417,6 +418,21 @@ A connection that fails 3 times in a row (other than a rate limit, an expired co
 
 The private key, the Enable Banking session of each connection and the bank's account identifiers are stored encrypted with `DATA_ENCRYPTION_KEY`; IBANs returned by the bank are only kept as a keyed hash, to recognize an account when the user reconnects. None of them appear in the audit log, the error messages or the pages. A connection is visible only to the user who made it, not to administrators. Deleting a user also deletes their Enable Banking sessions.
 
+## AI assistants (MCP server)
+
+Bilan can serve users' data to their own AI assistants through MCP, a standard protocol (endpoint `/api/mcp`). It is off by default, so you decide before any user can expose data.
+
+**Administration > Settings** has an **MCP server for AI assistants** setting, in the **Sign-up and sign-in** card (super administrators only), set to **Enabled** or **Disabled**.
+
+- **Disabled** (default): the endpoint answers 404 as if it didn't exist, every personal token stops working at once, and users see a notice on their **AI assistants** page. Tokens and users' choices are kept: enabling it again restores them.
+- **Enabled**: nothing is exposed yet. Each user still turns on **Allow AI assistants** for themselves and creates their own tokens, and the owner of a shared account ticks **Allow AI assistants** on the share for household members' assistants to receive it.
+
+Once a user's assistant is connected, their transactions' labels, amounts and notes are decrypted and sent to the assistant's provider. Tell your users before enabling it.
+
+Clients reach the endpoint at your public address, `APP_URL` followed by `/api/mcp`: it must be reachable from where the assistants run (a local client works against a LAN address). Each token is limited to 120 calls per minute.
+
+Token creation and revocation, and users turning the feature on or off, appear in the [audit log](#audit-log). Changing a password or signing out every device revokes the user's tokens.
+
 ## Audit log
 
 ![Audit log tab](images/en/admin-audit.png)
@@ -433,6 +449,7 @@ Every change of state is logged, reads are not. This includes:
 - invitation tokens, households and their invitations;
 - users' financial activity: bank accounts and shares, transactions, imports, categories, rules, budgets, links, bank connections (connected, reconnected, mapped, expired, disconnected);
 - each bank sync run that had something to do (`bank_sync.cron`, by **system**), with its counts;
+- AI assistants: tokens created and revoked, the feature turned on or off by a user;
 - failed security e-mails and audit purges.
 
 An SSO sign-in is logged as `auth.login.success` with `method: sso` and the provider key. The first SSO sign-in of an identity that creates an account is logged as the sign-up only (`auth.register.success`). A refused SSO sign-in (identity not linked, sign-up closed, account disabled, provider error) is logged as `auth.login.failed` with Better Auth's error code (`other` for an unexpected one). A sign-in cancelled at the provider is not logged, nor is one refused before Bilan reads the sign-in request.

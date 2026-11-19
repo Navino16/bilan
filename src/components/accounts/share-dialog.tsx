@@ -14,6 +14,7 @@ import {
   shareAccountAction,
   revokeShareAction,
   listSharesAction,
+  setShareAiAccessAction,
 } from "@/server/transport/actions/accounts";
 import { NativeSelect } from "@/components/ui/native-select";
 
@@ -35,6 +36,7 @@ export function ShareDialog({
   const t = useTranslations("accounts");
   const router = useRouter();
   const [shares, setShares] = useState<Record<string, string>>({});
+  const [aiAccess, setAiAccess] = useState<Record<string, boolean>>({});
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -42,7 +44,9 @@ export function ShareDialog({
     if (!open) return;
     let active = true;
     listSharesAction(accountId).then((rows) => {
-      if (active) setShares(Object.fromEntries(rows.map((r) => [r.groupId, r.permission])));
+      if (!active) return;
+      setShares(Object.fromEntries(rows.map((r) => [r.groupId, r.permission])));
+      setAiAccess(Object.fromEntries(rows.map((r) => [r.groupId, r.allowAiAssistants])));
     });
     return () => {
       active = false;
@@ -69,9 +73,29 @@ export function ShareDialog({
         else next[groupId] = value;
         return next;
       });
+      if (value === "NONE") setAiAccess((s) => ({ ...s, [groupId]: false }));
       router.refresh();
     });
   }
+
+  function changeAi(groupId: string, allow: boolean) {
+    setAiAccess((s) => ({ ...s, [groupId]: allow }));
+    startTransition(async () => {
+      const fd = new FormData();
+      fd.set("accountId", accountId);
+      fd.set("groupId", groupId);
+      fd.set("allow", String(allow));
+      setError(null);
+      const result = await setShareAiAccessAction(null, fd);
+      if (!result?.ok) {
+        setAiAccess((s) => ({ ...s, [groupId]: !allow }));
+        return setError(result?.error ?? "FAILED");
+      }
+      router.refresh();
+    });
+  }
+
+  const anyShared = groups.some((g) => shares[g.id]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -115,10 +139,24 @@ export function ShareDialog({
                     <option value="READ">{t("access.READ")}</option>
                     <option value="WRITE">{t("access.WRITE")}</option>
                   </NativeSelect>
+                  {shares[g.id] && (
+                    <label className="flex basis-full items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        className="border-input size-4 rounded border"
+                        aria-label={t("allowAiFor", { group: g.name })}
+                        checked={aiAccess[g.id] ?? false}
+                        disabled={pending}
+                        onChange={(e) => changeAi(g.id, e.target.checked)}
+                      />
+                      {t("allowAi")}
+                    </label>
+                  )}
                 </div>
               ))}
             </div>
           )}
+          {anyShared && <p className="text-muted-foreground text-xs">{t("allowAiHint")}</p>}
         </div>
       </DialogContent>
     </Dialog>

@@ -174,6 +174,7 @@
       "groups": "Foyers",
       "settings": "Préférences",
       "security": "Sécurité",
+      "ai": "Assistants IA",
       "data": "Données",
       "admin": "Administration"
     },
@@ -199,7 +200,7 @@
       "status": "Page {page, number} sur {pageCount, number}"
     },
     "copyLink": {
-      "manual": "La copie automatique n’est pas disponible sur cette connexion. Sélectionnez le lien puis copiez-le."
+      "manual": "La copie automatique n’est pas disponible sur cette connexion. Sélectionnez le texte puis copiez-le."
     },
     "skipToContent": "Aller au contenu principal",
     "mainNav": "Navigation principale",
@@ -227,17 +228,20 @@
     "title": "Confirmez votre identité",
     "passwordBody": {
       "iban": "Votre connexion date de plus de 10 minutes. Saisissez votre mot de passe pour afficher l’IBAN complet.",
-      "export": "Votre connexion date de plus de 10 minutes. Saisissez votre mot de passe pour télécharger toutes vos données, IBAN compris."
+      "export": "Votre connexion date de plus de 10 minutes. Saisissez votre mot de passe pour télécharger toutes vos données, IBAN compris.",
+      "mcpToken": "Votre connexion date de plus de 10 minutes. Saisissez votre mot de passe pour créer un jeton d’accès."
     },
     "signInBody": {
       "iban": "Votre connexion date de plus de 10 minutes. Reconnectez-vous pour afficher l’IBAN complet.",
-      "export": "Votre connexion date de plus de 10 minutes. Reconnectez-vous pour télécharger toutes vos données, IBAN compris."
+      "export": "Votre connexion date de plus de 10 minutes. Reconnectez-vous pour télécharger toutes vos données, IBAN compris.",
+      "mcpToken": "Votre connexion date de plus de 10 minutes. Reconnectez-vous pour créer un jeton d’accès."
     },
     "signInHint": "Votre session actuelle sera fermée, puis vous reviendrez sur cette page après la connexion.",
     "password": "Mot de passe",
     "confirm": {
       "iban": "Afficher l’IBAN",
-      "export": "Télécharger"
+      "export": "Télécharger",
+      "mcpToken": "Créer le jeton"
     },
     "checking": "Vérification…",
     "signInAgain": "Se reconnecter",
@@ -316,6 +320,9 @@
     "shareSubtitle": "Choisissez les foyers et leur niveau d’accès. Repasser sur Aucun un foyer avec lequel le compte était partagé retire aussi ses transactions incluses ou exclues dans les budgets de ce foyer.",
     "noGroups": "Vous n’appartenez à aucun foyer.",
     "permNone": "Aucun",
+    "allowAi": "Autoriser les assistants IA",
+    "allowAiFor": "Autoriser les assistants IA pour {group}",
+    "allowAiHint": "Les assistants IA des membres d’un foyer coché recevront les opérations de ce compte.",
     "access": {
       "OWNER": "Propriétaire",
       "WRITE": "Écriture",
@@ -1823,6 +1830,87 @@
           "failed": "La liaison n’a pas abouti. Réessayez."
         }
       }
+    },
+    "ai": {
+      "title": "Assistants IA",
+      "subtitle": "Interrogez vos finances depuis Claude, Codex ou un autre client MCP.",
+      "instanceOff": {
+        "title": "Indisponible sur cette instance",
+        "body": "Un administrateur doit d’abord activer le serveur MCP dans les paramètres de l’instance."
+      },
+      "access": {
+        "title": "Accès des assistants",
+        "switch": "Autoriser les assistants IA",
+        "privacy": "Les libellés, montants et notes de vos opérations seront déchiffrés et envoyés au fournisseur de votre assistant (Anthropic, OpenAI…), selon ses conditions.",
+        "confirmTitle": "Autoriser les assistants IA",
+        "enable": "Activer",
+        "enabling": "Activation…",
+        "error": {
+          "INSTANCE_DISABLED": "Un administrateur a désactivé les assistants IA sur cette instance.",
+          "FAILED": "Impossible d’enregistrer ce changement. Réessayez."
+        }
+      },
+      "connection": {
+        "title": "Connexion",
+        "hint": "L’adresse du serveur MCP à donner à votre client, avec un jeton.",
+        "off": "Autorisez les assistants IA pour connecter un client.",
+        "endpoint": "Adresse du serveur MCP",
+        "copy": "Copier l’adresse",
+        "copied": "Adresse copiée",
+        "header": "En-tête : <code></code>"
+      },
+      "tokens": {
+        "title": "Jetons personnels",
+        "hint": "Chaque jeton n’est affiché qu’une fois, à sa création.",
+        "create": "Créer un jeton",
+        "none": "Aucun jeton personnel.",
+        "scope": {
+          "read": "Lecture seule",
+          "write": "Lecture et écriture"
+        },
+        "created": "créé le <time></time>",
+        "lastUsed": "utilisé le <time></time>",
+        "neverUsed": "jamais utilisé",
+        "expires": "expire le <time></time>",
+        "expired": "expiré le <time></time>",
+        "noExpiry": "sans expiration",
+        "revoke": "Révoquer",
+        "revokeToken": "Révoquer {name}",
+        "error": {
+          "NOT_FOUND": "Ce jeton est déjà révoqué.",
+          "FAILED": "Impossible de révoquer ce jeton. Réessayez."
+        },
+        "form": {
+          "title": "Créer un jeton",
+          "description": "L’assistant agit en votre nom, dans la limite de l’accès choisi.",
+          "name": "Nom",
+          "namePlaceholder": "Claude Code sur le portable",
+          "access": "Accès",
+          "accessHint": "Pour l’instant, les assistants peuvent seulement lire vos données.",
+          "expiry": "Expiration",
+          "expiryChoice": {
+            "30": "30 jours",
+            "90": "90 jours",
+            "365": "1 an",
+            "never": "Sans expiration"
+          },
+          "cancel": "Annuler",
+          "submit": "Créer le jeton",
+          "submitting": "Création…",
+          "error": {
+            "INVALID": "Vérifiez les champs signalés.",
+            "FAILED": "Impossible de créer le jeton. Réessayez."
+          }
+        },
+        "shown": {
+          "title": "Jeton créé",
+          "description": "Copiez-le maintenant : il ne sera plus affiché.",
+          "label": "Nouveau jeton",
+          "copy": "Copier le jeton",
+          "copied": "Jeton copié",
+          "done": "Terminé"
+        }
+      }
     }
   },
   "admin": {
@@ -1954,6 +2042,8 @@
       "credentialsEnabled": "Connexion par mot de passe",
       "minPasswordLength": "Longueur minimale du mot de passe",
       "admin2faRequired": "Double authentification obligatoire (admin)",
+      "mcpEnabled": "Serveur MCP pour les assistants IA",
+      "mcpEnabledHint": "Chaque utilisateur doit encore l’activer lui-même dans ses préférences.",
       "mode": {
         "OPEN": "Ouvert",
         "INVITE_ONLY": "Sur invitation",
@@ -2167,7 +2257,8 @@
         "link": "Liaisons",
         "mail": "E-mails",
         "audit": "Journal d’audit",
-        "bank_sync": "Synchronisation bancaire"
+        "bank_sync": "Synchronisation bancaire",
+        "mcp": "Assistants IA (MCP)"
       },
       "entities": {
         "User": "Utilisateur",
@@ -2191,9 +2282,21 @@
         "Category": "Catégorie",
         "CategorizationRule": "Règle",
         "Budget": "Budget",
-        "BudgetAssignment": "Affectation de budget"
+        "BudgetAssignment": "Affectation de budget",
+        "McpToken": "Jeton MCP",
+        "UserPreference": "Préférences"
       },
       "actions": {
+        "mcp": {
+          "enabled": "MCP activé",
+          "disabled": "MCP désactivé",
+          "token": {
+            "created": "Jeton MCP créé",
+            "create_failed": "Création de jeton MCP refusée",
+            "revoked": "Jeton MCP révoqué",
+            "revoked_all": "Tous les jetons MCP révoqués"
+          }
+        },
         "settingUpdated": "Paramètre « {key} » modifié",
         "auth": {
           "login": {
@@ -2305,7 +2408,8 @@
           "archived": "Compte bancaire archivé",
           "share": {
             "create": "Compte partagé",
-            "revoke": "Partage de compte retiré"
+            "revoke": "Partage de compte retiré",
+            "ai": "Accès des assistants IA sur un partage modifié"
           },
           "deleted": "Compte bancaire supprimé",
           "unarchived": "Compte bancaire désarchivé",
@@ -2493,6 +2597,7 @@
       "group": "Foyer",
       "joinGroup": "Rejoindre un foyer",
       "security": "Sécurité",
+      "ai": "Assistants IA",
       "data": "Données",
       "admin": "Administration",
       "adminUsers": "Utilisateurs · Administration",

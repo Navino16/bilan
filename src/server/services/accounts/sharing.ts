@@ -1,5 +1,6 @@
 import { db } from "@/server/db";
 import { logEvent } from "@/server/services/audit";
+import { aiShareWhere } from "@/server/mcp/context";
 import {
   AccountAccessError,
   accountBalances,
@@ -78,6 +79,25 @@ export async function revokeShare(
   });
 }
 
+export async function setShareAiAccess(
+  input: { accountId: string; groupId: string; allow: boolean },
+  actor: { id: string },
+): Promise<void> {
+  await ownedOrThrow(input.accountId, actor.id);
+  const { count } = await db.accountShare.updateMany({
+    where: { accountId: input.accountId, groupId: input.groupId },
+    data: { allowAiAssistants: input.allow },
+  });
+  if (count === 0) throw new AccountAccessError("NOT_FOUND");
+  await logEvent({
+    userId: actor.id,
+    action: "account.share.ai",
+    entity: "AccountShare",
+    entityId: input.accountId,
+    metadata: { groupId: input.groupId, allow: input.allow },
+  });
+}
+
 export async function listSharesForAccount(accountId: string, actor: { id: string }) {
   await ownedOrThrow(accountId, actor.id);
   return db.accountShare.findMany({ where: { accountId }, include: { group: true } });
@@ -90,7 +110,7 @@ export async function listAccountsSharedWithGroup(
 ): Promise<SharedAccount[]> {
   await requireGroupRole(groupId, actor.id, "MEMBER");
   const shares = await db.accountShare.findMany({
-    where: { groupId, account: { archived: false } },
+    where: { groupId, ...aiShareWhere(), account: { archived: false } },
     include: { account: { include: { owner: true } } },
     orderBy: { createdAt: "desc" },
   });
@@ -116,7 +136,7 @@ export async function getEffectiveAccess(
   if (!acc) return null;
   if (acc.ownerId === userId) return "OWNER";
   const shares = await db.accountShare.findMany({
-    where: { accountId, group: { members: { some: { userId } } } },
+    where: { accountId, ...aiShareWhere(), group: { members: { some: { userId } } } },
   });
   if (shares.length === 0) return null;
   return shares.some((s) => s.permission === "WRITE") ? "WRITE" : "READ";
@@ -133,7 +153,15 @@ export async function writableAccountIds(userId: string): Promise<string[]> {
     where: {
       OR: [
         { ownerId: userId },
-        { shares: { some: { permission: "WRITE", group: { members: { some: { userId } } } } } },
+        {
+          shares: {
+            some: {
+              permission: "WRITE",
+              ...aiShareWhere(),
+              group: { members: { some: { userId } } },
+            },
+          },
+        },
       ],
     },
     select: { id: true },

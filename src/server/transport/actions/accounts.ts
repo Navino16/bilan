@@ -31,6 +31,7 @@ import {
 import {
   shareAccountWithGroup,
   revokeShare,
+  setShareAiAccess,
   listSharesForAccount,
   type SharePermission,
 } from "@/server/services/accounts/sharing";
@@ -225,16 +226,39 @@ export async function revokeShareAction(
   return { ok: true };
 }
 
+export async function setShareAiAccessAction(
+  _prev: AccountActionState,
+  formData: FormData,
+): Promise<AccountActionState> {
+  const user = await requireSession();
+  const accountId = String(formData.get("accountId") ?? "");
+  const groupId = String(formData.get("groupId") ?? "");
+  const allow = formData.get("allow");
+  if (!accountId || !groupId || (allow !== "true" && allow !== "false")) {
+    return { ok: false, error: "INVALID" };
+  }
+  try {
+    await setShareAiAccess({ accountId, groupId, allow: allow === "true" }, { id: user.id });
+  } catch (e) {
+    return { ok: false, error: e instanceof AccountAccessError ? "FORBIDDEN" : "FAILED" };
+  }
+  return { ok: true };
+}
+
 // Returns the current shares for an owned account, for the share dialog to
 // pre-fill its per-group permission state. Returns [] on any access error.
 export async function listSharesAction(
   accountId: string,
-): Promise<{ groupId: string; permission: string }[]> {
+): Promise<{ groupId: string; permission: string; allowAiAssistants: boolean }[]> {
   const user = await requireSession();
   if (!accountId) return [];
   try {
     const shares = await listSharesForAccount(accountId, { id: user.id });
-    return shares.map((s) => ({ groupId: s.groupId, permission: s.permission }));
+    return shares.map((s) => ({
+      groupId: s.groupId,
+      permission: s.permission,
+      allowAiAssistants: s.allowAiAssistants,
+    }));
   } catch {
     return [];
   }

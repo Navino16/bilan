@@ -19,7 +19,8 @@ Ce guide présente l’application du point de vue de l’utilisateur. L’insta
 9. [Foyers](#foyers)
 10. [Tableau de bord et analyses](#tableau-de-bord-et-analyses)
 11. [Sécurité du compte](#sécurité-du-compte)
-12. [Vos données](#vos-données)
+12. [Assistants IA](#assistants-ia)
+13. [Vos données](#vos-données)
 
 ## Premiers pas
 
@@ -74,7 +75,7 @@ Tant que vous n’avez aucune transaction, le tableau de bord affiche une carte 
 Sur ordinateur, la barre latérale a deux groupes :
 
 - **Espace** : Tableau de bord, Analyses, Transactions, Importer, Budgets, Comptes, Catégories, Foyers.
-- **Compte** : Sécurité, Données, et Administration si vous êtes administrateur.
+- **Compte** : Sécurité, Assistants IA, Données, et Administration si vous êtes administrateur.
 
 En haut à droite, le bouton **EN**/**FR** change de langue. Bilan retient votre choix et l’utilise aussi pour les e-mails qu’il vous envoie. Vos initiales ouvrent un menu avec **Se déconnecter**.
 
@@ -707,6 +708,8 @@ Pour transmettre un foyer, un propriétaire donne le rôle **Propriétaire** à 
 - **Écriture** : tout ce que permet Lecture, plus ajouter, modifier, recatégoriser, supprimer, importer, lier et délier des transactions.
 - Vous seul, en tant que propriétaire, pouvez modifier, partager, archiver ou supprimer le compte, et voir son IBAN.
 
+Sous chaque foyer avec lequel vous partagez, une case **Autoriser les assistants IA** décide si les assistants des membres de ce foyer reçoivent les transactions du compte (voir [Assistants IA](#assistants-ia)). Elle est décochée par défaut et vous seul, propriétaire, pouvez la cocher. Sans elle, le compte reste invisible pour ces assistants, même si les membres le voient dans Bilan.
+
 Vos comptes privés et leurs transactions ne sont jamais visibles des autres membres, sauf une transaction que vous incluez dans un budget de foyer (voir [Budgets de foyer](#budgets-de-foyer)). Un budget de foyer ne compte que les comptes partagés avec ce foyer.
 
 ### Quitter ou supprimer un foyer
@@ -821,6 +824,53 @@ Quand l’instance peut envoyer des e-mails, Bilan vous écrit après :
 - la désactivation de la double authentification.
 
 L’alerte indique la date, la méthode de connexion, l’adresse IP et l’appareil. Si ce n’était pas vous, changez votre mot de passe tout de suite. Ces alertes ne peuvent pas être désactivées.
+
+## Assistants IA
+
+![Réglages des assistants IA](images/fr/settings-ai.png)
+
+Bilan peut fournir vos données à votre propre assistant IA, pour poser des questions sur vos comptes, vos dépenses et vos budgets sans ouvrir l’application. Il parle MCP, un protocole standard : tout client MCP peut s’y connecter, comme Claude Code ou Codex. Bilan n’a pas de chat à lui et n’envoie rien à un assistant tant que vous n’en connectez pas un.
+
+Allez dans **Assistants IA** dans la barre latérale. Si la page indique que la fonction est indisponible sur cette instance, un administrateur doit d’abord activer le serveur MCP (voir le [guide d’administration](admin-guide.fr.md#assistants-ia-serveur-mcp)).
+
+### L’activer
+
+Activez **Autoriser les assistants IA** et confirmez. Les libellés, montants et notes de vos opérations sont alors déchiffrés et envoyés au fournisseur de votre assistant (Anthropic, OpenAI…), selon ses conditions. Le désactiver arrête aussitôt tous vos jetons. Ils sont conservés : le réactiver les rétablit.
+
+### Jetons personnels
+
+Un assistant se connecte avec un jeton personnel, qui agit en votre nom.
+
+1. Sous **Jetons personnels**, cliquez sur **Créer un jeton**.
+2. Saisissez un **Nom** pour le reconnaître, choisissez l’**Accès** (**Lecture seule** ou **Lecture et écriture**) et l’**Expiration** (30 jours, 90 jours, 1 an ou sans expiration).
+3. Cliquez sur **Créer le jeton**. Si vous vous êtes connecté il y a plus de 10 minutes, Bilan demande d’abord votre mot de passe, car un jeton est un identifiant.
+4. Copiez le jeton : il n’est affiché qu’une fois.
+
+Dans cette version, les assistants peuvent seulement lire vos données, quel que soit l’accès choisi.
+
+La liste donne pour chaque jeton son préfixe, son accès, sa création, sa dernière utilisation et son expiration. **Révoquer** arrête un jeton aussitôt. Changer ou réinitialiser votre mot de passe, ou cliquer sur **Tout déconnecter** sous [Appareils connectés](#appareils-connectés), révoque tous vos jetons : recréez-en ensuite.
+
+### Connecter un client
+
+La carte **Connexion** affiche l’adresse du serveur, `<adresse de votre Bilan>/api/mcp`, avec un bouton pour la copier. Un client envoie le jeton dans un en-tête `Authorization: Bearer <jeton>`. Avec Claude Code :
+
+```bash
+claude mcp add --transport http bilan https://bilan.example.com/api/mcp \
+  --header "Authorization: Bearer <jeton>"
+```
+
+Codex et les autres clients qui acceptent une URL de serveur et un en-tête personnalisé fonctionnent de la même façon : donnez-leur l’adresse et cet en-tête. Les clients qui ne proposent qu’une connexion par autorisation, comme les connecteurs de claude.ai, ne sont pas encore pris en charge.
+
+### Ce qu’un assistant peut voir
+
+Tout est limité à ce que vous pouvez voir dans Bilan, avec une restriction de plus :
+
+- vos propres comptes, toujours ;
+- les comptes partagés avec vos foyers seulement si leur propriétaire a coché **Autoriser les assistants IA** sur le partage. Les soldes, le tableau de bord, les analyses, les chiffres des budgets et la recherche ne comptent que les comptes qu’un assistant peut voir.
+
+Un assistant peut lire vos comptes et soldes, le tableau de bord et les analyses d’une période, les transactions (recherche et détail, avec leurs liens et leurs affectations de budget), les catégories, les règles, les budgets, les marchands, les foyers et les noms de leurs membres, les suggestions de liens et vos préférences. Il ne voit pas les IBAN complets, ne peut rien modifier, et n’accède à rien d’administratif ni de lié à la sécurité.
+
+Les libellés, notes et noms de marchands viennent de vos banques et d’autres personnes : on indique aux assistants de les traiter comme du simple texte, jamais comme des instructions. Ne connectez tout de même que des assistants de confiance.
 
 ## Vos données
 

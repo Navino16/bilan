@@ -13,6 +13,7 @@ import {
 } from "@/lib/budgets";
 import type { BudgetLineKind, TransferDirection } from "@/lib/validation/budget";
 import { linkPartners, type LinkPartner } from "@/server/services/links/members";
+import { mcpAccountIds } from "@/server/services/accounts";
 
 export type BudgetRow = {
   id: string;
@@ -164,7 +165,11 @@ export async function loadTransferContext(
     unlinkedOwn.push(...rows.filter((r) => r.accountId === b.accountId && r.linkId == null));
   }
   const allRows = attached.flatMap((b) => loaded.get(b.id)!.rows);
-  const searchedAccounts = [...new Set(attached.flatMap((b) => [...searchedOf.get(b.id)!]))];
+  // Mirror counterparts can lie outside an MCP call's accounts: no pending leg is looked for there.
+  const mcpAccounts = await mcpAccountIds();
+  const searchedAccounts = [...new Set(attached.flatMap((b) => [...searchedOf.get(b.id)!]))].filter(
+    (a) => !mcpAccounts || mcpAccounts.has(a),
+  );
   const counterparts = attached.flatMap((b) =>
     b.lines.flatMap((l) => (l.counterpartAccountId ? [l.counterpartAccountId] : [])),
   );

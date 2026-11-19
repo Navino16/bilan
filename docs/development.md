@@ -108,7 +108,8 @@ It needs a `.env` (`npm run setup`) and the test database (`docker compose up -d
    (e2e users + the demo account). `SEED_BANK_SYNC=1` adds a fictitious bank sync setup: an
    Enable Banking configuration with a zero application id and a key generated on the spot,
    a "Banque Fictive" connection whose consent ends in 10 days, mapped to the checking account
-   (balance matching, 2 pending operations), and the Livret A kept up to date from transfers.
+   (balance matching, 2 pending operations), and the Livret A kept up to date from transfers. `SEED_MCP=1` turns the MCP server on for the demo
+   account, with two personal tokens ("Claude Code (portable)" and "Codex").
 2. Serve a production build on that database, with an `APP_URL` on the same host and port:
 
    ```bash

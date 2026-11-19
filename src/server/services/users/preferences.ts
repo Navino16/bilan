@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import { db as defaultDb } from "@/server/db";
+import { logEvent } from "@/server/services/audit";
 import type { Locale } from "@/i18n/config";
 import { LINK_WINDOW_DAYS_DEFAULT } from "@/lib/validation/link-settings";
 import {
@@ -115,4 +116,35 @@ export async function updateExceptionalRule(
     update: data,
   });
   return parsed.data;
+}
+
+export async function getMcpEnabled(
+  userId: string,
+  db: PrismaClient = defaultDb,
+): Promise<boolean> {
+  const pref = await db.userPreference.findUnique({
+    where: { userId },
+    select: { mcpEnabled: true },
+  });
+  return pref?.mcpEnabled ?? false;
+}
+
+// `locale` only seeds a missing row, as for the link settings.
+export async function setMcpEnabled(
+  userId: string,
+  enabled: boolean,
+  locale: Locale,
+  db: PrismaClient = defaultDb,
+): Promise<void> {
+  await db.userPreference.upsert({
+    where: { userId },
+    create: { userId, locale, mcpEnabled: enabled },
+    update: { mcpEnabled: enabled },
+  });
+  await logEvent({
+    userId,
+    action: enabled ? "mcp.enabled" : "mcp.disabled",
+    entity: "UserPreference",
+    entityId: userId,
+  });
 }

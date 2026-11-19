@@ -13,6 +13,7 @@ const PAGES = [
   "/fr/import",
   "/fr/settings/security",
   "/fr/settings/data",
+  "/fr/settings/ai",
 ];
 const ADMIN_PAGES = ["/fr/admin/users", "/fr/admin/audit", "/fr/admin/signup-tokens"];
 const WIDTHS = [320, 768, 1024];

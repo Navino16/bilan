@@ -60,6 +60,7 @@ const APP_SETTINGS: { key: string; value: unknown; isSecret?: boolean }[] = [
   { key: "credentials_enabled", value: true },
   { key: "app_name", value: "Bilan" },
   { key: "security.admin_2fa_required", value: false },
+  { key: "mcp_enabled", value: false },
 ];
 
 export async function seedAppSettings(db: PrismaClient): Promise<void> {

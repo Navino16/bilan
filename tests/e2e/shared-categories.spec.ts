@@ -38,8 +38,8 @@ test.describe("categories on a shared account", () => {
     await expect(card).toBeVisible();
     await card.getByRole("button", { name: /^actions pour/i }).click();
     await page.getByRole("menuitem", { name: /partager/i }).click();
-    await page.getByLabel("E2E Shared").selectOption("READ");
-    await expect(page.getByLabel("E2E Shared")).toHaveValue("READ");
+    await page.getByLabel("E2E Shared", { exact: true }).selectOption("READ");
+    await expect(page.getByLabel("E2E Shared", { exact: true })).toHaveValue("READ");
     await page.keyboard.press("Escape");
 
     await card.getByRole("button", { name: /saisir une transaction/i }).click();

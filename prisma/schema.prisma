@@ -40,6 +40,7 @@ model User {
   merchantAliases  MerchantAlias[]
   bankConnections  BankConnection[]
   bankAuthRequests BankAuthRequest[]
+  mcpTokens        McpToken[]
 }
 
 model Session {
@@ -184,6 +185,23 @@ model UserPreference {
   // Exceptional expenses rule (spec §5.17).
   exceptionalMinAmount Decimal @default(50) @db.Decimal(12, 2)
   exceptionalFactor    Decimal @default(2) @db.Decimal(4, 1)
+  mcpEnabled           Boolean @default(false)
+}
+
+model McpToken {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String    @db.VarChar(80)
+  prefix     String    @db.VarChar(16)
+  tokenHash  String    @unique
+  scope      String // read | write
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+
+  @@index([userId])
 }
 
 model AuthProvider {
@@ -451,12 +469,14 @@ model GroupInvitation {
 }
 
 model AccountShare {
-  id          String   @id @default(cuid())
-  accountId   String
-  groupId     String
-  permission  String // READ | WRITE
-  createdById String
-  createdAt   DateTime @default(now())
+  id                String   @id @default(cuid())
+  accountId         String
+  groupId           String
+  permission        String // READ | WRITE
+  createdById       String
+  createdAt         DateTime @default(now())
+  // Lets the account's data reach AI assistants through the MCP server.
+  allowAiAssistants Boolean  @default(false)
 
   account BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
   group   Group       @relation(fields: [groupId], references: [id], onDelete: Cascade)

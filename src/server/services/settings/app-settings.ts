@@ -30,6 +30,7 @@ export const SECURITY_SETTING_KEYS: ReadonlySet<string> = new Set([
   "credentials_enabled",
   "min_password_length",
   "security.admin_2fa_required",
+  "mcp_enabled",
 ]);
 
 const DEFAULT_APP_NAME = "Bilan";

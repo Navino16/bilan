@@ -153,8 +153,27 @@ CREATE TABLE `UserPreference` (
     `dashboardLayout` JSON NULL,
     `exceptionalMinAmount` DECIMAL(12, 2) NOT NULL DEFAULT 50,
     `exceptionalFactor` DECIMAL(4, 1) NOT NULL DEFAULT 2,
+    `mcpEnabled` BOOLEAN NOT NULL DEFAULT false,
 
     PRIMARY KEY (`userId`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `McpToken` (
+    `id` VARCHAR(191) NOT NULL,
+    `userId` VARCHAR(191) NOT NULL,
+    `name` VARCHAR(80) NOT NULL,
+    `prefix` VARCHAR(16) NOT NULL,
+    `tokenHash` VARCHAR(191) NOT NULL,
+    `scope` VARCHAR(191) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `lastUsedAt` DATETIME(3) NULL,
+    `expiresAt` DATETIME(3) NULL,
+    `revokedAt` DATETIME(3) NULL,
+
+    UNIQUE INDEX `McpToken_tokenHash_key`(`tokenHash`),
+    INDEX `McpToken_userId_idx`(`userId`),
+    PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
@@ -413,6 +432,7 @@ CREATE TABLE `AccountShare` (
     `permission` VARCHAR(191) NOT NULL,
     `createdById` VARCHAR(191) NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `allowAiAssistants` BOOLEAN NOT NULL DEFAULT false,
 
     INDEX `AccountShare_groupId_idx`(`groupId`),
     UNIQUE INDEX `AccountShare_accountId_groupId_key`(`accountId`, `groupId`),
@@ -658,6 +678,9 @@ ALTER TABLE `UserRole` ADD CONSTRAINT `UserRole_roleId_fkey` FOREIGN KEY (`roleI
 
 -- AddForeignKey
 ALTER TABLE `UserPreference` ADD CONSTRAINT `UserPreference_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `McpToken` ADD CONSTRAINT `McpToken_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `BankConnection` ADD CONSTRAINT `BankConnection_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

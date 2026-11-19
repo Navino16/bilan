@@ -190,8 +190,12 @@ test.describe("accounts", () => {
     // Open the card's kebab → Share, then grant READ to the seeded "E2E Shared".
     await card.getByRole("button", { name: /^actions pour/i }).click();
     await page.getByRole("menuitem", { name: /partager/i }).click();
-    await page.getByLabel("E2E Shared").selectOption("READ");
-    await expect(page.getByLabel("E2E Shared")).toHaveValue("READ");
+    await page.getByLabel("E2E Shared", { exact: true }).selectOption("READ");
+    await expect(page.getByLabel("E2E Shared", { exact: true })).toHaveValue("READ");
+    const aiBox = page.getByLabel("Autoriser les assistants IA pour E2E Shared");
+    await expect(aiBox).not.toBeChecked();
+    await aiBox.check();
+    await expect(aiBox).toBeChecked();
 
     // The member of that household sees the account read-only (no mutate menu).
     const memberCtx = await browser.newContext({
