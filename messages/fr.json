@@ -2294,7 +2294,8 @@
             "created": "Jeton MCP créé",
             "create_failed": "Création de jeton MCP refusée",
             "revoked": "Jeton MCP révoqué",
-            "revoked_all": "Tous les jetons MCP révoqués"
+            "revoked_all": "Tous les jetons MCP révoqués",
+            "revoke_failed": "Échec de la révocation des jetons MCP"
           }
         },
         "settingUpdated": "Paramètre « {key} » modifié",

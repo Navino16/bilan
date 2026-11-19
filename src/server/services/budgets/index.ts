@@ -526,7 +526,11 @@ export async function listBudgetAccountOptions(userId: string): Promise<BudgetAc
   const accounts = await listVisibleForUser(userId, { includeArchived: true });
   const { groupIds } = await budgetScopeForUser(userId);
   const shares = await db.accountShare.findMany({
-    where: { accountId: { in: accounts.map((a) => a.id) }, groupId: { in: groupIds } },
+    where: {
+      accountId: { in: accounts.map((a) => a.id) },
+      groupId: { in: groupIds },
+      ...householdShareWhere(),
+    },
     select: { accountId: true, groupId: true },
   });
   const groupsOf = new Map<string, string[]>();

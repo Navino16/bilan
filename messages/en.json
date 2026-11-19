@@ -2294,7 +2294,8 @@
             "created": "MCP token created",
             "create_failed": "MCP token creation refused",
             "revoked": "MCP token revoked",
-            "revoked_all": "All MCP tokens revoked"
+            "revoked_all": "All MCP tokens revoked",
+            "revoke_failed": "MCP token revocation failed"
           }
         },
         "settingUpdated": "Setting “{key}” changed",

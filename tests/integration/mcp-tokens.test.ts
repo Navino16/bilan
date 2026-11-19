@@ -292,20 +292,8 @@ describe("credential lifecycle", () => {
 
   it("a password reset revokes every token", async () => {
     const a = await mk();
-    const auth = await getAuth();
-    const appUrl = process.env.APP_URL!.replace(/\/$/, "");
-    sent.length = 0;
-    await auth.api.requestPasswordReset({ body: { email, redirectTo: `${appUrl}/en/reset` } });
-    const mail = await vi.waitFor(() => {
-      const m = sent.find((x) => x.to === email && /reset your password/.test(x.subject));
-      if (!m) throw new Error("reset mail not sent yet");
-      return m;
-    });
-    const link = mail.text.split("\n").find((l) => l.startsWith(`${appUrl}/en/reset/`));
-    const token = decodeURIComponent(link!.split("/").pop()!);
-    await auth.api.resetPassword({ body: { newPassword: "reset-strong-password-3", token } });
+    await resetPasswordTo("reset-strong-password-3");
     expect(await principalFromToken(a.token)).toBeNull();
-    await auth.api.requestPasswordReset({ body: { email, redirectTo: `${appUrl}/en/reset` } });
   });
 
   it("revokeOtherSessions revokes every token", async () => {
@@ -316,6 +304,96 @@ describe("credential lifecycle", () => {
     expect(await principalFromToken(a.token)).toBeNull();
   });
 });
+
+describe("failed revocation", () => {
+  const failures = (reason: string) =>
+    db.auditLog.count({
+      where: {
+        userId,
+        action: "mcp.token.revoke_failed",
+        metadata: { path: "$.reason", equals: reason },
+      },
+    });
+  const breakRevocation = () =>
+    vi.spyOn(db.mcpToken, "updateMany").mockRejectedValue(new Error("db down"));
+  const quietErrors = () => vi.spyOn(console, "error").mockImplementation(() => {});
+  const loggedFailure = (spy: ReturnType<typeof quietErrors>) =>
+    spy.mock.calls.some((c) => c[0] === "[bilan] MCP token revocation failed");
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it("a password reset retries once, then audits the failure", async () => {
+    const a = await mk();
+    const before = await failures("password");
+    const update = breakRevocation();
+    const errors = quietErrors();
+    await resetPasswordTo(FAILED_RESET_PASSWORD);
+    expect(update).toHaveBeenCalledTimes(2);
+    expect(loggedFailure(errors)).toBe(true);
+    expect(await failures("password")).toBe(before + 1);
+    vi.restoreAllMocks();
+    expect(await principalFromToken(a.token)).not.toBeNull();
+  });
+
+  it("a password change retries once, then audits the failure", async () => {
+    await mk();
+    const headers = await signInWith(FAILED_RESET_PASSWORD);
+    const before = await failures("password");
+    const update = breakRevocation();
+    const errors = quietErrors();
+    const res = await changePassword(headers, {
+      currentPassword: FAILED_RESET_PASSWORD,
+      newPassword: FAILED_CHANGE_PASSWORD,
+      revokeOtherSessions: false,
+    });
+    expect(res.ok).toBe(true);
+    expect(update).toHaveBeenCalledTimes(2);
+    expect(loggedFailure(errors)).toBe(true);
+    expect(await failures("password")).toBe(before + 1);
+  });
+
+  it("revokeOtherSessions retries once, audits the failure and reports it", async () => {
+    const a = await mk();
+    const headers = await signInWith(FAILED_CHANGE_PASSWORD);
+    const before = await failures("sessions");
+    const update = breakRevocation();
+    const errors = quietErrors();
+    expect(await revokeOtherSessions(headers)).toEqual({ ok: false, error: "FAILED" });
+    expect(update).toHaveBeenCalledTimes(2);
+    expect(loggedFailure(errors)).toBe(true);
+    expect(await failures("sessions")).toBe(before + 1);
+    vi.restoreAllMocks();
+    expect(await principalFromToken(a.token)).not.toBeNull();
+  });
+
+  it("revokeOtherSessions succeeds when the retry does", async () => {
+    const a = await mk();
+    const headers = await signInWith(FAILED_CHANGE_PASSWORD);
+    const before = await failures("sessions");
+    vi.spyOn(db.mcpToken, "updateMany").mockRejectedValueOnce(new Error("blip"));
+    expect((await revokeOtherSessions(headers)).ok).toBe(true);
+    expect(await principalFromToken(a.token)).toBeNull();
+    expect(await failures("sessions")).toBe(before);
+  });
+});
+
+const FAILED_RESET_PASSWORD = "failed-reset-strong-password-4";
+const FAILED_CHANGE_PASSWORD = "failed-change-strong-password-5";
+
+async function resetPasswordTo(pw: string): Promise<void> {
+  const auth = await getAuth();
+  const appUrl = process.env.APP_URL!.replace(/\/$/, "");
+  sent.length = 0;
+  await auth.api.requestPasswordReset({ body: { email, redirectTo: `${appUrl}/en/reset` } });
+  const mail = await vi.waitFor(() => {
+    const m = sent.find((x) => x.to === email && /reset your password/.test(x.subject));
+    if (!m) throw new Error("reset mail not sent yet");
+    return m;
+  });
+  const link = mail.text.split("\n").find((l) => l.startsWith(`${appUrl}/en/reset/`));
+  const token = decodeURIComponent(link!.split("/").pop()!);
+  await auth.api.resetPassword({ body: { newPassword: pw, token } });
+}
 
 async function signInWith(pw: string): Promise<Headers> {
   const auth = await getAuth();
