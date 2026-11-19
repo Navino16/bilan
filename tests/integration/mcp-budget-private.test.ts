@@ -103,6 +103,34 @@ describe("MCP household budget details", () => {
       expect(json).not.toContain(needle);
   });
 
+  it("lists a visible leg whose account has no counted row of its own", async () => {
+    const categoryId = (
+      await db.category.create({ data: { groupId: f.groupId, name: "Pharmacy" } })
+    ).id;
+    const id = (
+      await createBudget(
+        {
+          name: "Pharmacy June",
+          groupId: f.groupId,
+          ...june,
+          lines: [{ categoryId, plannedAmount: 50 }],
+        },
+        { id: f.ownerId },
+      )
+    ).id;
+    const visibleLeg = await expense(f.accounts.sharedAi, at(3), 5, categoryId);
+    const hiddenLeg = await expense(f.accounts.sharedPlain, at(4), -30, categoryId);
+    await link([visibleLeg, hiddenLeg]);
+
+    const d = await inMcp(f.memberId, () => getBudgetDetail(id, f.memberId, { now }));
+    expect(d.lines[0].spent).toBe(25);
+    expect(d.transactions.map((t) => [t.id, t.amount])).toEqual([[visibleLeg, 5]]);
+    expect(d.privateAccountTotals).toMatchObject([
+      { lineId: d.lines[0].id, amount: -30, count: 1 },
+    ]);
+    expect(JSON.stringify(d)).not.toContain(hiddenLeg);
+  });
+
   it("keeps the forecast on the accounts the assistant can see", async () => {
     await db.bankAccount.update({
       where: { id: f.accounts.sharedPlain },
@@ -179,6 +207,72 @@ describe("MCP household budget details", () => {
         createBudget(attach, { id: f.memberId }),
       ]);
       expect(created).toHaveLength(2);
+    } finally {
+      await db.groupMember.updateMany({
+        where: { groupId: f.groupId, userId: f.memberId },
+        data: { role: "MEMBER" },
+      });
+    }
+  });
+
+  // X is shared with G without the AI flag but with H with it: B's assistant sees it anyway.
+  it("counts an account AI-allowed through another household as visible", async () => {
+    const h = (await db.group.create({ data: { name: `${PREFIX} H`, createdById: f.ownerId } })).id;
+    await db.groupMember.createMany({
+      data: [
+        { groupId: h, userId: f.ownerId, role: "OWNER" },
+        { groupId: h, userId: f.memberId, role: "MEMBER" },
+      ],
+    });
+    const x = (
+      await db.bankAccount.create({
+        data: { ownerId: f.ownerId, name: "x-account", type: "CHECKING", initialBalance: 300 },
+      })
+    ).id;
+    await db.accountShare.createMany({
+      data: [
+        {
+          accountId: x,
+          groupId: f.groupId,
+          permission: "READ",
+          allowAiAssistants: false,
+          createdById: f.ownerId,
+        },
+        {
+          accountId: x,
+          groupId: h,
+          permission: "READ",
+          allowAiAssistants: true,
+          createdById: f.ownerId,
+        },
+      ],
+    });
+    const xRow = await expense(x, at(9), -7, f.categoryId);
+    const [ai, xBalance] = await Promise.all([balanceOf(f.accounts.sharedAi), balanceOf(x)]);
+
+    const d = await inMcp(f.memberId, () => getBudgetDetail(budgetId, f.memberId, { now }));
+    expect(d.transactions.map((t) => t.id)).toContain(xRow);
+    expect(d.forecast!.balance).toBe(Math.round((ai + xBalance) * 100) / 100);
+
+    await db.groupMember.updateMany({
+      where: { groupId: f.groupId, userId: f.memberId },
+      data: { role: "ADMIN" },
+    });
+    try {
+      const created = await inMcp(f.memberId, () =>
+        createBudget(
+          {
+            name: "X line",
+            groupId: f.groupId,
+            periodType: "MONTH",
+            periodStart: "2026-08-01",
+            periodEnd: "2026-08-31",
+            lines: [{ accountId: x, plannedAmount: 10 }],
+          },
+          { id: f.memberId },
+        ),
+      );
+      expect(created.id).toBeTruthy();
     } finally {
       await db.groupMember.updateMany({
         where: { groupId: f.groupId, userId: f.memberId },

@@ -13,7 +13,7 @@ import {
   visibleAccountIds,
   visibleAccountRefs,
 } from "@/server/services/accounts";
-import { aiShareWhere, currentMcpPrincipal } from "@/server/mcp/context";
+import { currentMcpPrincipal } from "@/server/mcp/context";
 import { canReadAccount } from "@/server/services/accounts/sharing";
 import {
   assertCategoryAssignable,
@@ -489,26 +489,21 @@ async function readableOrThrow(id: string, userId: string) {
   return b;
 }
 
-// Inside an MCP call a household's line/attach guards and forecast keep the AI-allowed shares
-// and the caller's own accounts; its spend figures don't (budgetScopeAccounts, spec §5.18).
-function householdShareWhere(): Prisma.AccountShareWhereInput {
-  const principal = currentMcpPrincipal();
-  return principal ? { OR: [aiShareWhere(), { account: { ownerId: principal.userId } }] } : {};
-}
-
 // The accounts a budget's lines, attachment and forecast may use: a GROUP budget uses the
 // accounts shared with the group (so every member computes the same total and personal
-// accounts never leak in); a PERSONAL budget uses the owner's visible accounts.
+// accounts never leak in); a PERSONAL budget uses the owner's visible accounts. Inside an
+// MCP call only the call's accounts; the spend figures aren't narrowed (budgetScopeAccounts,
+// spec §5.18).
 async function budgetAccountIds(budget: {
   userId: string | null;
   groupId: string | null;
 }): Promise<string[]> {
   if (budget.groupId) {
-    const shares = await db.accountShare.findMany({
-      where: { groupId: budget.groupId, ...householdShareWhere() },
-      select: { accountId: true },
-    });
-    return shares.map((s) => s.accountId);
+    const [shares, mcpAccounts] = await Promise.all([
+      db.accountShare.findMany({ where: { groupId: budget.groupId }, select: { accountId: true } }),
+      mcpAccountIds(),
+    ]);
+    return shares.map((s) => s.accountId).filter((a) => !mcpAccounts || mcpAccounts.has(a));
   }
   if (!budget.userId) return [];
   return visibleAccountIds(budget.userId);
@@ -1164,7 +1159,7 @@ async function budgetTransactions(
   groupId: string | null,
 ): Promise<Pick<BudgetDetail, "transactions" | "privateAccountTotals">> {
   const visible = await displayableAccountNames(
-    [...new Set(listed.map((r) => r.accountId))],
+    [...new Set([...listed, ...e.rows].map((r) => r.accountId))],
     viewerId,
     groupId,
   );
