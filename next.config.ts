@@ -21,6 +21,10 @@ const nextConfig: NextConfig = {
         source: "/api/:path*",
         headers: Object.entries(API_SECURITY_HEADERS).map(([key, value]) => ({ key, value })),
       },
+      {
+        source: "/.well-known/:path*",
+        headers: Object.entries(API_SECURITY_HEADERS).map(([key, value]) => ({ key, value })),
+      },
     ];
   },
 };

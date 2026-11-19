@@ -1,5 +1,6 @@
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/server";
 import { mcpCallLimiter } from "@/server/auth/rate-limit";
+import { mcpChallenge } from "./discovery";
 import { buildMcpServer } from "./server";
 import { isMcpInstanceEnabled } from "./switches";
 import { principalFromToken } from "./tokens";
@@ -34,7 +35,9 @@ export async function handleMcpRequest(req: Request): Promise<Response> {
     const token = bearerToken(req);
     const principal = token ? await principalFromToken(token) : null;
     if (!principal) {
-      return json({ error: "UNAUTHORIZED" }, 401, { "WWW-Authenticate": 'Bearer realm="bilan"' });
+      return json({ error: "UNAUTHORIZED" }, 401, {
+        "WWW-Authenticate": mcpChallenge(token ? "invalid_token" : undefined),
+      });
     }
 
     const outcome = mcpCallLimiter.consume(`${principal.client.kind}:${principal.client.id}`);

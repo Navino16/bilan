@@ -4,6 +4,7 @@ import { getAuth } from "@/server/auth";
 import { appSettings } from "@/server/services/settings/app-settings";
 import { setMcpEnabled } from "@/server/services/users/preferences";
 import { createMcpToken, revokeMcpToken } from "@/server/mcp/tokens";
+import { mcpChallenge } from "@/server/mcp/discovery";
 import { handleMcpRequest } from "@/server/mcp/http";
 import { mcpCallLimiter } from "@/server/auth/rate-limit";
 import { READ_TOOLS } from "@/server/mcp/tools/read";
@@ -76,7 +77,9 @@ describe("/api/mcp", () => {
   it.each([["none"], ["nope"]])("answers 401 with a challenge for %s", async (kind) => {
     const res = await rpc(initialize, kind === "none" ? undefined : "nope");
     expect(res.status).toBe(401);
-    expect(res.headers.get("www-authenticate")).toBe('Bearer realm="bilan"');
+    expect(res.headers.get("www-authenticate")).toBe(
+      mcpChallenge(kind === "none" ? undefined : "invalid_token"),
+    );
     expect(await res.json()).toEqual({ error: "UNAUTHORIZED" });
     expect(res.headers.get("cache-control")).toBe("no-store");
   });

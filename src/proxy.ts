@@ -103,6 +103,6 @@ export default async function middleware(req: NextRequest) {
 // (tests/unit/server/proxy-matcher.test.ts keeps this list in sync with public/ and app/).
 export const config = {
   matcher: [
-    "/((?!api|_next|_vercel|icons/|sw\\.js|favicon\\.ico|icon\\.png|apple-icon\\.png|manifest\\.webmanifest).*)",
+    "/((?!api|_next|_vercel|\\.well-known/|icons/|sw\\.js|favicon\\.ico|icon\\.png|apple-icon\\.png|manifest\\.webmanifest).*)",
   ],
 };
