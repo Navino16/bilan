@@ -61,7 +61,10 @@ export async function serveDiscovery(
 }
 
 // Browser MCP clients preflight the metadata GET.
-export function discoveryPreflight(): Response {
+export async function discoveryPreflight(): Promise<Response> {
+  if (!(await isMcpInstanceEnabled())) {
+    return Response.json({ error: "NOT_FOUND" }, { status: 404, headers: PUBLIC_HEADERS });
+  }
   return new Response(null, {
     status: 204,
     headers: {

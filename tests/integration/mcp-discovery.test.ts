@@ -75,21 +75,40 @@ describe("authorization server metadata", () => {
 });
 
 describe("CORS preflight", () => {
-  it.each([[prmOptions], [asOptions]])("allows a cross-origin GET", async (options) => {
+  const preflights = [
+    ["protected resource", prmOptions],
+    ["authorization server", asOptions],
+  ] as const;
+
+  it.each(preflights)("allows a cross-origin GET of the %s metadata", async (_, options) => {
     const res = await options();
     expect(res.status).toBe(204);
     expect(res.headers.get("access-control-allow-origin")).toBe("*");
     expect(res.headers.get("access-control-allow-methods")).toBe("GET");
     expect(res.headers.get("access-control-allow-headers")).toBe("*");
   });
+
+  it.each(preflights)(
+    "answers 404 for the %s metadata while the instance switch is off",
+    async (_, options) => {
+      await appSettings.set("mcp_enabled", false, userId);
+      try {
+        const res = await options();
+        expect(res.status).toBe(404);
+        expect(res.headers.get("access-control-allow-origin")).toBe("*");
+      } finally {
+        await appSettings.set("mcp_enabled", true, userId);
+      }
+    },
+  );
 });
 
 describe("unknown suffixes and the instance switch", () => {
   it.each([
-    [prmGet, ["api", "other"]],
-    [asGet, ["api", "other"]],
-  ])("answers 404 for another suffix", async (get, path) => {
-    expect((await call(get, path)).status).toBe(404);
+    ["protected resource", prmGet],
+    ["authorization server", asGet],
+  ] as const)("answers 404 for another suffix of the %s metadata", async (_, get) => {
+    expect((await call(get, ["api", "other"])).status).toBe(404);
   });
 
   it("answers 404 on all four documents when the instance switch is off", async () => {

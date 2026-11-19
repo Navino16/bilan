@@ -206,15 +206,17 @@ describe("listOAuthGrants", () => {
 });
 
 describe("redirect host", () => {
-  it("falls back to the scheme for private-use redirect URIs", async () => {
+  it("shows the scheme of private-use redirect URIs", async () => {
     const user = await makeUser();
     const g = await grant(user, "bilan:read", undefined, "com.example.app:/cb");
     expect((await listOAuthGrants(user.id)).find((r) => r.clientId === g.clientId)).toMatchObject({
       redirectHost: "com.example.app:",
     });
     expect(redirectHost("cursor://anysphere.cursor-retrieval/oauth/callback")).toBe(
-      "anysphere.cursor-retrieval",
+      "cursor://anysphere.cursor-retrieval",
     );
+    expect(redirectHost("evil://claude.ai/cb")).toBe("evil://claude.ai");
+    expect(redirectHost("http://127.0.0.1:43123/callback")).toBe("127.0.0.1:43123");
     expect(clientRedirectHost(JSON.stringify(["https://mcp.example.com:8443/cb"]))).toBe(
       "mcp.example.com:8443",
     );

@@ -34,11 +34,13 @@ export function clientDisplayName(name: string | null): string | null {
   return name === null ? null : Array.from(name).slice(0, CLIENT_NAME_MAX).join("");
 }
 
-// Private-use schemes (`com.example.app:/cb`) have no host: the scheme stands in for it.
+// A custom scheme stays visible (`evil://claude.ai` is not claude.ai); private-use schemes
+// (`com.example.app:/cb`) have no host, so the scheme stands in for it.
 export function redirectHost(uri: string): string | null {
   try {
     const url = new URL(uri);
-    return url.host || url.protocol;
+    if (url.protocol === "http:" || url.protocol === "https:") return url.host;
+    return url.host ? `${url.protocol}//${url.host}` : url.protocol;
   } catch {
     return null;
   }
