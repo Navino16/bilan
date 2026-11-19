@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach, vi } from "vitest";
 
 // The Server Actions read the session through next/headers.
 const request = vi.hoisted(() => ({ headers: new Headers() }));
@@ -6,6 +6,21 @@ vi.mock("next/headers", () => ({
   headers: async () => request.headers,
   cookies: async () => ({ get: () => undefined, set: () => {} }),
 }));
+const consentFailures = vi.hoisted(() => ({ grant: false, deny: false }));
+vi.mock("@/server/mcp/oauth-consent", async (importOriginal) => {
+  const real = await importOriginal<typeof import("@/server/mcp/oauth-consent")>();
+  return {
+    ...real,
+    grantOAuthConsent: vi.fn(async (...args: Parameters<typeof real.grantOAuthConsent>) => {
+      if (consentFailures.grant) throw new Error("plugin down");
+      return real.grantOAuthConsent(...args);
+    }),
+    denyOAuthConsent: vi.fn(async (...args: Parameters<typeof real.denyOAuthConsent>) => {
+      if (consentFailures.deny) throw new Error("plugin down");
+      return real.denyOAuthConsent(...args);
+    }),
+  };
+});
 
 import { db } from "@/server/db";
 import { getAuth } from "@/server/auth";
@@ -67,6 +82,12 @@ beforeEach(async () => {
   await appSettings.set("mcp_enabled", true, userId);
   await setMcpEnabled(userId, true, "en");
   await db.auditLog.deleteMany({ where: { userId } });
+});
+
+afterEach(() => {
+  consentFailures.grant = false;
+  consentFailures.deny = false;
+  vi.restoreAllMocks();
 });
 
 afterAll(async () => {
@@ -193,6 +214,39 @@ describe("approveOAuthConsentAction", () => {
     });
     expect(await consents(p.clientId)).toBe(0);
   });
+
+  it("asks for a new sign-in after the password when the client sent prompt=login", async () => {
+    const p = await pending("bilan:read", { prompt: "login" });
+    await ageSessions();
+    const input = { oauthQuery: p.oauthQuery, access: "read" as const };
+    expect(await approveOAuthConsentAction(input)).toMatchObject({ error: "REAUTH_REQUIRED" });
+    expect(await approveOAuthConsentAction(input, password)).toEqual({
+      ok: false,
+      error: "LOGIN_REQUIRED",
+    });
+    expect(await consents(p.clientId)).toBe(0);
+  });
+
+  it("logs an unexpected failure and answers FAILED", async () => {
+    const p = await pending("bilan:read");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    consentFailures.grant = true;
+    expect(await approveOAuthConsentAction({ oauthQuery: p.oauthQuery, access: "read" })).toEqual({
+      ok: false,
+      error: "FAILED",
+    });
+    expect(log).toHaveBeenCalledWith("[bilan] OAuth consent failed", "Error");
+  });
+
+  it("still returns the redirect when the authorization audit fails", async () => {
+    const p = await pending("bilan:read");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(db.auditLog, "create").mockRejectedValueOnce(new Error("db down"));
+    const res = await approveOAuthConsentAction({ oauthQuery: p.oauthQuery, access: "read" });
+    expect(res).toEqual({ ok: true, url: expect.stringContaining("code=") });
+    expect(await consents(p.clientId)).toBe(1);
+    expect(log).toHaveBeenCalled();
+  });
 });
 
 describe("denyOAuthConsentAction", () => {
@@ -205,6 +259,23 @@ describe("denyOAuthConsentAction", () => {
     expect(url.searchParams.get("error")).toBe("access_denied");
     expect(url.searchParams.get("state")).toBe(p.state);
     expect(await consents(p.clientId)).toBe(0);
+  });
+
+  it("refuses when the instance switch is off", async () => {
+    const p = await pending("bilan:read");
+    await appSettings.set("mcp_enabled", false, userId);
+    expect(await denyOAuthConsentAction(p.oauthQuery)).toEqual({
+      ok: false,
+      error: "INSTANCE_DISABLED",
+    });
+  });
+
+  it("logs an unexpected failure and answers FAILED", async () => {
+    const p = await pending("bilan:read");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    consentFailures.deny = true;
+    expect(await denyOAuthConsentAction(p.oauthQuery)).toEqual({ ok: false, error: "FAILED" });
+    expect(log).toHaveBeenCalledWith("[bilan] OAuth consent failed", "Error");
   });
 
   it("refuses a tampered query", async () => {

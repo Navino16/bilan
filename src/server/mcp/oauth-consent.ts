@@ -138,7 +138,7 @@ export async function grantOAuthConsent(input: {
         scopes: scope.split(" "),
         via: input.audit.via,
       },
-    });
+    }).catch((e) => console.error("[bilan] OAuth authorization audit failed", e));
   }
   return { ok: true, url };
 }

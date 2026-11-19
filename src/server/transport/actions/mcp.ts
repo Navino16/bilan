@@ -191,15 +191,20 @@ export async function approveOAuthConsentAction(
       headers: await authHeaders(),
       audit: { ...(await auditOrigin()), via: await stepUpVia(session) },
     });
-  } catch {
+  } catch (e) {
+    console.error("[bilan] OAuth consent failed", e instanceof Error ? e.name : typeof e);
     return { ok: false, error: "FAILED" };
   }
 }
 
 export async function denyOAuthConsentAction(
   oauthQuery: string,
-): Promise<{ ok: true; url: string } | { ok: false; error: "EXPIRED" | "INVALID" | "FAILED" }> {
+): Promise<
+  | { ok: true; url: string }
+  | { ok: false; error: "INSTANCE_DISABLED" | "EXPIRED" | "INVALID" | "FAILED" }
+> {
   await requireSession();
+  if (!(await isMcpInstanceEnabled())) return { ok: false, error: "INSTANCE_DISABLED" };
   const parsed = oauthQuerySchema.safeParse(oauthQuery);
   if (!parsed.success) return { ok: false, error: "INVALID" };
   const consent = await parseConsentRequest(new URLSearchParams(parsed.data));
@@ -211,7 +216,8 @@ export async function denyOAuthConsentAction(
       ok: true,
       url: await denyOAuthConsent(consent.request.oauthQuery, await authHeaders()),
     };
-  } catch {
+  } catch (e) {
+    console.error("[bilan] OAuth consent failed", e instanceof Error ? e.name : typeof e);
     return { ok: false, error: "FAILED" };
   }
 }
