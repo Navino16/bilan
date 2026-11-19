@@ -87,6 +87,11 @@ export function formatDateTime(
   return formatWith(f, value, locale);
 }
 
+// "14:32" / "2:32 PM"; `timeZone` undefined = the runtime's zone.
+export function formatTime(value: DateInput, locale: string, timeZone?: string): string {
+  return formatWith(dateFormat("time", locale, timeZone, { timeStyle: "short" }), value, locale);
+}
+
 export function formatDateRange(from: DateInput, to: DateInput, locale: string): string {
   const f = dateFormat("date", locale, "UTC", { dateStyle: "medium" });
   return formatRangeWith(f, from, to, locale);

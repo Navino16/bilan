@@ -52,18 +52,21 @@ export function AiAssistants({
   endpoint,
   tokens,
   grants,
+  activity,
 }: {
   locale: string;
   enabled: boolean;
   endpoint: string;
   tokens: McpTokenView[];
   grants: OAuthGrantView[];
+  activity: React.ReactNode;
 }) {
   return (
     <>
       <AccessCard locale={locale} enabled={enabled} />
       <ConnectionCard enabled={enabled} endpoint={endpoint} />
       <AiOAuthClients grants={grants} />
+      {activity}
       <TokensCard tokens={tokens} />
     </>
   );

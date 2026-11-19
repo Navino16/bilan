@@ -1912,6 +1912,13 @@
           "FAILED": "Impossible de révoquer ce client. Réessayez."
         }
       },
+      "activity": {
+        "title": "Activité récente",
+        "hint": "Les modifications faites par vos assistants ces 90 derniers jours.",
+        "none": "Aucune action de vos assistants ces 90 derniers jours.",
+        "today": "Aujourd’hui",
+        "yesterday": "Hier"
+      },
       "tokens": {
         "title": "Jetons personnels",
         "hint": "Chaque jeton n’est affiché qu’une fois, à sa création.",
