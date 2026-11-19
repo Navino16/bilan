@@ -866,7 +866,8 @@ Codex and other clients that accept a server URL and a custom header work the sa
 Everything is limited to what you could see in Bilan, narrowed further:
 
 - your own accounts, always;
-- accounts shared with your households only when their owner ticked **Allow AI assistants** on the share. Balances, the dashboard, insights, budget figures and search only count the accounts an assistant can see.
+- accounts shared with your households only when their owner ticked **Allow AI assistants** on the share. Balances, the dashboard, insights, personal budget figures and search only count the accounts an assistant can see;
+- household budgets keep the same figures as in Bilan: the transactions of accounts the assistant can't see show only as one "Private account" amount per budget line, without label, date, account or merchant.
 
 An assistant can read your accounts and balances, the dashboard and insights for a period, transactions (search and detail, with their links and budget assignments), categories, rules, budgets, merchants, households and members' names, link suggestions and your preferences. It can't see full IBANs, and can't change anything, nor reach anything administrative or security-related.
 

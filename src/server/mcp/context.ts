@@ -18,8 +18,8 @@ export function currentMcpPrincipal(): McpPrincipal | null {
   return storage.getStore() ?? null;
 }
 
-// Spread into the share lookups that decide account visibility and access (budget scopes use
-// householdShareWhere): in an MCP call only shares allowing AI assistants count (spec §5.18).
+// Spread into the share lookups that decide account visibility and access: in an MCP call only
+// shares allowing AI assistants count (spec §5.18).
 export function aiShareWhere(): { allowAiAssistants: true } | Record<string, never> {
   return currentMcpPrincipal() ? { allowAiAssistants: true } : {};
 }

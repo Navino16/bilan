@@ -4,7 +4,7 @@ import { db } from "@/server/db";
 import { encrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
 import { buildSecureFields } from "@/server/services/transactions/secure-fields";
-import { createBudget } from "@/server/services/budgets";
+import { createBudget, getBudgetDetail, listBudgetsForUser } from "@/server/services/budgets";
 import { buildMcpServer } from "@/server/mcp/server";
 import { UNTRUSTED_NOTE } from "@/server/mcp/tools/read";
 import type { McpPrincipal } from "@/server/mcp/context";
@@ -20,6 +20,8 @@ const PREFIX = "mcpread";
 const BULK_PREFIX = "mcpreadbulk";
 const IBAN = "FR7630006000011234567890189";
 const RAW_LABEL = "ZZRAWSECRET CB BAKERY 4242";
+const PRIVATE_LABEL = "ZZPRIVATEPHARMA";
+const PLAIN_LABEL = "ZZPLAINSECRET";
 const now = new Date();
 const thisMonth = monthPeriod(now.getUTCFullYear(), now.getUTCMonth() + 1);
 const day = (d: Date, n: number) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), n, 12));
@@ -45,6 +47,7 @@ const ALL_TOOLS = [
 
 let f: McpFixture;
 let budgetId = "";
+let ownerPrivate = "";
 const tx = {} as Record<
   | "bakery"
   | "pairAPos"
@@ -54,7 +57,9 @@ const tx = {} as Record<
   | "l1Own"
   | "l1Ai"
   | "l2Own"
-  | "l2Plain",
+  | "l2Plain"
+  | "ownerPrivate"
+  | "plainSecret",
   string
 >;
 
@@ -156,6 +161,25 @@ beforeAll(async () => {
   ).id;
   await db.budgetAssignment.create({
     data: { budgetId, transactionId: tx.bakery, mode: "INCLUDE", assignedById: f.ownerId },
+  });
+  // Hidden from B's assistant: A's unshared account INCLUDE'd in the budget, and shared-plain.
+  ownerPrivate = (
+    await db.bankAccount.create({
+      data: { ownerId: f.ownerId, name: "owner-private", type: "CHECKING" },
+    })
+  ).id;
+  tx.ownerPrivate = await row(ownerPrivate, day(now, 11), -8, {
+    label: PRIVATE_LABEL,
+    type: "CARD",
+    categoryId: f.categoryId,
+  });
+  tx.plainSecret = await row(f.accounts.sharedPlain, day(now, 12), -3, {
+    label: PLAIN_LABEL,
+    type: "CARD",
+    categoryId: f.categoryId,
+  });
+  await db.budgetAssignment.create({
+    data: { budgetId, transactionId: tx.ownerPrivate, mode: "INCLUDE", assignedById: f.ownerId },
   });
   await db.categorizationRule.create({
     data: { pattern: "shop", matchType: "CONTAINS", categoryId: f.categoryId, groupId: f.groupId },
@@ -287,22 +311,46 @@ describe("MCP read tools", () => {
     expect(rules[0]).toMatchObject({ pattern: "shop", categoryId: f.categoryId });
   });
 
-  // `own` isn't shared with the household: its budget counts shared-ai only (50 outside MCP).
-  it("list_budgets, get_budget: figures over shared-ai, not shared-plain", async () => {
+  // `own` isn't shared with the household: the line counts shared-ai, shared-plain and the
+  // INCLUDE'd owner-private row (10 + 40 + 3 + 8), like the app; the bakery is out of budget.
+  it("list_budgets, get_budget: the app's figures for a household budget", async () => {
+    const app = await getBudgetDetail(budgetId, f.memberId, { withTransactions: false });
+    expect(app.lines[0].spent).toBe(61);
     const { budgets } = data(await call("list_budgets"));
     expect(budgets.map((b: { id: string }) => b.id)).toEqual([budgetId]);
-    expect(budgets[0].spentTotal).toBe(10);
+    expect(budgets[0].spentTotal).toBe(app.spentTotal);
+    expect(budgets[0].spentTotal).toBe((await listBudgetsForUser(f.memberId))[0].spentTotal);
     expect(data(await call("list_budgets", { archived: true })).budgets).toEqual([]);
 
     const { budget } = data(await call("get_budget", { id: budgetId }));
-    expect(budget.spentTotal).toBe(10);
+    expect(budget).toMatchObject({
+      spentTotal: app.spentTotal,
+      leftToSpend: app.leftToSpend,
+      lines: [{ spent: 61, remaining: app.lines[0].remaining }],
+    });
     expect(budget.transactions).toEqual([]);
+    expect(budget.privateAccountTotals).toEqual([]);
     const detailed = data(await call("get_budget", { id: budgetId, withTransactions: true }));
     // The INCLUDE'd bakery row shows, out of budget.
     expect(detailed.budget.transactions.map((t: { id: string }) => t.id).sort()).toEqual(
       [f.expenses.sharedAi, tx.bakery].sort(),
     );
     expect(detailed.budget.outOfBudget).toMatchObject({ spent: 5, count: 1 });
+    // Shared-plain (-40, -3) and owner-private (-8) rows: one entry on the line.
+    expect(detailed.budget.privateAccountTotals).toEqual([
+      {
+        private: true,
+        label: "Private account",
+        lineId: budget.lines[0].id,
+        outside: null,
+        amount: -51,
+        count: 3,
+      },
+    ]);
+    expect(detailed.budget.transactionCount).toBe(5);
+    const json = JSON.stringify(detailed);
+    for (const needle of [toIsoDay(day(now, 11)), toIsoDay(day(now, 12)), "owner-private"])
+      expect(json).not.toContain(needle);
 
     const missing = await call("get_budget", { id: "nope" });
     expect(missing.isError).toBe(true);
@@ -349,7 +397,7 @@ describe("MCP read tools", () => {
     expect(prefs.exceptionalRule).toHaveProperty("factor");
   });
 
-  it("no tool output carries the IBAN, a raw label or anything from shared-plain", async () => {
+  it("no tool output carries the IBAN, a raw label or anything from a hidden account", async () => {
     const args: Record<string, Record<string, unknown>> = {
       get_transaction: { id: tx.l2Own },
       get_budget: { id: budgetId, withTransactions: true },
@@ -364,6 +412,12 @@ describe("MCP read tools", () => {
       f.expenses.sharedPlain,
       tx.pairBPos,
       tx.l2Plain,
+      "owner-private",
+      ownerPrivate,
+      tx.ownerPrivate,
+      PRIVATE_LABEL,
+      tx.plainSecret,
+      PLAIN_LABEL,
     ];
     for (const name of ALL_TOOLS) {
       const text = textOf(await call(name, args[name] ?? {}));

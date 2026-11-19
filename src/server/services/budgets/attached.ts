@@ -141,6 +141,7 @@ const cents = (n: number) => Math.round(n * 100);
 export async function loadTransferContext(
   budgets: {
     id: string;
+    groupId: string | null;
     accountId: string | null;
     lines: { counterpartAccountId: string | null }[];
   }[],
@@ -152,6 +153,9 @@ export async function loadTransferContext(
   const ctx: TransferContext = { rows: new Map(), accountTypes: new Map() };
   if (attached.length === 0) return ctx;
 
+  // A personal budget's mirror counterparts can lie outside an MCP call's accounts: no pending
+  // leg is looked for there. A household budget keeps the app's figures (spec §5.18).
+  const mcpAccounts = await mcpAccountIds();
   const searchedOf = new Map<string, Set<string>>();
   const unlinkedOwn: BudgetRow[] = [];
   for (const b of attached) {
@@ -161,15 +165,13 @@ export async function loadTransferContext(
       ...(mirrors.get(b.id) ?? []).map((m) => m.counterpartAccountId!),
     ]);
     searched.delete(b.accountId!);
+    if (mcpAccounts && !b.groupId)
+      for (const a of searched) if (!mcpAccounts.has(a)) searched.delete(a);
     searchedOf.set(b.id, searched);
     unlinkedOwn.push(...rows.filter((r) => r.accountId === b.accountId && r.linkId == null));
   }
   const allRows = attached.flatMap((b) => loaded.get(b.id)!.rows);
-  // Mirror counterparts can lie outside an MCP call's accounts: no pending leg is looked for there.
-  const mcpAccounts = await mcpAccountIds();
-  const searchedAccounts = [...new Set(attached.flatMap((b) => [...searchedOf.get(b.id)!]))].filter(
-    (a) => !mcpAccounts || mcpAccounts.has(a),
-  );
+  const searchedAccounts = [...new Set(attached.flatMap((b) => [...searchedOf.get(b.id)!]))];
   const counterparts = attached.flatMap((b) =>
     b.lines.flatMap((l) => (l.counterpartAccountId ? [l.counterpartAccountId] : [])),
   );
