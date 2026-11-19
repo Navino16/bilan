@@ -518,16 +518,13 @@ export type BudgetAccountOption = {
 
 // The user's accounts with the groups each is shared with: a personal budget may
 // use any of them, a group budget only those shared with it. Archived ones are only
-// offered back to the lines that already use them.
+// offered back to the lines that already use them. Inside an MCP call the visible accounts
+// are the call's, like budgetAccountIds (spec §5.18).
 export async function listBudgetAccountOptions(userId: string): Promise<BudgetAccountOption[]> {
   const accounts = await listVisibleForUser(userId, { includeArchived: true });
   const { groupIds } = await budgetScopeForUser(userId);
   const shares = await db.accountShare.findMany({
-    where: {
-      accountId: { in: accounts.map((a) => a.id) },
-      groupId: { in: groupIds },
-      ...householdShareWhere(),
-    },
+    where: { accountId: { in: accounts.map((a) => a.id) }, groupId: { in: groupIds } },
     select: { accountId: true, groupId: true },
   });
   const groupsOf = new Map<string, string[]>();
