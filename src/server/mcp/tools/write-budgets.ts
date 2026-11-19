@@ -28,7 +28,7 @@ export const BUDGET_WRITE_TOOLS = [
   }),
   writeTool({
     name: "update_budget",
-    description: `Replace a budget's fields and lines; it stays personal or in its household (groupId is ignored). ${FIELDS}`,
+    description: `Replace a budget's fields and lines; it stays personal or in its household (groupId is ignored). Send every current field from get_budget: absent optional fields (description, accountId, outOfBudgetPlanned) are cleared and recurring becomes false. ${FIELDS}`,
     input: budgetInput.safeExtend({ id }),
     annotations: { destructiveHint: true },
     run: async (userId, { id, ...input }) => {
