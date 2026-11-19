@@ -69,6 +69,7 @@ export async function principalFromOAuthToken(
   const consent = await db.oauthConsent.findFirst({
     where: { userId: row.userId, clientId: row.clientId },
     select: { id: true, scopes: true, lastUsedAt: true },
+    orderBy: { updatedAt: "desc" },
   });
   if (!consent) return null;
   const consented = stringList(consent.scopes) ?? [];
