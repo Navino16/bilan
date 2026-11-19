@@ -30,6 +30,9 @@ const ACCESS_ERRORS = [
   TransactionAccessError,
 ];
 
+const isAccessError = (e: unknown): e is Error =>
+  e instanceof Error && ACCESS_ERRORS.some((cls) => e instanceof cls);
+
 export function toolErrorCode(e: unknown): ToolErrorCode {
   if (e instanceof McpToolError) return e.code;
   if (
@@ -38,10 +41,16 @@ export function toolErrorCode(e: unknown): ToolErrorCode {
     e instanceof PreferenceInputError
   )
     return "INVALID_INPUT";
-  if (e instanceof Error && ACCESS_ERRORS.some((cls) => e instanceof cls)) {
+  if (isAccessError(e)) {
     if (e.message === "NOT_FOUND" || e.message === "INVALID_PERIOD") return e.message;
     return e.message.startsWith("INVALID") ? "INVALID_INPUT" : "FORBIDDEN";
   }
   console.error("MCP tool failed", e);
   return "FAILED";
+}
+
+// The service's own code (LOCKED_FIELDS, ALREADY_LINKED…) when the tool code is broader (spec §5.18).
+export function toolErrorDetail(e: unknown): string | undefined {
+  if (!isAccessError(e) || e.message === toolErrorCode(e)) return undefined;
+  return e.message;
 }

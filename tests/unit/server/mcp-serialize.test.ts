@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { Prisma } from "@prisma/client";
 import { ZodError, z } from "zod";
 import { serialize } from "@/server/mcp/serialize";
-import { McpToolError, toolErrorCode } from "@/server/mcp/errors";
+import { McpToolError, toolErrorCode, toolErrorDetail } from "@/server/mcp/errors";
 import { BudgetAccessError } from "@/server/services/budgets";
 import { TransactionAccessError } from "@/server/services/transactions";
 import { RuleValidationError } from "@/server/services/categorization";
@@ -79,6 +79,14 @@ describe("toolErrorCode", () => {
     expect(zodError).toBeInstanceOf(ZodError);
     expect(toolErrorCode(zodError)).toBe("INVALID_INPUT");
     expect(toolErrorCode(new RuleValidationError("bad regex"))).toBe("INVALID_INPUT");
+  });
+
+  it("details the service code when it is not the tool code itself", () => {
+    expect(toolErrorDetail(new TransactionAccessError("LOCKED_FIELDS"))).toBe("LOCKED_FIELDS");
+    expect(toolErrorDetail(new BudgetAccessError("INVALID_LINE"))).toBe("INVALID_LINE");
+    expect(toolErrorDetail(new BudgetAccessError("FORBIDDEN"))).toBeUndefined();
+    expect(toolErrorDetail(new BudgetAccessError("NOT_FOUND"))).toBeUndefined();
+    expect(toolErrorDetail(new Error("connect ECONNREFUSED 10.0.0.1:3306"))).toBeUndefined();
   });
 
   it("logs an unknown error server-side and returns FAILED", () => {

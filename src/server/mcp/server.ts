@@ -3,7 +3,7 @@ import type { CallToolResult, StandardSchemaWithJSON } from "@modelcontextprotoc
 import type { z } from "zod";
 import { mcpWriteLimiter } from "@/server/auth/rate-limit";
 import { mcpLimiterKey, runAsMcp, type McpPrincipal, type McpScope } from "@/server/mcp/context";
-import { toolErrorCode, type ToolErrorCode } from "@/server/mcp/errors";
+import { toolErrorCode, toolErrorDetail, type ToolErrorCode } from "@/server/mcp/errors";
 import { serialize } from "@/server/mcp/serialize";
 import {
   READ_TOOLS,
@@ -24,7 +24,8 @@ function advertised(schema: z.ZodObject): StandardSchemaWithJSON {
   return { "~standard": { ...std, validate: (value: unknown) => ({ value }) } };
 }
 
-// `detail` only ever describes the caller's own arguments (zod issues), never server state.
+// `detail` is the zod issues of the arguments or the service's error code; services check
+// access before any code that reveals the state of data the user can't write.
 const toolError = (code: ToolErrorCode, detail?: string): CallToolResult => ({
   isError: true,
   content: [
@@ -59,7 +60,7 @@ async function runTool(
       content: [{ type: "text", text: JSON.stringify(structuredContent) }],
     };
   } catch (e) {
-    return toolError(toolErrorCode(e));
+    return toolError(toolErrorCode(e), toolErrorDetail(e));
   }
 }
 

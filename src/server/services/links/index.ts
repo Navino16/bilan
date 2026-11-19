@@ -44,13 +44,13 @@ export async function createLink(input: {
     },
   });
   if (rows.length !== ids.length) throw new LinkAccessError("NOT_FOUND");
-  for (const r of rows) {
-    if (r.linkMembership) throw new LinkAccessError("ALREADY_LINKED");
-  }
   await assertCanWriteAll(
     input.userId,
     rows.map((r) => r.accountId),
   );
+  for (const r of rows) {
+    if (r.linkMembership) throw new LinkAccessError("ALREADY_LINKED");
+  }
 
   const link = await db.transactionLink.create({
     data: {
