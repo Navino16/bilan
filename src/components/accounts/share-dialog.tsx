@@ -79,6 +79,7 @@ export function ShareDialog({
   }
 
   function changeAi(groupId: string, allow: boolean) {
+    setAiAccess((s) => ({ ...s, [groupId]: allow }));
     startTransition(async () => {
       const fd = new FormData();
       fd.set("accountId", accountId);
@@ -86,8 +87,10 @@ export function ShareDialog({
       fd.set("allow", String(allow));
       setError(null);
       const result = await setShareAiAccessAction(null, fd);
-      if (!result?.ok) return setError(result?.error ?? "FAILED");
-      setAiAccess((s) => ({ ...s, [groupId]: allow }));
+      if (!result?.ok) {
+        setAiAccess((s) => ({ ...s, [groupId]: !allow }));
+        return setError(result?.error ?? "FAILED");
+      }
       router.refresh();
     });
   }
