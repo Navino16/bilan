@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { overline } from "@/components/transactions/bits";
 import { LocalDateTime } from "@/components/shell/local-date-time";
+import { useAiSettingsLink } from "@/components/settings/ai-settings-link";
 import { revokeOtherSessionsAction, revokeSessionAction } from "@/server/transport/actions/auth";
 import type { SessionView } from "@/server/services/users/sessions";
 
@@ -78,6 +79,7 @@ export function SessionsControls({ sessions }: { sessions: SessionView[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const aiSettingsLink = useAiSettingsLink();
   const current = sessions.find((s) => s.current);
   const others = sessions.filter((s) => !s.current);
 
@@ -132,7 +134,11 @@ export function SessionsControls({ sessions }: { sessions: SessionView[] }) {
       )}
       {error && (
         <Alert variant="destructive">
-          <AlertDescription>{t(`error.${error}`)}</AlertDescription>
+          <AlertDescription>
+            {error === "TOKENS_FAILED"
+              ? t.rich("error.TOKENS_FAILED", { link: aiSettingsLink })
+              : t(`error.${error}`)}
+          </AlertDescription>
         </Alert>
       )}
     </div>

@@ -20,6 +20,7 @@ vi.mock("react", async (importOriginal) => {
 
 import { db } from "@/server/db";
 import { visibleAccountIds } from "@/server/services/accounts";
+import { getOnboardingState } from "@/server/services/onboarding";
 import { runAsMcp } from "@/server/mcp/context";
 import {
   cleanupMcpFixture,
@@ -29,14 +30,20 @@ import {
 } from "./support/mcp-fixtures";
 
 const PREFIX = "mcpcache";
+// Household member owning no account: only the WRITE share of `shared-plain` (AI not allowed).
+const writerId = `${PREFIX}_writer`;
 let f: McpFixture;
 
 beforeAll(async () => {
   f = await createMcpFixture(PREFIX, new Date("2026-06-15T12:00:00.000Z"));
+  await db.user.deleteMany({ where: { id: writerId } });
+  await db.user.create({ data: { id: writerId, email: `${writerId}@bilan.local`, name: "W" } });
+  await db.groupMember.create({ data: { groupId: f.groupId, userId: writerId, role: "MEMBER" } });
 });
 
 afterAll(async () => {
   await cleanupMcpFixture(PREFIX);
+  await db.user.deleteMany({ where: { id: writerId } });
   await db.$disconnect();
 });
 
@@ -48,5 +55,16 @@ describe("visibleAccountRefs memoization", () => {
     expect(await asMcp()).toHaveLength(2);
     expect(await visibleAccountIds(f.memberId)).toHaveLength(3);
     expect(await asMcp()).toHaveLength(2);
+  });
+});
+
+describe("getOnboardingState", () => {
+  it("ignores a WRITE share without the AI flag in an MCP call, under its own memo key", async () => {
+    const asMcp = () => runAsMcp(mcpPrincipal(writerId), () => getOnboardingState(writerId));
+
+    expect((await getOnboardingState(writerId)).addBlocker).toBeNull();
+    expect((await asMcp()).addBlocker).toBe("READ_ONLY");
+    expect((await getOnboardingState(writerId)).addBlocker).toBeNull();
+    expect((await asMcp()).addBlocker).toBe("READ_ONLY");
   });
 });
