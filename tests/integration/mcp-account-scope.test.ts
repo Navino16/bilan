@@ -142,10 +142,15 @@ describe("MCP account narrowing", () => {
       },
       { id: f.memberId },
     );
-    const { outside, inside } = await both(() => getBudgetDetail(personal.id, f.memberId, { now }));
-    expect(outside.spentTotal).toBe(150);
-    expect(inside.spentTotal).toBe(110);
-    await db.budget.delete({ where: { id: personal.id } });
+    try {
+      const { outside, inside } = await both(() =>
+        getBudgetDetail(personal.id, f.memberId, { now }),
+      );
+      expect(outside.spentTotal).toBe(150);
+      expect(inside.spentTotal).toBe(110);
+    } finally {
+      await db.budget.delete({ where: { id: personal.id } });
+    }
   });
 
   it("leaves shared-plain rows out of the transaction list", async () => {

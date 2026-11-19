@@ -867,7 +867,7 @@ Tout est limité à ce que vous pouvez voir dans Bilan, avec une restriction de 
 
 - vos propres comptes, toujours ;
 - les comptes partagés avec vos foyers seulement si leur propriétaire a coché **Autoriser les assistants IA** sur le partage. Les soldes, le tableau de bord, les analyses, les chiffres des budgets personnels et la recherche ne comptent que les comptes qu’un assistant peut voir ;
-- les budgets de foyer gardent les mêmes chiffres que dans Bilan : les transactions des comptes que l’assistant ne voit pas n’apparaissent que sous la forme d’un montant « Private account » (compte privé) par ligne de budget, sans libellé, date, compte ni marchand.
+- les budgets de foyer gardent les mêmes chiffres de dépenses que dans Bilan : les transactions des comptes que l’assistant ne voit pas n’apparaissent que sous la forme d’un montant « Private account » (compte privé) par ligne de budget, sans libellé, date, compte ni marchand.
 
 Un assistant peut lire vos comptes et soldes, le tableau de bord et les analyses d’une période, les transactions (recherche et détail, avec leurs liens et leurs affectations de budget), les catégories, les règles, les budgets, les marchands, les foyers et les noms de leurs membres, les suggestions de liens et vos préférences. Il ne voit pas les IBAN complets, ne peut rien modifier, et n’accède à rien d’administratif ni de lié à la sécurité.
 
