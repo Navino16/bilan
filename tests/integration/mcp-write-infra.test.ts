@@ -7,7 +7,7 @@ import { mcpWriteLimiter } from "@/server/auth/rate-limit";
 import { runAsMcp, type McpPrincipal } from "@/server/mcp/context";
 import { buildMcpServer } from "@/server/mcp/server";
 import { READ_TOOLS } from "@/server/mcp/tools/read";
-import { writeTool } from "@/server/mcp/tools/write";
+import { writeTool } from "@/server/mcp/tools/write-tool";
 
 const userId = "mcpwinfra_user";
 const principal = (scopes: McpPrincipal["scopes"], id = "a"): McpPrincipal => ({

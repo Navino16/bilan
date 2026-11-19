@@ -176,3 +176,37 @@ describe("set_transaction_month", () => {
     failed(await call("set_transaction_month", { id: "nope", month: null }), "NOT_FOUND");
   });
 });
+
+describe("writes stay inside the MCP account set", () => {
+  const targets = [
+    ["sharedAi", () => f.expenses.sharedAi],
+    ["sharedPlain", () => f.expenses.sharedPlain],
+  ] as const;
+
+  it.each(targets)("refuses every update-style tool on %s and leaves the row", async (_n, txId) => {
+    const id = txId();
+    const before = await db.transaction.findUniqueOrThrow({ where: { id } });
+    failed(await call("update_transaction", { id, label: "Hack", amount: -1 }), "FORBIDDEN");
+    failed(await call("recategorize_transaction", { id, categoryId: null }), "FORBIDDEN");
+    failed(await call("set_transaction_month", { id, month: "2020-01" }), "FORBIDDEN");
+    expect(await db.transaction.findUniqueOrThrow({ where: { id } })).toEqual(before);
+  });
+
+  it("stamps update, recategorize and set-month audit rows with via mcp", async () => {
+    const id = f.expenses.own;
+    ok(await call("update_transaction", { id, label: "Audited" }));
+    ok(await call("recategorize_transaction", { id, categoryId: null }));
+    ok(await call("set_transaction_month", { id, month: null }));
+    for (const action of [
+      "transaction.updated",
+      "transaction.recategorized",
+      "transaction.month_set",
+    ]) {
+      const rows = await db.auditLog.findMany({
+        where: { userId: f.memberId, action, entityId: id },
+      });
+      expect(rows.length, action).toBeGreaterThan(0);
+      for (const r of rows) expect(r.metadata).toMatchObject({ via: "mcp" });
+    }
+  });
+});

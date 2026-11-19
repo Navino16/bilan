@@ -8,18 +8,15 @@ import {
   setTransactionMonth,
   updateTransaction,
 } from "@/server/services/transactions";
-import { writeTool } from "@/server/mcp/tools/write";
+import { writeTool } from "@/server/mcp/tools/write-tool";
 
 const AMOUNTS = "Amounts are in euros, negative for spending.";
+const isoDay = z.string().refine(isValidIsoDay, { message: "DATE_INVALID" }).describe("YYYY-MM-DD");
 const id = z.string().min(1).describe("Transaction id");
 
 // z.coerce.date has no JSON Schema, so the date is advertised as a YYYY-MM-DD string.
 export const createTransactionInput = transactionInputSchema.omit({ rawLabel: true }).extend({
-  date: z
-    .string()
-    .refine(isValidIsoDay, { message: "DATE_INVALID" })
-    .transform(dayStart)
-    .describe("YYYY-MM-DD"),
+  date: isoDay.transform(dayStart),
 });
 
 // The service re-parses its input, so the date and note stay untransformed here.
@@ -27,11 +24,7 @@ const updateTransactionInput = z.object({
   id,
   label: transactionUpdateSchema.shape.label,
   note: z.string().trim().max(1000).optional().describe("Blank or absent clears the note"),
-  date: z
-    .string()
-    .refine(isValidIsoDay, { message: "DATE_INVALID" })
-    .optional()
-    .describe("YYYY-MM-DD"),
+  date: isoDay.optional(),
   amount: transactionUpdateSchema.shape.amount,
   type: transactionUpdateSchema.shape.type,
 });
