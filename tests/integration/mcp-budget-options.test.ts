@@ -49,12 +49,13 @@ describe("listBudgetAccountOptions", () => {
     });
   });
 
-  it("inside an MCP call keeps only AI-allowed shares, plus the caller's own accounts", async () => {
+  // An account AI-allowed in one household is visible to the assistant in every one (spec §5.18).
+  it("inside an MCP call keeps the assistant's accounts with all their groups", async () => {
     const options = await runAsMcp(mcpPrincipal(f.memberId), () =>
       listBudgetAccountOptions(f.memberId),
     );
     expect(groupsByAccount(options)).toEqual({
-      [f.accounts.sharedAi]: [f.groupId],
+      [f.accounts.sharedAi]: [f.groupId, g2].sort(),
       [f.accounts.own]: [g2],
     });
   });

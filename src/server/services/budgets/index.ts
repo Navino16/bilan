@@ -13,7 +13,7 @@ import {
   visibleAccountIds,
   visibleAccountRefs,
 } from "@/server/services/accounts";
-import { aiShareWhere, currentMcpPrincipal } from "@/server/mcp/context";
+import { currentMcpPrincipal } from "@/server/mcp/context";
 import { canReadAccount } from "@/server/services/accounts/sharing";
 import {
   assertCategoryAssignable,
@@ -23,6 +23,7 @@ import {
 import type { RowBucket } from "@/lib/budget-match";
 import { recentSeriesPeriods, seriesSummary, type BudgetSeriesHistory } from "@/lib/budget-history";
 import { linkIdsWhere } from "@/server/services/links/members";
+import { netSum, pickPrimary } from "@/lib/links";
 import {
   leftToSpend,
   lineStatus,
@@ -488,25 +489,21 @@ async function readableOrThrow(id: string, userId: string) {
   return b;
 }
 
-// Inside an MCP call a household scope keeps the AI-allowed shares and the caller's own accounts.
-function householdShareWhere(): Prisma.AccountShareWhereInput {
-  const principal = currentMcpPrincipal();
-  return principal ? { OR: [aiShareWhere(), { account: { ownerId: principal.userId } }] } : {};
-}
-
-// The account set a budget draws from: a GROUP budget uses the accounts shared
-// with the group (so every member computes the same total and personal accounts
-// never leak in); a PERSONAL budget uses the owner's visible accounts.
+// The accounts a budget's lines, attachment and forecast may use: a GROUP budget uses the
+// accounts shared with the group (so every member computes the same total and personal
+// accounts never leak in); a PERSONAL budget uses the owner's visible accounts. Inside an
+// MCP call only the call's accounts; the spend figures aren't narrowed (budgetScopeAccounts,
+// spec §5.18).
 async function budgetAccountIds(budget: {
   userId: string | null;
   groupId: string | null;
 }): Promise<string[]> {
   if (budget.groupId) {
-    const shares = await db.accountShare.findMany({
-      where: { groupId: budget.groupId, ...householdShareWhere() },
-      select: { accountId: true },
-    });
-    return shares.map((s) => s.accountId);
+    const [shares, mcpAccounts] = await Promise.all([
+      db.accountShare.findMany({ where: { groupId: budget.groupId }, select: { accountId: true } }),
+      mcpAccountIds(),
+    ]);
+    return shares.map((s) => s.accountId).filter((a) => !mcpAccounts || mcpAccounts.has(a));
   }
   if (!budget.userId) return [];
   return visibleAccountIds(budget.userId);
@@ -521,16 +518,13 @@ export type BudgetAccountOption = {
 
 // The user's accounts with the groups each is shared with: a personal budget may
 // use any of them, a group budget only those shared with it. Archived ones are only
-// offered back to the lines that already use them.
+// offered back to the lines that already use them. Inside an MCP call the visible accounts
+// are the call's, like budgetAccountIds (spec §5.18).
 export async function listBudgetAccountOptions(userId: string): Promise<BudgetAccountOption[]> {
   const accounts = await listVisibleForUser(userId, { includeArchived: true });
   const { groupIds } = await budgetScopeForUser(userId);
   const shares = await db.accountShare.findMany({
-    where: {
-      accountId: { in: accounts.map((a) => a.id) },
-      groupId: { in: groupIds },
-      ...householdShareWhere(),
-    },
+    where: { accountId: { in: accounts.map((a) => a.id) }, groupId: { in: groupIds } },
     select: { accountId: true, groupId: true },
   });
   const groupsOf = new Map<string, string[]>();
@@ -556,7 +550,8 @@ type BudgetRef = {
 const scopeKey = (b: { userId: string | null; groupId: string | null }) =>
   b.groupId ? `g:${b.groupId}` : `u:${b.userId}`;
 
-// The account ids of each budget scope, in one query for every group scope.
+// The account ids of each budget scope, in one query for every group scope. A household scope
+// isn't narrowed inside an MCP call: its figures stay the app's (spec §5.18).
 async function budgetScopeAccounts(budgets: BudgetRef[]): Promise<Map<string, Set<string>>> {
   const groupIds = [...new Set(budgets.flatMap((b) => (b.groupId ? [b.groupId] : [])))];
   const userIds = [...new Set(budgets.flatMap((b) => (!b.groupId && b.userId ? [b.userId] : [])))];
@@ -564,7 +559,7 @@ async function budgetScopeAccounts(budgets: BudgetRef[]): Promise<Map<string, Se
     groupIds.length === 0
       ? []
       : db.accountShare.findMany({
-          where: { groupId: { in: groupIds }, ...householdShareWhere() },
+          where: { groupId: { in: groupIds } },
           select: { groupId: true, accountId: true },
         }),
     Promise.all(userIds.map(visibleAccountIds)),
@@ -625,18 +620,15 @@ async function loadBudgetRows(budgets: BudgetRef[]): Promise<Map<string, LoadedB
       }),
       linkIdsWhere(where),
     ]);
-    // Assigned rows ignore the scope: inside an MCP call they still stay within its accounts.
-    rows = txs
-      .filter((r) => !mcpAccounts || mcpAccounts.has(r.accountId))
-      .map((r) => ({
-        id: r.id,
-        amount: Number(r.amount),
-        date: r.date,
-        periodDate: r.periodDate,
-        categoryId: r.categoryId,
-        accountId: r.accountId,
-        linkId: linkIds.get(r.id) ?? null,
-      }));
+    rows = txs.map((r) => ({
+      id: r.id,
+      amount: Number(r.amount),
+      date: r.date,
+      periodDate: r.periodDate,
+      categoryId: r.categoryId,
+      accountId: r.accountId,
+      linkId: linkIds.get(r.id) ?? null,
+    }));
   }
 
   const membersOf = await linkMembersOf(rows);
@@ -661,13 +653,17 @@ async function loadBudgetRows(budgets: BudgetRef[]): Promise<Map<string, LoadedB
     const accounts = budgetRowAccounts(b, scopes.get(scopeKey(b))!);
     const from = b.periodStart.getTime();
     const to = b.periodEnd.getTime();
+    // Inside an MCP call a household budget keeps the app's figures (spec §5.18), while a
+    // personal budget's assigned rows stay within the call's accounts.
+    const allowed = b.groupId ? null : mcpAccounts;
     l.rows = rows.filter(
       (r) =>
-        (accounts.has(r.accountId) &&
+        (!allowed || allowed.has(r.accountId)) &&
+        ((accounts.has(r.accountId) &&
           r.periodDate.getTime() >= from &&
           r.periodDate.getTime() <= to) ||
-        l.includedIds.has(r.id) ||
-        l.excluded.has(r.id),
+          l.includedIds.has(r.id) ||
+          l.excluded.has(r.id)),
     );
     const ids = new Set(l.rows.map((r) => r.id));
     const includedLinks = new Set(
@@ -832,16 +828,19 @@ async function evaluateBudgets(
   viewer: { userId: string; groupIds: string[] },
   now: Date = new Date(),
 ): Promise<BudgetEvaluation[]> {
-  const [loaded, subtrees, mirrors] = await Promise.all([
+  const [loaded, subtrees, mirrors, mcpAccounts] = await Promise.all([
     loadBudgetRows(budgets),
     withDescendants(lineCategoryIds(budgets)),
     budgetMirrors(budgets, viewer),
+    mcpAccountIds(),
   ]);
+  // A landing is a balance: inside an MCP call only on the call's accounts (spec §5.18).
   const landing = budgets.filter(
     (b) =>
       b.accountId &&
       !b.archived &&
       loaded.get(b.id)!.scope.has(b.accountId) &&
+      (!mcpAccounts || mcpAccounts.has(b.accountId)) &&
       b.periodStart <= now &&
       now <= b.periodEnd,
   );
@@ -980,6 +979,7 @@ export type BudgetDetail = {
   nextId: string | null;
   transactions: BudgetTransaction[]; // newest first, capped at BUDGET_TRANSACTIONS_SHOWN
   transactionCount: number;
+  privateAccountTotals: PrivateAccountTotal[]; // MCP calls only
 };
 
 const BUDGET_TRANSACTIONS_SHOWN = 100;
@@ -992,6 +992,17 @@ export type BudgetTransaction = {
   label: string | null;
   categoryId: string | null;
   accountName: string | null;
+};
+
+// Inside an MCP call, the listed rows on accounts hidden from the assistant, summed per line
+// (or out of budget / unplanned) with nothing else about them (spec §5.18).
+export type PrivateAccountTotal = {
+  private: true;
+  label: "Private account";
+  lineId: string | null;
+  outside: "out" | "unplanned" | null;
+  amount: number;
+  count: number;
 };
 
 // Per-line sums for display + a budget-wide dedup sum for the total: a tx that
@@ -1058,46 +1069,114 @@ async function readableAccountNames(userId: string): Promise<Map<string, string>
 
 // Names of the accounts whose counted transactions the viewer sees in full; the
 // write-time INCLUDE guard is re-checked here so stale assignments stop exposing
-// rows (spec §2.2). Group budget: account shared with the group or owner still a member.
+// rows (spec §2.2). Group budget: account shared with the group or owner still a member,
+// and inside an MCP call also within the call's accounts.
 async function displayableAccountNames(
   accountIds: string[],
   viewerId: string,
   groupId: string | null,
 ): Promise<Map<string, string>> {
-  // Inside an MCP call every loaded row is on an account the viewer reads (loadBudgetRows).
-  if (!groupId || currentMcpPrincipal()) return readableAccountNames(viewerId);
-  const accounts = await db.bankAccount.findMany({
-    where: {
-      id: { in: accountIds },
-      OR: [
-        { shares: { some: { groupId } } },
-        { owner: { groupMemberships: { some: { groupId } } } },
-      ],
-    },
-    select: { id: true, name: true },
+  if (!groupId) return readableAccountNames(viewerId);
+  const [accounts, mcpAccounts] = await Promise.all([
+    db.bankAccount.findMany({
+      where: {
+        id: { in: accountIds },
+        OR: [
+          { shares: { some: { groupId } } },
+          { owner: { groupMemberships: { some: { groupId } } } },
+        ],
+      },
+      select: { id: true, name: true },
+    }),
+    mcpAccountIds(),
+  ]);
+  return new Map(
+    accounts.filter((a) => !mcpAccounts || mcpAccounts.has(a.id)).map((a) => [a.id, a.name]),
+  );
+}
+
+// The hidden members of a listed row, summed; `rowId` is the counted row whose buckets they share.
+type HiddenPart = { rowId: string; amount: number; count: number };
+
+// Splits each listed row between its link members on visible and hidden accounts: the visible
+// part keeps its largest visible member's details, the hidden part only feeds the private totals.
+function splitByVisibility(
+  listed: BudgetRow[],
+  rows: BudgetRow[],
+  visible: Map<string, string>,
+): { shown: BudgetRow[]; hidden: HiddenPart[] } {
+  const members = new Map<string, BudgetRow[]>();
+  for (const r of rows) if (r.linkId) members.set(r.linkId, [...(members.get(r.linkId) ?? []), r]);
+  const shown: BudgetRow[] = [];
+  const hidden: HiddenPart[] = [];
+  for (const r of listed) {
+    const parts = r.linkId ? (members.get(r.linkId) ?? [r]) : [r];
+    const seen = parts.filter((m) => visible.has(m.accountId));
+    const unseen = parts.filter((m) => !visible.has(m.accountId));
+    if (unseen.length === 0) {
+      shown.push(r);
+      continue;
+    }
+    if (seen.length > 0)
+      shown.push({ ...pickPrimary(seen), amount: netSum(seen.map((m) => m.amount)) });
+    hidden.push({ rowId: r.id, amount: netSum(unseen.map((m) => m.amount)), count: unseen.length });
+  }
+  return { shown, hidden };
+}
+
+function privateAccountTotals(
+  hidden: HiddenPart[],
+  e: Pick<BudgetEvaluation, "lines" | "bucketsOf">,
+): PrivateAccountTotal[] {
+  const sums = new Map<RowBucket, { amount: number; count: number }>();
+  for (const part of hidden) {
+    for (const bucket of e.bucketsOf.get(part.rowId) ?? []) {
+      const sum = sums.get(bucket) ?? { amount: 0, count: 0 };
+      sums.set(bucket, { amount: sum.amount + part.amount, count: sum.count + part.count });
+    }
+  }
+  const order: RowBucket[] = [...e.lines.keys(), "out", "unplanned"];
+  return order.flatMap((bucket) => {
+    const sum = sums.get(bucket);
+    if (!sum) return [];
+    const line = typeof bucket === "number";
+    return [
+      {
+        private: true as const,
+        label: "Private account" as const,
+        lineId: line ? e.lines[bucket].id : null,
+        outside: line ? null : bucket,
+        amount: round2(sum.amount),
+        count: sum.count,
+      },
+    ];
   });
-  return new Map(accounts.map((a) => [a.id, a.name]));
 }
 
 async function budgetTransactions(
-  counted: BudgetRow[],
+  listed: BudgetRow[],
+  e: Pick<BudgetEvaluation, "lines" | "bucketsOf" | "rows">,
   viewerId: string,
   groupId: string | null,
-): Promise<BudgetTransaction[]> {
-  const shown = [...counted]
-    .sort((a, b) => b.date.getTime() - a.date.getTime())
-    .slice(0, BUDGET_TRANSACTIONS_SHOWN);
+): Promise<Pick<BudgetDetail, "transactions" | "privateAccountTotals">> {
   const visible = await displayableAccountNames(
-    [...new Set(shown.map((r) => r.accountId))],
+    [...new Set([...listed, ...e.rows].map((r) => r.accountId))],
     viewerId,
     groupId,
   );
+  // An MCP call lists the visible rows only, the hidden ones summed per line (spec §5.18).
+  const split = currentMcpPrincipal()
+    ? splitByVisibility(listed, e.rows, visible)
+    : { shown: [...listed], hidden: [] };
+  const shown = split.shown
+    .sort((a, b) => b.date.getTime() - a.date.getTime())
+    .slice(0, BUDGET_TRANSACTIONS_SHOWN);
   const rows = await db.transaction.findMany({
     where: { id: { in: shown.filter((r) => visible.has(r.accountId)).map((r) => r.id) } },
     select: { id: true, labelEnc: true },
   });
   const labels = new Map(rows.map((r) => [r.id, decrypt(r.labelEnc, dataKey)]));
-  return shown.map((r, i) =>
+  const transactions = shown.map((r, i) =>
     visible.has(r.accountId)
       ? {
           id: r.id,
@@ -1108,7 +1187,8 @@ async function budgetTransactions(
           categoryId: r.categoryId,
           accountName: visible.get(r.accountId)!,
         }
-      : {
+      : // App only: an MCP call has no hidden row left in `shown`.
+        {
           id: `hidden-${i}`,
           date: r.date,
           periodDate: r.periodDate,
@@ -1118,6 +1198,7 @@ async function budgetTransactions(
           accountName: null,
         },
   );
+  return { transactions, privateAccountTotals: privateAccountTotals(split.hidden, e) };
 }
 
 export type BudgetForecast = { balance: number; remaining: number; endBalance: number };
@@ -1191,7 +1272,9 @@ export async function getBudgetDetail(
     landing: e.landing,
     canManage: canManageBudget(b.groupId, roleByGroup),
     ...(await seriesNeighbours(b)),
-    transactions: withTransactions ? await budgetTransactions(listed, viewerId, b.groupId) : [],
+    ...(withTransactions
+      ? await budgetTransactions(listed, e, viewerId, b.groupId)
+      : { transactions: [], privateAccountTotals: [] }),
     transactionCount: listed.length,
   };
 }

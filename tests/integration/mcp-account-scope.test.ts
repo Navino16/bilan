@@ -7,7 +7,12 @@ import {
   listAccountsSharedWithGroup,
   writableAccountIds,
 } from "@/server/services/accounts/sharing";
-import { assignTransaction, createBudget, getBudgetDetail } from "@/server/services/budgets";
+import {
+  assignTransaction,
+  createBudget,
+  getBudgetDetail,
+  listBudgetSeriesHistory,
+} from "@/server/services/budgets";
 import { getDashboard } from "@/server/services/dashboard";
 import { getInsights } from "@/server/services/dashboard/insights";
 import { listTransactions } from "@/server/services/transactions";
@@ -120,10 +125,32 @@ describe("MCP account narrowing", () => {
     expect(inside.overview.net).toBe(-110);
   });
 
-  it("leaves shared-plain rows out of a household budget's spent, INCLUDEs too", async () => {
+  it("gives a household budget the app's spent, shared-plain INCLUDEs too", async () => {
     const { outside, inside } = await both(() => getBudgetDetail(budgetId, f.memberId, { now }));
     expect(outside.spentTotal).toBe(57);
-    expect(inside.spentTotal).toBe(10);
+    expect(inside.spentTotal).toBe(57);
+  });
+
+  it("leaves shared-plain rows out of a personal budget's spent", async () => {
+    const personal = await createBudget(
+      {
+        name: "Personal June",
+        periodType: "MONTH",
+        periodStart: "2026-06-01",
+        periodEnd: "2026-06-30",
+        lines: [{ categoryId: f.categoryId, plannedAmount: 500 }],
+      },
+      { id: f.memberId },
+    );
+    try {
+      const { outside, inside } = await both(() =>
+        getBudgetDetail(personal.id, f.memberId, { now }),
+      );
+      expect(outside.spentTotal).toBe(150);
+      expect(inside.spentTotal).toBe(110);
+    } finally {
+      await db.budget.delete({ where: { id: personal.id } });
+    }
   });
 
   it("leaves shared-plain rows out of the transaction list", async () => {
@@ -192,9 +219,33 @@ describe("MCP account narrowing", () => {
     try {
       const { outside, inside } = await both(() => getBudgetDetail(budgetId, f.memberId, { now }));
       expect(outside.spentTotal).toBe(157);
-      expect(inside.spentTotal).toBe(110);
+      expect(inside.spentTotal).toBe(157);
     } finally {
       await db.accountShare.deleteMany({ where: { accountId: f.accounts.own } });
     }
+  });
+
+  it("gives a household series the app's figures over time", async () => {
+    const month = (m: number) => ({
+      name: "Household series",
+      groupId: f.groupId,
+      periodType: "MONTH",
+      periodStart: new Date(Date.UTC(2026, m - 1, 1)),
+      periodEnd: new Date(Date.UTC(2026, m, 0)),
+      recurring: true,
+      createdById: f.ownerId,
+      lines: { create: [{ categoryId: f.categoryId, plannedAmount: 100 }] },
+    });
+    const april = await db.budget.create({ data: month(4) });
+    await db.budget.create({ data: { ...month(5), parentBudgetId: april.id } });
+    await expense(f.accounts.sharedPlain, new Date("2026-04-10T12:00:00.000Z"), -20, f.categoryId);
+
+    const { outside, inside } = await both(async () =>
+      (await listBudgetSeriesHistory(f.memberId, now))
+        .find((s) => s.name === "Household series")!
+        .periods.map((p) => p.spent),
+    );
+    expect(outside).toEqual([20, 7]);
+    expect(inside).toEqual(outside);
   });
 });
