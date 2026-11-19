@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from "vitest";
 
 // The Server Actions read the session through next/headers.
 const request = vi.hoisted(() => ({ headers: new Headers() }));
@@ -249,5 +249,23 @@ describe("revokeOAuthGrantAction", () => {
       ok: false,
       error: "NOT_FOUND",
     });
+  });
+});
+
+describe("unexpected revoke failures", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it.each([
+    ["token", () => vi.spyOn(db.mcpToken, "updateMany"), () => revokeMcpTokenAction("any-id")],
+    [
+      "OAuth client",
+      () => vi.spyOn(db.oauthClient, "findUnique"),
+      () => revokeOAuthGrantAction("any-id"),
+    ],
+  ] as const)("logs the error and answers FAILED for a %s", async (_label, spy, run) => {
+    spy().mockRejectedValue(new Error("db down"));
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await run()).toEqual({ ok: false, error: "FAILED" });
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("[bilan]"), "Error");
   });
 });

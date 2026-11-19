@@ -106,10 +106,9 @@ export async function revokeMcpTokenAction(
     await revokeMcpToken(user.id, parsed.data);
     return { ok: true };
   } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error && e.message === "NOT_FOUND" ? "NOT_FOUND" : "FAILED",
-    };
+    if (e instanceof Error && e.message === "NOT_FOUND") return { ok: false, error: "NOT_FOUND" };
+    console.error("[bilan] revoke MCP token failed", e instanceof Error ? e.name : typeof e);
+    return { ok: false, error: "FAILED" };
   }
 }
 
@@ -125,10 +124,9 @@ export async function revokeOAuthGrantAction(
     await revokeOAuthGrant(user.id, parsed.data);
     return { ok: true };
   } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error && e.message === "NOT_FOUND" ? "NOT_FOUND" : "FAILED",
-    };
+    if (e instanceof Error && e.message === "NOT_FOUND") return { ok: false, error: "NOT_FOUND" };
+    console.error("[bilan] revoke OAuth grant failed", e instanceof Error ? e.name : typeof e);
+    return { ok: false, error: "FAILED" };
   }
 }
 
