@@ -886,7 +886,7 @@ Un client que vous avez déjà autorisé se reconnecte sans cette page tant que 
 
 ### Activité récente
 
-**Activité récente** liste les modifications faites par vos assistants ces 90 derniers jours, les 50 plus récentes, regroupées par jour : l’heure, l’action et le nom du jeton ou du client qui l’a faite. Les lectures n’y figurent pas. Seules y figurent les modifications de vos propres jetons et clients, pas celles que l’assistant d’un autre membre a déclenchées sur vos comptes (un lien de virement automatique, par exemple).
+**Activité récente** liste les modifications faites par vos assistants ces 90 derniers jours, les 50 plus récentes, regroupées par jour : l’heure, l’action et ce qu’elle a modifié (le libellé de la transaction, les deux transactions d’un lien, ou le budget, avec un lien vers sa page), et le nom du jeton ou du client qui l’a faite. Seul ce que vous voyez encore est nommé : une transaction ou un budget supprimé, ou situé sur un compte ou un foyer auquel vous n’avez plus accès, n’affiche que l’action. Les lectures n’y figurent pas. Seules y figurent les modifications de vos propres jetons et clients, pas celles que l’assistant d’un autre membre a déclenchées sur vos comptes (un lien de virement automatique, par exemple).
 
 ### Jetons personnels
 

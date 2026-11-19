@@ -886,7 +886,7 @@ A client you have already authorized reconnects without this page while you are 
 
 ### Recent activity
 
-**Recent activity** lists the changes your assistants made in the last 90 days, the 50 most recent, grouped by day: the time, the action and the name of the token or client that made it. Reads don't appear. Only your own tokens and clients' changes appear, not those another member's assistant triggered on your accounts (an automatic transfer link, for instance).
+**Recent activity** lists the changes your assistants made in the last 90 days, the 50 most recent, grouped by day: the time, the action and what it changed (the transaction's label, the two transactions of a link, or the budget, linked to its page), and the name of the token or client that made it. Only what you can still see is named: a deleted transaction or budget, or one on an account or household you no longer have access to, shows the action alone. Reads don't appear. Only your own tokens and clients' changes appear, not those another member's assistant triggered on your accounts (an automatic transfer link, for instance).
 
 ### Personal tokens
 
