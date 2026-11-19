@@ -68,6 +68,7 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   await db.mcpToken.deleteMany({ where: { userId: { in: [userId, otherId] } } });
   await db.user.update({ where: { id: userId }, data: { banned: false } });
   await enable();
@@ -237,7 +238,6 @@ describe("principalFromToken", () => {
     vi.spyOn(db.mcpToken, "update").mockRejectedValueOnce(new Error("db blip"));
     expect(await principalFromToken(token)).toMatchObject({ userId });
     expect(errors).toHaveBeenCalled();
-    vi.restoreAllMocks();
   });
 
   it("is off with the instance switch and survives it coming back", async () => {

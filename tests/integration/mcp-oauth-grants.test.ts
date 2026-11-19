@@ -45,8 +45,10 @@ import {
   revokeAllMcpCredentialsOrAudit,
 } from "@/server/mcp/tokens";
 import {
+  clientRedirectHost,
   hasLiveOAuthGrants,
   listOAuthGrants,
+  redirectHost,
   revokeAllOAuthGrants,
   revokeOAuthGrant,
 } from "@/server/mcp/oauth-grants";
@@ -86,24 +88,34 @@ async function pendingCode(
   user: TestUser,
   scope = "bilan:read offline_access",
   name = `${tag}-client-${seq++}`,
+  opts: { redirectUri?: string; extra?: Record<string, string> } = {},
 ): Promise<Pending> {
-  const { clientId, redirectUri } = await registerClient({ name });
+  const { clientId, redirectUri } = await registerClient({ name, redirectUri: opts.redirectUri });
   const { oauthQuery, verifier } = await authorize({
     clientId,
     redirectUri,
     cookie: user.cookie,
     scope,
+    extra: opts.extra,
   });
   const { code } = await consent({ oauthQuery, cookie: user.cookie });
   return { clientId, redirectUri, code, verifier };
 }
 
-async function grant(user: TestUser, scope?: string, name?: string): Promise<Grant> {
-  const { clientId, redirectUri, code, verifier } = await pendingCode(user, scope, name);
+async function grant(
+  user: TestUser,
+  scope?: string,
+  name?: string,
+  redirectUri?: string,
+): Promise<Grant> {
+  const { clientId, code, verifier, ...rest } = await pendingCode(user, scope, name, {
+    redirectUri,
+  });
+  const redirect = rest.redirectUri;
   return {
     clientId,
-    redirectUri,
-    tokens: await exchangeCode({ clientId, redirectUri, code, verifier }),
+    redirectUri: redirect,
+    tokens: await exchangeCode({ clientId, redirectUri: redirect, code, verifier }),
   };
 }
 
@@ -191,6 +203,23 @@ describe("listOAuthGrants", () => {
   });
 });
 
+describe("redirect host", () => {
+  it("falls back to the scheme for private-use redirect URIs", async () => {
+    const user = await makeUser();
+    const g = await grant(user, "bilan:read", undefined, "com.example.app:/cb");
+    expect((await listOAuthGrants(user.id)).find((r) => r.clientId === g.clientId)).toMatchObject({
+      redirectHost: "com.example.app:",
+    });
+    expect(redirectHost("cursor://anysphere.cursor-retrieval/oauth/callback")).toBe(
+      "anysphere.cursor-retrieval",
+    );
+    expect(clientRedirectHost(JSON.stringify(["https://mcp.example.com:8443/cb"]))).toBe(
+      "mcp.example.com:8443",
+    );
+    expect(redirectHost("not a url")).toBeNull();
+  });
+});
+
 describe("revokeOAuthGrant", () => {
   it("kills the client's tokens and consent, audits, and leaves the other client alone", async () => {
     const user = await makeUser();
@@ -237,6 +266,26 @@ describe("revokeOAuthGrant", () => {
     const pending = await pendingCode(user);
     await revokeOAuthGrant(user.id, pending.clientId);
     await expectCodeRefused(pending);
+  });
+});
+
+describe("pending codes", () => {
+  it("ignores another user's code whose query carries the victim's id", async () => {
+    const victim = await makeUser();
+    const attacker = await makeUser();
+    const planted = await pendingCode(attacker, undefined, undefined, {
+      extra: { userId: victim.id },
+    });
+    expect(
+      await db.verification.count({
+        where: { value: { contains: `"userId":"${victim.id}"` } },
+      }),
+    ).toBe(1);
+
+    expect(await hasLiveOAuthGrants(victim.id)).toBe(false);
+    await expect(revokeOAuthGrant(victim.id, planted.clientId)).rejects.toThrow("NOT_FOUND");
+    expect(await revokeAllOAuthGrants(victim.id, "password")).toBe(0);
+    expect((await exchangeCode(planted)).access_token).toBeTruthy();
   });
 });
 
@@ -314,6 +363,19 @@ describe("failed revocation", () => {
     grantFailures.remaining = 1;
     expect(await revokeAllMcpCredentialsOrAudit(user.id, "sessions")).toBe(true);
     expect(await resolveMcpPrincipal(g.tokens.access_token)).toBeNull();
+  });
+
+  it("revokes the grants even when the personal tokens can't be", async () => {
+    const user = await makeUser();
+    const g = await grant(user);
+    const pat = await createMcpToken(user.id, { name: "t", scope: "read" });
+    quietErrors();
+    const updateMany = vi.spyOn(db.mcpToken, "updateMany").mockRejectedValue(new Error("db down"));
+    expect(await revokeAllMcpCredentialsOrAudit(user.id, "sessions")).toBe(false);
+    expect(updateMany).toHaveBeenCalledTimes(2);
+    await expectDead(g);
+    expect(await failures(user.id)).toBe(1);
+    expect(await principalFromToken(pat.token)).not.toBeNull();
   });
 
   it("the password form answers TOKENS_FAILED while a grant stays live", async () => {

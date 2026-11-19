@@ -34,14 +34,20 @@ export function clientDisplayName(name: string | null): string | null {
   return name === null ? null : Array.from(name).slice(0, CLIENT_NAME_MAX).join("");
 }
 
-function redirectHost(redirectUris: string): string | null {
-  const first = stringList(redirectUris)?.[0];
-  if (!first) return null;
+// Private-use schemes (`com.example.app:/cb`) have no host: the scheme stands in for it.
+export function redirectHost(uri: string): string | null {
   try {
-    return new URL(first).host || null;
+    const url = new URL(uri);
+    return url.host || url.protocol;
   } catch {
     return null;
   }
+}
+
+// `redirectUris` as the plugin stores it (a JSON list); the first URI identifies the client.
+export function clientRedirectHost(redirectUris: string): string | null {
+  const first = stringList(redirectUris)?.[0];
+  return first ? redirectHost(first) : null;
 }
 
 export async function listOAuthGrants(userId: string): Promise<OAuthGrantView[]> {
@@ -62,7 +68,7 @@ export async function listOAuthGrants(userId: string): Promise<OAuthGrantView[]>
     return {
       clientId: row.clientId,
       name: clientDisplayName(row.client.name),
-      redirectHost: redirectHost(row.client.redirectUris),
+      redirectHost: clientRedirectHost(row.client.redirectUris),
       access: scopes.includes("bilan:write") ? "write" : "read",
       offline: scopes.includes("offline_access"),
       authorizedAt: row.updatedAt,
@@ -71,12 +77,39 @@ export async function listOAuthGrants(userId: string): Promise<OAuthGrantView[]>
   });
 }
 
-// The plugin keeps pending codes in Verification, keyed by the code's hash; the JSON value
-// (no whitespace, quotes inside strings escaped) carries the user and the client.
-function pendingCodes(userId: string, clientId?: string): Prisma.VerificationWhereInput {
+// The plugin keeps pending codes in Verification as JSON. `contains` only narrows the scan: the
+// signed query passes unknown params through, so a client can plant `"userId":"<other>"` in it.
+async function pendingCodeIds(
+  client: Prisma.TransactionClient,
+  userId: string,
+  clientId?: string,
+  now?: Date,
+): Promise<string[]> {
   const parts = ['"type":"authorization_code"', `"userId":${JSON.stringify(userId)}`];
   if (clientId) parts.push(`"client_id":${JSON.stringify(clientId)}`);
-  return { AND: parts.map((part) => ({ value: { contains: part } })) };
+  const rows = await client.verification.findMany({
+    where: {
+      AND: parts.map((part) => ({ value: { contains: part } })),
+      ...(now ? { expiresAt: { gt: now } } : {}),
+    },
+    select: { id: true, value: true },
+  });
+  return rows.filter((row) => isCodeOf(row.value, userId, clientId)).map((row) => row.id);
+}
+
+function isCodeOf(value: string, userId: string, clientId?: string): boolean {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return false;
+  }
+  const v = parsed as { type?: unknown; userId?: unknown; query?: { client_id?: unknown } };
+  return (
+    v.type === "authorization_code" &&
+    v.userId === userId &&
+    (clientId === undefined || v.query?.client_id === clientId)
+  );
 }
 
 // Deletes tokens, consents and pending codes; returns the clients that had any.
@@ -92,8 +125,9 @@ async function deleteGrants(userId: string, clientId?: string): Promise<Set<stri
     await tx.oauthAccessToken.deleteMany({ where });
     await tx.oauthRefreshToken.deleteMany({ where });
     await tx.oauthConsent.deleteMany({ where });
-    const codes = await tx.verification.deleteMany({ where: pendingCodes(userId, clientId) });
-    if (clientId && codes.count > 0) clients.add(clientId);
+    const codeIds = await pendingCodeIds(tx, userId, clientId);
+    await tx.verification.deleteMany({ where: { id: { in: codeIds } } });
+    if (clientId && codeIds.length > 0) clients.add(clientId);
     return clients;
   });
 }
@@ -131,7 +165,7 @@ export async function hasLiveOAuthGrants(userId: string, now: Date = new Date())
     db.oauthConsent.count({ where: { userId } }),
     db.oauthAccessToken.count({ where: live }),
     db.oauthRefreshToken.count({ where: live }),
-    db.verification.count({ where: { ...pendingCodes(userId), expiresAt: { gt: now } } }),
+    pendingCodeIds(db, userId, undefined, now).then((ids) => ids.length),
   ]);
   return counts.some((n) => n > 0);
 }

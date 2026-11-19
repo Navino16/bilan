@@ -51,6 +51,7 @@ export async function authorize(opts: {
   redirectUri: string;
   cookie: string;
   scope: string;
+  extra?: Record<string, string>;
 }): Promise<{ oauthQuery: string; verifier: string; state: string }> {
   const verifier = randomBytes(32).toString("base64url");
   const state = randomBytes(8).toString("base64url");
@@ -63,6 +64,7 @@ export async function authorize(opts: {
     code_challenge_method: "S256",
     state,
     resource: mcpResourceUrl(),
+    ...opts.extra,
   });
   const res = await GET(
     new Request(`${appUrl}/api/auth/oauth2/authorize?${query}`, {

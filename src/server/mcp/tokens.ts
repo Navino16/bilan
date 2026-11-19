@@ -124,15 +124,20 @@ export async function revokeAllMcpCredentialsOrAudit(
   reason: "password" | "sessions",
 ): Promise<boolean> {
   let error: unknown;
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      await revokeAllMcpTokens(userId, reason);
-      await revokeAllOAuthGrants(userId, reason);
-      return true;
-    } catch (e) {
-      error = e;
+  let pending = [revokeAllMcpTokens, revokeAllOAuthGrants];
+  for (let attempt = 0; attempt < 2 && pending.length > 0; attempt++) {
+    const failed: typeof pending = [];
+    for (const revoke of pending) {
+      try {
+        await revoke(userId, reason);
+      } catch (e) {
+        error = e;
+        failed.push(revoke);
+      }
     }
+    pending = failed;
   }
+  if (pending.length === 0) return true;
   console.error("[bilan] MCP credential revocation failed", error);
   await logEvent({
     userId,
