@@ -1946,7 +1946,7 @@
           "name": "Name",
           "namePlaceholder": "Claude Code on my laptop",
           "access": "Access",
-          "accessHint": "Assistants can only read your data for now.",
+          "accessHint": "Read and write also lets the assistant change your transactions, links and budgets.",
           "expiry": "Expiry",
           "expiryChoice": {
             "30": "30 days",

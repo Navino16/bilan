@@ -1946,7 +1946,7 @@
           "name": "Nom",
           "namePlaceholder": "Claude Code sur le portable",
           "access": "Accès",
-          "accessHint": "Pour l’instant, les assistants peuvent seulement lire vos données.",
+          "accessHint": "Lecture et écriture permet aussi à l’assistant de modifier vos transactions, liens et budgets.",
           "expiry": "Expiration",
           "expiryChoice": {
             "30": "30 jours",
