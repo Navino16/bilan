@@ -8,7 +8,11 @@ import { DEFAULT_SORT, UNCATEGORIZED, type TransactionSort } from "@/lib/transac
 import { editScope } from "@/lib/transaction-edit";
 import { logEvent } from "@/server/services/audit";
 import { canWriteAccount, canReadAccount } from "@/server/services/accounts/sharing";
-import { isAccountArchived, visibleAccountRefs } from "@/server/services/accounts";
+import {
+  isAccountArchived,
+  visibleAccountIds,
+  visibleAccountRefs,
+} from "@/server/services/accounts";
 import {
   assertCategoryAssignable,
   CategoryAccessError,
@@ -151,6 +155,19 @@ export async function createManualTransaction(
   // Best-effort: a failed counter must not report a saved transaction as failed.
   await recordHits([ruleId]).catch(() => {});
   return { id };
+}
+
+// Decrypted labels of the transactions among `ids` whose account the user can read.
+export async function readableTransactionLabels(
+  userId: string,
+  ids: string[],
+): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map();
+  const rows = await db.transaction.findMany({
+    where: { id: { in: ids }, accountId: { in: await visibleAccountIds(userId) } },
+    select: { id: true, labelEnc: true },
+  });
+  return new Map(rows.map((r) => [r.id, decrypt(r.labelEnc, dataKey)]));
 }
 
 // Decrypts a single transaction for a user who can read its account.

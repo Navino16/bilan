@@ -489,6 +489,20 @@ async function readableOrThrow(id: string, userId: string) {
   return b;
 }
 
+// Names of the budgets among `ids` the user may read, same rule as readableOrThrow.
+export async function readableBudgetNames(
+  userId: string,
+  ids: string[],
+): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map();
+  const { groupIds } = await budgetScopeForUser(userId);
+  const rows = await db.budget.findMany({
+    where: { id: { in: ids }, OR: [{ userId }, { groupId: { in: groupIds } }] },
+    select: { id: true, name: true },
+  });
+  return new Map(rows.map((b) => [b.id, b.name]));
+}
+
 // The accounts a budget's lines, attachment and forecast may use: a GROUP budget uses the
 // accounts shared with the group (so every member computes the same total and personal
 // accounts never leak in); a PERSONAL budget uses the owner's visible accounts. Inside an

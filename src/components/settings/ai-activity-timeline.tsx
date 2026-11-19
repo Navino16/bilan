@@ -1,13 +1,20 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import Link from "next/link";
 import { useLocale, useNow } from "next-intl";
 import { OrdinalText } from "@/components/ordinal-text";
 import { listHeader } from "@/components/shell/section-card";
 import { formatLongDay, formatTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-export type ActivityEntry = { id: string; at: Date; action: string; clientName: string };
+export type ActivityEntry = {
+  id: string;
+  at: Date;
+  action: string;
+  clientName: string;
+  target: { text: string; href: string | null } | null;
+};
 
 const noop = () => () => {};
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -82,7 +89,28 @@ export function ActivityTimeline({
                 >
                   {inBrowser && formatTime(entry.at, locale)}
                 </time>
-                <span className="min-w-0 flex-1 text-sm">{entry.action}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm">{entry.action}</p>
+                  {entry.target &&
+                    (entry.target.href ? (
+                      <Link
+                        href={entry.target.href}
+                        data-slot="mcp-activity-target"
+                        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 mt-0.5 block w-fit max-w-full truncate rounded-sm text-xs underline-offset-2 transition-colors outline-none hover:underline focus-visible:ring-3"
+                        title={entry.target.text}
+                      >
+                        {entry.target.text}
+                      </Link>
+                    ) : (
+                      <p
+                        data-slot="mcp-activity-target"
+                        className="text-muted-foreground mt-0.5 truncate text-xs"
+                        title={entry.target.text}
+                      >
+                        {entry.target.text}
+                      </p>
+                    ))}
+                </div>
                 <span
                   className="text-muted-foreground max-w-[40%] shrink-0 truncate text-xs"
                   title={entry.clientName}

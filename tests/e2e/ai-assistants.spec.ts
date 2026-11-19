@@ -109,7 +109,7 @@ test.describe("AI assistants settings (#450)", () => {
         "Aucun jeton personnel.",
       );
 
-      // A write through MCP shows in the recent activity with the token's name. The edit
+      // A write through MCP shows in the recent activity with the token's name and its target. The edit
       // rewrites a transaction's own label and note, leaving the e2e data as it was.
       const writer = `E2E write ${Date.now()}`;
       await page.getByRole("button", { name: "Créer un jeton" }).click();
@@ -157,6 +157,7 @@ test.describe("AI assistants settings (#450)", () => {
       const latest = page.locator('[data-slot="mcp-activity"] li').first();
       await expect(latest).toContainText("Transaction modifiée");
       await expect(latest).toContainText(writer);
+      await expect(latest.locator('[data-slot="mcp-activity-target"]')).toHaveText(tx.label);
       await expect(page.locator('[data-slot="mcp-activity"] h3').first()).toHaveText(
         /aujourd’hui/i,
       );

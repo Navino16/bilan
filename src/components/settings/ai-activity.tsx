@@ -1,11 +1,15 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { auditLabels } from "@/components/admin/audit-table";
 import { SectionCard } from "@/components/shell/section-card";
 import { ActivityTimeline } from "@/components/settings/ai-activity-timeline";
 import type { McpActivityRow } from "@/server/mcp/activity";
 
 export async function AiActivity({ rows }: { rows: McpActivityRow[] }) {
-  const [t, labels] = await Promise.all([getTranslations("settings.ai.activity"), auditLabels()]);
+  const [t, labels, locale] = await Promise.all([
+    getTranslations("settings.ai.activity"),
+    auditLabels(),
+    getLocale(),
+  ]);
   return (
     <SectionCard flush title={t("title")} hint={t("hint")}>
       {rows.length === 0 ? (
@@ -19,6 +23,10 @@ export async function AiActivity({ rows }: { rows: McpActivityRow[] }) {
             at: row.at,
             action: labels.action(row.action),
             clientName: row.clientName,
+            target: row.target && {
+              text: row.target.text,
+              href: row.target.href && `/${locale}${row.target.href}`,
+            },
           }))}
           today={t("today")}
           yesterday={t("yesterday")}
