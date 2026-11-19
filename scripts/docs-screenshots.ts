@@ -1,7 +1,9 @@
+import { createHash, randomBytes } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import {
   chromium,
+  request,
   type Browser,
   type BrowserContext,
   type Locator,
@@ -22,6 +24,7 @@ type StorageState = Awaited<ReturnType<BrowserContext["storageState"]>>;
 type Shot = {
   name: string;
   path: string;
+  url?: (locale: Locale) => Promise<string>;
   fullPage?: boolean;
   maxHeight?: number;
   mobile?: boolean;
@@ -54,6 +57,104 @@ async function gotoLink(page: Page, link: Locator) {
   const href = await link.getAttribute("href");
   if (!href) throw new Error(`${link} has no href`);
   await page.goto(new URL(href, BASE_URL).toString());
+}
+
+// The claude.ai connector's callback: the docs show the host a real client would.
+const CLIENT_REDIRECT = "https://claude.ai/api/mcp/auth_callback";
+const CLIENT_SCOPE = "bilan:read bilan:write offline_access";
+
+// Registers and starts an authorization without cookies, as an MCP client does; returns the
+// localized consent page the plugin redirects to.
+async function startAuthorization(locale: Locale) {
+  const client = await request.newContext({ baseURL: BASE_URL });
+  try {
+    const registered = await client.post("/api/auth/oauth2/register", {
+      data: {
+        client_name: "Claude",
+        redirect_uris: [CLIENT_REDIRECT],
+        token_endpoint_auth_method: "none",
+        grant_types: ["authorization_code", "refresh_token"],
+        response_types: ["code"],
+      },
+    });
+    if (registered.status() !== 201) {
+      throw new Error(
+        `client registration: HTTP ${registered.status()} ${await registered.text()}`,
+      );
+    }
+    const { client_id: clientId } = (await registered.json()) as { client_id: string };
+    const verifier = randomBytes(32).toString("base64url");
+    const query = new URLSearchParams({
+      response_type: "code",
+      client_id: clientId,
+      redirect_uri: CLIENT_REDIRECT,
+      scope: CLIENT_SCOPE,
+      code_challenge: createHash("sha256").update(verifier).digest("base64url"),
+      code_challenge_method: "S256",
+      state: randomBytes(8).toString("base64url"),
+      resource: `${BASE_URL}/api/mcp`,
+    });
+    const authorize = await client.get(`/api/auth/oauth2/authorize?${query}`, { maxRedirects: 0 });
+    const location = authorize.headers()["location"];
+    if (!location) throw new Error(`authorize: HTTP ${authorize.status()}, no redirect`);
+    const consent = new URL(location, BASE_URL);
+    return { clientId, verifier, url: `${BASE_URL}/${locale}${consent.pathname}${consent.search}` };
+  } finally {
+    await client.dispose();
+  }
+}
+
+// One connected client for the settings-ai shot, used once so it shows a last use.
+async function connectClient(context: BrowserContext) {
+  const page = await context.newPage();
+  try {
+    await page.goto(`${BASE_URL}/en/settings/ai`);
+    if (await page.locator('[data-slot="mcp-clients"]').count()) return;
+
+    const { clientId, verifier, url } = await startAuthorization("en");
+    let callback: URL | undefined;
+    await page.route(`${new URL(CLIENT_REDIRECT).origin}/**`, async (route) => {
+      callback = new URL(route.request().url());
+      await route.fulfill({ status: 200, contentType: "text/plain", body: "ok" });
+    });
+    await page.goto(url);
+    await settle(page);
+    await page
+      .locator('[data-slot="oauth-consent"]')
+      .getByRole("button", { name: "Authorize" })
+      .click();
+    await page.waitForURL((current) => current.href.startsWith(CLIENT_REDIRECT));
+    const code = callback?.searchParams.get("code");
+    if (!code) throw new Error(`consent: no code in ${callback}`);
+
+    const client = await request.newContext({ baseURL: BASE_URL });
+    try {
+      const token = await client.post("/api/auth/oauth2/token", {
+        form: {
+          grant_type: "authorization_code",
+          code,
+          client_id: clientId,
+          redirect_uri: CLIENT_REDIRECT,
+          code_verifier: verifier,
+          resource: `${BASE_URL}/api/mcp`,
+        },
+      });
+      if (!token.ok()) throw new Error(`token: HTTP ${token.status()} ${await token.text()}`);
+      const { access_token: accessToken } = (await token.json()) as { access_token: string };
+      const call = await client.post("/api/mcp", {
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+          accept: "application/json, text/event-stream",
+        },
+        data: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      if (!call.ok()) throw new Error(`MCP call: HTTP ${call.status()}`);
+    } finally {
+      await client.dispose();
+    }
+  } finally {
+    await page.close();
+  }
 }
 
 function importCsv(): { name: string; mimeType: string; buffer: Buffer } {
@@ -226,6 +327,12 @@ const SHOTS: Shot[] = [
   { name: "settings-security", path: "/settings/security", fullPage: true },
   { name: "settings-data", path: "/settings/data" },
   { name: "settings-ai", path: "/settings/ai", fullPage: true },
+  {
+    name: "oauth-consent",
+    path: "/oauth/consent",
+    fullPage: true,
+    url: async (locale) => (await startAuthorization(locale)).url,
+  },
   { name: "admin-users", path: "/admin/users", fullPage: true },
   { name: "admin-signup-tokens", path: "/admin/signup-tokens", fullPage: true },
   { name: "admin-auth-providers", path: "/admin/auth-providers", fullPage: true },
@@ -312,6 +419,7 @@ async function main() {
     const state = await signIn(browser);
     desktop = await newContext(browser, false, state);
     const mobile = await newContext(browser, true, state);
+    await connectClient(desktop);
     for (const locale of LOCALES) {
       console.log(`${locale}:`);
       await mkdir(path.join(OUT_DIR, locale), { recursive: true });
@@ -319,7 +427,7 @@ async function main() {
       for (const shot of SHOTS) {
         const page = await (shot.mobile ? mobile : desktop).newPage();
         try {
-          await page.goto(`${BASE_URL}/${locale}${shot.path}`);
+          await page.goto(shot.url ? await shot.url(locale) : `${BASE_URL}/${locale}${shot.path}`);
           await settle(page);
           await shot.prepare?.(page);
           await capture(page, locale, shot);

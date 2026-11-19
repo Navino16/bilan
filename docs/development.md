@@ -124,7 +124,9 @@ It needs a `.env` (`npm run setup`) and the test database (`docker compose up -d
    the redirect URL only changes what the admin page shows.
 
 3. `DOCS_BASE_URL=http://localhost:3301 npm run docs:screenshots` captures every page in
-   English and French (`scripts/docs-screenshots.ts`).
+   English and French (`scripts/docs-screenshots.ts`). It authorizes a "Claude" OAuth client
+   for the AI assistants page (once: skipped when a connected client is listed) and registers
+   one more per locale for the consent page; the provider allows 5 registrations per minute.
 
 ## Performance benchmark
 

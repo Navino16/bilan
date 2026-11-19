@@ -829,37 +829,75 @@ The alert gives the date, the sign-in method, the IP address and the device. If 
 
 ![AI assistants settings](images/en/settings-ai.png)
 
-Bilan can serve your data to your own AI assistant, so you can ask questions about your accounts, spending and budgets without opening the app. It speaks MCP, a standard protocol: any MCP client can connect, such as Claude Code or Codex. Bilan has no chat of its own and sends nothing to an assistant until you connect one.
+Bilan can serve your data to your own AI assistant, so you can ask questions about your accounts, spending and budgets without opening the app. It speaks MCP, a standard protocol: any MCP client can connect, such as claude.ai, Claude Desktop, Claude Code or Codex. Bilan has no chat of its own and sends nothing to an assistant until you connect one.
 
 Go to **AI assistants** in the sidebar. If the page says it is not available on this instance, an administrator has to turn on the MCP server first (see the [administration guide](admin-guide.md#ai-assistants-mcp-server)).
 
 ### Turn it on
 
-Switch on **Allow AI assistants** and confirm. Your transactions' labels, amounts and notes are then decrypted and sent to your assistant's provider (Anthropic, OpenAI…), under its terms. Turning it off makes every token stop working at once. They are kept, so turning it back on restores them.
-
-### Personal tokens
-
-An assistant connects with a personal token, which acts as you.
-
-1. Under **Personal tokens**, click **Create a token**.
-2. Enter a **Name** to recognize it, choose the **Access** (**Read only** or **Read and write**) and the **Expiry** (30 days, 90 days, 1 year or no expiry).
-3. Click **Create the token**. If you signed in more than 10 minutes ago, Bilan asks for your password first, since a token is a credential.
-4. Copy the token: it is shown only once.
-
-In this version assistants can only read your data, whichever access you choose.
-
-The list shows each token's prefix, access, creation, last use and expiry. **Revoke** stops a token at once. Changing or resetting your password, or clicking **Sign out all** under [Signed-in devices](#signed-in-devices), revokes all your tokens: create new ones afterwards.
+Switch on **Allow AI assistants** and confirm. Your transactions' labels, amounts and notes are then decrypted and sent to your assistant's provider (Anthropic, OpenAI…), under its terms. Turning it off makes every connected client and token stop working at once. They are kept, so turning it back on restores them.
 
 ### Connect a client
 
-The **Connection** card shows the server address, `<your Bilan address>/api/mcp`, with a button to copy it. A client sends the token in an `Authorization: Bearer <token>` header. With Claude Code:
+The **Connection** card shows the server address, `<your Bilan address>/api/mcp`, with a button to copy it. A client connects in one of two ways:
+
+- **with your Bilan account**: the client opens Bilan in your browser, you sign in and authorize it. No token to copy;
+- **with a personal token** you create in Bilan and paste into the client's settings (see [Personal tokens](#personal-tokens)).
+
+**claude.ai and Claude Desktop**: add a custom connector with the server address. Claude opens Bilan's sign-in page, then the [authorization page](#authorize-a-client). These connectors reach Bilan from Anthropic's servers, so they only work when your Bilan is reachable from the internet over HTTPS.
+
+**Claude Code**, with your Bilan account:
+
+```bash
+claude mcp add --transport http bilan https://bilan.example.com/api/mcp
+```
+
+Then run `/mcp` in Claude Code, choose `bilan` and sign in (or run `claude mcp login bilan` in a terminal): the browser opens Bilan's sign-in page, then the authorization page.
+
+**Claude Code**, with a personal token:
 
 ```bash
 claude mcp add --transport http bilan https://bilan.example.com/api/mcp \
   --header "Authorization: Bearer <token>"
 ```
 
-Codex and other clients that accept a server URL and a custom header work the same way: give them the address and that header. Clients that only offer a sign-in flow, such as the claude.ai connectors, are not supported yet.
+Codex and other clients that accept a server URL and a custom header work the same way: give them the address and the `Authorization: Bearer <token>` header.
+
+### Authorize a client
+
+![Authorization page](images/en/oauth-consent.png)
+
+When a client connects with your Bilan account, Bilan asks you to sign in if you aren't already (password, passkey, two-factor authentication and SSO all work), then shows the authorization page:
+
+- **App**: the name the client gave itself, next to its **Return address**, where Bilan sends you back once you've answered. Any client can choose its name; only the return address is checked. For claude.ai and Claude Desktop it is `claude.ai`, for Claude Code a `localhost` address;
+- **Requested access**: **Read and write** or **Read only**, preselected as the client asked. **Read only** is offered when the client also asked for it;
+- when the client asks to stay connected: it keeps its access until you revoke it, or until it goes 30 days without use;
+- the privacy note: the data sent to the assistant's provider.
+
+**Authorize** sends you back to the client, which is then connected. If you signed in more than 10 minutes ago, Bilan asks for your password first, since the client gets a lasting access. **Deny** sends you back without access.
+
+The page says so instead when AI assistants are turned off for your account (turn them on under [Turn it on](#turn-it-on), then start the connection again from the client), when they are turned off on the instance, or when the request has expired (start again from the client).
+
+A client you have already authorized reconnects without this page while you are signed in to Bilan in that browser, as long as it asks for the same access.
+
+### Connected clients
+
+**Connected clients** lists the clients you authorized: name, return address, access, the date you authorized it and its last use. **Revoke** cuts its access at once, after a confirmation; it will have to ask for your authorization again to reconnect.
+
+### Personal tokens
+
+A personal token acts as you, for clients that send it in a header.
+
+1. Under **Personal tokens**, click **Create a token**.
+2. Enter a **Name** to recognize it, choose the **Access** (**Read only** or **Read and write**) and the **Expiry** (30 days, 90 days, 1 year or no expiry).
+3. Click **Create the token**. If you signed in more than 10 minutes ago, Bilan asks for your password first, since a token is a credential.
+4. Copy the token: it is shown only once.
+
+The list shows each token's prefix, access, creation, last use and expiry. **Revoke** stops a token at once.
+
+In this version assistants can only read your data, whichever access you choose.
+
+Changing or resetting your password, or clicking **Sign out all** under [Signed-in devices](#signed-in-devices), revokes all your tokens and connected clients: create new tokens and connect your clients again afterwards.
 
 ### What an assistant can see
 

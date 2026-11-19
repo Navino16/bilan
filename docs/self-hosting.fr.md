@@ -190,6 +190,28 @@ du client que le reverse proxy place dans un en-tête de requête. `TRUSTED_IP_H
 L'app fait confiance à cet en-tête sans le vérifier, d'où la règle ci-dessus : seul le proxy
 doit pouvoir joindre le port de l'app.
 
+### Assistants IA via OAuth
+
+Quand le serveur MCP est activé (voir le [guide d'administration](admin-guide.fr.md#assistants-ia-serveur-mcp)),
+des clients comme claude.ai, Claude Desktop ou Claude Code se connectent avec le compte Bilan de
+l'utilisateur (OAuth 2.1). Ils trouvent seuls le parcours de connexion à partir de l'adresse du
+point d'accès, ce qui impose :
+
+- **HTTPS public** pour les connecteurs de claude.ai et de Claude Desktop : ils appellent Bilan
+  depuis les serveurs d'Anthropic. Un client qui tourne sur votre réseau (Claude Code) fonctionne
+  aussi avec une adresse du réseau local.
+- **`APP_URL` est exactement l'origine publique** (schéma, hôte et port, sans chemin, telle que
+  les utilisateurs la saisissent). Les clients comparent la ressource annoncée par Bilan, `APP_URL`
+  suivie de `/api/mcp`, avec l'adresse qu'on leur a donnée, et les jetons d'accès y sont liés :
+  après un changement d'`APP_URL`, les clients connectés doivent être autorisés à nouveau.
+- **Le reverse proxy transmet ces chemins tels quels**, avec l'en-tête `Authorization` et
+  `X-Forwarded-Proto`, sans autre authentification devant (basic auth, passerelle SSO) :
+  `/.well-known/oauth-protected-resource` et `/.well-known/oauth-authorization-server` (avec
+  leurs suffixes), `/api/auth/*` et `/api/mcp`. Les exemples Caddy et nginx ci-dessus le font.
+
+Les documents de découverte répondent `Access-Control-Allow-Origin: *` : les clients qui
+tournent dans un navigateur les lisent depuis une autre origine.
+
 ## Premier démarrage : l'assistant de configuration
 
 Ouvrez `APP_URL`. Sur une installation neuve (aucun utilisateur), toutes les pages redirigent

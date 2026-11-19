@@ -424,14 +424,16 @@ Bilan peut fournir les données des utilisateurs à leurs propres assistants IA 
 
 **Administration > Paramètres** comporte un paramètre **Serveur MCP pour les assistants IA**, dans la carte **Inscription et connexion** (super administrateurs uniquement), sur **Activée** ou **Désactivée**.
 
-- **Désactivée** (défaut) : le point d'accès répond 404 comme s'il n'existait pas, tous les jetons personnels cessent de fonctionner aussitôt, et les utilisateurs voient un avis sur leur page **Assistants IA**. Les jetons et les choix des utilisateurs sont conservés : le réactiver les rétablit.
-- **Activée** : rien n'est encore exposé. Chaque utilisateur doit encore activer **Autoriser les assistants IA** pour lui-même et créer ses propres jetons, et le propriétaire d'un compte partagé coche **Autoriser les assistants IA** sur le partage pour que les assistants des membres du foyer le reçoivent.
+- **Désactivée** (défaut) : le point d'accès, la connexion des clients (`/api/auth/oauth2/*`) et les documents de découverte (`/.well-known/oauth-*`) répondent 404 comme s'ils n'existaient pas, tous les jetons personnels et clients connectés cessent de fonctionner aussitôt, et les utilisateurs voient un avis sur leur page **Assistants IA**. Les jetons, les clients connectés et les choix des utilisateurs sont conservés : le réactiver les rétablit.
+- **Activée** : rien n'est encore exposé. Chaque utilisateur doit encore activer **Autoriser les assistants IA** pour lui-même, puis connecter un client avec son compte Bilan ou créer ses propres jetons, et le propriétaire d'un compte partagé coche **Autoriser les assistants IA** sur le partage pour que les assistants des membres du foyer le reçoivent.
 
 Une fois l'assistant d'un utilisateur connecté, les libellés, montants et notes de ses transactions sont déchiffrés et envoyés au fournisseur de l'assistant. Prévenez vos utilisateurs avant de l'activer.
 
-Les clients joignent le point d'accès à votre adresse publique, `APP_URL` suivie de `/api/mcp` : elle doit être accessible depuis l'endroit où tournent les assistants (un client local fonctionne avec une adresse du réseau local). Chaque jeton est limité à 120 appels par minute.
+Les clients joignent le point d'accès à votre adresse publique, `APP_URL` suivie de `/api/mcp` : elle doit être accessible depuis l'endroit où tournent les assistants (un client local comme Claude Code fonctionne avec une adresse du réseau local). Les connecteurs de claude.ai et de Claude Desktop l'appellent depuis les serveurs d'Anthropic : il leur faut une adresse publique en HTTPS ; les exigences pour le reverse proxy sont dans [Assistants IA via OAuth](self-hosting.fr.md#assistants-ia-via-oauth). Chaque jeton, et chaque client connecté de chaque utilisateur, est limité à 120 appels par minute.
 
-La création et la révocation des jetons, et l'activation ou la désactivation de la fonction par un utilisateur, apparaissent dans le [journal d'audit](#journal-daudit). Changer de mot de passe ou déconnecter tous les appareils révoque les jetons de l'utilisateur.
+Tant que le serveur est activé, n'importe quel client peut s'enregistrer pour demander l'accès aux utilisateurs (enregistrement dynamique OAuth), sans intervention d'un administrateur : 20 enregistrements par heure et par adresse IP. Un client enregistré n'obtient rien tant qu'un utilisateur ne l'a pas autorisé ; celui qu'aucun utilisateur n'a autorisé est supprimé au bout de 7 jours. Le jeton d'accès d'un client dure une heure ; un client qui a demandé à rester connecté le renouvelle seul jusqu'à ce que l'utilisateur le révoque, ou après 30 jours sans utilisation.
+
+La création et la révocation des jetons, les clients autorisés et révoqués, et l'activation ou la désactivation de la fonction par un utilisateur apparaissent dans le [journal d'audit](#journal-daudit). Changer de mot de passe ou déconnecter tous les appareils révoque les jetons et les clients connectés de l'utilisateur.
 
 ## Journal d'audit
 
@@ -449,7 +451,7 @@ Chaque changement d'état est journalisé, les lectures ne le sont pas. Cela com
 - les jetons d'invitation, les foyers et leurs invitations ;
 - l'activité financière des utilisateurs : comptes bancaires et partages, transactions, imports, catégories, règles, budgets, liaisons, connexions bancaires (connectées, reconnectées, associées, expirées, déconnectées) ;
 - chaque passage de la synchronisation bancaire qui avait quelque chose à faire (`bank_sync.cron`, par **système**), avec ses compteurs ;
-- les assistants IA : jetons créés et révoqués, fonction activée ou désactivée par un utilisateur ;
+- les assistants IA : jetons créés et révoqués, clients autorisés et révoqués, autorisations refusées à la vérification du mot de passe, fonction activée ou désactivée par un utilisateur ;
 - les échecs d'envoi d'e-mails de sécurité et les purges du journal.
 
 Une connexion SSO est journalisée en `auth.login.success` avec `method: sso` et la clé du fournisseur. La première connexion SSO d'une identité qui crée un compte n'est journalisée que comme inscription (`auth.register.success`). Une connexion SSO refusée (identité non liée, inscription fermée, compte désactivé, erreur du fournisseur) est journalisée en `auth.login.failed` avec le code d'erreur de Better Auth (`other` pour un code inattendu). Une connexion annulée chez le fournisseur ne l'est pas, ni un refus survenu avant que Bilan lise la demande de connexion.
