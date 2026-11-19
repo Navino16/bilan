@@ -53,6 +53,8 @@ const failed = (r: ToolResult, code: string) => {
   expect(r.isError).toBe(true);
   expect(textOf(r)).toBe(code);
 };
+const detailOf = (r: ToolResult) =>
+  (r.content as { type: string; text: string }[])[1]?.text ?? null;
 const stamped = async (action: string, entityId: string) => {
   const rows = await db.auditLog.findMany({ where: { userId: f.memberId, action, entityId } });
   expect(rows.length, action).toBeGreaterThan(0);
@@ -200,6 +202,22 @@ describe("budget lifecycle over MCP", () => {
     expect(await budgetCount()).toBe(before);
   });
 
+  it("names NOT_RECURRING when rolling a one-off budget", async () => {
+    const id = ok(await call("create_budget", personal(f.accounts.own))).id;
+    const res = await call("roll_recurring_budget", { id });
+    failed(res, "FORBIDDEN");
+    expect(detailOf(res)).toBe("NOT_RECURRING");
+  });
+
+  it("rejects a string recurring flag instead of coercing it", async () => {
+    const before = await budgetCount();
+    failed(
+      await call("create_budget", personal(f.accounts.own, { recurring: "false" })),
+      "INVALID_INPUT",
+    );
+    expect(await budgetCount()).toBe(before);
+  });
+
   it("refuses to include a transaction on an account the client can't see", async () => {
     const id = ok(await call("create_budget", personal(f.accounts.own))).id;
     failed(
@@ -214,12 +232,14 @@ describe("budget lifecycle over MCP", () => {
   });
 });
 
-// Per-share rule (spec, PR 3 design §3): over MCP an account enters G's budgets only if owned
+// Per-share rule (spec §5.18): over MCP an account enters G's budgets only if owned
 // or AI-allowed on its G share, even when another household's share lets the client see it.
 describe("per-share AI rule on household budgets", () => {
   it("refuses a line on x over MCP and accepts it outside", async () => {
     const before = await budgetCount();
-    failed(await call("create_budget", household({ accountId: x })), "INVALID_INPUT");
+    const res = await call("create_budget", household({ accountId: x }));
+    failed(res, "INVALID_INPUT");
+    expect(detailOf(res)).toBe("INVALID_LINE");
     expect(
       await serviceError(
         asMcp(() => createBudget(household({ accountId: x }), { id: f.memberId })),
@@ -392,6 +412,7 @@ describe("annotations", () => {
     const hint = (n: string) => tools.find((t) => t.name === n)?.annotations;
     expect(hint("unassign_transaction_from_budget")?.destructiveHint).toBe(true);
     expect(hint("archive_budget")?.destructiveHint).toBe(true);
+    expect(hint("update_budget")?.destructiveHint).toBe(true);
     expect(hint("unarchive_budget")?.idempotentHint).toBe(true);
     expect(hint("assign_transaction_to_budget")?.idempotentHint).toBe(true);
     expect(hint("create_budget")?.readOnlyHint).toBe(false);

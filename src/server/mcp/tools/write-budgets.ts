@@ -16,17 +16,21 @@ const transactionId = z.string().min(1).describe("Transaction id");
 const FIELDS =
   "Dates are YYYY-MM-DD and, unless periodType is CUSTOM, periodEnd is the period's last day. Planned amounts are positive euros. Category ids come from list_categories, account ids from list_accounts. A household budget (groupId) needs the household admin role and may only use the user's own accounts and the household's shares that allow AI assistants.";
 
+// The form's z.coerce.boolean() would read "false" as true.
+const budgetInput = budgetInputSchema.safeExtend({ recurring: z.boolean().default(false) });
+
 export const BUDGET_WRITE_TOOLS = [
   writeTool({
     name: "create_budget",
     description: `Create a budget, personal or for a household (groupId), with at least one line. With an accountId the budget follows that account and lines may be INCOME or TRANSFER too. ${FIELDS}`,
-    input: budgetInputSchema,
+    input: budgetInput,
     run: async (userId, args) => ({ ok: true, id: (await createBudget(args, { id: userId })).id }),
   }),
   writeTool({
     name: "update_budget",
     description: `Replace a budget's fields and lines; it stays personal or in its household (groupId is ignored). ${FIELDS}`,
-    input: budgetInputSchema.safeExtend({ id }),
+    input: budgetInput.safeExtend({ id }),
+    annotations: { destructiveHint: true },
     run: async (userId, { id, ...input }) => {
       await updateBudget(id, input, { id: userId });
       return { ok: true, id };

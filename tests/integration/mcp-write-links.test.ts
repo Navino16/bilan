@@ -38,6 +38,8 @@ const failed = (r: ToolResult, code: string) => {
   expect(r.isError).toBe(true);
   expect(textOf(r)).toBe(code);
 };
+const detailOf = (r: ToolResult) =>
+  (r.content as { type: string; text: string }[])[1]?.text ?? null;
 const linkCount = () => db.transactionLink.count({ where: { createdById: f.memberId } });
 const audit = (action: string, entityId?: string) =>
   db.auditLog.findMany({ where: { userId: f.memberId, action, ...(entityId && { entityId }) } });
@@ -104,6 +106,29 @@ describe("create_link and delete_link", () => {
 
   it("rejects fewer than two transactions", async () => {
     failed(await call("create_link", { transactionIds: [f.expenses.own] }), "INVALID_INPUT");
+    const res = await call("create_link", { transactionIds: [f.expenses.own, f.expenses.own] });
+    failed(res, "FORBIDDEN");
+    expect(detailOf(res)).toBe("TOO_FEW");
+  });
+
+  it("names ALREADY_LINKED on own transactions, not on one it may not write", async () => {
+    const [a, b] = await pair(61);
+    ok(await call("create_link", { transactionIds: [a, b] }));
+    const mine = await expense(f.accounts.own, day, 62, null);
+    const res = await call("create_link", { transactionIds: [mine, a] });
+    failed(res, "FORBIDDEN");
+    expect(detailOf(res)).toBe("ALREADY_LINKED");
+
+    const hidden = await expense(f.accounts.sharedPlain, day, -63, null);
+    await db.transactionLink.create({
+      data: {
+        createdById: f.ownerId,
+        members: { create: [{ transactionId: hidden }, { transactionId: f.expenses.sharedAi }] },
+      },
+    });
+    const refused = await call("create_link", { transactionIds: [mine, hidden] });
+    failed(refused, "FORBIDDEN");
+    expect(detailOf(refused)).toBeNull();
   });
 
   it("refuses to delete a link it may not write and keeps the link", async () => {
@@ -139,6 +164,16 @@ describe("create_opposite_transaction", () => {
       (await db.transactionLinkMember.findMany({ where: { linkId: member.linkId } })).length,
     ).toBe(2);
     await stamped("link.oppositeCreated");
+  });
+
+  it("names SAME_ACCOUNT when the target is the source's account", async () => {
+    const source = await expense(f.accounts.own, day, -27, null);
+    const res = await call("create_opposite_transaction", {
+      transactionId: source,
+      targetAccountId: f.accounts.own,
+    });
+    failed(res, "FORBIDDEN");
+    expect(detailOf(res)).toBe("SAME_ACCOUNT");
   });
 
   it("refuses a target the client may not write", async () => {
@@ -191,9 +226,15 @@ describe("link suggestions", () => {
     await stamped("link.suggestionRestored", key);
   });
 
-  it("rejects a pair key without a separator", async () => {
+  it("rejects a pair key without a separator or too long, and too many transactions", async () => {
     failed(await call("ignore_link_suggestion", { pairKey: "abc" }), "INVALID_INPUT");
     failed(await call("restore_link_suggestion", { pairKey: "abc" }), "INVALID_INPUT");
+    failed(
+      await call("ignore_link_suggestion", { pairKey: `${"a".repeat(100)}|${"b".repeat(100)}` }),
+      "INVALID_INPUT",
+    );
+    const ids = Array.from({ length: 51 }, (_, i) => `tx${i}`);
+    failed(await call("create_link", { transactionIds: ids }), "INVALID_INPUT");
   });
 
   it("answers NOT_FOUND when restoring a pair that was never ignored", async () => {

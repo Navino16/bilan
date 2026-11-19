@@ -10,6 +10,7 @@ import { writeTool } from "@/server/mcp/tools/write-tool";
 
 const pairKey = z
   .string()
+  .max(191)
   .refine((k) => k.includes("|"), { message: "INVALID_PAIR_KEY" })
   .describe("Pair key as returned by list_link_suggestions");
 
@@ -18,7 +19,7 @@ export const LINK_WRITE_TOOLS = [
     name: "create_link",
     description:
       "Link 2 or more transactions together (a transfer, a refund). Every transaction must be on an account the user can write and not already linked.",
-    input: z.object({ transactionIds: z.array(z.string().min(1)).min(2) }),
+    input: z.object({ transactionIds: z.array(z.string().min(1)).min(2).max(50) }),
     run: async (userId, { transactionIds }) => ({
       ok: true,
       id: (await createLink({ transactionIds, userId })).id,
