@@ -109,6 +109,63 @@ test.describe("AI assistants settings (#450)", () => {
         "Aucun jeton personnel.",
       );
 
+      // A write through MCP shows in the recent activity with the token's name. The edit
+      // rewrites a transaction's own label and note, leaving the e2e data as it was.
+      const writer = `E2E write ${Date.now()}`;
+      await page.getByRole("button", { name: "Créer un jeton" }).click();
+      await dialog.getByLabel("Nom", { exact: true }).fill(writer);
+      await dialog.getByRole("radio", { name: "Lecture et écriture" }).check();
+      await dialog.getByRole("button", { name: "Créer le jeton" }).click();
+      await expect(value).toHaveValue(/^bilan_pat_/);
+      const writeToken = await value.inputValue();
+      await dialog.getByRole("button", { name: "Terminé" }).click();
+      await expect(dialog).toBeHidden();
+
+      const call = async (name: string, args: Record<string, unknown>) => {
+        const res = await page.request.post("/api/mcp", {
+          headers: {
+            authorization: `Bearer ${writeToken}`,
+            accept: "application/json, text/event-stream",
+          },
+          data: { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } },
+        });
+        expect(res.status()).toBe(200);
+        const body = (await res.json()) as {
+          result: { isError?: boolean; structuredContent: Record<string, unknown> };
+        };
+        expect(body.result.isError).toBeFalsy();
+        return body.result.structuredContent;
+      };
+      const { accounts } = (await call("list_accounts", {})) as {
+        accounts: { id: string; access: string }[];
+      };
+      const owned = new Set(accounts.filter((a) => a.access === "OWNER").map((a) => a.id));
+      const { items } = (await call("search_transactions", { take: 100 })) as {
+        items: { id: string; accountId: string; label: string; note: string | null }[];
+      };
+      const tx = items.find((item) => owned.has(item.accountId))!;
+      expect(tx).toBeDefined();
+      expect(
+        await call("update_transaction", {
+          id: tx.id,
+          label: tx.label,
+          ...(tx.note ? { note: tx.note } : {}),
+        }),
+      ).toEqual({ ok: true, id: tx.id });
+
+      await page.reload({ waitUntil: "networkidle" });
+      const latest = page.locator('[data-slot="mcp-activity"] li').first();
+      await expect(latest).toContainText("Transaction modifiée");
+      await expect(latest).toContainText(writer);
+      await expect(page.locator('[data-slot="mcp-activity"] h3').first()).toHaveText(
+        /aujourd’hui/i,
+      );
+      await page
+        .locator("[data-token-id]", { hasText: writer })
+        .getByRole("button", { name: `Révoquer ${writer}` })
+        .click();
+      await expect(page.locator('[data-slot="mcp-tokens-empty"]')).toBeVisible();
+
       // Turning access off needs no confirmation.
       await access.click();
       await expect(access).toHaveAttribute("aria-checked", "false");

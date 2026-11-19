@@ -1,5 +1,6 @@
 import type { AuditLog, Prisma, PrismaClient } from "@prisma/client";
 import { db } from "@/server/db";
+import { currentMcpPrincipal } from "@/server/mcp/context";
 import { escapeLike } from "@/server/db/like";
 import { ADMIN_PAGE_SIZE, pageWindow } from "@/lib/pagination";
 import { AUDIT_FAMILIES } from "@/lib/audit";
@@ -13,13 +14,19 @@ export async function logEvent(input: {
   ipAddress?: string | null;
   userAgent?: string | null;
 }): Promise<void> {
+  const principal = currentMcpPrincipal();
+  // `by` is the acting user: a row about another user (an auto-link on the owner's accounts)
+  // must not reach that user's AI activity (spec §5.18).
+  const metadata = principal
+    ? { ...input.metadata, via: "mcp", client: principal.client, by: principal.userId }
+    : (input.metadata ?? {});
   await db.auditLog.create({
     data: {
       userId: input.userId ?? null,
       action: input.action,
       entity: input.entity ?? null,
       entityId: input.entityId ?? null,
-      metadata: (input.metadata ?? {}) as never,
+      metadata: metadata as never,
       ipAddress: input.ipAddress ?? null,
       userAgent: input.userAgent ?? null,
     },

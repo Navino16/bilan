@@ -215,7 +215,8 @@ describe("MCP household budget details", () => {
     }
   });
 
-  // X is shared with G without the AI flag but with H with it: B's assistant sees it anyway.
+  // X is shared with G without the AI flag but with H with it: B's assistant sees it anyway, but
+  // may not write it into G's budgets (per-share rule).
   it("counts an account AI-allowed through another household as visible", async () => {
     const h = (await db.group.create({ data: { name: `${PREFIX} H`, createdById: f.ownerId } })).id;
     await db.groupMember.createMany({
@@ -259,7 +260,7 @@ describe("MCP household budget details", () => {
       data: { role: "ADMIN" },
     });
     try {
-      const created = await inMcp(f.memberId, () =>
+      const created = inMcp(f.memberId, () =>
         createBudget(
           {
             name: "X line",
@@ -272,7 +273,7 @@ describe("MCP household budget details", () => {
           { id: f.memberId },
         ),
       );
-      expect(created.id).toBeTruthy();
+      await expect(created).rejects.toThrow("INVALID_LINE");
     } finally {
       await db.groupMember.updateMany({
         where: { groupId: f.groupId, userId: f.memberId },

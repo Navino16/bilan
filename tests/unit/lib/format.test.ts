@@ -15,6 +15,7 @@ import {
   formatMonthYear,
   formatChange,
   formatPercent,
+  formatTime,
 } from "@/lib/format";
 import { readAmount } from "@/lib/amount";
 
@@ -38,6 +39,15 @@ describe("formatDate", () => {
     expect(formatDate(oct1, "fr")).toBe("1er oct. 2026");
     expect(formatDate(new Date(Date.UTC(2026, 9, 21)), "fr")).toBe("21 oct. 2026");
     expect(formatDate(new Date(Date.UTC(2026, 9, 31)), "fr")).toBe("31 oct. 2026");
+  });
+});
+
+describe("formatTime", () => {
+  it("formats a short time in the given zone", () => {
+    const at = new Date(Date.UTC(2026, 9, 1, 16, 3, 9));
+    expect(formatTime(at, "fr", "UTC")).toBe("16:03");
+    expect(formatTime(at, "fr", "Europe/Paris")).toBe("18:03");
+    expect(formatTime(at, "en", "UTC")).toBe("4:03 PM");
   });
 });
 

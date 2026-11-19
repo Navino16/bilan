@@ -13,7 +13,7 @@ import {
   visibleAccountIds,
   visibleAccountRefs,
 } from "@/server/services/accounts";
-import { currentMcpPrincipal } from "@/server/mcp/context";
+import { aiShareWhere, currentMcpPrincipal } from "@/server/mcp/context";
 import { canReadAccount } from "@/server/services/accounts/sharing";
 import {
   assertCategoryAssignable,
@@ -138,7 +138,7 @@ async function assertLinesInScope(
     ),
   );
   if (accountIds.length === 0) return;
-  const allowed = new Set(await budgetAccountIds(scope));
+  const allowed = new Set(await budgetWriteAccountIds(scope));
   if (accountIds.some((id) => !allowed.has(id))) throw new BudgetAccessError("INVALID_LINE");
 }
 
@@ -152,7 +152,7 @@ async function assertBudgetAccount(
 ): Promise<void> {
   if (accountId === kept) return;
   const allowed = scope.groupId
-    ? (await budgetAccountIds(scope)).includes(accountId)
+    ? (await budgetWriteAccountIds(scope)).includes(accountId)
     : (await db.bankAccount.count({ where: { id: accountId, ownerId: scope.userId! } })) > 0;
   if (!allowed) throw new BudgetAccessError("INVALID_ACCOUNT");
 }
@@ -507,6 +507,27 @@ async function budgetAccountIds(budget: {
   }
   if (!budget.userId) return [];
   return visibleAccountIds(budget.userId);
+}
+
+// The accounts a budget write may put in a household budget's lines or attachment. Inside an
+// MCP call: owned, or AI-allowed on the share to that household, not merely visible through
+// another household (per-share rule, spec §5.18).
+async function budgetWriteAccountIds(scope: {
+  userId: string | null;
+  groupId: string | null;
+}): Promise<string[]> {
+  const ids = await budgetAccountIds(scope);
+  const principal = currentMcpPrincipal();
+  if (!scope.groupId || !principal) return ids;
+  const shares = await db.accountShare.findMany({
+    where: {
+      groupId: scope.groupId,
+      accountId: { in: ids },
+      OR: [{ allowAiAssistants: true }, { account: { ownerId: principal.userId } }],
+    },
+    select: { accountId: true },
+  });
+  return shares.map((s) => s.accountId);
 }
 
 export type BudgetAccountOption = {
@@ -1405,12 +1426,15 @@ export async function assignTransaction(
   if (!txRow) throw new BudgetAccessError("NOT_FOUND");
   if (!(await canReadAccount(actor.id, txRow.accountId))) throw new BudgetAccessError("FORBIDDEN");
   // An INCLUDE shows the transaction to every group member (spec §2.2), so reading the
-  // account through another group isn't enough.
+  // account through another group isn't enough; inside MCP the group's share must allow AI.
   if (input.mode === "INCLUDE" && budget.groupId) {
     const includable = await db.bankAccount.count({
       where: {
         id: txRow.accountId,
-        OR: [{ ownerId: actor.id }, { shares: { some: { groupId: budget.groupId } } }],
+        OR: [
+          { ownerId: actor.id },
+          { shares: { some: { groupId: budget.groupId, ...aiShareWhere() } } },
+        ],
       },
     });
     if (includable === 0) throw new BudgetAccessError("FORBIDDEN");
@@ -1445,6 +1469,16 @@ export async function unassignTransaction(
   actor: { id: string },
 ): Promise<void> {
   await readableOrThrow(input.budgetId, actor.id);
+  // The app keeps its lenient unassign; an MCP client may only touch transactions it sees.
+  if (currentMcpPrincipal()) {
+    const txRow = await db.transaction.findUnique({
+      where: { id: input.transactionId },
+      select: { accountId: true },
+    });
+    if (!txRow) throw new BudgetAccessError("NOT_FOUND");
+    if (!(await canReadAccount(actor.id, txRow.accountId)))
+      throw new BudgetAccessError("FORBIDDEN");
+  }
   await db.budgetAssignment
     .delete({
       where: {

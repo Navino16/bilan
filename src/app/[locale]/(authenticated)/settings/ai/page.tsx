@@ -2,9 +2,11 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { env } from "@/env";
 import { requireSession } from "@/server/auth/permissions";
 import { isMcpInstanceEnabled } from "@/server/mcp/switches";
+import { listMcpActivity } from "@/server/mcp/activity";
 import { listOAuthGrants } from "@/server/mcp/oauth-grants";
 import { listMcpTokens } from "@/server/mcp/tokens";
 import { getMcpEnabled } from "@/server/services/users/preferences";
+import { AiActivity } from "@/components/settings/ai-activity";
 import { AiAssistants } from "@/components/settings/ai-assistants";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PageHeader } from "@/components/shell/page-header";
@@ -37,10 +39,11 @@ export default async function AiAssistantsPage({
     );
   }
 
-  const [enabled, tokens, grants] = await Promise.all([
+  const [enabled, tokens, grants, activity] = await Promise.all([
     getMcpEnabled(user.id),
     listMcpTokens(user.id),
     listOAuthGrants(user.id),
+    listMcpActivity(user.id),
   ]);
   return (
     <div className="space-y-6">
@@ -51,6 +54,7 @@ export default async function AiAssistantsPage({
         endpoint={`${env.APP_URL.replace(/\/$/, "")}/api/mcp`}
         tokens={tokens}
         grants={grants}
+        activity={<AiActivity rows={activity} />}
       />
     </div>
   );

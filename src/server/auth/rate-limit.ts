@@ -121,6 +121,8 @@ export const verificationMailLimiter = sharedLimiter("verificationMail", {
 });
 // Keyed by MCP principal (client kind and id): every tool call goes through the services.
 export const mcpCallLimiter = sharedLimiter("mcpCall", { max: 120, windowMs: 60_000 });
+// Keyed like mcpCallLimiter: caps tool calls that modify data.
+export const mcpWriteLimiter = sharedLimiter("mcpWrite", { max: 30, windowMs: 60_000 });
 // Keyed by client IP: open dynamic client registration (spec §5.18).
 export const oauthRegisterLimiter = sharedLimiter("oauthRegister", {
   max: 20,

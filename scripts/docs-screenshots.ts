@@ -141,14 +141,38 @@ async function connectClient(context: BrowserContext) {
       });
       if (!token.ok()) throw new Error(`token: HTTP ${token.status()} ${await token.text()}`);
       const { access_token: accessToken } = (await token.json()) as { access_token: string };
-      const call = await client.post("/api/mcp", {
-        headers: {
-          authorization: `Bearer ${accessToken}`,
-          accept: "application/json, text/event-stream",
-        },
-        data: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      const callTool = async (name: string, args: Record<string, unknown>) => {
+        const call = await client.post("/api/mcp", {
+          headers: {
+            authorization: `Bearer ${accessToken}`,
+            accept: "application/json, text/event-stream",
+          },
+          data: { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } },
+        });
+        if (!call.ok()) throw new Error(`MCP ${name}: HTTP ${call.status()}`);
+        const { result } = (await call.json()) as {
+          result: { isError?: boolean; structuredContent?: Record<string, unknown> };
+        };
+        if (result.isError) throw new Error(`MCP ${name}: ${JSON.stringify(result)}`);
+        return result.structuredContent ?? {};
+      };
+      // Writes that leave the data set as it was, for the "Recent activity" list.
+      const { items } = (await callTool("search_transactions", { take: 500 })) as {
+        items: {
+          id: string;
+          categoryId: string | null;
+          manuallyCategorized: boolean;
+          periodManual: boolean;
+        }[];
+      };
+      const categorized = items.find((tx) => tx.manuallyCategorized && tx.categoryId);
+      const autoMonth = items.find((tx) => !tx.periodManual);
+      if (!categorized || !autoMonth) throw new Error("MCP activity: no suitable transaction");
+      await callTool("set_transaction_month", { id: autoMonth.id, month: null });
+      await callTool("recategorize_transaction", {
+        id: categorized.id,
+        categoryId: categorized.categoryId,
       });
-      if (!call.ok()) throw new Error(`MCP call: HTTP ${call.status()}`);
     } finally {
       await client.dispose();
     }

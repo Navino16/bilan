@@ -18,6 +18,10 @@ export function currentMcpPrincipal(): McpPrincipal | null {
   return storage.getStore() ?? null;
 }
 
+// A PAT id is already per user; an OAuth client id is shared by every user who authorized it.
+export const mcpLimiterKey = ({ client, userId }: McpPrincipal) =>
+  client.kind === "oauth" ? `oauth:${client.id}:${userId}` : `token:${client.id}`;
+
 // Spread into the share lookups that decide account visibility and access: in an MCP call only
 // shares allowing AI assistants count (spec §5.18).
 export function aiShareWhere(): { allowAiAssistants: true } | Record<string, never> {

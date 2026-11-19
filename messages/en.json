@@ -1912,6 +1912,13 @@
           "FAILED": "Couldn’t revoke this client. Try again."
         }
       },
+      "activity": {
+        "title": "Recent activity",
+        "hint": "Changes made by your assistants in the last 90 days.",
+        "none": "No action by your assistants in the last 90 days.",
+        "today": "Today",
+        "yesterday": "Yesterday"
+      },
       "tokens": {
         "title": "Personal tokens",
         "hint": "Each token is shown only once, when it’s created.",
@@ -1939,7 +1946,7 @@
           "name": "Name",
           "namePlaceholder": "Claude Code on my laptop",
           "access": "Access",
-          "accessHint": "Assistants can only read your data for now.",
+          "accessHint": "Read and write also lets the assistant change your transactions, links and budgets.",
           "expiry": "Expiry",
           "expiryChoice": {
             "30": "30 days",
