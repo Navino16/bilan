@@ -11,7 +11,7 @@ import {
   type McpTool,
 } from "@/server/mcp/tools/read";
 
-const hasScope = (principal: McpPrincipal, scope: McpScope) =>
+export const hasScope = (principal: Pick<McpPrincipal, "scopes">, scope: McpScope) =>
   principal.scopes.includes(scope) ||
   (scope === "bilan:read" && principal.scopes.includes("bilan:write"));
 
@@ -59,9 +59,9 @@ async function runTool(
 }
 
 // One server per authenticated request: only the tools the principal's scopes allow.
-export function buildMcpServer(principal: McpPrincipal): McpServer {
+export function buildMcpServer(principal: McpPrincipal, tools: McpTool[] = READ_TOOLS): McpServer {
   const server = new McpServer({ name: "bilan", version: "1.0.0" });
-  for (const tool of READ_TOOLS) {
+  for (const tool of tools) {
     if (!hasScope(principal, tool.scope)) continue;
     server.registerTool(
       tool.name,

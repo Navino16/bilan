@@ -5,8 +5,14 @@ import { appSettings } from "@/server/services/settings/app-settings";
 import { handleMcpRequest } from "@/server/mcp/http";
 import { MCP_OAUTH_SCOPES, mcpResourceUrl, oauthIssuer } from "@/server/mcp/oauth-config";
 import { mcpChallenge } from "@/server/mcp/discovery";
-import { GET as prmGet } from "@/app/.well-known/oauth-protected-resource/[[...path]]/route";
-import { GET as asGet } from "@/app/.well-known/oauth-authorization-server/[[...path]]/route";
+import {
+  GET as prmGet,
+  OPTIONS as prmOptions,
+} from "@/app/.well-known/oauth-protected-resource/[[...path]]/route";
+import {
+  GET as asGet,
+  OPTIONS as asOptions,
+} from "@/app/.well-known/oauth-authorization-server/[[...path]]/route";
 import { snapshotSetting } from "./support/app-setting-snapshot";
 
 const stamp = Date.now();
@@ -65,6 +71,16 @@ describe("authorization server metadata", () => {
     expect(body).not.toHaveProperty("userinfo_endpoint");
     expect(res.headers.get("access-control-allow-origin")).toBe("*");
     expect(res.headers.get("cache-control")).toBe("no-store");
+  });
+});
+
+describe("CORS preflight", () => {
+  it.each([[prmOptions], [asOptions]])("allows a cross-origin GET", async (options) => {
+    const res = await options();
+    expect(res.status).toBe(204);
+    expect(res.headers.get("access-control-allow-origin")).toBe("*");
+    expect(res.headers.get("access-control-allow-methods")).toBe("GET");
+    expect(res.headers.get("access-control-allow-headers")).toBe("*");
   });
 });
 

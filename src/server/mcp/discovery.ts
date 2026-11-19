@@ -59,3 +59,15 @@ export async function serveDiscovery(
     return Response.json({ error: "INTERNAL" }, { status: 500, headers: PUBLIC_HEADERS });
   }
 }
+
+// Browser MCP clients preflight the metadata GET.
+export function discoveryPreflight(): Response {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET",
+      "Access-Control-Allow-Headers": "*",
+    },
+  });
+}
