@@ -83,7 +83,9 @@ export async function revokeSession(
 
 export async function revokeOtherSessions(
   headers: Headers,
-): Promise<{ ok: true; count: number } | { ok: false; error: "UNAUTHORIZED" | "FAILED" }> {
+): Promise<
+  { ok: true; count: number } | { ok: false; error: "UNAUTHORIZED" | "FAILED" | "TOKENS_FAILED" }
+> {
   const me = await currentSession(headers);
   if (!me) return { ok: false, error: "UNAUTHORIZED" };
   const count = await db.session.count({
@@ -99,5 +101,5 @@ export async function revokeOtherSessions(
   // A trusted browser would otherwise sign back in without its 2FA code (#243).
   await purgeTrustedDevices(me.userId);
   await logEvent({ userId: me.userId, action: "auth.session.revoked_others", metadata: { count } });
-  return tokensRevoked ? { ok: true, count } : { ok: false, error: "FAILED" };
+  return tokensRevoked ? { ok: true, count } : { ok: false, error: "TOKENS_FAILED" };
 }

@@ -21,7 +21,7 @@ vi.mock("next/headers", () => ({
 import { db } from "@/server/db";
 import { getAuth } from "@/server/auth";
 import { appSettings } from "@/server/services/settings/app-settings";
-import { changePassword } from "@/server/services/users/password";
+import { changePassword, isCurrentPassword } from "@/server/services/users/password";
 import { revokeOtherSessions } from "@/server/services/users/sessions";
 import { setMcpEnabled, PreferenceInputError } from "@/server/services/users/preferences";
 import {
@@ -30,6 +30,7 @@ import {
   listMcpTokens,
   principalFromToken,
   revokeAllMcpTokens,
+  revokeAllMcpTokensOrAudit,
   revokeMcpToken,
 } from "@/server/mcp/tokens";
 
@@ -346,7 +347,8 @@ describe("failed revocation", () => {
       newPassword: FAILED_CHANGE_PASSWORD,
       revokeOtherSessions: false,
     });
-    expect(res.ok).toBe(true);
+    expect(res).toEqual({ ok: false, error: "TOKENS_FAILED" });
+    expect(await isCurrentPassword(userId, FAILED_CHANGE_PASSWORD)).toBe(true);
     expect(update).toHaveBeenCalledTimes(2);
     expect(loggedFailure(errors)).toBe(true);
     expect(await failures("password")).toBe(before + 1);
@@ -358,12 +360,35 @@ describe("failed revocation", () => {
     const before = await failures("sessions");
     const update = breakRevocation();
     const errors = quietErrors();
-    expect(await revokeOtherSessions(headers)).toEqual({ ok: false, error: "FAILED" });
+    expect(await revokeOtherSessions(headers)).toEqual({ ok: false, error: "TOKENS_FAILED" });
     expect(update).toHaveBeenCalledTimes(2);
     expect(loggedFailure(errors)).toBe(true);
     expect(await failures("sessions")).toBe(before + 1);
     vi.restoreAllMocks();
     expect(await principalFromToken(a.token)).not.toBeNull();
+  });
+
+  it("a failed revoked_all audit leaves the revocation successful", async () => {
+    const a = await mk();
+    const before = await failures("password");
+    const errors = quietErrors();
+    vi.spyOn(db.auditLog, "create").mockRejectedValueOnce(new Error("audit down"));
+    expect(await revokeAllMcpTokensOrAudit(userId, "password")).toBe(true);
+    expect(await principalFromToken(a.token)).toBeNull();
+    expect(errors).toHaveBeenCalled();
+    expect(await failures("password")).toBe(before);
+  });
+
+  it("stores at most 500 characters of the error", async () => {
+    await mk();
+    quietErrors();
+    vi.spyOn(db.mcpToken, "updateMany").mockRejectedValue(new Error("x".repeat(2000)));
+    expect(await revokeAllMcpTokensOrAudit(userId, "sessions")).toBe(false);
+    const row = await db.auditLog.findFirstOrThrow({
+      where: { userId, action: "mcp.token.revoke_failed" },
+      orderBy: { createdAt: "desc" },
+    });
+    expect((row.metadata as { error: string }).error).toHaveLength(500);
   });
 
   it("revokeOtherSessions succeeds when the retry does", async () => {

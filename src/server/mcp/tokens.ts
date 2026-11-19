@@ -112,7 +112,7 @@ export async function revokeAllMcpTokens(
     action: "mcp.token.revoked_all",
     entity: "McpToken",
     metadata: { reason, count },
-  });
+  }).catch((e) => console.error("[bilan] MCP token revocation audit failed", e));
   return count;
 }
 
@@ -136,7 +136,7 @@ export async function revokeAllMcpTokensOrAudit(
     userId,
     action: "mcp.token.revoke_failed",
     entity: "McpToken",
-    metadata: { reason, error: error instanceof Error ? error.message : "unknown" },
+    metadata: { reason, error: error instanceof Error ? error.message.slice(0, 500) : "unknown" },
   }).catch((e) => console.error("[bilan] MCP token revocation audit failed", e));
   return false;
 }
