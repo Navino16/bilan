@@ -5,10 +5,13 @@ import { mcpWriteLimiter } from "@/server/auth/rate-limit";
 import { createRule } from "@/server/services/categorization";
 import { buildMcpServer } from "@/server/mcp/server";
 import { mcpLimiterKey } from "@/server/mcp/context";
+import { listMcpActivity } from "@/server/mcp/activity";
+import { getTransactionForUser } from "@/server/services/transactions";
 import { addMonths } from "@/lib/period";
 import {
   cleanupMcpFixture,
   createMcpFixture,
+  expense,
   mcpPrincipal,
   type McpFixture,
 } from "./support/mcp-fixtures";
@@ -37,6 +40,9 @@ const failed = (r: ToolResult, code: string) => {
   expect(r.isError).toBe(true);
   expect(textOf(r)).toBe(code);
 };
+const detailOf = (r: ToolResult) =>
+  (r.content as { type: string; text: string }[])[1]?.text ?? null;
+const noteOf = async (id: string) => (await getTransactionForUser(id, f.memberId))?.note;
 const countRows = (accountId: string) => db.transaction.count({ where: { accountId } });
 
 beforeAll(async () => {
@@ -136,6 +142,24 @@ describe("update_transaction", () => {
   it("answers NOT_FOUND for an unknown id", async () => {
     failed(await call("update_transaction", { id: "nope", label: "x" }), "NOT_FOUND");
   });
+
+  it("keeps the note when it is absent and clears it on null", async () => {
+    const id = f.expenses.own;
+    ok(await call("update_transaction", { id, label: "Noted", note: "Keep me" }));
+    ok(await call("update_transaction", { id, label: "Renamed again" }));
+    expect(await noteOf(id)).toBe("Keep me");
+    ok(await call("update_transaction", { id, label: "Renamed again", note: null }));
+    expect(await noteOf(id)).toBeNull();
+  });
+
+  it("names LOCKED_FIELDS when an imported transaction's amount is changed", async () => {
+    const id = await expense(f.accounts.own, now, -7, null);
+    await db.transaction.update({ where: { id }, data: { externalId: `${PREFIX}-imported` } });
+    const res = await call("update_transaction", { id, label: "Imported", amount: -8 });
+    failed(res, "FORBIDDEN");
+    expect(detailOf(res)).toBe("LOCKED_FIELDS");
+    expect(Number((await db.transaction.findUniqueOrThrow({ where: { id } })).amount)).toBe(-7);
+  });
 });
 
 describe("recategorize_transaction", () => {
@@ -207,6 +231,43 @@ describe("writes stay inside the MCP account set", () => {
       });
       expect(rows.length, action).toBeGreaterThan(0);
       for (const r of rows) expect(r.metadata).toMatchObject({ via: "mcp" });
+    }
+  });
+});
+
+describe("recent activity of an auto-link on another user's account", () => {
+  it("lists the member's own write only, never the owner's auto-link row", async () => {
+    const share = { accountId: f.accounts.sharedAi, groupId: f.groupId };
+    await db.accountShare.update({
+      where: { accountId_groupId: share },
+      data: { permission: "WRITE" },
+    });
+    try {
+      const plain = await expense(f.accounts.sharedPlain, now, -123.45, null);
+      await db.transaction.update({ where: { id: plain }, data: { type: "TRANSFER" } });
+      const res = ok(
+        await call("create_transaction", {
+          accountId: f.accounts.sharedAi,
+          date: now.toISOString().slice(0, 10),
+          amount: 123.45,
+          type: "TRANSFER",
+          label: "Transfer in",
+        }),
+      );
+      expect(await db.transactionLinkMember.count({ where: { transactionId: res.id } })).toBe(1);
+      expect(
+        await db.auditLog.count({ where: { userId: f.ownerId, action: "link.autoCreated" } }),
+      ).toBe(1);
+
+      expect(await listMcpActivity(f.ownerId)).toEqual([]);
+      const mine = await listMcpActivity(f.memberId);
+      expect(mine.find((r) => r.entityId === res.id)?.action).toBe("transaction.created");
+      expect(mine.map((r) => r.action)).not.toContain("link.autoCreated");
+    } finally {
+      await db.accountShare.update({
+        where: { accountId_groupId: share },
+        data: { permission: "READ" },
+      });
     }
   });
 });

@@ -4,6 +4,7 @@ import { dayStart, isValidIsoDay } from "@/lib/period";
 import { transactionInputSchema, transactionUpdateSchema } from "@/lib/schemas/transaction";
 import {
   createManualTransaction,
+  getTransactionForUser,
   recategorizeTransaction,
   setTransactionMonth,
   updateTransaction,
@@ -23,7 +24,13 @@ export const createTransactionInput = transactionInputSchema.omit({ rawLabel: tr
 const updateTransactionInput = z.object({
   id,
   label: transactionUpdateSchema.shape.label,
-  note: z.string().trim().max(1000).optional().describe("Blank or absent clears the note"),
+  note: z
+    .string()
+    .trim()
+    .max(1000)
+    .nullable()
+    .optional()
+    .describe("Absent keeps the note; null or blank clears it"),
   date: isoDay.optional(),
   amount: transactionUpdateSchema.shape.amount,
   type: transactionUpdateSchema.shape.type,
@@ -32,7 +39,7 @@ const updateTransactionInput = z.object({
 export const TRANSACTION_WRITE_TOOLS = [
   writeTool({
     name: "create_transaction",
-    description: `Add a manual transaction to an account the user can write. ${AMOUNTS} When no category is given, the user's categorization rules pick one.`,
+    description: `Add a manual transaction to an account the user can write; an archived account refuses it (ACCOUNT_ARCHIVED). ${AMOUNTS} When no category is given, the user's categorization rules pick one.`,
     input: createTransactionInput,
     run: async (userId, args) => ({
       ok: true,
@@ -41,10 +48,13 @@ export const TRANSACTION_WRITE_TOOLS = [
   }),
   writeTool({
     name: "update_transaction",
-    description: `Edit a transaction's label, note, date, amount or type; absent date, amount and type stay unchanged. ${AMOUNTS}`,
+    description: `Edit a transaction's label, note, date, amount or type; absent note, date, amount and type stay unchanged. Imported transactions and those on archived accounts have their date, amount and type locked (LOCKED_FIELDS). ${AMOUNTS}`,
     input: updateTransactionInput,
-    run: async (userId, { id, ...fields }) => {
-      await updateTransaction(id, fields, { id: userId });
+    run: async (userId, { id, note, ...fields }) => {
+      // The service clears an absent note (the form always sends it); unreadable ids fall
+      // through to the service's own NOT_FOUND / FORBIDDEN.
+      const kept = note === undefined ? (await getTransactionForUser(id, userId))?.note : note;
+      await updateTransaction(id, { ...fields, note: kept ?? undefined }, { id: userId });
       return { ok: true, id };
     },
   }),
