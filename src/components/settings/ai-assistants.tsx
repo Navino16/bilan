@@ -82,7 +82,10 @@ function AccessCard({ locale, enabled }: { locale: string; enabled: boolean }) {
       } catch {
         res = { ok: false, error: "FAILED" };
       }
-      if (!res.ok) return setError(res.error);
+      if (!res.ok) {
+        if (res.error === "INSTANCE_DISABLED") router.refresh();
+        return setError(res.error);
+      }
       setConfirming(false);
       router.refresh();
     });
@@ -142,7 +145,12 @@ function ConnectionCard({ enabled, endpoint }: { enabled: boolean; endpoint: str
               data-slot="mcp-endpoint"
               onFocus={(e) => e.currentTarget.select()}
             />
-            <CopyLinkButton url={endpoint} label={t("copy")} copiedLabel={t("copied")} />
+            <CopyLinkButton
+              url={endpoint}
+              icon={Copy}
+              label={t("copy")}
+              copiedLabel={t("copied")}
+            />
           </div>
           <p id="mcp-endpoint-header" className="text-muted-foreground text-xs">
             {t.rich("header", {
@@ -188,7 +196,7 @@ function TokensCard({ tokens }: { tokens: McpTokenView[] }) {
       action={<Button onClick={() => setCreating(true)}>{t("create")}</Button>}
     >
       {tokens.length === 0 ? (
-        <p className="text-muted-foreground px-4 py-4 text-sm sm:px-6" data-slot="mcp-tokens-empty">
+        <p className="text-muted-foreground p-4 text-sm sm:px-6" data-slot="mcp-tokens-empty">
           {t("none")}
         </p>
       ) : (
@@ -225,7 +233,7 @@ function TokenRow({
   onRevoke: () => void;
 }) {
   const t = useTranslations("settings.ai.tokens");
-  const time = (value: Date) => ({ time: () => <LocalDateTime value={value} /> });
+  const time = (value: Date) => ({ time: () => <LocalDateTime value={value} dateOnly /> });
   const expiry = token.expiresAt
     ? t.rich(token.expired ? "expired" : "expires", time(token.expiresAt))
     : t("noExpiry");

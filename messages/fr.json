@@ -200,7 +200,7 @@
       "status": "Page {page, number} sur {pageCount, number}"
     },
     "copyLink": {
-      "manual": "La copie automatique n’est pas disponible sur cette connexion. Sélectionnez le lien puis copiez-le."
+      "manual": "La copie automatique n’est pas disponible sur cette connexion. Sélectionnez le texte puis copiez-le."
     },
     "skipToContent": "Aller au contenu principal",
     "mainNav": "Navigation principale",

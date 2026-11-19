@@ -200,7 +200,7 @@
       "status": "Page {page, number} of {pageCount, number}"
     },
     "copyLink": {
-      "manual": "Automatic copy isn’t available on this connection. Select the link and copy it."
+      "manual": "Automatic copy isn’t available on this connection. Select the text and copy it."
     },
     "skipToContent": "Skip to main content",
     "mainNav": "Main navigation",
@@ -1853,7 +1853,7 @@
       "connection": {
         "title": "Connection",
         "hint": "The MCP server address to give your client, along with a token.",
-        "off": "Allow AI assistants to connect a client.",
+        "off": "Turn on AI assistant access to connect a client.",
         "endpoint": "MCP server address",
         "copy": "Copy the address",
         "copied": "Address copied",

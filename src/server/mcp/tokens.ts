@@ -37,6 +37,7 @@ const createSchema = z.object({
 export async function createMcpToken(
   userId: string,
   input: { name: string; scope: McpTokenScope; expiresAt?: Date | null },
+  audit: { ipAddress?: string | null; userAgent?: string | null; via?: string | null } = {},
 ): Promise<{ id: string; token: string; prefix: string }> {
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) throw new PreferenceInputError(fieldErrorsFromZod(parsed.error, input));
@@ -59,7 +60,9 @@ export async function createMcpToken(
     action: "mcp.token.created",
     entity: "McpToken",
     entityId: row.id,
-    metadata: { name, scope },
+    ipAddress: audit.ipAddress,
+    userAgent: audit.userAgent,
+    metadata: { name, scope, ...(audit.via ? { via: audit.via } : {}) },
   });
   return { id: row.id, token, prefix };
 }

@@ -81,16 +81,23 @@ afterAll(async () => {
 
 describe("create / list / revoke", () => {
   it("creates a bilan_pat_ token stored only as a hash, and audits it", async () => {
-    const { id, token, prefix } = await createMcpToken(userId, { name: "Claude", scope: "write" });
+    const { id, token, prefix } = await createMcpToken(
+      userId,
+      { name: "Claude", scope: "write" },
+      { ipAddress: "203.0.113.7", userAgent: "vitest", via: "password" },
+    );
     expect(token.startsWith(MCP_TOKEN_PREFIX)).toBe(true);
     expect(token.length).toBe(MCP_TOKEN_PREFIX.length + 43);
     expect(prefix).toBe(token.slice(0, 16));
     const row = await db.mcpToken.findUniqueOrThrow({ where: { id } });
     expect(row.tokenHash).not.toContain(token);
     expect(row.scope).toBe("write");
-    expect(
-      await db.auditLog.count({ where: { userId, action: "mcp.token.created", entityId: id } }),
-    ).toBe(1);
+    const audits = await db.auditLog.findMany({
+      where: { userId, action: "mcp.token.created", entityId: id },
+    });
+    expect(audits).toHaveLength(1);
+    expect(audits[0]).toMatchObject({ ipAddress: "203.0.113.7", userAgent: "vitest" });
+    expect(audits[0].metadata).toMatchObject({ name: "Claude", scope: "write", via: "password" });
   });
 
   it("lists only the user's non-revoked tokens, without secrets", async () => {
