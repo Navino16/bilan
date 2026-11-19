@@ -8,6 +8,7 @@ export type ChangePasswordError =
   | "TOO_SHORT"
   | "TOO_LONG"
   | "REVOKE_FAILED"
+  | "TOKENS_FAILED"
   | "SAME_PASSWORD"
   | "FAILED";
 
@@ -87,6 +88,10 @@ export async function changePassword(
       return { ok: false, error: "REVOKE_FAILED" };
     }
     await purgeTrustedDevices(userId);
+  }
+  // The account.update hook revoked the MCP tokens (retry + audit included, spec §5.18).
+  if ((await db.mcpToken.count({ where: { userId, revokedAt: null } })) > 0) {
+    return { ok: false, error: "TOKENS_FAILED" };
   }
   return { ok: true };
 }

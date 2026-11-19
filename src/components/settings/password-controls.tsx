@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { changePasswordAction } from "@/server/transport/actions/auth";
 import { useActionForm } from "@/components/forms/use-action-form";
 import { FieldError } from "@/components/forms/field-error";
+import { useAiSettingsLink } from "@/components/settings/ai-settings-link";
 import { PASSWORD_MAX_LENGTH } from "@/lib/validation/app-settings";
 
 function PasswordForm({
@@ -23,6 +24,7 @@ function PasswordForm({
 }) {
   const t = useTranslations("settings.security.passwordCard");
   const [revoke, setRevoke] = useState(true);
+  const aiSettingsLink = useAiSettingsLink();
   const form = useActionForm(changePasswordAction, { onSuccess: onDone });
   const { pending } = form;
   const retryAfter = form.state && !form.state.ok ? form.state.retryAfter : undefined;
@@ -86,7 +88,9 @@ function PasswordForm({
           <AlertDescription>
             {form.error === "RATE_LIMITED" && retryAfter
               ? t("error.rateLimitedFor", { minutes: Math.ceil(retryAfter / 60) })
-              : t(`error.${form.error}`)}
+              : form.error === "TOKENS_FAILED"
+                ? t.rich("error.TOKENS_FAILED", { link: aiSettingsLink })
+                : t(`error.${form.error}`)}
           </AlertDescription>
         </Alert>
       )}

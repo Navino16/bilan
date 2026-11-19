@@ -112,8 +112,33 @@ export async function revokeAllMcpTokens(
     action: "mcp.token.revoked_all",
     entity: "McpToken",
     metadata: { reason, count },
-  });
+  }).catch((e) => console.error("[bilan] MCP token revocation audit failed", e));
   return count;
+}
+
+// Credential flows can't leave tokens silently live: one retry, then an audited failure (spec §5.18).
+// Returns false when the tokens may still be valid.
+export async function revokeAllMcpTokensOrAudit(
+  userId: string,
+  reason: "password" | "sessions",
+): Promise<boolean> {
+  let error: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      await revokeAllMcpTokens(userId, reason);
+      return true;
+    } catch (e) {
+      error = e;
+    }
+  }
+  console.error("[bilan] MCP token revocation failed", error);
+  await logEvent({
+    userId,
+    action: "mcp.token.revoke_failed",
+    entity: "McpToken",
+    metadata: { reason, error: error instanceof Error ? error.message.slice(0, 500) : "unknown" },
+  }).catch((e) => console.error("[bilan] MCP token revocation audit failed", e));
+  return false;
 }
 
 export async function principalFromToken(token: string): Promise<McpPrincipal | null> {
