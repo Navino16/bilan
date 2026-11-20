@@ -2318,6 +2318,8 @@
         "mail": "E-mails",
         "audit": "Journal d’audit",
         "bank_sync": "Synchronisation bancaire",
+        "merchant": "Marchands",
+        "preferences": "Préférences",
         "mcp": "Assistants IA (MCP)"
       },
       "entities": {
@@ -2345,9 +2347,19 @@
         "BudgetAssignment": "Affectation de budget",
         "McpToken": "Jeton MCP",
         "OauthClient": "Client OAuth",
+        "MerchantAlias": "Alias de marchand",
         "UserPreference": "Préférences"
       },
       "actions": {
+        "merchant": {
+          "renamed": "Nom de marchand modifié",
+          "reset": "Nom de marchand réinitialisé",
+          "alias_removed": "Alias de marchand retiré"
+        },
+        "preferences": {
+          "link_settings_updated": "Réglages des liaisons modifiés",
+          "exceptional_updated": "Règle des dépenses exceptionnelles modifiée"
+        },
         "mcp": {
           "enabled": "MCP activé",
           "disabled": "MCP désactivé",

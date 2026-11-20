@@ -15,6 +15,7 @@ import {
   type CategoryNode,
 } from "@/server/services/categories";
 import { listRulesForUser } from "@/server/services/categorization";
+import { previewRulesApplication } from "@/server/services/categorization/apply";
 import { getDashboard } from "@/server/services/dashboard";
 import { getInsights } from "@/server/services/dashboard/insights";
 import { getGroupDetail, listGroupsForUser } from "@/server/services/groups";
@@ -25,6 +26,7 @@ import { getExceptionalRule, getLinkSuggestionSettings } from "@/server/services
 import {
   comparisonInput,
   periodInput,
+  ruleIdsInput,
   searchInput,
   toComparison,
   toPeriod,
@@ -169,6 +171,14 @@ export const READ_TOOLS: McpTool[] = [
     description: "Categorization rules (own and households'), in the order they apply.",
     input: z.strictObject({}),
     run: async (userId) => ({ rules: await listRulesForUser(userId) }),
+  }),
+  readTool({
+    name: "preview_rules_application",
+    description:
+      "What apply_rules would do with these rules, without writing: transactions matched, moving (and from another category), already in the category, kept because manual, and kept by a higher-priority rule. Counts only the accounts this assistant may write.",
+    input: z.strictObject({ ruleIds: ruleIdsInput }),
+    categoryPaths: false,
+    run: (userId, args) => previewRulesApplication(args.ruleIds, { id: userId }),
   }),
   readTool({
     name: "list_budgets",

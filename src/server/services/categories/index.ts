@@ -185,6 +185,40 @@ export async function updateCategory(
   });
 }
 
+// MCP patch (spec §5.18): an absent field keeps its value, null clears it or resets it to its default.
+export type CategoryPatch = {
+  name?: string;
+  color?: string | null;
+  icon?: string | null;
+  parentId?: string | null;
+  shiftDays?: number | null;
+  savings?: boolean | null;
+  neutral?: boolean | null;
+};
+
+export async function patchCategory(
+  id: string,
+  patch: CategoryPatch,
+  actor: { id: string },
+): Promise<void> {
+  const cur = await ownedOrThrow(id, actor.id);
+  const pick = <K extends keyof CategoryPatch>(key: K) =>
+    (patch[key] === undefined ? cur[key] : patch[key]) ?? undefined;
+  await updateCategory(
+    id,
+    {
+      name: patch.name ?? cur.name,
+      color: pick("color"),
+      icon: pick("icon"),
+      parentId: pick("parentId"),
+      shiftDays: pick("shiftDays"),
+      savings: pick("savings"),
+      neutral: pick("neutral"),
+    },
+    actor,
+  );
+}
+
 // Maps each id to itself + all its descendants, walking down one level per query.
 export async function withDescendants(
   ids: string[],
@@ -363,6 +397,20 @@ export async function loadAssignableCategories(
     where: { OR: [{ userId }, { groupId: { in: groupIds } }] },
     orderBy: { name: "asc" },
   });
+}
+
+// For the AI activity list (spec §5.18).
+export async function readableCategoryNames(
+  userId: string,
+  ids: string[],
+): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map();
+  const groupIds = (await groupMemberships(userId)).map((m) => m.groupId);
+  const rows = await db.category.findMany({
+    where: { id: { in: ids }, OR: [{ userId }, { groupId: { in: groupIds } }] },
+    select: { id: true, name: true },
+  });
+  return new Map(rows.map((c) => [c.id, c.name]));
 }
 
 // `loadAssignableCategories` as a parent/child forest. Memoized per server

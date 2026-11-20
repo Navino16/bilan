@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
+import { logEvent } from "@/server/services/audit";
 import { decrypt, encrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
 import { hashMerchantKey } from "@/server/services/transactions/secure-fields";
@@ -120,6 +121,19 @@ async function load(userId: string): Promise<Alias[]> {
   }));
 }
 
+// Current display names of the user's aliases by key hash, for the AI activity list (spec §5.18).
+export async function readableAliasNames(
+  userId: string,
+  keyHashes: string[],
+): Promise<Map<string, string>> {
+  if (keyHashes.length === 0) return new Map();
+  const rows = await db.merchantAlias.findMany({
+    where: { userId, keyHash: { in: keyHashes } },
+    select: { keyHash: true, nameEnc: true },
+  });
+  return new Map(rows.map((a) => [a.keyHash, decrypt(a.nameEnc, dataKey)]));
+}
+
 // Reuses the stored spelling of a name, so "supermarché" joins "Supermarché".
 function canonical(name: string, others: Alias[]): string {
   return others.find((a) => sameName(a.name, name))?.name ?? name;
@@ -190,6 +204,7 @@ async function absorbNamesake(
   });
 }
 
+// Audit rows carry the key HMAC, never a merchant name or key (#244).
 export async function renameMerchant(userId: string, key: string, name: string): Promise<void> {
   const k = merchantKeySchema.parse(key);
   const parsed = merchantNameSchema.parse(name);
@@ -203,6 +218,12 @@ export async function renameMerchant(userId: string, key: string, name: string):
     update: { keyEnc, nameEnc },
   });
   await absorbNamesake(userId, final, new Set([k, ...others.map((a) => a.key)]));
+  await logEvent({
+    userId,
+    action: "merchant.renamed",
+    entity: "MerchantAlias",
+    entityId: hashMerchantKey(k),
+  });
 }
 
 export async function renameAliasGroup(userId: string, from: string, to: string): Promise<void> {
@@ -223,15 +244,35 @@ export async function renameAliasGroup(userId: string, from: string, to: string)
   // A case-only rename must not re-absorb a merchant the user detached from this group.
   if (merchantKeySchema.safeParse(name).data !== merchantKeySchema.safeParse(from).data)
     await absorbNamesake(userId, name, new Set(all.map((a) => a.key)));
+  await logEvent({
+    userId,
+    action: "merchant.renamed",
+    entity: "MerchantAlias",
+    entityId: hashMerchantKey(members[0].key),
+  });
 }
 
 export async function deleteAliasGroup(userId: string, name: string): Promise<void> {
   const { members } = await membersOf(userId, name);
   await db.merchantAlias.deleteMany({ where: { userId, id: { in: members.map((m) => m.id) } } });
+  await logEvent({
+    userId,
+    action: "merchant.reset",
+    entity: "MerchantAlias",
+    entityId: hashMerchantKey(members[0].key),
+  });
 }
 
 export async function removeMerchantAlias(userId: string, key: string): Promise<void> {
-  const keyHash = hashMerchantKey(merchantKeySchema.parse(key));
-  const { count } = await db.merchantAlias.deleteMany({ where: { userId, keyHash } });
+  const k = merchantKeySchema.parse(key);
+  const { count } = await db.merchantAlias.deleteMany({
+    where: { userId, keyHash: hashMerchantKey(k) },
+  });
   if (count === 0) throw new MerchantAliasError("NOT_FOUND");
+  await logEvent({
+    userId,
+    action: "merchant.alias_removed",
+    entity: "MerchantAlias",
+    entityId: hashMerchantKey(k),
+  });
 }

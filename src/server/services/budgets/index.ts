@@ -39,7 +39,7 @@ import {
   type BudgetPeriodType,
   type TransferDirection,
 } from "@/lib/validation/budget";
-import { budgetInputSchema, type BudgetInput } from "@/lib/schemas/budget";
+import { budgetInputSchema, type BudgetInput, type BudgetLineInput } from "@/lib/schemas/budget";
 import {
   attachedLanding,
   budgetMirrors,
@@ -308,6 +308,60 @@ export async function updateBudget(
     }),
   ]);
   await logEvent({ userId: actor.id, action: "budget.updated", entity: "Budget", entityId: id });
+}
+
+// MCP patch (spec §5.18): an absent field keeps its value, null clears it (recurring → false);
+// sent lines replace every line.
+export type BudgetPatch = {
+  name?: string;
+  description?: string | null;
+  accountId?: string | null;
+  periodType?: BudgetPeriodType;
+  periodStart?: string;
+  periodEnd?: string;
+  recurring?: boolean | null;
+  outOfBudgetPlanned?: number | null;
+  lines?: BudgetLineInput[];
+};
+
+export async function patchBudget(
+  id: string,
+  patch: BudgetPatch,
+  actor: { id: string },
+): Promise<void> {
+  const cur = await manageableOrThrow(id, actor.id);
+  const keep = <T>(sent: T | null | undefined, stored: T | null) =>
+    (sent === undefined ? stored : sent) ?? undefined;
+  const day = (d: Date) => d.toISOString().slice(0, 10);
+  const lines =
+    patch.lines ??
+    (await db.budgetLine.findMany({ where: { budgetId: id } })).map((l) => ({
+      kind: l.kind as BudgetLineKind,
+      categoryId: l.categoryId ?? undefined,
+      accountId: l.accountId ?? undefined,
+      direction: (l.direction as TransferDirection | null) ?? undefined,
+      counterpartAccountId: l.counterpartAccountId ?? undefined,
+      label: l.label ?? undefined,
+      plannedAmount: Number(l.plannedAmount),
+    }));
+  await updateBudget(
+    id,
+    {
+      name: patch.name ?? cur.name,
+      description: keep(patch.description, cur.description),
+      accountId: keep(patch.accountId, cur.accountId),
+      periodType: patch.periodType ?? (cur.periodType as BudgetPeriodType),
+      periodStart: patch.periodStart ?? day(cur.periodStart),
+      periodEnd: patch.periodEnd ?? day(cur.periodEnd),
+      recurring: keep(patch.recurring, cur.recurring),
+      outOfBudgetPlanned: keep(
+        patch.outOfBudgetPlanned,
+        cur.outOfBudgetPlanned === null ? null : Number(cur.outOfBudgetPlanned),
+      ),
+      lines,
+    },
+    actor,
+  );
 }
 
 export async function deleteBudget(id: string, actor: { id: string }): Promise<void> {

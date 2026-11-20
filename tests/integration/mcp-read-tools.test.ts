@@ -37,6 +37,7 @@ const ALL_TOOLS = [
   "get_transaction",
   "list_categories",
   "list_rules",
+  "preview_rules_application",
   "list_budgets",
   "get_budget",
   "list_merchants",
@@ -196,7 +197,7 @@ afterAll(async () => {
 });
 
 describe("MCP read tools", () => {
-  it("lists the 13 read tools, read-only, each description ending with the untrusted note", async () => {
+  it("lists the 14 read tools, read-only, each description ending with the untrusted note", async () => {
     const { tools } = await member.client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([...ALL_TOOLS].sort());
     for (const t of tools) {

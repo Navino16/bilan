@@ -178,6 +178,71 @@ describe("budget lifecycle over MCP", () => {
     await stamped("budget.created", rolled.id);
   });
 
+  it("keeps omitted budget fields, replaces lines when sent and detaches with null", async () => {
+    const period = { periodType: "MONTH", periodStart: "2001-03-01", periodEnd: "2001-03-31" };
+    const line = (kind: string, plannedAmount: number) => ({
+      kind,
+      categoryId: personalCategory,
+      plannedAmount,
+    });
+    const id = ok(
+      await call("create_budget", {
+        name: "Attached",
+        description: "Weekly shop",
+        accountId: f.accounts.own,
+        ...period,
+        recurring: true,
+        outOfBudgetPlanned: 50,
+        lines: [line("EXPENSE", 300)],
+      }),
+    ).id;
+    const budget = () => db.budget.findUniqueOrThrow({ where: { id }, include: { lines: true } });
+    const linesOf = (b: Awaited<ReturnType<typeof budget>>) =>
+      b.lines.map((l) => [l.kind, l.categoryId, Number(l.plannedAmount)]).sort();
+
+    ok(await call("update_budget", { id, name: "Renamed" }));
+    const kept = await budget();
+    expect(kept).toMatchObject({
+      name: "Renamed",
+      description: "Weekly shop",
+      accountId: f.accounts.own,
+      recurring: true,
+      periodType: "MONTH",
+    });
+    expect(Number(kept.outOfBudgetPlanned)).toBe(50);
+    expect([iso(kept.periodStart), iso(kept.periodEnd)]).toEqual(["2001-03-01", "2001-03-31"]);
+    expect(linesOf(kept)).toEqual([["EXPENSE", personalCategory, 300]]);
+    await stamped("budget.updated", id);
+
+    ok(await call("update_budget", { id, lines: [line("EXPENSE", 120), line("INCOME", 40)] }));
+    const replaced = await budget();
+    expect(replaced).toMatchObject({ name: "Renamed", accountId: f.accounts.own, recurring: true });
+    expect(linesOf(replaced)).toEqual([
+      ["EXPENSE", personalCategory, 120],
+      ["INCOME", personalCategory, 40],
+    ]);
+
+    ok(
+      await call("update_budget", {
+        id,
+        accountId: null,
+        outOfBudgetPlanned: null,
+        description: null,
+        recurring: null,
+        lines: [line("EXPENSE", 80)],
+      }),
+    );
+    const detached = await budget();
+    expect(detached).toMatchObject({
+      name: "Renamed",
+      accountId: null,
+      outOfBudgetPlanned: null,
+      description: null,
+      recurring: false,
+    });
+    expect(linesOf(detached)).toEqual([["EXPENSE", personalCategory, 80]]);
+  });
+
   it("assigns then unassigns an own transaction", async () => {
     const id = ok(await call("create_budget", personal(f.accounts.own))).id;
     const args = { budgetId: id, transactionId: f.expenses.own };

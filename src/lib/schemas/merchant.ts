@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { MERCHANT_NAME_MAX } from "@/lib/validation/merchant";
 
+export const MERCHANT_KEY_MAX = 200;
+
 export const merchantNameSchema = z
   .string()
   .transform((s) => s.replace(/\s+/g, " ").trim())
@@ -17,4 +19,4 @@ export const merchantKeySchema = z
       .replace(/\p{Diacritic}/gu, "")
       .toUpperCase(),
   )
-  .pipe(z.string().min(1).max(200));
+  .pipe(z.string().min(1).max(MERCHANT_KEY_MAX));

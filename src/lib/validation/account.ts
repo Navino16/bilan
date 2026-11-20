@@ -5,6 +5,7 @@ export const ACCOUNT_TYPES = ["CHECKING", "SAVINGS", "CREDIT", "OTHER"] as const
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
 export const ACCOUNT_NAME_MAX = 100;
 export const ACCOUNT_BANK_NAME_MAX = 100;
+export const ACCOUNT_ICON_MAX = 50;
 export const ACCOUNT_IBAN_MAX = 40;
 export const MIRROR_PATTERN_MAX = 100;
 export const MIRROR_MATCH_TYPES = ["CONTAINS", "EXACT"] as const satisfies readonly RuleMatchType[];

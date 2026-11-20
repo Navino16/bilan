@@ -159,6 +159,20 @@ export async function listRulesForUser(userId: string) {
   return rules.sort((a, b) => compareRules(key(a), key(b)));
 }
 
+// For the AI activity list (spec §5.18).
+export async function readableRulePatterns(
+  userId: string,
+  ids: string[],
+): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map();
+  const groupIds = (await groupMemberships(userId)).map((m) => m.groupId);
+  const rows = await db.categorizationRule.findMany({
+    where: { id: { in: ids }, OR: [{ userId }, { groupId: { in: groupIds } }] },
+    select: { id: true, pattern: true },
+  });
+  return new Map(rows.map((r) => [r.id, r.pattern]));
+}
+
 // Loads a rule and checks the actor may manage it: own rules (userId) or group
 // rules where the actor is at least ADMIN. Throws RuleAccessError otherwise.
 export async function loadManageableRule(id: string, actorId: string) {
@@ -232,24 +246,43 @@ export async function updateRule(
   });
 }
 
+// MCP patch (spec §5.18): an absent field keeps its value, null resets it to its default.
+export type RulePatch = {
+  pattern?: string;
+  matchType?: RuleMatchType;
+  caseSensitive?: boolean | null;
+  priority?: number | null;
+  categoryId?: string;
+};
+
+export async function patchRule(
+  id: string,
+  patch: RulePatch,
+  actor: { id: string },
+): Promise<void> {
+  const rule = await loadManageableRule(id, actor.id);
+  const pick = <K extends keyof RulePatch>(key: K) =>
+    (patch[key] === undefined ? rule[key] : patch[key]) ?? undefined;
+  await updateRule(
+    id,
+    {
+      pattern: patch.pattern ?? rule.pattern,
+      matchType: patch.matchType ?? (rule.matchType as RuleMatchType),
+      caseSensitive: pick("caseSensitive"),
+      priority: pick("priority"),
+      categoryId: patch.categoryId ?? rule.categoryId,
+    },
+    actor,
+  );
+}
+
 // Points a rule at another category, keeping its pattern, match and priority.
 export async function retargetRule(
   id: string,
   categoryId: string,
   actor: { id: string },
 ): Promise<void> {
-  const rule = await loadManageableRule(id, actor.id);
-  await updateRule(
-    id,
-    {
-      pattern: rule.pattern,
-      matchType: rule.matchType as RuleMatchType,
-      caseSensitive: rule.caseSensitive,
-      priority: rule.priority,
-      categoryId,
-    },
-    actor,
-  );
+  await patchRule(id, { categoryId }, actor);
 }
 
 export type RuleSummary = { id: string; pattern: string; priority: number; canManage: boolean };

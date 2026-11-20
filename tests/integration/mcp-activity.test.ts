@@ -210,6 +210,7 @@ describe("listMcpActivity targets", () => {
     const pairLink = await link([out, inn]);
     const wideLink = await link([bakery, third, await tx(fx.accounts.own, "Fourth leg")]);
     const personal = await budget("Holidays", { userId: actor });
+    const ownCategory = (await db.category.create({ data: { userId: actor, name: "Pets" } })).id;
     const household = await budget("Groceries", { groupId: fx.groupId });
     const [first, second] = [bakery, inn].sort();
     const labelOf = (id: string) => (id === bakery ? "Bakery" : "Transfer in");
@@ -228,6 +229,7 @@ describe("listMcpActivity targets", () => {
       householdBudget: await row("budget.archived", "Budget", household),
       assigned: await row("budget.assignment.create", "BudgetAssignment", `${personal}:${bakery}`),
       other: await row("link.autoCreated", "User", actor),
+      category: await row("category.updated", "Category", ownCategory),
     };
 
     const got = await targets();
@@ -250,6 +252,63 @@ describe("listMcpActivity targets", () => {
       href: `/budgets/${personal}`,
     });
     expect(got.get(ids.other)).toBeNull();
+    expect(got.get(ids.category)).toEqual({ text: "Pets", href: "/categories" });
+  });
+
+  it("resolves an account to its name while the user can see it", async () => {
+    const updated = await row("account.updated", "BankAccount", fx.accounts.own);
+    const shared = await row("account.updated", "BankAccount", fx.accounts.sharedAi);
+    const unshared = await db.bankAccount.create({
+      data: { ownerId: fx.ownerId, name: "unshared", type: "CHECKING" },
+    });
+    const hidden = await row("account.updated", "BankAccount", unshared.id);
+    const gone = await row("account.updated", "BankAccount", "gone_account");
+    let got = await targets();
+    expect(got.get(updated)).toEqual({ text: "own", href: "/accounts" });
+    expect(got.get(shared)).toEqual({ text: "shared-ai", href: "/accounts" });
+    expect(got.get(hidden)).toBeNull();
+    expect(got.get(gone)).toBeNull();
+    await db.groupMember.deleteMany({ where: { groupId: fx.groupId, userId: actor } });
+    got = await targets();
+    expect(got.get(shared)).toBeNull();
+  });
+
+  it("drops a household category of a household the user left", async () => {
+    const updated = await row("category.updated", "Category", fx.categoryId);
+    const deleted = await row("category.updated", "Category", "gone_category");
+    expect((await targets()).get(updated)).toEqual({ text: "Groceries", href: "/categories" });
+    expect((await targets()).get(deleted)).toBeNull();
+    await db.groupMember.deleteMany({ where: { groupId: fx.groupId, userId: actor } });
+    expect((await targets()).get(updated)).toBeNull();
+  });
+
+  it("resolves a rule to its pattern while the user can read it", async () => {
+    const own = await db.categorizationRule.create({
+      data: { pattern: "BAKERY", matchType: "CONTAINS", categoryId: fx.categoryId, userId: actor },
+    });
+    const household = await db.categorizationRule.create({
+      data: {
+        pattern: "MARKET",
+        matchType: "CONTAINS",
+        categoryId: fx.categoryId,
+        groupId: fx.groupId,
+      },
+    });
+    const gone = await db.categorizationRule.create({
+      data: { pattern: "GONE", matchType: "CONTAINS", categoryId: fx.categoryId, userId: actor },
+    });
+    const updated = await row("rule.updated", "CategorizationRule", own.id);
+    const applied = await row("rule.applied", "CategorizationRule", household.id);
+    const deleted = await row("rule.deleted", "CategorizationRule", gone.id);
+    await db.categorizationRule.delete({ where: { id: gone.id } });
+
+    let got = await targets();
+    expect(got.get(updated)).toEqual({ text: "BAKERY", href: "/categories" });
+    expect(got.get(applied)).toEqual({ text: "MARKET", href: "/categories" });
+    expect(got.get(deleted)).toBeNull();
+    await db.groupMember.deleteMany({ where: { groupId: fx.groupId, userId: actor } });
+    got = await targets();
+    expect(got.get(applied)).toBeNull();
   });
 
   it("drops a transaction on an account no longer shared with the user", async () => {

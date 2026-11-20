@@ -82,6 +82,13 @@ export async function updateLinkSuggestionSettings(
     create: { userId, locale, ...data },
     update: data,
   });
+  await logEvent({
+    userId,
+    action: "preferences.link_settings_updated",
+    entity: "UserPreference",
+    entityId: userId,
+    metadata: parsed.data,
+  });
   return parsed.data;
 }
 
@@ -114,6 +121,13 @@ export async function updateExceptionalRule(
     where: { userId },
     create: { userId, locale, ...data },
     update: data,
+  });
+  await logEvent({
+    userId,
+    action: "preferences.exceptional_updated",
+    entity: "UserPreference",
+    entityId: userId,
+    metadata: parsed.data,
   });
   return parsed.data;
 }

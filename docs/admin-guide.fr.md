@@ -450,6 +450,7 @@ Chaque changement d'état est journalisé, les lectures ne le sont pas. Cela com
 - les paramètres : chaque paramètre de l'application, les modifications et tests SMTP et de la synchronisation bancaire, les fournisseurs d'authentification ;
 - les jetons d'invitation, les foyers et leurs invitations ;
 - l'activité financière des utilisateurs : comptes bancaires et partages, transactions, imports, catégories, règles, budgets, liaisons, connexions bancaires (connectées, reconnectées, associées, expirées, déconnectées) ;
+- les noms de marchands (renommés, réinitialisés, alias retirés) et les réglages des suggestions de liaisons et des dépenses exceptionnelles, qu'ils soient modifiés dans l'application ou par un assistant. L'identifiant d'une entrée de marchand est une empreinte à clé du marchand, jamais son nom ;
 - chaque passage de la synchronisation bancaire qui avait quelque chose à faire (`bank_sync.cron`, par **système**), avec ses compteurs ;
 - les assistants IA : jetons créés et révoqués, clients autorisés et révoqués, autorisations refusées à la vérification du mot de passe, fonction activée ou désactivée par un utilisateur. Une modification faite par un assistant est journalisée au nom de l'utilisateur pour qui il agit, avec la même action que dans l'application ; son entrée enregistre aussi `via: mcp` et le client (jeton personnel ou client connecté, son identifiant et son nom). L'utilisateur voit ces entrées sous **Activité récente** sur sa page **Assistants IA** ;
 - les échecs d'envoi d'e-mails de sécurité et les purges du journal.
@@ -467,7 +468,7 @@ Combinez ces filtres, puis cliquez sur **Filtrer** (**Réinitialiser** les effac
 
 ### Confidentialité
 
-Le journal n'affiche de noms que pour les entités du domaine de l'administration : utilisateurs, foyers, invitations de foyer (adresse e-mail), clés d'accès, fournisseurs d'authentification, jetons d'invitation et paramètres. Les données financières des utilisateurs (comptes bancaires, transactions, catégories, budgets, règles, imports) n'apparaissent que sous forme d'identifiants, pour que les administrateurs ne puissent pas les lire.
+Le journal n'affiche de noms que pour les entités du domaine de l'administration : utilisateurs, foyers, invitations de foyer (adresse e-mail), clés d'accès, fournisseurs d'authentification, jetons d'invitation et paramètres. Les données financières des utilisateurs (comptes bancaires, transactions, catégories, budgets, règles, imports, noms de marchands) n'apparaissent que sous forme d'identifiants, pour que les administrateurs ne puissent pas les lire.
 
 À la suppression d'un utilisateur, ses entrées sont anonymisées.
 

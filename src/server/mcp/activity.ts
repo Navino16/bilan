@@ -1,5 +1,9 @@
 import { db } from "@/server/db";
+import { readableAccountNames } from "@/server/services/accounts";
+import { readableCategoryNames } from "@/server/services/categories";
 import { readableBudgetNames } from "@/server/services/budgets";
+import { readableRulePatterns } from "@/server/services/categorization";
+import { readableAliasNames } from "@/server/services/merchants";
 import { readableTransactionLabels } from "@/server/services/transactions";
 
 export const MCP_ACTIVITY_DAYS = 90;
@@ -20,7 +24,11 @@ export type McpActivityRow = {
 type TargetRef =
   | { kind: "transactions"; ids: string[] }
   | { kind: "link"; linkId: string }
-  | { kind: "budget"; budgetId: string; transactionId: string | null };
+  | { kind: "budget"; budgetId: string; transactionId: string | null }
+  | { kind: "category"; categoryId: string }
+  | { kind: "rule"; ruleId: string }
+  | { kind: "alias"; keyHash: string }
+  | { kind: "account"; accountId: string };
 
 function clientName(metadata: unknown): string {
   const client = (metadata as { client?: { name?: unknown; id?: unknown } } | null)?.client;
@@ -51,6 +59,14 @@ function targetRef(
       const [budgetId, transactionId] = entityId.split(":");
       return { kind: "budget", budgetId, transactionId: transactionId ?? null };
     }
+    case "Category":
+      return { kind: "category", categoryId: entityId };
+    case "CategorizationRule":
+      return { kind: "rule", ruleId: entityId };
+    case "BankAccount":
+      return { kind: "account", accountId: entityId };
+    case "MerchantAlias":
+      return { kind: "alias", keyHash: entityId };
     default:
       return null;
   }
@@ -80,19 +96,47 @@ async function resolveTargets(
   const txIdsOf = (r: TargetRef): string[] => {
     if (r.kind === "transactions") return r.ids;
     if (r.kind === "link") return (legs.get(r.linkId) ?? []).map((m) => m.transactionId);
-    return r.transactionId ? [r.transactionId] : [];
+    return r.kind === "budget" && r.transactionId ? [r.transactionId] : [];
   };
   const present = refs.filter((r) => r !== null);
-  const [labels, budgets] = await Promise.all([
+  const [labels, budgets, categories, rules, aliasNames, accounts] = await Promise.all([
     readableTransactionLabels(userId, [...new Set(present.flatMap(txIdsOf))]),
     readableBudgetNames(userId, [
       ...new Set(present.flatMap((r) => (r.kind === "budget" ? [r.budgetId] : []))),
+    ]),
+    readableCategoryNames(userId, [
+      ...new Set(present.flatMap((r) => (r.kind === "category" ? [r.categoryId] : []))),
+    ]),
+    readableRulePatterns(userId, [
+      ...new Set(present.flatMap((r) => (r.kind === "rule" ? [r.ruleId] : []))),
+    ]),
+    readableAliasNames(userId, [
+      ...new Set(present.flatMap((r) => (r.kind === "alias" ? [r.keyHash] : []))),
+    ]),
+    readableAccountNames(userId, [
+      ...new Set(present.flatMap((r) => (r.kind === "account" ? [r.accountId] : []))),
     ]),
   ]);
   const labelsOf = (ids: string[]) => ids.flatMap((id) => labels.get(id) ?? []);
 
   return refs.map((r) => {
     if (!r) return null;
+    if (r.kind === "alias") {
+      const name = aliasNames.get(r.keyHash);
+      return name ? { text: name, href: null } : null;
+    }
+    if (r.kind === "account") {
+      const name = accounts.get(r.accountId);
+      return name ? { text: name, href: "/accounts" } : null;
+    }
+    if (r.kind === "category") {
+      const name = categories.get(r.categoryId);
+      return name ? { text: name, href: "/categories" } : null;
+    }
+    if (r.kind === "rule") {
+      const pattern = rules.get(r.ruleId);
+      return pattern ? { text: pattern, href: "/categories" } : null;
+    }
     if (r.kind !== "budget") {
       const text = joinLabels(labelsOf(txIdsOf(r)));
       return text ? { text, href: null } : null;
