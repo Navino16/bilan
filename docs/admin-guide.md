@@ -450,6 +450,7 @@ Every change of state is logged, reads are not. This includes:
 - settings: every app setting, SMTP and bank sync changes and tests, auth providers;
 - invitation tokens, households and their invitations;
 - users' financial activity: bank accounts and shares, transactions, imports, categories, rules, budgets, links, bank connections (connected, reconnected, mapped, expired, disconnected);
+- merchant names (renamed, reset, alias removed) and the link suggestion and exceptional expense settings, whether changed in the app or by an assistant. A merchant entry's identifier is a keyed hash of the merchant, never its name;
 - each bank sync run that had something to do (`bank_sync.cron`, by **system**), with its counts;
 - AI assistants: tokens created and revoked, clients authorized and revoked, authorizations refused at the password check, the feature turned on or off by a user. A change an assistant makes is logged under the user it acts for, with the same action as in the app; its entry also stores `via: mcp` and the client (personal token or connected client, its id and name). The user sees these entries under **Recent activity** on their **AI assistants** page;
 - failed security e-mails and audit purges.
@@ -467,7 +468,7 @@ Combine any of these filters, then click **Filter** (**Reset** clears them):
 
 ### Privacy
 
-The log shows names only for admin-domain entities: users, households, household invitations (e-mail address), passkeys, auth providers, invitation tokens and settings. Users' financial data (bank accounts, transactions, categories, budgets, rules, imports) appears as identifiers only, so administrators cannot read it.
+The log shows names only for admin-domain entities: users, households, household invitations (e-mail address), passkeys, auth providers, invitation tokens and settings. Users' financial data (bank accounts, transactions, categories, budgets, rules, imports, merchant names) appears as identifiers only, so administrators cannot read it.
 
 When a user is deleted, their entries are anonymized.
 

@@ -829,7 +829,7 @@ The alert gives the date, the sign-in method, the IP address and the device. If 
 
 ![AI assistants settings](images/en/settings-ai.png)
 
-Bilan can serve your data to your own AI assistant, so you can ask questions about your accounts, spending and budgets without opening the app, and, with read and write access, have it update your transactions, links and budgets. It speaks MCP, a standard protocol: any MCP client can connect, such as claude.ai, Claude Desktop, Claude Code or Codex. Bilan has no chat of its own and sends nothing to an assistant until you connect one.
+Bilan can serve your data to your own AI assistant, so you can ask questions about your accounts, spending and budgets without opening the app, and, with read and write access, have it update your transactions, links, budgets, categories, rules, merchant names, preferences and accounts. It speaks MCP, a standard protocol: any MCP client can connect, such as claude.ai, Claude Desktop, Claude Code or Codex. Bilan has no chat of its own and sends nothing to an assistant until you connect one.
 
 Go to **AI assistants** in the sidebar. If the page says it is not available on this instance, an administrator has to turn on the MCP server first (see the [administration guide](admin-guide.md#ai-assistants-mcp-server)).
 
@@ -886,7 +886,7 @@ A client you have already authorized reconnects without this page while you are 
 
 ### Recent activity
 
-**Recent activity** lists the changes your assistants made in the last 90 days, the 50 most recent, grouped by day: the time, the action and what it changed (the transaction's label, the two transactions of a link, or the budget, linked to its page), and the name of the token or client that made it. Only what you can still see is named: a deleted transaction or budget, or one on an account or household you no longer have access to, shows the action alone. Reads don't appear. Only your own tokens and clients' changes appear, not those another member's assistant triggered on your accounts (an automatic transfer link, for instance).
+**Recent activity** lists the changes your assistants made in the last 90 days, the 50 most recent, grouped by day: the time, the action and what it changed (the transaction's label, the two transactions of a link, the budget, linked to its page, the category, the rule's pattern or the account, linked to their page, or the merchant's current name), and the name of the token or client that made it. Only what you can still see is named: a deleted transaction, budget, category, rule or account, one on an account or household you no longer have access to, or a merchant name since removed, shows the action alone, as do preference changes. Reads don't appear. Only your own tokens and clients' changes appear, not those another member's assistant triggered on your accounts (an automatic transfer link, for instance).
 
 ### Personal tokens
 
@@ -921,9 +921,22 @@ With **Read and write** access, an assistant can:
 
 - **transactions**: add one by hand (your rules pick the category when it gives none), edit the label, note, date, amount or type, change the category, count it in another month;
 - **links**: link transactions, create the other side of a transfer on one of your own accounts, remove a link, ignore or restore a suggested pair;
-- **budgets**: create and edit budgets, archive and unarchive them, start the next period of a recurring budget now (with the same lines), include or exclude a transaction, remove an inclusion or exclusion.
+- **budgets**: create and edit budgets, archive and unarchive them, start the next period of a recurring budget now (with the same lines), include or exclude a transaction, remove an inclusion or exclusion;
+- **categories**: create and edit categories (name, color, icon, parent, month shift, savings, neutral);
+- **rules**: create and edit rules, point one at another category, enable, disable or delete one, preview what applying rules would change and apply them to existing transactions. Applying only changes transactions on the accounts it may change (below), and transactions you categorized by hand keep their category;
+- **merchant names**: rename a merchant or a whole display name, remove a display name (its merchants go back to their bank labels), detach one merchant from its display name;
+- **preferences**: the link suggestion settings (days apart and minimum amount) and the exceptional expenses rule (minimum amount and multiple);
+- **accounts**: create accounts, and edit, archive and unarchive your own.
 
-It has the same rights as you in Bilan, on the accounts it can see (above): changing a transaction on a shared account needs **Write** on the share as well as **Allow AI assistants**. It can't delete transactions or budgets, and can't change categories, rules, merchant names, preferences or accounts.
+When it edits something, the fields it doesn't send are kept.
+
+It has the same rights as you in Bilan, on the accounts it can see (above): changing a transaction on a shared account needs **Write** on the share as well as **Allow AI assistants**. Household categories and rules need the owner or admin role in the household, as in Bilan. It can't:
+
+- delete transactions, budgets, categories or accounts;
+- share an account or manage households;
+- change an account someone else owns, even one shared with you;
+- set, change or read an IBAN: editing an account keeps its IBAN;
+- set up a [savings account kept up to date from transfers](#savings-accounts-your-bank-doesnt-list), nor change the type of a savings account set up that way.
 
 In a household budget, an assistant may only add your own accounts and accounts whose share to that household allows AI assistants, to the budget's lines or as its account, and may only include transactions from those accounts. An account it sees through another household is refused. Accounts already in the budget stay when it edits the budget, and excluding a transaction is not restricted.
 

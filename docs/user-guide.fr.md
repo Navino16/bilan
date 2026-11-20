@@ -829,7 +829,7 @@ L’alerte indique la date, la méthode de connexion, l’adresse IP et l’appa
 
 ![Réglages des assistants IA](images/fr/settings-ai.png)
 
-Bilan peut fournir vos données à votre propre assistant IA, pour poser des questions sur vos comptes, vos dépenses et vos budgets sans ouvrir l’application et, avec l’accès en lecture et écriture, lui faire mettre à jour vos transactions, liens et budgets. Il parle MCP, un protocole standard : tout client MCP peut s’y connecter, comme claude.ai, Claude Desktop, Claude Code ou Codex. Bilan n’a pas de chat à lui et n’envoie rien à un assistant tant que vous n’en connectez pas un.
+Bilan peut fournir vos données à votre propre assistant IA, pour poser des questions sur vos comptes, vos dépenses et vos budgets sans ouvrir l’application et, avec l’accès en lecture et écriture, lui faire mettre à jour vos transactions, liens, budgets, catégories, règles, noms de marchands, préférences et comptes. Il parle MCP, un protocole standard : tout client MCP peut s’y connecter, comme claude.ai, Claude Desktop, Claude Code ou Codex. Bilan n’a pas de chat à lui et n’envoie rien à un assistant tant que vous n’en connectez pas un.
 
 Allez dans **Assistants IA** dans la barre latérale. Si la page indique que la fonction est indisponible sur cette instance, un administrateur doit d’abord activer le serveur MCP (voir le [guide d’administration](admin-guide.fr.md#assistants-ia-serveur-mcp)).
 
@@ -886,7 +886,7 @@ Un client que vous avez déjà autorisé se reconnecte sans cette page tant que 
 
 ### Activité récente
 
-**Activité récente** liste les modifications faites par vos assistants ces 90 derniers jours, les 50 plus récentes, regroupées par jour : l’heure, l’action et ce qu’elle a modifié (le libellé de la transaction, les deux transactions d’un lien, ou le budget, avec un lien vers sa page), et le nom du jeton ou du client qui l’a faite. Seul ce que vous voyez encore est nommé : une transaction ou un budget supprimé, ou situé sur un compte ou un foyer auquel vous n’avez plus accès, n’affiche que l’action. Les lectures n’y figurent pas. Seules y figurent les modifications de vos propres jetons et clients, pas celles que l’assistant d’un autre membre a déclenchées sur vos comptes (un lien de virement automatique, par exemple).
+**Activité récente** liste les modifications faites par vos assistants ces 90 derniers jours, les 50 plus récentes, regroupées par jour : l’heure, l’action et ce qu’elle a modifié (le libellé de la transaction, les deux transactions d’un lien, le budget, avec un lien vers sa page, la catégorie, le motif de la règle ou le compte, avec un lien vers leur page, ou le nom actuel du marchand), et le nom du jeton ou du client qui l’a faite. Seul ce que vous voyez encore est nommé : une transaction, un budget, une catégorie, une règle ou un compte supprimé, situé sur un compte ou un foyer auquel vous n’avez plus accès, ou un nom de marchand retiré depuis n’affiche que l’action, comme les modifications de préférences. Les lectures n’y figurent pas. Seules y figurent les modifications de vos propres jetons et clients, pas celles que l’assistant d’un autre membre a déclenchées sur vos comptes (un lien de virement automatique, par exemple).
 
 ### Jetons personnels
 
@@ -921,9 +921,22 @@ Avec l’accès **Lecture et écriture**, un assistant peut :
 
 - **transactions** : en saisir une à la main (vos règles choisissent la catégorie s’il n’en donne pas), modifier le libellé, la note, la date, le montant ou le type, changer la catégorie, la compter dans un autre mois ;
 - **liens** : lier des transactions, créer l’autre côté d’un virement sur l’un de vos propres comptes, supprimer un lien, ignorer ou rétablir une paire suggérée ;
-- **budgets** : créer et modifier des budgets, les archiver et les désarchiver, lancer dès maintenant la période suivante d’un budget récurrent (avec les mêmes lignes), inclure ou exclure une transaction, retirer une inclusion ou une exclusion.
+- **budgets** : créer et modifier des budgets, les archiver et les désarchiver, lancer dès maintenant la période suivante d’un budget récurrent (avec les mêmes lignes), inclure ou exclure une transaction, retirer une inclusion ou une exclusion ;
+- **catégories** : créer et modifier des catégories (nom, couleur, icône, parent, décalage de mois, épargne, neutre) ;
+- **règles** : créer et modifier des règles, en faire pointer une vers une autre catégorie, en activer, désactiver ou supprimer une, prévisualiser ce que l’application de règles changerait et les appliquer aux transactions existantes. L’application ne change que les transactions des comptes qu’il peut modifier (ci-dessous), et les transactions que vous avez catégorisées à la main gardent leur catégorie ;
+- **noms de marchands** : renommer un marchand ou tout un nom d’affichage, retirer un nom d’affichage (ses marchands reprennent leur libellé bancaire), détacher un marchand de son nom d’affichage ;
+- **préférences** : les réglages des suggestions de liens (écart en jours et montant minimum) et la règle des dépenses exceptionnelles (montant minimum et multiple) ;
+- **comptes** : créer des comptes, et modifier, archiver et désarchiver les vôtres.
 
-Il a les mêmes droits que vous dans Bilan, sur les comptes qu’il peut voir (ci-dessus) : modifier une transaction d’un compte partagé demande l’accès **Écriture** sur le partage en plus de **Autoriser les assistants IA**. Il ne peut supprimer ni transactions ni budgets, et ne peut modifier ni les catégories, ni les règles, ni les noms de marchands, ni les préférences, ni les comptes.
+Quand il modifie quelque chose, les champs qu’il n’envoie pas sont conservés.
+
+Il a les mêmes droits que vous dans Bilan, sur les comptes qu’il peut voir (ci-dessus) : modifier une transaction d’un compte partagé demande l’accès **Écriture** sur le partage en plus de **Autoriser les assistants IA**. Les catégories et règles d’un foyer demandent d’en être propriétaire ou administrateur, comme dans Bilan. Il ne peut pas :
+
+- supprimer des transactions, budgets, catégories ou comptes ;
+- partager un compte ni gérer des foyers ;
+- modifier un compte dont quelqu’un d’autre est propriétaire, même partagé avec vous ;
+- saisir, modifier ou lire un IBAN : modifier un compte garde son IBAN ;
+- mettre en place un [compte d’épargne tenu à jour par les virements](#les-comptes-dépargne-que-votre-banque-ne-remonte-pas), ni changer le type d’un compte d’épargne tenu à jour ainsi.
 
 Dans un budget de foyer, un assistant ne peut ajouter, aux lignes du budget ou comme son compte, que vos propres comptes et les comptes dont le partage avec ce foyer autorise les assistants IA, et ne peut y inclure que des transactions de ces comptes. Un compte qu’il voit par un autre foyer est refusé. Les comptes déjà dans le budget restent quand il modifie le budget, et exclure une transaction n’est pas restreint.
 
