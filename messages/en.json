@@ -2318,6 +2318,8 @@
         "mail": "Emails",
         "audit": "Audit log",
         "bank_sync": "Bank sync",
+        "merchant": "Merchants",
+        "preferences": "Preferences",
         "mcp": "AI assistants (MCP)"
       },
       "entities": {
@@ -2345,9 +2347,19 @@
         "BudgetAssignment": "Budget assignment",
         "McpToken": "MCP token",
         "OauthClient": "OAuth client",
+        "MerchantAlias": "Merchant alias",
         "UserPreference": "Preferences"
       },
       "actions": {
+        "merchant": {
+          "renamed": "Merchant name changed",
+          "reset": "Merchant name reset",
+          "alias_removed": "Merchant alias removed"
+        },
+        "preferences": {
+          "link_settings_updated": "Link settings changed",
+          "exceptional_updated": "Exceptional expense rule changed"
+        },
         "mcp": {
           "enabled": "MCP enabled",
           "disabled": "MCP disabled",

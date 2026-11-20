@@ -12,6 +12,8 @@ export const AUDIT_FAMILIES = [
   "rule",
   "budget",
   "link",
+  "merchant",
+  "preferences",
   "mail",
   "audit",
   "bank_sync",
@@ -43,6 +45,7 @@ export const AUDIT_ENTITIES = [
   "BudgetAssignment",
   "McpToken",
   "OauthClient",
+  "MerchantAlias",
   "UserPreference",
 ] as const;
 

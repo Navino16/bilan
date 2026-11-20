@@ -24,7 +24,8 @@ type TargetRef =
   | { kind: "link"; linkId: string }
   | { kind: "budget"; budgetId: string; transactionId: string | null }
   | { kind: "category"; categoryId: string }
-  | { kind: "rule"; ruleId: string };
+  | { kind: "rule"; ruleId: string }
+  | { kind: "text"; text: string };
 
 function clientName(metadata: unknown): string {
   const client = (metadata as { client?: { name?: unknown; id?: unknown } } | null)?.client;
@@ -59,6 +60,8 @@ function targetRef(
       return { kind: "category", categoryId: entityId };
     case "CategorizationRule":
       return { kind: "rule", ruleId: entityId };
+    case "MerchantAlias":
+      return { kind: "text", text: entityId };
     default:
       return null;
   }
@@ -107,6 +110,7 @@ async function resolveTargets(
 
   return refs.map((r) => {
     if (!r) return null;
+    if (r.kind === "text") return { text: r.text, href: null };
     if (r.kind === "category") {
       const name = categories.get(r.categoryId);
       return name ? { text: name, href: "/categories" } : null;
