@@ -160,6 +160,40 @@ describe("update_transaction", () => {
     expect(detailOf(res)).toBe("LOCKED_FIELDS");
     expect(Number((await db.transaction.findUniqueOrThrow({ where: { id } })).amount)).toBe(-7);
   });
+
+  it("accepts the current figures of an imported transaction with a new label", async () => {
+    const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const id = await expense(f.accounts.own, day, -7, null);
+    await db.transaction.update({ where: { id }, data: { externalId: `${PREFIX}-same` } });
+    const date = day.toISOString().slice(0, 10);
+    ok(
+      await call("update_transaction", {
+        id,
+        label: "Kept figures",
+        date,
+        amount: -7,
+        type: "CARD",
+      }),
+    );
+    expect(await getTransactionForUser(id, f.memberId)).toMatchObject({
+      label: "Kept figures",
+      amount: -7,
+    });
+  });
+
+  it("keeps the label when only the note is sent", async () => {
+    const id = await expense(f.accounts.own, now, -4, null);
+    ok(await call("update_transaction", { id, label: "Before note" }));
+    ok(await call("update_transaction", { id, note: "Only a note" }));
+    expect(await getTransactionForUser(id, f.memberId)).toMatchObject({
+      label: "Before note",
+      note: "Only a note",
+    });
+  });
+
+  it("answers NOT_FOUND without a label for an unknown id", async () => {
+    failed(await call("update_transaction", { id: "nope", note: "x" }), "NOT_FOUND");
+  });
 });
 
 describe("recategorize_transaction", () => {

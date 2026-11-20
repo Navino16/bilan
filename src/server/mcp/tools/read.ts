@@ -19,7 +19,7 @@ import { previewRulesApplication } from "@/server/services/categorization/apply"
 import { getDashboard } from "@/server/services/dashboard";
 import { getInsights } from "@/server/services/dashboard/insights";
 import { getGroupDetail, listGroupsForUser } from "@/server/services/groups";
-import { getLinkSummary, suggestPairs } from "@/server/services/links";
+import { getLinkSummary, listIgnoredSuggestions, suggestPairs } from "@/server/services/links";
 import { getMerchantDirectory } from "@/server/services/merchants";
 import { getTransactionForUser, listTransactions } from "@/server/services/transactions";
 import { getExceptionalRule, getLinkSuggestionSettings } from "@/server/services/users/preferences";
@@ -91,7 +91,9 @@ export const READ_TOOLS: McpTool[] = [
   readTool({
     name: "list_accounts",
     description: "Bank accounts the user can read (own and shared with AI allowed) with balances.",
-    input: z.strictObject({ includeArchived: z.boolean().default(false) }),
+    input: z.strictObject({
+      includeArchived: z.boolean().default(false).describe("true also lists archived accounts"),
+    }),
     categoryPaths: false,
     run: async (userId, { includeArchived }) => ({
       accounts: (await listVisibleForUser(userId, { includeArchived })).map((a) => ({
@@ -141,14 +143,14 @@ export const READ_TOOLS: McpTool[] = [
   readTool({
     name: "search_transactions",
     description:
-      "Transactions matching the filters of the transactions page, paginated with take/skip; `total` is approximate when `capped`.",
+      "Transactions matching the filters of the transactions page, paginated with take/skip (100 by default): compare `total` with what you received before concluding; `total` is approximate when `capped`.",
     input: searchInput,
     run: (userId, args) => listTransactions(userId, toTransactionFilters(args)),
   }),
   readTool({
     name: "get_transaction",
     description: "One transaction with what it is linked to and the budgets it is assigned to.",
-    input: z.strictObject({ id }),
+    input: z.strictObject({ id: id.describe("Transaction id, from search_transactions") }),
     run: async (userId, args) => {
       const transaction = await getTransactionForUser(args.id, userId);
       if (!transaction) throw new McpToolError("NOT_FOUND");
@@ -183,7 +185,9 @@ export const READ_TOOLS: McpTool[] = [
   readTool({
     name: "list_budgets",
     description: "Budgets (own and households') with their planned and spent figures.",
-    input: z.strictObject({ archived: z.boolean().default(false) }),
+    input: z.strictObject({
+      archived: z.boolean().default(false).describe("true lists the archived budgets instead"),
+    }),
     run: async (userId, args) => ({
       budgets: await listBudgetsForUser(userId, { archived: args.archived }),
     }),
@@ -191,7 +195,10 @@ export const READ_TOOLS: McpTool[] = [
   readTool({
     name: "get_budget",
     description: "One budget's detail: lines, spent, forecast, optionally its transactions.",
-    input: z.strictObject({ id, withTransactions: z.boolean().default(false) }),
+    input: z.strictObject({
+      id: id.describe("Budget id, from list_budgets"),
+      withTransactions: z.boolean().default(false).describe("true adds the budget's transactions"),
+    }),
     run: async (userId, args) => ({
       budget: await getBudgetDetail(args.id, userId, { withTransactions: args.withTransactions }),
     }),
@@ -224,10 +231,15 @@ export const READ_TOOLS: McpTool[] = [
   }),
   readTool({
     name: "list_link_suggestions",
-    description: "Suggested +X/-X pairs of transactions to link (transfers, refunds).",
-    input: z.strictObject({}),
+    description:
+      "Suggested +X/-X pairs of transactions to link (transfers, refunds), each with its pair key. With ignored: true, the pairs dismissed with ignore_link_suggestion instead, most recent first.",
+    input: z.strictObject({
+      ignored: z.boolean().default(false).describe("true lists the dismissed pairs"),
+    }),
     categoryPaths: false,
-    run: async (userId) => ({ suggestions: await suggestPairs(userId) }),
+    run: async (userId, { ignored }) => ({
+      suggestions: await (ignored ? listIgnoredSuggestions(userId) : suggestPairs(userId)),
+    }),
   }),
   readTool({
     name: "get_preferences",
