@@ -255,6 +255,24 @@ describe("listMcpActivity targets", () => {
     expect(got.get(ids.category)).toEqual({ text: "Pets", href: "/categories" });
   });
 
+  it("resolves an account to its name while the user can see it", async () => {
+    const updated = await row("account.updated", "BankAccount", fx.accounts.own);
+    const shared = await row("account.updated", "BankAccount", fx.accounts.sharedAi);
+    const unshared = await db.bankAccount.create({
+      data: { ownerId: fx.ownerId, name: "unshared", type: "CHECKING" },
+    });
+    const hidden = await row("account.updated", "BankAccount", unshared.id);
+    const gone = await row("account.updated", "BankAccount", "gone_account");
+    let got = await targets();
+    expect(got.get(updated)).toEqual({ text: "own", href: "/accounts" });
+    expect(got.get(shared)).toEqual({ text: "shared-ai", href: "/accounts" });
+    expect(got.get(hidden)).toBeNull();
+    expect(got.get(gone)).toBeNull();
+    await db.groupMember.deleteMany({ where: { groupId: fx.groupId, userId: actor } });
+    got = await targets();
+    expect(got.get(shared)).toBeNull();
+  });
+
   it("drops a household category of a household the user left", async () => {
     const updated = await row("category.updated", "Category", fx.categoryId);
     const deleted = await row("category.updated", "Category", "gone_category");
