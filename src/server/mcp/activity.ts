@@ -1,7 +1,7 @@
 import { db } from "@/server/db";
 import { decrypt } from "@/server/crypto/encryption";
 import { dataKey } from "@/server/crypto/keys";
-import { visibleAccountRefs } from "@/server/services/accounts";
+import { readableAccountNames } from "@/server/services/accounts";
 import { readableCategoryNames } from "@/server/services/categories";
 import { readableBudgetNames } from "@/server/services/budgets";
 import { readableRulePatterns } from "@/server/services/categorization";
@@ -101,7 +101,6 @@ async function resolveTargets(
   };
   const present = refs.filter((r) => r !== null);
   const aliasHashes = [...new Set(present.flatMap((r) => (r.kind === "alias" ? [r.keyHash] : [])))];
-  const wantsAccounts = present.some((r) => r.kind === "account");
   const [labels, budgets, categories, rules, aliasRows, accounts] = await Promise.all([
     readableTransactionLabels(userId, [...new Set(present.flatMap(txIdsOf))]),
     readableBudgetNames(userId, [
@@ -119,9 +118,10 @@ async function resolveTargets(
           select: { keyHash: true, nameEnc: true },
         })
       : [],
-    wantsAccounts ? visibleAccountRefs(userId) : [],
+    readableAccountNames(userId, [
+      ...new Set(present.flatMap((r) => (r.kind === "account" ? [r.accountId] : []))),
+    ]),
   ]);
-  const accountNames = new Map(accounts.map((a) => [a.id, a.name]));
   const aliasNames = new Map(aliasRows.map((a) => [a.keyHash, decrypt(a.nameEnc, dataKey)]));
   const labelsOf = (ids: string[]) => ids.flatMap((id) => labels.get(id) ?? []);
 
@@ -132,7 +132,7 @@ async function resolveTargets(
       return name ? { text: name, href: null } : null;
     }
     if (r.kind === "account") {
-      const name = accountNames.get(r.accountId);
+      const name = accounts.get(r.accountId);
       return name ? { text: name, href: "/accounts" } : null;
     }
     if (r.kind === "category") {

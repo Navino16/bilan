@@ -128,6 +128,48 @@ describe("account tools over MCP", () => {
     await stamped("account.updated", withIban);
   });
 
+  it("patches: omitted fields are kept, empty icon clears", async () => {
+    const id = ok(
+      await call("create_account", {
+        name: "Livret A",
+        type: "SAVINGS",
+        bankName: "Bank",
+        icon: "🏦",
+        color: "#112233",
+        initialBalance: 250.5,
+      }),
+    ).id;
+    ok(await call("update_account", { id, name: "Livret B" }));
+    let row = await db.bankAccount.findUniqueOrThrow({ where: { id } });
+    expect(row).toMatchObject({
+      name: "Livret B",
+      type: "SAVINGS",
+      bankName: "Bank",
+      icon: "🏦",
+      color: "#112233",
+    });
+    expect(Number(row.initialBalance)).toBe(250.5);
+    ok(await call("update_account", { id, icon: "", bankName: "" }));
+    row = await db.bankAccount.findUniqueOrThrow({ where: { id } });
+    expect(row).toMatchObject({ icon: null, bankName: null, name: "Livret B" });
+  });
+
+  it("refuses to leave SAVINGS while a mirror is configured", async () => {
+    const id = ok(await call("create_account", { name: "Mirrored", type: "SAVINGS" })).id;
+    await db.bankAccount.update({
+      where: { id },
+      data: { mirrorPattern: "X", mirrorSources: { create: { sourceAccountId: withIban } } },
+    });
+    const res = await call("update_account", { id, type: "CHECKING" });
+    failed(res, "INVALID_INPUT");
+    expect((res.content as { text: string }[])[1]?.text).toBe("INVALID_MIRROR_ACTIVE");
+    expect(await db.bankAccount.findUniqueOrThrow({ where: { id } })).toMatchObject({
+      type: "SAVINGS",
+      mirrorPattern: "X",
+    });
+    await db.savingsMirrorSource.deleteMany({ where: { savingsAccountId: id } });
+  });
+
   it("rejects an iban key and writes nothing", async () => {
     const count = await accountCount();
     failed(

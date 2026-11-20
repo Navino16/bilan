@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   ACCOUNT_BANK_NAME_MAX,
   ACCOUNT_IBAN_MAX,
+  ACCOUNT_ICON_MAX,
   ACCOUNT_NAME_MAX,
   ACCOUNT_TYPES,
 } from "@/lib/validation/account";
@@ -28,7 +29,7 @@ export const accountInputSchema = z.object({
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/)
     .optional(),
-  icon: z.string().trim().max(50).optional(),
+  icon: z.string().trim().max(ACCOUNT_ICON_MAX).optional(),
   // Opening balance in clear (Decimal(12,2)). Accepts a number or a string with
   // a comma or dot decimal separator; empty === 0. Negative allowed (credit).
   initialBalance: z

@@ -269,6 +269,25 @@ export function visibleAccountRefs(
   return accountRefs(userId, currentMcpPrincipal() !== null);
 }
 
+// Names of the referenced accounts the user can see now (shares not narrowed to AI ones).
+export async function readableAccountNames(
+  userId: string,
+  ids: string[],
+): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map();
+  const rows = await db.bankAccount.findMany({
+    where: {
+      id: { in: ids },
+      OR: [
+        { ownerId: userId },
+        { shares: { some: { ...aiShareWhere(), group: { members: { some: { userId } } } } } },
+      ],
+    },
+    select: { id: true, name: true },
+  });
+  return new Map(rows.map((a) => [a.id, a.name]));
+}
+
 export async function visibleAccountIds(userId: string): Promise<string[]> {
   return (await visibleAccountRefs(userId)).map((a) => a.id);
 }

@@ -1,8 +1,15 @@
 import { z } from "zod";
-import { ACCOUNT_BANK_NAME_MAX, ACCOUNT_NAME_MAX, ACCOUNT_TYPES } from "@/lib/validation/account";
+import {
+  ACCOUNT_BANK_NAME_MAX,
+  ACCOUNT_ICON_MAX,
+  ACCOUNT_NAME_MAX,
+  ACCOUNT_TYPES,
+} from "@/lib/validation/account";
 import {
   archiveAccount,
+  AccountAccessError,
   createAccount,
+  ownedOrThrow,
   unarchiveAccount,
   updateAccount,
   visibleAccountIds,
@@ -20,7 +27,7 @@ const FIELDS = {
     .regex(/^#[0-9a-fA-F]{6}$/)
     .optional()
     .describe("#RRGGBB hex color"),
-  icon: z.string().trim().max(50).optional().describe("A single emoji or symbol key"),
+  icon: z.string().trim().max(ACCOUNT_ICON_MAX).optional().describe("A single emoji or symbol key"),
   initialBalance: z
     .number()
     .optional()
@@ -46,12 +53,46 @@ export const ACCOUNT_WRITE_TOOLS = [
   writeTool({
     name: "update_account",
     description:
-      "Replace an owned account's fields; the stored IBAN is kept. Send every current field from list_accounts: absent bankName and icon are cleared and an absent initialBalance resets to 0; an absent color is kept. Only the owner can update an account.",
-    input: z.strictObject({ id: ID, ...FIELDS }),
+      "Update an owned account; the stored IBAN is kept. Absent fields stay unchanged; an empty bankName or icon clears it. A type change away from SAVINGS is refused (INVALID_INPUT, detail INVALID_MIRROR_ACTIVE) while the account has a savings mirror. Only the owner can update an account.",
+    input: z.strictObject({
+      id: ID,
+      ...FIELDS,
+      name: FIELDS.name.optional(),
+      type: FIELDS.type.optional(),
+      bankName: z
+        .string()
+        .trim()
+        .max(ACCOUNT_BANK_NAME_MAX)
+        .optional()
+        .describe("Bank name; empty clears it"),
+      icon: z
+        .string()
+        .trim()
+        .max(ACCOUNT_ICON_MAX)
+        .optional()
+        .describe("A single emoji or symbol key; empty clears it"),
+    }),
     annotations: { idempotentHint: true },
-    run: async (userId, { id, ...input }) => {
+    run: async (userId, { id, ...patch }) => {
       await requireVisible(userId, id);
-      await updateAccount(id, input, { id: userId }, { removeIban: false });
+      const cur = await ownedOrThrow(id, userId);
+      const type = patch.type ?? ACCOUNT_TYPES.find((t) => t === cur.type) ?? "OTHER";
+      if (cur.mirrorPattern && type !== "SAVINGS") {
+        throw new AccountAccessError("INVALID_MIRROR_ACTIVE");
+      }
+      await updateAccount(
+        id,
+        {
+          name: patch.name ?? cur.name,
+          type,
+          bankName: patch.bankName ?? cur.bankName ?? undefined,
+          color: patch.color ?? cur.color ?? undefined,
+          icon: (patch.icon ?? cur.icon) || undefined,
+          initialBalance: patch.initialBalance ?? Number(cur.initialBalance),
+        },
+        { id: userId },
+        { removeIban: false },
+      );
       return { ok: true, id };
     },
   }),
