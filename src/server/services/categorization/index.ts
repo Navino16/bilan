@@ -159,6 +159,21 @@ export async function listRulesForUser(userId: string) {
   return rules.sort((a, b) => compareRules(key(a), key(b)));
 }
 
+// Patterns of the rules the user can read now (own and their households'), for the AI
+// activity list (spec §5.18).
+export async function readableRulePatterns(
+  userId: string,
+  ids: string[],
+): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map();
+  const groupIds = (await groupMemberships(userId)).map((m) => m.groupId);
+  const rows = await db.categorizationRule.findMany({
+    where: { id: { in: ids }, OR: [{ userId }, { groupId: { in: groupIds } }] },
+    select: { id: true, pattern: true },
+  });
+  return new Map(rows.map((r) => [r.id, r.pattern]));
+}
+
 // Loads a rule and checks the actor may manage it: own rules (userId) or group
 // rules where the actor is at least ADMIN. Throws RuleAccessError otherwise.
 export async function loadManageableRule(id: string, actorId: string) {

@@ -84,6 +84,7 @@ describe("toolErrorCode", () => {
   it("details the service code when it is not the tool code itself", () => {
     expect(toolErrorDetail(new TransactionAccessError("LOCKED_FIELDS"))).toBe("LOCKED_FIELDS");
     expect(toolErrorDetail(new BudgetAccessError("INVALID_LINE"))).toBe("INVALID_LINE");
+    expect(toolErrorDetail(new RuleValidationError("INVALID_REGEX"))).toBe("INVALID_REGEX");
     expect(toolErrorDetail(new BudgetAccessError("FORBIDDEN"))).toBeUndefined();
     expect(toolErrorDetail(new BudgetAccessError("NOT_FOUND"))).toBeUndefined();
     expect(toolErrorDetail(new Error("connect ECONNREFUSED 10.0.0.1:3306"))).toBeUndefined();

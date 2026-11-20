@@ -264,6 +264,35 @@ describe("listMcpActivity targets", () => {
     expect((await targets()).get(updated)).toBeNull();
   });
 
+  it("resolves a rule to its pattern while the user can read it", async () => {
+    const own = await db.categorizationRule.create({
+      data: { pattern: "BAKERY", matchType: "CONTAINS", categoryId: fx.categoryId, userId: actor },
+    });
+    const household = await db.categorizationRule.create({
+      data: {
+        pattern: "MARKET",
+        matchType: "CONTAINS",
+        categoryId: fx.categoryId,
+        groupId: fx.groupId,
+      },
+    });
+    const gone = await db.categorizationRule.create({
+      data: { pattern: "GONE", matchType: "CONTAINS", categoryId: fx.categoryId, userId: actor },
+    });
+    const updated = await row("rule.updated", "CategorizationRule", own.id);
+    const applied = await row("rule.applied", "CategorizationRule", household.id);
+    const deleted = await row("rule.deleted", "CategorizationRule", gone.id);
+    await db.categorizationRule.delete({ where: { id: gone.id } });
+
+    let got = await targets();
+    expect(got.get(updated)).toEqual({ text: "BAKERY", href: "/categories" });
+    expect(got.get(applied)).toEqual({ text: "MARKET", href: "/categories" });
+    expect(got.get(deleted)).toBeNull();
+    await db.groupMember.deleteMany({ where: { groupId: fx.groupId, userId: actor } });
+    got = await targets();
+    expect(got.get(applied)).toBeNull();
+  });
+
   it("drops a transaction on an account no longer shared with the user", async () => {
     const shared = await tx(fx.accounts.sharedPlain, "Shared rent");
     const own = await tx(fx.accounts.own, "Own rent");

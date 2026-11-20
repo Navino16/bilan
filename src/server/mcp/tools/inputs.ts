@@ -16,6 +16,7 @@ import {
 } from "@/lib/period";
 import { TRANSACTION_SORTS, UNCATEGORIZED } from "@/lib/transaction-filters";
 import { TRANSACTION_TYPES } from "@/lib/validation/transaction";
+import { RULES_FILE_MAX_RULES } from "@/lib/validation/rules-file";
 import type { TransactionFilters } from "@/server/services/transactions";
 import { McpToolError } from "@/server/mcp/errors";
 
@@ -33,6 +34,12 @@ export type PeriodInput = z.infer<typeof periodInput>;
 export const comparisonInput = z
   .enum(BASELINES)
   .describe("Reference: previous period, or the average of the last 3/6/12 months");
+
+export const ruleIdsInput = z
+  .array(z.string().min(1))
+  .min(1)
+  .max(RULES_FILE_MAX_RULES)
+  .describe("Rule ids, from list_rules");
 
 export const searchInput = z.strictObject({
   accountId: z.string().optional(),
