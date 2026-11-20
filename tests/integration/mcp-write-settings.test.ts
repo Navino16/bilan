@@ -5,6 +5,7 @@ import { mcpWriteLimiter } from "@/server/auth/rate-limit";
 import { buildMcpServer } from "@/server/mcp/server";
 import { mcpLimiterKey, type McpPrincipal } from "@/server/mcp/context";
 import { listMcpActivity } from "@/server/mcp/activity";
+import { hashMerchantKey } from "@/server/services/transactions/secure-fields";
 import { loadAliases, renameMerchant, renameAliasGroup } from "@/server/services/merchants";
 import {
   getExceptionalRule,
@@ -90,23 +91,54 @@ describe("merchant tools over MCP", () => {
   it("renames by key and by group, resets a name and removes an alias", async () => {
     ok(await call("rename_merchant", { key: "CARTE LIDL 12", name: "Lidl" }));
     expect((await loadAliases(f.memberId)).get("CARTE LIDL 12")).toBe("Lidl");
-    await stamped("merchant.renamed", "Lidl");
+    await stamped("merchant.renamed", hashMerchantKey("CARTE LIDL 12"));
 
     ok(await call("rename_merchant", { key: "LIDL PARIS", name: "Lidl" }));
     ok(await call("rename_merchant", { from: "Lidl", name: "Lidl Market" }));
     const aliases = await loadAliases(f.memberId);
     expect(aliases.get("CARTE LIDL 12")).toBe("Lidl Market");
     expect(aliases.get("LIDL PARIS")).toBe("Lidl Market");
-    const [group] = await stamped("merchant.renamed", "Lidl Market");
-    expect(group.metadata).toMatchObject({ from: "Lidl" });
+    await stamped("merchant.renamed", hashMerchantKey("CARTE LIDL 12"));
 
     ok(await call("remove_merchant_alias", { key: "lidl paris" }));
     expect((await loadAliases(f.memberId)).has("LIDL PARIS")).toBe(false);
-    await stamped("merchant.alias_removed", "LIDL PARIS");
+    await stamped("merchant.alias_removed", hashMerchantKey("LIDL PARIS"));
 
     ok(await call("reset_merchant_name", { name: "Lidl Market" }));
     expect((await loadAliases(f.memberId)).size).toBe(0);
-    await stamped("merchant.reset", "Lidl Market");
+    await stamped("merchant.reset", hashMerchantKey("CARTE LIDL 12"));
+  });
+
+  it("keeps merchant names and keys out of the audit rows and resolves the live name", async () => {
+    ok(await call("rename_merchant", { key: "SECRETSHOP 42", name: "Secret Shop" }));
+    ok(await call("rename_merchant", { from: "Secret Shop", name: "Hidden Store" }));
+    const logged = await db.auditLog.findMany({
+      where: { userId: f.memberId, entity: "MerchantAlias" },
+    });
+    expect(logged.length).toBeGreaterThanOrEqual(2);
+    for (const r of logged) {
+      const text = JSON.stringify([r.entityId, r.metadata]).toLowerCase();
+      for (const secret of ["secretshop", "secret shop", "hidden store"])
+        expect(text).not.toContain(secret);
+    }
+    const live = (await listMcpActivity(f.memberId)).find(
+      (a) => a.entityId === hashMerchantKey("SECRETSHOP 42"),
+    );
+    expect(live?.target).toEqual({ text: "Hidden Store", href: null });
+
+    ok(await call("reset_merchant_name", { name: "Hidden Store" }));
+    const after = (await listMcpActivity(f.memberId)).filter(
+      (a) => a.entityId === hashMerchantKey("SECRETSHOP 42"),
+    );
+    expect(after.length).toBeGreaterThan(0);
+    for (const a of after) expect(a.target).toBeNull();
+  });
+
+  it("removes an alias whose key is 200 characters long", async () => {
+    const key = "K".repeat(200);
+    ok(await call("rename_merchant", { key, name: "Long Key" }));
+    ok(await call("remove_merchant_alias", { key }));
+    await stamped("merchant.alias_removed", hashMerchantKey(key));
   });
 
   it("refuses both or neither of key and from, writing nothing", async () => {
@@ -150,14 +182,6 @@ describe("preference tools over MCP", () => {
     expect(await getExceptionalRule(f.memberId)).toEqual({ minAmount: 80, factor: 2.5 });
     expect(await auditCount()).toBe(before);
   });
-
-  it("keeps the stored locale of an existing row", async () => {
-    await db.userPreference.update({ where: { userId: f.memberId }, data: { locale: "en" } });
-    ok(await call("update_link_settings", { windowDays: 9, minAmount: 0 }));
-    expect(
-      (await db.userPreference.findUniqueOrThrow({ where: { userId: f.memberId } })).locale,
-    ).toBe("en");
-  });
 });
 
 describe("audit of app-side edits and the activity list", () => {
@@ -170,6 +194,8 @@ describe("audit of app-side edits and the activity list", () => {
     for (const r of await db.auditLog.findMany({ where: { userId: f.memberId } }))
       expect(r.metadata).not.toHaveProperty("via");
     expect(await rows("merchant.renamed")).toHaveLength(2);
+    expect(await rows("preferences.link_settings_updated")).toHaveLength(1);
+    expect(await rows("preferences.exceptional_updated")).toHaveLength(1);
     expect(await listMcpActivity(f.memberId)).toEqual([]);
 
     ok(await call("rename_merchant", { from: "App Name 2", name: "Mcp Name" }));

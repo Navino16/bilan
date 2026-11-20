@@ -1,4 +1,6 @@
 import { db } from "@/server/db";
+import { decrypt } from "@/server/crypto/encryption";
+import { dataKey } from "@/server/crypto/keys";
 import { readableCategoryNames } from "@/server/services/categories";
 import { readableBudgetNames } from "@/server/services/budgets";
 import { readableRulePatterns } from "@/server/services/categorization";
@@ -25,7 +27,7 @@ type TargetRef =
   | { kind: "budget"; budgetId: string; transactionId: string | null }
   | { kind: "category"; categoryId: string }
   | { kind: "rule"; ruleId: string }
-  | { kind: "text"; text: string };
+  | { kind: "alias"; keyHash: string };
 
 function clientName(metadata: unknown): string {
   const client = (metadata as { client?: { name?: unknown; id?: unknown } } | null)?.client;
@@ -61,7 +63,7 @@ function targetRef(
     case "CategorizationRule":
       return { kind: "rule", ruleId: entityId };
     case "MerchantAlias":
-      return { kind: "text", text: entityId };
+      return { kind: "alias", keyHash: entityId };
     default:
       return null;
   }
@@ -94,7 +96,8 @@ async function resolveTargets(
     return r.kind === "budget" && r.transactionId ? [r.transactionId] : [];
   };
   const present = refs.filter((r) => r !== null);
-  const [labels, budgets, categories, rules] = await Promise.all([
+  const aliasHashes = [...new Set(present.flatMap((r) => (r.kind === "alias" ? [r.keyHash] : [])))];
+  const [labels, budgets, categories, rules, aliasRows] = await Promise.all([
     readableTransactionLabels(userId, [...new Set(present.flatMap(txIdsOf))]),
     readableBudgetNames(userId, [
       ...new Set(present.flatMap((r) => (r.kind === "budget" ? [r.budgetId] : []))),
@@ -105,12 +108,22 @@ async function resolveTargets(
     readableRulePatterns(userId, [
       ...new Set(present.flatMap((r) => (r.kind === "rule" ? [r.ruleId] : []))),
     ]),
+    aliasHashes.length
+      ? db.merchantAlias.findMany({
+          where: { userId, keyHash: { in: aliasHashes } },
+          select: { keyHash: true, nameEnc: true },
+        })
+      : [],
   ]);
+  const aliasNames = new Map(aliasRows.map((a) => [a.keyHash, decrypt(a.nameEnc, dataKey)]));
   const labelsOf = (ids: string[]) => ids.flatMap((id) => labels.get(id) ?? []);
 
   return refs.map((r) => {
     if (!r) return null;
-    if (r.kind === "text") return { text: r.text, href: null };
+    if (r.kind === "alias") {
+      const name = aliasNames.get(r.keyHash);
+      return name ? { text: name, href: null } : null;
+    }
     if (r.kind === "category") {
       const name = categories.get(r.categoryId);
       return name ? { text: name, href: "/categories" } : null;

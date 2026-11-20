@@ -191,6 +191,7 @@ async function absorbNamesake(
   });
 }
 
+// Audit rows carry the key HMAC, never a merchant name or key (#244).
 export async function renameMerchant(userId: string, key: string, name: string): Promise<void> {
   const k = merchantKeySchema.parse(key);
   const parsed = merchantNameSchema.parse(name);
@@ -204,7 +205,12 @@ export async function renameMerchant(userId: string, key: string, name: string):
     update: { keyEnc, nameEnc },
   });
   await absorbNamesake(userId, final, new Set([k, ...others.map((a) => a.key)]));
-  await logEvent({ userId, action: "merchant.renamed", entity: "MerchantAlias", entityId: final });
+  await logEvent({
+    userId,
+    action: "merchant.renamed",
+    entity: "MerchantAlias",
+    entityId: hashMerchantKey(k),
+  });
 }
 
 export async function renameAliasGroup(userId: string, from: string, to: string): Promise<void> {
@@ -229,15 +235,19 @@ export async function renameAliasGroup(userId: string, from: string, to: string)
     userId,
     action: "merchant.renamed",
     entity: "MerchantAlias",
-    entityId: name,
-    metadata: { from },
+    entityId: hashMerchantKey(members[0].key),
   });
 }
 
 export async function deleteAliasGroup(userId: string, name: string): Promise<void> {
   const { members } = await membersOf(userId, name);
   await db.merchantAlias.deleteMany({ where: { userId, id: { in: members.map((m) => m.id) } } });
-  await logEvent({ userId, action: "merchant.reset", entity: "MerchantAlias", entityId: name });
+  await logEvent({
+    userId,
+    action: "merchant.reset",
+    entity: "MerchantAlias",
+    entityId: hashMerchantKey(members[0].key),
+  });
 }
 
 export async function removeMerchantAlias(userId: string, key: string): Promise<void> {
@@ -250,6 +260,6 @@ export async function removeMerchantAlias(userId: string, key: string): Promise<
     userId,
     action: "merchant.alias_removed",
     entity: "MerchantAlias",
-    entityId: k,
+    entityId: hashMerchantKey(k),
   });
 }
