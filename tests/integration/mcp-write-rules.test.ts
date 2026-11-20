@@ -149,6 +149,38 @@ describe("rule tools over MCP", () => {
     await stamped("rule.deleted", created.id);
   });
 
+  it("keeps omitted fields on update_rule and resets caseSensitive and priority with null", async () => {
+    const id = ok(
+      await call("create_rule", {
+        pattern: "BAKERY",
+        matchType: "STARTS_WITH",
+        caseSensitive: true,
+        priority: 37,
+        categoryId: mine,
+      }),
+    ).id;
+    const rule = () => db.categorizationRule.findUniqueOrThrow({ where: { id } });
+
+    ok(await call("update_rule", { id, pattern: "BOULANGERIE" }));
+    expect(await rule()).toMatchObject({
+      pattern: "BOULANGERIE",
+      matchType: "STARTS_WITH",
+      caseSensitive: true,
+      priority: 37,
+      categoryId: mine,
+    });
+
+    ok(await call("update_rule", { id, caseSensitive: null, priority: null }));
+    expect(await rule()).toMatchObject({
+      pattern: "BOULANGERIE",
+      matchType: "STARTS_WITH",
+      caseSensitive: false,
+      priority: 100,
+      categoryId: mine,
+    });
+    await db.categorizationRule.delete({ where: { id } });
+  });
+
   it("rejects an invalid regex with INVALID_REGEX", async () => {
     const before = await ruleCount();
     const res = await call("create_rule", { pattern: "(", matchType: "REGEX", categoryId: mine });

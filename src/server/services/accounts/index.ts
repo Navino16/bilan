@@ -12,6 +12,7 @@ import {
   MIRROR_MATCH_TYPES,
   MIRROR_PATTERN_MAX,
   toMirrorMatchType,
+  type AccountType,
   type MirrorMatchType,
 } from "@/lib/validation/account";
 
@@ -135,6 +136,58 @@ export async function updateAccount(
       }),
     },
   });
+  await logEvent({
+    userId: actor.id,
+    action: "account.updated",
+    entity: "BankAccount",
+    entityId: id,
+  });
+}
+
+// MCP patch (spec §5.18): an absent field keeps its value, null clears bankName or icon and
+// resets initialBalance to 0. The stored IBAN is never touched.
+export type AccountPatch = {
+  name?: string;
+  type?: AccountType;
+  bankName?: string | null;
+  color?: string;
+  icon?: string | null;
+  initialBalance?: number | null;
+};
+
+export async function patchAccount(
+  id: string,
+  patch: AccountPatch,
+  actor: { id: string },
+): Promise<void> {
+  const cur = await ownedOrThrow(id, actor.id);
+  const keep = <T>(sent: T | null | undefined, stored: T | null) =>
+    (sent === undefined ? stored : sent) ?? undefined;
+  const data = accountInputSchema.parse({
+    name: patch.name ?? cur.name,
+    type: patch.type ?? cur.type,
+    bankName: keep(patch.bankName, cur.bankName),
+    color: patch.color ?? cur.color ?? undefined,
+    icon: keep(patch.icon, cur.icon),
+    initialBalance: keep(patch.initialBalance, Number(cur.initialBalance)),
+  });
+  // Leaving SAVINGS is refused while a mirror is set; the check sits in the update's filter so
+  // a mirror configured after the read above is never wiped.
+  const { count } = await db.bankAccount.updateMany({
+    where: { id, ownerId: actor.id, ...(data.type !== "SAVINGS" && { mirrorPattern: null }) },
+    data: {
+      name: data.name,
+      type: data.type,
+      bankName: data.bankName ?? null,
+      color: data.color,
+      icon: data.icon ?? null,
+      initialBalance: data.initialBalance,
+    },
+  });
+  if (count === 0) {
+    const owned = await db.bankAccount.count({ where: { id, ownerId: actor.id } });
+    throw new AccountAccessError(owned ? "INVALID_MIRROR_ACTIVE" : "FORBIDDEN");
+  }
   await logEvent({
     userId: actor.id,
     action: "account.updated",

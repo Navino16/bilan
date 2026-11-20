@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { budgetInputSchema } from "@/lib/schemas/budget";
+import { BUDGET_DESCRIPTION_MAX } from "@/lib/validation/budget";
 import {
   archiveBudget,
   assignTransaction,
@@ -7,7 +8,7 @@ import {
   rollRecurring,
   unarchiveBudget,
   unassignTransaction,
-  updateBudget,
+  patchBudget,
 } from "@/server/services/budgets";
 import { writeTool } from "@/server/mcp/tools/write-tool";
 
@@ -19,6 +20,25 @@ const FIELDS =
 // The form's z.coerce.boolean() would read "false" as true.
 const budgetInput = budgetInputSchema.safeExtend({ recurring: z.boolean().default(false) });
 
+const shape = budgetInputSchema.shape;
+const budgetPatch = z.object({
+  id,
+  name: shape.name.optional(),
+  description: z.string().trim().max(BUDGET_DESCRIPTION_MAX).nullable().optional(),
+  accountId: z
+    .string()
+    .min(1)
+    .nullable()
+    .optional()
+    .describe("Account id the budget follows, from list_accounts; null detaches it"),
+  periodType: shape.periodType.optional(),
+  periodStart: shape.periodStart.optional(),
+  periodEnd: shape.periodEnd.optional(),
+  recurring: z.boolean().nullable().optional().describe("null = false"),
+  outOfBudgetPlanned: z.number().min(0).nullable().optional(),
+  lines: shape.lines.optional().describe("When sent, replaces every line"),
+});
+
 export const BUDGET_WRITE_TOOLS = [
   writeTool({
     name: "create_budget",
@@ -28,11 +48,11 @@ export const BUDGET_WRITE_TOOLS = [
   }),
   writeTool({
     name: "update_budget",
-    description: `Replace a budget's fields and lines; it stays personal or in its household (groupId is ignored). Send every current field from get_budget: absent optional fields (description, accountId, outOfBudgetPlanned) are cleared and recurring becomes false. ${FIELDS}`,
-    input: budgetInput.safeExtend({ id }),
+    description: `Change a budget; it stays personal or in its household. Absent fields are kept; null clears description, accountId or outOfBudgetPlanned and turns recurring off; lines, when sent, replace every line. get_budget shows the current values. ${FIELDS}`,
+    input: budgetPatch,
     annotations: { destructiveHint: true },
-    run: async (userId, { id, ...input }) => {
-      await updateBudget(id, input, { id: userId });
+    run: async (userId, { id, ...patch }) => {
+      await patchBudget(id, patch, { id: userId });
       return { ok: true, id };
     },
   }),

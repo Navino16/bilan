@@ -105,15 +105,66 @@ describe("category tools over MCP", () => {
     await stamped("category.updated", created.id);
   });
 
-  it("keeps a null color null on update without color", async () => {
-    const created = ok(await call("create_category", { name: "Inherits" }));
-    expect((await db.category.findUniqueOrThrow({ where: { id: created.id } })).color).toBeNull();
-    ok(await call("update_category", { id: created.id, name: "Still inherits" }));
+  it("keeps omitted fields on update and clears them with null", async () => {
+    const parent = ok(await call("create_category", { name: "Home" }));
+    const created = ok(
+      await call("create_category", {
+        name: "Rent",
+        color: "#123456",
+        icon: "🏠",
+        parentId: parent.id,
+        shiftDays: 4,
+        savings: true,
+        neutral: true,
+      }),
+    );
+    const full = {
+      color: "#123456",
+      icon: "🏠",
+      parentId: parent.id,
+      shiftDays: 4,
+      savings: true,
+      neutral: true,
+    };
+
+    ok(await call("update_category", { id: created.id, name: "Housing" }));
     expect(await db.category.findUniqueOrThrow({ where: { id: created.id } })).toMatchObject({
-      name: "Still inherits",
-      color: null,
+      name: "Housing",
+      ...full,
     });
+
+    ok(await call("update_category", { id: created.id, color: null, icon: null }));
+    expect(await db.category.findUniqueOrThrow({ where: { id: created.id } })).toMatchObject({
+      name: "Housing",
+      ...full,
+      color: null,
+      icon: null,
+    });
+
+    ok(
+      await call("update_category", {
+        id: created.id,
+        parentId: null,
+        shiftDays: null,
+        savings: null,
+        neutral: null,
+      }),
+    );
+    expect(await db.category.findUniqueOrThrow({ where: { id: created.id } })).toMatchObject({
+      name: "Housing",
+      color: null,
+      icon: null,
+      parentId: null,
+      shiftDays: null,
+      savings: false,
+      neutral: false,
+    });
+
+    const inherits = ok(await call("create_category", { name: "Inherits" }));
+    ok(await call("update_category", { id: inherits.id, name: "Still inherits" }));
+    expect((await db.category.findUniqueOrThrow({ where: { id: inherits.id } })).color).toBeNull();
     failed(await call("create_category", { name: "X", icon: "  " }), "INVALID_INPUT");
+    failed(await call("create_category", { name: "X", color: null }), "INVALID_INPUT");
   });
 
   it("lets a household admin create a household category and refuses a plain member", async () => {

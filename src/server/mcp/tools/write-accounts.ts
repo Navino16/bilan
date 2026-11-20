@@ -7,11 +7,9 @@ import {
 } from "@/lib/validation/account";
 import {
   archiveAccount,
-  AccountAccessError,
   createAccount,
-  ownedOrThrow,
+  patchAccount,
   unarchiveAccount,
-  updateAccount,
   visibleAccountIds,
 } from "@/server/services/accounts";
 import { McpToolError } from "@/server/mcp/errors";
@@ -21,7 +19,12 @@ import { writeTool } from "@/server/mcp/tools/write-tool";
 const FIELDS = {
   name: z.string().trim().min(1).max(ACCOUNT_NAME_MAX).describe("Account name (untrusted text)"),
   type: z.enum(ACCOUNT_TYPES).describe("Account type"),
-  bankName: z.string().trim().max(ACCOUNT_BANK_NAME_MAX).optional().describe("Bank name"),
+  bankName: z
+    .string()
+    .trim()
+    .max(ACCOUNT_BANK_NAME_MAX)
+    .optional()
+    .describe("Bank name (untrusted text)"),
   color: z
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/)
@@ -53,46 +56,38 @@ export const ACCOUNT_WRITE_TOOLS = [
   writeTool({
     name: "update_account",
     description:
-      "Update an owned account; the stored IBAN is kept. Absent fields stay unchanged; an empty bankName or icon clears it. A type change away from SAVINGS is refused (INVALID_INPUT, detail INVALID_MIRROR_ACTIVE) while the account has a savings mirror. Only the owner can update an account.",
+      "Change an owned account; the stored IBAN is kept. Absent fields are kept; null clears bankName or icon and sets initialBalance to 0. A type change away from SAVINGS is refused (INVALID_INPUT, detail INVALID_MIRROR_ACTIVE) while the account has a savings mirror. Only the owner can update an account.",
     input: z.strictObject({
       id: ID,
-      ...FIELDS,
       name: FIELDS.name.optional(),
       type: FIELDS.type.optional(),
       bankName: z
         .string()
         .trim()
+        .min(1)
         .max(ACCOUNT_BANK_NAME_MAX)
+        .nullable()
         .optional()
-        .describe("Bank name; empty clears it"),
+        .describe("Bank name (untrusted text); null clears it"),
+      color: FIELDS.color,
       icon: z
         .string()
         .trim()
+        .min(1)
         .max(ACCOUNT_ICON_MAX)
+        .nullable()
         .optional()
-        .describe("A single emoji or symbol key; empty clears it"),
+        .describe("A single emoji or symbol key; null clears it"),
+      initialBalance: z
+        .number()
+        .nullable()
+        .optional()
+        .describe("Opening balance, negative for a credit account; null sets it to 0"),
     }),
     annotations: { idempotentHint: true },
     run: async (userId, { id, ...patch }) => {
       await requireVisible(userId, id);
-      const cur = await ownedOrThrow(id, userId);
-      const type = patch.type ?? ACCOUNT_TYPES.find((t) => t === cur.type) ?? "OTHER";
-      if (cur.mirrorPattern && type !== "SAVINGS") {
-        throw new AccountAccessError("INVALID_MIRROR_ACTIVE");
-      }
-      await updateAccount(
-        id,
-        {
-          name: patch.name ?? cur.name,
-          type,
-          bankName: patch.bankName ?? cur.bankName ?? undefined,
-          color: patch.color ?? cur.color ?? undefined,
-          icon: (patch.icon ?? cur.icon) || undefined,
-          initialBalance: patch.initialBalance ?? Number(cur.initialBalance),
-        },
-        { id: userId },
-        { removeIban: false },
-      );
+      await patchAccount(id, patch, { id: userId });
       return { ok: true, id };
     },
   }),

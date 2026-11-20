@@ -3,9 +3,9 @@ import { RULE_MATCH_TYPES } from "@/lib/validation/rule";
 import {
   createRule,
   deleteRule,
+  patchRule,
   retargetRule,
   toggleRule,
-  updateRule,
 } from "@/server/services/categorization";
 import { applyRules } from "@/server/services/categorization/apply";
 import { ruleIdsInput } from "@/server/mcp/tools/inputs";
@@ -56,11 +56,22 @@ export const RULE_WRITE_TOOLS = [
   writeTool({
     name: "update_rule",
     description:
-      "Replace a rule's fields; its scope can't change. Send every current field from list_rules: absent caseSensitive and priority reset to false and 100. A household rule needs the household admin role.",
-    input: z.strictObject({ id: ruleId, ...FIELDS }),
+      "Change a rule's fields; its scope can't change. Absent fields are kept; null resets caseSensitive to false and priority to 100. A household rule needs the household admin role.",
+    input: z.strictObject({
+      id: ruleId,
+      pattern: FIELDS.pattern.optional(),
+      matchType: FIELDS.matchType.optional(),
+      caseSensitive: z.boolean().nullable().optional().describe("null = false"),
+      priority: FIELDS.priority
+        .unwrap()
+        .nullable()
+        .optional()
+        .describe("Higher wins when several rules match; null = 100"),
+      categoryId: categoryId.optional(),
+    }),
     annotations: { idempotentHint: true },
-    run: async (userId, { id, ...input }) => {
-      await updateRule(id, input, { id: userId });
+    run: async (userId, { id, ...patch }) => {
+      await patchRule(id, patch, { id: userId });
       return { ok: true, id };
     },
   }),

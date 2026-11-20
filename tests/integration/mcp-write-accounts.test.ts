@@ -128,7 +128,7 @@ describe("account tools over MCP", () => {
     await stamped("account.updated", withIban);
   });
 
-  it("patches: omitted fields are kept, empty icon clears", async () => {
+  it("patches: omitted fields are kept, null clears", async () => {
     const id = ok(
       await call("create_account", {
         name: "Livret A",
@@ -149,9 +149,17 @@ describe("account tools over MCP", () => {
       color: "#112233",
     });
     expect(Number(row.initialBalance)).toBe(250.5);
-    ok(await call("update_account", { id, icon: "", bankName: "" }));
+    ok(await call("update_account", { id, icon: null, bankName: null, initialBalance: null }));
     row = await db.bankAccount.findUniqueOrThrow({ where: { id } });
-    expect(row).toMatchObject({ icon: null, bankName: null, name: "Livret B" });
+    expect(row).toMatchObject({
+      icon: null,
+      bankName: null,
+      name: "Livret B",
+      type: "SAVINGS",
+      color: "#112233",
+    });
+    expect(Number(row.initialBalance)).toBe(0);
+    await stamped("account.updated", id);
   });
 
   it("refuses to leave SAVINGS while a mirror is configured", async () => {
