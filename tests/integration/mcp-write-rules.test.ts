@@ -278,6 +278,31 @@ describe("rule tools over MCP", () => {
     expect(applied[0].metadata).toMatchObject({ reclassified: 1 });
   });
 
+  it("applies on an account shared with WRITE and AI assistants allowed", async () => {
+    const target = (await db.category.create({ data: { userId: f.memberId, name: "Shops" } })).id;
+    const share = { accountId: f.accounts.sharedPlain, groupId: f.groupId };
+    await db.accountShare.update({
+      where: { accountId_groupId: share },
+      data: { allowAiAssistants: true },
+    });
+    try {
+      const rule = ok(
+        await call("create_rule", { pattern: "SHOP", matchType: "CONTAINS", categoryId: target }),
+      ).id;
+      ok(await call("apply_rules", { ruleIds: [rule] }));
+      const categoryOf = async (id: string) =>
+        (await db.transaction.findUniqueOrThrow({ where: { id } })).categoryId;
+      expect(await categoryOf(f.expenses.sharedPlain)).toBe(target);
+      expect(await categoryOf(f.expenses.own)).toBe(target);
+      expect(await categoryOf(f.expenses.sharedAi)).toBe(f.categoryId);
+    } finally {
+      await db.accountShare.update({
+        where: { accountId_groupId: share },
+        data: { allowAiAssistants: false },
+      });
+    }
+  });
+
   it("lists preview_rules_application but not apply_rules to a read-only client", async () => {
     const ro = await connect(mcpPrincipal(f.memberId));
     try {
