@@ -2,6 +2,8 @@ import { z } from "zod";
 import { defaultLocale } from "@/i18n/config";
 import { MERCHANT_KEY_MAX } from "@/lib/schemas/merchant";
 import { MERCHANT_NAME_MAX } from "@/lib/validation/merchant";
+import { LINK_WINDOW_DAYS_RANGE } from "@/lib/validation/link-settings";
+import { EXCEPTIONAL_FACTOR_RANGE } from "@/lib/exceptional";
 import {
   deleteAliasGroup,
   removeMerchantAlias,
@@ -9,6 +11,8 @@ import {
   renameMerchant,
 } from "@/server/services/merchants";
 import {
+  getExceptionalRule,
+  getLinkSuggestionSettings,
   updateExceptionalRule,
   updateLinkSuggestionSettings,
 } from "@/server/services/users/preferences";
@@ -21,6 +25,10 @@ const key = z
   .min(1)
   .max(MERCHANT_KEY_MAX)
   .describe("Merchant key, from list_merchants (untrusted text derived from bank labels)");
+const minAmount = z
+  .number()
+  .min(0)
+  .describe("Smallest amount considered, in euros; absent keeps it");
 
 export const SETTINGS_WRITE_TOOLS = [
   writeTool({
@@ -38,7 +46,8 @@ export const SETTINGS_WRITE_TOOLS = [
       name: name.describe("New display name (untrusted text)"),
     }),
     run: async (userId, { key, from, name }) => {
-      if ((key === undefined) === (from === undefined)) throw new McpToolError("INVALID_INPUT");
+      if ((key === undefined) === (from === undefined))
+        throw new McpToolError("INVALID_INPUT", "key, from: send exactly one of them");
       if (from !== undefined) await renameAliasGroup(userId, from, name);
       else await renameMerchant(userId, key as string, name);
       return { ok: true };
@@ -48,7 +57,9 @@ export const SETTINGS_WRITE_TOOLS = [
     name: "reset_merchant_name",
     description:
       "Remove a display name (as listed by list_merchants; untrusted text) and every alias grouped under it; the merchants fall back to their bank labels.",
-    input: z.strictObject({ name }),
+    input: z.strictObject({
+      name: name.describe("Display name, from list_merchants (untrusted text)"),
+    }),
     annotations: { destructiveHint: true },
     run: async (userId, { name }) => {
       await deleteAliasGroup(userId, name);
@@ -69,23 +80,49 @@ export const SETTINGS_WRITE_TOOLS = [
   writeTool({
     name: "update_link_settings",
     description:
-      "Set the link suggestion settings: how many days apart two transactions may be (windowDays, a whole number) and the smallest amount suggested (minAmount, 0 or more). get_preferences shows the current values.",
-    input: z.strictObject({ windowDays: z.number(), minAmount: z.number() }),
+      "Change the link suggestion settings: how many days apart two transactions may be (windowDays) and the smallest amount suggested (minAmount). Absent fields are kept; get_preferences shows the current values.",
+    input: z.strictObject({
+      windowDays: z
+        .number()
+        .int()
+        .min(LINK_WINDOW_DAYS_RANGE.min)
+        .max(LINK_WINDOW_DAYS_RANGE.max)
+        .optional()
+        .describe("Whole days; absent keeps it"),
+      minAmount: minAmount.optional(),
+    }),
     annotations: { idempotentHint: true },
     run: async (userId, args) => ({
       ok: true,
-      settings: await updateLinkSuggestionSettings(userId, args, defaultLocale),
+      settings: await updateLinkSuggestionSettings(
+        userId,
+        { ...(await getLinkSuggestionSettings(userId)), ...args },
+        defaultLocale,
+      ),
     }),
   }),
   writeTool({
     name: "update_exceptional_rule",
     description:
-      "Set the rule flagging exceptional expenses: the smallest amount considered (minAmount, 0 or more) and how many times above the usual level it must be (factor, in steps of 0.1). get_preferences shows the current values.",
-    input: z.strictObject({ minAmount: z.number(), factor: z.number() }),
+      "Change the rule flagging exceptional expenses: the smallest amount considered (minAmount) and how many times above the usual level it must be (factor). Absent fields are kept; get_preferences shows the current values.",
+    input: z.strictObject({
+      minAmount: minAmount.optional(),
+      factor: z
+        .number()
+        .min(EXCEPTIONAL_FACTOR_RANGE.min)
+        .max(EXCEPTIONAL_FACTOR_RANGE.max)
+        .multipleOf(0.1)
+        .optional()
+        .describe("In steps of 0.1; absent keeps it"),
+    }),
     annotations: { idempotentHint: true },
     run: async (userId, args) => ({
       ok: true,
-      settings: await updateExceptionalRule(userId, args, defaultLocale),
+      settings: await updateExceptionalRule(
+        userId,
+        { ...(await getExceptionalRule(userId)), ...args },
+        defaultLocale,
+      ),
     }),
   }),
 ];

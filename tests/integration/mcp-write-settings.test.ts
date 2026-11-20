@@ -45,6 +45,8 @@ const failed = (r: ToolResult, code: string) => {
   expect(r.isError).toBe(true);
   expect(textOf(r)).toBe(code);
 };
+const detailOf = (r: ToolResult) =>
+  (r.content as { type: string; text: string }[])[1]?.text ?? null;
 const rows = (action: string) =>
   db.auditLog.findMany({ where: { userId: f.memberId, action }, orderBy: { createdAt: "asc" } });
 const stamped = async (action: string, entityId: string) => {
@@ -143,8 +145,11 @@ describe("merchant tools over MCP", () => {
 
   it("refuses both or neither of key and from, writing nothing", async () => {
     const before = await auditCount();
-    failed(await call("rename_merchant", { key: "A", from: "B", name: "C" }), "INVALID_INPUT");
-    failed(await call("rename_merchant", { name: "C" }), "INVALID_INPUT");
+    for (const args of [{ key: "A", from: "B", name: "C" }, { name: "C" }]) {
+      const res = await call("rename_merchant", args);
+      failed(res, "INVALID_INPUT");
+      expect(detailOf(res)).toBe("key, from: send exactly one of them");
+    }
     expect(await auditCount()).toBe(before);
     expect((await loadAliases(f.memberId)).size).toBe(0);
   });
@@ -171,6 +176,15 @@ describe("preference tools over MCP", () => {
     await stamped("preferences.exceptional_updated", f.memberId);
   });
 
+  it("keeps the fields a partial update leaves out", async () => {
+    ok(await call("update_link_settings", { windowDays: 9 }));
+    expect(await getLinkSuggestionSettings(f.memberId)).toEqual({ windowDays: 9, minAmount: 12.5 });
+    ok(await call("update_link_settings", { windowDays: 7 }));
+    ok(await call("update_exceptional_rule", { factor: 3 }));
+    expect(await getExceptionalRule(f.memberId)).toEqual({ minAmount: 80, factor: 3 });
+    ok(await call("update_exceptional_rule", { factor: 2.5 }));
+  });
+
   it("rejects out-of-range values, leaving the settings unchanged", async () => {
     const before = await auditCount();
     failed(
@@ -178,6 +192,7 @@ describe("preference tools over MCP", () => {
       "INVALID_INPUT",
     );
     failed(await call("update_exceptional_rule", { minAmount: 1, factor: 999 }), "INVALID_INPUT");
+    failed(await call("update_exceptional_rule", { factor: 2.55 }), "INVALID_INPUT");
     expect(await getLinkSuggestionSettings(f.memberId)).toEqual({ windowDays: 7, minAmount: 12.5 });
     expect(await getExceptionalRule(f.memberId)).toEqual({ minAmount: 80, factor: 2.5 });
     expect(await auditCount()).toBe(before);

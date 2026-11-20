@@ -13,7 +13,10 @@ export type ToolErrorCode =
   "NOT_FOUND" | "FORBIDDEN" | "INVALID_PERIOD" | "INVALID_INPUT" | "RATE_LIMITED" | "FAILED";
 
 export class McpToolError extends Error {
-  constructor(readonly code: ToolErrorCode) {
+  constructor(
+    readonly code: ToolErrorCode,
+    readonly detail?: string,
+  ) {
     super(code);
   }
 }
@@ -51,6 +54,7 @@ export function toolErrorCode(e: unknown): ToolErrorCode {
 
 // The service's own code (LOCKED_FIELDS, ALREADY_LINKED…) when the tool code is broader (spec §5.18).
 export function toolErrorDetail(e: unknown): string | undefined {
+  if (e instanceof McpToolError) return e.detail;
   if (!(isAccessError(e) || e instanceof RuleValidationError)) return undefined;
   if (e.message === toolErrorCode(e)) return undefined;
   return e.message;

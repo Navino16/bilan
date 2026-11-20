@@ -42,21 +42,24 @@ export const ruleIdsInput = z
   .describe("Rule ids, from list_rules");
 
 export const searchInput = z.strictObject({
-  accountId: z.string().optional(),
+  accountId: z.string().optional().describe("Account id, from list_accounts"),
   categoryId: z
     .string()
     .optional()
     .describe(`Category id (its subcategories included), or "${UNCATEGORIZED}" for uncategorized`),
-  type: z.enum(TRANSACTION_TYPES).optional(),
-  direction: z.enum(["in", "out"]).optional(),
+  type: z.enum(TRANSACTION_TYPES).optional().describe("Bank operation type"),
+  direction: z
+    .enum(["in", "out"])
+    .optional()
+    .describe("in: money received (amount > 0), out: money spent"),
   amountMin: z.number().nonnegative().optional().describe("Lower bound on the absolute amount"),
   amountMax: z.number().nonnegative().optional().describe("Upper bound on the absolute amount"),
-  sort: z.enum(TRANSACTION_SORTS).optional(),
+  sort: z.enum(TRANSACTION_SORTS).optional().describe("Defaults to date-desc, newest first"),
   from: isoDay("First day").optional(),
   to: isoDay("Last day").optional(),
   search: z.string().max(200).optional().describe("Words that must all prefix-match the label"),
-  take: z.number().int().min(1).max(1000).default(100),
-  skip: z.number().int().min(0).default(0),
+  take: z.number().int().min(1).max(1000).default(100).describe("Page size"),
+  skip: z.number().int().min(0).default(0).describe("Rows to skip, for the next pages"),
 });
 export type SearchInput = z.infer<typeof searchInput>;
 

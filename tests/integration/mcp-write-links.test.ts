@@ -218,6 +218,8 @@ describe("link suggestions", () => {
     });
     const after = ok(await call("list_link_suggestions", {}));
     expect(after.suggestions.map((s: { key: string }) => s.key)).not.toContain(key);
+    const dismissed = ok(await call("list_link_suggestions", { ignored: true }));
+    expect(dismissed.suggestions.map((s: { key: string }) => s.key)).toContain(key);
 
     ok(await call("restore_link_suggestion", { pairKey: key }));
     const back = ok(await call("list_link_suggestions", {}));

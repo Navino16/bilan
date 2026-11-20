@@ -1,12 +1,6 @@
 import { z } from "zod";
 import { RULE_MATCH_TYPES } from "@/lib/validation/rule";
-import {
-  createRule,
-  deleteRule,
-  patchRule,
-  retargetRule,
-  toggleRule,
-} from "@/server/services/categorization";
+import { createRule, deleteRule, patchRule, toggleRule } from "@/server/services/categorization";
 import { applyRules } from "@/server/services/categorization/apply";
 import { ruleIdsInput } from "@/server/mcp/tools/inputs";
 import { writeTool } from "@/server/mcp/tools/write-tool";
@@ -26,7 +20,9 @@ const FIELDS = {
     .describe(
       "Text matched against the bank label (untrusted text); a regular expression for REGEX",
     ),
-  matchType: z.enum(RULE_MATCH_TYPES),
+  matchType: z
+    .enum(RULE_MATCH_TYPES)
+    .describe("How pattern meets the label: CONTAINS, EXACT, STARTS_WITH or REGEX"),
   caseSensitive: z.boolean().optional().describe("Defaults to false"),
   priority: z
     .number()
@@ -56,7 +52,7 @@ export const RULE_WRITE_TOOLS = [
   writeTool({
     name: "update_rule",
     description:
-      "Change a rule's fields; its scope can't change. Absent fields are kept; null resets caseSensitive to false and priority to 100. A household rule needs the household admin role.",
+      "Change a rule's fields, its category included; its scope can't change. Absent fields are kept; null resets caseSensitive to false and priority to 100. Transactions it already categorized keep their category until apply_rules runs with it. A household rule needs the household admin role.",
     input: z.strictObject({
       id: ruleId,
       pattern: FIELDS.pattern.optional(),
@@ -76,21 +72,10 @@ export const RULE_WRITE_TOOLS = [
     },
   }),
   writeTool({
-    name: "retarget_rule",
-    description:
-      "Point a rule at another category, keeping its pattern, match and priority. A household rule needs the household admin role.",
-    input: z.strictObject({ id: ruleId, categoryId }),
-    annotations: { idempotentHint: true },
-    run: async (userId, { id, categoryId }) => {
-      await retargetRule(id, categoryId, { id: userId });
-      return { ok: true, id };
-    },
-  }),
-  writeTool({
     name: "toggle_rule",
     description:
-      "Enable or disable a rule; a disabled rule matches nothing. A household rule needs the household admin role.",
-    input: z.strictObject({ id: ruleId, enabled: z.boolean() }),
+      "Enable or disable a rule; a disabled rule matches nothing, and transactions it already categorized keep their category. A household rule needs the household admin role.",
+    input: z.strictObject({ id: ruleId, enabled: z.boolean().describe("false disables the rule") }),
     annotations: { idempotentHint: true },
     run: async (userId, { id, enabled }) => {
       await toggleRule(id, enabled, { id: userId });

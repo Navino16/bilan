@@ -130,7 +130,7 @@ describe("rule tools over MCP", () => {
     });
     await stamped("rule.updated", created.id);
 
-    ok(await call("retarget_rule", { id: created.id, categoryId: f.categoryId }));
+    ok(await call("update_rule", { id: created.id, categoryId: f.categoryId }));
     expect(
       await db.categorizationRule.findUniqueOrThrow({ where: { id: created.id } }),
     ).toMatchObject({ pattern: "COFFEE", priority: 300, categoryId: f.categoryId });
@@ -218,7 +218,7 @@ describe("rule tools over MCP", () => {
       }),
       "FORBIDDEN",
     );
-    failed(await call("retarget_rule", { id: rule.id, categoryId: mine }), "FORBIDDEN");
+    failed(await call("update_rule", { id: rule.id, categoryId: mine }), "FORBIDDEN");
     failed(await call("toggle_rule", { id: rule.id, enabled: false }), "FORBIDDEN");
     failed(await call("delete_rule", { id: rule.id }), "FORBIDDEN");
     failed(await call("apply_rules", { ruleIds: [rule.id] }), "FORBIDDEN");
@@ -327,7 +327,7 @@ describe("rule tools over MCP", () => {
     }
     expect(tool("update_rule").inputSchema.properties).not.toHaveProperty("groupId");
     expect(tool("toggle_rule").annotations?.idempotentHint).toBe(true);
-    expect(tool("retarget_rule").annotations?.idempotentHint).toBe(true);
+    expect(tools.map((t) => t.name)).not.toContain("retarget_rule");
     expect(tool("delete_rule").annotations?.destructiveHint).toBe(true);
     expect(tool("apply_rules").annotations?.destructiveHint).toBe(true);
     expect(tool("preview_rules_application").annotations?.readOnlyHint).toBe(true);

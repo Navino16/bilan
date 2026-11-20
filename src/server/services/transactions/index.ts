@@ -436,6 +436,38 @@ export async function updateTransaction(
   if (recategorized) await recordHits([recategorized.ruleId]).catch(() => {});
 }
 
+export type TransactionPatch = Partial<Omit<TransactionUpdateInput, "note">> & {
+  note?: string | null;
+};
+
+// MCP's update_transaction: absent fields keep their value and figures equal to the stored
+// ones are dropped, so a locked row only refuses an actual change (spec §5.18).
+export async function patchTransaction(
+  id: string,
+  patch: TransactionPatch,
+  actor: { id: string },
+): Promise<void> {
+  const row = await db.transaction.findUnique({ where: { id } });
+  if (!row) throw new TransactionAccessError("NOT_FOUND");
+  if (!(await canWriteAccount(actor.id, row.accountId)))
+    throw new TransactionAccessError("FORBIDDEN");
+  const figures = transactionUpdateSchema
+    .pick({ date: true, amount: true, type: true })
+    .parse(patch);
+  const storedNote = row.noteEnc ? decrypt(row.noteEnc, dataKey) : undefined;
+  await updateTransaction(
+    id,
+    {
+      label: patch.label ?? decrypt(row.labelEnc, dataKey),
+      note: patch.note === undefined ? storedNote : (patch.note ?? undefined),
+      date: figures.date?.getTime() === row.date.getTime() ? undefined : patch.date,
+      amount: figures.amount === Number(row.amount) ? undefined : figures.amount,
+      type: figures.type === row.type ? undefined : figures.type,
+    },
+    actor,
+  );
+}
+
 // Assigns a transaction to a month by hand (#341), or back to the automatic one with `null`.
 export async function setTransactionMonth(
   id: string,

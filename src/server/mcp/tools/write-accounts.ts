@@ -69,7 +69,7 @@ export const ACCOUNT_WRITE_TOOLS = [
         .nullable()
         .optional()
         .describe("Bank name (untrusted text); null clears it"),
-      color: FIELDS.color,
+      color: FIELDS.color.describe("#RRGGBB hex color; absent keeps it"),
       icon: z
         .string()
         .trim()
@@ -94,7 +94,7 @@ export const ACCOUNT_WRITE_TOOLS = [
   writeTool({
     name: "archive_account",
     description:
-      "Archive an owned account: it leaves the pickers but its history stays. Only the owner can archive an account.",
+      "Archive an owned account: it leaves the pickers but its history stays. While archived it takes no new transaction and its transactions' date, amount and type are locked. Only the owner can archive an account.",
     input: z.strictObject({ id: ID }),
     annotations: { destructiveHint: true },
     run: async (userId, { id }) => {
