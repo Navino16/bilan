@@ -365,6 +365,20 @@ export async function loadAssignableCategories(
   });
 }
 
+// Names of the categories the user can read now (own, or of a household they belong to).
+export async function readableCategoryNames(
+  userId: string,
+  ids: string[],
+): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map();
+  const groupIds = (await groupMemberships(userId)).map((m) => m.groupId);
+  const rows = await db.category.findMany({
+    where: { id: { in: ids }, OR: [{ userId }, { groupId: { in: groupIds } }] },
+    select: { id: true, name: true },
+  });
+  return new Map(rows.map((c) => [c.id, c.name]));
+}
+
 // `loadAssignableCategories` as a parent/child forest. Memoized per server
 // render: pages also reach it through listForeignCategories.
 export const listForUser = cache(async (userId: string): Promise<CategoryNode[]> =>

@@ -210,6 +210,7 @@ describe("listMcpActivity targets", () => {
     const pairLink = await link([out, inn]);
     const wideLink = await link([bakery, third, await tx(fx.accounts.own, "Fourth leg")]);
     const personal = await budget("Holidays", { userId: actor });
+    const ownCategory = (await db.category.create({ data: { userId: actor, name: "Pets" } })).id;
     const household = await budget("Groceries", { groupId: fx.groupId });
     const [first, second] = [bakery, inn].sort();
     const labelOf = (id: string) => (id === bakery ? "Bakery" : "Transfer in");
@@ -228,6 +229,7 @@ describe("listMcpActivity targets", () => {
       householdBudget: await row("budget.archived", "Budget", household),
       assigned: await row("budget.assignment.create", "BudgetAssignment", `${personal}:${bakery}`),
       other: await row("link.autoCreated", "User", actor),
+      category: await row("category.updated", "Category", ownCategory),
     };
 
     const got = await targets();
@@ -250,6 +252,16 @@ describe("listMcpActivity targets", () => {
       href: `/budgets/${personal}`,
     });
     expect(got.get(ids.other)).toBeNull();
+    expect(got.get(ids.category)).toEqual({ text: "Pets", href: "/categories" });
+  });
+
+  it("drops a household category of a household the user left", async () => {
+    const updated = await row("category.updated", "Category", fx.categoryId);
+    const deleted = await row("category.updated", "Category", "gone_category");
+    expect((await targets()).get(updated)).toEqual({ text: "Groceries", href: "/categories" });
+    expect((await targets()).get(deleted)).toBeNull();
+    await db.groupMember.deleteMany({ where: { groupId: fx.groupId, userId: actor } });
+    expect((await targets()).get(updated)).toBeNull();
   });
 
   it("drops a transaction on an account no longer shared with the user", async () => {
