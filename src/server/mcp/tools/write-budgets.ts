@@ -48,7 +48,7 @@ export const BUDGET_WRITE_TOOLS = [
   }),
   writeTool({
     name: "update_budget",
-    description: `Change a budget; it stays personal or in its household. Absent fields are kept; null clears description, accountId or outOfBudgetPlanned and turns recurring off; lines, when sent, replace every line. get_budget shows the current values. ${FIELDS}`,
+    description: `Change a budget; it stays personal or in its household. Absent fields are kept; null clears description, accountId or outOfBudgetPlanned and turns recurring off; lines, when sent, replace every line. Detaching (accountId: null) also needs outOfBudgetPlanned: null and EXPENSE-only lines. get_budget shows the current values. ${FIELDS}`,
     input: budgetPatch,
     annotations: { destructiveHint: true },
     run: async (userId, { id, ...patch }) => {
