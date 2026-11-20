@@ -159,8 +159,7 @@ export async function listRulesForUser(userId: string) {
   return rules.sort((a, b) => compareRules(key(a), key(b)));
 }
 
-// Patterns of the rules the user can read now (own and their households'), for the AI
-// activity list (spec §5.18).
+// For the AI activity list (spec §5.18).
 export async function readableRulePatterns(
   userId: string,
   ids: string[],

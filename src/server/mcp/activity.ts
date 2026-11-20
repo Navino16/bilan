@@ -1,10 +1,9 @@
 import { db } from "@/server/db";
-import { decrypt } from "@/server/crypto/encryption";
-import { dataKey } from "@/server/crypto/keys";
 import { readableAccountNames } from "@/server/services/accounts";
 import { readableCategoryNames } from "@/server/services/categories";
 import { readableBudgetNames } from "@/server/services/budgets";
 import { readableRulePatterns } from "@/server/services/categorization";
+import { readableAliasNames } from "@/server/services/merchants";
 import { readableTransactionLabels } from "@/server/services/transactions";
 
 export const MCP_ACTIVITY_DAYS = 90;
@@ -100,8 +99,7 @@ async function resolveTargets(
     return r.kind === "budget" && r.transactionId ? [r.transactionId] : [];
   };
   const present = refs.filter((r) => r !== null);
-  const aliasHashes = [...new Set(present.flatMap((r) => (r.kind === "alias" ? [r.keyHash] : [])))];
-  const [labels, budgets, categories, rules, aliasRows, accounts] = await Promise.all([
+  const [labels, budgets, categories, rules, aliasNames, accounts] = await Promise.all([
     readableTransactionLabels(userId, [...new Set(present.flatMap(txIdsOf))]),
     readableBudgetNames(userId, [
       ...new Set(present.flatMap((r) => (r.kind === "budget" ? [r.budgetId] : []))),
@@ -112,17 +110,13 @@ async function resolveTargets(
     readableRulePatterns(userId, [
       ...new Set(present.flatMap((r) => (r.kind === "rule" ? [r.ruleId] : []))),
     ]),
-    aliasHashes.length
-      ? db.merchantAlias.findMany({
-          where: { userId, keyHash: { in: aliasHashes } },
-          select: { keyHash: true, nameEnc: true },
-        })
-      : [],
+    readableAliasNames(userId, [
+      ...new Set(present.flatMap((r) => (r.kind === "alias" ? [r.keyHash] : []))),
+    ]),
     readableAccountNames(userId, [
       ...new Set(present.flatMap((r) => (r.kind === "account" ? [r.accountId] : []))),
     ]),
   ]);
-  const aliasNames = new Map(aliasRows.map((a) => [a.keyHash, decrypt(a.nameEnc, dataKey)]));
   const labelsOf = (ids: string[]) => ids.flatMap((id) => labels.get(id) ?? []);
 
   return refs.map((r) => {

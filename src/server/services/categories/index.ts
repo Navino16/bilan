@@ -399,7 +399,7 @@ export async function loadAssignableCategories(
   });
 }
 
-// Names of the categories the user can read now (own, or of a household they belong to).
+// For the AI activity list (spec §5.18).
 export async function readableCategoryNames(
   userId: string,
   ids: string[],

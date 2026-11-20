@@ -121,6 +121,19 @@ async function load(userId: string): Promise<Alias[]> {
   }));
 }
 
+// Current display names of the user's aliases by key hash, for the AI activity list (spec §5.18).
+export async function readableAliasNames(
+  userId: string,
+  keyHashes: string[],
+): Promise<Map<string, string>> {
+  if (keyHashes.length === 0) return new Map();
+  const rows = await db.merchantAlias.findMany({
+    where: { userId, keyHash: { in: keyHashes } },
+    select: { keyHash: true, nameEnc: true },
+  });
+  return new Map(rows.map((a) => [a.keyHash, decrypt(a.nameEnc, dataKey)]));
+}
+
 // Reuses the stored spelling of a name, so "supermarché" joins "Supermarché".
 function canonical(name: string, others: Alias[]): string {
   return others.find((a) => sameName(a.name, name))?.name ?? name;
