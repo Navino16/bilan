@@ -15,12 +15,14 @@ const FIELDS = {
   color: z
     .string()
     .refine(isCategoryColor)
+    .optional()
     .describe(
-      `A #rrggbb hex color or a palette color var(--cat-<key>) with key one of: ${CATEGORY_PALETTE.join(", ")}`,
+      `Absent = inherits the parent's color (or none). Otherwise a #rrggbb hex color or a palette color var(--cat-<key>) with key one of: ${CATEGORY_PALETTE.join(", ")}`,
     ),
   icon: z
     .string()
     .trim()
+    .min(1)
     .max(CATEGORY_ICON_MAX)
     .optional()
     .describe("A single emoji or symbol key"),

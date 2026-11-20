@@ -105,6 +105,17 @@ describe("category tools over MCP", () => {
     await stamped("category.updated", created.id);
   });
 
+  it("keeps a null color null on update without color", async () => {
+    const created = ok(await call("create_category", { name: "Inherits" }));
+    expect((await db.category.findUniqueOrThrow({ where: { id: created.id } })).color).toBeNull();
+    ok(await call("update_category", { id: created.id, name: "Still inherits" }));
+    expect(await db.category.findUniqueOrThrow({ where: { id: created.id } })).toMatchObject({
+      name: "Still inherits",
+      color: null,
+    });
+    failed(await call("create_category", { name: "X", icon: "  " }), "INVALID_INPUT");
+  });
+
   it("lets a household admin create a household category and refuses a plain member", async () => {
     const before = await categoryCount();
     const refused = await call("create_category", {
