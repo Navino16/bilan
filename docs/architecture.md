@@ -64,7 +64,7 @@ Self-hosted personal-finance application. A full web app with multi-user support
 | GitHub Actions | — | CI/CD (`ci.yml`, `build.yml`, `prod-smoke.yml`) — see §7.6 / §10.4 |
 | Codecov | — | Coverage + test results upload |
 | ghcr.io | — | Multi-arch (amd64 + arm64) Docker image registry |
-| Dependabot | — | Dependency updates (npm + GitHub Actions) |
+| Renovate | — | Dependency updates (npm, GitHub Actions, Docker) |
 
 > Note on auth: Better Auth (which now maintains Auth.js) is the recommendation for new self-hosted projects. It provides 2FA, passkeys, immediate session revocation, and dynamic OIDC providers out of the box; RBAC is Bilan's own `Role`/`Permission` tables (§2.3).
 
@@ -101,7 +101,7 @@ Self-hosted personal-finance application. A full web app with multi-user support
 - **Registration mode**: `OPEN | INVITE_ONLY | DISABLED` configurable from admin UI.
 - **Admin signup tokens**: generic invite tokens (separate from group invitations) for `INVITE_ONLY` mode.
 - **Audit log**: every state-mutating event (auth, sharing, settings, transactions) tracked in `AuditLog` with 12-month retention (purged by a cron route).
-- **CI**: GitHub Actions; **Dependabot** for dependency updates.
+- **CI**: GitHub Actions; **Renovate** for dependency updates.
 
 ### 2.4 Other settings — all in the web UI
 
@@ -1516,7 +1516,7 @@ Sign-ins are audited alike whatever the method (#258): `auth.login.success` / `a
 
 GitHub Actions, on every PR to `develop`/`main` (`ci.yml`, `permissions: contents: read`): lint (ESLint + Prettier), typecheck, build, unit tests with coverage, integration tests (MariaDB 11), E2E tests (Playwright, Chromium + WebKit, against a production build). `prod-smoke.yml` boots the production compose on PRs touching the image, Docker or Prisma files. `build.yml` builds and pushes the multi-arch image to GHCR on `develop` and tags. No `npm audit` step.
 
-Dependabot: weekly updates for npm, GitHub Actions and Docker, targeting `develop`; minor/patch grouped per ecosystem, majors separate; `@types/node` majors ignored (tracks the Node 24 runtime).
+Renovate (`renovate.json`, the Renovate GitHub App): weekly updates for npm, GitHub Actions and Docker, targeting `develop`; minor/patch grouped per ecosystem, majors separate; no major for `@types/node`, `typescript` and the `node` image (they track the Node 24 runtime); `@playwright/test` and the CI Playwright image in one PR. A version is proposed only once it is 24 h old (`minimumReleaseAge`, `internalChecksFilter: strict`), as `npx npm-check-updates` does (`cooldown` in `.ncurc.cjs`); OSV vulnerability alerts on.
 
 ### 6.11 Future security improvements (post-MVP roadmap)
 
@@ -1631,7 +1631,7 @@ GitHub Actions, Node 24, npm. Four workflows in `.github/workflows/`.
 
 **CodeQL** comes from GitHub's code-scanning default setup (repository settings), not from a workflow file.
 
-Actions are pinned to major versions (`actions/checkout@v7`, `actions/setup-node@v7` with `cache: npm`, `codecov/codecov-action@v7`, `actions/upload-artifact@v7`). Dependabot (`.github/dependabot.yml`) opens weekly grouped PRs against `develop` for npm, GitHub Actions and Docker. They run the same CI.
+Actions are pinned to major versions (`actions/checkout@v7`, `actions/setup-node@v7` with `cache: npm`, `codecov/codecov-action@v7`, `actions/upload-artifact@v7`). Renovate (`renovate.json`) opens weekly grouped PRs against `develop` for npm, GitHub Actions and Docker. They run the same CI.
 
 **Reporting config**: Vitest uses the `default` and JUnit reporters, with Cobertura coverage. Playwright uses `list`, JUnit and HTML (`.reports/playwright-report/`).
 
@@ -1864,4 +1864,4 @@ The project is a **public GitHub repository** (`Navino16/bilan`, AGPL-3.0), usin
 - Business logic goes in `src/server/services/*`. Server Actions and Route Handlers stay thin.
 - Run `npm run ci` before opening a PR.
 - No `--no-verify`. The ruleset blocks force-pushes to `main`/`develop`.
-- Dependabot PRs follow the same flow (target `develop`, CI must pass).
+- Renovate PRs follow the same flow (target `develop`, CI must pass).
