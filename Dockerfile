@@ -2,7 +2,8 @@
 
 FROM node:24-alpine AS base
 WORKDIR /app
-RUN apk add --no-cache libc6-compat openssl
+# Takes Alpine's security fixes without waiting for the official image to be rebuilt.
+RUN apk upgrade --no-cache && apk add --no-cache libc6-compat openssl
 
 FROM base AS deps
 COPY package.json package-lock.json ./
@@ -48,6 +49,9 @@ COPY prisma/migrations ./prisma/migrations
 FROM base AS prod
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+# The runtime only runs node: package managers would ship their own vulnerable dependencies.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn-v* \
+  && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
