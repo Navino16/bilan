@@ -1684,12 +1684,12 @@ Everything else (SSO providers, SMTP, bank sync, registration mode, password pol
 
 ### 8.3 Dockerfile (multi-stage)
 
-- `base`: `node:24-alpine` plus `libc6-compat` and `openssl`.
+- `base`: `node:24-alpine` with `apk upgrade` (Alpine's fixes before the official image is rebuilt) plus `libc6-compat` and `openssl`.
 - `deps`: `npm ci`.
 - `dev`: `node:24` (Debian/glibc), used by the dev compose. glibc keeps the host's bind-mounted `node_modules` (Prisma engines and other native modules) binary-compatible.
 - `builder`: dummy build-time env (not carried into the final image), `prisma generate`, `next build`.
 - `migrator`: a pinned Prisma CLI (`docker/migrate/package.json` + lockfile) with the schema and migrations, in `/opt/migrate`.
-- `prod`: standalone Next.js output, non-root user `nextjs:1001`, plus `/opt/migrate` and the cron scripts (`/opt/cron`). The command runs `prisma migrate deploy` and then `node server.js`. Overriding the command (e.g. `sh`) skips the migration, which is how a failed migration is repaired (docs/self-hosting.md).
+- `prod`: standalone Next.js output, without npm, npx, corepack or yarn (the runtime only runs `node`, and the bundled npm carries vulnerable dependencies), non-root user `nextjs:1001`, plus `/opt/migrate` and the cron scripts (`/opt/cron`). The command runs `prisma migrate deploy` and then `node server.js`. Overriding the command (e.g. `sh`) skips the migration, which is how a failed migration is repaired (docs/self-hosting.md).
 
 ### 8.4 Better Auth configuration
 
