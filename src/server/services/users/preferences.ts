@@ -1,0 +1,164 @@
+import type { PrismaClient } from "@prisma/client";
+import { db as defaultDb } from "@/server/db";
+import { logEvent } from "@/server/services/audit";
+import type { Locale } from "@/i18n/config";
+import { LINK_WINDOW_DAYS_DEFAULT } from "@/lib/validation/link-settings";
+import {
+  linkSettingsSchema,
+  type LinkSettings,
+  type LinkSettingsInput,
+} from "@/lib/schemas/link-settings";
+import { fieldErrorsFromZod, type FieldErrors } from "@/lib/validation/field-errors";
+import { EXCEPTIONAL_DEFAULTS, type ExceptionalRule } from "@/lib/exceptional";
+import {
+  exceptionalSettingsSchema,
+  type ExceptionalSettingsInput,
+} from "@/lib/schemas/exceptional-settings";
+
+// Never overwrites: an existing row holds a locale the user already chose.
+export async function storeSignupLocale(
+  userId: string,
+  locale: Locale,
+  db: PrismaClient = defaultDb,
+): Promise<void> {
+  await db.userPreference.upsert({
+    where: { userId },
+    create: { userId, locale },
+    update: {},
+  });
+}
+
+// Called on every language switch and sign-in: write only when it changes something.
+export async function syncPreferredLocale(
+  userId: string,
+  locale: Locale,
+  db: PrismaClient = defaultDb,
+): Promise<boolean> {
+  const pref = await db.userPreference.findUnique({ where: { userId }, select: { locale: true } });
+  if (pref?.locale === locale) return false;
+  await db.userPreference.upsert({
+    where: { userId },
+    create: { userId, locale },
+    update: { locale },
+  });
+  return true;
+}
+
+export class PreferenceInputError extends Error {
+  constructor(readonly fieldErrors: FieldErrors) {
+    super("INVALID");
+  }
+}
+
+export async function getLinkSuggestionSettings(
+  userId: string,
+  db: PrismaClient = defaultDb,
+): Promise<LinkSettings> {
+  const pref = await db.userPreference.findUnique({
+    where: { userId },
+    select: { linkWindowDays: true, linkMinAmount: true },
+  });
+  return {
+    windowDays: pref?.linkWindowDays ?? LINK_WINDOW_DAYS_DEFAULT,
+    minAmount: pref ? Number(pref.linkMinAmount) : 0,
+  };
+}
+
+// `locale` only seeds a missing row; an existing row keeps the user's language.
+export async function updateLinkSuggestionSettings(
+  userId: string,
+  input: LinkSettingsInput,
+  locale: Locale,
+  db: PrismaClient = defaultDb,
+): Promise<LinkSettings> {
+  const parsed = linkSettingsSchema.safeParse(input);
+  if (!parsed.success) throw new PreferenceInputError(fieldErrorsFromZod(parsed.error, input));
+  const data = {
+    linkWindowDays: parsed.data.windowDays,
+    linkMinAmount: parsed.data.minAmount,
+  };
+  await db.userPreference.upsert({
+    where: { userId },
+    create: { userId, locale, ...data },
+    update: data,
+  });
+  await logEvent({
+    userId,
+    action: "preferences.link_settings_updated",
+    entity: "UserPreference",
+    entityId: userId,
+    metadata: parsed.data,
+  });
+  return parsed.data;
+}
+
+export async function getExceptionalRule(
+  userId: string,
+  db: PrismaClient = defaultDb,
+): Promise<ExceptionalRule> {
+  const pref = await db.userPreference.findUnique({
+    where: { userId },
+    select: { exceptionalMinAmount: true, exceptionalFactor: true },
+  });
+  if (!pref) return EXCEPTIONAL_DEFAULTS;
+  return { minAmount: Number(pref.exceptionalMinAmount), factor: Number(pref.exceptionalFactor) };
+}
+
+// `locale` only seeds a missing row, as for the link settings.
+export async function updateExceptionalRule(
+  userId: string,
+  input: ExceptionalSettingsInput,
+  locale: Locale,
+  db: PrismaClient = defaultDb,
+): Promise<ExceptionalRule> {
+  const parsed = exceptionalSettingsSchema.safeParse(input);
+  if (!parsed.success) throw new PreferenceInputError(fieldErrorsFromZod(parsed.error, input));
+  const data = {
+    exceptionalMinAmount: parsed.data.minAmount,
+    exceptionalFactor: parsed.data.factor,
+  };
+  await db.userPreference.upsert({
+    where: { userId },
+    create: { userId, locale, ...data },
+    update: data,
+  });
+  await logEvent({
+    userId,
+    action: "preferences.exceptional_updated",
+    entity: "UserPreference",
+    entityId: userId,
+    metadata: parsed.data,
+  });
+  return parsed.data;
+}
+
+export async function getMcpEnabled(
+  userId: string,
+  db: PrismaClient = defaultDb,
+): Promise<boolean> {
+  const pref = await db.userPreference.findUnique({
+    where: { userId },
+    select: { mcpEnabled: true },
+  });
+  return pref?.mcpEnabled ?? false;
+}
+
+// `locale` only seeds a missing row, as for the link settings.
+export async function setMcpEnabled(
+  userId: string,
+  enabled: boolean,
+  locale: Locale,
+  db: PrismaClient = defaultDb,
+): Promise<void> {
+  await db.userPreference.upsert({
+    where: { userId },
+    create: { userId, locale, mcpEnabled: enabled },
+    update: { mcpEnabled: enabled },
+  });
+  await logEvent({
+    userId,
+    action: enabled ? "mcp.enabled" : "mcp.disabled",
+    entity: "UserPreference",
+    entityId: userId,
+  });
+}

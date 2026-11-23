@@ -1,0 +1,2774 @@
+{
+  "app": {
+    "tagline": "Your finances, settled."
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "email": "Email address",
+      "password": "Password",
+      "forgot": "Forgot password?",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "noAccount": "No account yet?",
+      "registerLink": "Create an account",
+      "error": {
+        "rateLimited": "Too many attempts. Try again later.",
+        "rateLimitedFor": "Too many attempts. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
+        "badCredentials": "Incorrect email or password.",
+        "passkeyNotFound": "This passkey is no longer recognized. Sign in with your password.",
+        "passkeyFailed": "Passkey sign-in was canceled or didn’t complete.",
+        "disabled": "This account is disabled. Contact the instance administrator.",
+        "ssoFailed": "Signing in through the identity provider failed. Try again.",
+        "ssoSignUpDisabled": "No {appName} account matches this identity, and account creation isn’t allowed, either by this provider or because registration is closed. Ask the instance administrator for an account.",
+        "ssoNotLinked": "No account is linked to this identity. Sign in with another sign-in method, then link it from Account > Security.",
+        "ssoDenied": "Sign-in was canceled or refused at the identity provider.",
+        "ssoProvider": "The identity provider returned an error. Try again later or use another sign-in method.",
+        "ssoExpired": "The sign-in request expired or was opened in another browser. Start again.",
+        "ssoNoEmail": "The identity provider didn’t share an email address. Contact the instance administrator."
+      },
+      "or": "or",
+      "passkey": "Sign in with a passkey",
+      "notice": {
+        "passwordReset": "Your password has been changed. Sign in with the new one.",
+        "accountDeleted": "Your account and all your data have been deleted."
+      }
+    },
+    "twoFactor": {
+      "title": "Verification",
+      "hint": "Enter the 6-digit code shown by your authenticator app.",
+      "backupHint": "Enter one of your backup codes. Each code works only once.",
+      "code": "Verification code",
+      "backupCode": "Backup code",
+      "trustDevice": "Trust this device",
+      "trustDeviceHint": "The code will be asked again after 30 days without signing in from this device.",
+      "submit": "Verify",
+      "submitting": "Verifying…",
+      "back": "Back",
+      "useBackup": "Use a backup code",
+      "useTotp": "Use the authenticator app",
+      "error": {
+        "badCode": "Invalid code. Please try again.",
+        "expired": "The verification has expired. Go back and sign in again.",
+        "rateLimited": "Too many attempts. Go back and sign in again.",
+        "slowDown": "Too many attempts in a row. Wait a few seconds before trying again."
+      }
+    },
+    "register": {
+      "title": "Create an account",
+      "name": "Name",
+      "email": "Email address",
+      "password": "Password",
+      "passwordHint": "At least {count} characters.",
+      "submit": "Create account",
+      "submitting": "Creating…",
+      "haveAccount": "Already have an account?",
+      "loginLink": "Sign in",
+      "closed": "Registration is closed on this instance.",
+      "token": "Invitation token",
+      "tokenHint": "Provided by an administrator.",
+      "error": {
+        "INVALID": "Check the fields you entered.",
+        "DISABLED": "Registration is closed on this instance.",
+        "TOKEN_REQUIRED": "An invitation token is required.",
+        "BAD_TOKEN": "Invalid or expired invitation token.",
+        "RATE_LIMITED": "Too many attempts. Try again later.",
+        "FAILED": "Could not create the account. Check your details.",
+        "MISMATCH": "The two passwords don’t match."
+      },
+      "confirmPassword": "Confirm password"
+    },
+    "reset": {
+      "title": "Reset password",
+      "subtitle": "Enter your email to receive a link.",
+      "email": "Email address",
+      "submit": "Send link",
+      "submitting": "Sending…",
+      "sent": "If an account exists for this email, a reset link has been sent.",
+      "backToLogin": "Back to sign in",
+      "error": {
+        "rateLimited": "Too many attempts. Try again later.",
+        "invalid": "Invalid email address."
+      }
+    },
+    "verifyEmail": {
+      "title": "Address verified",
+      "failedTitle": "Verification failed",
+      "body": "Your email address is verified. Invitations to join a household sent to this address now show up in Households.",
+      "error": {
+        "expired": "This link has expired. Sign in, then resend the verification email from the banner.",
+        "invalid": "This link isn’t valid. Sign in, then resend the verification email from the banner."
+      },
+      "continue": "Go to my households",
+      "signIn": "Sign in"
+    },
+    "resetConfirm": {
+      "title": "New password",
+      "subtitle": "Choose a new password.",
+      "password": "New password",
+      "passwordHint": "At least {count} characters.",
+      "submit": "Reset",
+      "submitting": "Resetting…",
+      "error": {
+        "invalidToken": "This link is invalid or expired. Request a new one.",
+        "invalid": "Check the password (at least {count} characters)."
+      },
+      "requestAgain": "Request a new link"
+    },
+    "passwordVisibility": {
+      "show": "Show password",
+      "hide": "Hide password"
+    },
+    "sso": {
+      "continueWith": "Continue with {name}",
+      "signUpWith": "Sign up with {name}",
+      "startFailed": "Couldn’t reach the identity provider. Try again.",
+      "badOrigin": "Can’t sign in from this address. Open the app from its configured address."
+    },
+    "consent": {
+      "title": "Authorize access to {appName}",
+      "signedInAs": "Signed in as <strong>{email}</strong>",
+      "client": "App",
+      "unnamed": "Unnamed app",
+      "redirect": "Return address",
+      "nameNote": "This name is declared by the app; only the return address is verified.",
+      "access": "Requested access",
+      "choice": {
+        "write": "Read and write",
+        "read": "Read only"
+      },
+      "offline": "Stays connected until you revoke it, or after 30 days without use.",
+      "privacy": "Your transactions’ labels, amounts and notes will be decrypted and sent to this assistant’s provider (Anthropic, OpenAI…), under its terms.",
+      "approve": "Authorize",
+      "deny": "Deny",
+      "mcpDisabled": "AI assistants are turned off for your account. Turn them on in <link>Settings › AI assistants</link>, then start the connection again from your assistant.",
+      "instanceOff": "AI assistants are turned off on this instance.",
+      "expired": "This request has expired. Start the connection again from your assistant.",
+      "noScope": "This app requests no access to your data.",
+      "failed": "The authorization couldn’t be completed.",
+      "code": "Code: {code}",
+      "error": {
+        "FAILED": "Something went wrong. Please try again."
+      }
+    }
+  },
+  "errors": {
+    "back": "Back to dashboard",
+    "notFound": {
+      "title": "Page not found",
+      "message": "This page doesn’t exist or has moved."
+    },
+    "serverError": {
+      "title": "Something went wrong",
+      "message": "An unexpected problem occurred. Try again in a moment.",
+      "retry": "Try again"
+    },
+    "forbidden": {
+      "title": "Access denied",
+      "message": "You don’t have access to this page."
+    },
+    "unauthorized": {
+      "title": "Sign-in required",
+      "message": "Sign in to access this page."
+    }
+  },
+  "shell": {
+    "tagline": "Finances · {year}",
+    "theme": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System",
+      "current": {
+        "light": "Light theme",
+        "dark": "Dark theme",
+        "system": "System theme"
+      }
+    },
+    "openMenu": "Open menu",
+    "groups": {
+      "workspace": "Workspace",
+      "account": "Account"
+    },
+    "nav": {
+      "dashboard": "Dashboard",
+      "insights": "Insights",
+      "transactions": "Transactions",
+      "import": "Import",
+      "budgets": "Budgets",
+      "accounts": "Accounts",
+      "categories": "Categories",
+      "groups": "Households",
+      "settings": "Settings",
+      "security": "Security",
+      "ai": "AI assistants",
+      "data": "Data",
+      "admin": "Administration"
+    },
+    "tabs": {
+      "dashboard": "Home",
+      "transactions": "Transactions",
+      "budgets": "Budgets",
+      "accounts": "Accounts",
+      "categories": "Categories"
+    },
+    "userMenu": {
+      "open": "Account menu",
+      "settings": "Settings",
+      "logout": "Sign out"
+    },
+    "confirm": {
+      "cancel": "Cancel"
+    },
+    "pager": {
+      "label": "Pagination",
+      "previous": "Previous",
+      "next": "Next",
+      "status": "Page {page, number} of {pageCount, number}"
+    },
+    "copyLink": {
+      "manual": "Automatic copy isn’t available on this connection. Select the text and copy it."
+    },
+    "skipToContent": "Skip to main content",
+    "mainNav": "Main navigation",
+    "tabsNav": "Quick navigation",
+    "close": "Close",
+    "switchLanguage": "Switch to French (FR)",
+    "verifyEmail": {
+      "title": "Verify your email address",
+      "body": "Follow the link sent to {email}. Invitations to join a household sent to this address will show up once it’s verified.",
+      "resend": "Resend the email",
+      "sending": "Sending…",
+      "sent": "Email sent. Check your spam folder too.",
+      "error": {
+        "RATE_LIMITED": "Too many requests. Please try again later.",
+        "SMTP_DISABLED": "Email is turned off on this instance.",
+        "FAILED": "Sending failed. Please retry."
+      }
+    },
+    "period": {
+      "previous": "Previous period",
+      "next": "Next period"
+    }
+  },
+  "stepUp": {
+    "title": "Confirm it’s you",
+    "passwordBody": {
+      "iban": "You signed in more than 10 minutes ago. Enter your password to show the full IBAN.",
+      "export": "You signed in more than 10 minutes ago. Enter your password to download all your data, IBANs included.",
+      "mcpToken": "You signed in more than 10 minutes ago. Enter your password to create an access token.",
+      "mcpConsent": "You signed in more than 10 minutes ago. Enter your password to authorize this app."
+    },
+    "signInBody": {
+      "iban": "You signed in more than 10 minutes ago. Sign in again to show the full IBAN.",
+      "export": "You signed in more than 10 minutes ago. Sign in again to download all your data, IBANs included.",
+      "mcpToken": "You signed in more than 10 minutes ago. Sign in again to create an access token.",
+      "mcpConsent": "This authorization needs a recent sign-in. Sign in again to authorize this app."
+    },
+    "signInHint": "You’ll be signed out, then come back to this page once you sign in again.",
+    "password": "Password",
+    "confirm": {
+      "iban": "Show IBAN",
+      "export": "Download",
+      "mcpToken": "Create the token",
+      "mcpConsent": "Authorize"
+    },
+    "checking": "Checking…",
+    "signInAgain": "Sign in again",
+    "cancel": "Cancel",
+    "error": {
+      "BAD_PASSWORD": "Incorrect password.",
+      "RATE_LIMITED": "Too many attempts. Try again later.",
+      "rateLimitedFor": "Too many attempts. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
+      "NOT_FOUND": "This IBAN is no longer available.",
+      "FAILED": "Something went wrong. Please try again."
+    }
+  },
+  "accounts": {
+    "overline": "Wealth",
+    "title": "Accounts",
+    "create": "New account",
+    "createTitle": "Add an account",
+    "createSubtitle": "The account becomes visible in imports, budgets and sharing.",
+    "editTitle": "Edit account",
+    "editSubtitle": "Update this account’s details.",
+    "createCta": "Create account",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "actionsFor": "Actions for {name}",
+    "addTransaction": "Add a transaction",
+    "archive": "Archive",
+    "archiveTitle": "Archive “{name}”?",
+    "archiveBody": "The account leaves lists and entry forms. Its history stays in transactions, budgets and the dashboard, and you can unarchive it.",
+    "unarchive": "Unarchive",
+    "archivedTitle": "Archived accounts · {count, number}",
+    "archivedHint": "Hidden from entry forms and the global balance; their transactions stay in your history.",
+    "archivedBadge": "Archived",
+    "delete": "Delete",
+    "deleteDialog": {
+      "title": "Delete “{name}”?",
+      "loading": "Computing the impact…",
+      "transactions": "{count, plural, =0 {No transactions to delete.} one {# transaction will be deleted.} other {# transactions will be deleted.}}",
+      "imports": "{count, plural, one {# import will leave the import history.} other {# imports will leave the import history.}}",
+      "sharedWith": "Sharing with {groups} will be removed.",
+      "budgetLines": "{count, plural, one {# budget line limited to this account will be deleted.} other {# budget lines limited to this account will be deleted.}}",
+      "emptiedBudgets": "{count, plural, one {# budget will be deleted as it only covered this account ({names}).} other {# budgets will be deleted as they only covered this account ({names}).}}",
+      "dissolvedLinks": "{count, plural, one {# link with another account will be dissolved.} other {# links with other accounts will be dissolved.}}",
+      "irreversible": "This cannot be undone. To keep the history, archive the account instead.",
+      "confirmLabel": "Type “{name}” to confirm",
+      "keep": "Keep",
+      "confirm": "Delete permanently",
+      "deleting": "Deleting…"
+    },
+    "name": "Account name",
+    "namePlaceholder": "Checking account",
+    "type": "Account type",
+    "iban": "IBAN",
+    "ibanEncrypted": "IBAN (optional, encrypted)",
+    "ibanPlaceholder": "FR76 …",
+    "ibanKeep": "{iban} — leave blank to keep it",
+    "ibanRemove": "Remove the saved IBAN",
+    "bankName": "Bank",
+    "bankPlaceholder": "First Bank",
+    "initialBalance": "Opening balance",
+    "globalBalance": "Global balance",
+    "color": "Color",
+    "customColor": "Custom color",
+    "privacyNote": "This account is private by default. You can share it with a household once created.",
+    "save": "Save",
+    "saving": "Saving…",
+    "owner": "Owner",
+    "showIban": "Show IBAN",
+    "hideIban": "Hide IBAN",
+    "sharedBy": "Shared by {name}",
+    "share": "Share",
+    "private": "Private",
+    "shared": "Shared",
+    "sharedAccounts": "Shared accounts",
+    "noSharedAccounts": "No accounts shared with this household.",
+    "shareTitle": "Share account",
+    "shareSubtitle": "Choose households and their access level. Switching a household the account was shared with to None also drops that household’s budget inclusions and exclusions of its transactions.",
+    "noGroups": "You don’t belong to any household.",
+    "permNone": "None",
+    "allowAi": "Allow AI assistants",
+    "allowAiFor": "Allow AI assistants for {group}",
+    "allowAiHint": "AI assistants of a ticked household’s members will receive this account’s transactions.",
+    "access": {
+      "OWNER": "Owner",
+      "WRITE": "Write",
+      "READ": "Read"
+    },
+    "types": {
+      "CHECKING": "Checking",
+      "SAVINGS": "Savings",
+      "CREDIT": "Credit",
+      "OTHER": "Other"
+    },
+    "error": {
+      "INVALID": "Check the fields.",
+      "INVALID_IBAN": "Invalid IBAN.",
+      "FORBIDDEN": "Action not allowed.",
+      "FAILED": "Failed. Please retry.",
+      "CONFIRMATION": "The name you typed doesn’t match the account.",
+      "AMOUNT_INVALID": "Invalid amount. Examples: -12.34 or 1,234.56.",
+      "AMOUNT_AMBIGUOUS": "Ambiguous amount: write 1234 or 1.23 (no lone thousands separator).",
+      "AMOUNT_PRECISION": "The amount can’t have more than 2 decimals.",
+      "INVALID_MIRROR": "Pick at least one source account and a label pattern."
+    },
+    "legendOthers": "Others · {count, number}",
+    "legendNegative": "Hatched: negative balance",
+    "mirror": {
+      "title": "Kept up to date from transfers",
+      "description": "Your bank doesn’t list this account? Each transfer from a source account whose label matches the pattern adds the opposite operation here, after imports and bank syncs.",
+      "sources": "Source accounts",
+      "noSources": "No other account to pick.",
+      "pattern": "Label pattern",
+      "matchType": "Match",
+      "match": {
+        "CONTAINS": "Contains",
+        "EXACT": "Exact label"
+      },
+      "patternHint": {
+        "CONTAINS": "Matched anywhere in the label, ignoring case and accents.",
+        "EXACT": "Must be the whole label, ignoring case, accents and extra spaces."
+      },
+      "interest": "Interest stays a manual entry."
+    },
+    "bankSync": {
+      "connect": "Connect my bank",
+      "dialog": {
+        "title": "Connect my bank",
+        "intro": "Pick your bank: you will authorize it to share your accounts with Bilan, read-only, through Enable Banking. You then come back here to map the accounts.",
+        "country": "Country",
+        "search": "Search for a bank",
+        "searchPlaceholder": "Bank name",
+        "banks": "Banks",
+        "loading": "Loading banks…",
+        "empty": "No bank matches.",
+        "consent": "Access valid for up to {days, plural, one {# day} other {# days}}",
+        "cancel": "Cancel",
+        "submit": "Continue to the bank",
+        "submitting": "Redirecting…"
+      },
+      "error": {
+        "UNAVAILABLE": "Bank sync is not available on this instance.",
+        "UNKNOWN_BANK": "Pick a bank from the list.",
+        "RATE_LIMITED_LOCAL": "Too many attempts. Try again in a few minutes.",
+        "RATE_LIMITED": "The bank limits access for today. Try again later.",
+        "APP_INACTIVE": "The instance’s Enable Banking application is not active: let the administrator know.",
+        "UNAUTHORIZED": "Enable Banking refused access: let the administrator know.",
+        "EXPIRED_SESSION": "The authorization given to the bank has expired. Reconnect the bank.",
+        "NETWORK": "Enable Banking does not answer. Try again later.",
+        "NOT_FOUND": "Bank connection not found.",
+        "HTTP": "Enable Banking returned an error. Try again later.",
+        "REDIRECT_NOT_ALLOWED": "Enable Banking refuses the redirect URL: register exactly the one shown in Administration › Bank sync.",
+        "BUSY": "A sync of this bank is already running. Try again in a moment.",
+        "FAILED": "Failed. Try again."
+      },
+      "result": {
+        "UNAVAILABLE": "Bank sync is not available on this instance.",
+        "UNKNOWN_BANK": "Pick a bank from the list.",
+        "RATE_LIMITED_LOCAL": "Too many attempts. Try again in a few minutes.",
+        "RATE_LIMITED": "The bank limits access for today. Try again later.",
+        "APP_INACTIVE": "The instance’s Enable Banking application is not active: let the administrator know.",
+        "UNAUTHORIZED": "Enable Banking refused access: let the administrator know.",
+        "EXPIRED_SESSION": "The authorization given to the bank has expired. Reconnect the bank.",
+        "NETWORK": "Enable Banking does not answer. Try again later.",
+        "NOT_FOUND": "Bank connection not found.",
+        "HTTP": "Enable Banking returned an error. Try again later.",
+        "REDIRECT_NOT_ALLOWED": "Enable Banking refuses the redirect URL: register exactly the one shown in Administration › Bank sync.",
+        "FAILED": "Failed. Try again.",
+        "SIGNED_OUT": "Your session ended during the authorization. Sign in, then connect the bank again.",
+        "UNKNOWN_STATE": "This return from the bank is unknown or already used. Connect the bank again.",
+        "EXPIRED_STATE": "The authorization took more than 15 minutes. Connect the bank again.",
+        "WRONG_USER": "This authorization was started by another user.",
+        "DENIED": "Access to the accounts was refused at the bank. Nothing was connected.",
+        "RECONNECTED": "Bank reconnected: your accounts are synced again."
+      },
+      "status": {
+        "synced": "Synced {ago} · {bank}",
+        "neverSynced": "Not synced yet · {bank}",
+        "pending": "{count, plural, one {# transaction pending} other {# transactions pending}}, {total}",
+        "syncNow": "Sync now",
+        "syncing": "Syncing…",
+        "done": "{count, plural, =0 {No new transaction.} one {# new transaction.} other {# new transactions.}}",
+        "truncated": "The bank did not send every transaction requested: some may be missing.",
+        "tooSoon": "This bank was already synced less than 10 minutes ago."
+      },
+      "balance": {
+        "matches": "Matches the bank on {date}",
+        "gap": "Gap with the bank on {date}: {amount}",
+        "expected": "Balance expected by the bank on {date}: {amount}"
+      },
+      "connections": {
+        "title": "Bank connections",
+        "validUntil": "Access valid until {date}",
+        "expiredOn": "Access expired on {date}",
+        "mapped": "Synced: {names}",
+        "unmapped": "No account mapped",
+        "map": "Map accounts",
+        "status": {
+          "ACTIVE": "Active",
+          "EXPIRED": "Expired",
+          "REVOKED": "Revoked",
+          "ERROR": "Failing"
+        }
+      },
+      "mapping": {
+        "overline": "Bank sync",
+        "title": "Map the accounts of {bank}",
+        "intro": "For each account the bank returned, pick the Bilan account to keep up to date, create one, or ignore it. The history is imported right away; duplicates of your file imports are left out.",
+        "empty": "The bank returned no account.",
+        "target": "Bilan account",
+        "ignore": "Ignore this account",
+        "create": "Create a new account",
+        "syncedTarget": "{name} (already synced)",
+        "name": "Name of the new account",
+        "syncFrom": "Import from",
+        "syncFromHint": "Defaults to the day of the account’s last transaction (duplicates are left out); for an empty account, all the history the bank provides.",
+        "syncedElsewhere": "Already synced by your other connection.",
+        "unsupportedCurrency": "{currency} account: only euro accounts are synced.",
+        "submit": "Map and import",
+        "submitting": "Importing…",
+        "done": "Import finished",
+        "imported": "{name}: {count, plural, =0 {no new transaction} one {# transaction imported} other {# transactions imported}}",
+        "truncated": "{name}: the bank did not send all the history requested, some transactions may be missing.",
+        "back": "Back to accounts",
+        "error": {
+          "UNAVAILABLE": "Bank sync is not available on this instance.",
+          "UNKNOWN_BANK": "Pick a bank from the list.",
+          "RATE_LIMITED_LOCAL": "Too many attempts. Try again in a few minutes.",
+          "RATE_LIMITED": "The bank limits access for today. Try again later.",
+          "APP_INACTIVE": "The instance’s Enable Banking application is not active: let the administrator know.",
+          "UNAUTHORIZED": "Enable Banking refused access: let the administrator know.",
+          "EXPIRED_SESSION": "The authorization given to the bank has expired. Reconnect the bank.",
+          "NETWORK": "Enable Banking does not answer. Try again later.",
+          "NOT_FOUND": "Bank connection not found.",
+          "HTTP": "Enable Banking returned an error. Try again later.",
+          "REDIRECT_NOT_ALLOWED": "Enable Banking refuses the redirect URL: register exactly the one shown in Administration › Bank sync.",
+          "FAILED": "Failed. Try again.",
+          "INVALID": "Check the fields.",
+          "FORBIDDEN": "You can only map your own accounts, not archived.",
+          "ALREADY_SYNCED": "One of these accounts is already synced by another connection.",
+          "UNSUPPORTED_CURRENCY": "Only euro accounts can be synced.",
+          "BUSY": "A sync of this bank is already running. Try again in a moment."
+        }
+      },
+      "reconnect": {
+        "submit": "Reconnect",
+        "submitting": "Redirecting…"
+      },
+      "disconnect": {
+        "submit": "Disconnect",
+        "submitting": "Disconnecting…",
+        "title": "Disconnect {bank}?",
+        "body": "Bilan stops syncing these accounts and deletes its access at the bank. The transactions already synced stay."
+      },
+      "consent": {
+        "expires": "Your {bank} bank connection expires on {date} ({days, plural, one {# day} other {# days}} left). Reconnect it to keep your accounts synced.",
+        "expired": "Your {bank} bank connection has expired: its accounts no longer sync. Reconnect it."
+      }
+    }
+  },
+  "rules": {
+    "pageTitle": "Categories & rules",
+    "tabCategories": "Categories",
+    "tabRules": "Rules",
+    "new": "New rule",
+    "empty": "No rules yet. Create one to auto-categorize your imports and entries.",
+    "colPriority": "Priority",
+    "colPattern": "Pattern",
+    "colMatch": "Type",
+    "colTarget": "Target",
+    "colScope": "Scope",
+    "colHits": "Hits",
+    "hitCount": "{count, plural, one {# hit} other {# hits}}",
+    "sortBy": "Sort by",
+    "sortPriority": "Priority",
+    "sortHits": "Hits",
+    "scopePersonal": "Personal",
+    "match": {
+      "CONTAINS": "Contains",
+      "EXACT": "Equals",
+      "STARTS_WITH": "Starts with",
+      "REGEX": "Regex"
+    },
+    "createTitle": "New rule",
+    "editTitle": "Edit rule",
+    "pattern": "Pattern",
+    "patternPlaceholder": "carrefour",
+    "matchType": "Match",
+    "category": "Category",
+    "priority": "Priority",
+    "priorityValue": "Priority {priority}",
+    "caseSensitive": "Case-sensitive",
+    "scope": "Scope",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "editRule": "Edit rule “{pattern}”",
+    "delete": "Delete",
+    "deleteRule": "Delete rule “{pattern}”",
+    "deleteConfirm": "Delete this rule?",
+    "disabled": "disabled",
+    "error": {
+      "INVALID": "Check the fields.",
+      "INVALID_REGEX": "Invalid or unsupported regular expression (backreferences and lookarounds are not allowed).",
+      "FORBIDDEN": "Not allowed.",
+      "FAILED": "Failed. Try again.",
+      "NOT_FOUND": "This rule no longer exists.",
+      "DISABLED": "This rule is disabled.",
+      "TOO_LARGE": "This file is too large.",
+      "BAD_FILE": "This is not a Bilan rules file.",
+      "TOO_MANY": "This file holds too many rules.",
+      "INVALID_DECISION": "Rules or categories changed since the preview. Go back and load the file again."
+    },
+    "deleteFailed": "Deleting failed. Try again.",
+    "apply": {
+      "overlineCreated": "Rule created",
+      "overlineUpdated": "Rule updated",
+      "overlineStandalone": "Rule",
+      "title": "Apply to existing transactions?",
+      "intro": "The rule “{pattern}” → <chip>{category}</chip> matches {matched, plural, one {# existing transaction} other {# existing transactions}}.",
+      "loading": "Finding the matching transactions…",
+      "moving": "{count, plural, one {moves} other {move}} to <chip>{category}</chip>",
+      "movingFromOther": "{count} of them currently in another category",
+      "kept": "{count, plural, one {stays} other {stay}} with “{pattern}”, which takes precedence",
+      "keptHint": "Raise this rule’s priority to take them over.",
+      "manual": "categorized by hand: {count, plural, one {it stays as is} other {they stay as they are}}",
+      "none": "No existing transaction needs reclassifying.",
+      "later": "Later",
+      "close": "Close",
+      "apply": "Reclassify {count, plural, one {# transaction} other {# transactions}}",
+      "button": "Apply “{pattern}” to existing transactions",
+      "partial": "{count, plural, =0 {No transaction} one {# transaction} other {# transactions}} reclassified out of {expected}: the others changed in the meantime."
+    },
+    "transfer": {
+      "import": "Import",
+      "export": "Export",
+      "importRules": "Import rules",
+      "cancel": "Cancel",
+      "close": "Close",
+      "back": "Back",
+      "exportTitle": "Export rules",
+      "exportIntro": "The file holds the patterns and the category names, never your transactions.",
+      "exportScope": "Rules to export",
+      "personal": "Personal rules",
+      "download": "Download",
+      "exporting": "Preparing export…",
+      "exportFailed": "The export failed. Please try again.",
+      "importTitle": "Import rules",
+      "fileLabel": "Rules file",
+      "fileHint": "A file exported from Bilan (.json, up to {size} and {max} rules).",
+      "chooseFile": "Choose a file",
+      "target": "Import into",
+      "reading": "Reading the file…",
+      "next": "Continue",
+      "reviewTitle": "Review the import",
+      "reviewIntro": "{count, plural, one {# rule} other {# rules}} in {file}, imported into {scope}.",
+      "categoriesTitle": "Categories to resolve",
+      "categoriesHint": "These categories don’t exist yet: create them, map them to an existing category, or ignore their rules.",
+      "ruleCount": "{count, plural, one {# rule} other {# rules}}",
+      "create": "Create",
+      "map": "Map to",
+      "ignore": "Ignore",
+      "createsLevels": "Creates {path}",
+      "mapCategory": "Category for {path}",
+      "conflictsTitle": "Conflicts",
+      "conflictsHint": "These rules already exist with another category.",
+      "conflictChange": "{current} → {next}",
+      "keep": "Keep",
+      "move": "Move",
+      "rejectedTitle": "{count, plural, one {# invalid rule skipped} other {# invalid rules skipped}}",
+      "rejectedRule": "Rule {index}",
+      "rejectedReason": {
+        "INVALID": "invalid",
+        "INVALID_REGEX": "unsupported regular expression"
+      },
+      "summaryCreate": "{count, plural, one {rule to create} other {rules to create}}",
+      "summaryMove": "{count, plural, one {rule to move} other {rules to move}}",
+      "summarySkip": "skipped (identical, ignored or invalid)",
+      "undecided": "Choose a category for each “Map to” row.",
+      "nothing": "Nothing to import: every rule already exists or is skipped.",
+      "importButton": "Import",
+      "importing": "Importing…",
+      "resultTitle": "Rules imported",
+      "resultCreated": "{count, plural, one {rule created} other {rules created}}",
+      "resultCategoriesCreated": "{count, plural, one {category created} other {categories created}}",
+      "resultMoved": "{count, plural, one {existing rule moved} other {existing rules moved}}",
+      "resultSkipped": "skipped (identical, duplicate, ignored or invalid)",
+      "reclassify": "Reclassify existing transactions",
+      "batch": {
+        "overline": "Imported rules",
+        "title": "Reclassify existing transactions?",
+        "intro": "The imported rules match {matched, plural, one {# existing transaction} other {# existing transactions}}.",
+        "moving": "{count, plural, one {moves to its rule’s category} other {move to their rules’ categories}}"
+      }
+    }
+  },
+  "budgets": {
+    "pageTitle": "Budgets",
+    "create": "New budget",
+    "createTitle": "New budget",
+    "editTitle": "Edit budget",
+    "name": "Name",
+    "namePlaceholder": "March budget",
+    "scope": "Scope",
+    "scopePersonal": "Personal",
+    "scopeGroup": "Household",
+    "period": "Period",
+    "periodStart": "Start",
+    "periodEnd": "End",
+    "periodType": {
+      "WEEK": "Week",
+      "MONTH": "Month",
+      "QUARTER": "Quarter",
+      "YEAR": "Year",
+      "CUSTOM": "Custom"
+    },
+    "recurring": "Recurring",
+    "lines": "Lines",
+    "line": {
+      "category": "Category",
+      "account": "Account",
+      "label": "Label",
+      "planned": "Planned amount",
+      "add": "Add a line",
+      "remove": "Remove",
+      "anyCategory": "All categories",
+      "anyAccount": "All accounts",
+      "allSpending": "All spending",
+      "otherSpending": "Other spending",
+      "catchAllHint": "An “All categories / All accounts” line takes every expense that no other line matches.",
+      "hidden": "Hidden category or account",
+      "archivedAccount": "{name} (archived)",
+      "labelPlaceholder": "Label (optional, defaults to the category or account)",
+      "kindLabel": "Kind",
+      "kind": {
+        "EXPENSE": "Expense",
+        "INCOME": "Income",
+        "TRANSFER": "Transfer"
+      },
+      "directionLabel": "Direction",
+      "direction": {
+        "OUT": "To",
+        "IN": "From"
+      },
+      "counterpart": "Other account",
+      "chooseCategory": "Choose a category",
+      "chooseAccount": "Choose an account",
+      "transferTo": "Transfer → {account}",
+      "transferFrom": "Transfer ← {account}",
+      "attachedHint": "Each line takes this account’s transactions of its category, or its transfers to or from the chosen account. Everything else goes out of budget."
+    },
+    "save": "Save",
+    "saving": "Saving…",
+    "createCta": "Create budget",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "error": {
+      "INVALID": "Check the fields.",
+      "INVALID_PERIOD": "End must be after start.",
+      "FORBIDDEN": "Not allowed.",
+      "NOT_FOUND": "Budget not found.",
+      "FAILED": "Failed. Try again.",
+      "PERIOD_MISMATCH": "The dates don’t match the selected period type.",
+      "INVALID_LINE": "A line uses a category or account that isn’t available for this budget.",
+      "AMOUNT_INVALID": "Invalid amount. Examples: -12.34 or 1,234.56.",
+      "AMOUNT_AMBIGUOUS": "Ambiguous amount: write 1234 or 1.23 (no lone thousands separator).",
+      "AMOUNT_PRECISION": "The amount can’t have more than 2 decimals.",
+      "ARCHIVED": "This budget is archived: unarchive it to assign transactions to it.",
+      "INVALID_ACCOUNT": "This account isn’t available for this budget.",
+      "ACCOUNT_OVERLAP": "Another budget already follows this account over this period."
+    },
+    "status": {
+      "OK": "On track",
+      "WARN": "Almost reached",
+      "REACHED": "Reached",
+      "OVER": "Over budget"
+    },
+    "detail": {
+      "planned": "Planned",
+      "remaining": "{amount} left",
+      "overBy": "Over by {amount}",
+      "seeTransactions": "See transactions",
+      "counted": "Counted in this budget",
+      "transactions": "{count, plural, =0 {No transactions} one {# transaction} other {# transactions}}",
+      "latestOnly": "Showing the {count, number} most recent.",
+      "noTransactions": "No transaction counts in this budget yet.",
+      "hiddenTx": "Another member’s transaction",
+      "outOfBudget": "Out of budget",
+      "outOfBudgetHint": "{count, plural, one {# included transaction} other {# included transactions}} matching no line",
+      "income": "Income",
+      "spending": "Spending",
+      "received": "Received",
+      "expected": "Expected",
+      "toReceive": "{amount} to receive",
+      "moreThanPlanned": "+{amount} more than planned",
+      "savedOnTop": "+{amount} saved on top",
+      "mirrorOf": "Planned in {name}",
+      "unplannedIncome": "Unplanned income",
+      "unplannedHint": "{count, plural, =0 {No income outside the lines} one {# transaction no income line takes} other {# transactions no income line takes}}",
+      "fromSavings": "Taken from savings this period: {amount}",
+      "outOfBudgetAccountHint": "{count, plural, =0 {Nothing paid outside the lines} one {# transaction no other line takes} other {# transactions no other line takes}}",
+      "margin": "Margin {amount}",
+      "unmatchedTransfers": "{count, plural, one {# transfer isn’t linked yet} other {# transfers aren’t linked yet}}: see the link suggestions.",
+      "showAll": "Show all",
+      "showingOut": "Out-of-budget transactions",
+      "showingUnplanned": "Unplanned income"
+    },
+    "assign": {
+      "title": "Assign to a budget",
+      "countedIn": "Counted in",
+      "choose": "Choose a budget",
+      "include": "Include",
+      "exclude": "Exclude",
+      "remove": "Remove",
+      "none": "No budget",
+      "assigned": "Assigned",
+      "modeINCLUDE": "Included",
+      "modeEXCLUDE": "Excluded"
+    },
+    "roll": "Renew",
+    "rolledOk": "Budget renewed: {name}, from {start} to {end}.",
+    "ended": "Period ended",
+    "subtitle": "Set an envelope by category or account over a period.",
+    "rolledExisting": "The next period already exists.",
+    "rollView": "View",
+    "actionsFor": "Actions for {name}",
+    "edit": "Edit",
+    "deleteTitle": "Delete “{name}”?",
+    "deleteBody": "The budget and its lines will be deleted. Transactions are not touched; the other periods of a recurring budget are kept.",
+    "otherPeriods": "{count, plural, one {# other period} other {# other periods}}",
+    "previousPeriod": "Previous period",
+    "nextPeriod": "Next period",
+    "forecast": {
+      "title": "Projected balance on {date}",
+      "breakdown": "Current checking balance {balance}, minus {remaining} left to spend. Income still to come isn’t included."
+    },
+    "plannedTotalValue": "Planned total: {amount}",
+    "description": "Description",
+    "descriptionPlaceholder": "Optional: what is this budget for?",
+    "archive": "Archive",
+    "unarchive": "Unarchive",
+    "archiveTitle": "Archive “{name}”?",
+    "archiveBody": "The budget leaves the list, the dashboard and the assignment menu, and is no longer renewed. Its lines and assignments are kept and you can unarchive it.",
+    "archivedTitle": "Archived budgets · {count, number}",
+    "archivedHint": "Out of the list, the dashboard and the assignment menu. Open one to view it, or unarchive it from its menu.",
+    "archivedBadge": "Archived",
+    "account": {
+      "label": "Account",
+      "none": "None: all accounts",
+      "hint": "The budget follows this account only: its transfers to your other accounts count, and the Budgets page shows where the account lands at the end of the period."
+    },
+    "outOfBudget": {
+      "label": "Out of budget",
+      "margin": "Margin (optional)",
+      "marginHint": "Room for the unexpected: what is left of it is reserved in the landing."
+    },
+    "lineStatus": {
+      "EXPECTED": "Expected",
+      "RECEIVED": "Received",
+      "SAVED": "Saved on top"
+    },
+    "summary": {
+      "month": "{month} budget",
+      "year": "{year} budget",
+      "period": "Period budget",
+      "percentSpent": "{percent} spent",
+      "leftToSpend": "Left to spend",
+      "spent": "{amount} spent",
+      "planned": "of {amount} planned",
+      "outOfBudget": "Out of budget · {count, plural, one {# transaction} other {# transactions}}",
+      "seeTransactions": "See the transactions",
+      "deficit": "Plan in deficit of {deficit}: {income} of planned income for {planned} of planned spending",
+      "accountOn": "{account} on {date}",
+      "balanceToday": "Balance today",
+      "toPay": "To pay",
+      "toPayHint": "what still has to leave the account",
+      "toReceive": "To receive",
+      "endOfMonth": "End of month",
+      "endOfPeriod": "End of period"
+    },
+    "landing": {
+      "title": "Where I land",
+      "on": "On {date}",
+      "breakdown": "{balance} today + {income} to receive − {spending} to pay",
+      "fromSavings": "Taken from savings: {amount}"
+    }
+  },
+  "categories": {
+    "title": "Categories",
+    "empty": "No categories yet.",
+    "create": "New category",
+    "createTitle": "New category",
+    "editTitle": "Edit category",
+    "name": "Name",
+    "namePlaceholder": "Cafeteria, Gifts, Vacation…",
+    "color": "Color",
+    "parent": "Parent category",
+    "noParent": "None (root category)",
+    "scope": "Scope",
+    "scopePersonal": "Personal",
+    "scopeGroup": "Household",
+    "edit": "Edit",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "createCta": "Create category",
+    "error": {
+      "INVALID": "Check the fields.",
+      "INVALID_PARENT": "Invalid parent category.",
+      "FORBIDDEN": "Not allowed.",
+      "NOT_FOUND": "Category not found.",
+      "FAILED": "Failed. Try again.",
+      "INVALID_TARGET": "Invalid target category."
+    },
+    "actionsFor": "Actions for {name}",
+    "colorInherited": "Inherited from the parent category.",
+    "inheritColor": "Use the parent’s color",
+    "deleteDialog": {
+      "title": "Delete “{name}”?",
+      "loading": "Computing the impact…",
+      "unused": "This category isn’t used anywhere.",
+      "usedBy": "This deletion affects:",
+      "subcategories": "{count, plural, one {# sub-category, deleted as well} other {# sub-categories, deleted as well}}",
+      "transactions": "{count, plural, one {# transaction} other {# transactions}}",
+      "rules": "{count, plural, one {# rule} other {# rules}}",
+      "budgetLines": "{count, plural, one {# budget line} other {# budget lines}}",
+      "moveTo": "Move to",
+      "noTarget": "No category",
+      "outcomeMove": "Transactions, rules and budget lines will be moved to “{name}”.",
+      "outcomeNone": "Transactions will become uncategorized; rules and budget lines will be deleted."
+    },
+    "createHint": "You can attach categorization rules after creating it.",
+    "editHint": "Linked transactions, rules and budgets follow the change.",
+    "preview": "Preview",
+    "previewName": "My category",
+    "scopeHintPersonal": "Visible only to you.",
+    "scopeHintGroup": "Visible to every household member.",
+    "scopeLocked": "The scope can’t be changed after creation.",
+    "symbol": "Symbol",
+    "noSymbol": "No symbol",
+    "colors": {
+      "groceries": "Sage green",
+      "housing": "Purple",
+      "transport": "Blue",
+      "food": "Orange",
+      "leisure": "Mauve",
+      "health": "Teal",
+      "savings": "Ochre",
+      "shopping": "Brown",
+      "bills": "Slate blue",
+      "income": "Forest green",
+      "other": "Gray"
+    },
+    "symbols": {
+      "money": "Money",
+      "cart": "Shopping cart",
+      "home": "Home",
+      "car": "Car",
+      "party": "Party",
+      "health": "Health",
+      "shopping": "Shopping bags",
+      "box": "Package",
+      "restaurant": "Restaurant",
+      "coffee": "Coffee",
+      "energy": "Energy",
+      "phone": "Phone",
+      "transit": "Train",
+      "fuel": "Fuel",
+      "travel": "Travel",
+      "movie": "Movies",
+      "sport": "Fitness",
+      "books": "Books",
+      "pharmacy": "Pharmacy",
+      "clothes": "Clothing",
+      "gift": "Gift",
+      "pets": "Pets",
+      "kids": "Kids",
+      "bank": "Bank",
+      "piggy": "Piggy bank",
+      "work": "Work",
+      "receipt": "Bills",
+      "tools": "Repairs"
+    },
+    "customColor": "Custom color ({color})",
+    "pickColor": "Pick a custom color",
+    "customSymbol": "Custom symbol ({glyph})",
+    "addSymbol": "Enter another symbol",
+    "symbolInput": "Custom symbol",
+    "symbolInvalid": "A single character or emoji.",
+    "shift": "Count toward the next month",
+    "shiftHint": "Transactions from the last days of the month count toward the next month, like a salary paid at the end of the month.",
+    "savings": "Counts as savings",
+    "savingsHint": "Its spending counts toward the dashboard's net savings, subcategories included.",
+    "neutral": "Counts neither as spending nor as income",
+    "neutralHint": "Left out of income and spending on the dashboard and insights, subcategories included: for transfers between your own accounts.",
+    "inheritedFrom": "Inherited from “{name}”.",
+    "overriddenByNeutral": "No effect: “{name}” counts neither as spending nor as income.",
+    "shiftDays": "Number of days"
+  },
+  "transactions": {
+    "title": "Transactions",
+    "subtitle": "Your transactions across all visible accounts.",
+    "empty": "No transactions yet.",
+    "create": "New transaction",
+    "createTitle": "Add a transaction",
+    "account": "Account",
+    "date": "Date",
+    "amount": "Amount",
+    "type": "Type",
+    "label": "Label",
+    "labelPlaceholder": "Carrefour City",
+    "note": "Note",
+    "category": "Category",
+    "noCategory": "Uncategorized",
+    "search": "Search",
+    "searchPlaceholder": "Search keywords…",
+    "filters": "Filters",
+    "allAccounts": "All accounts",
+    "allCategories": "All categories",
+    "allTypes": "All types",
+    "opCount": "{capped, select, true {{count, number}+ transactions} other {{count, plural, one {# transaction} other {# transactions}}}}",
+    "shownOf": "Showing {shown, number} of {capped, select, true {{total, number}+ transactions} other {{total, plural, one {# transaction} other {# transactions}}}}",
+    "loadMore": "Show {count, number} more",
+    "refineToSeeMore": "Narrow the filters to see older ones.",
+    "tab": {
+      "all": "All",
+      "in": "Income",
+      "out": "Expenses"
+    },
+    "detailOverline": "Transaction",
+    "originalLabel": "Original label",
+    "notePlaceholder": "No note.",
+    "close": "Close",
+    "from": "From",
+    "to": "To",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "createCta": "Add",
+    "types": {
+      "CARD": "Card",
+      "TRANSFER": "Transfer",
+      "DIRECT_DEBIT": "Direct debit",
+      "CHEQUE": "Cheque",
+      "ATM": "ATM",
+      "OTHER": "Other"
+    },
+    "rulePrompt": {
+      "learning": "Learning",
+      "title": "Create a rule for similar transactions?",
+      "body": "Automatically categorize future transactions containing “{pattern}” as <chip>{category}</chip>?",
+      "pattern": "Pattern",
+      "matchType": "Match type",
+      "match": {
+        "CONTAINS": "Contains",
+        "STARTS_WITH": "Starts with",
+        "EXACT": "Equals",
+        "REGEX": "Regex"
+      },
+      "existingNote": "In the next step, you’ll see the existing transactions concerned before reclassifying them.",
+      "decline": "No thanks",
+      "confirm": "Create rule",
+      "titleRetarget": "Fix the existing rule?",
+      "bodyRetarget": "Change the rule “{pattern}” so it categorizes its transactions as <chip>{category}</chip> from now on?",
+      "target": {
+        "new": "New rule",
+        "existing": "Edit the existing one"
+      },
+      "outranks": "It will take precedence over the rule “{pattern}”.",
+      "confirmRetarget": "Update rule"
+    },
+    "error": {
+      "INVALID": "Check the fields.",
+      "FORBIDDEN": "Not allowed.",
+      "NOT_FOUND": "Transaction not found.",
+      "FAILED": "Failed. Try again.",
+      "ACCOUNT_ARCHIVED": "This account is archived: unarchive it to add transactions.",
+      "AMOUNT_INVALID": "Invalid amount. Examples: -12.34 or 1,234.56.",
+      "AMOUNT_PRECISION": "The amount can’t have more than 2 decimals.",
+      "AMOUNT_ZERO": "The amount can’t be zero.",
+      "LABEL_REQUIRED": "The label is required.",
+      "LABEL_TOO_LONG": "The label can’t exceed 200 characters.",
+      "AMOUNT_AMBIGUOUS": "Ambiguous amount: write 1234 or 1.23 (no lone thousands separator).",
+      "DATE_INVALID": "Invalid date.",
+      "LOCKED_FIELDS": "The amount, date and type of this transaction can’t be changed."
+    },
+    "link": {
+      "create": "Link",
+      "linked": "Linked",
+      "unlink": "Unlink",
+      "failed": "Linking failed.",
+      "error": {
+        "ALREADY_LINKED": "One of the selected transactions is already linked.",
+        "FORBIDDEN": "You can’t edit one of these accounts.",
+        "NOT_FOUND": "A transaction no longer exists. Reload the page.",
+        "TOO_FEW": "Select at least two transactions."
+      },
+      "linkedTo": "Linked to",
+      "hiddenMembers": "{count, plural, one {+ # transaction on an account you can’t see} other {+ # transactions on accounts you can’t see}}",
+      "unlinkFailed": "Couldn’t unlink. Try again.",
+      "unlinkGone": "This link no longer exists.",
+      "unlinkNeedsWrite": "Unlinking needs write access to every account in the link.",
+      "field": "Link",
+      "startFrom": "Link to other transactions"
+    },
+    "opposite": {
+      "field": "Create the opposite transaction on…",
+      "choose": "Choose an account",
+      "create": "Create",
+      "hint": "Adds {amount} on the chosen account, linked to this transaction.",
+      "failed": "Couldn’t create the opposite transaction. Try again.",
+      "error": {
+        "ALREADY_LINKED": "This transaction is already linked.",
+        "FORBIDDEN": "You can’t edit this transaction.",
+        "NOT_FOUND": "This transaction no longer exists. Reload the page.",
+        "SAME_ACCOUNT": "Choose another account than this transaction’s.",
+        "TARGET_ARCHIVED": "This account is archived.",
+        "TARGET_FORBIDDEN": "Choose one of your own accounts."
+      }
+    },
+    "suggestions": {
+      "title": "Link suggestions",
+      "subtitle": "{count, plural, =0 {No suggestions} one {# suggested pair} other {# suggested pairs}}",
+      "open": "Suggestions",
+      "pairWithin": "{days, plural, =0 {same day} one {# day apart} other {# days apart}}",
+      "link": "Link",
+      "ignore": "Ignore",
+      "empty": "No pairs to suggest right now.",
+      "back": "Back to transactions",
+      "hint": "{appName} spots pairs with the same amount and opposite signs (a transfer between your accounts, a refund) so you can link them and not count them twice.",
+      "ignoreFailed": "Couldn’t ignore this pair. Try again.",
+      "ignored": "{count, plural, one {# ignored pair} other {# ignored pairs}}",
+      "ignoredHint": "A restored pair can be suggested again.",
+      "restore": "Restore",
+      "restoreFailed": "Couldn’t restore this pair. Try again.",
+      "criteria": "{days, plural, =0 {Pairs on the same day} one {Pairs up to # day apart} other {Pairs up to # days apart}}, from {amount}.",
+      "settings": {
+        "open": "Settings",
+        "title": "Suggestion settings",
+        "subtitle": "Choose which pairs are suggested to you. These settings only apply to you.",
+        "windowDays": "Maximum gap (days)",
+        "windowDaysHint": "Days between the two transactions, from 0 (same day) to 365.",
+        "minAmount": "Minimum amount",
+        "minAmountHint": "Pairs below this amount aren’t suggested.",
+        "cancel": "Cancel",
+        "save": "Save",
+        "saving": "Saving…",
+        "failed": "Couldn’t save these settings. Try again."
+      }
+    },
+    "filterSheet": {
+      "reset": "Reset",
+      "period": "Period",
+      "show": "{capped, select, true {Show {count, number}+ transactions} other {{count, plural, =0 {No transactions} one {Show # transaction} other {Show # transactions}}}}"
+    },
+    "selection": {
+      "mode": "Select",
+      "exit": "Exit selection",
+      "selected": "{count, plural, =0 {Nothing selected} one {# selected} other {# selected}}",
+      "hint": "Link or delete several transactions.",
+      "with": "With: {label}"
+    },
+    "delete": {
+      "action": "Delete",
+      "detailAction": "Delete transaction",
+      "title": "{count, plural, one {Delete this transaction?} other {Delete # transactions?}}",
+      "loading": "Checking the impact…",
+      "deleted": "{count, plural, one {This transaction will be permanently deleted.} other {# transactions will be permanently deleted.}}",
+      "dissolvedLinks": "{count, plural, one {# link will be dissolved (only one transaction would be left).} other {# links will be dissolved (only one transaction would be left).}}",
+      "leavingLink": "{count, plural, one {# transaction will leave its link, which stays active.} other {# transactions will leave their link, which stays active.}}",
+      "budgeted": "{count, plural, one {# transaction is assigned to a budget and will be removed from it.} other {# transactions are assigned to a budget and will be removed from their budgets.}}",
+      "irreversible": "This can’t be undone.",
+      "keep": "Keep",
+      "confirm": "Delete",
+      "error": {
+        "INVALID": "Invalid selection (500 transactions at most).",
+        "NOT_FOUND": "A transaction no longer exists. Reload the page.",
+        "FORBIDDEN": "You can’t edit one of these accounts.",
+        "FAILED": "Deletion failed. Try again."
+      }
+    },
+    "readOnly": "read-only",
+    "recategorizeFailed": "The category couldn’t be changed.",
+    "searchHint": "Search matches word beginnings of at least {min} letters: shorter words are ignored.",
+    "emptySearch": "No matching transaction. Search matches word beginnings of at least {min} letters.",
+    "edit": "Edit",
+    "editTitle": "Edit transaction",
+    "editLinkedWarning": "This transaction is linked: changing its amount or sign can unbalance the link and shift dashboard and budget totals.",
+    "editLimited": {
+      "imported": "Imported transaction: amount, date and type follow the bank statement; only the label and note can be edited.",
+      "archived": "Archived account: only the label and note can be edited."
+    },
+    "amountMin": "Min amount",
+    "amountMax": "Max amount",
+    "amountRange": "Amount",
+    "direction": "Direction",
+    "sortLabel": "Sort",
+    "sort": {
+      "date-desc": "Newest first",
+      "date-asc": "Oldest first",
+      "amount-asc": "Largest expenses first",
+      "amount-desc": "Largest income first"
+    },
+    "assignedMonth": {
+      "label": "Assigned month",
+      "countedIn": "Counted in {month}",
+      "backToAuto": "Back to automatic",
+      "failed": "The month could not be saved."
+    }
+  },
+  "import": {
+    "title": "Import a statement",
+    "steps": {
+      "file": "File",
+      "read": "Reading",
+      "match": "Mapping",
+      "validate": "Validation"
+    },
+    "fileSection": "File",
+    "fileMeta": "{count, plural, one {# row} other {# rows}} · {size}",
+    "options": "Options",
+    "optCategorize": "Categorize automatically",
+    "previewTitle": "Preview — {count, plural, one {# transaction} other {# transactions}}",
+    "previewMeta": "{dup, plural, one {# already imported} other {# already imported}} · {cat, number} auto-categorized",
+    "previewMetaNoCat": "{dup, plural, one {# already imported} other {# already imported}}",
+    "validate": "Validate import",
+    "cancel": "Cancel",
+    "include": "Include this row",
+    "duplicate": "duplicate",
+    "probableDuplicate": "Probable duplicate",
+    "probableOf": "Already in the account: {label}",
+    "probableInclude": "Import anyway",
+    "probable": {
+      "count": "{count, plural, one {# probable duplicate to review} other {# probable duplicates to review}}"
+    },
+    "filter": {
+      "label": "Filter the preview",
+      "all": "All ({count})",
+      "uncategorized": "Uncategorized ({count})",
+      "probable": "Probable duplicates ({count})"
+    },
+    "noCategory": "Uncategorized",
+    "colRawLabel": "Raw label",
+    "colCategory": "Suggested category",
+    "autoDetected": "auto-detected",
+    "account": "Account",
+    "drop": "Drop a CSV, PDF or OFX file here, or click to browse.",
+    "mapping": "Column mapping",
+    "decimal": {
+      "label": "Decimal mark",
+      "comma": "Comma",
+      "dot": "Dot",
+      "guessed": "Decimal mark guessed ({mark, select, comma {comma} other {dot}}): check the amounts (“Decimal mark” setting).",
+      "confirm": "Looks right",
+      "useOther": "Use {mark, select, comma {comma} other {dot}}"
+    },
+    "colDate": "Date",
+    "colLabel": "Label",
+    "colAmount": "Amount",
+    "colDebit": "Debit",
+    "colCredit": "Credit",
+    "colType": "Type",
+    "none": "—",
+    "importing": "Importing…",
+    "summary": "{imported, plural, one {# transaction imported} other {# transactions imported}} · {skipped, plural, one {# duplicate skipped} other {# duplicates skipped}}",
+    "viewTransactions": "View transactions",
+    "bankDetected": "Detected bank: {bank}",
+    "bankUnknown": "Bank not recognized — review the rows below before importing.",
+    "supportedBanks": "Supported banks: {list}",
+    "targetAccount": "Target account",
+    "ignoreProduct": "Don’t import",
+    "banks": {
+      "revolut": "Revolut",
+      "lcl": "LCL"
+    },
+    "products": {
+      "compte": "Current account",
+      "depot": "Deposit",
+      "default": "Account"
+    },
+    "error": {
+      "INVALID": "Check the file and account.",
+      "BAD_TYPE": "Unsupported file type.",
+      "TOO_LARGE": "File too large ({max} max).",
+      "FORBIDDEN": "Not allowed.",
+      "PARSE_FAILED": "Could not read the file.",
+      "COMMIT_FAILED": "Import failed. Try again.",
+      "NOT_COMMITTABLE": "This import was already committed or undone.",
+      "INVALID_MAPPING": "Pick at least the date, the label and an amount (or debit / credit).",
+      "UNAUTHORIZED": "Your session expired. Sign in again.",
+      "EMPTY": "No transactions found in this file.",
+      "NOT_TEXT": "This file isn’t a readable CSV (a binary file or an image?).",
+      "NOTHING_TO_IMPORT": "Nothing to import: no row is left (duplicates, unchecked or unreadable rows, or ignored products).",
+      "ACCOUNT_ARCHIVED": "This account is archived: unarchive it to import into it."
+    },
+    "history": {
+      "title": "Recent imports",
+      "empty": "No imports yet.",
+      "rows": "{imported, plural, one {# transaction imported} other {# transactions imported}} · {skipped, plural, one {# duplicate skipped} other {# duplicates skipped}}",
+      "status": {
+        "COMPLETED": "Imported",
+        "REVERTED": "Undone"
+      },
+      "actions": "Import actions"
+    },
+    "revert": {
+      "action": "Undo import",
+      "title": "Undo this import?",
+      "loading": "Checking the impact…",
+      "deleted": "{count, plural, one {# transaction will be deleted} other {# transactions will be deleted}}",
+      "linked": "{count, plural, one {# is linked to other transactions and will leave its link} other {# are linked to other transactions and will leave their links}}",
+      "budgeted": "{count, plural, one {# is assigned to a budget} other {# are assigned to a budget}}",
+      "edited": "{count, plural, one {# was edited since the import} other {# were edited since the import}}",
+      "balanceRestore": "The opening balance of {account} will go back to {amount}.",
+      "balanceKept": "The opening balance of {account} was changed since the import: it will stay as is.",
+      "irreversible": "This can’t be undone.",
+      "keep": "Keep",
+      "confirm": "Delete the transactions",
+      "done": "Import undone: {count, plural, one {# transaction deleted} other {# transactions deleted}}.",
+      "newImport": "New import",
+      "error": {
+        "NOT_REVERTIBLE": "This import was already undone.",
+        "NOT_FOUND": "Import not found.",
+        "FORBIDDEN": "Not allowed.",
+        "FAILED": "Undo failed. Try again."
+      }
+    },
+    "formats": "Accepted formats: CSV, PDF and OFX.",
+    "manualEntry": "Manual entry",
+    "rejected": {
+      "count": "{count, plural, one {# unreadable row skipped} other {# unreadable rows skipped}}",
+      "example": "Row {row}: {reason} ({value})",
+      "reason": {
+        "DATE": "unrecognized date",
+        "AMOUNT": "unrecognized amount",
+        "AMOUNT_RANGE": "amount out of range",
+        "LABEL": "empty label"
+      },
+      "exampleNoValue": "Row {row}: {reason}"
+    },
+    "settings": "Import settings",
+    "duplicatesNote": "Transactions already on this account are skipped (duplicates). Probable duplicates (same day and amount) come unticked: tick one to import it anyway.",
+    "fieldRejected": "Some rows could not be read with this column.",
+    "duplicateSkipped": "Duplicate: already on this account, won’t be imported",
+    "nothingToImport": "Nothing to import: no row is left (duplicates, unchecked or unreadable rows, or ignored products).",
+    "progress": "{done, number} of {total, plural, one {# transaction imported} other {# transactions imported}}…",
+    "reading": "Reading the file…",
+    "limits": "CSV up to {csv}, PDF up to {pdf}, OFX up to {ofx}.",
+    "productAccount": "Target account: {product}",
+    "pager": {
+      "range": "Rows {from} to {to} of {total}",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "rowCategory": "Category for {label}",
+    "ruleOffer": "Create a rule",
+    "ruleOfferLabel": "Create a rule for {label}",
+    "dateOrder": {
+      "label": "Date order",
+      "DMY": "DD/MM",
+      "MDY": "MM/DD",
+      "guessed": "Date order guessed ({order}): check the dates (“Date order” setting).",
+      "confirm": "Dates look right",
+      "useOther": "Use {order}"
+    },
+    "ofxProduct": "{type} ••{last4}",
+    "ofxAccountType": {
+      "CHECKING": "Current account",
+      "SAVINGS": "Savings account",
+      "MONEYMRKT": "Money market account",
+      "CREDITLINE": "Credit line",
+      "CREDITCARD": "Credit card",
+      "OTHER": "Account"
+    },
+    "balance": {
+      "bank": "Bank balance on {date}",
+      "after": "Balance after import",
+      "gap": "Gap: {amount}",
+      "matches": "Balances match",
+      "adjust": "Set the opening balance so the balance matches the bank’s"
+    }
+  },
+  "groups": {
+    "detailOverline": "Household",
+    "title": "Households",
+    "subtitle": "Share accounts and budgets with your household.",
+    "empty": "No households yet. Create one to share your accounts.",
+    "create": "New household",
+    "createTitle": "Create a household",
+    "createSubtitle": "Then invite members and share accounts.",
+    "editTitle": "Edit household",
+    "edit": "Edit",
+    "createCta": "Create household",
+    "cancel": "Cancel",
+    "name": "Household name",
+    "namePlaceholder": "Smith household",
+    "description": "Description",
+    "descriptionPlaceholder": "Optional",
+    "save": "Save",
+    "saving": "Saving…",
+    "members": "Members",
+    "memberCount": "{count, plural, one {# member} other {# members}}",
+    "you": "You",
+    "role": "Role",
+    "remove": "Remove",
+    "removeConfirm": "Remove this member from the household? Their accounts stop being shared with it and their transactions leave its budgets.",
+    "leave": "Leave",
+    "leaveConfirm": "Leave this household? Your accounts stop being shared with it and their transactions leave its budgets.",
+    "delete": "Delete household",
+    "deleteConfirm": "Permanently delete this household? This cannot be undone.",
+    "deleteImpact": {
+      "shares": "{count, plural, one {# shared account stops being shared; it stays with its owner} other {# shared accounts stop being shared; they stay with their owners}}.",
+      "owned": "{categories, plural, one {# household category} other {# household categories}}, {rules, plural, one {# rule} other {# rules}} and {budgets, plural, one {# budget} other {# budgets}} will be deleted.",
+      "uncategorized": "{count, plural, one {# transaction will become uncategorized} other {# transactions will become uncategorized}}."
+    },
+    "back": "Back to households",
+    "roles": {
+      "OWNER": "Owner",
+      "ADMIN": "Admin",
+      "MEMBER": "Member"
+    },
+    "error": {
+      "FORBIDDEN": "Action not allowed.",
+      "INVALID": "Check the fields.",
+      "LAST_OWNER": "Not allowed: at least one owner must remain.",
+      "NOT_MEMBER": "This member is not part of the household.",
+      "FAILED": "Failed. Please retry."
+    },
+    "dangerZone": "Danger zone",
+    "dangerTitleOwner": "Leave or delete the household",
+    "leaveHint": "You will lose access to this household’s shared accounts and budgets, and your accounts stop being shared with it.",
+    "leaveTitle": "Leave the household",
+    "deleteHint": "Deleting removes the shares and the household’s categories, rules and budgets. This cannot be undone.",
+    "removeTitle": "Remove {name}?"
+  },
+  "invitations": {
+    "invite": "Invite",
+    "email": "Email address",
+    "emailPlaceholder": "member@example.com",
+    "role": "Role",
+    "send": "Send invitation",
+    "sending": "Sending…",
+    "pending": "Pending invitations",
+    "code": "Code: <mono>{code}</mono>",
+    "expiresAt": "Expires <date></date>",
+    "revoke": "Revoke",
+    "revokeConfirm": "Revoke this invitation?",
+    "noPending": "No pending invitations.",
+    "pendingForYou": "Pending invitations for you",
+    "fromGroup": "Household “{group}”",
+    "joinByCode": "Join with a code",
+    "joinPlaceholder": "6-character code",
+    "join": "Join",
+    "joining": "…",
+    "joinTitle": "Join the household",
+    "accept": "Accept invitation",
+    "accepting": "…",
+    "invalidLink": "This invitation cannot be found, has expired, or was already used.",
+    "joinPromptRole": "You’ve been invited to join “{group}” as {role, select, OWNER {an owner} ADMIN {an admin} other {a member}}.",
+    "joinCodeHint": "The code only works with the account whose address was invited.",
+    "copyLink": "Copy invitation link",
+    "linkCopied": "Link copied",
+    "openGroup": "Open the household",
+    "error": {
+      "NOT_FOUND": "Invitation not found.",
+      "EXPIRED": "This invitation has expired.",
+      "ALREADY_USED": "This invitation was already used.",
+      "ALREADY_MEMBER": "This person is already in the household.",
+      "FORBIDDEN": "Action not allowed.",
+      "INVALID": "Check the fields.",
+      "FAILED": "Failed. Please retry.",
+      "WRONG_ACCOUNT": "This invitation was sent to {email}. Sign in with that account to accept it.",
+      "ALREADY_IN_GROUP": "You’re already in this household.",
+      "EMAIL_NOT_VERIFIED": "Verify your email address first, or use the invitation link or code.",
+      "RATE_LIMITED": "Too many attempts. Please try again later."
+    },
+    "revokeFailed": "Revoking failed. Try again.",
+    "sent": "Invitation sent.",
+    "resent": "Invitation resent.",
+    "created": "Invitation created",
+    "renewed": "Invitation renewed",
+    "mailDisabled": "E-mail is disabled: share this link.",
+    "mailFailed": "The email couldn’t be sent: share this link.",
+    "shareLink": "Invitation link",
+    "decline": "Decline",
+    "declineConfirm": "Decline this invitation?",
+    "unverifiedHint": "{smtp, select, true {Invitations sent to your address will show up here once it’s verified: follow the link we emailed you.} other {Invitations sent to your address will show up here once an administrator verifies it.}} Meanwhile, an invitation link or code already works."
+  },
+  "dashboard": {
+    "accounts": {
+      "overline": "Account balances",
+      "seeAll": "Accounts",
+      "landing": "On {date}: {amount}"
+    },
+    "overline": "Overview",
+    "txCount": "{count, plural, one {# transaction} other {# transactions}}",
+    "kpi": {
+      "income": "Income",
+      "expense": "Expenses",
+      "net": "Net balance",
+      "savings": "Net savings",
+      "leftToSpend": "Left to spend"
+    },
+    "vsPrev": "{arrow} {pct} vs previous period",
+    "noPrev": "Nothing in the previous period",
+    "byCategory": "Spending by category",
+    "spentThisPeriod": "spent this period",
+    "noExpenses": "No spending this period.",
+    "noCategory": "Uncategorized",
+    "recent": "Recent transactions",
+    "seeAll": "See all",
+    "noRecent": "No transactions this period.",
+    "preset": {
+      "this-month": "This month",
+      "last-month": "Last month",
+      "this-quarter": "Quarter",
+      "this-year": "Year",
+      "custom": "Custom"
+    },
+    "apply": "Apply",
+    "vsPrevAmount": "{arrow} {amount} vs previous period",
+    "compareTo": "Compared with",
+    "baseline": {
+      "prev": "the previous month",
+      "avg3": "the 3-month average",
+      "avg6": "the 6-month average",
+      "avg12": "the 12-month average"
+    },
+    "inProgressPrev": "Period in progress: compared with the same number of days of the previous period ({previous}).",
+    "inProgressAvg": "Period in progress: compared with the same days ({day, plural, =1 {the 1st} other {days 1–#}} of each month).",
+    "vsAvg": "{arrow} {pct} vs {months}-month average",
+    "vsAvgAmount": "{arrow} {amount} vs {months}-month average",
+    "noSameDate": "Nothing by this point last period",
+    "noAvg": "Nothing over the previous {months} months",
+    "rangeStart": "Period start",
+    "rangeEnd": "Period end",
+    "rangeReversed": "The end must be after the start.",
+    "otherCategories": "{count, plural, one {Other category} other {# other categories}}",
+    "upcoming": "Upcoming period: only transactions assigned to it appear.",
+    "acrossBudgets": "{count, plural, one {across # current budget} other {across # current budgets}}",
+    "todo": {
+      "title": "Needs attention",
+      "uncategorizedOut": "{count, plural, one {# uncategorized expense} other {# uncategorized expenses}}",
+      "uncategorizedIn": "{count, plural, one {# uncategorized income} other {# uncategorized incomes}}",
+      "unlinkedNeutral": "{count, plural, one {# unlinked operation in a neutral category} other {# unlinked operations in a neutral category}}"
+    },
+    "currentBudgets": {
+      "overline": "Current budgets",
+      "left": "{amount} left",
+      "ofPlanned": "{percent} of {planned}",
+      "outOfBudget": "Out of budget: {amount}"
+    },
+    "pace": {
+      "title": "Spending pace",
+      "headline": "{amount} by {date}",
+      "less": "{amount} less than {reference}",
+      "more": "{amount} more than {reference}",
+      "same": "Same as {reference}",
+      "refPrev": "the previous period",
+      "refPrevSameDate": "the previous period at the same date",
+      "refAvg": "the {months}-month average",
+      "refAvgSameDate": "the {months}-month average at the same date",
+      "legendCurrent": "This period",
+      "legendPrev": "Previous period",
+      "legendAvg": "{months}-month average",
+      "tip": "{date}: {amount}",
+      "tipRef": "{date}: {amount} (ref. {reference})",
+      "tipRefOnly": "{date}: ref. {reference}"
+    }
+  },
+  "merchants": {
+    "tab": "Merchants",
+    "rename": "Rename {name}",
+    "title": "Rename merchant",
+    "bankLabel": "Bank label: {labels}",
+    "bankLabels": "Groups: {labels}",
+    "name": "Display name",
+    "existing": "Or group under an existing name:",
+    "hint": "Merchants renamed to the same name are added up.",
+    "removeKey": "Remove {key} from {name}",
+    "reset": "Restore",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "empty": "No spending yet: merchants show up after an import.",
+    "error": {
+      "INVALID": "The name must be 1 to 60 characters.",
+      "NOT_FOUND": "This name no longer exists. Reload the page.",
+      "FAILED": "Saving failed."
+    },
+    "search": "Search a merchant",
+    "renamedSection": "Renamed",
+    "othersSection": "Other merchants",
+    "showMore": "Show {count, number} more",
+    "noMatch": "No merchant matches.",
+    "count": "{count, number}×",
+    "noCategory": "Uncategorized"
+  },
+  "insights": {
+    "pageTitle": "Insights",
+    "noData": "No spending this period.",
+    "noCategory": "Uncategorized",
+    "merchantsTitle": "Top merchants",
+    "merchantsSub": "Recurring payments left out",
+    "merchantsCount": "{count, number}×",
+    "noMerchants": "No merchants this period.",
+    "incomeTitle": "Income by category",
+    "incomeTotal": "{amount} this period",
+    "noIncome": "No income this period.",
+    "new": "new",
+    "historyAverage": "avg.",
+    "historyAverageToDay": "avg. to day {day}:",
+    "historyInProgress": "{month} (in progress)",
+    "overviewOverline": "Last 12 months",
+    "overviewTitle": "Income and spending",
+    "overviewIncome": "Income",
+    "overviewSpending": "Spending",
+    "overviewNet": "Net savings",
+    "overviewNetSub": "income − spending, 12 months",
+    "perMonth": "monthly average",
+    "overviewBar": "{month}: income {income}, spending {spending}",
+    "overviewAbove": "Spending above income {count, plural, one {# month} other {# months}} out of {total}",
+    "overviewEmpty": "Nothing recorded over these 12 months.",
+    "categoriesTitle": "Spending by category",
+    "categoriesSub": "{current} vs {previous}",
+    "categoriesSubAvg": "{current} vs average of {months}",
+    "trendAverage": "12-month average: {amount}",
+    "seeTransactions": "See the transactions",
+    "stable": "Stable",
+    "stableCount": "{count, plural, one {# category with steady spending} other {# categories with steady spending}}",
+    "uncategorized": "{amount} uncategorized",
+    "toSort": "To sort",
+    "recurringTitle": "Recurring payments",
+    "recurringSub": "Paid about every month over the last 6 months",
+    "recurringPerMonth": "a month",
+    "recurringExtra": "including {amount} from new payments and price increases",
+    "recurringNew": "new",
+    "recurringIncrease": "price increase",
+    "recurringStopped": "stopped?",
+    "recurringLast": "last {date}",
+    "recurringUsual": "usually {amount}",
+    "recurringEveryTwoMonths": "every 2 months",
+    "noRecurring": "No recurring payment found over the last 6 months.",
+    "exceptionalTitle": "Exceptional expenses",
+    "exceptionalSub": "Above {factor, select, 1 {their category’s monthly average} other {{factor}× their category’s monthly average}}, from {amount}",
+    "exceptionalSettings": {
+      "open": "Set the threshold",
+      "title": "Exceptional expenses",
+      "subtitle": "Choose from when an expense stands out. This setting only applies to you.",
+      "minAmount": "Minimum amount",
+      "minAmountHint": "Expenses below this amount never stand out.",
+      "factor": "Multiple of the average",
+      "factorHint": "An expense stands out above this multiple of its category’s monthly average: 1 for the average, 2 for twice it.",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…",
+      "failed": "Could not save this setting. Try again."
+    },
+    "exceptionalShare": "{share} of the period’s spending",
+    "exceptionalMeta": "{date} · avg. {average}",
+    "exceptionalAverageTitle": "Category’s monthly average: {amount}",
+    "exceptionalShowAll": "Show all ({count, number})",
+    "exceptionalShowLess": "Show less",
+    "noExceptional": "No exceptional expense this period.",
+    "budgetsTitle": "Budgets over time",
+    "budgetsSub": "The last 12 periods of each recurring budget, up to today",
+    "budgetsLegendReached": "Almost reached or reached",
+    "budgetsLegendInProgress": "In progress",
+    "budgetsCell": "{period}{inProgress, select, true { (in progress)} other {}}: {status}, {spent} of {planned}",
+    "budgetsOver": "{over, plural, =0 {Never over} one {Over once} other {Over # times}} in {finished, plural, one {# period} other {# periods}}",
+    "budgetsGap": "{gap} vs planned on average"
+  },
+  "settings": {
+    "data": {
+      "title": "Data",
+      "subtitle": "Export your data or permanently delete your account.",
+      "exportTitle": "Export my data",
+      "exportHint": "Download your transactions as CSV, or your full data (GDPR) as JSON.",
+      "exportCsv": "Transactions (CSV)",
+      "exportJson": "All my data (JSON)",
+      "exporting": "Preparing export…",
+      "exportFailed": "The export failed. Please try again.",
+      "dangerZone": "Danger zone",
+      "deleteTitle": "Delete my account",
+      "deleteWarning": "This action is irreversible: all your data will be permanently deleted.",
+      "passwordLabel": "Password",
+      "confirmEmailLabel": "Type your email ({email}) to confirm",
+      "cancel": "Cancel",
+      "deleting": "Deleting…",
+      "confirmDelete": "Delete permanently",
+      "impact": {
+        "title": "What will be deleted:",
+        "accounts": "{count, plural, one {# bank account} other {# bank accounts}} and {transactions, plural, one {# transaction} other {# transactions}}{shared, plural, =0 {} one {, including # account shared with a household: its members will no longer see it} other {, including # accounts shared with households: their members will no longer see them}}.",
+        "personal": "Your personal categories, rules and budgets, your imports and your preferences.",
+        "transfer": "Household “{group}” will be handed over to {to}.",
+        "group": "Household “{group}”, of which you are the only member, will be deleted with its categories, rules and budgets.",
+        "budgetLines": "Lines in household or other members’ budgets that targeted your accounts will no longer be limited to an account."
+      },
+      "error": {
+        "REQUIRED": "Please enter your password.",
+        "BAD_PASSWORD": "Incorrect password.",
+        "BAD_CONFIRM": "The email you entered doesn’t match.",
+        "RATE_LIMITED": "Too many attempts. Try again later.",
+        "FAILED": "Deletion failed. Please try again.",
+        "LAST_SUPER_ADMIN": "You are the last active super administrator: appoint another one before deleting your account."
+      },
+      "exportFilters": "CSV export filters",
+      "exportFrom": "From",
+      "exportTo": "To",
+      "exportAccount": "Account",
+      "exportAllAccounts": "All accounts",
+      "exportArchivedAccount": "{name} (archived)",
+      "exportFiltersHint": "Leave empty to export everything. The JSON export always contains all your data."
+    },
+    "security": {
+      "title": "Security",
+      "subtitle": "Strengthen your account’s protection.",
+      "adminRequired": {
+        "title": "Two-factor authentication required",
+        "body": "This instance requires administrators to use two-factor authentication. Until you enable it below, the administration pages bring you back here and your admin actions are refused."
+      },
+      "ssoOnly": "Your account has no password: you sign in through an identity provider or with a passkey. Bilan’s two-factor authentication only protects password sign-ins; your identity provider’s own two-factor authentication applies instead.",
+      "passwordSignInOff": "Password sign-in is turned off on this instance. Bilan’s two-factor authentication only protects password sign-ins, so it doesn’t apply for now: your identity provider’s own two-factor authentication protects your sign-ins.",
+      "twoFactor": "Two-factor authentication",
+      "twoFactorTitle": "Authenticator app (TOTP)",
+      "twoFactorHint": "Add a one-time code on top of your password.",
+      "statusEnabled": "Two-factor authentication is enabled on your account.",
+      "statusDisabled": "Two-factor authentication is not enabled yet.",
+      "password": "Password",
+      "enrolScan": "1. Scan this QR code with your authenticator app (Google Authenticator, 1Password, Aegis…).",
+      "enrolManual": "Can’t scan it? Enter this key:",
+      "enrolBackup": "2. Keep these backup codes somewhere safe. Each one lets you sign in once if you lose your phone.",
+      "enrolVerify": "3. Enter the code shown by the app to finish.",
+      "qrLabel": "Authenticator app setup QR code",
+      "backupCodes": "Backup codes",
+      "enable": "Enable",
+      "disable": "Disable",
+      "disableCode": "Authentication code",
+      "disableCodeHint": "The 6-digit code from your authenticator app, or one of your backup codes.",
+      "disableTitle": "Disable two-factor authentication",
+      "regenerate": "Generate new codes",
+      "regenerateWarning": "Your current backup codes stop working as soon as the new ones are generated.",
+      "codesRegenerated": "Save these new codes somewhere safe: they won’t be shown again. Your previous codes no longer work.",
+      "codesSaved": "Done",
+      "codesLeft": "{count, plural, =0 {No backup codes left.} one {# backup code left.} other {# backup codes left.}}",
+      "copyCodes": "Copy",
+      "codesCopied": "Copied",
+      "copyCodesFailed": "Couldn’t copy: select the codes or download them.",
+      "downloadCodes": "Download",
+      "cancel": "Cancel",
+      "verify": "Verify and enable",
+      "working": "Working…",
+      "error": {
+        "BAD_PASSWORD": "Incorrect password.",
+        "BAD_CODE": "Invalid code. Please try again.",
+        "ALREADY_ENABLED": "Two-factor authentication is already enabled.",
+        "NOT_ENABLED": "Two-factor authentication isn’t enabled.",
+        "RATE_LIMITED": "Too many attempts. Try again later.",
+        "rateLimitedFor": "Too many attempts. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
+        "FAILED": "Something went wrong. Please try again."
+      },
+      "passwordCard": {
+        "title": "Change password",
+        "hint": "Used to sign in and to confirm sensitive actions.",
+        "edit": "Change",
+        "current": "Current password",
+        "new": "New password",
+        "confirm": "Confirm new password",
+        "minLength": "At least {count} characters.",
+        "revokeOthers": "Sign out my other devices",
+        "submit": "Change password",
+        "cancel": "Cancel",
+        "working": "Working…",
+        "changed": "Your password has been changed.",
+        "error": {
+          "BAD_PASSWORD": "Incorrect current password.",
+          "SAME_PASSWORD": "The new password must be different from the current one.",
+          "TOO_SHORT": "The new password is too short.",
+          "TOO_LONG": "The new password is too long.",
+          "MISMATCH": "The two passwords don’t match.",
+          "RATE_LIMITED": "Too many attempts. Try again later.",
+          "rateLimitedFor": "Too many attempts. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
+          "INVALID": "Fill in all the fields.",
+          "FAILED": "Couldn’t change the password. Please try again.",
+          "REVOKE_FAILED": "Your password was changed, but your other devices couldn’t be signed out.",
+          "TOKENS_FAILED": "Your password was changed, but your AI assistant access couldn’t be revoked. Revoke it from <link>Settings › AI assistants</link>."
+        }
+      },
+      "sessionsCard": {
+        "title": "Signed-in devices",
+        "hint": "Sign out a device you don’t recognize or no longer use.",
+        "thisDevice": "This device",
+        "unknownBrowser": "Unknown browser",
+        "activeNow": "Active now",
+        "active": "{days, plural, =0 {Active today} =1 {Active yesterday} other {Active # days ago}}",
+        "others": "Other devices · {count, number}",
+        "none": "No other device is signed in.",
+        "revoke": "Sign out",
+        "revokeAll": "Sign out all",
+        "revokeDevice": "Sign out {device}",
+        "error": {
+          "NOT_FOUND": "This device is already signed out.",
+          "CURRENT": "Use “Sign out” for this device.",
+          "UNAUTHORIZED": "Your session has expired. Sign in again.",
+          "INVALID": "Invalid request.",
+          "FAILED": "Couldn’t sign this device out. Try again.",
+          "TOKENS_FAILED": "Your other devices were signed out, but your AI assistant access couldn’t be revoked. Revoke it from <link>Settings › AI assistants</link>."
+        },
+        "signedIn": "Signed in on <time></time>"
+      },
+      "trustedDevicesCard": {
+        "title": "Trusted devices",
+        "hint": "These devices skip the authentication code when you sign in with your password. Forget one you no longer use.",
+        "count": "Devices · {count, number}",
+        "none": "No trusted device.",
+        "unknownDevice": "Unknown device",
+        "thisDevice": "This device",
+        "lastUsed": "Last used on <time></time>",
+        "expires": "Expires on <time></time>",
+        "revoke": "Forget",
+        "revokeAll": "Forget all",
+        "revokeDevice": "Forget {device}",
+        "error": {
+          "NOT_FOUND": "This device is no longer trusted.",
+          "INVALID": "Invalid request.",
+          "FAILED": "Couldn’t forget this device. Try again."
+        }
+      },
+      "passkeysCard": {
+        "overline": "Passkeys",
+        "title": "Passwordless sign-in",
+        "hint": "Sign in with your fingerprint, your face or your device’s PIN.",
+        "count": "Your passkeys · {count}",
+        "add": "Add",
+        "none": "No passkeys yet.",
+        "defaultName": "Passkey",
+        "unnamed": "Unnamed passkey",
+        "added": "Added on <date></date>",
+        "synced": "Synced",
+        "deviceBound": "This device only",
+        "rename": "Rename {name}",
+        "delete": "Delete {name}",
+        "nameLabel": "Passkey name",
+        "save": "Save",
+        "cancel": "Cancel",
+        "deleteTitle": "Delete this passkey?",
+        "deleteBody": "“{name}” will no longer sign you in. Also remove it from your device’s password manager.",
+        "deleteConfirm": "Delete",
+        "error": {
+          "NOT_FRESH": "For your security, sign in again before adding a passkey.",
+          "ALREADY_REGISTERED": "This device already has a passkey for your account.",
+          "ADD_FAILED": "Adding the passkey was canceled or didn’t complete.",
+          "FAILED": "Something went wrong. Please try again."
+        },
+        "signInAgain": "Sign in again"
+      },
+      "identitiesCard": {
+        "overline": "Connected identities",
+        "title": "Sign in through an identity provider",
+        "hint": "Link a Google identity or your organization’s to sign in with it.",
+        "count": "Your identities · {count}",
+        "none": "No linked identity yet.",
+        "linkedAt": "Linked on <date></date>",
+        "providerDisabled": "Provider disabled by the administrator",
+        "onlyMethod": "This is your only way to sign in: add a passkey or link another identity before unlinking it.",
+        "link": "Link {name}",
+        "unlink": "Unlink {name}",
+        "unlinkTitle": "Unlink this identity?",
+        "unlinkBody": "You will no longer be able to sign in with “{name}”. You can link it again later.",
+        "unlinkConfirm": "Unlink",
+        "cancel": "Cancel",
+        "linkedNotice": "“{name}” is now linked to your account.",
+        "signInAgain": "Sign in again",
+        "error": {
+          "NOT_FRESH": "For your security, sign in again before changing your connected identities.",
+          "LOCKOUT": "You can’t unlink your last way to sign in.",
+          "ALREADY_LINKED": "An identity from this provider is already linked to your account.",
+          "UNAVAILABLE": "This identity provider is no longer available.",
+          "FAILED": "Something went wrong. Try again.",
+          "BAD_ORIGIN": "Can’t link from this address. Open the app from its configured address."
+        },
+        "linkError": {
+          "denied": "Linking was canceled or refused at the identity provider.",
+          "provider": "The identity provider returned an error. Try again later.",
+          "expired": "The link request expired or was opened in another browser. Start again.",
+          "noEmail": "The identity provider didn’t share an email address.",
+          "emailMismatch": "This identity’s email address doesn’t match your account’s.",
+          "linkedElsewhere": "This identity is already linked to another account.",
+          "failed": "Linking didn’t complete. Try again."
+        }
+      }
+    },
+    "ai": {
+      "title": "AI assistants",
+      "subtitle": "Query your finances from Claude, Codex or another MCP client.",
+      "instanceOff": {
+        "title": "Not available on this instance",
+        "body": "An administrator has to turn on the MCP server in the instance settings first."
+      },
+      "access": {
+        "title": "Assistant access",
+        "switch": "Allow AI assistants",
+        "privacy": "Your transactions’ labels, amounts and notes will be decrypted and sent to your assistant’s provider (Anthropic, OpenAI…), under its terms.",
+        "confirmTitle": "Allow AI assistants",
+        "enable": "Enable",
+        "enabling": "Enabling…",
+        "error": {
+          "INSTANCE_DISABLED": "An administrator has turned off AI assistants on this instance.",
+          "FAILED": "Couldn’t save this change. Try again."
+        }
+      },
+      "connection": {
+        "title": "Connection",
+        "hint": "The MCP server address to give your client, along with a token.",
+        "off": "Turn on AI assistant access to connect a client.",
+        "endpoint": "MCP server address",
+        "copy": "Copy the address",
+        "copied": "Address copied",
+        "header": "Header: <code></code>",
+        "connector": "For claude.ai or Claude Desktop, add a custom connector with this address: it signs in through your Bilan account, no token needed."
+      },
+      "clients": {
+        "title": "Connected clients",
+        "hint": "Assistants authorized from your Bilan account, no token needed.",
+        "none": "No connected client.",
+        "unnamed": "Unnamed app",
+        "scope": {
+          "read": "Read only",
+          "write": "Read and write"
+        },
+        "authorized": "authorized on <time></time>",
+        "lastUsed": "last used <time></time>",
+        "neverUsed": "never used",
+        "revoke": "Revoke",
+        "revokeClient": "Revoke {name}",
+        "confirmTitle": "Revoke {name}?",
+        "confirmBody": "{name} loses access at once. It will have to ask for authorization again to reconnect.",
+        "error": {
+          "NOT_FOUND": "This client is already revoked.",
+          "FAILED": "Couldn’t revoke this client. Try again."
+        }
+      },
+      "activity": {
+        "title": "Recent activity",
+        "hint": "Changes made by your assistants in the last 90 days.",
+        "none": "No action by your assistants in the last 90 days.",
+        "today": "Today",
+        "yesterday": "Yesterday"
+      },
+      "tokens": {
+        "title": "Personal tokens",
+        "hint": "Each token is shown only once, when it’s created.",
+        "create": "Create a token",
+        "none": "No personal token.",
+        "scope": {
+          "read": "Read only",
+          "write": "Read and write"
+        },
+        "created": "created <time></time>",
+        "lastUsed": "last used <time></time>",
+        "neverUsed": "never used",
+        "expires": "expires <time></time>",
+        "expired": "expired <time></time>",
+        "noExpiry": "no expiry",
+        "revoke": "Revoke",
+        "revokeToken": "Revoke {name}",
+        "error": {
+          "NOT_FOUND": "This token is already revoked.",
+          "FAILED": "Couldn’t revoke this token. Try again."
+        },
+        "form": {
+          "title": "Create a token",
+          "description": "The assistant acts as you, within the access you choose.",
+          "name": "Name",
+          "namePlaceholder": "Claude Code on my laptop",
+          "access": "Access",
+          "accessHint": "Read and write also lets the assistant change your transactions, links and budgets.",
+          "expiry": "Expiry",
+          "expiryChoice": {
+            "30": "30 days",
+            "90": "90 days",
+            "365": "1 year",
+            "never": "No expiry"
+          },
+          "cancel": "Cancel",
+          "submit": "Create the token",
+          "submitting": "Creating…",
+          "error": {
+            "INVALID": "Check the highlighted fields.",
+            "FAILED": "Couldn’t create the token. Try again."
+          }
+        },
+        "shown": {
+          "title": "Token created",
+          "description": "Copy it now: it won’t be shown again.",
+          "label": "New token",
+          "copy": "Copy the token",
+          "copied": "Token copied",
+          "done": "Done"
+        }
+      }
+    }
+  },
+  "admin": {
+    "title": "Administration",
+    "nav": {
+      "users": "Users",
+      "signupTokens": "Invitation tokens",
+      "authProviders": "Auth providers",
+      "smtp": "SMTP",
+      "bankSync": "Bank sync",
+      "appSettings": "Settings",
+      "audit": "Audit log"
+    },
+    "users": {
+      "createTitle": "Create a user",
+      "listTitle": "Users",
+      "name": "Name",
+      "email": "Email address",
+      "role": "Role",
+      "create": "Create",
+      "creating": "Creating…",
+      "created": "User created. A password-setup link has been emailed to them.",
+      "createdNoMail": "User created, but no email was sent: SMTP is not configured or is disabled, so they can’t set their password yet. Once SMTP is configured, they can use “Forgot password?” on the sign-in page.",
+      "empty": "No users.",
+      "error": {
+        "UNAUTHORIZED": "You don’t have permission to create users.",
+        "INVALID": "Check the fields you entered.",
+        "FAILED": "Creation failed. Please try again.",
+        "FORBIDDEN": "You can’t create a user with this role."
+      },
+      "createHint": "They receive an email with a link to set their password (requires SMTP).",
+      "count": "{count, plural, =0 {No accounts} one {# account} other {# accounts}}",
+      "roleFor": "{user}’s role",
+      "roleError": {
+        "UNAUTHORIZED": "You don’t have permission to change roles.",
+        "INVALID": "Invalid role.",
+        "SELF": "You can’t change your own role.",
+        "FORBIDDEN": "Only a super administrator can grant or revoke an admin role.",
+        "LAST_SUPER_ADMIN": "The last super administrator can’t be removed.",
+        "NOT_FOUND": "User not found.",
+        "FAILED": "Role change failed."
+      },
+      "search": "Search",
+      "searchPlaceholder": "Name or email",
+      "clearSearch": "Clear",
+      "matchCount": "{count, plural, =0 {No match} one {# match} other {# matches}}",
+      "noMatch": "No user matches this search.",
+      "disabledBadge": "Disabled",
+      "unverifiedBadge": "Unverified email",
+      "actionsFor": "Actions for {user}",
+      "disable": "Disable",
+      "enable": "Re-enable",
+      "delete": "Delete permanently",
+      "disableTitle": "Disable {user}?",
+      "disableBody": "Their sessions are closed and every sign-in is refused (password, passkey, OIDC). Their data is kept; you can re-enable them.",
+      "enableTitle": "Re-enable {user}?",
+      "enableBody": "They will be able to sign in again.",
+      "verifyEmail": "Mark email as verified",
+      "verifyEmailTitle": "Mark {user}’s email as verified?",
+      "verifyEmailBody": "Only do this if you know {email} belongs to this person: invitations sent to this address will be offered to them.",
+      "verifyEmailConfirm": "Mark as verified",
+      "deleteTitle": "Permanently delete {user}?",
+      "deleteBody": "Their account and all their data are erased, and the audit log is anonymized. This cannot be undone.",
+      "deleteType": "To confirm, type {email}",
+      "lifecycleError": {
+        "UNAUTHORIZED": "You are not allowed to do this.",
+        "INVALID": "Invalid request.",
+        "SELF": "You can’t act on your own account.",
+        "FORBIDDEN": "Only a super administrator can act on an administrator or delete an account.",
+        "LAST_SUPER_ADMIN": "Not possible: this is the last active super administrator.",
+        "NOT_FOUND": "User not found.",
+        "CONFIRMATION": "The address typed doesn’t match.",
+        "FAILED": "Failed. Try again."
+      },
+      "deleteLoading": "Working out the impact…",
+      "deleteAccounts": "{count, plural, one {# bank account and its history disappear{shared, plural, =0 {} other {; it is shared, so household members will no longer see it}}} other {# bank accounts and their history disappear{shared, plural, =0 {} one {, # of them shared: household members will no longer see it} other {, # of them shared: household members will no longer see them}}}}.",
+      "deleteTransfer": "Household “{group}” will be handed over to {to}.",
+      "deleteGroup": "Household “{group}”, of which they are the only member, will be deleted.",
+      "deleteBudgetLines": "Lines in household or other members’ budgets that targeted their accounts will no longer be limited to an account.",
+      "roleConfirmTitle": "Change {user}’s role?",
+      "roleConfirmBody": "{from} → {to}. The change takes effect immediately.",
+      "roleConfirm": "Change role",
+      "roleSuperAdminWarning": "A super administrator has every right, including over other administrators and account deletion."
+    },
+    "signupTokens": {
+      "createTitle": "Create a token",
+      "listTitle": "Tokens",
+      "description": "Description",
+      "descriptionPlaceholder": "e.g. finance team",
+      "maxUses": "Max uses",
+      "create": "Create",
+      "creating": "Creating…",
+      "revoke": "Revoke",
+      "empty": "No tokens.",
+      "uses": "{used}/{max} uses",
+      "statusActive": "Active",
+      "statusRevoked": "Revoked",
+      "statusExpired": "Expired",
+      "statusUsedUp": "Used up",
+      "error": {
+        "UNAUTHORIZED": "You don’t have permission to manage tokens.",
+        "INVALID": "Check the fields you entered.",
+        "STILL_ACTIVE": "Revoke this token before deleting it.",
+        "FAILED": "Failed. Try again."
+      },
+      "createHint": "A token lets someone sign up when registration is invite-only. Share the signup link copied from the list.",
+      "token": "Token",
+      "usesCol": "Uses",
+      "status": "Status",
+      "expiresIn": "Expires",
+      "expiresInDays": "{count, plural, one {In # day} other {In # days}}",
+      "never": "Never",
+      "expires": "Expires:",
+      "expiresCol": "Expires",
+      "copyLink": "Copy the signup link",
+      "linkCopied": "Link copied",
+      "delete": "Delete",
+      "revokeTitle": "Revoke this token?",
+      "revokeBody": "It can no longer be used to sign up. Accounts already created are not affected.",
+      "deleteTitle": "Delete this token?",
+      "deleteBody": "It will be removed from the list. Accounts created with it are not affected.",
+      "modeOpen": "Registration is open: anyone can sign up and tokens are not required.",
+      "modeDisabled": "Registration is disabled: tokens are rejected.",
+      "modeLink": "Change the registration mode"
+    },
+    "settings": {
+      "appName": "Instance name",
+      "registrationMode": "Registration mode",
+      "credentialsEnabled": "Password sign-in",
+      "minPasswordLength": "Minimum password length",
+      "admin2faRequired": "Mandatory admin 2FA",
+      "mcpEnabled": "MCP server for AI assistants",
+      "mcpEnabledHint": "Users still have to turn it on themselves in their preferences.",
+      "mode": {
+        "OPEN": "Open",
+        "INVITE_ONLY": "Invite only",
+        "DISABLED": "Disabled"
+      },
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Saved.",
+      "error": {
+        "INVALID": "Invalid value.",
+        "FAILED": "Save failed.",
+        "FORBIDDEN": "Only a super admin can change these settings.",
+        "LOCKOUT": "Password sign-in kept: {count, plural, one {# user would} other {# users would}} be left with no way to sign in (no passkey or enabled linked provider)."
+      },
+      "general": {
+        "overline": "General",
+        "title": "Identity",
+        "hint": "Name shown in the interface, emails and the browser tab."
+      },
+      "access": {
+        "overline": "Access",
+        "title": "Sign-up and sign-in",
+        "hint": "Who can create an account and how people sign in."
+      },
+      "security": {
+        "overline": "Security",
+        "title": "Passwords and two-factor",
+        "hint": "Requirements applied to every account."
+      }
+    },
+    "smtp": {
+      "title": "SMTP server",
+      "subtitle": "Outgoing email configuration (invitations, password resets).",
+      "host": "Host",
+      "port": "Port",
+      "username": "Username",
+      "password": "Password",
+      "passwordKept": "Leave blank to keep the current one (same server and account)",
+      "credentialsHint": "Leave the username and password empty for a relay that doesn’t require authentication.",
+      "fromAddress": "From address",
+      "fromName": "From name",
+      "security": {
+        "label": "Encryption",
+        "STARTTLS": "STARTTLS (port 587) — recommended",
+        "TLS": "Implicit TLS (port 465)",
+        "NONE": "None — local relay only, unencrypted",
+        "hint": {
+          "STARTTLS": "The connection is upgraded to TLS before logging in; sending fails if the server doesn’t support it.",
+          "TLS": "The connection is encrypted from the start, as most providers expect on port 465.",
+          "NONE": "The password and emails, reset links included, travel in clear text: only for a relay on the same machine or a trusted local network."
+        }
+      },
+      "enabled": "State",
+      "on": "On",
+      "off": "Off",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "SMTP configuration saved.",
+      "error": {
+        "INVALID": "Check the fields you entered.",
+        "FAILED": "Save failed.",
+        "PASSWORD_REQUIRED": "Enter the password: it is only kept when the host, port, encryption and username are unchanged."
+      },
+      "test": "Send a test email",
+      "testing": "Sending…",
+      "testHint": "The test uses the saved settings, even when disabled, and mails your own address.",
+      "testSent": "Test email sent to {to}.",
+      "testError": {
+        "NOT_CONFIGURED": "Save an SMTP configuration first.",
+        "RATE_LIMITED": "Too many tests. Try again in a minute.",
+        "EAUTH": "Failed: the SMTP server rejected the username or password.",
+        "ECONNECTION": "Failed: couldn’t connect to the SMTP server (host, port or encryption).",
+        "ETIMEDOUT": "Failed: the SMTP server didn’t respond.",
+        "ESOCKET": "Failed: network or TLS error with the SMTP server.",
+        "EENVELOPE": "Failed: the server rejected the sender or recipient.",
+        "OTHER": "Sending failed. Details are in the server logs."
+      },
+      "testMail": {
+        "subject": "{appName} — test email",
+        "body": "This is a test email sent from the {appName} admin area. The SMTP settings work."
+      },
+      "remove": "Remove the configuration",
+      "removeTitle": "Remove the SMTP configuration?",
+      "removeBody": "No email will be sent (invitations, password resets, security alerts) until a new configuration is saved."
+    },
+    "bankSync": {
+      "title": "Bank sync",
+      "subtitle": "Enable Banking application that imports transactions from the bank.",
+      "intro": "In restricted production mode, Enable Banking only gives access to the accounts linked in its control panel: those of the application owner and their household.",
+      "applicationId": "Application ID",
+      "privateKey": "Private key (PEM)",
+      "privateKeyKept": "Stored key: leave blank to keep it (same application)",
+      "privateKeyHint": "Paste the private key generated when the application was created. It is stored encrypted and never shown again.",
+      "enabled": "Offer bank sync to users",
+      "enabledHint": "While it is off, the feature is hidden from users.",
+      "syncInterval": "Sync frequency",
+      "syncIntervalOption": "Every {hours} hours",
+      "syncIntervalHint": "Background sync of each connection. Some banks limit these accesses to 4 a day per account: widen the interval if a bank refuses them.",
+      "rateLimited": "A bank limited access on {date}: consider a longer interval.",
+      "redirectUrl": "Redirect URL",
+      "redirectUrlHint": "Register it in the Enable Banking application. It must use HTTPS.",
+      "copyRedirect": "Copy the redirect URL",
+      "copiedRedirect": "URL copied",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Configuration saved.",
+      "error": {
+        "INVALID": "Check the fields you entered.",
+        "FAILED": "Save failed."
+      },
+      "test": {
+        "run": "Test the connection",
+        "running": "Testing…",
+        "hint": "The test uses the saved configuration, even when off: it reads the application and counts the banks available in France.",
+        "ok": "Application “{name}” ({environment}), {active, select, true {active} other {inactive}}: {count, plural, one {# bank available} other {# banks available}} in France.",
+        "inactive": "The application is not active yet. Activate it by linking your accounts in the Enable Banking control panel, then test again.",
+        "error": {
+          "NOT_CONFIGURED": "Save a configuration first.",
+          "RATE_LIMITED": "Too many tests. Try again in a minute.",
+          "UNAUTHORIZED": "Enable Banking rejects the signature: check the application ID and the private key.",
+          "EXPIRED_SESSION": "Enable Banking answered that the session expired.",
+          "NOT_FOUND": "Enable Banking can’t find this application.",
+          "NETWORK": "Enable Banking can’t be reached from the server.",
+          "HTTP": "Enable Banking returned an error. Try again later.",
+          "REDIRECT_NOT_ALLOWED": "Enable Banking refuses the redirect URL: register exactly the one shown in Administration › Bank sync."
+        }
+      },
+      "remove": "Remove the configuration",
+      "removeTitle": "Remove the bank sync configuration?",
+      "removeBody": "Bank sync will be unavailable until a new configuration is saved."
+    },
+    "authProviders": {
+      "listTitle": "Configured providers",
+      "addTitle": "Add a provider",
+      "empty": "No providers configured.",
+      "key": "Key",
+      "type": "Type",
+      "typeOidc": "OIDC",
+      "typeGoogle": "Google",
+      "displayName": "Display name",
+      "enabled": "State",
+      "on": "On",
+      "off": "Off",
+      "allowSignUp": "Allow sign-up",
+      "allowSignUpHint": "Creates a {appName} account on the first sign-in of an identity no account is linked to, only while the registration mode is “Open”. Otherwise this provider only signs in identities already linked to an account. Same email is not enough: an existing user links the identity from Account > Security.",
+      "oidcSection": "Advanced OIDC options",
+      "googleHint": "Google only uses the client ID and client secret.",
+      "issuer": "Issuer",
+      "clientId": "Client ID",
+      "clientSecret": "Client secret",
+      "secretKept": "Leave blank to keep the current one",
+      "scopes": "Scopes",
+      "mapName": "Claim → name",
+      "mapEmail": "Claim → email",
+      "authorizationUrl": "Authorization URL",
+      "tokenUrl": "Token URL",
+      "userInfoUrl": "Userinfo URL",
+      "pkce": "PKCE",
+      "save": "Save",
+      "add": "Add",
+      "saving": "Saving…",
+      "saved": "Provider saved.",
+      "error": {
+        "INVALID": "Check the fields: a lowercase key (letters, digits, - or _), a display name, a client ID, and for OIDC the issuer.",
+        "FAILED": "Save failed.",
+        "KEY_EXISTS": "A provider already uses this key. Edit it in the list above.",
+        "NOT_FOUND": "This provider no longer exists.",
+        "SECRET_REQUIRED": "The client secret is required.",
+        "LOCKOUT": "Refused: {count, plural, one {# user would} other {# users would}} be left with no way to sign in.",
+        "TYPE_LOCKED": "A provider’s type can’t be changed. Create a new one instead.",
+        "GOOGLE_EXISTS": "A Google provider already exists."
+      },
+      "addHint": "OpenID Connect or Google sign-in. Password sign-in is set in the Settings tab.",
+      "delete": "Delete",
+      "deleting": "Deleting…",
+      "deleteTitle": "Delete the {name} provider?",
+      "deleteBody": "It disappears from the sign-in page. This cannot be undone.",
+      "deleteLinked": "{count, plural, one {# user account is linked} other {# user accounts are linked}} to this provider: those links will be removed.",
+      "deleteLockout": "{count, plural, one {# user would} other {# users would}} be left with no way to sign in (no password, passkey or other enabled provider). Disable this provider instead.",
+      "deleteLockoutNoPassword": "{count, plural, one {# user would} other {# users would}} be left with no way to sign in (no password, passkey or other enabled provider). With password sign-in off, disabling this provider is refused too: turn password sign-in back on, or have these users add a passkey or another provider first."
+    },
+    "audit": {
+      "title": "Audit log",
+      "empty": "No entries.",
+      "count": "{total, plural, =0 {No entries} one {# entry} other {# entries}}",
+      "colDate": "Date",
+      "colAction": "Action",
+      "colEntity": "Entity",
+      "colUser": "User",
+      "system": "system",
+      "filter": "Filter",
+      "all": "All",
+      "from": "From",
+      "to": "To",
+      "reset": "Reset",
+      "userPlaceholder": "Email or name",
+      "families": {
+        "auth": "Authentication",
+        "user": "Users",
+        "settings": "Settings",
+        "signup_token": "Invitation tokens",
+        "group": "Households",
+        "account": "Bank accounts",
+        "transaction": "Transactions",
+        "import": "Imports",
+        "category": "Categories",
+        "rule": "Rules",
+        "budget": "Budgets",
+        "link": "Links",
+        "mail": "Emails",
+        "audit": "Audit log",
+        "bank_sync": "Bank sync",
+        "merchant": "Merchants",
+        "preferences": "Preferences",
+        "mcp": "AI assistants (MCP)"
+      },
+      "entities": {
+        "User": "User",
+        "Session": "Session",
+        "Passkey": "Passkey",
+        "TrustedDevice": "Trusted device",
+        "AppSetting": "Setting",
+        "AuthProvider": "Auth provider",
+        "SmtpConfig": "SMTP settings",
+        "BankSyncConfig": "Bank sync settings",
+        "BankConnection": "Bank connection",
+        "AdminSignupToken": "Invitation token",
+        "Group": "Household",
+        "GroupInvitation": "Household invitation",
+        "BankAccount": "Bank account",
+        "AccountShare": "Account share",
+        "Transaction": "Transaction",
+        "TransactionLink": "Link",
+        "IgnoredLinkSuggestion": "Ignored link suggestion",
+        "ImportBatch": "Import",
+        "Category": "Category",
+        "CategorizationRule": "Rule",
+        "Budget": "Budget",
+        "BudgetAssignment": "Budget assignment",
+        "McpToken": "MCP token",
+        "OauthClient": "OAuth client",
+        "MerchantAlias": "Merchant alias",
+        "UserPreference": "Preferences"
+      },
+      "actions": {
+        "merchant": {
+          "renamed": "Merchant name changed",
+          "reset": "Merchant name reset",
+          "alias_removed": "Merchant alias removed"
+        },
+        "preferences": {
+          "link_settings_updated": "Link settings changed",
+          "exceptional_updated": "Exceptional expense rule changed"
+        },
+        "mcp": {
+          "enabled": "MCP enabled",
+          "disabled": "MCP disabled",
+          "token": {
+            "created": "MCP token created",
+            "create_failed": "MCP token creation refused",
+            "revoked": "MCP token revoked",
+            "revoked_all": "All MCP tokens revoked"
+          },
+          "client": {
+            "authorized": "OAuth client authorized",
+            "authorize_failed": "OAuth client authorization refused",
+            "revoked": "OAuth client revoked",
+            "revoked_all": "All OAuth clients revoked"
+          },
+          "credentials": {
+            "revoke_failed": "AI assistant access revocation failed"
+          }
+        },
+        "settingUpdated": "Setting “{key}” changed",
+        "auth": {
+          "login": {
+            "success": "Signed in",
+            "failed": "Failed sign-in",
+            "2fa_pending": "Sign-in awaiting 2FA"
+          },
+          "2fa": {
+            "enabled": "Two-factor enabled",
+            "disabled": "Two-factor disabled",
+            "enable_failed": "Two-factor enable failed",
+            "disable_failed": "Two-factor disable failed",
+            "backup_codes_regenerated": "Backup codes regenerated",
+            "backup_codes_failed": "Backup code regeneration failed"
+          },
+          "signup": "Account created (setup)",
+          "register": {
+            "success": "Registration succeeded",
+            "failed": "Registration failed"
+          },
+          "password": {
+            "changed": "Password changed",
+            "change_failed": "Password change failed",
+            "reset_requested": "Password reset requested",
+            "reset_completed": "Password reset completed"
+          },
+          "email": {
+            "verified": "Email address verified",
+            "verification_sent": "Verification email resent"
+          },
+          "passkey": {
+            "added": "Passkey added",
+            "deleted": "Passkey deleted"
+          },
+          "session": {
+            "revoked": "Session revoked",
+            "revoked_others": "Other sessions revoked"
+          },
+          "trusted_device": {
+            "revoked": "Trusted device forgotten",
+            "revoked_all": "All trusted devices forgotten"
+          },
+          "identity": {
+            "linked": "SSO identity linked",
+            "unlinked": "SSO identity unlinked",
+            "link_failed": "SSO identity link failed"
+          }
+        },
+        "user": {
+          "data": {
+            "exported": "Full data export downloaded",
+            "export_failed": "Full data export refused"
+          },
+          "role": {
+            "granted": "Role granted",
+            "changed": "Role changed"
+          },
+          "deleted": "Account deleted",
+          "created_by_admin": "User created by an admin",
+          "disabled": "User disabled",
+          "enabled": "User re-enabled",
+          "email_verified": "Email address marked as verified"
+        },
+        "settings": {
+          "smtp": {
+            "update": "SMTP settings changed",
+            "test": "SMTP test",
+            "delete": "SMTP settings removed"
+          },
+          "bankSync": {
+            "update": "Bank sync settings changed",
+            "test": "Bank sync test",
+            "delete": "Bank sync settings removed"
+          },
+          "auth_provider": {
+            "update": "Auth provider changed",
+            "create": "Auth provider added",
+            "delete": "Auth provider removed"
+          }
+        },
+        "signup_token": {
+          "created": "Invitation token created",
+          "revoked": "Invitation token revoked",
+          "deleted": "Invitation token deleted"
+        },
+        "group": {
+          "created": "Household created",
+          "updated": "Household updated",
+          "deleted": "Household deleted",
+          "member": {
+            "removed": "Member removed",
+            "role_changed": "Member role changed"
+          },
+          "invitation": {
+            "create": "Invitation sent",
+            "revoke": "Invitation revoked",
+            "accept": "Invitation accepted",
+            "resend": "Invitation resent",
+            "decline": "Invitation declined"
+          }
+        },
+        "account": {
+          "iban": {
+            "revealed": "IBAN revealed",
+            "reveal_failed": "IBAN reveal refused"
+          },
+          "created": "Bank account created",
+          "updated": "Bank account updated",
+          "archived": "Bank account archived",
+          "share": {
+            "create": "Account shared",
+            "revoke": "Account share removed",
+            "ai": "AI assistant access on a share changed"
+          },
+          "deleted": "Bank account deleted",
+          "unarchived": "Bank account unarchived",
+          "initial_balance_adjusted": "Opening balance adjusted by an import",
+          "initial_balance_restored": "Opening balance restored by an import revert",
+          "mirror_updated": "Savings account kept up to date from transfers: settings changed"
+        },
+        "transaction": {
+          "created": "Transaction created",
+          "deleted": "Transaction deleted",
+          "recategorized": "Transaction recategorized",
+          "updated": "Transaction edited",
+          "month_set": "Assigned month changed"
+        },
+        "import": {
+          "created": "Import started",
+          "committed": "Import committed",
+          "discarded": "Import discarded",
+          "reverted": "Import reverted",
+          "purged": "Imports purged"
+        },
+        "category": {
+          "created": "Category created",
+          "updated": "Category updated",
+          "deleted": "Category deleted"
+        },
+        "rule": {
+          "created": "Rule created",
+          "updated": "Rule updated",
+          "deleted": "Rule deleted",
+          "enabled": "Rule enabled",
+          "disabled": "Rule disabled",
+          "applied": "Rule applied to existing transactions",
+          "exported": "Rules exported",
+          "imported": "Rules imported"
+        },
+        "budget": {
+          "created": "Budget created",
+          "updated": "Budget updated",
+          "deleted": "Budget deleted",
+          "archived": "Budget archived",
+          "unarchived": "Budget unarchived",
+          "assignment": {
+            "create": "Transaction assigned to a budget",
+            "delete": "Budget assignment removed"
+          }
+        },
+        "link": {
+          "autoCreated": "Automatic transfer links created",
+          "created": "Link created",
+          "deleted": "Link deleted",
+          "suggestionIgnored": "Link suggestion ignored",
+          "suggestionRestored": "Link suggestion restored",
+          "mirrorCreated": "Savings mirror legs created",
+          "oppositeCreated": "Opposite transaction created"
+        },
+        "mail": {
+          "security": {
+            "failed": "Security email failed"
+          }
+        },
+        "audit": {
+          "purged": "Audit log purged"
+        },
+        "bank_sync": {
+          "connection": {
+            "created": "Bank connected",
+            "expired": "Bank connection expired",
+            "reconnected": "Bank reconnected",
+            "revoked": "Bank disconnected"
+          },
+          "mapping": {
+            "saved": "Bank accounts mapped"
+          },
+          "cron": "Background bank sync"
+        }
+      }
+    },
+    "roles": {
+      "USER": "User",
+      "ADMIN": "Administrator",
+      "SUPER_ADMIN": "Super administrator"
+    }
+  },
+  "setup": {
+    "title": "Welcome to Bilan",
+    "subtitle": "Let’s set up your instance. It only takes a minute.",
+    "steps": {
+      "account": "Admin account",
+      "smtp": "Email (SMTP)",
+      "oidc": "External login",
+      "registration": "Registration mode"
+    },
+    "account": {
+      "name": "Name",
+      "email": "Email address",
+      "password": "Password",
+      "passwordHint": "At least {count} characters.",
+      "error": "Check the fields: name required, valid email, password of at least {count} characters.",
+      "submit": "Continue"
+    },
+    "smtp": {
+      "description": "Optional — for sending emails (password resets, invitations). Leave blank to configure later in admin settings.",
+      "host": "Host",
+      "port": "Port",
+      "username": "Username",
+      "password": "Password",
+      "fromAddress": "From address",
+      "fromName": "From name",
+      "credentialsHint": "Leave the username and password empty for a relay that doesn’t require authentication.",
+      "error": "Incomplete SMTP fields: host, port and a valid from address are required, and a username needs its password.",
+      "save": "Save and continue",
+      "skip": "Skip"
+    },
+    "oidc": {
+      "description": "Optional — sign in through an OpenID Connect identity provider (Authentik, Keycloak…). Leave blank to add one later in the admin area, where you can also set up Google.",
+      "redirectUri": "Redirect URL",
+      "redirectUriHint": "Register this as an allowed redirect URI in your identity provider.",
+      "signUpHint": "This provider only signs in identities linked to a Bilan account, and a matching email does not link them. To let it create accounts on first sign-in, allow sign-up in Administration > Auth providers and set the registration mode to “Open”.",
+      "displayName": "Display name",
+      "issuer": "Issuer (URL)",
+      "clientId": "Client ID",
+      "clientSecret": "Client secret",
+      "scopes": "Scopes",
+      "test": "Test connection",
+      "testing": "Testing…",
+      "testOk": "OIDC discovery valid ✓",
+      "testFailed": "Test failed",
+      "testError": {
+        "UNAUTHORIZED": "You don’t have permission to test this connection.",
+        "NO_ISSUER": "Enter the issuer URL.",
+        "INVALID_URL": "The issuer URL isn’t valid.",
+        "HTTPS_REQUIRED": "The test only checks https issuers.",
+        "UNSAFE_HOST": "The test doesn’t contact private-network or local addresses. A provider on your local network will still work at sign-in: continue without testing.",
+        "UNREACHABLE": "No discovery document could be reached at this address.",
+        "INVALID_DISCOVERY": "The discovery document lacks the authorization and token endpoints."
+      },
+      "advanced": "Advanced options",
+      "pkce": "Enable PKCE",
+      "endpointsHint": "Only set these endpoints if your provider’s automatic (.well-known) discovery doesn’t work.",
+      "authorizationUrl": "Authorization URL",
+      "tokenUrl": "Token URL",
+      "userInfoUrl": "Userinfo URL",
+      "mapName": "Name claim",
+      "mapEmail": "Email claim",
+      "error": "Incomplete OIDC fields: a valid issuer URL, client ID and client secret are required.",
+      "save": "Save and continue",
+      "skip": "Skip",
+      "displayNamePlaceholder": "My SSO"
+    },
+    "registration": {
+      "submit": "Finish",
+      "submitting": "Saving…",
+      "error": "Setup failed. Check your details and try again.",
+      "modes": {
+        "INVITE_ONLY": {
+          "label": "Invite only",
+          "description": "New accounts require an invitation token. Recommended."
+        },
+        "OPEN": {
+          "label": "Open",
+          "description": "Anyone can create an account."
+        },
+        "DISABLED": {
+          "label": "Disabled",
+          "description": "Only an admin can create accounts."
+        }
+      }
+    }
+  },
+  "meta": {
+    "titles": {
+      "dashboard": "Dashboard",
+      "insights": "Insights",
+      "transactions": "Transactions",
+      "suggestions": "Link suggestions",
+      "import": "Import",
+      "importCsv": "CSV import",
+      "importPdf": "PDF import",
+      "budgets": "Budgets",
+      "budget": "Budget",
+      "accounts": "Accounts",
+      "categories": "Categories",
+      "groups": "Households",
+      "group": "Household",
+      "joinGroup": "Join a household",
+      "security": "Security",
+      "ai": "AI assistants",
+      "data": "Data",
+      "admin": "Administration",
+      "adminUsers": "Users · Administration",
+      "adminSignupTokens": "Invitation tokens · Administration",
+      "adminAuthProviders": "Auth providers · Administration",
+      "adminSmtp": "SMTP · Administration",
+      "adminBankSync": "Bank sync · Administration",
+      "adminAppSettings": "Settings · Administration",
+      "adminAudit": "Audit log · Administration",
+      "login": "Sign in",
+      "register": "Sign up",
+      "reset": "Forgot password",
+      "resetConfirm": "New password",
+      "verifyEmail": "Email verification",
+      "consent": "Authorization",
+      "setup": "Setup",
+      "forbidden": "Access denied",
+      "notFound": "Page not found",
+      "bankMapping": "Map accounts · Accounts"
+    }
+  },
+  "onboarding": {
+    "createAccount": "Create an account",
+    "manageAccounts": "Manage accounts",
+    "importStatement": "Import a statement",
+    "addTransaction": "Add a transaction",
+    "blockedTitle": {
+      "NO_ACCOUNT": "Start by creating an account",
+      "READ_ONLY": "Read-only accounts",
+      "ARCHIVED": "All your accounts are archived"
+    },
+    "blocked": {
+      "NO_ACCOUNT": "Every transaction belongs to a bank account. Create one, then import a statement or add a transaction.",
+      "READ_ONLY": "The accounts shared with you are read-only. Create your own account to import or add transactions.",
+      "ARCHIVED": "Unarchive an account or create a new one to import or add transactions."
+    },
+    "welcome": {
+      "overline": "Getting started",
+      "title": "Welcome to {appName}",
+      "heading": "Two steps to see your finances here",
+      "step1": "Create a bank account",
+      "step1Hint": "Checking, savings, card… Your transactions will belong to it.",
+      "step1Done": "You have an account ready for transactions.",
+      "step2": "Import a statement or add a transaction",
+      "step2Hint": "A CSV, PDF or OFX file exported from your bank, or a manual entry.",
+      "done": "Done"
+    },
+    "transactions": {
+      "title": "No transactions yet",
+      "body": "Import a bank statement or add your first transaction."
+    },
+    "accounts": {
+      "title": "No accounts yet",
+      "body": "Add a checking account, a savings account or a card to import your statements into.",
+      "cta": "Create my first account"
+    },
+    "budgets": {
+      "title": "No budgets yet",
+      "body": "A budget sets an envelope per category or account over a period and tracks your spending.",
+      "cta": "Create my first budget"
+    }
+  },
+  "forms": {
+    "fieldError": {
+      "REQUIRED": "This field is required.",
+      "TOO_LONG": "This text is too long.",
+      "TOO_SHORT": "This text is too short.",
+      "TOO_BIG": "This value is too large.",
+      "TOO_SMALL": "This value is too small.",
+      "INVALID_EMAIL": "Invalid email address.",
+      "INVALID_URL": "Invalid URL (https://…).",
+      "INVALID_FORMAT": "Invalid format.",
+      "INVALID": "Invalid value.",
+      "MISMATCH": "The two passwords don’t match.",
+      "AMOUNT_INVALID": "Invalid amount. Examples: -12.34 or 1,234.56.",
+      "AMOUNT_AMBIGUOUS": "Ambiguous amount: write 1234 or 1.23 (no lone thousands separator).",
+      "AMOUNT_PRECISION": "The amount can’t have more than 2 decimals.",
+      "PASSWORD_TOO_SHORT": "At least {count} characters.",
+      "PASSWORD_TOO_LONG": "At most {max, number} characters.",
+      "BAD_PASSWORD": "Incorrect password.",
+      "SAME_PASSWORD": "Must be different from the current password.",
+      "BAD_CONFIRM": "The email you entered doesn’t match.",
+      "USER_EXISTS": "An account already exists with this email.",
+      "OUT_OF_RANGE": "Whole number from {min, number} to {max, number}.",
+      "FACTOR_RANGE": "A number between {min, number} and {max, number}, with at most one decimal.",
+      "KEY_REQUIRED": "Paste the private key: it is only kept for the same application ID.",
+      "INVALID_KEY": "This is not an RSA private key in PEM format.",
+      "DATE_INVALID": "Invalid date.",
+      "DATE_IN_FUTURE": "The date cannot be in the future."
+    }
+  }
+}

@@ -1,0 +1,935 @@
+// Bilan — Group A schema: Identity (Better Auth) + RBAC
+// Later phases add Groups B–H models (groups, accounts, categories, transactions, budgets, …).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ─── Better Auth core ────────────────────────────────────────────────────────
+
+model User {
+  id               String    @id
+  email            String    @unique
+  emailVerified    Boolean   @default(false)
+  name             String?
+  image            String?
+  twoFactorEnabled Boolean   @default(false)
+  role             String? // Better Auth admin plugin (admin | user); RBAC permissions live in UserRole.
+  banned           Boolean   @default(false)
+  banReason        String?
+  banExpires       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  sessions           Session[]
+  authAccounts       AuthAccount[]
+  twoFactors         TwoFactor[]
+  passkeys           Passkey[]
+  roles              UserRole[]
+  preference         UserPreference?
+  accounts           BankAccount[]        @relation("AccountOwner")
+  groupMemberships   GroupMember[]
+  sentInvitations    GroupInvitation[]    @relation("InvitedBy")
+  categories         Category[]
+  rules              CategorizationRule[]
+  budgets            Budget[]
+  merchantAliases    MerchantAlias[]
+  bankConnections    BankConnection[]
+  bankAuthRequests   BankAuthRequest[]
+  mcpTokens          McpToken[]
+  oauthClients       OauthClient[]
+  oauthAccessTokens  OauthAccessToken[]
+  oauthRefreshTokens OauthRefreshToken[]
+  oauthConsents      OauthConsent[]
+}
+
+model Session {
+  id             String   @id
+  userId         String
+  token          String   @unique
+  expiresAt      DateTime
+  ipAddress      String?
+  userAgent      String?  @db.Text
+  impersonatedBy String? // Better Auth admin plugin (set during impersonation).
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  oauthAccessTokens  OauthAccessToken[]
+  oauthRefreshTokens OauthRefreshToken[]
+
+  @@index([userId])
+}
+
+// Renamed from Better Auth's "Account" to avoid confusion with BankAccount (Group C).
+model AuthAccount {
+  id                    String    @id
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?   @db.Text
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String   @db.Text
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+model TwoFactor {
+  id                      String    @id
+  userId                  String
+  secret                  String    @db.Text
+  backupCodes             String    @db.Text
+  verified                Boolean   @default(true)
+  // Last accepted TOTP time-step, so a code can't be replayed within its window (#223).
+  lastUsedStep            Int?
+  // Better Auth's own failed-code lockout (1.7).
+  failedVerificationCount Int       @default(0)
+  lockedUntil             DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Passkey {
+  id           String   @id
+  name         String?
+  publicKey    String   @db.Text
+  userId       String
+  credentialID String
+  counter      Int      @default(0)
+  deviceType   String
+  backedUp     Boolean  @default(false)
+  transports   String?
+  aaguid       String?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─── RBAC ────────────────────────────────────────────────────────────────────
+
+model Role {
+  id          String  @id @default(cuid())
+  key         String  @unique // SUPER_ADMIN, ADMIN, USER
+  name        String
+  description String?
+  isSystem    Boolean @default(false)
+
+  permissions RolePermission[]
+  users       UserRole[]
+}
+
+model Permission {
+  id          String @id @default(cuid())
+  key         String @unique // admin.settings.write, admin.users.read, …
+  scope       String // admin | system
+  description String
+
+  roles RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+}
+
+model UserRole {
+  userId    String
+  roleId    String
+  grantedAt DateTime @default(now())
+  grantedBy String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+}
+
+// ─── App configuration, audit & signup tokens (Phase 1) ──────────────────────
+
+model UserPreference {
+  userId               String  @id
+  user                 User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  locale               String  @default("fr")
+  linkWindowDays       Int     @default(30)
+  linkMinAmount        Decimal @default(0) @db.Decimal(12, 2)
+  dashboardLayout      Json?
+  // Exceptional expenses rule (spec §5.17).
+  exceptionalMinAmount Decimal @default(50) @db.Decimal(12, 2)
+  exceptionalFactor    Decimal @default(2) @db.Decimal(4, 1)
+  mcpEnabled           Boolean @default(false)
+}
+
+model McpToken {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String    @db.VarChar(80)
+  prefix     String    @db.VarChar(16)
+  tokenHash  String    @unique
+  scope      String // read | write
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+
+  @@index([userId])
+}
+
+// ─── OAuth 2.1 provider for MCP clients (@better-auth/oauth-provider, spec §5.18) ──
+// Columns mirror `npx auth generate`; list and JSON fields are stored as JSON text.
+
+model OauthClient {
+  id                               String    @id
+  clientId                         String    @unique
+  clientSecret                     String?   @db.Text
+  clientDiscoveryId                String?   @db.Text
+  disabled                         Boolean?  @default(false)
+  skipConsent                      Boolean?
+  enableEndSession                 Boolean?
+  subjectType                      String?   @db.Text
+  scopes                           String?   @db.Text
+  clientCredentialsScopes          String?   @db.Text
+  userId                           String?
+  createdAt                        DateTime?
+  updatedAt                        DateTime?
+  name                             String?   @db.Text
+  uri                              String?   @db.Text
+  icon                             String?   @db.Text
+  contacts                         String?   @db.Text
+  tos                              String?   @db.Text
+  policy                           String?   @db.Text
+  softwareId                       String?   @db.Text
+  softwareVersion                  String?   @db.Text
+  softwareStatement                String?   @db.Text
+  redirectUris                     String    @db.Text
+  postLogoutRedirectUris           String?   @db.Text
+  backchannelLogoutUri             String?   @db.Text
+  backchannelLogoutSessionRequired Boolean?
+  tokenEndpointAuthMethod          String?   @db.Text
+  applicationType                  String?   @db.Text
+  jwks                             String?   @db.Text
+  jwksUri                          String?   @db.Text
+  grantTypes                       String?   @db.Text
+  responseTypes                    String?   @db.Text
+  requirePKCE                      Boolean?
+  dpopBoundAccessTokens            Boolean?  @default(false)
+  referenceId                      String?   @db.Text
+  metadata                         String?   @db.Text
+
+  user          User?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resources     OauthClientResource[]
+  accessTokens  OauthAccessToken[]
+  refreshTokens OauthRefreshToken[]
+  consents      OauthConsent[]
+
+  @@index([userId])
+}
+
+model OauthResource {
+  id                            String    @id
+  identifier                    String    @unique
+  name                          String    @db.Text
+  accessTokenTtl                Int?
+  refreshTokenTtl               Int?
+  signingAlgorithm              String?   @db.Text
+  signingKeyId                  String?   @db.Text
+  allowedScopes                 String?   @db.Text
+  customClaims                  String?   @db.Text
+  dpopBoundAccessTokensRequired Boolean?  @default(false)
+  disabled                      Boolean?  @default(false)
+  createdAt                     DateTime?
+  updatedAt                     DateTime?
+  policyVersion                 Int?      @default(1)
+  metadata                      String?   @db.Text
+
+  clients OauthClientResource[]
+}
+
+model OauthClientResource {
+  id         String    @id
+  clientId   String
+  resourceId String
+  metadata   String?   @db.Text
+  createdAt  DateTime?
+
+  client   OauthClient   @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  resource OauthResource @relation(fields: [resourceId], references: [identifier], onDelete: Cascade)
+
+  @@unique([clientId, resourceId])
+  @@index([resourceId])
+}
+
+model OauthRefreshToken {
+  id                      String    @id
+  token                   String    @unique
+  clientId                String
+  sessionId               String?
+  userId                  String
+  referenceId             String?   @db.Text
+  authorizationCodeId     String?
+  resources               String?   @db.Text
+  requestedUserInfoClaims String?   @db.Text
+  expiresAt               DateTime
+  createdAt               DateTime
+  revoked                 DateTime?
+  rotatedAt               DateTime?
+  rotationReplayResponse  String?   @db.Text
+  rotationReplayExpiresAt DateTime?
+  authTime                DateTime?
+  confirmation            String?   @db.Text
+  scopes                  String    @db.Text
+
+  client       OauthClient        @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  session      Session?           @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessTokens OauthAccessToken[]
+
+  @@index([clientId])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([authorizationCodeId])
+}
+
+model OauthAccessToken {
+  id                      String    @id
+  token                   String    @unique
+  clientId                String
+  sessionId               String?
+  userId                  String?
+  referenceId             String?   @db.Text
+  authorizationCodeId     String?
+  resources               String?   @db.Text
+  requestedUserInfoClaims String?   @db.Text
+  refreshId               String?
+  expiresAt               DateTime
+  createdAt               DateTime
+  revoked                 DateTime?
+  confirmation            String?   @db.Text
+  scopes                  String    @db.Text
+
+  client       OauthClient        @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  session      Session?           @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  user         User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshToken OauthRefreshToken? @relation(fields: [refreshId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([authorizationCodeId])
+  @@index([refreshId])
+}
+
+model OauthConsent {
+  id                      String    @id
+  clientId                String
+  userId                  String?
+  referenceId             String?   @db.Text
+  resources               String?   @db.Text
+  requestedUserInfoClaims String?   @db.Text
+  scopes                  String    @db.Text
+  createdAt               DateTime
+  updatedAt               DateTime
+  // Bilan-only (connected-clients list); the plugin never writes it.
+  lastUsedAt              DateTime?
+
+  client OauthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user   User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([userId])
+}
+
+model OauthClientAssertion {
+  id        String   @id
+  expiresAt DateTime
+}
+
+model AuthProvider {
+  id              String   @id @default(cuid())
+  type            String // oidc | google
+  key             String   @unique
+  displayName     String
+  enabled         Boolean  @default(false)
+  issuer          String?
+  clientId        String?
+  clientSecretEnc String?  @db.Text
+  scopes          String?
+  config          Json?
+  // OIDC/Google only: an unknown IdP user may create an account on first sign-in (#200).
+  allowSignUp     Boolean  @default(false)
+  updatedAt       DateTime @updatedAt
+  updatedById     String?
+}
+
+model SmtpConfig {
+  id          String       @id @default(cuid())
+  host        String
+  port        Int
+  security    SmtpSecurity @default(STARTTLS)
+  username    String
+  passwordEnc String       @db.Text
+  fromAddress String
+  fromName    String?
+  enabled     Boolean      @default(false)
+  updatedAt   DateTime     @updatedAt
+  updatedById String?
+}
+
+// Enable Banking application, a singleton like SmtpConfig (design §Data model).
+model BankSyncConfig {
+  id                String    @id @default(cuid())
+  applicationId     String
+  privateKeyEnc     String    @db.Text
+  enabled           Boolean   @default(false)
+  syncIntervalHours Int       @default(6) // one of SYNC_INTERVALS
+  lastRateLimitedAt DateTime? // last 429 from a bank, shown on the admin page
+  updatedAt         DateTime  @updatedAt
+  updatedById       String?
+}
+
+// One user consent at Enable Banking (design §Data model).
+model BankConnection {
+  id               String    @id @default(cuid())
+  userId           String
+  aspspName        String
+  aspspCountry     String    @db.VarChar(2)
+  sessionIdEnc     String    @db.Text
+  validUntil       DateTime
+  status           String    @default("ACTIVE") // ACTIVE | EXPIRED | REVOKED | ERROR
+  lastSyncAt       DateTime?
+  lastError        String? // error code only (design §Security and privacy)
+  syncStartedAt    DateTime? // claim against concurrent syncs
+  failureCount     Int       @default(0) // consecutive failed syncs
+  retryAfter       DateTime? // background syncs wait until then after a rate limit
+  reminderSentDays Int? // smallest REMINDER_DAYS threshold already mailed
+  createdAt        DateTime  @default(now())
+
+  user     User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accounts BankConnectionAccount[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model BankConnectionAccount {
+  id                  String    @id @default(cuid())
+  connectionId        String
+  uidEnc              String    @db.Text
+  ibanHash            String?
+  name                String
+  currency            String    @db.VarChar(3)
+  accountId           String? // null = ignored; one active connection per account, enforced in mapping.ts
+  syncFrom            DateTime?
+  lastSyncedDate      DateTime?
+  bookedBalance       Decimal?  @db.Decimal(12, 2)
+  bookedBalanceDate   DateTime?
+  expectedBalance     Decimal?  @db.Decimal(12, 2)
+  expectedBalanceDate DateTime?
+  pendingCount        Int       @default(0)
+  pendingTotal        Decimal   @default(0) @db.Decimal(12, 2)
+
+  connection BankConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  account    BankAccount?   @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  @@index([connectionId])
+  @@index([accountId])
+  @@index([ibanHash])
+}
+
+model BankAuthRequest {
+  id           String   @id @default(cuid())
+  stateHash    String   @unique // hmacExact of the state: the raw value only travels in the URL
+  userId       String
+  aspspName    String
+  aspspCountry String   @db.VarChar(2)
+  reconnectOf  String?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+}
+
+// A synced row or a savings mirror leg the user deleted: never re-inserted (design §Deleting synced rows).
+model SyncTombstone {
+  accountId  String
+  externalId String
+  createdAt  DateTime @default(now())
+
+  account BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@id([accountId, externalId])
+}
+
+// A source account whose matching transfers get a mirror leg on the savings account.
+model SavingsMirrorSource {
+  savingsAccountId String
+  sourceAccountId  String
+
+  savings BankAccount @relation("MirrorSavings", fields: [savingsAccountId], references: [id], onDelete: Cascade)
+  source  BankAccount @relation("MirrorSource", fields: [sourceAccountId], references: [id], onDelete: Cascade)
+
+  @@id([savingsAccountId, sourceAccountId])
+  @@index([sourceAccountId])
+}
+
+// TLS: implicit TLS (465); STARTTLS: upgrade required (587); NONE: unencrypted local relay.
+enum SmtpSecurity {
+  TLS
+  STARTTLS
+  NONE
+}
+
+model AppSetting {
+  key         String   @id
+  value       Json
+  isSecret    Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String?
+  entityId  String?
+  metadata  Json?
+  ipAddress String?
+  userAgent String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([entity, entityId])
+  @@index([action, createdAt])
+  @@index([createdAt])
+  @@index([entity, createdAt])
+}
+
+model AdminSignupToken {
+  id          String    @id @default(cuid())
+  tokenEnc    String    @db.Text // AES-256-GCM, shown back to admins
+  tokenHash   String    @unique // HMAC-SHA256 lookup index (spec §6.2)
+  description String?
+  maxUses     Int?
+  usedCount   Int       @default(0)
+  expiresAt   DateTime?
+  createdById String
+  createdAt   DateTime  @default(now())
+  revokedAt   DateTime?
+}
+
+// ─── Group C — Bank accounts (Phase 2) ───────────────────────────────────────
+
+model BankAccount {
+  id              String   @id @default(cuid())
+  ownerId         String
+  name            String
+  type            String // CHECKING | SAVINGS | CREDIT | OTHER
+  initialBalance  Decimal  @default(0) @db.Decimal(12, 2) // CLEAR — opening balance; transactions add to it (Phase 3+)
+  ibanEnc         String?  @db.Text // AES-256-GCM (v1.iv.ct.tag)
+  ibanHash        String? // HMAC-SHA256 blind index for equality search
+  bankName        String?
+  color           String?  @default("#2563eb")
+  icon            String?
+  archived        Boolean  @default(false)
+  // Label pattern of the source transfers a savings account mirrors (design §Savings mirror legs).
+  mirrorPattern   String?
+  mirrorMatchType String   @default("CONTAINS") // CONTAINS | EXACT
+  createdAt       DateTime @default(now())
+
+  owner            User                    @relation("AccountOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  shares           AccountShare[]
+  transactions     Transaction[]
+  imports          ImportBatch[]
+  budgetLines      BudgetLine[]            @relation("BudgetLineAccount")
+  counterpartLines BudgetLine[]            @relation("BudgetLineCounterpart")
+  attachedBudgets  Budget[]                @relation("BudgetAccount")
+  bankLinks        BankConnectionAccount[]
+  syncTombstones   SyncTombstone[]
+  mirrorSources    SavingsMirrorSource[]   @relation("MirrorSavings")
+  mirroredBy       SavingsMirrorSource[]   @relation("MirrorSource")
+
+  @@index([ownerId])
+  @@index([ibanHash])
+}
+
+// ─── Group B — Households & membership (Phase 2) ─────────────────────────────
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdById String
+  createdAt   DateTime @default(now())
+  archived    Boolean  @default(false)
+
+  members       GroupMember[]
+  invitations   GroupInvitation[]
+  accountShares AccountShare[]
+  categories    Category[]
+  rules         CategorizationRule[]
+  budgets       Budget[]
+}
+
+model GroupMember {
+  id       String   @id @default(cuid())
+  groupId  String
+  userId   String
+  role     String // OWNER | ADMIN | MEMBER
+  joinedAt DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+}
+
+model GroupInvitation {
+  id           String    @id @default(cuid())
+  groupId      String
+  email        String
+  invitedById  String
+  role         String    @default("MEMBER")
+  tokenEnc     String    @db.Text // AES-256-GCM, shown back to household admins
+  tokenHash    String    @unique // HMAC-SHA256 lookup index (spec §6.2)
+  codeEnc      String    @db.Text
+  codeHash     String    @unique
+  expiresAt    DateTime
+  acceptedAt   DateTime?
+  acceptedById String?
+  createdAt    DateTime  @default(now())
+
+  group     Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  invitedBy User  @relation("InvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([groupId])
+}
+
+model AccountShare {
+  id                String   @id @default(cuid())
+  accountId         String
+  groupId           String
+  permission        String // READ | WRITE
+  createdById       String
+  createdAt         DateTime @default(now())
+  // Lets the account's data reach AI assistants through the MCP server.
+  allowAiAssistants Boolean  @default(false)
+
+  account BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  group   Group       @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, groupId])
+  @@index([groupId])
+}
+
+model Category {
+  id           String               @id @default(cuid())
+  name         String
+  color        String?
+  icon         String?
+  parentId     String?
+  parent       Category?            @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children     Category[]           @relation("CategoryHierarchy")
+  transactions Transaction[]
+  rules        CategorizationRule[]
+  budgetLines  BudgetLine[]
+
+  // Owner XOR (User or Group) — enforced at the service layer (a DB CHECK is
+  // impossible on MariaDB: error 1901 on a FK column with a referential action).
+  userId  String?
+  groupId String?
+  user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group   Group?  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  isDefault Boolean  @default(false)
+  // Transactions dated in the last N days of a month count toward the next one (#341).
+  shiftDays Int?
+  // Counted in the dashboard's net savings, with its subtree.
+  savings   Boolean  @default(false)
+  // Counts neither as spending nor as income, with its subtree; wins over `savings` (#420).
+  neutral   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([groupId])
+  @@index([parentId])
+}
+
+// ─── Group D — Transactions (Phase 3) ────────────────────────────────────────
+
+model Transaction {
+  id           String   @id @default(cuid())
+  accountId    String
+  date         DateTime
+  // Date the period aggregates bucket on: `date`, or the 1st of the assigned month (#341).
+  // The DB default copies `date`, so inserts that omit it stay correct.
+  periodDate   DateTime @default(dbgenerated("(`date`)"))
+  periodManual Boolean  @default(false)
+  amount       Decimal  @db.Decimal(12, 2)
+  type         String // CARD | TRANSFER | DIRECT_DEBIT | CHEQUE | ATM | OTHER
+
+  labelEnc        String  @db.Text
+  labelHash       String
+  rawLabelEnc     String  @db.Text
+  rawLabelHash    String
+  // HMAC of the merchant key of `label`: the merchant directory groups on it (#296).
+  merchantKeyHash String?
+  noteEnc         String? @db.Text
+
+  categoryId          String?
+  category            Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  manuallyCategorized Boolean   @default(false)
+
+  externalId  String?
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  importBatchId String?
+  importBatch   ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+
+  account           BankAccount              @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  searchTokens      TransactionSearchToken[]
+  linkMembership    TransactionLinkMember?
+  budgetAssignments BudgetAssignment[]
+
+  @@unique([accountId, externalId])
+  // Per-account newest-first walk of the transaction list (#297).
+  @@index([accountId, date, createdAt])
+  @@index([accountId, periodDate])
+  @@index([categoryId, date])
+  // Categories met on the visible accounts (listForeignCategories, #298).
+  @@index([accountId, categoryId])
+  @@index([labelHash])
+  @@index([rawLabelHash])
+  // Covers the merchant directory's sums: they read no table row.
+  @@index([accountId, merchantKeyHash, categoryId, type, amount, date], map: "Transaction_merchant_directory_idx")
+  @@index([date])
+  @@index([importBatchId])
+}
+
+model TransactionSearchToken {
+  id            String      @id @default(cuid())
+  transactionId String
+  tokenHash     String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@unique([tokenHash, transactionId])
+  @@index([transactionId])
+}
+
+model ImportBatch {
+  id           String    @id @default(cuid())
+  accountId    String
+  source       String // CSV | PDF | OFX | SYNC
+  filename     String?
+  filenameHash String?
+  status       String // PARSING | REVIEW | COMMITTING | COMPLETED | REVERTED (FAILED is never set)
+  totalRows    Int       @default(0)
+  importedRows Int       @default(0)
+  skippedRows  Int       @default(0)
+  errorMessage String?
+  metadata     Json?
+  createdById  String
+  createdAt    DateTime  @default(now())
+  completedAt  DateTime?
+
+  account      BankAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([accountId, createdAt])
+}
+
+model CategorizationRule {
+  id            String  @id @default(cuid())
+  pattern       String
+  matchType     String // CONTAINS | EXACT | STARTS_WITH | REGEX
+  caseSensitive Boolean @default(false)
+  priority      Int     @default(100)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  // Scope XOR (User or Group) — enforced at the service layer (a DB CHECK is
+  // impossible on MariaDB: error 1901 on a FK column with a referential action).
+  userId  String?
+  groupId String?
+  user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group   Group?  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  enabled   Boolean  @default(true)
+  // Cumulative count of transactions this rule categorized (import + manual entry).
+  hits      Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([groupId])
+  @@index([categoryId])
+}
+
+// Per-user display name for a merchant (#125). keyHash = HMAC(merchantKey), the
+// lookup/uniqueness handle; keyEnc/nameEnc keep the values readable for the owner only.
+model MerchantAlias {
+  id      String @id @default(cuid())
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyHash String
+  keyEnc  String @db.Text
+  nameEnc String @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, keyHash])
+}
+
+model TransactionLink {
+  id          String   @id @default(cuid())
+  name        String?
+  auto        Boolean  @default(false) // made by autoLinkTransfers; deleting it ignores the pair
+  createdById String
+  createdAt   DateTime @default(now())
+
+  members TransactionLinkMember[]
+
+  @@index([createdById])
+}
+
+model TransactionLinkMember {
+  linkId        String
+  transactionId String   @unique // a transaction belongs to at most one link
+  joinedAt      DateTime @default(now())
+
+  link        TransactionLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  transaction Transaction     @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@id([linkId, transactionId])
+  @@index([linkId])
+}
+
+model IgnoredLinkSuggestion {
+  userId     String
+  pairKey    String // canonical "txid1|txid2" (ids sorted)
+  ignoredAt  DateTime  @default(now())
+  // Set when restored: suggested again, but never auto-linked again (#363).
+  restoredAt DateTime?
+
+  @@id([userId, pairKey])
+  @@index([userId])
+}
+
+// ─── Group G — Budgets (Phase 7) ─────────────────────────────────────────────
+
+model Budget {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+
+  // Owner XOR (User or Group) — enforced at the service layer (a DB CHECK is
+  // impossible on MariaDB: error 1901 on a FK column with a referential action).
+  userId  String?
+  groupId String?
+  user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group   Group?  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  // Attached budget: counts this account only (design §B).
+  accountId          String?
+  account            BankAccount? @relation("BudgetAccount", fields: [accountId], references: [id], onDelete: SetNull)
+  // Optional margin of the out-of-budget line of an attached budget (design §D).
+  outOfBudgetPlanned Decimal?     @db.Decimal(12, 2)
+
+  periodType     String // WEEK | MONTH | QUARTER | YEAR | CUSTOM
+  periodStart    DateTime
+  periodEnd      DateTime
+  recurring      Boolean  @default(false)
+  parentBudgetId String?
+  parentBudget   Budget?  @relation("BudgetRecurrence", fields: [parentBudgetId], references: [id], onDelete: SetNull)
+  instances      Budget[] @relation("BudgetRecurrence")
+
+  archived    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  createdById String
+
+  lines       BudgetLine[]
+  assignments BudgetAssignment[]
+
+  @@index([userId, periodStart])
+  @@index([groupId, periodStart])
+  @@index([accountId, periodStart])
+  @@index([parentBudgetId])
+}
+
+model BudgetLine {
+  id       String @id @default(cuid())
+  budgetId String
+  budget   Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+
+  categoryId String?
+  category   Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  accountId  String?
+  account    BankAccount? @relation("BudgetLineAccount", fields: [accountId], references: [id], onDelete: SetNull)
+
+  kind                 String       @default("EXPENSE") // EXPENSE | INCOME | TRANSFER
+  direction            String? // TRANSFER only: OUT | IN
+  counterpartAccountId String?
+  counterpart          BankAccount? @relation("BudgetLineCounterpart", fields: [counterpartAccountId], references: [id], onDelete: SetNull)
+
+  plannedAmount Decimal @db.Decimal(12, 2)
+  label         String?
+
+  @@index([budgetId])
+}
+
+model BudgetAssignment {
+  id            String   @id @default(cuid())
+  budgetId      String
+  transactionId String
+  mode          String // INCLUDE | EXCLUDE
+  assignedById  String
+  assignedAt    DateTime @default(now())
+
+  budget      Budget      @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@unique([budgetId, transactionId])
+  @@index([transactionId])
+}

@@ -1,0 +1,315 @@
+import { randomBytes, randomInt } from "node:crypto";
+import type { GroupInvitation } from "@prisma/client";
+import { db } from "@/server/db";
+import { decrypt, encrypt } from "@/server/crypto/encryption";
+import { hmacExact } from "@/server/crypto/hmac";
+import { dataKey, searchKey } from "@/server/crypto/keys";
+import { logEvent } from "@/server/services/audit";
+import { sendMail } from "@/server/services/mail/mailer";
+import { invitationMail } from "@/server/services/mail/invitation";
+import { pickMailLocale } from "@/server/services/mail/locale";
+import { getAppName } from "@/server/services/settings/app-settings";
+import { isEmailVerified } from "@/server/services/users/email-verification";
+import { env } from "@/env";
+import { defaultLocale, type Locale } from "@/i18n/config";
+import {
+  INVITABLE_GROUP_ROLES,
+  type GroupRole,
+  type InvitableGroupRole,
+} from "@/lib/validation/group";
+import { displayName } from "@/lib/validation/name";
+import { requireGroupRole } from "./roles";
+
+export class InvitationError extends Error {
+  constructor(
+    code: string,
+    // Extra context safe to show the caller (e.g. the masked invited address).
+    readonly hint?: string,
+  ) {
+    super(code);
+  }
+}
+
+export function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  return `${local.slice(0, 1)}***@${domain}`;
+}
+
+const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous chars
+const INVITE_TTL_DAYS = 7;
+const INVITE_TTL_MS = INVITE_TTL_DAYS * 24 * 60 * 60 * 1000;
+
+function makeCode(): string {
+  let s = "";
+  for (let i = 0; i < 6; i++) s += CODE_ALPHABET[randomInt(CODE_ALPHABET.length)];
+  return s;
+}
+
+const tokenHash = (token: string) => hmacExact(token, searchKey);
+const codeHash = (code: string) => hmacExact(code.toUpperCase(), searchKey);
+
+// Fresh link and code, stored encrypted and found back through their HMAC (spec §6.1).
+function newSecrets() {
+  const token = randomBytes(32).toString("base64url");
+  const code = makeCode();
+  return {
+    tokenEnc: encrypt(token, dataKey),
+    tokenHash: tokenHash(token),
+    codeEnc: encrypt(code, dataKey),
+    codeHash: codeHash(code),
+  };
+}
+
+function revealSecrets(inv: Pick<GroupInvitation, "tokenEnc" | "codeEnc">) {
+  return { token: decrypt(inv.tokenEnc, dataKey), code: decrypt(inv.codeEnc, dataKey) };
+}
+
+// The mail goes out in the invitee's preferred locale when they already have an account,
+// else in `locale` (the inviter's page). Re-inviting an address with a pending invitation
+// renews it instead of creating a second one (link and code rotate only if it had expired).
+export async function createInvitation(
+  input: { groupId: string; email: string; role: GroupRole; locale?: Locale },
+  actor: { id: string },
+): Promise<{
+  id: string;
+  token: string;
+  code: string;
+  renewed: boolean;
+  delivery: InvitationDelivery;
+  acceptUrl: string;
+}> {
+  if (!INVITABLE_GROUP_ROLES.includes(input.role as InvitableGroupRole)) {
+    throw new InvitationError("INVALID");
+  }
+  await requireGroupRole(input.groupId, actor.id, "ADMIN");
+  const email = input.email.trim().toLowerCase();
+  if (!email) throw new InvitationError("INVALID");
+
+  // Don't invite someone who already belongs to the group (this also covers
+  // inviting yourself, since the inviter is necessarily a member).
+  const existingUser = await db.user.findUnique({
+    where: { email },
+    select: { id: true, preference: { select: { locale: true } } },
+  });
+  const assertNotMember = async () => {
+    if (!existingUser) return;
+    const membership = await db.groupMember.findUnique({
+      where: { groupId_userId: { groupId: input.groupId, userId: existingUser.id } },
+    });
+    if (membership) throw new InvitationError("ALREADY_MEMBER");
+  };
+  await assertNotMember();
+
+  const expiresAt = new Date(Date.now() + INVITE_TTL_MS);
+  const pending = await db.groupInvitation.findFirst({
+    where: { groupId: input.groupId, email, acceptedAt: null },
+    orderBy: { createdAt: "desc" },
+  });
+  let renewedId: string | null = null;
+  if (pending) {
+    const expired = pending.expiresAt.getTime() < Date.now();
+    // Guarded on acceptedAt: an accept racing this renewal must not be overwritten.
+    const { count } = await db.groupInvitation.updateMany({
+      where: { id: pending.id, acceptedAt: null },
+      data: {
+        role: input.role,
+        invitedById: actor.id,
+        expiresAt,
+        ...(expired && newSecrets()),
+      },
+    });
+    if (count === 1) renewedId = pending.id;
+    else await assertNotMember();
+  }
+  const inv = renewedId
+    ? await db.groupInvitation.findUniqueOrThrow({ where: { id: renewedId } })
+    : await db.groupInvitation.create({
+        data: {
+          groupId: input.groupId,
+          email,
+          invitedById: actor.id,
+          role: input.role,
+          ...newSecrets(),
+          expiresAt,
+        },
+      });
+  const { token, code } = revealSecrets(inv);
+
+  const locale = pickMailLocale(existingUser?.preference?.locale, input.locale ?? defaultLocale);
+  const acceptUrl = `${env.APP_URL.replace(/\/$/, "")}/${locale}/groups/join/${token}`;
+  const [group, inviter, appName] = await Promise.all([
+    db.group.findUniqueOrThrow({ where: { id: input.groupId }, select: { name: true } }),
+    db.user.findUniqueOrThrow({ where: { id: actor.id }, select: { name: true, email: true } }),
+    getAppName(),
+  ]);
+  const mail = invitationMail(locale, {
+    appName,
+    inviter: displayName(inviter),
+    group: group.name,
+    acceptUrl,
+    code,
+    ttlDays: INVITE_TTL_DAYS,
+  });
+  const delivery = await deliver({ to: email, ...mail, locale, sensitive: true });
+  await logEvent({
+    userId: actor.id,
+    action: renewedId ? "group.invitation.resend" : "group.invitation.create",
+    entity: "GroupInvitation",
+    entityId: inv.id,
+    metadata: { email, delivery },
+  });
+  return { id: inv.id, token, code, renewed: renewedId !== null, delivery, acceptUrl };
+}
+
+// Unless "sent", the inviter gets the link to share instead.
+export type InvitationDelivery = "sent" | "disabled" | "failed";
+
+async function deliver(mail: Parameters<typeof sendMail>[0]): Promise<InvitationDelivery> {
+  try {
+    return (await sendMail(mail)).delivered ? "sent" : "disabled";
+  } catch (e) {
+    console.error("[bilan] invitation mail failed", e);
+    return "failed";
+  }
+}
+
+type Invitee = { id: string; email: string };
+
+// The token and the code are secrets delivered to the address (or shared by the inviter):
+// holding one is enough, verified address or not (spec §6.12).
+export async function acceptInvitation(
+  tokenOrCode: string,
+  user: Invitee,
+): Promise<{ groupId: string }> {
+  const key = tokenOrCode.trim();
+  const inv = await db.groupInvitation.findFirst({
+    where: { OR: [{ tokenHash: tokenHash(key) }, { codeHash: codeHash(key) }] },
+  });
+  return accept(inv, user);
+}
+
+// From the "pending for you" list, matched on the address alone: only a verified one counts.
+export async function acceptPendingInvitation(
+  invitationId: string,
+  user: Invitee,
+): Promise<{ groupId: string }> {
+  return accept(await ownPendingInvitation(invitationId, user), user);
+}
+
+// Ids aren't secrets: someone else's invitation is reported missing, whatever its state.
+async function ownPendingInvitation(invitationId: string, user: Invitee): Promise<GroupInvitation> {
+  const inv = await db.groupInvitation.findFirst({
+    where: { id: invitationId, email: user.email.trim().toLowerCase() },
+  });
+  if (!inv) throw new InvitationError("NOT_FOUND");
+  if (!(await isEmailVerified(user.id))) throw new InvitationError("EMAIL_NOT_VERIFIED");
+  return inv;
+}
+
+async function accept(inv: GroupInvitation | null, user: Invitee): Promise<{ groupId: string }> {
+  if (!inv) throw new InvitationError("NOT_FOUND");
+  if (inv.acceptedAt) throw new InvitationError("ALREADY_USED");
+  if (inv.expiresAt.getTime() < Date.now()) throw new InvitationError("EXPIRED");
+  // Invitations are nominative: the code/link only works for the invited address.
+  if (inv.email !== user.email.trim().toLowerCase()) {
+    throw new InvitationError("WRONG_ACCOUNT", maskEmail(inv.email));
+  }
+  const membership = await db.groupMember.findUnique({
+    where: { groupId_userId: { groupId: inv.groupId, userId: user.id } },
+  });
+  if (membership) throw new InvitationError("ALREADY_IN_GROUP");
+
+  await db.$transaction([
+    db.groupMember.create({
+      data: { groupId: inv.groupId, userId: user.id, role: inv.role },
+    }),
+    db.groupInvitation.update({
+      where: { id: inv.id },
+      data: { acceptedAt: new Date(), acceptedById: user.id },
+    }),
+    db.groupInvitation.deleteMany({
+      where: { groupId: inv.groupId, email: inv.email, acceptedAt: null, id: { not: inv.id } },
+    }),
+  ]);
+  await logEvent({
+    userId: user.id,
+    action: "group.invitation.accept",
+    entity: "GroupInvitation",
+    entityId: inv.id,
+    metadata: { groupId: inv.groupId },
+  });
+  return { groupId: inv.groupId };
+}
+
+export async function revokeInvitation(id: string, actor: { id: string }): Promise<void> {
+  const inv = await db.groupInvitation.findUnique({ where: { id } });
+  if (!inv) throw new InvitationError("NOT_FOUND");
+  await requireGroupRole(inv.groupId, actor.id, "ADMIN");
+  await db.groupInvitation.delete({ where: { id } });
+  await logEvent({
+    userId: actor.id,
+    action: "group.invitation.revoke",
+    entity: "GroupInvitation",
+    entityId: id,
+  });
+}
+
+// The invitee turns down an invitation from their pending list; also how a stale one for a
+// foyer they already belong to gets cleared.
+export async function declineInvitation(invitationId: string, user: Invitee): Promise<void> {
+  const inv = await ownPendingInvitation(invitationId, user);
+  if (inv.acceptedAt) throw new InvitationError("ALREADY_USED");
+  await db.groupInvitation.delete({ where: { id: inv.id } });
+  await logEvent({
+    userId: user.id,
+    action: "group.invitation.decline",
+    entity: "GroupInvitation",
+    entityId: inv.id,
+    metadata: { groupId: inv.groupId },
+  });
+}
+
+export async function listInvitations(groupId: string, actor: { id: string }) {
+  await requireGroupRole(groupId, actor.id, "ADMIN");
+  const rows = await db.groupInvitation.findMany({
+    where: { groupId, acceptedAt: null },
+    omit: { tokenHash: true, codeHash: true },
+    orderBy: { createdAt: "desc" },
+  });
+  return rows.map(({ tokenEnc, codeEnc, ...r }) => ({
+    ...r,
+    ...revealSecrets({ tokenEnc, codeEnc }),
+  }));
+}
+
+// Public-ish lookup for the join-by-link page: returns just what's needed to
+// render the confirm screen (no membership required — the token is the secret).
+export async function getInvitationByToken(token: string) {
+  const inv = await db.groupInvitation.findUnique({
+    where: { tokenHash: tokenHash(token) },
+    include: { group: true },
+  });
+  if (!inv) return null;
+  return {
+    id: inv.id,
+    groupId: inv.groupId,
+    token,
+    email: inv.email,
+    role: inv.role as GroupRole,
+    groupName: inv.group.name,
+    accepted: inv.acceptedAt !== null,
+    expired: inv.expiresAt.getTime() < Date.now(),
+  };
+}
+
+// Matched on the address alone, so empty until it is verified (spec §6.12). No token or code:
+// the list acts by id through acceptPendingInvitation / declineInvitation.
+export async function pendingInvitationsForUser(user: Invitee) {
+  if (!(await isEmailVerified(user.id))) return [];
+  const rows = await db.groupInvitation.findMany({
+    where: { email: user.email.toLowerCase(), acceptedAt: null, expiresAt: { gt: new Date() } },
+    select: { id: true, role: true, group: { select: { name: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+  return rows.map((r) => ({ id: r.id, role: r.role as GroupRole, groupName: r.group.name }));
+}

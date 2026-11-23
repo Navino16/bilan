@@ -1,0 +1,417 @@
+import { cache } from "react";
+import { db } from "@/server/db";
+import { encrypt, decrypt } from "@/server/crypto/encryption";
+import { hmacForSearch } from "@/server/crypto/hmac";
+import { dataKey, searchKey } from "@/server/crypto/keys";
+import { logEvent } from "@/server/services/audit";
+import { aiShareWhere, currentMcpPrincipal } from "@/server/mcp/context";
+import { accountInputSchema, type AccountInput } from "@/lib/schemas/account";
+import { isValidIban, normalizeIban, maskIban } from "./iban";
+import { displayName } from "@/lib/validation/name";
+import {
+  MIRROR_MATCH_TYPES,
+  MIRROR_PATTERN_MAX,
+  toMirrorMatchType,
+  type AccountType,
+  type MirrorMatchType,
+} from "@/lib/validation/account";
+
+// Thrown for both authorization failures and invalid business input so callers
+// (Server Actions) can map any of them to a single user-facing error state.
+export class AccountAccessError extends Error {}
+
+export type AccountAccess = "OWNER" | "WRITE" | "READ";
+
+export type VisibleAccount = {
+  id: string;
+  name: string;
+  type: string;
+  bankName: string | null;
+  color: string | null;
+  icon: string | null;
+  archived: boolean;
+  initialBalance: number;
+  balance: number; // opening balance + every transaction of the account
+  ibanMasked: string | null;
+  access: AccountAccess;
+  sharedCount: number; // groups this account is shared with (owner view only; 0 otherwise)
+  ownerName: string | null; // null when the viewer owns it
+  mirror: SavingsMirror | null; // owner view only
+};
+
+export type SavingsMirror = {
+  sourceAccountIds: string[];
+  pattern: string;
+  matchType: MirrorMatchType;
+};
+
+// Current balance per account: opening balance + sum of its transactions.
+export async function accountBalances(
+  accounts: { id: string; initialBalance: unknown }[],
+  { asOf }: { asOf?: Date } = {},
+): Promise<Map<string, number>> {
+  const sums = await db.transaction.groupBy({
+    by: ["accountId"],
+    where: { accountId: { in: accounts.map((a) => a.id) }, ...(asOf && { date: { lte: asOf } }) },
+    _sum: { amount: true },
+  });
+  const byId = new Map(sums.map((s) => [s.accountId, Number(s._sum.amount ?? 0)]));
+  return new Map(
+    accounts.map((a) => [
+      a.id,
+      Math.round((Number(a.initialBalance) + (byId.get(a.id) ?? 0)) * 100) / 100,
+    ]),
+  );
+}
+
+function ibanFields(iban: string | undefined): {
+  ibanEnc: string | null;
+  ibanHash: string | null;
+} {
+  if (!iban) return { ibanEnc: null, ibanHash: null };
+  const normalized = normalizeIban(iban);
+  if (!isValidIban(normalized)) throw new AccountAccessError("INVALID_IBAN");
+  return { ibanEnc: encrypt(normalized, dataKey), ibanHash: hmacForSearch(normalized, searchKey) };
+}
+
+export async function createAccount(input: AccountInput, ownerId: string): Promise<{ id: string }> {
+  const data = accountInputSchema.parse(input);
+  const { ibanEnc, ibanHash } = ibanFields(data.iban);
+  const acc = await db.bankAccount.create({
+    data: {
+      ownerId,
+      name: data.name,
+      type: data.type,
+      bankName: data.bankName ?? null,
+      color: data.color ?? undefined,
+      icon: data.icon ?? null,
+      initialBalance: data.initialBalance,
+      ibanEnc,
+      ibanHash,
+    },
+  });
+  await logEvent({
+    userId: ownerId,
+    action: "account.created",
+    entity: "BankAccount",
+    entityId: acc.id,
+  });
+  return { id: acc.id };
+}
+
+export async function ownedOrThrow(id: string, actorId: string) {
+  const acc = await db.bankAccount.findUnique({ where: { id } });
+  if (!acc || acc.ownerId !== actorId) throw new AccountAccessError("FORBIDDEN");
+  return acc;
+}
+
+// A blank IBAN keeps the stored one; `removeIban` clears it.
+export async function updateAccount(
+  id: string,
+  input: AccountInput,
+  actor: { id: string },
+  opts: { removeIban?: boolean } = {},
+): Promise<void> {
+  await ownedOrThrow(id, actor.id);
+  const data = accountInputSchema.parse(input);
+  const iban = data.iban
+    ? ibanFields(data.iban)
+    : opts.removeIban
+      ? { ibanEnc: null, ibanHash: null }
+      : {};
+  await db.bankAccount.update({
+    where: { id },
+    data: {
+      name: data.name,
+      type: data.type,
+      bankName: data.bankName ?? null,
+      color: data.color ?? undefined,
+      icon: data.icon ?? null,
+      initialBalance: data.initialBalance,
+      ...iban,
+      ...(data.type !== "SAVINGS" && {
+        mirrorPattern: null,
+        mirrorMatchType: "CONTAINS",
+        mirrorSources: { deleteMany: {} },
+      }),
+    },
+  });
+  await logEvent({
+    userId: actor.id,
+    action: "account.updated",
+    entity: "BankAccount",
+    entityId: id,
+  });
+}
+
+// MCP patch (spec §5.18): an absent field keeps its value, null clears bankName or icon and
+// resets initialBalance to 0. The stored IBAN is never touched.
+export type AccountPatch = {
+  name?: string;
+  type?: AccountType;
+  bankName?: string | null;
+  color?: string;
+  icon?: string | null;
+  initialBalance?: number | null;
+};
+
+export async function patchAccount(
+  id: string,
+  patch: AccountPatch,
+  actor: { id: string },
+): Promise<void> {
+  const cur = await ownedOrThrow(id, actor.id);
+  const keep = <T>(sent: T | null | undefined, stored: T | null) =>
+    (sent === undefined ? stored : sent) ?? undefined;
+  const data = accountInputSchema.parse({
+    name: patch.name ?? cur.name,
+    type: patch.type ?? cur.type,
+    bankName: keep(patch.bankName, cur.bankName),
+    color: patch.color ?? cur.color ?? undefined,
+    icon: keep(patch.icon, cur.icon),
+    initialBalance: keep(patch.initialBalance, Number(cur.initialBalance)),
+  });
+  // Leaving SAVINGS is refused while a mirror is set; the check sits in the update's filter so
+  // a mirror configured after the read above is never wiped.
+  const { count } = await db.bankAccount.updateMany({
+    where: { id, ownerId: actor.id, ...(data.type !== "SAVINGS" && { mirrorPattern: null }) },
+    data: {
+      name: data.name,
+      type: data.type,
+      bankName: data.bankName ?? null,
+      color: data.color,
+      icon: data.icon ?? null,
+      initialBalance: data.initialBalance,
+    },
+  });
+  if (count === 0) {
+    const owned = await db.bankAccount.count({ where: { id, ownerId: actor.id } });
+    throw new AccountAccessError(owned ? "INVALID_MIRROR_ACTIVE" : "FORBIDDEN");
+  }
+  await logEvent({
+    userId: actor.id,
+    action: "account.updated",
+    entity: "BankAccount",
+    entityId: id,
+  });
+}
+
+// Sources and label pattern of a savings account kept up to date from transfers
+// (design §Savings mirror legs); `null` turns it off.
+export async function setSavingsMirror(
+  actorId: string,
+  savingsAccountId: string,
+  input: (Omit<SavingsMirror, "matchType"> & { matchType?: MirrorMatchType }) | null,
+): Promise<void> {
+  const account = await ownedOrThrow(savingsAccountId, actorId);
+  if (!input && !account.mirrorPattern) return;
+  const sourceIds = [...new Set(input?.sourceAccountIds ?? [])];
+  const pattern = input?.pattern.trim() ?? "";
+  const matchType = input?.matchType ?? "CONTAINS";
+  if (input) {
+    if (account.type !== "SAVINGS") throw new AccountAccessError("INVALID_MIRROR");
+    if (!MIRROR_MATCH_TYPES.includes(matchType)) throw new AccountAccessError("INVALID_MIRROR");
+    if (!pattern || pattern.length > MIRROR_PATTERN_MAX) {
+      throw new AccountAccessError("INVALID_MIRROR");
+    }
+    if (sourceIds.length === 0 || sourceIds.includes(savingsAccountId)) {
+      throw new AccountAccessError("INVALID_MIRROR");
+    }
+    const owned = await db.bankAccount.count({
+      where: { id: { in: sourceIds }, ownerId: actorId },
+    });
+    if (owned !== sourceIds.length) throw new AccountAccessError("INVALID_MIRROR");
+  }
+  await db.$transaction([
+    db.savingsMirrorSource.deleteMany({ where: { savingsAccountId } }),
+    db.savingsMirrorSource.createMany({
+      data: sourceIds.map((sourceAccountId) => ({ savingsAccountId, sourceAccountId })),
+    }),
+    db.bankAccount.update({
+      where: { id: savingsAccountId },
+      data: { mirrorPattern: input ? pattern : null, mirrorMatchType: matchType },
+    }),
+  ]);
+  await logEvent({
+    userId: actorId,
+    action: "account.mirror_updated",
+    entity: "BankAccount",
+    entityId: savingsAccountId,
+    metadata: { sources: sourceIds.length, matchType },
+  });
+}
+
+export async function getSavingsMirror(
+  actorId: string,
+  savingsAccountId: string,
+): Promise<SavingsMirror | null> {
+  const account = await ownedOrThrow(savingsAccountId, actorId);
+  if (!account.mirrorPattern) return null;
+  const sources = await db.savingsMirrorSource.findMany({
+    where: { savingsAccountId },
+    select: { sourceAccountId: true },
+    orderBy: { sourceAccountId: "asc" },
+  });
+  return {
+    sourceAccountIds: sources.map((s) => s.sourceAccountId),
+    pattern: account.mirrorPattern,
+    matchType: toMirrorMatchType(account.mirrorMatchType),
+  };
+}
+
+export async function archiveAccount(id: string, actor: { id: string }): Promise<void> {
+  await ownedOrThrow(id, actor.id);
+  await db.bankAccount.update({ where: { id }, data: { archived: true } });
+  await logEvent({
+    userId: actor.id,
+    action: "account.archived",
+    entity: "BankAccount",
+    entityId: id,
+  });
+}
+
+export async function unarchiveAccount(id: string, actor: { id: string }): Promise<void> {
+  await ownedOrThrow(id, actor.id);
+  await db.bankAccount.update({ where: { id }, data: { archived: false } });
+  await logEvent({
+    userId: actor.id,
+    action: "account.unarchived",
+    entity: "BankAccount",
+    entityId: id,
+  });
+}
+
+export async function getAccountForUser(id: string, userId: string) {
+  const acc = await db.bankAccount.findUnique({ where: { id } });
+  if (!acc || acc.ownerId !== userId) return null;
+  return acc;
+}
+
+export async function isAccountArchived(id: string): Promise<boolean> {
+  const acc = await db.bankAccount.findUnique({ where: { id }, select: { archived: true } });
+  return acc?.archived ?? false;
+}
+
+// Memoized per server render (React `cache`): a page reaches it through several services.
+// Keyed by the MCP context too, so an MCP call never reuses a non-MCP account set.
+const accountRefs = cache(
+  async (userId: string, inMcp: boolean): Promise<readonly { id: string; name: string }[]> =>
+    db.bankAccount.findMany({
+      where: {
+        OR: [
+          { ownerId: userId },
+          {
+            shares: {
+              some: {
+                ...(inMcp ? { allowAiAssistants: true } : {}),
+                group: { members: { some: { userId } } },
+              },
+            },
+          },
+        ],
+      },
+      select: { id: true, name: true },
+    }),
+);
+
+// Every account whose history the user can read (owned or shared), archived ones
+// included: archiving hides an account from pickers, not from history (#174).
+export function visibleAccountRefs(
+  userId: string,
+): Promise<readonly { id: string; name: string }[]> {
+  return accountRefs(userId, currentMcpPrincipal() !== null);
+}
+
+// For the AI activity list (spec §5.18), resolved outside any MCP call.
+export async function readableAccountNames(
+  userId: string,
+  ids: string[],
+): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map();
+  const wanted = new Set(ids);
+  const refs = await visibleAccountRefs(userId);
+  return new Map(refs.filter((a) => wanted.has(a.id)).map((a) => [a.id, a.name]));
+}
+
+export async function visibleAccountIds(userId: string): Promise<string[]> {
+  return (await visibleAccountRefs(userId)).map((a) => a.id);
+}
+
+// The current MCP call's account set (owned + AI-allowed shares), null outside one.
+export async function mcpAccountIds(): Promise<Set<string> | null> {
+  const principal = currentMcpPrincipal();
+  return principal ? new Set(await visibleAccountIds(principal.userId)) : null;
+}
+
+// Owned accounts plus accounts shared via the viewer's groups; archived ones only
+// on request. Owner access wins; shared viewers never receive the IBAN.
+export async function listVisibleForUser(
+  userId: string,
+  opts: { includeArchived?: boolean } = {},
+): Promise<VisibleAccount[]> {
+  const archived = opts.includeArchived ? {} : { archived: false };
+  const owned = await db.bankAccount.findMany({
+    where: { ownerId: userId, ...archived },
+    include: {
+      _count: { select: { shares: true } },
+      mirrorSources: { select: { sourceAccountId: true }, orderBy: { sourceAccountId: "asc" } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  const shared = await db.bankAccount.findMany({
+    where: {
+      ...archived,
+      ownerId: { not: userId },
+      shares: { some: { ...aiShareWhere(), group: { members: { some: { userId } } } } },
+    },
+    include: {
+      owner: true,
+      shares: { where: { ...aiShareWhere(), group: { members: { some: { userId } } } } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const balances = await accountBalances([...owned, ...shared]);
+
+  const ownedView: VisibleAccount[] = owned.map((a) => ({
+    id: a.id,
+    name: a.name,
+    type: a.type,
+    bankName: a.bankName,
+    color: a.color,
+    icon: a.icon,
+    archived: a.archived,
+    initialBalance: Number(a.initialBalance),
+    balance: balances.get(a.id) ?? Number(a.initialBalance),
+    ibanMasked: a.ibanEnc ? maskIban(decrypt(a.ibanEnc, dataKey)) : null,
+    access: "OWNER",
+    sharedCount: a._count.shares,
+    ownerName: null,
+    mirror: a.mirrorPattern
+      ? {
+          sourceAccountIds: a.mirrorSources.map((m) => m.sourceAccountId),
+          pattern: a.mirrorPattern,
+          matchType: toMirrorMatchType(a.mirrorMatchType),
+        }
+      : null,
+  }));
+
+  const sharedView: VisibleAccount[] = shared.map((a) => ({
+    id: a.id,
+    name: a.name,
+    type: a.type,
+    bankName: a.bankName,
+    color: a.color,
+    icon: a.icon,
+    archived: a.archived,
+    initialBalance: Number(a.initialBalance),
+    balance: balances.get(a.id) ?? Number(a.initialBalance),
+    ibanMasked: null, // shared viewers never see the IBAN
+    access: a.shares.some((s) => s.permission === "WRITE") ? "WRITE" : "READ",
+    sharedCount: 0,
+    ownerName: displayName(a.owner),
+    mirror: null,
+  }));
+
+  return [...ownedView, ...sharedView];
+}

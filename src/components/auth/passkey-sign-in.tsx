@@ -1,0 +1,49 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
+import { KeyRound } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { signIn } from "@/lib/auth-client";
+
+export function PasskeySignIn({ redirectTo }: { redirectTo: string }) {
+  const t = useTranslations("auth.login");
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<"passkeyNotFound" | "passkeyFailed" | "disabled" | null>(null);
+
+  function run() {
+    setError(null);
+    startTransition(async () => {
+      const res = await signIn.passkey();
+      if (res?.error) {
+        const code = "code" in res.error ? res.error.code : undefined;
+        if (code === "BANNED_USER") return setError("disabled");
+        return setError(code === "PASSKEY_NOT_FOUND" ? "passkeyNotFound" : "passkeyFailed");
+      }
+      router.push(redirectTo);
+    });
+  }
+
+  return (
+    <div className="space-y-4">
+      <Button
+        type="button"
+        variant="outline"
+        className="h-auto min-h-8 w-full py-1.5 text-center whitespace-normal"
+        disabled={pending}
+        onClick={run}
+      >
+        <KeyRound />
+        {t("passkey")}
+      </Button>
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{t(`error.${error}`)}</AlertDescription>
+        </Alert>
+      )}
+    </div>
+  );
+}

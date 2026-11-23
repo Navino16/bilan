@@ -1,0 +1,965 @@
+**English** · [Français](user-guide.fr.md)
+
+# Bilan user guide
+
+Bilan keeps track of your bank accounts, transactions and budgets, on your own server. You can use it alone or share accounts and budgets with the people you live with.
+
+This guide walks through the app as a user. Running an instance is covered in the [self-hosting guide](self-hosting.md), and the instance settings in the [administration guide](admin-guide.md).
+
+## Contents
+
+1. [Getting started](#getting-started)
+2. [Accounts](#accounts)
+3. [Transactions](#transactions)
+4. [Importing statements](#importing-statements)
+5. [Bank sync](#bank-sync)
+6. [Categories, rules and merchants](#categories-rules-and-merchants)
+7. [Links: transfers and refunds](#links-transfers-and-refunds)
+8. [Budgets](#budgets)
+9. [Households](#households)
+10. [Dashboard and insights](#dashboard-and-insights)
+11. [Account security](#account-security)
+12. [AI assistants](#ai-assistants)
+13. [Your data](#your-data)
+
+## Getting started
+
+### Sign in
+
+![Sign-in page](images/en/login.png)
+
+1. Enter your **Email address** and **Password**, then click **Sign in**.
+2. If two-factor authentication is on, enter the 6-digit code from your authenticator app on the **Verification** step. Click **Use a backup code** if you don't have your phone. Tick **Trust this device** to skip the code on this device: it is asked again after 30 days without signing in from it.
+
+You can also use **Sign in with a passkey**, or a **Continue with …** button when your administrator has set up Google or another identity provider. These sign-ins don't ask for the 2FA code.
+
+Tips:
+
+- After 5 failed attempts in 15 minutes, sign-in is blocked for a while and the page tells you how long to wait.
+- An identity provider account is not linked to your Bilan account just because the e-mail is the same. Link it first from **Security** (see [Connected identities](#connected-identities)).
+- A session lasts 7 days and is extended each day you use the app.
+
+### Create an account
+
+Click **Create an account** on the sign-in page. What you see depends on how the instance is configured:
+
+- **Open registration**: fill in **Name**, **Email address**, **Password** and **Confirm password**, then click **Create account**.
+- **Invite only** (the default): an **Invitation token** field appears first. Your administrator gives you a token or a sign-up link that fills it in for you.
+- **Closed**: the sign-in page has no **Create an account** link, and the sign-up page shows "Registration is closed on this instance." Ask your administrator to create your account.
+
+The password must be at least 12 characters long by default (your administrator may choose another minimum). You are signed in right away and Bilan creates a starter set of categories in your language.
+
+### Forgot your password
+
+1. Click **Forgot password?** on the sign-in page.
+2. Enter your e-mail and click **Send link**.
+3. Open the link from the e-mail (valid for 1 hour), choose a **New password** and click **Reset**.
+
+Resetting your password signs you out everywhere and forgets your trusted devices.
+
+### Verify your e-mail address
+
+When the instance can send e-mail, a **Verify your email address** banner stays at the top of every page until you click the link Bilan sent you (valid for 24 hours). Use **Resend the email** if it didn't arrive.
+
+Verification matters for households: invitations sent to your address only show up on the **Households** page once the address is verified. An invitation link or code works before that.
+
+### First steps
+
+Until you have a transaction, the dashboard shows a **Welcome** card with two steps:
+
+1. **Create a bank account**: see [Accounts](#accounts).
+2. **Import a statement or add a transaction**: see [Importing statements](#importing-statements) and [Add a transaction by hand](#add-a-transaction-by-hand).
+
+### Find your way around
+
+On a computer, the sidebar has two groups:
+
+- **Workspace**: Dashboard, Insights, Transactions, Import, Budgets, Accounts, Categories, Households.
+- **Account**: Security, AI assistants, Data, and Administration if you are an administrator.
+
+At the top right, the **FR**/**EN** button switches the language. Bilan remembers your choice and also uses it for the e-mails it sends you. Your initials open a menu with **Sign out**.
+
+The theme button sits at the bottom of the sidebar. It offers **Light**, **Dark** and **System**. **System** (the default) follows your device's setting.
+
+### On a phone
+
+| Dashboard                                               | Transactions                                                  |
+| ------------------------------------------------------- | ------------------------------------------------------------- |
+| ![Dashboard on a phone](images/en/mobile-dashboard.png) | ![Transactions on a phone](images/en/mobile-transactions.png) |
+
+- The bottom bar gives quick access to **Home**, **Transactions**, **Budgets**, **Accounts** and **Categories**.
+- The menu button at the top left opens everything else: Insights, Import, Households, Security, Data, the theme button and the language button.
+- On the transactions page, filters live behind the **Filters** button.
+
+Bilan can be installed as an app: use your browser's **Install** or **Add to Home Screen** option. It still needs a connection: your financial data is never stored on the device.
+
+## Accounts
+
+![Accounts page](images/en/accounts.png)
+
+An account holds transactions: a checking account, a savings account, a card, and so on. The **Global balance** at the top adds up every active account you can see, including accounts shared with you. Negative balances are drawn hatched.
+
+### Add an account
+
+1. Go to **Accounts** and click **New account**.
+2. Pick the **Account type**: Checking, Savings, Credit or Other.
+3. Enter the **Account name**, and optionally the **Bank**.
+4. Enter the **Opening balance**: the balance before the first transaction you will record. It can be negative.
+5. Optionally enter the **IBAN**. Bilan checks it and stores it encrypted.
+6. Pick a **Color** and click **Create account**.
+
+An account's balance is its opening balance plus all its transactions. Amounts are in euros.
+
+A new account is private. To share it, see [Share an account](#share-an-account).
+
+### See the IBAN
+
+The card shows only the last 4 characters. Click the eye button (**Show IBAN**) to display the full IBAN, and click it again to hide it. Only the account owner can see the IBAN; people you share the account with never do.
+
+If you signed in less than 10 minutes ago, the IBAN shows right away. Otherwise Bilan first asks you to confirm it's you:
+
+- If you sign in with a password, enter it and click **Show IBAN**. For the next 5 minutes, Bilan doesn't ask again. After 5 wrong passwords in 15 minutes, wait before trying again.
+- If your account has no password (identity provider or passkey only), or password sign-in is turned off, click **Sign in again**: you are signed out, then brought back to the accounts page once signed in. The IBAN then shows right away.
+
+Every display of a full IBAN is recorded in the activity log, without the IBAN itself.
+
+To change or remove the IBAN, open **Edit** in the card's menu. Leave the field blank to keep the saved one, or tick **Remove the saved IBAN**.
+
+### Archive or delete an account
+
+The **⋮** menu on a card (owner only) offers **Edit**, **Share**, **Archive** and **Delete**.
+
+- **Archive** an account you no longer use but whose history you want to keep. It leaves the entry forms and the global balance, and moves to an **Archived accounts** section. Its transactions stay in your history, budgets and dashboard. You can't add or import transactions into it, and only the label and note of its transactions can be edited. Use **Unarchive** to bring it back.
+- **Delete** removes the account and all its transactions for good. Bilan first shows what will go: transactions, imports, shares, budget lines limited to this account, budgets that only covered it, and links with other accounts. Type the account name to confirm, then click **Delete permanently**.
+
+Tip: if you only want to tidy up the list, archive rather than delete.
+
+### Accounts shared with you
+
+An account another household member shares with you shows **Read** or **Write** and "Shared by …". Your own accounts show **Private** or **Shared**. See [What Read and Write allow](#what-read-and-write-allow).
+
+## Transactions
+
+![Transactions page](images/en/transactions.png)
+
+The **Transactions** page lists the transactions of every account you can see, grouped by day. When a day has several transactions, its header shows the day's total.
+
+### Filter and sort
+
+- **Period**: This month, Last month, Quarter, Year, or Custom (pick a start and end date, then **Apply**). With no period selected, the list covers all dates.
+- **All / Income / Expenses**.
+- **Category**: a category also includes its sub-categories. **Uncategorized** finds transactions without a category.
+- **Account** and **Type** (Card, Transfer, Direct debit, Cheque, ATM, Other).
+- **Min amount** / **Max amount**: these compare the amount without its sign, so 50 matches both −50 and +50.
+- **Sort**: Newest first, Oldest first, Largest expenses first, Largest income first.
+
+The list shows 100 transactions at a time: click **Show 100 more** below it. Past 1,000, narrow the filters to reach older ones.
+
+On a phone, tap **Filters**, adjust, then tap **Show … transactions**. **Reset** clears filters and sort.
+
+### Search
+
+Type in **Search keywords…**. The search looks at the beginning of words in the label:
+
+- "lec" finds "LECLERC", but "clerc" doesn't.
+- Words shorter than 3 letters are ignored.
+- With several words, a transaction must match all of them.
+- Case and accents don't matter.
+- Amounts, notes and categories are not searched: use the amount filters for amounts.
+
+### Transaction details
+
+![Transaction details](images/en/transaction-detail.png)
+
+Click a transaction to open its details:
+
+- **Category**: pick a category; it is saved immediately. See [Learn from your choices](#learn-from-your-choices).
+- **Original label**: the label exactly as your bank wrote it. It never changes, even if you rename the transaction.
+- **Assigned month**: the month the transaction counts in. See [Count a transaction in another month](#count-a-transaction-in-another-month).
+- **Note**: your own comment, added with **Edit**.
+- **Linked to**: shown when the transaction is part of a [link](#links-transfers-and-refunds).
+- **Create the opposite transaction on…**: adds the other side of a transfer on another of your accounts. See [Create the other side of a transfer](#create-the-other-side-of-a-transfer).
+- **Counted in**: each active budget that counts the transaction, with the line it lands in, or **Out of budget** / **Unplanned income** when no line takes it. It is the same matching as the budget's own page; click an entry to open that budget.
+- **Assign to a budget**: see [Include or exclude a transaction](#include-or-exclude-a-transaction).
+- **Delete transaction** at the bottom.
+
+**Edit** lets you change the label and note. For transactions you entered by hand, you can also change the date, amount and type. Imported transactions keep the amount, date and type from the bank statement.
+
+### Add a transaction by hand
+
+1. Click **New transaction** (or **Add a transaction** on an account card).
+2. Pick the **Account**, the **Date** and the **Amount**: a negative amount is an expense, a positive one is income.
+3. Enter the **Label**, the **Type**, and optionally a **Category** and a **Note**.
+4. Click **Add**.
+
+If you leave the category empty, your [rules](#rules) try to find one from the label.
+
+### Select several transactions
+
+1. Click **Select** above the list (on a phone, the switch in **Filters** works too).
+2. Tick the transactions. Those on accounts you can only read can't be selected.
+3. Click **Link** (2 or more transactions) or **Delete** in the bar that appears.
+
+Before deleting, Bilan lists the side effects: links that will be dissolved and budgets the transactions will leave. You can delete up to 500 transactions at once. Deletion can't be undone.
+
+### Count a transaction in another month
+
+Some transactions belong to another month than the day they hit your account: a salary paid on the last working day of the month that funds the next one, or a yearly bill you file under the previous month.
+
+- **One transaction**: in its details, pick a month under **Assigned month**, past or future. **Back to automatic** cancels your choice.
+- **A whole category**: edit the category and turn on **Count toward the next month**, then set the **Number of days**. Transactions of that category dated in the last days of a month then count in the next month. Turn it on for **Salary** with 5 days and every end-of-month salary counts in the following month. It applies to the category's existing transactions too, but not to its sub-categories. A month you picked by hand always wins.
+
+Both sides of a [linked](#link-transactions) transfer between your accounts count in the same month: picking a month for one side, or going back to automatic, does the same for the other side (if you can edit its account). When you link two transfers and only one of them has a month picked by hand, the other side takes that month.
+
+The transaction keeps its real date in the list, with a **Counted in …** mention. The dashboard, insights and budgets count it in its assigned month. To see a salary that already counts in next month, the dashboard and insights let you open the next month.
+
+## Importing statements
+
+![Import page](images/en/import.png)
+
+Bilan imports CSV files (up to 5 MB), PDF statements (up to 10 MB) and OFX files (up to 5 MB) exported from your bank. OFX is the most reliable of the three: it is a structured format, so there is no column to map and no decimal mark or date order to guess.
+
+### Import a CSV file
+
+1. Go to **Import** and choose the **Account**.
+2. Drop the file on the page or click to browse.
+3. Check the settings on the left (they come pre-filled from the file):
+   - **Target account**: you can still switch account here.
+   - **Column mapping**: which column holds the **Date**, the **Label** and the **Amount**. If your bank uses separate columns for money out and money in, set **Amount** to "—" and map **Debit** and **Credit** instead. **Type** is optional.
+   - **Decimal mark**: Comma or Dot.
+   - **Date order**: DD/MM or MM/DD.
+   - **Categorize automatically**: applies your [rules](#rules). It is on by default.
+4. Review the preview. You can untick a row to skip it, or pick a category for it.
+5. Click **Validate import**.
+
+![Import preview](images/en/import-preview.png)
+
+Things to check in the preview:
+
+- **Decimal mark**: when Bilan had to guess, a warning asks you to check the amounts. Click **Looks right**, or the button that switches to the other mark.
+- **Date order**: Bilan picks MM/DD only when the file can't be read as DD/MM (for example 12/25). When every date fits both orders, it assumes DD/MM and a warning asks you to check the dates. Click **Dates look right**, or **Use MM/DD**. Dates written as 2026-10-15 are never ambiguous.
+- **Duplicates**: a row with the same date, amount and bank label (extra spaces ignored) as a transaction already imported into this account is marked **duplicate** and skipped. You can't force it in. Transactions you entered by hand are never treated as certain duplicates. Identical rows within the same file are all kept.
+- **Probable duplicates**: a row that isn't a certain duplicate, but whose account already has a transaction (imported or entered by hand) on the same day for the same amount, is flagged **Probable duplicate**, with the matching transaction shown under "Already in the account". It is unticked, so it is skipped unless you tick it (**Import anyway**). This catches the same purchase entered by hand, or labelled differently by the bank. The counter at the top lists how many there are, and the **Probable duplicates** filter isolates them for review.
+- **Filters**: above the rows, **All**, **Uncategorized** and **Probable duplicates** narrow the preview, each with its row count. **Uncategorized** keeps the rows no rule categorized, leaving out duplicates already imported: handy to sort out a large first import. A category picked by hand leaves the row listed. This filter is hidden while **Categorize automatically** is unticked.
+- **Rules from your picks**: after you pick a category by hand, **Create a rule** appears under it. It opens the same dialog as on the transactions screen, so the next imports categorize that merchant on their own. When a rule had suggested another category and you can edit it, the dialog also offers to change that rule instead. Otherwise the new rule takes precedence over it. Once saved, the preview is recalculated and the other rows the rule matches take its category.
+- **Unreadable rows**: rows with an unrecognized date or amount, an amount out of range or an empty label are skipped. Bilan shows how many there were and up to 5 examples with their line number. If a whole column is wrong, the sidebar flags it: try another column mapping.
+
+Changing the mapping, the account, the decimal mark or the date order rebuilds the preview, and you lose the rows you unticked and the categories you picked.
+
+Bilan doesn't remember the mapping between imports, but it recognizes the usual column names in French and English.
+
+### Import a PDF statement
+
+Drop the PDF on the same page. Bilan reads statements from **LCL** and **Revolut** (French-language statements). The preview shows the detected bank. For other banks it warns that the bank isn't recognized and tries a generic reading of "date, label, amount" lines, so check the preview carefully. Scanned PDFs (images) can't be read.
+
+A Revolut statement can contain several sections (current account, deposit). Each section gets its own **Target account** choice. Pick **Don't import** to skip one.
+
+There is no decimal mark or date order to set for PDFs. Duplicates (certain and probable), categories and the preview work as for CSV files.
+
+### Import an OFX file
+
+Most banks let you download your history as an **OFX** file (sometimes called "Money" or "Microsoft Money"), next to the CSV and PDF options. Look for it in the export or download menu of your account history, choose a period (a long one the first time, for instance two years), and pick the OFX format.
+
+Then drop the file on the **Import** page like a CSV. Bilan reads both the old OFX 1.x and the newer 2.x formats, in UTF-8 or Windows-1252.
+
+- **Label**: the bank's name for the operation. When it is empty, Bilan uses the memo, and for a cheque without a name, **CHEQUE** followed by its number. When both a name and a different memo exist, the memo goes into the transaction's **note**.
+- **Type** (card, transfer, direct debit, cheque...): Bilan reads it from the label first, then from the type the bank gives.
+- **Several accounts in one file**: each statement is listed with its account type and the last 4 characters of its account number (for example **Current account ••1234**). Pick a **Target account** for each one, or **Don't import** to skip it, as for a Revolut PDF.
+- **Duplicates**: certain and probable duplicates work as for CSV files. This is what makes regular exports that overlap each other, or an OFX that overlaps a PDF statement of the same account, safe to import: what is already there is skipped, and a near match is left for you to review.
+- **Unreadable rows**: transactions with an unreadable date or amount are skipped and listed, as for CSV files.
+
+#### Check the balance
+
+When the file gives the bank's balance (most bank statements do, credit-card statements don't), the preview shows a **balance check**:
+
+- **Bank balance on** *date*: the balance the bank reports at the end of the file.
+- **Balance after import**: what Bilan would show for the account at that date: the opening balance, plus the account's transactions, plus the rows that will be imported.
+- **Gap**, or **Balances match**.
+
+The balance after import follows your changes: unticking a row, or ticking a probable duplicate, updates the gap on the spot. A gap usually means operations are missing from the account, or that the account's opening balance is wrong.
+
+#### Set the opening balance
+
+When the file starts the history of the account (the account has no transaction before the file's first day) and there is a gap, a checkbox offers to **Set the opening balance so the balance matches the bank's**. Tick it and Bilan changes the account's [opening balance](#accounts) at the same time as the import, so the balance matches the bank's. This is how you load a bank history into a new account without computing the opening balance by hand.
+
+- Only the **owner** of the account sees the checkbox, because only the owner can change the opening balance. With write access only, you see the gap but can't adjust it.
+- It isn't offered on an account that already has older transactions: there, a gap points to missing operations, and adjusting would hide them.
+
+### Undo an import
+
+You imported the wrong file or picked the wrong account? Undo the whole import:
+
+- right after importing, click **Undo import** on the summary, or
+- later, open the **⋯** menu of the import in **Recent imports** on the **Import** page and choose **Undo import**.
+
+Bilan shows how many transactions will be deleted, and warns you if some are linked to other transactions, assigned to a budget, or were edited since the import. If the import adjusted an account's opening balance, the dialog says it will go back to its previous value. If you changed that opening balance yourself since, it is left as it is and the dialog tells you so. Click **Delete the transactions** to confirm.
+
+All of that import's transactions are deleted, edited ones included. The import stays in the history as **Undone**, and you can import the same file again afterwards. There is no time limit, but you need write access to every account the import went into.
+
+## Bank sync
+
+Bank sync keeps your accounts up to date from your bank by itself, read-only, through Enable Banking, a licensed account-information provider. It only shows when the administrator of your instance has set it up: the **Accounts** page then has a **Connect my bank** button. Bilan can't make payments or change anything at your bank.
+
+### Connect your bank
+
+1. On **Accounts**, click **Connect my bank**.
+2. Pick the **Country** and your bank (type part of its name to search). Each bank shows how long the access lasts: "Access valid for up to 180 days", for example.
+3. Click **Continue to the bank**, sign in at your bank and authorize the access.
+4. Your bank sends you back to Bilan, on the page where you map the accounts. Do it right away: see [Map the accounts](#map-the-accounts).
+
+Complete the authorization within 15 minutes; past that, connect the bank again. If you refuse the access at the bank, nothing is connected.
+
+### Map the accounts
+
+![Mapping the accounts of a bank](images/en/bank-mapping.png)
+
+For each account the bank returned, pick what Bilan does with it:
+
+- a **Bilan account** to keep up to date: one of your own accounts, not archived. Accounts shared with you are not offered. An account already synced by your other connection shows "(already synced)" and can't be picked.
+- **Create a new account**: a checking account named after the bank's account (you can change the name).
+- **Ignore this account**: nothing is imported from it.
+
+Only euro accounts can be synced. A bank account already synced by another of your connections shows "Already synced by your other connection."
+
+**Import from** sets where the history starts. It defaults to the day of the account's last transaction; for an empty account, it starts with all the history the bank provides (at most 3 years).
+
+Click **Map and import**: the history is imported right away, and Bilan shows how many transactions each account got. As with a file import:
+
+- rows already in the account are left out, and so are probable duplicates (same day and same amount as a transaction already there, imported or entered by hand). Connecting a bank on an account you filled from statement files is safe: what is there stays, and only what is missing is added. Unlike a file import, there is no preview to tick a probable duplicate back in;
+- your [rules](#rules) categorize the new transactions, and transfers between your accounts are [linked](#automatic-links);
+- for LCL, the label is the one printed on the statement, as in its OFX files, so your rules match the same way.
+
+When the account has no transaction before the import starts (a new or empty account), Bilan also sets its [opening balance](#set-the-opening-balance) so its balance matches the bank's.
+
+If the bank didn't send all the history requested, the summary says some transactions may be missing. To change the mapping later, click **Map accounts** next to the bank, under **Bank connections** at the bottom of the **Accounts** page.
+
+#### Full history right after connecting
+
+Some banks, LCL among them, only give operations older than 90 days right after you authorize the access, while you are on the page: syncs made in the background then only reach the last 90 days. So the full history is imported when you map the accounts just after connecting (or [reconnecting](#reconnect-or-disconnect)). If you want years of history, map the accounts as soon as you are back from the bank, and set **Import from** then.
+
+### Keeping up to date
+
+![Accounts page with a synced account](images/en/accounts.png)
+
+Once mapped, Bilan syncs each connection in the background a few times a day (the administrator sets the frequency). A synced account's card shows "Synced 2 hours ago · *bank*". Each sync reads the last 7 days again, to catch operations the bank books late; what is already there is left out.
+
+- **Sync now** syncs the connection's accounts at once. It works once every 10 minutes per bank ("This bank was already synced less than 10 minutes ago").
+- **Pending operations** (a card payment the bank hasn't booked yet) are not imported: the account shows "2 transactions pending, −€35.40", and each one comes in once the bank books it.
+- If the bank limits access for the day, or Enable Banking doesn't answer, the error shows on the account's card and Bilan tries again later. After 3 failed syncs in a row, the connection is marked **Failing** and only **Sync now** retries it.
+
+Only you see the sync status of your accounts: household members you share an account with see its transactions, not your bank connection.
+
+### Bank balance check
+
+At each sync, the bank also gives the account's balance. On the synced account's card:
+
+- **Matches the bank on** *date*: the bank's balance and Bilan's balance on that day are the same. Bilan compares the balance the bank expects minus the pending operations (they are not imported yet), or the booked balance when the bank doesn't give an expected one.
+- **Gap with the bank on** *date*: the difference (bank minus Bilan). Click it to open the account's transactions for the week up to that day.
+- **Balance expected by the bank on** *date*: shown when the bank gives it. It includes the pending operations, which Bilan doesn't import, so it can differ from Bilan's balance while some are pending.
+
+A gap usually means operations are missing in Bilan (a synced transaction you deleted, a probable duplicate that was not one) or were entered by hand without existing at the bank, or that the opening balance is wrong.
+
+### Reconnect or disconnect
+
+The bank's consent lasts a limited time, often 180 days. The **Bank connections** section of the **Accounts** page lists your banks, with the accounts they sync and "Access valid until …".
+
+- **From 14 days before it ends**, a banner on the dashboard and the **Accounts** page tells you, with a **Reconnect** button. If the instance sends e-mails, you also get one 14 days and 3 days before.
+- **Reconnect** takes you to the bank to authorize the access again. Bilan recognizes your accounts and keeps their mapping: you come back to **Accounts** with "Bank reconnected", and the sync runs right away. If an account can't be matched with the previous connection, the mapping page opens instead.
+- **Once expired**, the connection shows **Expired** and its accounts no longer sync. Nothing is deleted: reconnect to start again.
+- **Disconnect** stops syncing the bank's accounts and deletes Bilan's access at the bank. The transactions already synced stay.
+
+### Deleting synced transactions
+
+You can delete a synced transaction like any other. It doesn't come back at the next sync. Syncs don't appear in **Recent imports** on the **Import** page and can't be undone as a whole.
+
+### Savings accounts your bank doesn't list
+
+![Savings account kept up to date from transfers](images/en/account-mirror.png)
+
+Some banks don't share their savings accounts (a Livret A at LCL, for example). Bilan can still keep such an account up to date from the transfers you make to it:
+
+1. Open **Edit** in the savings account's menu (accounts of type **Savings** only, as their owner).
+2. Under **Kept up to date from transfers**, tick the **Source accounts**: your accounts the transfers come from.
+3. Check the **Label pattern**: it defaults to the account's name in capitals. Next to it, pick how it's matched, ignoring case and accents either way:
+   - **Contains** (the default): anywhere in the label.
+   - **Exact label**: the whole label must be the pattern, extra spaces aside. Use it when other transfers start the same way: with the pattern `VIR.PERMANENT Livret A`, a transfer labelled `VIR.PERMANENT Livret A Camille` (someone else's Livret A) isn't mirrored.
+4. Click **Save**.
+
+After each bank sync or file import on a source account, each new transfer whose label matches the pattern, and that isn't linked yet, adds the opposite operation on the savings account ("Virement depuis …" or "Virement vers …"), [linked](#links-transfers-and-refunds) to it. When the savings account already has the opposite operation (same amount, at most 4 days apart, not linked), Bilan links it instead of adding one.
+
+- A savings account has one label pattern, for all its source accounts.
+- When a transfer matches several savings accounts, an exact label wins over a contains pattern, then the longest pattern wins.
+- Only transactions imported or synced after you set it are mirrored: the existing history isn't changed.
+- Interest stays a manual entry.
+- If you delete an operation Bilan added, it doesn't come back.
+- Untick every source account to turn it off.
+- When a label doesn't tell which account a transfer went to, [create its other side](#create-the-other-side-of-a-transfer) from the transaction's details.
+
+## Categories, rules and merchants
+
+The **Categories** page has three tabs: **Categories**, **Rules** and **Merchants**.
+
+### Categories
+
+![Categories](images/en/categories.png)
+
+Bilan starts you with a set of categories and sub-categories that you can edit or delete like your own.
+
+Outside this page, a sub-category shows with its path, such as **🩺 Health › Reimbursements**, so two sub-categories with the same name stay apart. Without its own symbol, it shows its parent's.
+
+To create one:
+
+1. Click **New category**.
+2. Enter a **Name** and choose a **Parent category**, or **None (root category)**.
+3. Choose the **Scope**: **Personal** (visible only to you) or a household (visible to every member). The scope can't be changed later.
+4. Pick a **Color**. The **+** button opens a custom colour picker. A sub-category can use its parent's colour.
+5. Pick a **Symbol**, or enter any character or emoji with **+**.
+6. Optionally turn on **Count toward the next month**: see [Count a transaction in another month](#count-a-transaction-in-another-month).
+7. Optionally turn on **Counts as savings**: spending in this category and its sub-categories counts toward the dashboard's **Net savings** instead of its expenses (money put aside on an account Bilan doesn't track, such as a brokerage account or a child's savings book). It is on for the default **Savings** category.
+8. Optionally turn on **Counts neither as spending nor as income**: transactions in this category and its sub-categories are left out of the dashboard and insights, for transfers between your own accounts that Bilan can't link (a joint account it doesn't track, for example). It wins over **Counts as savings** and is on for the default **Bank › Internal transfer** category.
+
+   A sub-category shows both options as set by its parent category: when a parent counts as savings or as neither, the switch is on, locked, and names that parent.
+9. Click **Create category**.
+
+To delete a category, open its **⋮** menu and choose **Delete**. Its sub-categories are deleted too. If transactions, rules or budget lines use it, choose where to move them with **Move to**. With **No category**, transactions become uncategorized and the rules and budget lines are deleted.
+
+### Rules
+
+![Rules](images/en/rules.png)
+
+A rule gives a category to transactions whose bank label matches a pattern.
+
+A new account starts with a set of ready-made rules on the default categories: national retailers, utilities, subscriptions, motorways, pharmacies, taxes, bank fees… so a first import is already partly categorized. Edit, turn off or delete them like your own. Transfers between people and local shops are never covered: add your own rules for them.
+
+1. On the **Rules** tab, click **New rule**.
+2. Enter the **Pattern** and pick the **Match**: **Contains**, **Equals**, **Starts with** or **Regex**.
+3. Pick the **Category** and the **Priority**: when several rules match, the highest number wins (100 by default). At equal priority, the longest pattern wins, then the most recent rule.
+4. If you manage a household, choose the **Scope**: **Personal** or the household. Household rules apply to every member's transactions.
+5. Tick **Case-sensitive** if needed. By default, case and accents are ignored.
+6. Click **Save**.
+
+The checkbox at the start of each row turns a rule on or off. **Hits** counts the transactions the rule has categorized.
+
+When rules run:
+
+- during an import, when **Categorize automatically** is ticked;
+- when you add a transaction by hand without choosing a category.
+
+### Apply a rule to existing transactions
+
+After you save a rule that matches transactions already in Bilan, the dialog shows a summary:
+
+- how many transactions **move** to the rule's category, and how many of them are currently in another category;
+- how many **stay** with another rule that takes precedence (raise this rule's priority to take them over);
+- how many were **categorized by hand**: they never move.
+
+Click **Reclassify** to apply the rule, or **Later** to leave the transactions as they are. To apply a rule later, click the clock icon on its row in the **Rules** tab.
+
+Only transactions on accounts you can edit are reclassified. Rules never override a category you chose yourself.
+
+### Import and export rules
+
+On the **Rules** tab, **Export** saves your rules to a `bilan-rules-YYYY-MM-DD.json` file and **Import** reads one back. Use them to back up your rules, to move them to another Bilan instance or to share them with a household.
+
+**Export.** If you belong to a household, choose **Rules to export**: **Personal rules** or a household, then click **Download**. The file contains the patterns, match types, priorities and category names, never your transactions.
+
+**Import.**
+
+1. Click **Import**, choose the file and, if you manage a household, **Import into**: **Personal rules** or the household. Click **Continue**. Nothing is saved yet.
+2. In **Categories to resolve**, each category of the file that doesn't exist yet in the destination offers three choices: **Create** it (this is the default; only the missing levels are created, existing parent categories are reused), **Map to** one of your existing categories, or **Ignore** its rules. Bilan first looks for the same path in the destination (for example *Alimentation > Courses*), ignoring case and accents: *epargne* matches *Épargne*. Otherwise it reuses a category whose path ends with the file's path, if there is exactly one. The others are created unless you map or ignore them.
+3. In **Conflicts**, a rule that already exists with another category shows the change. Choose **Keep** the current category (the default) or **Move** the rule to the one in the file; a move changes only the category, not the pattern, priority or other settings. Rules that already exist with the same category are skipped.
+4. Check the counts of rules to create, to move and skipped, then click **Import**. Invalid rules in the file are listed and skipped; the others are still imported. The import itself is all-or-nothing: if it fails, no rule or category is saved.
+
+![Reviewing a rules import](images/en/rules-import.png)
+
+Imported categories and rules are always created in the destination you chose. When it is done, click **Reclassify existing transactions** to [apply the imported rules](#apply-a-rule-to-existing-transactions) to transactions already in Bilan, or **Close** to leave them as they are. Disabled rules are left out: they don't reclassify anything until you enable them.
+
+Importing into a household requires being an administrator or owner of it.
+
+### Learn from your choices
+
+When you change a transaction's category, Bilan offers to **Create a rule for similar transactions?**. It suggests a pattern taken from the bank label, which you can edit along with the match type. Click **Create rule** to save a personal rule, or **No thanks**. If other transactions match, you can then [apply the rule to them](#apply-a-rule-to-existing-transactions).
+
+### Merchants
+
+The **Merchants** tab lists the places you spend money, with bank noise removed ("CB", "PRLV SEPA", dates, references). Click the pencil to give a merchant a **Display name**, or group several bank labels under one name. Merchants renamed to the same name are added up.
+
+This only affects the merchant list and the **Top merchants** card in [Insights](#insights). Transaction labels don't change.
+
+## Links: transfers and refunds
+
+A transfer between two of your accounts appears twice: money out of one, money in to the other. A refund cancels out a purchase. Linking these transactions stops Bilan from counting them twice:
+
+- linked transactions that cancel out (a transfer, a full refund) are left out of the dashboard and budget totals;
+- otherwise (a partial refund, for example), the link counts once, for the difference.
+
+In budgets, the dashboard and insights, a link is evaluated as a whole even when its transactions fall in different months: one that cancels out is left out of every month, otherwise the difference counts in the month and category of its largest transaction.
+
+Linked transactions stay in the list with a **Linked** tag.
+
+### Link transactions
+
+![Link suggestions](images/en/suggestions.png)
+
+- **From suggestions**: on **Transactions**, click **Suggestions**. Bilan suggests pairs with the same amount and opposite signs, at most 30 days apart. Within one account, only pairs whose labels look alike (same merchant, or a shared word like a fee and its rebate) are suggested; the most likely pairs come first. Click **Link** to accept a pair or **Ignore** to dismiss it. Ignored pairs are listed further down, and **Restore** makes a pair eligible again. **Settings** changes, for you only, the **Maximum gap (days)** between the two transactions (0 for the same day, up to 365) and the **Minimum amount** below which pairs aren't suggested.
+- **By hand**: [select](#select-several-transactions) two or more transactions and click **Link**. You can also open a transaction and click **Link to other transactions**: it is selected, and stays selected while you search or filter for the others (the selection bar names it).
+
+Linking requires write access to every account involved.
+
+### Create the other side of a transfer
+
+When only one side of a transfer is in Bilan (the other account isn't synced, or the label doesn't tell which account the money went to), open the transaction, pick the other account under **Create the opposite transaction on…** and click **Create**. Bilan adds the opposite amount on that account, on the same date, as a transfer labelled "Virement depuis …" or "Virement vers …" followed by the first transaction's account name, and links the two.
+
+- It is offered for a transaction that isn't linked yet, on an account you can edit.
+- The other account must be one of your own active accounts. When exactly one of them is a savings account, it is picked for you.
+- The new transaction has no category. When the first one is a transfer with a month picked by hand, the new one takes that month.
+
+### Automatic links
+
+Bilan links the two sides of a transfer between two accounts you own by itself, when you import a statement or add a transaction by hand: both sides are transfers, same amount in opposite directions, at most 4 days apart, and one obvious match. A transfer that matches a card payment, a direct debit or a cash withdrawal is only suggested, never linked by itself. When it isn't sure (two transfers of the same amount on the same day, for example), the pair stays in the suggestions. Transfers to an account someone shares with you are never linked automatically.
+
+To undo an automatic link, [unlink](#unlink) it: Bilan won't link that pair again, and stops suggesting it to you and to the accounts' owner. If you restore the pair from the ignored pairs, it comes back as a suggestion only, never linked automatically again.
+
+### Unlink
+
+Open one of the transactions and click **Unlink** in the **Linked to** section. Deleting a transaction removes it from its link. A link with only one transaction left disappears.
+
+## Budgets
+
+![Budgets](images/en/budgets.png)
+
+A budget sets how much you plan to spend per category or account over a period, and tracks what you actually spend. Attached to an account, it becomes that account's envelope: planned income, transfers and spending, and where the account lands at the end of the period (see [Budget on an account](#budget-on-an-account)).
+
+### Create a budget
+
+1. Go to **Budgets** and click **New budget**.
+2. Enter a **Name** and, if you like, a **Description**.
+3. Choose the **Scope**: **Personal**, or a household you manage (see [Household budgets](#household-budgets)). It can't be changed later.
+4. Optionally choose an **Account** (see [Budget on an account](#budget-on-an-account)). Leave **None: all accounts** for a budget across your accounts.
+5. Choose the **Period**: Week, Month, Quarter, Year or Custom, then the **Start** date. The end date follows from the period.
+6. Tick **Recurring** for a budget that repeats every period.
+7. Add **Lines**. For each line, pick a **Category** (or **All categories**), an **Account** (or **All accounts**) and a **Planned amount**. A line can also have a **Label**, shown instead of the category or account name.
+8. Click **Create budget**.
+
+How lines count spending:
+
+- A category line counts that category and its sub-categories. A refund in that category reduces the amount spent.
+- When a parent line and a sub-category line both match, the transaction goes to the more specific one.
+- An **All categories / All accounts** line takes every expense that no other line matches.
+- Linked transactions are counted as explained in [Links](#links-transfers-and-refunds).
+
+### Budget on an account
+
+A budget attached to an account follows that account only: the money that comes in, the money that goes out, and the transfers to your other accounts. Use one per checking account, for example one for your personal account and one for the household's joint account.
+
+- An account has at most one budget at a time: two budgets on the same account can't overlap, even partly. Archived budgets don't count.
+- A personal budget uses one of your own accounts; a household budget, an account shared with the household.
+- Transfers to your other accounts count in full: a transfer to your savings account is money that left this account.
+
+Each line has a **Type**:
+
+| Type         | What it counts on the account                                                      |
+| ------------ | ---------------------------------------------------------------------------------- |
+| **Expense**  | spending in the category and its sub-categories (a refund reduces it)              |
+| **Income**   | money received in the category, for example your salary                           |
+| **Transfer** | transfers **To** or **From** another of your accounts, chosen in **Other account** |
+
+A transaction counts in one line only. Transfer lines come first, then the most specific category line. A transfer is matched once it is linked to the other account's side (see [Automatic links](#automatic-links)), or when that account holds the same amount the other way within 4 days and you haven't ignored that pair in the link suggestions. Money coming from another account never counts as a refund of an expense line.
+
+Going over a line reads differently by type: **Over by …** for an expense, **+… more than planned** for income or a transfer, and **+… saved on top** for a transfer to a savings account, which doesn't push the budget over.
+
+A transfer line is set once, in the budget of the account the money leaves. The other account's budget shows it as a read-only line, **Planned in …**, when both budgets have the same period type and start and you can see both. If that budget already has its own **From** line for this account, only its own line counts.
+
+**Out of budget** is always the last line. It collects what the account paid that no other line takes: uncategorized transactions, categories without a line, unplanned transfers. You can give it an optional **Margin** for the unexpected. Click it to list those transactions; click a transaction to open it in **Transactions**, where you can recategorize it or include it elsewhere. When a transfer is left there because it isn't linked yet, a link to the link suggestions appears.
+
+**Unplanned income** lists the money received that no Income or Transfer line takes. What came from a savings account shows as **Taken from savings this period**. The **Income** section total includes it. The **Spending** total counts out of budget only when the budget has a margin, as one more line; without one, it stays apart from the total.
+
+#### Where the account lands
+
+During the current period, the **Budgets** page opens with **Where I land**: one card per account with a budget in progress (the dashboard shows it under each account's balance, and the budget's details at the top of the page). Its balance at the period's end is:
+
+> today's balance + income still expected − spending still to come
+
+- Today's balance only counts transactions dated today or earlier.
+- Income still expected: what each Income line and incoming transfer has not received yet.
+- Spending still to come: what each Expense line and outgoing transfer has not spent yet, plus what is left of the Out-of-budget margin. A line already over counts as 0.
+- A transaction already dated later in the period isn't in today's balance: it counts in what is still to come when it is more than what is left of its line.
+- A transaction from another account included in the budget counts in its line, but not in the landing: it never touched this account.
+
+Past and future periods show planned versus actual only. Savings accounts get no budget and no landing: their balance shows on the dashboard.
+
+### Follow a budget
+
+![Budget details](images/en/budget-detail.png)
+
+Each line and the budget as a whole show a status:
+
+| Status             | Meaning                                 |
+| ------------------ | --------------------------------------- |
+| **On track**       | under 80 % of the planned amount        |
+| **Almost reached** | 80 % or more, not reached yet           |
+| **Reached**        | exactly the planned amount, to the cent |
+| **Over budget**    | more than the planned amount            |
+
+Tip: **Reached** needs the exact amount, to the cent. Until then the percentage stays below 100 % (99.6 % is shown as 99 %), and any overspend shows at least 101 %. A line planned at 0 € stays **On track** while nothing is spent; any spending puts it **Over budget**, with no percentage (—).
+
+A budget's card in the list shows the same spent figure, percentage and status as the top of its details. Without a margin, out-of-budget spending shows apart, on its own **Out of budget** row.
+
+Click a budget to open its details: each line with "… left" or "Over by …", **See transactions** for category lines, and the list of transactions **Counted in this budget**.
+
+At the top of the details, one card sums up the period:
+
+- **Left to spend**: what the spending lines still allow (a line already over counts as 0), with the percentage spent. Below the bar, what these lines spent out of the planned total. On a budget on an account, the Out-of-budget margin counts as one more line, and saving more than planned on a transfer to savings isn't counted as spent.
+- **Out of budget · … transactions**, when something was spent outside the lines: the amount, with the margin if there is one. **See the transactions** lists them.
+- **Plan in deficit of …**, when the budget plans income and plans to spend more than it.
+- During the current period, a budget on an account adds where the account lands at the end of the period (see [Where the account lands](#where-the-account-lands)): **Balance today**, **Left to spend**, **To receive** and **End of month** (**End of period** for a period other than a calendar month). When what still has to leave the account differs from what is left to spend (a transaction already dated later in the period, one from another account), that row reads **To pay**.
+
+During the current period, a budget with no account shows **Projected balance on …**: the current balance of your checking accounts, minus what the lines still plan to spend (an over-budget line counts as 0). Savings accounts and income still to come are left out. A budget on an account shows its landing instead (see [Where the account lands](#where-the-account-lands)).
+
+### Renew a recurring budget
+
+When a recurring budget's period ends, a **Renew** button on its card creates the next period with the same account, lines and margin. If another budget already covers the next period on that account, the budget isn't renewed. Unspent amounts are not carried over. Your administrator can also set up automatic renewal. The periods of a series are grouped on one card: open **… other periods** to see them, or use the arrows on the details page.
+
+### Edit, archive or delete a budget
+
+The **⋮** menu on a budget's card or details page offers **Edit**, **Archive** and **Delete**.
+
+- **Archive** a budget you no longer follow but want to keep. It leaves the list, the dashboard and the **Assign to a budget** menu, and it is no longer renewed. Its lines and assignments are kept: a transaction's details still show its assignment, marked **Archived**, and you can remove it. Archived budgets are grouped under **Archived budgets** at the bottom of the list: open one to view it, or choose **Unarchive** in its menu to bring it back.
+- **Delete** removes the budget and its lines. Transactions are not affected, and the other periods of a recurring budget are kept.
+
+### Include or exclude a transaction
+
+From a transaction's details, under **Assign to a budget**:
+
+1. **Choose a budget**.
+2. Click **Include** to count the transaction in that budget even if it doesn't match a line, falls outside the period, or is on an account the budget doesn't cover. Click **Exclude** to keep it out.
+3. The assignment appears below with **Included** or **Excluded**. Click **Remove** to undo it.
+
+**Counted in**, just above, updates right away: an excluded transaction leaves that budget, an included one joins it.
+
+An included transaction that matches no line counts in the budget under a separate **Out of budget** card, apart from the spent total: it never changes a line.
+
+### Household budgets
+
+A budget with a household scope belongs to the household:
+
+- Owners and admins create, edit, renew, archive and delete it. Every member can view it, and can include or exclude transactions.
+- It counts transactions from the accounts shared with that household.
+
+A member can also **Include** a transaction from one of their private accounts. It then counts in the totals for everyone, and every member sees it in the budget in full: date, amount, label, category and account name. Only that transaction becomes visible: the private account and its other transactions stay hidden. If that member later leaves the household or is removed from it, the transaction stops counting in the household budgets.
+
+You can only **Include** a transaction from one of your own accounts or from an account shared with this household: an account another household shares with you can't be included.
+
+## Households
+
+![Households](images/en/groups.png)
+
+A household lets several people share accounts, budgets, categories and rules. Each person's accounts stay private until they decide to share one.
+
+### Create a household
+
+Go to **Households**, click **New household**, enter the **Household name** and an optional **Description**, then click **Create household**. You become its owner.
+
+![Household page](images/en/group-detail.png)
+
+### Invite someone
+
+Owners and admins can invite people:
+
+1. On the household page, under **Invite**, enter the person's **Email address**.
+2. Choose the **Role**: Member or Admin.
+3. Click **Send invitation**.
+
+Each invitation comes with a link and a 6-character code, and expires after 7 days. If the instance can't send e-mail, Bilan says so and shows the **Invitation link**: copy it with **Copy invitation link** and send it yourself.
+
+**Pending invitations** shows the code, the expiry date and a copy button for each invitation. The **X** revokes it. Inviting the same address again renews its invitation.
+
+### Accept or decline an invitation
+
+You can accept an invitation in three ways:
+
+- **On the Households page**: under **Pending invitations for you**, click **Accept invitation** or **Decline**. Invitations only appear here once your e-mail address is verified.
+- **With the link**: open it while signed in and click **Accept invitation**.
+- **With the code**: on the **Households** page, enter it under **Join with a code** and click **Join**.
+
+An invitation only works for the account whose e-mail address was invited. The link and code work even before your address is verified.
+
+### Roles
+
+| Action                                                              | Member | Admin        | Owner |
+| ------------------------------------------------------------------- | ------ | ------------ | ----- |
+| See members, shared accounts and household budgets                  | yes    | yes          | yes   |
+| Share your own accounts, include or exclude transactions in budgets | yes    | yes          | yes   |
+| Edit the household, invite people                                   | no     | yes          | yes   |
+| Manage household budgets, categories and rules                      | no     | yes          | yes   |
+| Remove members                                                      | no     | members only | yes   |
+| Change roles, delete the household                                  | no     | no           | yes   |
+
+To hand over a household, an owner sets another member's role to **Owner**. A household can have several owners, but always keeps at least one.
+
+### Share an account
+
+1. On **Accounts**, open the account's **⋮** menu and choose **Share**.
+2. For each household, choose **None**, **Read** or **Write**. The change applies immediately. Switching a household the account was shared with back to **None** also drops the inclusions and exclusions of its transactions in that household's budgets, so none of them count there any more.
+
+#### What Read and Write allow
+
+- **Read**: members see the account, its balance and all its transactions, notes included. They can include or exclude its transactions in budgets.
+- **Write**: everything in Read, plus adding, editing, recategorizing, deleting, importing, linking and unlinking transactions.
+- Only you, the owner, can edit, share, archive or delete the account, and see its IBAN.
+
+Under each household you share with, an **Allow AI assistants** checkbox decides whether the assistants of that household's members receive the account's transactions (see [AI assistants](#ai-assistants)). It is off by default and only you, the owner, can tick it. Without it, the account stays invisible to those assistants even though members can see it in Bilan. It also decides whether those assistants may put the account in that household's budgets or include its transactions there: ticking it for one household doesn't let assistants use the account in another household's budgets.
+
+Your private accounts and their transactions are never visible to other members, except a transaction you include in a household budget (see [Household budgets](#household-budgets)). A household budget only counts the accounts shared with that household.
+
+### Leave or delete a household
+
+The **Danger zone** at the bottom of the household page offers:
+
+- **Leave**: you lose access to the household's shared accounts and budgets. Your accounts stop being shared with the household, and your transactions leave its budgets (included or excluded ones alike). The last owner can't leave.
+- **Delete household** (owners): removes the members, invitations and shares, along with the household's categories, rules and budgets. Transactions that used a household category become uncategorized. Accounts and transactions themselves are kept. The confirmation counts what is affected.
+
+The same happens to a member an owner or admin removes. A household budget line limited to one of their accounts stays, counts nothing, and shows as a hidden account: edit or delete it.
+
+## Dashboard and insights
+
+The dashboard and insights cover every account you can see: your own, the ones shared with you, and archived ones.
+
+### Choose the period
+
+On both pages, pick **This month**, **Last month**, **Quarter**, **Year** or **Custom**, and use the arrows to move to the previous or next period. You can go as far as next month, marked as upcoming: it shows the transactions [assigned to it](#count-a-transaction-in-another-month) in advance.
+
+For a single month, **Compared with** lets you compare against **the previous month** or the 3-, 6- or 12-month average. The dashboard starts on the previous month, insights on the 3-month average, so a one-off expense last month doesn't skew every change. Other periods are compared with the previous period of the same length.
+
+While the period is still running, Bilan compares it with the same number of days of the comparison period, and a note says so.
+
+Tip: transfers between your own accounts are linked automatically and left out of income and expenses. A transfer Bilan couldn't link counts as both until you link it. See [Links](#links-transfers-and-refunds).
+
+### Dashboard
+
+![Dashboard](images/en/dashboard.png)
+
+- **Account balances**: the current balance of each non-archived account and their total, whatever the selected period. **Accounts** opens the accounts page. Under the balance of an account whose [budget](#where-the-account-lands) is in progress, **On …:** gives its balance at the period's end; hover it for the breakdown, click it to open the budget.
+- **Income** and **Expenses**, each with its change against the comparison. Spending in categories that [count as savings](#categories) is not an expense: it only counts in net savings.
+- **Net savings**: linked transfers into your savings accounts minus those out of them, plus spending in categories that count as savings, with its change against the comparison.
+- **Left to spend**, while the period is in progress: what your current budgets still allow, the same figure as each budget's summary, added up. Without a budget in progress, and for a past period, this card shows the **Net balance** (income minus expenses) instead.
+- **To do**, only when something needs it: the uncategorized expenses and income of the period that aren't linked, with their total. Click one to open those transactions and categorize them. A last line counts the unlinked operations in a category that [counts neither as spending nor as income](#categories): a transfer whose other leg is missing. Link it, or ignore it if the other account isn't in Bilan.
+- **Current budgets**, while the period is in progress: one block per budget in progress, side by side on a wide screen, with what is left to spend, how much of the plan is spent and its out-of-budget spending. Click a row to open the budget.
+- **Spending pace**: your spending added up day by day (by month over a quarter or a year), the dashed line being the comparison period, or the average month. While the period is running, the curve stops at today; above it, how much you have spent so far and how it compares with the same date of the comparison.
+- **Spending by category**: a donut with the six largest categories, the rest grouped.
+- **Recent transactions**: the latest six in the period. **See all** opens the full list.
+
+### Insights
+
+![Insights](images/en/insights.png)
+
+![Insights on a phone](images/en/mobile-insights.png)
+
+Insights count income and spending like the dashboard: spending in categories that count as savings, and categories that count neither as spending nor as income, are left out.
+
+- **Income and spending**: your income and spending for each of the last 12 months, the current month hatched while it runs. Above, the monthly averages (complete months only) and your net savings over the 12 months (income minus spending). A note says how many months your spending went above your income.
+- **Spending by category**: your spending per category, the biggest change first. Each row shows the change (as a multiple, like ×17, once spending has tripled), the comparison amount → the current one (while the month runs, the average spent by the same day: **avg. to day 17**), and a 12-month chart on the category's own scale: the dashed line is its monthly average, the period's bars are darker. Click a row to see its sub-categories and their changes. Categories whose spending barely moves (rent, subscriptions…), this period included, are grouped under **Stable** at the bottom. Uncategorized spending isn't a category: a line above the list gives its amount, **To sort** opens it.
+- **Exceptional expenses**: the period's one-off large expenses, which often explain a category's increase: each one is at least 50 € and above twice its category's monthly average (the slider button on the card changes both: the minimum amount, and the multiple from 1 for the average itself to 10) over the 12 months before the period (a sub-category used in fewer than 3 months is compared with its parent category instead). Recurring payments, transfers, savings and neutral categories are left out, and a refunded purchase only counts for what wasn't refunded. Each row shows the merchant, its category, the date and the category's average; above the list, their total and their share of the period's spending. The 8 biggest are shown, **Show all** lists the rest. Click a row to see the transaction in your list.
+- **Recurring payments**: what comes back about every month at the same merchant (rent, energy, insurance, subscriptions…), found over the last 6 months: at least 3 payments about a month apart (a skipped month is fine), for similar amounts (direct debits may vary more, like an energy bill between summer and winter), at a merchant you don't pay much else. A bill paid every two months is marked **every 2 months** and counts for half in the monthly cost. Each row shows the merchant, its category, its current amount and the last payment date (the usual amount after a price increase); above the list, what they cost a month and how much of it comes from new payments and price increases. **new** marks a payment that started in the last two months, **price increase** a last payment above the usual amount by more than 5 % (and at least 1 €), **stopped?** one whose month went by without it: these come first, stopped ones last. Transfers are left out, and merchants renamed to the same name count as one. Click a row to see the merchant's transactions over those 6 months.
+- **Top merchants**: where your everyday money goes, recurring payments left out (they have their own card). The pencil renames a merchant (see [Merchants](#merchants)).
+- **Income by category**.
+- **Budgets over time**, once a [recurring budget](#renew-a-recurring-budget) has at least two finished periods: one row per recurring budget you can see (yours and your households'), with a cell for each of its last 12 periods coloured like the budget list: on track, almost reached or reached, over budget, the period in progress hatched. Below, how many finished periods went over budget and how far spending was from the plan on average (above it in red, below it in green). Hover a cell for the period, its status and spent / planned; click it to open that period's budget. This card ignores the selected period: it always ends today.
+
+Most rows are clickable and open the matching transactions.
+
+## Account security
+
+![Security settings](images/en/settings-security.png)
+
+Go to **Security** in the sidebar.
+
+### Change your password
+
+Click **Change**, enter your **Current password** and the new one twice, then click **Change password**. **Sign out my other devices** is on by default. Bilan e-mails you to confirm the change.
+
+### Two-factor authentication
+
+To turn it on:
+
+1. Under **Authenticator app (TOTP)**, enter your **Password** and click **Enable**.
+2. Scan the QR code with your authenticator app (or type the key shown).
+3. Save the **Backup codes** somewhere safe. Each works once if you lose your phone. They are shown only this once.
+4. Enter the code from the app and click **Verify and enable**.
+
+To turn it off, enter your **Password** and an **Authentication code** (from the app, or a backup code), then click **Disable**. Both are required.
+
+While it is on, the card shows how many **Backup codes** you have left. To get a new set, click **Generate new codes**, enter your **Password** and an **Authentication code**, then click **Generate new codes** again. Your previous codes stop working at once. Save the new ones with **Copy** or **Download**: they are shown only this once.
+
+If your account has no password (you sign in through an identity provider or with a passkey), the card has nothing to set up: Bilan's two-factor authentication only protects password sign-ins, and your identity provider's own two-factor authentication applies instead.
+
+Your administrator can require two-factor authentication for administrators who have a password. Until such an administrator sets it up, administration pages send them back to this page, and a banner explains why.
+
+### Trusted devices
+
+When two-factor authentication is on, **Trusted devices** lists the browsers where you ticked **Trust this device**: browser and system when known, last use and expiry date. Click **Forget** next to a device, or **Forget all**. A forgotten device asks for the code again at its next sign-in with your password.
+
+### Passkeys
+
+A passkey lets you sign in with your fingerprint, face or device PIN instead of your password. Click **Add** under **Passwordless sign-in** and follow your device's prompts. You can rename or delete each passkey.
+
+If you signed in more than 24 hours ago, Bilan asks you to sign in again before adding one.
+
+### Signed-in devices
+
+**Signed-in devices** lists where you are signed in: browser, system, IP address and last activity. Click **Sign out** next to a device you don't recognize, or **Sign out all** for every other device.
+
+Trusted devices are also forgotten when you click **Sign out all**, change your password with **Sign out my other devices** on, reset your password, or turn two-factor authentication on or off.
+
+### Connected identities
+
+If your administrator has set up Google or another identity provider, click **Link …** under **Sign in through an identity provider**. The identity's e-mail address must match your account's. You can unlink it later, unless it is your only way to sign in.
+
+### Sign-in alerts
+
+When the instance can send e-mail, Bilan e-mails you after:
+
+- a new sign-in with your password, a passkey, a backup code or an identity provider;
+- a password change or reset;
+- a new passkey;
+- two-factor authentication being turned off.
+
+The alert gives the date, the sign-in method, the IP address and the device. If it wasn't you, change your password right away. These alerts can't be turned off.
+
+## AI assistants
+
+![AI assistants settings](images/en/settings-ai.png)
+
+Bilan can serve your data to your own AI assistant, so you can ask questions about your accounts, spending and budgets without opening the app, and, with read and write access, have it update your transactions, links, budgets, categories, rules, merchant names, preferences and accounts. It speaks MCP, a standard protocol: any MCP client can connect, such as claude.ai, Claude Desktop, Claude Code or Codex. Bilan has no chat of its own and sends nothing to an assistant until you connect one.
+
+Go to **AI assistants** in the sidebar. If the page says it is not available on this instance, an administrator has to turn on the MCP server first (see the [administration guide](admin-guide.md#ai-assistants-mcp-server)).
+
+### Turn it on
+
+Switch on **Allow AI assistants** and confirm. Your transactions' labels, amounts and notes are then decrypted and sent to your assistant's provider (Anthropic, OpenAI…), under its terms. Turning it off makes every connected client and token stop working at once. They are kept, so turning it back on restores them.
+
+### Connect a client
+
+The **Connection** card shows the server address, `<your Bilan address>/api/mcp`, with a button to copy it. A client connects in one of two ways:
+
+- **with your Bilan account**: the client opens Bilan in your browser, you sign in and authorize it. No token to copy;
+- **with a personal token** you create in Bilan and paste into the client's settings (see [Personal tokens](#personal-tokens)).
+
+**claude.ai and Claude Desktop**: add a custom connector with the server address. Claude opens Bilan's sign-in page, then the [authorization page](#authorize-a-client). These connectors reach Bilan from Anthropic's servers, so they only work when your Bilan is reachable from the internet over HTTPS.
+
+**Claude Code**, with your Bilan account:
+
+```bash
+claude mcp add --transport http bilan https://bilan.example.com/api/mcp
+```
+
+Then run `/mcp` in Claude Code, choose `bilan` and sign in (or run `claude mcp login bilan` in a terminal): the browser opens Bilan's sign-in page, then the authorization page.
+
+**Claude Code**, with a personal token:
+
+```bash
+claude mcp add --transport http bilan https://bilan.example.com/api/mcp \
+  --header "Authorization: Bearer <token>"
+```
+
+Codex and other clients that accept a server URL and a custom header work the same way: give them the address and the `Authorization: Bearer <token>` header.
+
+### Authorize a client
+
+![Authorization page](images/en/oauth-consent.png)
+
+When a client connects with your Bilan account, Bilan asks you to sign in if you aren't already (password, passkey, two-factor authentication and SSO all work), then shows the authorization page:
+
+- **App**: the name the client gave itself, next to its **Return address**, where Bilan sends you back once you've answered. Any client can choose its name; only the return address is checked. For claude.ai and Claude Desktop it is `claude.ai`, for Claude Code a `localhost` address;
+- **Requested access**: **Read and write** or **Read only**, preselected as the client asked. **Read only** is offered when the client also asked for it;
+- when the client asks to stay connected: it keeps its access until you revoke it, or until it goes 30 days without use;
+- the privacy note: the data sent to the assistant's provider.
+
+**Authorize** sends you back to the client, which is then connected. If you signed in more than 10 minutes ago, Bilan asks for your password first, since the client gets a lasting access. **Deny** sends you back without access.
+
+The page says so instead when AI assistants are turned off for your account (turn them on under [Turn it on](#turn-it-on), then start the connection again from the client), when they are turned off on the instance, or when the request has expired (start again from the client).
+
+A client you have already authorized reconnects without this page while you are signed in to Bilan in that browser, as long as it asks for the same access.
+
+### Connected clients
+
+**Connected clients** lists the clients you authorized: name, return address, access, the date you authorized it and its last use. **Revoke** cuts its access at once, after a confirmation; it will have to ask for your authorization again to reconnect.
+
+### Recent activity
+
+**Recent activity** lists the changes your assistants made in the last 90 days, the 50 most recent, grouped by day: the time, the action and what it changed (the transaction's label, the two transactions of a link, the budget, linked to its page, the category, the rule's pattern or the account, linked to their page, or the merchant's current name), and the name of the token or client that made it. Only what you can still see is named: a deleted transaction, budget, category, rule or account, one on an account or household you no longer have access to, or a merchant name since removed, shows the action alone, as do preference changes. Reads don't appear. Only your own tokens and clients' changes appear, not those another member's assistant triggered on your accounts (an automatic transfer link, for instance).
+
+### Personal tokens
+
+A personal token acts as you, for clients that send it in a header.
+
+1. Under **Personal tokens**, click **Create a token**.
+2. Enter a **Name** to recognize it, choose the **Access** (**Read only** or **Read and write**) and the **Expiry** (30 days, 90 days, 1 year or no expiry).
+3. Click **Create the token**. If you signed in more than 10 minutes ago, Bilan asks for your password first, since a token is a credential.
+4. Copy the token: it is shown only once.
+
+The list shows each token's prefix, access, creation, last use and expiry. **Revoke** stops a token at once.
+
+**Read only** lets the assistant read; **Read and write** also lets it change your data (see [What an assistant can change](#what-an-assistant-can-change)).
+
+Changing or resetting your password, or clicking **Sign out all** under [Signed-in devices](#signed-in-devices), revokes all your tokens and connected clients: create new tokens and connect your clients again afterwards.
+
+### What an assistant can see
+
+Everything is limited to what you could see in Bilan, narrowed further:
+
+- your own accounts, always;
+- accounts shared with your households only when their owner ticked **Allow AI assistants** on the share. Balances, the dashboard, insights, personal budget figures and search only count the accounts an assistant can see;
+- household budgets keep the same spending figures as in Bilan: the transactions of accounts the assistant can't see show only as one "Private account" amount per budget line, without label, date, account or merchant.
+
+An assistant can read your accounts and balances, the dashboard and insights for a period, transactions (search and detail, with their links and budget assignments), categories, rules, budgets, merchants, households and members' names, link suggestions and your preferences. It can't see full IBANs, nor reach anything administrative or security-related.
+
+Labels, notes and merchant names come from your banks and from other people: assistants are told to treat them as plain text, never as instructions. Still, only connect assistants you trust.
+
+### What an assistant can change
+
+With **Read and write** access, an assistant can:
+
+- **transactions**: add one by hand (your rules pick the category when it gives none), edit the label, note, date, amount or type, change the category, count it in another month;
+- **links**: link transactions, create the other side of a transfer on one of your own accounts, remove a link, ignore or restore a suggested pair;
+- **budgets**: create and edit budgets, archive and unarchive them, start the next period of a recurring budget now (with the same lines), include or exclude a transaction, remove an inclusion or exclusion;
+- **categories**: create and edit categories (name, color, icon, parent, month shift, savings, neutral);
+- **rules**: create and edit rules, point one at another category, enable, disable or delete one, preview what applying rules would change and apply them to existing transactions. Applying only changes transactions on the accounts it may change (below), and transactions you categorized by hand keep their category;
+- **merchant names**: rename a merchant or a whole display name, remove a display name (its merchants go back to their bank labels), detach one merchant from its display name;
+- **preferences**: the link suggestion settings (days apart and minimum amount) and the exceptional expenses rule (minimum amount and multiple);
+- **accounts**: create accounts, and edit, archive and unarchive your own.
+
+When it edits something, the fields it doesn't send are kept.
+
+It has the same rights as you in Bilan, on the accounts it can see (above): changing a transaction on a shared account needs **Write** on the share as well as **Allow AI assistants**. Household categories and rules need the owner or admin role in the household, as in Bilan. It can't:
+
+- delete transactions, budgets, categories or accounts;
+- share an account or manage households;
+- change an account someone else owns, even one shared with you;
+- set, change or read an IBAN: editing an account keeps its IBAN;
+- set up a [savings account kept up to date from transfers](#savings-accounts-your-bank-doesnt-list), nor change the type of a savings account set up that way.
+
+In a household budget, an assistant may only add your own accounts and accounts whose share to that household allows AI assistants, to the budget's lines or as its account, and may only include transactions from those accounts. An account it sees through another household is refused. Accounts already in the budget stay when it edits the budget, and excluding a transaction is not restricted.
+
+Each token or connected client may make up to 30 changes per minute, within its 120 calls per minute. Every change appears under [Recent activity](#recent-activity).
+
+## Your data
+
+![Data settings](images/en/settings-data.png)
+
+Go to **Data** in the sidebar.
+
+### Export
+
+- **Transactions (CSV)**: the transactions on the accounts you can see, with date, amount, type, label, account, category and, when it differs from the real month, the assigned month. By default the file has all of them; to narrow it, set a date range (**From**, **To**) or pick an **Account** above the buttons. The file opens in a spreadsheet and can be imported back into Bilan. In French the file uses a semicolon separator and decimal comma.
+- **All my data (JSON)**: everything that belongs to you, for your records or to move elsewhere: profile, your own accounts (IBAN included), their transactions with notes and original labels, categories, rules, merchant names, budgets, households, links, import history, bank connections (without their access to the bank) and your recent activity log. Accounts other people share with you are not included. Since it contains your full IBANs, it asks you to confirm it's you the same way as [showing an IBAN](#see-the-iban) if you signed in more than 10 minutes ago.
+
+### Delete your account
+
+Click **Delete my account**, type your **Password** (or your e-mail address if you sign in only through an identity provider), then click **Delete permanently**. The confirmation lists what will go: how many accounts and transactions, the households handed over or deleted. Deletion is immediate and final:
+
+- your accounts and their transactions are deleted, including those shared with a household: other members lose them too;
+- for each household you own, another member becomes owner; a household with no other member is deleted;
+- the household's own categories, rules and budgets are kept.
+- your bank connections are disconnected: Bilan deletes its access at the bank.
+
+Tip: export your data first if you want to keep a copy.

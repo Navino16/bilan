@@ -1,0 +1,17 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+.reports/
+coverage/
+playwright-report/
+test-results/
+package-lock.json
+next-env.d.ts
+
+# Brainstorm mockups
+.superpowers/
+
+# Long-form docs (specs/plans) — not auto-formatted
+docs/

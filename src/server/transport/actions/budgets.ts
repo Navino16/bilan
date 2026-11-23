@@ -1,0 +1,204 @@
+"use server";
+
+import { requireSession } from "@/server/auth/permissions";
+import { db } from "@/server/db";
+import { canReadAccount } from "@/server/services/accounts/sharing";
+import {
+  createBudget,
+  updateBudget,
+  deleteBudget,
+  archiveBudget,
+  unarchiveBudget,
+  assignTransaction,
+  unassignTransaction,
+  listAssignmentsForTx,
+  listBudgetMatchesForTx,
+  rollRecurring,
+  BudgetAccessError,
+  type TxAssignment,
+  type TxBudgetMatches,
+} from "@/server/services/budgets";
+import { budgetInputSchema } from "@/lib/schemas/budget";
+import { AMOUNT_ERRORS } from "@/lib/amount";
+import { issueCode } from "@/lib/schemas/amount";
+import { invalidInput, type FormFailure } from "@/lib/validation/field-errors";
+
+export type BudgetActionState = { ok: true; id?: string } | FormFailure | null;
+
+function mapError(e: unknown): string {
+  return e instanceof BudgetAccessError ? e.message || "FORBIDDEN" : "FAILED";
+}
+
+function parse(formData: FormData) {
+  let lines: unknown = [];
+  try {
+    lines = JSON.parse(String(formData.get("lines") ?? "[]"));
+  } catch {
+    lines = [];
+  }
+  return budgetInputSchema.safeParse({
+    name: formData.get("name") ?? "",
+    description: formData.get("description") ?? "",
+    groupId: formData.get("groupId") ?? "",
+    accountId: formData.get("accountId") ?? "",
+    outOfBudgetPlanned: formData.get("outOfBudgetPlanned") ?? "",
+    periodType: formData.get("periodType") ?? "MONTH",
+    periodStart: formData.get("periodStart") ?? "",
+    periodEnd: formData.get("periodEnd") ?? "",
+    recurring: formData.get("recurring") === "on" || formData.get("recurring") === "true",
+    lines,
+  });
+}
+
+export async function createBudgetAction(
+  _prev: BudgetActionState,
+  formData: FormData,
+): Promise<BudgetActionState> {
+  const user = await requireSession();
+  const parsed = parse(formData);
+  if (!parsed.success)
+    return invalidInput(parsed.error, undefined, issueCode(parsed.error.issues, AMOUNT_ERRORS));
+  try {
+    const { id } = await createBudget(parsed.data, { id: user.id });
+    return { ok: true, id };
+  } catch (e) {
+    return { ok: false, error: mapError(e) };
+  }
+}
+
+export async function updateBudgetAction(
+  _prev: BudgetActionState,
+  formData: FormData,
+): Promise<BudgetActionState> {
+  const user = await requireSession();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { ok: false, error: "INVALID" };
+  const parsed = parse(formData);
+  if (!parsed.success)
+    return invalidInput(parsed.error, undefined, issueCode(parsed.error.issues, AMOUNT_ERRORS));
+  try {
+    await updateBudget(id, parsed.data, { id: user.id });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: mapError(e) };
+  }
+}
+
+export async function deleteBudgetAction(
+  _prev: BudgetActionState,
+  formData: FormData,
+): Promise<BudgetActionState> {
+  const user = await requireSession();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { ok: false, error: "INVALID" };
+  try {
+    await deleteBudget(id, { id: user.id });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: mapError(e) };
+  }
+}
+
+async function setArchived(formData: FormData, archived: boolean): Promise<BudgetActionState> {
+  const user = await requireSession();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { ok: false, error: "INVALID" };
+  try {
+    await (archived ? archiveBudget : unarchiveBudget)(id, { id: user.id });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: mapError(e) };
+  }
+}
+
+export async function archiveBudgetAction(
+  _prev: BudgetActionState,
+  formData: FormData,
+): Promise<BudgetActionState> {
+  return setArchived(formData, true);
+}
+
+export async function unarchiveBudgetAction(
+  _prev: BudgetActionState,
+  formData: FormData,
+): Promise<BudgetActionState> {
+  return setArchived(formData, false);
+}
+
+export async function assignTransactionAction(
+  _prev: BudgetActionState,
+  formData: FormData,
+): Promise<BudgetActionState> {
+  const user = await requireSession();
+  const budgetId = String(formData.get("budgetId") ?? "");
+  const transactionId = String(formData.get("transactionId") ?? "");
+  const mode = String(formData.get("mode") ?? "");
+  if (!budgetId || !transactionId || (mode !== "INCLUDE" && mode !== "EXCLUDE")) {
+    return { ok: false, error: "INVALID" };
+  }
+  try {
+    await assignTransaction({ budgetId, transactionId, mode }, { id: user.id });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: mapError(e) };
+  }
+}
+
+export async function unassignTransactionAction(
+  _prev: BudgetActionState,
+  formData: FormData,
+): Promise<BudgetActionState> {
+  const user = await requireSession();
+  const budgetId = String(formData.get("budgetId") ?? "");
+  const transactionId = String(formData.get("transactionId") ?? "");
+  if (!budgetId || !transactionId) return { ok: false, error: "INVALID" };
+  try {
+    await unassignTransaction({ budgetId, transactionId }, { id: user.id });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: mapError(e) };
+  }
+}
+
+// The session user, when they can read the transaction's account: the panel's lazy fetches
+// below would otherwise let a session holder probe any transaction id (IDOR).
+async function txReader(transactionId: string): Promise<string | null> {
+  const user = await requireSession();
+  if (!transactionId) return null;
+  const txRow = await db.transaction.findUnique({
+    where: { id: transactionId },
+    select: { accountId: true },
+  });
+  if (!txRow || !(await canReadAccount(user.id, txRow.accountId))) return null;
+  return user.id;
+}
+
+// Lazy per-transaction fetch for the detail panel: which budgets the tx is
+// currently assigned to (INCLUDE/EXCLUDE).
+export async function listAssignmentsForTxAction(transactionId: string): Promise<TxAssignment[]> {
+  const userId = await txReader(transactionId);
+  return userId ? listAssignmentsForTx(transactionId, userId) : [];
+}
+
+// Which budget line the tx counts toward in each budget, for the detail panel (#365).
+export async function listBudgetMatchesForTxAction(
+  transactionId: string,
+): Promise<TxBudgetMatches> {
+  const userId = await txReader(transactionId);
+  return userId ? listBudgetMatchesForTx(transactionId, userId) : { matches: [], names: {} };
+}
+
+export async function rollRecurringAction(
+  _prev: BudgetActionState,
+  formData: FormData,
+): Promise<BudgetActionState> {
+  const user = await requireSession();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { ok: false, error: "INVALID" };
+  try {
+    const r = await rollRecurring(id, { id: user.id });
+    return { ok: true, id: r.id };
+  } catch (e) {
+    return { ok: false, error: mapError(e) };
+  }
+}

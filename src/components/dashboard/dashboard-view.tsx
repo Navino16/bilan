@@ -1,0 +1,320 @@
+import { getTranslations } from "next-intl/server";
+import Link from "next/link";
+import { Card } from "@/components/ui/card";
+import { AssignedMonthBadge } from "@/components/transactions/assigned-month";
+import { overline, CategoryAvatar, CategoryLabel } from "@/components/transactions/bits";
+import { Donut } from "./charts";
+import { PeriodNav } from "./period-nav";
+import { PeriodPicker } from "./period-picker";
+import type { DashboardData } from "@/server/services/dashboard";
+import type { Comparison, Period } from "@/lib/period";
+import { categoryPath, type FlatCategory } from "@/components/transactions/category-tree";
+import { formatPeriodLabel, toIsoDay } from "@/lib/period";
+import { formatDayMonth, formatMoney, formatPercent } from "@/lib/format";
+import { PageHeader } from "@/components/shell/page-header";
+import { categorySliceColors } from "@/lib/chart-colors";
+import { DEFAULT_CATEGORY_COLOR } from "@/lib/category-appearance";
+import { BaselineSelect } from "./baseline-select";
+import { ComparisonNote } from "./comparison-note";
+import { AccountsOverview } from "./accounts-overview";
+import { CurrentBudgets } from "./current-budgets";
+import { SpendingPace } from "./spending-pace";
+import { TodoCard } from "./todo-card";
+import type { VisibleAccount } from "@/server/services/accounts";
+import type { CurrentBudget, CurrentLanding } from "@/server/services/budgets";
+import { round2 } from "@/lib/budgets";
+
+const OTHERS_COLOR = "var(--ink-4)";
+const DONUT_SLICES = 6;
+
+function delta(cur: number, prev: number): { pct: number; arrow: string } | null {
+  if (!prev) return null;
+  const pct = Math.round(((cur - prev) / Math.abs(prev)) * 100) || 0;
+  return { pct, arrow: pct > 0 ? "↗" : pct < 0 ? "↘" : "=" };
+}
+
+export async function DashboardView({
+  data,
+  period,
+  comparison,
+  categories,
+  budgets,
+  accounts,
+  landings,
+  locale,
+  notice,
+}: {
+  data: DashboardData;
+  period: Period;
+  comparison: Comparison;
+  categories: FlatCategory[];
+  budgets: CurrentBudget[];
+  accounts: VisibleAccount[];
+  landings: CurrentLanding[];
+  locale: string;
+  notice?: React.ReactNode;
+}) {
+  const t = await getTranslations("dashboard");
+  const money = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0,
+  });
+  const catById = new Map(categories.map((c) => [c.id, c]));
+  const label = formatPeriodLabel(period, locale);
+
+  const months = comparison.months.length;
+  const noReference = comparison.elapsedDays
+    ? t("noSameDate")
+    : months
+      ? t("noAvg", { months })
+      : t("noPrev");
+  const pctNote = (d: ReturnType<typeof delta>) => {
+    if (!d) return noReference;
+    const args = { arrow: d.arrow, pct: formatPercent(Math.abs(d.pct) / 100, locale) };
+    return months ? t("vsAvg", { ...args, months }) : t("vsPrev", args);
+  };
+  // The net can change sign between periods, which makes a % meaningless (issue #112 §7):
+  // it shows the difference in euros instead.
+  const netDiff = data.totals.net - data.previous.net;
+  const savingsDiff = data.savings.current - data.savings.previous;
+  const hasPrevious = data.previous.income !== 0 || data.previous.expense !== 0;
+  const signedMoney = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0,
+    signDisplay: "exceptZero",
+  });
+
+  const trendTone = (change: number | undefined, goodWhenUp = true) =>
+    !change ? undefined : change > 0 === goodWhenUp ? "var(--income)" : "var(--expense)";
+
+  const inProgress = comparison.elapsedDays !== null;
+  // Only a period in progress has budgets left to spend (spec §5.16); otherwise the net.
+  const current = inProgress ? budgets : [];
+  const netKpi = {
+    key: "net",
+    amount: signedMoney.format(data.totals.net),
+    note: hasPrevious
+      ? t(months ? "vsAvgAmount" : "vsPrevAmount", {
+          arrow: netDiff > 0 ? "↗" : netDiff < 0 ? "↘" : "=",
+          amount: signedMoney.format(netDiff),
+          months,
+        })
+      : noReference,
+    noteTone: hasPrevious ? trendTone(netDiff) : undefined,
+  };
+  const leftKpi = {
+    key: "leftToSpend",
+    amount: money.format(round2(current.reduce((s, b) => s + b.leftToSpend, 0))),
+    note: t("acrossBudgets", { count: current.length }),
+    noteTone: undefined,
+  };
+  const kpis = [
+    {
+      key: "income",
+      amount: money.format(data.totals.income),
+      note: pctNote(delta(data.totals.income, data.previous.income)),
+      noteTone: trendTone(delta(data.totals.income, data.previous.income)?.pct),
+    },
+    {
+      key: "expense",
+      amount: money.format(data.totals.expense),
+      note: pctNote(delta(data.totals.expense, data.previous.expense)),
+      noteTone: trendTone(delta(data.totals.expense, data.previous.expense)?.pct, false),
+    },
+    {
+      key: "savings",
+      amount: signedMoney.format(data.savings.current),
+      note: hasPrevious
+        ? t(months ? "vsAvgAmount" : "vsPrevAmount", {
+            arrow: savingsDiff > 0 ? "↗" : savingsDiff < 0 ? "↘" : "=",
+            amount: signedMoney.format(savingsDiff),
+            months,
+          })
+        : noReference,
+      noteTone: hasPrevious ? trendTone(savingsDiff) : undefined,
+    },
+    current.length > 0 ? leftKpi : netKpi,
+  ];
+
+  // Beyond 6 categories the 6th slice groups the rest, so the arcs add up to the
+  // total like the legend's percentages do.
+  const overflow = data.byCategory.length > DONUT_SLICES;
+  const named = data.byCategory.slice(0, overflow ? DONUT_SLICES - 1 : DONUT_SLICES);
+  const namedColors = categorySliceColors(named, catById, DEFAULT_CATEGORY_COLOR);
+  const slices = [
+    ...named.map((c, i) => ({
+      key: c.categoryId ?? "none",
+      category: c.categoryId ? catById.get(c.categoryId) : undefined,
+      name: t("noCategory"),
+      amount: c.amount,
+      color: namedColors[i],
+    })),
+    ...(overflow
+      ? [
+          {
+            key: "others",
+            category: undefined,
+            name: t("otherCategories", { count: data.byCategory.length - named.length }),
+            amount: data.byCategory.slice(named.length).reduce((s, c) => s + c.amount, 0),
+            color: OTHERS_COLOR,
+          },
+        ]
+      : []),
+  ];
+  const range = `from=${toIsoDay(period.from)}&to=${toIsoDay(period.to)}`;
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-3">
+        <PageHeader
+          overline={t("overline")}
+          title={label}
+          subtitle={t("txCount", { count: data.totals.count })}
+          actions={
+            <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+              <PeriodPicker from={toIsoDay(period.from)} to={toIsoDay(period.to)} />
+              <PeriodNav period={period} />
+            </div>
+          }
+        />
+        {period.month && <BaselineSelect value={comparison.baseline} />}
+        <ComparisonNote comparison={comparison} locale={locale} />
+      </div>
+
+      {notice}
+
+      <AccountsOverview accounts={accounts} landings={landings} locale={locale} />
+
+      {/* KPI row */}
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-3">
+        {kpis.map((k) => (
+          <Card key={k.key} data-slot="kpi-card" className="gap-1 p-3.5 md:gap-2 md:p-5">
+            <div className={overline}>{t(`kpi.${k.key}`)}</div>
+            <div
+              className="font-display text-[1.375rem] leading-none tabular-nums md:text-3xl"
+              data-slot="kpi-amount"
+            >
+              {k.amount}
+            </div>
+            <div
+              className="text-muted-foreground text-xs"
+              style={{ color: k.noteTone }}
+              data-slot="kpi-note"
+            >
+              {k.note}
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <div className="flex flex-col gap-4 empty:hidden md:gap-5">
+        <TodoCard
+          uncategorized={data.uncategorized}
+          neutral={data.neutral}
+          period={period}
+          locale={locale}
+        />
+        <CurrentBudgets budgets={current} locale={locale} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:gap-5 xl:grid-cols-[1.4fr_1fr]">
+        <SpendingPace
+          pace={data.pace}
+          spent={data.totals.expense}
+          referenceSpent={data.previous.expense}
+          hasReference={hasPrevious}
+          comparison={comparison}
+          locale={locale}
+          className="xl:order-last"
+        />
+
+        {/* Donut + breakdown */}
+        <Card className="gap-4 p-4.5 md:p-6">
+          <div className="font-display text-xl">{t("byCategory")}</div>
+          {data.totals.expense === 0 ? (
+            <p className="text-muted-foreground text-sm">{t("noExpenses")}</p>
+          ) : (
+            <div className="flex flex-col items-center gap-6 sm:flex-row">
+              <Donut
+                data={slices.map((s) => ({ value: s.amount, color: s.color }))}
+                centerLabel={money.format(data.totals.expense)}
+                centerSub={t("spentThisPeriod")}
+              />
+              <div className="flex w-full min-w-0 flex-1 flex-col gap-2">
+                {slices.map((s) => (
+                  <div
+                    key={s.key}
+                    data-slot="donut-legend-row"
+                    className="flex items-center gap-2.5 text-sm"
+                  >
+                    <span
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ background: s.color }}
+                    />
+                    <CategoryLabel category={s.category} fallback={s.name} className="flex-1" />
+                    <span className="tabular-nums">{money.format(s.amount)}</span>
+                    <span className="text-muted-foreground w-10 text-right text-[11.5px] tabular-nums">
+                      {formatPercent(s.amount / data.totals.expense, locale)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* Recent transactions */}
+      <Card className="gap-0 overflow-hidden p-0">
+        <div className="flex items-center justify-between p-5">
+          <div className="font-display text-xl">{t("recent")}</div>
+          <Link
+            href={`/${locale}/transactions?${range}`}
+            className="text-primary text-sm hover:underline"
+          >
+            {t("seeAll")}
+          </Link>
+        </div>
+        <div className="border-t">
+          {data.recent.length === 0 ? (
+            <p className="text-muted-foreground p-5 text-sm">{t("noRecent")}</p>
+          ) : (
+            data.recent.map((r) => {
+              const meta = r.categoryId ? catById.get(r.categoryId) : undefined;
+              return (
+                <div
+                  key={r.id}
+                  data-slot="dashboard-recent-row"
+                  className="flex items-center gap-3 border-b px-5 py-2.5 last:border-b-0"
+                >
+                  <CategoryAvatar category={meta} size={28} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate text-sm">{r.label}</span>
+                      <AssignedMonthBadge date={r.date} periodDate={r.periodDate} />
+                    </div>
+                    <div className="text-muted-foreground truncate text-[11.5px]">
+                      {formatDayMonth(r.date, locale)} ·{" "}
+                      {meta ? categoryPath(meta) : t("noCategory")}
+                    </div>
+                  </div>
+                  <span className="text-muted-foreground hidden max-w-40 truncate text-[11.5px] sm:block">
+                    {r.accountName}
+                  </span>
+                  <span
+                    className="text-sm font-medium tabular-nums"
+                    style={r.amount > 0 ? { color: "var(--income)" } : undefined}
+                  >
+                    {formatMoney(r.amount, locale)}
+                  </span>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}

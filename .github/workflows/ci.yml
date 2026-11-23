@@ -1,0 +1,239 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Bootstrap values used by env validation so the app/tests don't refuse to start.
+  # Real secrets aren't required here — the keys are validated for length only.
+  APP_URL: http://localhost:3000
+  AUTH_SECRET: ci_auth_secret_value_padding_padding_padding
+  DATA_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+  SEARCH_TOKEN_KEY: BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBA=
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Run ESLint + Prettier
+        run: npm run lint
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+  build:
+    name: Build
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Build
+        run: npm run build
+        # The /api/auth route module imports the Prisma db at load time, so
+        # `next build` page-data collection validates DATABASE_URL. No DB is
+        # contacted during build (the adapter connects lazily); a well-formed
+        # dummy URL is enough to pass env validation.
+        env:
+          DATABASE_URL: mysql://app:app_password@localhost:3306/budget
+
+  test:
+    name: Test (unit + coverage)
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run unit tests with coverage
+        run: npx vitest run tests/unit --coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: .reports/coverage/cobertura-coverage.xml
+          fail_ci_if_error: false
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: .reports/junit.xml
+          report_type: test_results
+          fail_ci_if_error: false
+
+  integration:
+    name: Integration
+    runs-on: ubuntu-26.04
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: root_password
+          MARIADB_DATABASE: budget_test
+          MARIADB_USER: app
+          MARIADB_PASSWORD: app_password
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DATABASE_URL: mysql://app:app_password@localhost:3307/budget_test
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+
+      - name: Run integration tests
+        run: npm run test:integration
+
+      - name: Upload integration test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: .reports/junit.xml
+          report_type: test_results
+          fail_ci_if_error: false
+
+  e2e:
+    name: E2E
+    runs-on: ubuntu-26.04
+    # Browsers and their system deps come preinstalled: `playwright install --with-deps` hung on
+    # slow Ubuntu mirrors (#330). Keep the tag on the @playwright/test version.
+    container:
+      image: mcr.microsoft.com/playwright:v1.65.1-noble
+      options: --ipc=host
+    env:
+      DATABASE_URL: mysql://app:app_password@mariadb:3306/budget
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: root_password
+          MARIADB_DATABASE: budget
+          MARIADB_USER: app
+          MARIADB_PASSWORD: app_password
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Seed e2e database (post-setup state)
+        run: npx tsx scripts/seed-e2e.ts
+        env:
+          NODE_ENV: test
+
+      - name: Build (production server for stable E2E)
+        run: npm run build
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+
+      - name: Upload Playwright artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-results
+          path: |
+            .reports/playwright-report/
+            test-results/
+          retention-days: 7
+
+      - name: Upload E2E test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: .reports/junit-e2e.xml
+          report_type: test_results
+          fail_ci_if_error: false

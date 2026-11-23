@@ -1,0 +1,965 @@
+[English](user-guide.md) · **Français**
+
+# Guide de l’utilisateur de Bilan
+
+Bilan suit vos comptes bancaires, vos transactions et vos budgets, sur votre propre serveur. Vous pouvez l’utiliser seul ou partager des comptes et des budgets avec les personnes de votre foyer.
+
+Ce guide présente l’application du point de vue de l’utilisateur. L’installation d’une instance est décrite dans le [guide d’auto-hébergement](self-hosting.fr.md), et les réglages de l’instance dans le [guide d’administration](admin-guide.fr.md).
+
+## Sommaire
+
+1. [Premiers pas](#premiers-pas)
+2. [Comptes](#comptes)
+3. [Transactions](#transactions)
+4. [Importer des relevés](#importer-des-relevés)
+5. [Synchronisation bancaire](#synchronisation-bancaire)
+6. [Catégories, règles et marchands](#catégories-règles-et-marchands)
+7. [Liens entre transactions](#liens-entre-transactions)
+8. [Budgets](#budgets)
+9. [Foyers](#foyers)
+10. [Tableau de bord et analyses](#tableau-de-bord-et-analyses)
+11. [Sécurité du compte](#sécurité-du-compte)
+12. [Assistants IA](#assistants-ia)
+13. [Vos données](#vos-données)
+
+## Premiers pas
+
+### Se connecter
+
+![Page de connexion](images/fr/login.png)
+
+1. Saisissez votre **Adresse e-mail** et votre **Mot de passe**, puis cliquez sur **Se connecter**.
+2. Si la double authentification est activée, saisissez le code à 6 chiffres de votre application d’authentification à l’étape **Vérification**. Cliquez sur **Utiliser un code de secours** si vous n’avez pas votre téléphone. Cochez **Faire confiance à cet appareil** pour ne plus saisir le code sur cet appareil : il sera redemandé après 30 jours sans connexion depuis celui-ci.
+
+Vous pouvez aussi utiliser **Se connecter avec une clé d’accès**, ou un bouton **Continuer avec …** si votre administrateur a configuré Google ou un autre fournisseur d’identité. Ces connexions ne demandent pas le code de double authentification.
+
+Bon à savoir :
+
+- Après 5 tentatives échouées en 15 minutes, la connexion est bloquée un moment ; la page indique combien de temps attendre.
+- Une identité d’un fournisseur externe n’est pas reliée à votre compte Bilan simplement parce que l’e-mail est le même. Liez-la d’abord depuis **Sécurité** (voir [Identités connectées](#identités-connectées)).
+- Une session dure 7 jours et se prolonge chaque jour où vous utilisez l’application.
+
+### Créer un compte
+
+Cliquez sur **Créer un compte** depuis la page de connexion. Ce que vous voyez dépend de la configuration de l’instance :
+
+- **Inscriptions ouvertes** : renseignez **Nom**, **Adresse e-mail**, **Mot de passe** et **Confirmer le mot de passe**, puis cliquez sur **Créer le compte**.
+- **Sur invitation** (le réglage par défaut) : un champ **Jeton d’invitation** apparaît en premier. Votre administrateur vous transmet un jeton, ou un lien d’inscription qui le remplit pour vous.
+- **Fermées** : la page de connexion n’affiche pas de lien **Créer un compte**, et la page d’inscription affiche « Les inscriptions sont fermées sur cette instance. » Demandez à votre administrateur de créer votre compte.
+
+Le mot de passe doit faire au moins 12 caractères par défaut (votre administrateur peut choisir un autre minimum). Vous êtes connecté aussitôt, et Bilan crée un jeu de catégories de départ dans votre langue.
+
+### Mot de passe oublié
+
+1. Cliquez sur **Mot de passe oublié ?** depuis la page de connexion.
+2. Saisissez votre e-mail et cliquez sur **Envoyer le lien**.
+3. Ouvrez le lien reçu par e-mail (valable 1 heure), choisissez un **Nouveau mot de passe** et cliquez sur **Réinitialiser**.
+
+La réinitialisation vous déconnecte partout et oublie vos appareils de confiance.
+
+### Vérifier votre adresse e-mail
+
+Quand l’instance peut envoyer des e-mails, un bandeau **Vérifiez votre adresse e-mail** reste en haut de chaque page jusqu’à ce que vous cliquiez sur le lien envoyé par Bilan (valable 24 heures). Utilisez **Renvoyer l’e-mail** s’il n’est pas arrivé.
+
+La vérification compte pour les foyers : les invitations envoyées à votre adresse n’apparaissent sur la page **Foyers** qu’une fois l’adresse vérifiée. Un lien ou un code d’invitation fonctionne déjà avant.
+
+### Démarrer
+
+Tant que vous n’avez aucune transaction, le tableau de bord affiche une carte **Bienvenue** en deux étapes :
+
+1. **Créer un compte bancaire** : voir [Comptes](#comptes).
+2. **Importer un relevé ou saisir une transaction** : voir [Importer des relevés](#importer-des-relevés) et [Saisir une transaction à la main](#saisir-une-transaction-à-la-main).
+
+### Se repérer
+
+Sur ordinateur, la barre latérale a deux groupes :
+
+- **Espace** : Tableau de bord, Analyses, Transactions, Importer, Budgets, Comptes, Catégories, Foyers.
+- **Compte** : Sécurité, Assistants IA, Données, et Administration si vous êtes administrateur.
+
+En haut à droite, le bouton **EN**/**FR** change de langue. Bilan retient votre choix et l’utilise aussi pour les e-mails qu’il vous envoie. Vos initiales ouvrent un menu avec **Se déconnecter**.
+
+Le bouton de thème se trouve en bas de la barre latérale. Il propose **Clair**, **Sombre** et **Système**. **Système** (le choix par défaut) suit le réglage de votre appareil.
+
+### Sur téléphone
+
+| Tableau de bord                                                  | Transactions                                                     |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------- |
+| ![Tableau de bord sur téléphone](images/fr/mobile-dashboard.png) | ![Transactions sur téléphone](images/fr/mobile-transactions.png) |
+
+- La barre du bas donne un accès rapide à **Accueil**, **Transactions**, **Budgets**, **Comptes** et **Catégories**.
+- Le bouton de menu en haut à gauche ouvre tout le reste : Analyses, Importer, Foyers, Sécurité, Données, le bouton de thème et le bouton de langue.
+- Sur la page des transactions, les filtres sont derrière le bouton **Filtres**.
+
+Bilan peut s’installer comme une application : utilisez l’option **Installer** ou **Ajouter à l’écran d’accueil** de votre navigateur. Une connexion reste nécessaire : vos données financières ne sont jamais stockées sur l’appareil.
+
+## Comptes
+
+![Page des comptes](images/fr/accounts.png)
+
+Un compte regroupe des transactions : compte courant, livret, carte, etc. Le **Solde global** en haut additionne tous les comptes actifs que vous voyez, y compris ceux partagés avec vous. Les soldes négatifs sont hachurés.
+
+### Ajouter un compte
+
+1. Allez dans **Comptes** et cliquez sur **Nouveau compte**.
+2. Choisissez le **Type de compte** : Courant, Épargne, Crédit ou Autre.
+3. Saisissez le **Nom du compte** et, si vous le souhaitez, la **Banque**.
+4. Saisissez le **Solde initial** : le solde avant la première transaction que vous enregistrerez. Il peut être négatif.
+5. Saisissez éventuellement l’**IBAN**. Bilan le vérifie et le stocke chiffré.
+6. Choisissez une **Couleur** et cliquez sur **Créer le compte**.
+
+Le solde d’un compte est son solde initial plus toutes ses transactions. Les montants sont en euros.
+
+Un nouveau compte est privé. Pour le partager, voir [Partager un compte](#partager-un-compte).
+
+### Voir l’IBAN
+
+La carte n’affiche que les 4 derniers caractères. Cliquez sur l’œil (**Afficher l’IBAN**) pour voir l’IBAN complet, puis de nouveau pour le masquer. Seul le propriétaire du compte voit l’IBAN ; les personnes avec qui vous le partagez ne le voient jamais.
+
+Si vous vous êtes connecté il y a moins de 10 minutes, l’IBAN s’affiche aussitôt. Sinon, Bilan vous demande d’abord de confirmer votre identité :
+
+- Si vous vous connectez avec un mot de passe, saisissez-le et cliquez sur **Afficher l’IBAN**. Pendant les 5 minutes suivantes, Bilan ne le redemande pas. Après 5 mots de passe erronés en 15 minutes, patientez avant de réessayer.
+- Si votre compte n’a pas de mot de passe (fournisseur d’identité ou clé d’accès uniquement), ou si la connexion par mot de passe est désactivée, cliquez sur **Se reconnecter** : votre session est fermée, puis vous revenez sur la page des comptes une fois reconnecté. L’IBAN s’affiche alors aussitôt.
+
+Chaque affichage d’un IBAN complet est enregistré dans le journal d’activité, sans l’IBAN lui-même.
+
+Pour changer ou retirer l’IBAN, ouvrez **Modifier** dans le menu de la carte. Laissez le champ vide pour garder celui enregistré, ou cochez **Retirer l’IBAN enregistré**.
+
+### Archiver ou supprimer un compte
+
+Le menu **⋮** d’une carte (propriétaire uniquement) propose **Modifier**, **Partager**, **Archiver** et **Supprimer**.
+
+- **Archiver** convient à un compte que vous n’utilisez plus mais dont vous voulez garder l’historique. Il disparaît des saisies et du solde global, et passe dans une section **Comptes archivés**. Ses transactions restent dans votre historique, vos budgets et le tableau de bord. Vous ne pouvez plus y saisir ni y importer de transactions, et seuls le libellé et la note de ses transactions restent modifiables. **Désarchiver** le fait revenir.
+- **Supprimer** efface définitivement le compte et toutes ses transactions. Bilan indique d’abord ce qui va disparaître : transactions, imports, partages, lignes de budget limitées à ce compte, budgets qui ne portaient que sur lui, et liens avec d’autres comptes. Saisissez le nom du compte pour confirmer, puis cliquez sur **Supprimer définitivement**.
+
+Astuce : si vous voulez seulement alléger la liste, archivez plutôt que de supprimer.
+
+### Comptes partagés avec vous
+
+Un compte qu’un autre membre du foyer partage avec vous affiche **Lecture** ou **Écriture** et « Partagé par … ». Vos propres comptes affichent **Privé** ou **Partagé**. Voir [Ce que permettent Lecture et Écriture](#ce-que-permettent-lecture-et-écriture).
+
+## Transactions
+
+![Page des transactions](images/fr/transactions.png)
+
+La page **Transactions** liste les transactions de tous les comptes que vous voyez, regroupées par jour. Quand un jour compte plusieurs transactions, son en-tête affiche le total du jour.
+
+### Filtrer et trier
+
+- **Période** : Ce mois, Mois dernier, Trimestre, Année, ou Personnalisé (choisissez un début et une fin, puis **Appliquer**). Sans période choisie, la liste couvre toutes les dates.
+- **Toutes / Entrées / Sorties**.
+- **Catégorie** : une catégorie inclut aussi ses sous-catégories. **Sans catégorie** retrouve les transactions non classées.
+- **Compte** et **Type** (Carte, Virement, Prélèvement, Chèque, Retrait, Autre).
+- **Montant min.** / **Montant max.** : ils comparent le montant sans son signe, donc 50 retrouve −50 comme +50.
+- **Tri** : Plus récentes d’abord, Plus anciennes d’abord, Plus grosses dépenses d’abord, Plus grosses entrées d’abord.
+
+La liste affiche 100 transactions à la fois : cliquez sur **Afficher 100 de plus** en bas. Au-delà de 1 000, affinez les filtres pour voir les plus anciennes.
+
+Sur téléphone, touchez **Filtres**, ajustez, puis touchez **Voir … transactions**. **Réinitialiser** efface les filtres et le tri.
+
+### Rechercher
+
+Tapez dans **Rechercher…**. La recherche porte sur le début des mots du libellé :
+
+- « lec » trouve « LECLERC », mais « clerc » ne trouve rien.
+- Les mots de moins de 3 lettres sont ignorés.
+- Avec plusieurs mots, une transaction doit les contenir tous.
+- Les majuscules et les accents ne comptent pas.
+- Les montants, les notes et les catégories ne sont pas recherchés : utilisez les filtres de montant pour les montants.
+
+### Détail d’une transaction
+
+![Détail d’une transaction](images/fr/transaction-detail.png)
+
+Cliquez sur une transaction pour ouvrir son détail :
+
+- **Catégorie** : choisissez une catégorie ; elle est enregistrée aussitôt. Voir [Apprendre de vos choix](#apprendre-de-vos-choix).
+- **Libellé d’origine** : le libellé exactement tel que votre banque l’a écrit. Il ne change jamais, même si vous renommez la transaction.
+- **Mois d’affectation** : le mois pour lequel la transaction compte. Voir [Compter une transaction dans un autre mois](#compter-une-transaction-dans-un-autre-mois).
+- **Note** : votre commentaire, ajouté avec **Modifier**.
+- **Liée à** : affiché quand la transaction fait partie d’un [lien](#liens-entre-transactions).
+- **Créer la transaction inverse sur…** : ajoute l’autre côté d’un virement sur un autre de vos comptes. Voir [Créer l’autre côté d’un virement](#créer-lautre-côté-dun-virement).
+- **Comptée dans** : chaque budget actif qui compte la transaction, avec la ligne où elle tombe, ou **Hors budget** / **Rentrées hors budget** quand aucune ligne ne la prend. C’est le même rapprochement que sur la page du budget ; cliquez sur une entrée pour ouvrir ce budget.
+- **Assigner à un budget** : voir [Inclure ou exclure une transaction](#inclure-ou-exclure-une-transaction).
+- **Supprimer la transaction** en bas.
+
+**Modifier** permet de changer le libellé et la note. Pour les transactions saisies à la main, vous pouvez aussi changer la date, le montant et le type. Les transactions importées gardent le montant, la date et le type du relevé bancaire.
+
+### Saisir une transaction à la main
+
+1. Cliquez sur **Nouvelle transaction** (ou **Saisir une transaction** sur la carte d’un compte).
+2. Choisissez le **Compte**, la **Date** et le **Montant** : un montant négatif est une dépense, un montant positif une entrée.
+3. Saisissez le **Libellé**, le **Type**, et éventuellement une **Catégorie** et une **Note**.
+4. Cliquez sur **Ajouter**.
+
+Si vous laissez la catégorie vide, vos [règles](#règles) essaient d’en trouver une d’après le libellé.
+
+### Sélectionner plusieurs transactions
+
+1. Cliquez sur **Sélectionner** au-dessus de la liste (sur téléphone, l’interrupteur dans **Filtres** marche aussi).
+2. Cochez les transactions. Celles des comptes que vous pouvez seulement consulter ne sont pas sélectionnables.
+3. Cliquez sur **Lier** (2 transactions ou plus) ou **Supprimer** dans la barre qui apparaît.
+
+Avant la suppression, Bilan liste les effets : liens qui seront dissous et budgets dont les transactions sortiront. Vous pouvez supprimer jusqu’à 500 transactions à la fois. La suppression est irréversible.
+
+### Compter une transaction dans un autre mois
+
+Certaines transactions appartiennent à un autre mois que le jour où elles arrivent sur votre compte : un salaire versé le dernier jour ouvré du mois pour financer le mois suivant, ou une facture annuelle que vous rattachez au mois précédent.
+
+- **Une transaction** : dans son détail, choisissez un mois sous **Mois d’affectation**, passé ou futur. **Revenir en automatique** annule votre choix.
+- **Toute une catégorie** : modifiez la catégorie et activez **Compter dans le mois suivant**, puis réglez le **Nombre de jours**. Les transactions de cette catégorie datées des derniers jours d’un mois comptent alors pour le mois suivant. Activez-le sur **Salaire** avec 5 jours et chaque salaire de fin de mois compte pour le mois d’après. L’option s’applique aussi aux transactions déjà présentes dans la catégorie, mais pas à ses sous-catégories. Un mois choisi à la main l’emporte toujours.
+
+Les deux côtés d’un virement [lié](#lier-des-transactions) entre vos comptes comptent dans le même mois : choisir un mois pour un côté, ou revenir en automatique, fait de même pour l’autre côté (si vous pouvez modifier son compte). Quand vous liez deux virements et qu’un seul a un mois choisi à la main, l’autre côté prend ce mois.
+
+La transaction garde sa date réelle dans la liste, avec la mention **Compté en …**. Le tableau de bord, les analyses et les budgets la comptent dans son mois d’affectation. Pour voir un salaire qui compte déjà pour le mois prochain, le tableau de bord et les analyses permettent d’ouvrir le mois suivant.
+
+## Importer des relevés
+
+![Page d’import](images/fr/import.png)
+
+Bilan importe des fichiers CSV (jusqu’à 5 Mo), des relevés PDF (jusqu’à 10 Mo) et des fichiers OFX (jusqu’à 5 Mo) exportés depuis votre banque. L’OFX est le plus fiable des trois : c’est un format structuré, donc pas de colonnes à faire correspondre ni de séparateur décimal ou d’ordre des dates à deviner.
+
+### Importer un fichier CSV
+
+1. Allez dans **Importer** et choisissez le **Compte**.
+2. Déposez le fichier sur la page ou cliquez pour le choisir.
+3. Vérifiez les réglages à gauche (pré-remplis d’après le fichier) :
+   - **Compte de destination** : vous pouvez encore changer de compte ici.
+   - **Correspondance des colonnes** : quelle colonne contient la **Date**, le **Libellé** et le **Montant**. Si votre banque sépare les sorties et les entrées dans deux colonnes, mettez **Montant** sur « — » et choisissez plutôt **Débit** et **Crédit**. **Type** est facultatif.
+   - **Décimales** : Virgule ou Point.
+   - **Ordre des dates** : JJ/MM ou MM/JJ.
+   - **Catégoriser automatiquement** : applique vos [règles](#règles). La case est cochée par défaut.
+4. Relisez l’aperçu. Vous pouvez décocher une ligne pour l’ignorer, ou lui choisir une catégorie.
+5. Cliquez sur **Valider l’import**.
+
+![Aperçu de l’import](images/fr/import-preview.png)
+
+Points à vérifier dans l’aperçu :
+
+- **Décimales** : quand Bilan a dû deviner, un avertissement vous demande de vérifier les montants. Cliquez sur **C’est correct**, ou sur le bouton qui passe à l’autre séparateur.
+- **Ordre des dates** : Bilan ne choisit MM/JJ que lorsque le fichier ne peut pas se lire en JJ/MM (par exemple 12/25). Quand toutes les dates conviennent aux deux ordres, il retient JJ/MM et un avertissement vous demande de vérifier les dates. Cliquez sur **Les dates sont correctes**, ou sur **Utiliser MM/JJ**. Les dates écrites 2026-10-15 ne sont jamais ambiguës.
+- **Doublons** : une ligne de même date, même montant et même libellé bancaire (espaces superflus ignorés) qu’une transaction déjà importée sur ce compte est marquée **doublon** et ignorée. Impossible de la forcer. Les transactions saisies à la main ne sont jamais considérées comme des doublons certains. Les lignes identiques d’un même fichier sont toutes conservées.
+- **Doublons probables** : une ligne qui n’est pas un doublon certain, mais dont le compte contient déjà une transaction (importée ou saisie à la main) le même jour pour le même montant, est signalée **Doublon probable**, avec la transaction correspondante sous « Déjà dans le compte ». Elle est décochée : elle est donc ignorée sauf si vous la cochez (**Importer quand même**). Cela couvre le même achat saisi à la main, ou libellé autrement par la banque. Le compteur en haut indique leur nombre, et le filtre **Doublons probables** les isole pour les passer en revue.
+- **Filtres** : au-dessus des lignes, **Toutes**, **Sans catégorie** et **Doublons probables** limitent l’aperçu, chacun avec son nombre de lignes. **Sans catégorie** garde les lignes qu’aucune règle n’a catégorisées, hors doublons déjà importés : pratique pour trier un gros premier import. Une catégorie choisie à la main laisse la ligne affichée. Ce filtre disparaît quand **Catégoriser automatiquement** est décoché.
+- **Règles depuis vos choix** : après avoir choisi une catégorie à la main, **Créer une règle** apparaît dessous. Le lien ouvre la même fenêtre que dans les transactions, pour que les prochains imports catégorisent ce marchand d’eux-mêmes. Si une règle avait suggéré une autre catégorie et que vous pouvez la modifier, la fenêtre propose aussi de corriger cette règle. Sinon, la nouvelle règle passe avant elle. Une fois la règle enregistrée, l’aperçu est recalculé et les autres lignes qu’elle reconnaît prennent sa catégorie.
+- **Lignes illisibles** : les lignes avec une date ou un montant non reconnus, un montant hors limites ou un libellé vide sont ignorées. Bilan indique leur nombre et jusqu’à 5 exemples avec leur numéro de ligne. Si toute une colonne pose problème, elle est signalée à gauche : essayez une autre correspondance.
+
+Changer la correspondance, le compte, le séparateur décimal ou l’ordre des dates recalcule l’aperçu, et vous perdez les lignes décochées et les catégories choisies.
+
+Bilan ne mémorise pas la correspondance d’un import à l’autre, mais il reconnaît les noms de colonnes habituels en français et en anglais.
+
+### Importer un relevé PDF
+
+Déposez le PDF sur la même page. Bilan lit les relevés **LCL** et **Revolut** (relevés en français). L’aperçu indique la banque détectée. Pour les autres banques, il signale une banque non reconnue et tente une lecture générique des lignes « date, libellé, montant » : relisez l’aperçu avec attention. Les PDF scannés (images) ne sont pas lisibles.
+
+Un relevé Revolut peut contenir plusieurs sections (compte courant, dépôt). Chaque section a son propre choix de **Compte de destination**. Choisissez **Ne pas importer** pour en ignorer une.
+
+Pas de séparateur décimal ni d’ordre des dates à régler pour les PDF. Les doublons (certains et probables), les catégories et l’aperçu fonctionnent comme pour les CSV.
+
+### Importer un fichier OFX
+
+La plupart des banques permettent de télécharger l’historique d’un compte au format **OFX** (parfois appelé « Money » ou « Microsoft Money »), à côté des options CSV et PDF. Cherchez-le dans le menu d’export ou de téléchargement de l’historique, choisissez une période (longue la première fois, par exemple deux ans) et sélectionnez le format OFX.
+
+Déposez ensuite le fichier sur la page **Importer** comme un CSV. Bilan lit l’ancien format OFX 1.x comme le plus récent 2.x, en UTF-8 ou en Windows-1252.
+
+- **Libellé** : le nom de l’opération donné par la banque. S’il est vide, Bilan prend le mémo, et pour un chèque sans nom, **CHEQUE** suivi de son numéro. Quand un nom et un mémo différent existent, le mémo va dans la **note** de la transaction.
+- **Type** (carte, virement, prélèvement, chèque…) : Bilan le lit d’abord dans le libellé, puis dans le type donné par la banque.
+- **Plusieurs comptes dans un fichier** : chaque relevé est listé avec son type de compte et les 4 derniers caractères de son numéro (par exemple **Compte courant ••1234**). Choisissez un **Compte de destination** pour chacun, ou **Ne pas importer** pour l’ignorer, comme pour un PDF Revolut.
+- **Doublons** : les doublons certains et probables fonctionnent comme pour les CSV. C’est ce qui permet d’importer sans risque des exports réguliers qui se chevauchent, ou un OFX qui chevauche un relevé PDF du même compte : ce qui existe déjà est ignoré, et une quasi-correspondance est laissée à votre relecture.
+- **Lignes illisibles** : les transactions dont la date ou le montant n’est pas lisible sont ignorées et listées, comme pour les CSV.
+
+#### Vérifier le solde
+
+Quand le fichier donne le solde de la banque (c’est le cas de la plupart des relevés bancaires, pas des relevés de carte de crédit), l’aperçu affiche une **vérification du solde** :
+
+- **Solde banque au** *date* : le solde que la banque indique à la fin du fichier.
+- **Solde après import** : ce que Bilan afficherait pour le compte à cette date : le solde initial, plus les transactions du compte, plus les lignes qui vont être importées.
+- **Écart**, ou **Les soldes concordent**.
+
+Le solde après import suit vos choix : décocher une ligne, ou cocher un doublon probable, met l’écart à jour immédiatement. Un écart signifie en général que des opérations manquent dans le compte, ou que son solde initial est faux.
+
+#### Caler le solde initial
+
+Quand le fichier commence l’historique du compte (le compte n’a aucune transaction avant le premier jour du fichier) et qu’il y a un écart, une case propose de **Caler le solde initial pour retomber sur le solde de la banque**. Cochez-la et Bilan modifie le [solde initial](#comptes) du compte en même temps que l’import, pour que le solde corresponde à celui de la banque. C’est la façon de charger l’historique d’une banque dans un nouveau compte sans calculer le solde initial à la main.
+
+- Seul le **propriétaire** du compte voit la case, car lui seul peut modifier le solde initial. Avec un simple accès en écriture, vous voyez l’écart sans pouvoir le caler.
+- Elle n’est pas proposée sur un compte qui contient déjà des transactions plus anciennes : un écart y indique des opérations manquantes, que le calage masquerait.
+
+### Annuler un import
+
+Mauvais fichier, mauvais compte ? Annulez tout l’import :
+
+- juste après l’import, cliquez sur **Annuler l’import** dans le récapitulatif, ou
+- plus tard, ouvrez le menu **⋯** de l’import dans **Imports récents** sur la page **Importer** et choisissez **Annuler l’import**.
+
+Bilan indique combien de transactions seront supprimées, et prévient si certaines sont liées à d’autres transactions, affectées à un budget ou modifiées depuis l’import. Si l’import a calé le solde initial d’un compte, la fenêtre indique qu’il reviendra à sa valeur précédente. Si vous l’avez modifié vous-même depuis, il est laissé tel quel et la fenêtre vous le dit. Cliquez sur **Supprimer les transactions** pour confirmer.
+
+Toutes les transactions de cet import sont supprimées, y compris celles modifiées depuis. L’import reste dans l’historique avec le statut **Annulé**, et vous pouvez réimporter le même fichier ensuite. Il n’y a pas de délai, mais il faut un accès en écriture à chaque compte concerné par l’import.
+
+## Synchronisation bancaire
+
+La synchronisation bancaire tient vos comptes à jour d’elle-même depuis votre banque, en lecture seule, via Enable Banking, un prestataire agréé d’information sur les comptes. Elle n’apparaît que si l’administrateur de votre instance l’a configurée : la page **Comptes** affiche alors un bouton **Connecter ma banque**. Bilan ne peut ni faire de paiement ni rien modifier à votre banque.
+
+### Connecter votre banque
+
+1. Sur **Comptes**, cliquez sur **Connecter ma banque**.
+2. Choisissez le **Pays** et votre banque (tapez une partie de son nom pour la chercher). Chaque banque indique la durée de l’accès : « Accès valable jusqu’à 180 jours », par exemple.
+3. Cliquez sur **Continuer vers la banque**, connectez-vous à votre banque et autorisez l’accès.
+4. Votre banque vous renvoie vers Bilan, sur la page où vous associez les comptes. Faites-le tout de suite : voir [Associer les comptes](#associer-les-comptes).
+
+Terminez l’autorisation en moins de 15 minutes ; au-delà, connectez la banque à nouveau. Si vous refusez l’accès à la banque, rien n’est connecté.
+
+### Associer les comptes
+
+![Association des comptes d’une banque](images/fr/bank-mapping.png)
+
+Pour chaque compte renvoyé par la banque, choisissez ce que Bilan en fait :
+
+- un **Compte Bilan** à tenir à jour : l’un de vos propres comptes, non archivé. Les comptes partagés avec vous ne sont pas proposés. Un compte déjà synchronisé par votre autre connexion affiche « (déjà synchronisé) » et ne peut pas être choisi.
+- **Créer un nouveau compte** : un compte courant qui porte le nom du compte de la banque (vous pouvez le changer).
+- **Ignorer ce compte** : rien n’en est importé.
+
+Seuls les comptes en euros peuvent être synchronisés. Un compte de la banque déjà synchronisé par une autre de vos connexions affiche « Déjà synchronisé par votre autre connexion. »
+
+**Importer depuis le** fixe le début de l’historique. Par défaut, c’est le jour de la dernière opération du compte ; pour un compte vide, tout l’historique fourni par la banque (3 ans au plus).
+
+Cliquez sur **Associer et importer** : l’historique est importé tout de suite, et Bilan indique combien de transactions chaque compte a reçues. Comme pour un import de fichier :
+
+- les lignes déjà présentes dans le compte sont écartées, de même que les doublons probables (même jour et même montant qu’une transaction déjà là, importée ou saisie à la main). Connecter une banque sur un compte rempli à partir de relevés ne pose donc pas de problème : ce qui est là reste, seul ce qui manque est ajouté. Contrairement à un import de fichier, il n’y a pas d’aperçu pour cocher à nouveau un doublon probable ;
+- vos [règles](#règles) catégorisent les nouvelles transactions, et les virements entre vos comptes sont [liés](#liens-automatiques) ;
+- pour LCL, le libellé est celui imprimé sur le relevé, comme dans ses fichiers OFX, donc vos règles s’appliquent de la même façon.
+
+Quand le compte n’a aucune transaction avant le début de l’import (un compte nouveau ou vide), Bilan [cale aussi son solde initial](#caler-le-solde-initial) pour que son solde corresponde à celui de la banque.
+
+Si la banque n’a pas envoyé tout l’historique demandé, le récapitulatif signale que des transactions peuvent manquer. Pour modifier l’association plus tard, cliquez sur **Associer les comptes** à côté de la banque, dans **Connexions bancaires** en bas de la page **Comptes**.
+
+#### Tout l’historique juste après la connexion
+
+Certaines banques, dont LCL, ne donnent les opérations de plus de 90 jours que juste après l’autorisation de l’accès, pendant que vous êtes sur la page : les synchronisations faites en arrière-plan n’atteignent ensuite que les 90 derniers jours. Tout l’historique est donc importé quand vous associez les comptes juste après la connexion (ou la [reconnexion](#reconnecter-ou-déconnecter)). Si vous voulez des années d’historique, associez les comptes dès votre retour de la banque, et réglez **Importer depuis le** à ce moment-là.
+
+### Rester à jour
+
+![Page des comptes avec un compte synchronisé](images/fr/accounts.png)
+
+Une fois les comptes associés, Bilan synchronise chaque connexion en arrière-plan plusieurs fois par jour (l’administrateur en règle la fréquence). La carte d’un compte synchronisé affiche « Synchronisé il y a 2 heures · *banque* ». Chaque synchronisation relit les 7 derniers jours, pour rattraper les opérations que la banque comptabilise en retard ; ce qui est déjà là est écarté.
+
+- **Synchroniser** synchronise tout de suite les comptes de la connexion. C’est possible une fois toutes les 10 minutes par banque (« Cette banque a déjà été synchronisée il y a moins de 10 minutes »).
+- Les **opérations en attente** (un paiement par carte que la banque n’a pas encore comptabilisé) ne sont pas importées : le compte affiche « 2 opérations en attente, −35,40 € », et chacune arrive une fois comptabilisée par la banque.
+- Si la banque limite les accès pour la journée, ou si Enable Banking ne répond pas, l’erreur s’affiche sur la carte du compte et Bilan réessaie plus tard. Après 3 synchronisations en échec d’affilée, la connexion passe **En erreur** et seul **Synchroniser** la relance.
+
+Vous seul voyez l’état de synchronisation de vos comptes : les membres du foyer avec qui vous partagez un compte voient ses transactions, pas votre connexion bancaire.
+
+### Contrôle du solde bancaire
+
+À chaque synchronisation, la banque donne aussi le solde du compte. Sur la carte du compte synchronisé :
+
+- **Conforme à la banque au** *date* : le solde de la banque et celui de Bilan ce jour-là sont identiques. Bilan compare le solde prévu par la banque moins les opérations en attente (pas encore importées), ou le solde comptabilisé quand la banque ne donne pas de solde prévu.
+- **Écart avec la banque au** *date* : la différence (banque moins Bilan). Cliquez dessus pour ouvrir les transactions du compte de la semaine qui précède ce jour.
+- **Solde prévu par la banque au** *date* : affiché quand la banque le donne. Il comprend les opérations en attente, que Bilan n’importe pas, et peut donc différer du solde de Bilan tant qu’il y en a.
+
+Un écart signifie en général qu’il manque des opérations dans Bilan (une transaction synchronisée que vous avez supprimée, un doublon probable qui n’en était pas un), qu’une opération a été saisie à la main sans exister à la banque, ou que le solde initial est faux.
+
+### Reconnecter ou déconnecter
+
+Le consentement donné à la banque dure un temps limité, souvent 180 jours. La section **Connexions bancaires** de la page **Comptes** liste vos banques, avec les comptes qu’elles synchronisent et « Accès valable jusqu’au … ».
+
+- **À partir de 14 jours avant la fin**, un bandeau sur le tableau de bord et la page **Comptes** vous prévient, avec un bouton **Reconnecter**. Si l’instance envoie des e-mails, vous en recevez aussi un 14 jours et 3 jours avant.
+- **Reconnecter** vous emmène à la banque pour autoriser à nouveau l’accès. Bilan reconnaît vos comptes et garde leur association : vous revenez sur **Comptes** avec « Banque reconnectée », et la synchronisation se lance aussitôt. Si un compte ne peut pas être rapproché de la connexion précédente, la page d’association s’ouvre à la place.
+- **Une fois expirée**, la connexion affiche **Expirée** et ses comptes ne se synchronisent plus. Rien n’est supprimé : reconnectez-la pour reprendre.
+- **Déconnecter** arrête la synchronisation des comptes de la banque et supprime l’accès de Bilan à la banque. Les transactions déjà synchronisées sont conservées.
+
+### Supprimer des transactions synchronisées
+
+Vous pouvez supprimer une transaction synchronisée comme n’importe quelle autre. Elle ne revient pas à la synchronisation suivante. Les synchronisations n’apparaissent pas dans **Imports récents** sur la page **Importer** et ne s’annulent pas en bloc.
+
+### Les comptes d’épargne que votre banque ne remonte pas
+
+![Compte d’épargne tenu à jour par les virements](images/fr/account-mirror.png)
+
+Certaines banques ne partagent pas leurs comptes d’épargne (un Livret A chez LCL, par exemple). Bilan peut quand même tenir un tel compte à jour à partir des virements que vous lui faites :
+
+1. Ouvrez **Modifier** dans le menu du compte d’épargne (comptes de type **Épargne** seulement, dont vous êtes propriétaire).
+2. Sous **Tenu à jour par les virements**, cochez les **Comptes sources** : vos comptes d’où partent les virements.
+3. Vérifiez le **Motif du libellé** : par défaut, le nom du compte en majuscules. À côté, choisissez comment il est recherché, sans tenir compte de la casse ni des accents dans les deux cas :
+   - **Contient** (par défaut) : n’importe où dans le libellé.
+   - **Libellé exact** : le libellé entier doit être le motif, aux espaces en trop près. Utile quand d’autres virements commencent de la même façon : avec le motif `VIR.PERMANENT Livret A`, un virement libellé `VIR.PERMANENT Livret A Camille` (le Livret A de quelqu’un d’autre) n’est pas reporté.
+4. Cliquez sur **Enregistrer**.
+
+Après chaque synchronisation bancaire ou import de fichier sur un compte source, chaque nouveau virement dont le libellé correspond au motif, et qui n’est pas encore lié, ajoute l’opération inverse sur le compte d’épargne (« Virement depuis … » ou « Virement vers … »), [liée](#liens-entre-transactions) à lui. Quand le compte d’épargne a déjà l’opération inverse (même montant, 4 jours d’écart au plus, non liée), Bilan la lie au lieu d’en ajouter une.
+
+- Un compte d’épargne a un seul motif de libellé, pour tous ses comptes sources.
+- Quand un virement correspond à plusieurs comptes d’épargne, un libellé exact l’emporte sur un motif « contient », puis le motif le plus long l’emporte.
+- Seules les transactions importées ou synchronisées après le réglage sont reportées : l’historique existant ne change pas.
+- Les intérêts restent une saisie manuelle.
+- Si vous supprimez une opération ajoutée par Bilan, elle ne revient pas.
+- Décochez tous les comptes sources pour désactiver le report.
+- Quand un libellé ne dit pas vers quel compte part un virement, [créez son autre côté](#créer-lautre-côté-dun-virement) depuis le détail de la transaction.
+
+## Catégories, règles et marchands
+
+La page **Catégories** a trois onglets : **Catégories**, **Règles** et **Marchands**.
+
+### Catégories
+
+![Catégories](images/fr/categories.png)
+
+Bilan vous fournit au départ des catégories et sous-catégories, modifiables et supprimables comme les vôtres.
+
+Ailleurs que sur cette page, une sous-catégorie s’affiche avec son chemin, par exemple **🩺 Santé › Remboursements**, pour distinguer deux sous-catégories du même nom. Sans symbole propre, elle reprend celui de son parent.
+
+Pour en créer une :
+
+1. Cliquez sur **Nouvelle catégorie**.
+2. Saisissez un **Nom** et choisissez une **Catégorie parente**, ou **Aucune (catégorie racine)**.
+3. Choisissez la **Portée** : **Personnelle** (visible uniquement par vous) ou un foyer (visible par tous ses membres). La portée ne peut plus être changée ensuite.
+4. Choisissez une **Couleur**. Le bouton **+** ouvre un sélecteur de couleur libre. Une sous-catégorie peut reprendre la couleur de son parent.
+5. Choisissez un **Symbole**, ou saisissez n’importe quel caractère ou emoji avec **+**.
+6. Activez si besoin **Compter dans le mois suivant** : voir [Compter une transaction dans un autre mois](#compter-une-transaction-dans-un-autre-mois).
+7. Activez si besoin **Compte comme de l’épargne** : les dépenses de cette catégorie et de ses sous-catégories comptent dans l’**Épargne nette** du tableau de bord au lieu de ses dépenses (de l’argent mis de côté sur un compte que Bilan ne suit pas, comme un compte-titres ou le livret d’un enfant). C’est activé pour la catégorie **Épargne** par défaut.
+8. Activez si besoin **Ne compte ni en dépense ni en rentrée** : les transactions de cette catégorie et de ses sous-catégories sont exclues du tableau de bord et des analyses, pour les virements entre vos propres comptes que Bilan ne peut pas lier (un compte joint qu’il ne suit pas, par exemple). Cette option l’emporte sur **Compte comme de l’épargne** et est activée pour la catégorie **Banque › Virement interne** par défaut.
+
+   Une sous-catégorie affiche ces deux options telles que sa catégorie parente les définit : quand un parent compte comme de l’épargne ou ne compte ni en dépense ni en rentrée, l’interrupteur est activé, verrouillé, et nomme ce parent.
+9. Cliquez sur **Créer la catégorie**.
+
+Pour supprimer une catégorie, ouvrez son menu **⋮** et choisissez **Supprimer**. Ses sous-catégories sont supprimées aussi. Si des transactions, des règles ou des lignes de budget l’utilisent, choisissez où les rattacher avec **Déplacer vers**. Avec **Aucune catégorie**, les transactions deviennent non catégorisées et les règles et lignes de budget sont supprimées.
+
+### Règles
+
+![Règles](images/fr/rules.png)
+
+Une règle attribue une catégorie aux transactions dont le libellé bancaire correspond à un motif.
+
+Un nouveau compte démarre avec un jeu de règles prêtes sur les catégories par défaut : grandes enseignes, énergie, abonnements, autoroutes, pharmacies, impôts, frais bancaires… Un premier import est donc déjà en partie catégorisé. Modifiez, désactivez ou supprimez-les comme les vôtres. Les virements entre personnes et les commerces locaux ne sont jamais couverts : ajoutez vos propres règles pour eux.
+
+1. Dans l’onglet **Règles**, cliquez sur **Nouvelle règle**.
+2. Saisissez le **Motif** et choisissez la **Correspondance** : **Contient**, **Égal**, **Commence par** ou **Regex**.
+3. Choisissez la **Catégorie** et la **Priorité** : quand plusieurs règles correspondent, le nombre le plus élevé l’emporte (100 par défaut). À priorité égale, le motif le plus long l’emporte, puis la règle la plus récente.
+4. Si vous gérez un foyer, choisissez la **Portée** : **Personnelle** ou le foyer. Les règles d’un foyer s’appliquent aux transactions de tous ses membres.
+5. Cochez **Sensible à la casse** si besoin. Par défaut, majuscules et accents sont ignorés.
+6. Cliquez sur **Enregistrer**.
+
+La case en début de ligne active ou désactive une règle. **Utilisations** compte les transactions catégorisées par la règle.
+
+Quand les règles s’appliquent :
+
+- pendant un import, si **Catégoriser automatiquement** est coché ;
+- quand vous saisissez une transaction à la main sans choisir de catégorie.
+
+### Appliquer une règle aux transactions existantes
+
+Quand vous enregistrez une règle qui correspond à des transactions déjà présentes, la fenêtre affiche un bilan :
+
+- combien de transactions **passent** dans la catégorie de la règle, et combien d’entre elles sont aujourd’hui dans une autre catégorie ;
+- combien **restent** avec une autre règle qui l’emporte (montez la priorité de cette règle pour les reprendre) ;
+- combien ont été **catégorisées à la main** : elles ne bougent jamais.
+
+Cliquez sur **Reclasser** pour appliquer la règle, ou sur **Plus tard** pour laisser les transactions telles quelles. Pour appliquer une règle plus tard, cliquez sur l’icône horloge de sa ligne dans l’onglet **Règles**.
+
+Seules les transactions des comptes que vous pouvez modifier sont reclassées. Les règles ne remplacent jamais une catégorie que vous avez choisie vous-même.
+
+### Importer et exporter des règles
+
+Dans l’onglet **Règles**, **Exporter** enregistre vos règles dans un fichier `bilan-rules-AAAA-MM-JJ.json` et **Importer** en relit un. Servez-vous-en pour sauvegarder vos règles, les transférer vers une autre instance de Bilan ou les partager avec un foyer.
+
+**Export.** Si vous appartenez à un foyer, choisissez les **Règles à exporter** : **Règles personnelles** ou un foyer, puis cliquez sur **Télécharger**. Le fichier contient les motifs, les types de correspondance, les priorités et les noms de catégories, jamais vos transactions.
+
+**Import.**
+
+1. Cliquez sur **Importer**, choisissez le fichier et, si vous gérez un foyer, **Importer dans** : **Règles personnelles** ou le foyer. Cliquez sur **Continuer**. Rien n’est encore enregistré.
+2. Dans **Catégories à résoudre**, chaque catégorie du fichier qui n’existe pas encore dans la destination propose trois choix : la **Créer** (c’est le choix par défaut ; seuls les niveaux manquants sont créés, les catégories parentes existantes sont réutilisées), l’**Associer à** l’une de vos catégories existantes, ou **Ignorer** ses règles. Bilan cherche d’abord le même chemin dans la destination (par exemple *Alimentation > Courses*), sans tenir compte des majuscules ni des accents : *epargne* correspond à *Épargne*. À défaut, il réutilise une catégorie dont le chemin se termine par celui du fichier, s’il n’y en a qu’une. Les autres sont créées, sauf si vous les associez ou les ignorez.
+3. Dans **Conflits**, une règle qui existe déjà avec une autre catégorie affiche le changement. Choisissez de **Laisser** la catégorie actuelle (par défaut) ou de **Déplacer** la règle vers celle du fichier ; un déplacement ne change que la catégorie, pas le motif, la priorité ni les autres réglages. Les règles qui existent déjà avec la même catégorie sont ignorées.
+4. Vérifiez les nombres de règles à créer, à déplacer et ignorées, puis cliquez sur **Importer**. Les règles invalides du fichier sont listées et ignorées ; les autres sont quand même importées. L’import lui-même est tout ou rien : s’il échoue, aucune règle ni catégorie n’est enregistrée.
+
+![Vérification d’un import de règles](images/fr/rules-import.png)
+
+Les catégories et les règles importées sont toujours créées dans la destination choisie. Une fois l’import terminé, cliquez sur **Reclasser les transactions existantes** pour [appliquer les règles importées](#appliquer-une-règle-aux-transactions-existantes) aux transactions déjà présentes dans Bilan, ou sur **Fermer** pour les laisser telles quelles. Les règles désactivées sont écartées : elles ne reclassent rien tant que vous ne les activez pas.
+
+Importer dans un foyer demande d’en être administrateur ou propriétaire.
+
+### Apprendre de vos choix
+
+Quand vous changez la catégorie d’une transaction, Bilan propose **Créer une règle pour les transactions similaires ?**. Il suggère un motif tiré du libellé bancaire, modifiable, ainsi que le type de correspondance. Cliquez sur **Créer la règle** pour enregistrer une règle personnelle, ou sur **Non merci**. Si d’autres transactions correspondent, vous pouvez ensuite [leur appliquer la règle](#appliquer-une-règle-aux-transactions-existantes).
+
+### Marchands
+
+L’onglet **Marchands** liste les endroits où vous dépensez, débarrassés du bruit bancaire (« CB », « PRLV SEPA », dates, références). Cliquez sur le crayon pour donner à un marchand un **Nom affiché**, ou regrouper plusieurs libellés bancaires sous un même nom. Les marchands renommés avec le même nom sont additionnés.
+
+Cela ne concerne que la liste des marchands et la carte **Top marchands** des [Analyses](#analyses). Les libellés des transactions ne changent pas.
+
+## Liens entre transactions
+
+Un virement entre deux de vos comptes apparaît deux fois : une sortie d’un côté, une entrée de l’autre. Un remboursement annule un achat. Lier ces transactions évite à Bilan de les compter deux fois :
+
+- des transactions liées qui s’annulent (un virement, un remboursement complet) sont écartées des totaux du tableau de bord et des budgets ;
+- sinon (un remboursement partiel par exemple), le lien compte une seule fois, pour la différence.
+
+Dans les budgets, le tableau de bord et les analyses, un lien est évalué en entier même quand ses transactions tombent dans des mois différents : s’il s’annule, il est écarté de tous les mois, sinon la différence compte dans le mois et la catégorie de sa plus grosse transaction.
+
+Les transactions liées restent dans la liste avec l’étiquette **Liée**.
+
+### Lier des transactions
+
+![Suggestions de liens](images/fr/suggestions.png)
+
+- **Depuis les suggestions** : sur **Transactions**, cliquez sur **Suggestions**. Bilan propose des paires de même montant et de sens opposé, à 30 jours d’écart au plus. Dans un même compte, seules les paires dont les libellés se ressemblent (même marchand, ou un mot en commun comme des frais et leur remise) sont proposées ; les paires les plus probables viennent en premier. Cliquez sur **Lier** pour accepter une paire ou **Ignorer** pour l’écarter. Les paires ignorées sont listées plus bas, et **Restaurer** permet de les suggérer de nouveau. **Réglages** modifie, pour vous seul, l’**Écart maximal (jours)** entre les deux opérations (0 pour le même jour, jusqu’à 365) et le **Montant minimum** en dessous duquel aucune paire n’est suggérée.
+- **À la main** : [sélectionnez](#sélectionner-plusieurs-transactions) deux transactions ou plus et cliquez sur **Lier**. Vous pouvez aussi ouvrir une transaction et cliquer sur **Lier à d’autres transactions** : elle est sélectionnée, et le reste pendant que vous cherchez ou filtrez les autres (la barre de sélection la rappelle).
+
+Il faut un accès en écriture à chaque compte concerné.
+
+### Créer l’autre côté d’un virement
+
+Quand un seul côté d’un virement est dans Bilan (l’autre compte n’est pas synchronisé, ou le libellé ne dit pas vers quel compte l’argent est parti), ouvrez la transaction, choisissez l’autre compte sous **Créer la transaction inverse sur…** et cliquez sur **Créer**. Bilan ajoute le montant opposé sur ce compte, à la même date, en virement libellé « Virement depuis … » ou « Virement vers … » suivi du nom du compte de la première transaction, et lie les deux.
+
+- C’est proposé pour une transaction pas encore liée, sur un compte que vous pouvez modifier.
+- L’autre compte doit être l’un de vos propres comptes actifs. Quand un seul d’entre eux est un compte d’épargne, il est choisi d’office.
+- La nouvelle transaction n’a pas de catégorie. Quand la première est un virement dont le mois a été choisi à la main, la nouvelle prend ce mois.
+
+### Liens automatiques
+
+Bilan lie de lui-même les deux côtés d’un virement entre deux de vos comptes, quand vous importez un relevé ou ajoutez une transaction à la main : les deux côtés sont des virements, même montant en sens opposé, 4 jours d’écart au plus, et une seule correspondance évidente. Un virement qui correspond à un paiement par carte, un prélèvement ou un retrait n’est que suggéré, jamais lié de lui-même. Quand il a un doute (deux virements du même montant le même jour, par exemple), la paire reste dans les suggestions. Un virement vers un compte qu’on partage avec vous n’est jamais lié automatiquement.
+
+Pour annuler un lien automatique, [déliez-le](#délier) : Bilan ne liera plus cette paire et cesse de la suggérer, à vous comme au propriétaire des comptes. Si vous restaurez la paire depuis les paires ignorées, elle revient en suggestion seulement, sans plus jamais être liée automatiquement.
+
+### Délier
+
+Ouvrez l’une des transactions et cliquez sur **Délier** dans la section **Liée à**. Supprimer une transaction la retire de son lien. Un lien qui ne contient plus qu’une transaction disparaît.
+
+## Budgets
+
+![Budgets](images/fr/budgets.png)
+
+Un budget fixe ce que vous prévoyez de dépenser par catégorie ou par compte sur une période, et suit ce que vous dépensez réellement. Rattaché à un compte, il devient l’enveloppe de ce compte : rentrées, virements et dépenses prévus, et le solde où le compte atterrit en fin de période (voir [Budget sur un compte](#budget-sur-un-compte)).
+
+### Créer un budget
+
+1. Allez dans **Budgets** et cliquez sur **Nouveau budget**.
+2. Saisissez un **Nom** et, si vous le souhaitez, une **Description**.
+3. Choisissez la **Portée** : **Personnel**, ou un foyer que vous gérez (voir [Budgets de foyer](#budgets-de-foyer)). Elle ne peut plus être changée ensuite.
+4. Choisissez si vous le souhaitez un **Compte** (voir [Budget sur un compte](#budget-sur-un-compte)). Laissez **Aucun : tous les comptes** pour un budget sur l’ensemble de vos comptes.
+5. Choisissez la **Période** : Semaine, Mois, Trimestre, Année ou Personnalisée, puis la date de **Début**. La date de fin découle de la période.
+6. Cochez **Récurrent** pour un budget qui se répète à chaque période.
+7. Ajoutez des **Lignes**. Pour chaque ligne, choisissez une **Catégorie** (ou **Toutes catégories**), un **Compte** (ou **Tous comptes**) et un **Montant prévu**. Une ligne peut aussi avoir un **Libellé**, affiché à la place du nom de la catégorie ou du compte.
+8. Cliquez sur **Créer le budget**.
+
+Comment les lignes comptent les dépenses :
+
+- Une ligne de catégorie compte cette catégorie et ses sous-catégories. Un remboursement dans cette catégorie diminue le montant dépensé.
+- Quand une ligne parente et une ligne de sous-catégorie correspondent toutes les deux, la transaction va à la plus précise.
+- Une ligne **Toutes catégories / Tous comptes** reprend toutes les dépenses qui n’entrent dans aucune autre ligne.
+- Les transactions liées sont comptées comme expliqué dans [Liens entre transactions](#liens-entre-transactions).
+
+### Budget sur un compte
+
+Un budget rattaché à un compte ne suit que ce compte : l’argent qui arrive, l’argent qui sort, et les virements vers vos autres comptes. Prévoyez-en un par compte courant, par exemple un pour votre compte personnel et un pour le compte joint du foyer.
+
+- Un compte a au plus un budget à la fois : deux budgets sur le même compte ne peuvent pas se chevaucher, même en partie. Les budgets archivés ne comptent pas.
+- Un budget personnel utilise un de vos propres comptes ; un budget de foyer, un compte partagé avec le foyer.
+- Les virements vers vos autres comptes comptent en entier : un virement vers votre livret est de l’argent sorti de ce compte.
+
+Chaque ligne a un **Type** :
+
+| Type         | Ce qu’elle compte sur le compte                                                         |
+| ------------ | --------------------------------------------------------------------------------------- |
+| **Dépense**  | les dépenses de la catégorie et de ses sous-catégories (un remboursement les diminue)   |
+| **Rentrée**  | l’argent reçu dans la catégorie, par exemple votre salaire                              |
+| **Virement** | les virements **Vers** ou **Depuis** un autre de vos comptes, choisi dans **Autre compte** |
+
+Une transaction ne compte que dans une ligne. Les lignes de virement passent d’abord, puis la ligne de catégorie la plus précise. Un virement est reconnu dès qu’il est lié à sa contrepartie sur l’autre compte (voir [Liens automatiques](#liens-automatiques)), ou quand cet autre compte porte le même montant en sens inverse à 4 jours ou moins et que vous n’avez pas ignoré cette paire dans les suggestions de liens. L’argent qui vient d’un autre compte ne compte jamais comme le remboursement d’une ligne de dépense.
+
+Un dépassement se lit selon le type : **Dépassé de …** pour une dépense, **+… de plus que prévu** pour une rentrée ou un virement, et **+… épargnés en plus** pour un virement vers un compte d’épargne, qui ne fait pas passer le budget en dépassement.
+
+Une ligne de virement se saisit une seule fois, dans le budget du compte d’où part l’argent. Le budget de l’autre compte l’affiche en lecture seule, **Prévu dans …**, quand les deux budgets ont le même type de période et le même début et que vous voyez les deux. Si ce budget a déjà sa propre ligne **Depuis** ce compte, seule sa ligne compte.
+
+**Hors budget** est toujours la dernière ligne. Elle reprend ce que le compte a payé et qu’aucune autre ligne ne prend : transactions sans catégorie, catégories sans ligne, virements imprévus. Vous pouvez lui donner une **Marge** facultative pour l’imprévu. Cliquez dessus pour lister ces transactions ; cliquez sur une transaction pour l’ouvrir dans **Transactions**, où vous pouvez la recatégoriser ou l’inclure ailleurs. Quand un virement y reste parce qu’il n’est pas encore lié, un lien vers les suggestions de liens apparaît.
+
+**Rentrées hors budget** liste l’argent reçu qu’aucune ligne de rentrée ou de virement ne prend. Ce qui vient d’un compte d’épargne s’affiche en **Puisé dans l’épargne sur la période**. Le total de la section **Rentrées** les inclut. Celui des **Dépenses** ne compte le hors budget qu’avec une marge, comme une ligne de plus ; sans marge, il reste à part du total.
+
+#### Où le compte atterrit
+
+Pendant la période en cours, la page **Budgets** commence par **Où j’atterris** : une carte par compte dont le budget est en cours (le tableau de bord l’affiche sous le solde de chaque compte, et le détail du budget en haut de la page). Son solde en fin de période est :
+
+> solde d’aujourd’hui + rentrées encore attendues − dépenses encore à venir
+
+- Le solde d’aujourd’hui ne compte que les transactions datées d’aujourd’hui ou avant.
+- Rentrées encore attendues : ce que chaque ligne de rentrée et chaque virement entrant n’a pas encore reçu.
+- Dépenses encore à venir : ce que chaque ligne de dépense et chaque virement sortant n’a pas encore dépensé, plus ce qui reste de la marge Hors budget. Une ligne déjà dépassée compte pour 0.
+- Une transaction déjà datée plus tard dans la période n’est pas dans le solde d’aujourd’hui : elle compte dans ce qui reste à venir quand elle dépasse ce qui reste de sa ligne.
+- Une transaction d’un autre compte incluse dans le budget compte dans sa ligne, mais pas dans l’atterrissage : elle n’a jamais touché ce compte.
+
+Les périodes passées et à venir n’affichent que le prévu et le réalisé. Les comptes d’épargne n’ont ni budget ni atterrissage : leur solde s’affiche sur le tableau de bord.
+
+### Suivre un budget
+
+![Détail d’un budget](images/fr/budget-detail.png)
+
+Chaque ligne, et le budget dans son ensemble, affiche un statut :
+
+| Statut              | Signification                                |
+| ------------------- | -------------------------------------------- |
+| **Dans le budget**  | moins de 80 % du montant prévu               |
+| **Bientôt atteint** | 80 % ou plus, sans l’avoir atteint           |
+| **Atteint**         | exactement le montant prévu, au centime près |
+| **Dépassé**         | plus que le montant prévu                    |
+
+Astuce : **Atteint** demande le montant exact, au centime près. D’ici là, le pourcentage reste sous 100 % (99,6 % s’affiche 99 %), et tout dépassement affiche au moins 101 %. Une ligne prévue à 0 € reste **Dans le budget** tant que rien n’est dépensé ; la moindre dépense la passe en **Dépassé**, sans pourcentage (—).
+
+La carte d’un budget dans la liste affiche le même montant dépensé, le même pourcentage et le même statut que le haut de son détail. Sans marge, les dépenses hors budget s’affichent à part, sur leur propre ligne **Hors budget**.
+
+Cliquez sur un budget pour ouvrir son détail : chaque ligne avec « Reste … » ou « Dépassé de … », **Voir les transactions** pour les lignes de catégorie, et la liste des transactions **Comptées dans ce budget**.
+
+En haut du détail, une carte résume la période :
+
+- **Reste à dépenser** : ce que les lignes de dépense permettent encore (une ligne déjà dépassée compte pour 0), avec le pourcentage dépensé. Sous la barre, ce que ces lignes ont dépensé sur le total prévu. Sur un budget sur un compte, la marge Hors budget compte comme une ligne de plus, et épargner plus que prévu sur un virement vers l’épargne ne compte pas comme une dépense.
+- **Hors budget · … opérations**, quand quelque chose a été dépensé hors des lignes : le montant, avec la marge s’il y en a une. **Voir les opérations** les liste.
+- **Plan en déficit de …**, quand le budget prévoit des rentrées et prévoit de dépenser plus.
+- Pendant la période en cours, un budget sur un compte ajoute où le compte atterrit en fin de période (voir [Où le compte atterrit](#où-le-compte-atterrit)) : **Solde aujourd’hui**, **Reste à dépenser**, **À recevoir** et **Fin de mois** (**Fin de période** pour une période autre qu’un mois civil). Quand ce qui doit encore sortir du compte diffère du reste à dépenser (une transaction déjà datée plus tard dans la période, une autre venant d’un autre compte), cette ligne devient **À payer**.
+
+Pendant la période en cours, un budget sans compte affiche **Solde prévu au …** : le solde actuel de vos comptes courants, moins ce que les lignes prévoient encore de dépenser (une ligne dépassée compte pour 0). Les comptes d’épargne et les revenus à venir n’entrent pas dans le calcul. Un budget sur un compte affiche son atterrissage à la place (voir [Où le compte atterrit](#où-le-compte-atterrit)).
+
+### Renouveler un budget récurrent
+
+Quand la période d’un budget récurrent se termine, un bouton **Renouveler** sur sa carte crée la période suivante avec le même compte, les mêmes lignes et la même marge. Si un autre budget couvre déjà la période suivante sur ce compte, le budget n’est pas renouvelé. Ce qui n’a pas été dépensé n’est pas reporté. Votre administrateur peut aussi mettre en place le renouvellement automatique. Les périodes d’une même série sont regroupées sur une carte : ouvrez **… autres périodes** pour les voir, ou utilisez les flèches de la page de détail.
+
+### Modifier, archiver ou supprimer un budget
+
+Le menu **⋮** de la carte d’un budget ou de sa page de détail propose **Modifier**, **Archiver** et **Supprimer**.
+
+- **Archivez** un budget que vous ne suivez plus mais que vous voulez garder. Il quitte la liste, le tableau de bord et le menu **Assigner à un budget**, et il n’est plus renouvelé. Ses lignes et ses affectations sont conservées : le détail d’une transaction affiche toujours son affectation, marquée **Archivé**, et vous pouvez la retirer. Les budgets archivés sont regroupés sous **Budgets archivés** en bas de la liste : ouvrez-en un pour le consulter, ou choisissez **Désarchiver** dans son menu pour le rétablir.
+- **Supprimer** efface le budget et ses lignes. Les transactions ne sont pas touchées, et les autres périodes d’un budget récurrent sont conservées.
+
+### Inclure ou exclure une transaction
+
+Depuis le détail d’une transaction, sous **Assigner à un budget** :
+
+1. **Choisir un budget**.
+2. Cliquez sur **Inclure** pour compter la transaction dans ce budget même si elle ne correspond à aucune ligne, sort de la période ou se trouve sur un compte que le budget ne couvre pas. Cliquez sur **Exclure** pour l’en écarter.
+3. L’affectation apparaît en dessous avec **Incluse** ou **Exclue**. Cliquez sur **Retirer** pour l’annuler.
+
+**Comptée dans**, juste au-dessus, se met à jour aussitôt : une transaction exclue quitte ce budget, une transaction incluse le rejoint.
+
+Une transaction incluse qui ne correspond à aucune ligne compte dans le budget sous une carte **Hors budget** à part, hors du total dépensé : elle ne modifie aucune ligne.
+
+### Budgets de foyer
+
+Un budget dont la portée est un foyer appartient au foyer :
+
+- Les propriétaires et les admins le créent, le modifient, le renouvellent, l’archivent et le suppriment. Tous les membres peuvent le consulter et y inclure ou en exclure des transactions.
+- Il compte les transactions des comptes partagés avec ce foyer.
+
+Un membre peut aussi **Inclure** une transaction de l’un de ses comptes privés. Elle compte alors dans les totaux pour tout le monde, et tous les membres la voient en entier dans le budget : date, montant, libellé, catégorie et nom du compte. Seule cette transaction devient visible : le compte privé et ses autres transactions restent masqués. Si ce membre quitte ensuite le foyer ou en est retiré, la transaction ne compte plus dans les budgets du foyer.
+
+Vous ne pouvez **Inclure** qu’une transaction de l’un de vos comptes ou d’un compte partagé avec ce foyer : un compte qu’un autre foyer partage avec vous ne peut pas être inclus.
+
+## Foyers
+
+![Foyers](images/fr/groups.png)
+
+Un foyer permet à plusieurs personnes de partager des comptes, des budgets, des catégories et des règles. Les comptes de chacun restent privés tant qu’il ne décide pas d’en partager un.
+
+### Créer un foyer
+
+Allez dans **Foyers**, cliquez sur **Nouveau foyer**, saisissez le **Nom du foyer** et une **Description** facultative, puis cliquez sur **Créer le foyer**. Vous en devenez propriétaire.
+
+![Page d’un foyer](images/fr/group-detail.png)
+
+### Inviter quelqu’un
+
+Les propriétaires et les admins peuvent inviter :
+
+1. Sur la page du foyer, sous **Inviter**, saisissez l’**Adresse e-mail** de la personne.
+2. Choisissez le **Rôle** : Membre ou Admin.
+3. Cliquez sur **Envoyer l’invitation**.
+
+Chaque invitation comporte un lien et un code à 6 caractères, et expire au bout de 7 jours. Si l’instance ne peut pas envoyer d’e-mail, Bilan le signale et affiche le **Lien d’invitation** : copiez-le avec **Copier le lien d’invitation** et transmettez-le vous-même.
+
+**Invitations en attente** affiche, pour chaque invitation, le code, la date d’expiration et un bouton de copie. Le **X** la révoque. Inviter de nouveau la même adresse renouvelle son invitation.
+
+### Accepter ou refuser une invitation
+
+Vous pouvez accepter une invitation de trois façons :
+
+- **Sur la page Foyers** : sous **Invitations en attente pour vous**, cliquez sur **Accepter l’invitation** ou **Refuser**. Les invitations n’apparaissent ici qu’une fois votre adresse e-mail vérifiée.
+- **Avec le lien** : ouvrez-le en étant connecté et cliquez sur **Accepter l’invitation**.
+- **Avec le code** : sur la page **Foyers**, saisissez-le sous **Rejoindre avec un code** et cliquez sur **Rejoindre**.
+
+Une invitation ne fonctionne qu’avec le compte dont l’adresse e-mail a été invitée. Le lien et le code fonctionnent même avant la vérification de votre adresse.
+
+### Rôles
+
+| Action                                                                        | Membre | Admin                 | Propriétaire |
+| ----------------------------------------------------------------------------- | ------ | --------------------- | ------------ |
+| Voir les membres, les comptes partagés et les budgets du foyer                | oui    | oui                   | oui          |
+| Partager ses propres comptes, inclure ou exclure des transactions des budgets | oui    | oui                   | oui          |
+| Modifier le foyer, inviter des personnes                                      | non    | oui                   | oui          |
+| Gérer les budgets, catégories et règles du foyer                              | non    | oui                   | oui          |
+| Retirer des membres                                                           | non    | les membres seulement | oui          |
+| Changer les rôles, supprimer le foyer                                         | non    | non                   | oui          |
+
+Pour transmettre un foyer, un propriétaire donne le rôle **Propriétaire** à un autre membre. Un foyer peut avoir plusieurs propriétaires, mais en garde toujours au moins un.
+
+### Partager un compte
+
+1. Dans **Comptes**, ouvrez le menu **⋮** du compte et choisissez **Partager**.
+2. Pour chaque foyer, choisissez **Aucun**, **Lecture** ou **Écriture**. Le changement s’applique immédiatement. Repasser sur **Aucun** un foyer avec lequel le compte était partagé retire aussi les inclusions et exclusions de ses transactions dans les budgets de ce foyer : aucune n’y compte plus.
+
+#### Ce que permettent Lecture et Écriture
+
+- **Lecture** : les membres voient le compte, son solde et toutes ses transactions, notes comprises. Ils peuvent inclure ses transactions dans des budgets ou les en exclure.
+- **Écriture** : tout ce que permet Lecture, plus ajouter, modifier, recatégoriser, supprimer, importer, lier et délier des transactions.
+- Vous seul, en tant que propriétaire, pouvez modifier, partager, archiver ou supprimer le compte, et voir son IBAN.
+
+Sous chaque foyer avec lequel vous partagez, une case **Autoriser les assistants IA** décide si les assistants des membres de ce foyer reçoivent les transactions du compte (voir [Assistants IA](#assistants-ia)). Elle est décochée par défaut et vous seul, propriétaire, pouvez la cocher. Sans elle, le compte reste invisible pour ces assistants, même si les membres le voient dans Bilan. Elle décide aussi si ces assistants peuvent mettre le compte dans les budgets de ce foyer ou y inclure ses transactions : la cocher pour un foyer ne permet pas aux assistants d’utiliser le compte dans les budgets d’un autre foyer.
+
+Vos comptes privés et leurs transactions ne sont jamais visibles des autres membres, sauf une transaction que vous incluez dans un budget de foyer (voir [Budgets de foyer](#budgets-de-foyer)). Un budget de foyer ne compte que les comptes partagés avec ce foyer.
+
+### Quitter ou supprimer un foyer
+
+La **Zone de danger** en bas de la page du foyer propose :
+
+- **Quitter** : vous perdez l’accès aux comptes et budgets partagés du foyer. Vos comptes cessent d’être partagés avec le foyer, et vos transactions sortent de ses budgets (incluses comme exclues). Le dernier propriétaire ne peut pas quitter.
+- **Supprimer le foyer** (propriétaires) : retire les membres, les invitations et les partages, ainsi que les catégories, règles et budgets du foyer. Les transactions qui utilisaient une catégorie du foyer deviennent non catégorisées. Les comptes et les transactions sont conservés. La confirmation chiffre ce qui est touché.
+
+Il en va de même pour un membre retiré par un propriétaire ou un administrateur. Une ligne de budget du foyer limitée à l’un de ses comptes reste, ne compte plus rien et s’affiche comme un compte masqué : modifiez-la ou supprimez-la.
+
+## Tableau de bord et analyses
+
+Le tableau de bord et les analyses portent sur tous les comptes que vous voyez : les vôtres, ceux partagés avec vous, et les comptes archivés.
+
+### Choisir la période
+
+Sur les deux pages, choisissez **Ce mois**, **Mois dernier**, **Trimestre**, **Année** ou **Personnalisé**, et utilisez les flèches pour passer à la période précédente ou suivante. Vous pouvez aller jusqu’au mois prochain, signalé comme à venir : il montre les transactions qui lui sont déjà [affectées](#compter-une-transaction-dans-un-autre-mois).
+
+Pour un mois seul, **Comparé à** permet de comparer avec **le mois précédent** ou la moyenne sur 3, 6 ou 12 mois. Le tableau de bord part du mois précédent, les analyses de la moyenne sur 3 mois, pour qu’une dépense exceptionnelle le mois dernier ne fausse pas toutes les évolutions. Les autres périodes sont comparées à la période précédente de même durée.
+
+Tant que la période est en cours, Bilan la compare au même nombre de jours de la période de comparaison, et une note l’indique.
+
+Astuce : les virements entre vos propres comptes sont liés automatiquement et restent hors des revenus et des dépenses. Un virement que Bilan n’a pas pu lier compte dans les deux tant que vous ne le liez pas. Voir [Liens entre transactions](#liens-entre-transactions).
+
+### Tableau de bord
+
+![Tableau de bord](images/fr/dashboard.png)
+
+- **Solde des comptes** : le solde actuel de chaque compte non archivé et leur total, quelle que soit la période choisie. **Comptes** ouvre la page des comptes. Sous le solde d’un compte dont le [budget](#où-le-compte-atterrit) est en cours, **Au … :** donne son solde en fin de période ; survolez-le pour le détail, cliquez pour ouvrir le budget.
+- **Revenus** et **Dépenses**, chacun avec son évolution par rapport à la comparaison. Les dépenses des catégories qui [comptent comme de l’épargne](#catégories) ne sont pas des dépenses : elles ne comptent que dans l’épargne nette.
+- **Épargne nette** : les virements liés vers vos comptes d’épargne moins ceux qui en sortent, plus les dépenses des catégories qui comptent comme de l’épargne, avec son évolution par rapport à la comparaison.
+- **Reste à dépenser**, pendant la période en cours : ce que vos budgets en cours permettent encore, le même montant que le résumé de chaque budget, additionné. Sans budget en cours, et pour une période passée, cette carte affiche le **Solde net** (revenus moins dépenses) à la place.
+- **À faire**, seulement s’il y a quelque chose à traiter : les dépenses et rentrées sans catégorie de la période qui ne sont pas liées, avec leur total. Cliquez sur l’une d’elles pour ouvrir ces transactions et les catégoriser. Une dernière ligne compte les opérations non liées d’une catégorie qui [ne compte ni en dépense ni en rentrée](#catégories) : un virement dont l’autre jambe manque. Liez-la, ou ignorez-la si l’autre compte n’est pas dans Bilan.
+- **Budgets en cours**, pendant la période en cours : un bloc par budget en cours, côte à côte sur grand écran, avec ce qu’il reste à dépenser, la part du prévu déjà dépensée et ses dépenses hors budget. Cliquez sur une ligne pour ouvrir le budget.
+- **Rythme des dépenses** : vos dépenses cumulées jour après jour (mois après mois sur un trimestre ou une année), la ligne pointillée étant la période de comparaison, ou le mois moyen. Tant que la période est en cours, la courbe s’arrête à aujourd’hui ; au-dessus, ce que vous avez dépensé jusqu’ici et l’écart avec la même date de la comparaison.
+- **Dépenses par catégorie** : un anneau avec les six plus grosses catégories, le reste regroupé.
+- **Transactions récentes** : les six dernières de la période. **Tout voir** ouvre la liste complète.
+
+### Analyses
+
+![Analyses](images/fr/insights.png)
+
+![Analyses sur téléphone](images/fr/mobile-insights.png)
+
+Les analyses comptent les rentrées et les dépenses comme le tableau de bord : les dépenses des catégories qui comptent comme de l’épargne, et les catégories qui ne comptent ni en dépense ni en rentrée, en sont exclues.
+
+- **Rentrées et dépenses** : vos rentrées et vos dépenses de chacun des 12 derniers mois, le mois en cours hachuré tant qu’il court. Au-dessus, les moyennes mensuelles (mois complets seulement) et votre épargne nette sur les 12 mois (rentrées moins dépenses). Une note indique combien de mois vos dépenses ont dépassé vos rentrées.
+- **Dépenses par catégorie** : vos dépenses par catégorie, la plus forte évolution d’abord. Chaque ligne montre l’évolution (en multiple, comme ×17, dès que la dépense a triplé), le montant de comparaison → le montant actuel (tant que le mois court, la moyenne dépensée à la même date : **moy. au 17**), et un graphique sur 12 mois à l’échelle de la catégorie : le pointillé est sa moyenne mensuelle, les barres de la période sont plus foncées. Cliquez sur une ligne pour voir ses sous-catégories et leur évolution. Les catégories dont les dépenses bougent peu (loyer, abonnements…), période comprise, sont regroupées sous **Stables**, en bas. Les dépenses sans catégorie ne sont pas une catégorie : une ligne au-dessus de la liste donne leur montant, **À trier** les ouvre.
+- **Dépenses exceptionnelles** : les grosses dépenses ponctuelles de la période, qui expliquent souvent la hausse d’une catégorie : chacune fait au moins 50 € et dépasse le double de la moyenne mensuelle de sa catégorie (le bouton de réglage de la carte change les deux : le montant minimum, et le multiple, de 1 pour la moyenne elle-même à 10) sur les 12 mois qui précèdent la période (une sous-catégorie utilisée moins de 3 mois est comparée à sa catégorie parente). Les prélèvements récurrents, les virements, l’épargne et les catégories neutres sont exclus, et un achat remboursé ne compte que pour ce qui n’a pas été remboursé. Chaque ligne montre le marchand, sa catégorie, la date et la moyenne de la catégorie ; au-dessus de la liste, leur total et leur part dans les dépenses de la période. Les 8 plus grosses sont affichées, **Tout afficher** montre les autres. Cliquez sur une ligne pour retrouver l’opération dans votre liste.
+- **Prélèvements récurrents** : ce qui revient environ chaque mois chez le même marchand (loyer, énergie, assurances, abonnements…), repéré sur les 6 derniers mois : au moins 3 paiements à environ un mois d’écart (un mois sauté passe), pour des montants proches (un prélèvement peut varier davantage, comme une facture d’énergie entre l’été et l’hiver), chez un marchand où vous ne payez guère autre chose. Une facture payée tous les deux mois porte la mention **tous les 2 mois** et compte pour moitié dans le coût mensuel. Chaque ligne montre le marchand, sa catégorie, son montant actuel et la date du dernier paiement (le montant habituel après une hausse) ; au-dessus de la liste, ce qu’ils coûtent par mois et la part qui vient des nouveaux paiements et des hausses. **nouveau** signale un paiement apparu ces deux derniers mois, **hausse** un dernier paiement supérieur au montant habituel de plus de 5 % (et d’au moins 1 €), **arrêté ?** un paiement dont le mois est passé sans lui : ceux-là viennent en premier, les arrêtés en dernier. Les virements sont exclus, et les marchands renommés du même nom comptent pour un. Cliquez sur une ligne pour voir les transactions du marchand sur ces 6 mois.
+- **Top marchands** : où part votre argent au quotidien, hors prélèvements récurrents (ils ont leur propre carte). Le crayon renomme un marchand (voir [Marchands](#marchands)).
+- **Revenus par catégorie**.
+- **Budgets dans le temps**, dès qu’un [budget récurrent](#renouveler-un-budget-récurrent) a au moins deux périodes terminées : une ligne par budget récurrent que vous voyez (les vôtres et ceux de vos foyers), avec une case pour chacune de ses 12 dernières périodes, colorée comme dans la liste des budgets : dans le budget, bientôt atteint ou atteint, dépassé, la période en cours hachurée. En dessous, combien de périodes terminées ont dépassé le budget et l’écart moyen des dépenses au prévu (au-dessus en rouge, en dessous en vert). Survolez une case pour voir la période, son statut et le dépensé / prévu ; cliquez dessus pour ouvrir le budget de cette période. Cette carte ignore la période choisie : elle s’arrête toujours à aujourd’hui.
+
+La plupart des lignes sont cliquables et ouvrent les transactions correspondantes.
+
+## Sécurité du compte
+
+![Réglages de sécurité](images/fr/settings-security.png)
+
+Allez dans **Sécurité** dans la barre latérale.
+
+### Changer de mot de passe
+
+Cliquez sur **Modifier**, saisissez votre **Mot de passe actuel** puis le nouveau deux fois, et cliquez sur **Changer le mot de passe**. **Déconnecter mes autres appareils** est activé par défaut. Bilan vous envoie un e-mail pour confirmer le changement.
+
+### Double authentification
+
+Pour l’activer :
+
+1. Sous **Application d’authentification (TOTP)**, saisissez votre **Mot de passe** et cliquez sur **Activer**.
+2. Scannez le QR code avec votre application d’authentification (ou saisissez la clé affichée).
+3. Gardez les **Codes de secours** en lieu sûr. Chacun sert une fois si vous perdez votre téléphone. Ils ne sont affichés qu’à ce moment-là.
+4. Saisissez le code affiché par l’application et cliquez sur **Vérifier et activer**.
+
+Pour la désactiver, saisissez votre **Mot de passe** et un **Code d’authentification** (de l’application, ou un code de secours), puis cliquez sur **Désactiver**. Les deux sont obligatoires.
+
+Tant qu’elle est activée, la carte indique combien de **Codes de secours** il vous reste. Pour en obtenir de nouveaux, cliquez sur **Générer de nouveaux codes**, saisissez votre **Mot de passe** et un **Code d’authentification**, puis cliquez de nouveau sur **Générer de nouveaux codes**. Vos anciens codes cessent aussitôt de fonctionner. Gardez les nouveaux avec **Copier** ou **Télécharger** : ils ne sont affichés qu’à ce moment-là.
+
+Si votre compte n’a pas de mot de passe (vous vous connectez par un fournisseur d’identité ou avec une clé d’accès), la carte n’a rien à configurer : la double authentification de Bilan ne protège que les connexions par mot de passe, et c’est celle de votre fournisseur d’identité qui s’applique.
+
+Votre administrateur peut rendre la double authentification obligatoire pour les administrateurs qui ont un mot de passe. Tant qu’un tel administrateur ne l’a pas activée, les pages d’administration le renvoient vers cette page, où un bandeau en explique la raison.
+
+### Appareils de confiance
+
+Quand la double authentification est activée, **Appareils de confiance** liste les navigateurs où vous avez coché **Faire confiance à cet appareil** : navigateur et système quand ils sont connus, dernière utilisation et date d’expiration. Cliquez sur **Oublier** à côté d’un appareil, ou sur **Tout oublier**. Un appareil oublié redemande le code à sa prochaine connexion par mot de passe.
+
+### Clés d’accès
+
+Une clé d’accès permet de vous connecter avec votre empreinte, votre visage ou le code de votre appareil au lieu du mot de passe. Cliquez sur **Ajouter** sous **Connexion sans mot de passe** et suivez les instructions de votre appareil. Vous pouvez renommer ou supprimer chaque clé.
+
+Si votre connexion date de plus de 24 heures, Bilan vous demande de vous reconnecter avant d’en ajouter une.
+
+### Appareils connectés
+
+**Appareils connectés** liste les endroits où vous êtes connecté : navigateur, système, adresse IP et dernière activité. Cliquez sur **Déconnecter** à côté d’un appareil que vous ne reconnaissez pas, ou sur **Tout déconnecter** pour tous les autres appareils.
+
+Les appareils de confiance sont aussi oubliés quand vous cliquez sur **Tout déconnecter**, changez de mot de passe avec **Déconnecter mes autres appareils** activé, réinitialisez votre mot de passe, ou activez ou désactivez la double authentification.
+
+### Identités connectées
+
+Si votre administrateur a configuré Google ou un autre fournisseur d’identité, cliquez sur **Lier …** sous **Connexion via un fournisseur d’identité**. L’adresse e-mail de l’identité doit correspondre à celle de votre compte. Vous pourrez la délier plus tard, sauf si c’est votre seul moyen de connexion.
+
+### Alertes de connexion
+
+Quand l’instance peut envoyer des e-mails, Bilan vous écrit après :
+
+- une nouvelle connexion avec votre mot de passe, une clé d’accès, un code de secours ou un fournisseur d’identité ;
+- un changement ou une réinitialisation du mot de passe ;
+- l’ajout d’une clé d’accès ;
+- la désactivation de la double authentification.
+
+L’alerte indique la date, la méthode de connexion, l’adresse IP et l’appareil. Si ce n’était pas vous, changez votre mot de passe tout de suite. Ces alertes ne peuvent pas être désactivées.
+
+## Assistants IA
+
+![Réglages des assistants IA](images/fr/settings-ai.png)
+
+Bilan peut fournir vos données à votre propre assistant IA, pour poser des questions sur vos comptes, vos dépenses et vos budgets sans ouvrir l’application et, avec l’accès en lecture et écriture, lui faire mettre à jour vos transactions, liens, budgets, catégories, règles, noms de marchands, préférences et comptes. Il parle MCP, un protocole standard : tout client MCP peut s’y connecter, comme claude.ai, Claude Desktop, Claude Code ou Codex. Bilan n’a pas de chat à lui et n’envoie rien à un assistant tant que vous n’en connectez pas un.
+
+Allez dans **Assistants IA** dans la barre latérale. Si la page indique que la fonction est indisponible sur cette instance, un administrateur doit d’abord activer le serveur MCP (voir le [guide d’administration](admin-guide.fr.md#assistants-ia-serveur-mcp)).
+
+### L’activer
+
+Activez **Autoriser les assistants IA** et confirmez. Les libellés, montants et notes de vos opérations sont alors déchiffrés et envoyés au fournisseur de votre assistant (Anthropic, OpenAI…), selon ses conditions. Le désactiver arrête aussitôt tous vos clients connectés et vos jetons. Ils sont conservés : le réactiver les rétablit.
+
+### Connecter un client
+
+La carte **Connexion** affiche l’adresse du serveur, `<adresse de votre Bilan>/api/mcp`, avec un bouton pour la copier. Un client se connecte de l’une de ces deux façons :
+
+- **avec votre compte Bilan** : le client ouvre Bilan dans votre navigateur, vous vous connectez et l’autorisez. Aucun jeton à copier ;
+- **avec un jeton personnel** que vous créez dans Bilan et collez dans les réglages du client (voir [Jetons personnels](#jetons-personnels)).
+
+**claude.ai et Claude Desktop** : ajoutez un connecteur personnalisé avec l’adresse du serveur. Claude ouvre la page de connexion de Bilan, puis la [page d’autorisation](#autoriser-un-client). Ces connecteurs joignent Bilan depuis les serveurs d’Anthropic : ils ne fonctionnent que si votre Bilan est accessible depuis Internet en HTTPS.
+
+**Claude Code**, avec votre compte Bilan :
+
+```bash
+claude mcp add --transport http bilan https://bilan.example.com/api/mcp
+```
+
+Lancez ensuite `/mcp` dans Claude Code, choisissez `bilan` et connectez-vous (ou lancez `claude mcp login bilan` dans un terminal) : le navigateur ouvre la page de connexion de Bilan, puis la page d’autorisation.
+
+**Claude Code**, avec un jeton personnel :
+
+```bash
+claude mcp add --transport http bilan https://bilan.example.com/api/mcp \
+  --header "Authorization: Bearer <jeton>"
+```
+
+Codex et les autres clients qui acceptent une URL de serveur et un en-tête personnalisé fonctionnent de la même façon : donnez-leur l’adresse et l’en-tête `Authorization: Bearer <jeton>`.
+
+### Autoriser un client
+
+![Page d’autorisation](images/fr/oauth-consent.png)
+
+Quand un client se connecte avec votre compte Bilan, Bilan vous demande de vous connecter si ce n’est pas déjà fait (mot de passe, clé d’accès, double authentification et SSO fonctionnent tous), puis affiche la page d’autorisation :
+
+- **Application** : le nom que le client s’est donné, à côté de son **Adresse de retour**, où Bilan vous renvoie une fois votre réponse donnée. N’importe quel client peut choisir son nom ; seule l’adresse de retour est vérifiée. Pour claude.ai et Claude Desktop, c’est `claude.ai`, pour Claude Code une adresse `localhost` ;
+- **Accès demandé** : **Lecture et écriture** ou **Lecture seule**, présélectionné selon la demande du client. **Lecture seule** est proposé quand le client l’a aussi demandé ;
+- quand le client demande à rester connecté : il garde son accès jusqu’à ce que vous le révoquiez, ou après 30 jours sans utilisation ;
+- la note de confidentialité : les données envoyées au fournisseur de l’assistant.
+
+**Autoriser** vous renvoie au client, qui est alors connecté. Si vous vous êtes connecté il y a plus de 10 minutes, Bilan demande d’abord votre mot de passe, car le client obtient un accès durable. **Refuser** vous renvoie sans accès.
+
+La page l’indique à la place quand les assistants IA sont désactivés pour votre compte (activez-les sous [L’activer](#lactiver), puis relancez la connexion depuis le client), quand ils sont désactivés sur l’instance, ou quand la demande a expiré (relancez-la depuis le client).
+
+Un client que vous avez déjà autorisé se reconnecte sans cette page tant que vous êtes connecté à Bilan dans ce navigateur, s’il demande le même accès.
+
+### Clients connectés
+
+**Clients connectés** liste les clients que vous avez autorisés : nom, adresse de retour, accès, date d’autorisation et dernière utilisation. **Révoquer** coupe son accès aussitôt, après une confirmation ; il devra redemander votre autorisation pour se reconnecter.
+
+### Activité récente
+
+**Activité récente** liste les modifications faites par vos assistants ces 90 derniers jours, les 50 plus récentes, regroupées par jour : l’heure, l’action et ce qu’elle a modifié (le libellé de la transaction, les deux transactions d’un lien, le budget, avec un lien vers sa page, la catégorie, le motif de la règle ou le compte, avec un lien vers leur page, ou le nom actuel du marchand), et le nom du jeton ou du client qui l’a faite. Seul ce que vous voyez encore est nommé : une transaction, un budget, une catégorie, une règle ou un compte supprimé, situé sur un compte ou un foyer auquel vous n’avez plus accès, ou un nom de marchand retiré depuis n’affiche que l’action, comme les modifications de préférences. Les lectures n’y figurent pas. Seules y figurent les modifications de vos propres jetons et clients, pas celles que l’assistant d’un autre membre a déclenchées sur vos comptes (un lien de virement automatique, par exemple).
+
+### Jetons personnels
+
+Un jeton personnel agit en votre nom, pour les clients qui l’envoient dans un en-tête.
+
+1. Sous **Jetons personnels**, cliquez sur **Créer un jeton**.
+2. Saisissez un **Nom** pour le reconnaître, choisissez l’**Accès** (**Lecture seule** ou **Lecture et écriture**) et l’**Expiration** (30 jours, 90 jours, 1 an ou sans expiration).
+3. Cliquez sur **Créer le jeton**. Si vous vous êtes connecté il y a plus de 10 minutes, Bilan demande d’abord votre mot de passe, car un jeton est un identifiant.
+4. Copiez le jeton : il n’est affiché qu’une fois.
+
+La liste donne pour chaque jeton son préfixe, son accès, sa création, sa dernière utilisation et son expiration. **Révoquer** arrête un jeton aussitôt.
+
+**Lecture seule** permet à l’assistant de lire ; **Lecture et écriture** lui permet aussi de modifier vos données (voir [Ce qu’un assistant peut modifier](#ce-quun-assistant-peut-modifier)).
+
+Changer ou réinitialiser votre mot de passe, ou cliquer sur **Tout déconnecter** sous [Appareils connectés](#appareils-connectés), révoque tous vos jetons et vos clients connectés : recréez des jetons et reconnectez vos clients ensuite.
+
+### Ce qu’un assistant peut voir
+
+Tout est limité à ce que vous pouvez voir dans Bilan, avec une restriction de plus :
+
+- vos propres comptes, toujours ;
+- les comptes partagés avec vos foyers seulement si leur propriétaire a coché **Autoriser les assistants IA** sur le partage. Les soldes, le tableau de bord, les analyses, les chiffres des budgets personnels et la recherche ne comptent que les comptes qu’un assistant peut voir ;
+- les budgets de foyer gardent les mêmes chiffres de dépenses que dans Bilan : les transactions des comptes que l’assistant ne voit pas n’apparaissent que sous la forme d’un montant « Private account » (compte privé) par ligne de budget, sans libellé, date, compte ni marchand.
+
+Un assistant peut lire vos comptes et soldes, le tableau de bord et les analyses d’une période, les transactions (recherche et détail, avec leurs liens et leurs affectations de budget), les catégories, les règles, les budgets, les marchands, les foyers et les noms de leurs membres, les suggestions de liens et vos préférences. Il ne voit pas les IBAN complets et n’accède à rien d’administratif ni de lié à la sécurité.
+
+Les libellés, notes et noms de marchands viennent de vos banques et d’autres personnes : on indique aux assistants de les traiter comme du simple texte, jamais comme des instructions. Ne connectez tout de même que des assistants de confiance.
+
+### Ce qu’un assistant peut modifier
+
+Avec l’accès **Lecture et écriture**, un assistant peut :
+
+- **transactions** : en saisir une à la main (vos règles choisissent la catégorie s’il n’en donne pas), modifier le libellé, la note, la date, le montant ou le type, changer la catégorie, la compter dans un autre mois ;
+- **liens** : lier des transactions, créer l’autre côté d’un virement sur l’un de vos propres comptes, supprimer un lien, ignorer ou rétablir une paire suggérée ;
+- **budgets** : créer et modifier des budgets, les archiver et les désarchiver, lancer dès maintenant la période suivante d’un budget récurrent (avec les mêmes lignes), inclure ou exclure une transaction, retirer une inclusion ou une exclusion ;
+- **catégories** : créer et modifier des catégories (nom, couleur, icône, parent, décalage de mois, épargne, neutre) ;
+- **règles** : créer et modifier des règles, en faire pointer une vers une autre catégorie, en activer, désactiver ou supprimer une, prévisualiser ce que l’application de règles changerait et les appliquer aux transactions existantes. L’application ne change que les transactions des comptes qu’il peut modifier (ci-dessous), et les transactions que vous avez catégorisées à la main gardent leur catégorie ;
+- **noms de marchands** : renommer un marchand ou tout un nom d’affichage, retirer un nom d’affichage (ses marchands reprennent leur libellé bancaire), détacher un marchand de son nom d’affichage ;
+- **préférences** : les réglages des suggestions de liens (écart en jours et montant minimum) et la règle des dépenses exceptionnelles (montant minimum et multiple) ;
+- **comptes** : créer des comptes, et modifier, archiver et désarchiver les vôtres.
+
+Quand il modifie quelque chose, les champs qu’il n’envoie pas sont conservés.
+
+Il a les mêmes droits que vous dans Bilan, sur les comptes qu’il peut voir (ci-dessus) : modifier une transaction d’un compte partagé demande l’accès **Écriture** sur le partage en plus de **Autoriser les assistants IA**. Les catégories et règles d’un foyer demandent d’en être propriétaire ou administrateur, comme dans Bilan. Il ne peut pas :
+
+- supprimer des transactions, budgets, catégories ou comptes ;
+- partager un compte ni gérer des foyers ;
+- modifier un compte dont quelqu’un d’autre est propriétaire, même partagé avec vous ;
+- saisir, modifier ou lire un IBAN : modifier un compte garde son IBAN ;
+- mettre en place un [compte d’épargne tenu à jour par les virements](#les-comptes-dépargne-que-votre-banque-ne-remonte-pas), ni changer le type d’un compte d’épargne tenu à jour ainsi.
+
+Dans un budget de foyer, un assistant ne peut ajouter, aux lignes du budget ou comme son compte, que vos propres comptes et les comptes dont le partage avec ce foyer autorise les assistants IA, et ne peut y inclure que des transactions de ces comptes. Un compte qu’il voit par un autre foyer est refusé. Les comptes déjà dans le budget restent quand il modifie le budget, et exclure une transaction n’est pas restreint.
+
+Chaque jeton ou client connecté peut faire jusqu’à 30 modifications par minute, dans la limite de ses 120 appels par minute. Chaque modification apparaît sous [Activité récente](#activité-récente).
+
+## Vos données
+
+![Réglages des données](images/fr/settings-data.png)
+
+Allez dans **Données** dans la barre latérale.
+
+### Exporter
+
+- **Transactions (CSV)** : les transactions des comptes que vous voyez, avec date, montant, type, libellé, compte, catégorie et, quand il diffère du mois réel, le mois d’affectation. Par défaut, le fichier les contient toutes ; pour le restreindre, choisissez une période (**Du**, **Au**) ou un **Compte** au-dessus des boutons. Le fichier s’ouvre dans un tableur et peut être réimporté dans Bilan. En français, il utilise le point-virgule comme séparateur et la virgule décimale.
+- **Toutes mes données (JSON)** : tout ce qui vous appartient, pour vos archives ou pour changer d’outil : profil, vos propres comptes (IBAN compris), leurs transactions avec notes et libellés d’origine, catégories, règles, noms de marchands, budgets, foyers, liens, historique des imports, connexions bancaires (sans leur accès à la banque) et votre journal d’activité récent. Les comptes que d’autres partagent avec vous n’y figurent pas. Comme il contient vos IBAN complets, il vous demande de confirmer votre identité comme pour [voir un IBAN](#voir-liban) si votre connexion date de plus de 10 minutes.
+
+### Supprimer votre compte
+
+Cliquez sur **Supprimer mon compte**, saisissez votre **Mot de passe** (ou votre adresse e-mail si vous vous connectez uniquement via un fournisseur d’identité), puis cliquez sur **Supprimer définitivement**. La confirmation détaille ce qui disparaît : nombre de comptes et de transactions, foyers transmis ou supprimés. La suppression est immédiate et définitive :
+
+- vos comptes et leurs transactions sont supprimés, y compris ceux partagés avec un foyer : les autres membres les perdent aussi ;
+- pour chaque foyer dont vous êtes propriétaire, un autre membre devient propriétaire ; un foyer sans autre membre est supprimé ;
+- les catégories, règles et budgets propres au foyer sont conservés.
+- vos connexions bancaires sont déconnectées : Bilan supprime son accès à la banque.
+
+Astuce : exportez vos données d’abord si vous voulez en garder une copie.

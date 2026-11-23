@@ -1,0 +1,234 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
+import { Check, Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-is-mobile";
+import { useFrozenWhileOpen } from "@/hooks/use-frozen-while-open";
+import {
+  createRuleAction,
+  previewRuleApplicationAction,
+  retargetRuleAction,
+} from "@/server/transport/actions/rules";
+import type { RuleApplicationPreview } from "@/server/services/categorization/apply";
+import {
+  RuleApplyStep,
+  shouldOfferApply,
+  type RuleApplyTarget,
+} from "@/components/categories/rule-apply-step";
+import { RULE_MATCH_TYPES, type RuleMatchType } from "@/lib/validation/rule";
+import { CategoryChip, SegmentedTabs, overline, type CategoryLabelData } from "./bits";
+import { categoryPath } from "./category-tree";
+
+// The rule that suggested another category; the dialog offers to retarget it when manageable.
+export type SupersededRule = {
+  id: string;
+  pattern: string;
+  priority: number;
+  canManage: boolean;
+};
+
+// Learning dialog shown after a manual recategorization. Pre-filled with a
+// proposed pattern (most distinctive token) and the chosen category; lets the
+// user tune the match type before creating a personal rule, or retarget the
+// rule that suggested another category.
+export function CreateRuleDialog({
+  open,
+  onOpenChange,
+  pattern,
+  categoryId,
+  category,
+  superseded,
+  onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  pattern: string;
+  categoryId: string;
+  category: CategoryLabelData;
+  superseded?: SupersededRule | null;
+  onSaved?: () => void;
+}) {
+  const t = useTranslations("transactions");
+  const tRules = useTranslations("rules");
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const [pat, setPat] = useState(pattern);
+  const [matchType, setMatchType] = useState<RuleMatchType>("CONTAINS");
+  const [target, setTarget] = useState<"new" | "existing">("new");
+  const retarget = target === "existing" && !!superseded?.canManage;
+  const [pending, startTransition] = useTransition();
+  const [applying, setApplying] = useState<{
+    target: RuleApplyTarget;
+    preview: RuleApplicationPreview;
+  } | null>(null);
+  const isMobile = useFrozenWhileOpen(open, useIsMobile());
+
+  // Keep the proposed pattern in sync when the dialog reopens for another tx.
+  if (open && pat === "" && pattern) setPat(pattern);
+
+  function save() {
+    if (retarget) return retargetRuleAction(superseded.id, categoryId);
+    const fd = new FormData();
+    fd.set("pattern", pat);
+    fd.set("matchType", matchType);
+    fd.set("categoryId", categoryId);
+    // Same pattern length as the superseded rule would leave the tie to the older rule.
+    if (superseded) fd.set("priority", String(Math.min(superseded.priority + 1, 10000)));
+    return createRuleAction(null, fd);
+  }
+
+  function submit() {
+    setError(null);
+    startTransition(async () => {
+      const res = await save();
+      if (!res?.ok) return setError(res?.error ?? "FAILED");
+      router.refresh();
+      onSaved?.();
+      const preview = await previewRuleApplicationAction(res.id);
+      if (!preview.ok || !shouldOfferApply(preview.preview)) return handleOpenChange(false);
+      setApplying({
+        target: {
+          id: res.id,
+          pattern: retarget ? superseded.pattern : pat,
+          category,
+        },
+        preview: preview.preview,
+      });
+    });
+  }
+
+  const handleOpenChange = (n: boolean) => {
+    if (pending) return;
+    if (!n) {
+      setPat("");
+      setTarget("new");
+      setApplying(null);
+    }
+    setError(null);
+    onOpenChange(n);
+  };
+
+  const body = (
+    <>
+      <DialogHeader className="space-y-2 px-6 pt-5 pb-3 text-left max-md:px-5">
+        <span className={overline}>{t("rulePrompt.learning")}</span>
+        <DialogTitle className="font-display text-2xl leading-tight">
+          {t(retarget ? "rulePrompt.titleRetarget" : "rulePrompt.title")}
+        </DialogTitle>
+        <p className="text-muted-foreground text-sm leading-relaxed">
+          {t.rich(retarget ? "rulePrompt.bodyRetarget" : "rulePrompt.body", {
+            pattern: retarget ? superseded.pattern : pat,
+            category: categoryPath(category),
+            chip: () => (
+              <span className="mx-0.5 inline-flex max-w-full align-middle">
+                <CategoryChip category={category} />
+              </span>
+            ),
+          })}
+        </p>
+      </DialogHeader>
+
+      <div className="flex flex-col gap-4 px-6 pb-4 max-md:px-5">
+        {superseded?.canManage && (
+          <SegmentedTabs
+            items={[
+              { id: "new" as const, label: t("rulePrompt.target.new") },
+              { id: "existing" as const, label: t("rulePrompt.target.existing") },
+            ]}
+            value={target}
+            onChange={setTarget}
+            fullWidth
+          />
+        )}
+        {!retarget && (
+          <>
+            <div className="space-y-1.5">
+              <span className={overline}>{t("rulePrompt.pattern")}</span>
+              <Input
+                value={pat}
+                onChange={(e) => setPat(e.target.value)}
+                className="border-hairline-2 bg-muted border-dashed font-mono"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <span className={overline}>{t("rulePrompt.matchType")}</span>
+              <SegmentedTabs
+                items={RULE_MATCH_TYPES.map((m) => ({
+                  id: m,
+                  label: t(`rulePrompt.match.${m}`),
+                }))}
+                value={matchType}
+                onChange={setMatchType}
+                fullWidth
+              />
+            </div>
+            {superseded && (
+              <p className="text-muted-foreground text-xs">
+                {t("rulePrompt.outranks", { pattern: superseded.pattern })}
+              </p>
+            )}
+          </>
+        )}
+        <div className="flex items-start gap-2 rounded-lg bg-[var(--info-bg)] px-3 py-2.5 text-xs text-[var(--info)]">
+          <Info className="mt-px size-3.5 shrink-0" />
+          <span>{t("rulePrompt.existingNote")}</span>
+        </div>
+        {error && (
+          <p role="alert" className="text-destructive text-sm">
+            {tRules(`error.${error}`)}
+          </p>
+        )}
+      </div>
+
+      <DialogFooter className="bg-muted/40 border-border border-t px-6 py-3 max-md:px-5">
+        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          {t("rulePrompt.decline")}
+        </Button>
+        <Button type="button" disabled={pending || (!retarget && !pat.trim())} onClick={submit}>
+          <Check />
+          {t(retarget ? "rulePrompt.confirmRetarget" : "rulePrompt.confirm")}
+        </Button>
+      </DialogFooter>
+    </>
+  );
+
+  const content = applying ? (
+    <RuleApplyStep
+      rule={applying.target}
+      mode={retarget ? "updated" : "created"}
+      initialPreview={applying.preview}
+      pending={pending}
+      startTransition={startTransition}
+      onDone={() => handleOpenChange(false)}
+    />
+  ) : (
+    body
+  );
+
+  return isMobile ? (
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent
+        side="bottom"
+        className="flex max-h-[92dvh] flex-col gap-0 overflow-y-auto rounded-t-2xl p-0"
+      >
+        {content}
+      </SheetContent>
+    </Sheet>
+  ) : (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">{content}</DialogContent>
+    </Dialog>
+  );
+}

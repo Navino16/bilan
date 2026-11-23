@@ -1,0 +1,8 @@
+[mariadb]
+plugin_load_add = file_key_management
+file_key_management_filename = /etc/mysql/keyring/keyfile
+file_key_management_encryption_algorithm = AES_CTR
+
+innodb_encrypt_tables = ON
+innodb_encrypt_log = ON
+innodb_encryption_threads = 4

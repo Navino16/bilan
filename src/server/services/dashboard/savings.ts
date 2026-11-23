@@ -1,0 +1,126 @@
+import { db } from "@/server/db";
+import { withDescendants } from "@/server/services/categories";
+import { groupMemberships } from "@/server/services/groups/memberships";
+import type { Period } from "@/lib/period";
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+// Categories carrying `flag` that may tag these accounts' rows, with their subtrees.
+async function flaggedCategoryIds(
+  userId: string,
+  ownerIds: string[],
+  flag: "savings" | "neutral",
+): Promise<string[]> {
+  const groupIds = (await groupMemberships(userId)).map((m) => m.groupId);
+  const flagged = await db.category.findMany({
+    where: {
+      [flag]: true,
+      OR: [{ userId: { in: [userId, ...ownerIds] } }, { groupId: { in: groupIds } }],
+    },
+    select: { id: true },
+  });
+  if (flagged.length === 0) return [];
+  const subtrees = await withDescendants(flagged.map((c) => c.id));
+  return [...new Set([...subtrees.values()].flatMap((s) => [...s]))];
+}
+
+export type SavingsScope = {
+  accountIds: string[];
+  savingsAccountIds: Set<string>;
+  // Savings subtrees minus the neutral ones.
+  categoryIds: Set<string>;
+  neutralIds: Set<string>;
+};
+
+export async function savingsScope(userId: string, accountIds: string[]): Promise<SavingsScope> {
+  const accounts = accountIds.length
+    ? await db.bankAccount.findMany({
+        where: { id: { in: accountIds } },
+        select: { id: true, type: true, ownerId: true },
+      })
+    : [];
+  const savingsAccountIds = new Set(accounts.filter((a) => a.type === "SAVINGS").map((a) => a.id));
+  const ownerIds = [...new Set(accounts.map((a) => a.ownerId))];
+  const [savingsIds, neutralIds] = await Promise.all([
+    accounts.length > savingsAccountIds.size ? flaggedCategoryIds(userId, ownerIds, "savings") : [],
+    accounts.length ? flaggedCategoryIds(userId, ownerIds, "neutral") : [],
+  ]);
+  const neutral = new Set(neutralIds);
+  return {
+    accountIds,
+    savingsAccountIds,
+    categoryIds: new Set(savingsIds.filter((id) => !neutral.has(id))),
+    neutralIds: neutral,
+  };
+}
+
+// The unlinked rows outside savings accounts that `netSavings` counts by category: they show
+// in Saved only, never in income or spending.
+export function savedByCategory(
+  scope: SavingsScope,
+  row: { accountId: string; categoryId: string | null; linkId: string | null },
+): boolean {
+  return (
+    row.linkId === null &&
+    row.categoryId !== null &&
+    scope.categoryIds.has(row.categoryId) &&
+    !scope.savingsAccountIds.has(row.accountId)
+  );
+}
+
+// What the dashboard and insights count as income or spending: neither savings-category rows
+// nor rows in a neutral subtree (spec §5.16).
+export function countedRow(
+  scope: SavingsScope,
+  row: { accountId: string; categoryId: string | null; linkId: string | null },
+): boolean {
+  return (
+    !savedByCategory(scope, row) &&
+    !(row.categoryId !== null && scope.neutralIds.has(row.categoryId))
+  );
+}
+
+// Net savings over the period (spec A): transfers linked into savings accounts minus those
+// out of them, plus unlinked spending in savings categories (money saved outside Bilan).
+export async function netSavings(scope: SavingsScope, period: Period): Promise<number> {
+  const savingsIds = [...scope.savingsAccountIds];
+  const otherIds = scope.accountIds.filter((id) => !scope.savingsAccountIds.has(id));
+  const periodDate = { gte: period.from, lte: period.to };
+
+  let transferred = 0;
+  if (savingsIds.length > 0) {
+    const legs = await db.transactionLinkMember.findMany({
+      where: { transaction: { accountId: { in: savingsIds }, periodDate } },
+      select: { linkId: true, transaction: { select: { amount: true } } },
+    });
+    const crossing = new Set(
+      (
+        await db.transactionLinkMember.findMany({
+          where: {
+            linkId: { in: [...new Set(legs.map((l) => l.linkId))] },
+            transaction: { account: { type: { not: "SAVINGS" } } },
+          },
+          select: { linkId: true },
+        })
+      ).map((m) => m.linkId),
+    );
+    for (const l of legs) if (crossing.has(l.linkId)) transferred += Number(l.transaction.amount);
+  }
+
+  let spent = 0;
+  if (otherIds.length > 0 && scope.categoryIds.size > 0) {
+    const { _sum } = await db.transaction.aggregate({
+      where: {
+        accountId: { in: otherIds },
+        periodDate,
+        categoryId: { in: [...scope.categoryIds] },
+        linkMembership: { is: null },
+      },
+      _sum: { amount: true },
+    });
+    spent = -Number(_sum.amount ?? 0);
+  }
+  return round2(transferred + spent);
+}
