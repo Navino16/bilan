@@ -1516,7 +1516,7 @@ Sign-ins are audited alike whatever the method (#258): `auth.login.success` / `a
 
 GitHub Actions, on every PR to `develop`/`main` (`ci.yml`, `permissions: contents: read`): lint (ESLint + Prettier), typecheck, build, unit tests with coverage, integration tests (MariaDB 11), E2E tests (Playwright, Chromium + WebKit, against a production build). `prod-smoke.yml` boots the production compose on PRs touching the image, Docker or Prisma files. `build.yml` builds and pushes the multi-arch image to GHCR on `develop` and tags. No `npm audit` step.
 
-Renovate (`renovate.json`, the Renovate GitHub App): weekly updates for npm, GitHub Actions and Docker, targeting `develop`; minor/patch grouped per ecosystem, majors separate; no major for `@types/node`, `typescript` and the `node` image (they track the Node 24 runtime); `@playwright/test` and the CI Playwright image in one PR. A version is proposed only once it is 24 h old (`minimumReleaseAge`, `internalChecksFilter: strict`), as `npx npm-check-updates` does (`cooldown` in `.ncurc.cjs`); OSV vulnerability alerts on.
+Renovate (`renovate.json`, the Renovate GitHub App): weekly updates for npm, GitHub Actions and Docker, targeting `develop`; minor/patch grouped per ecosystem, majors separate; no major for `@types/node`, `typescript` and the `node` image (they track the Node 24 runtime); `@playwright/test` and the CI Playwright image in one PR. A version is proposed only once it is 24 h old (`minimumReleaseAge`, `internalChecksFilter: strict`), as `npx npm-check-updates` does (`cooldown` in `.ncurc.cjs`); OSV vulnerability alerts on. The "Dependency Dashboard" issue lists pending, scheduled and rate-limited updates.
 
 ### 6.11 Future security improvements (post-MVP roadmap)
 

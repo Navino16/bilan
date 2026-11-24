@@ -4,7 +4,6 @@
   "timezone": "Europe/Paris",
   "baseBranchPatterns": ["develop"],
   "labels": ["dependencies"],
-  "dependencyDashboard": { "enabled": false },
   "prHourlyLimit": 0,
   "prConcurrentLimit": 20,
   "minimumReleaseAge": "1 day",
