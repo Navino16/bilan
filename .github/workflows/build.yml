@@ -249,10 +249,12 @@ jobs:
     permissions: {}
     needs: [release]
     if: startsWith(github.ref, 'refs/tags/')
+    env:
+      WEBHOOK_URL: ${{ secrets.DISCORD_RELEASES_WEBHOOK }}
     steps:
       - name: Send Discord notification
+        if: env.WEBHOOK_URL != ''
         env:
-          WEBHOOK_URL: ${{ secrets.DISCORD_RELEASES_WEBHOOK }}
           TAG: ${{ github.ref_name }}
           CHANGELOG: ${{ needs.release.outputs.changelog }}
           REPOSITORY: ${{ github.repository }}
@@ -260,9 +262,10 @@ jobs:
         run: |
           BODY=$(echo "$CHANGELOG" | head -c 1800)
           PAYLOAD=$(jq -n \
-            --arg content "<@&${ROLE_ID}>" \
+            --arg role "$ROLE_ID" \
             --arg title "Bilan ${TAG}" \
             --arg url "https://github.com/${REPOSITORY}/releases/tag/${TAG}" \
             --arg description "$BODY" \
-            '{content: $content, embeds: [{title: $title, url: $url, description: $description, color: 2050362}]}')
-          curl -H "Content-Type: application/json" -d "$PAYLOAD" "$WEBHOOK_URL"
+            '{embeds: [{title: $title, url: $url, description: $description, color: 2050362}]}
+              + (if $role == "" then {} else {content: "<@&\($role)>"} end)')
+          curl --fail-with-body -sS -H "Content-Type: application/json" -d "$PAYLOAD" "$WEBHOOK_URL"
