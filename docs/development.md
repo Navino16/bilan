@@ -206,7 +206,8 @@ git push origin main develop --tags
 ruleset (pull request, squash merge, linear history) refuses them, but repository administrators
 bypass it: only an administrator can push a release. Pushing the tag runs `build.yml`, which
 publishes the multi-arch image to `ghcr.io/navino16/bilan`, builds the changelog from the PR
-labels, creates the GitHub Release and posts it to Discord.
+labels, creates the GitHub Release and posts it to Discord when the `DISCORD_RELEASES_WEBHOOK`
+secret is set.
 
 ## Design documents
 

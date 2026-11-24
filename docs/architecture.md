@@ -1516,7 +1516,7 @@ Sign-ins are audited alike whatever the method (#258): `auth.login.success` / `a
 
 GitHub Actions, on every PR to `develop`/`main` (`ci.yml`, `permissions: contents: read`): lint (ESLint + Prettier), typecheck, build, unit tests with coverage, integration tests (MariaDB 11), E2E tests (Playwright, Chromium + WebKit, against a production build). `prod-smoke.yml` boots the production compose on PRs touching the image, Docker or Prisma files. `build.yml` builds and pushes the multi-arch image to GHCR on `develop` and tags. No `npm audit` step.
 
-Renovate (`renovate.json`, the Renovate GitHub App): weekly updates for npm, GitHub Actions and Docker, targeting `develop`; minor/patch grouped per ecosystem, majors separate; no major for `@types/node`, `typescript` and the `node` image (they track the Node 24 runtime); `@playwright/test` and the CI Playwright image in one PR. A version is proposed only once it is 24 h old (`minimumReleaseAge`, `internalChecksFilter: strict`), as `npx npm-check-updates` does (`cooldown` in `.ncurc.cjs`); OSV vulnerability alerts on.
+Renovate (`renovate.json`, the Renovate GitHub App): weekly updates for npm, GitHub Actions and Docker, targeting `develop`; minor/patch grouped per ecosystem, majors separate; no major for `@types/node`, `typescript` and the `node` image (they track the Node 24 runtime); `@playwright/test` and the CI Playwright image in one PR. A version is proposed only once it is 24 h old (`minimumReleaseAge`, `internalChecksFilter: strict`), as `npx npm-check-updates` does (`cooldown` in `.ncurc.cjs`); OSV vulnerability alerts on. The "Dependency Dashboard" issue lists pending, scheduled and rate-limited updates.
 
 ### 6.11 Future security improvements (post-MVP roadmap)
 
@@ -1851,11 +1851,11 @@ The project is a **public GitHub repository** (`Navino16/bilan`, AGPL-3.0), usin
 2. **Build (linux/amd64 | linux/arm64)**: a matrix on `ubuntu-26.04` and `ubuntu-24.04-arm`. Each runner builds the `prod` target with Buildx and the GHA cache, then pushes it by digest to **ghcr.io** (`ghcr.io/navino16/bilan`).
 3. **Merge Manifests**: combines the per-arch digests into a multi-arch manifest, tagged with `docker/metadata-action` (semver `{{version}}` and `{{major}}.{{minor}}`, branch, PR, `sha-` prefix; `latest=auto`).
 4. **Create Release** (tags only): builds the changelog from PR labels with `mikepenz/release-changelog-builder-action` (categories: breaking change, enhancement, bug, security, infra, documentation, dependencies; base branch `develop`), then creates the GitHub Release with `softprops/action-gh-release`.
-5. **Discord Release Notification** (tags only): posts the release and a changelog excerpt to a Discord webhook, mentioning a role.
+5. **Discord Release Notification** (tags only): posts the release and a changelog excerpt to a Discord webhook, mentioning a role. Optional: skipped when `DISCORD_RELEASES_WEBHOOK` is unset, and posted without a mention when `DISCORD_RELEASE_ROLE_ID` is unset.
 
 **Release flow**: the maintainer cuts a release with Git Flow (`git flow release finish` → tag on `main`) and pushes the tag. The tag triggers `build.yml`: images, GitHub Release, Discord. The **decision is manual**; **packaging and publishing are automated**.
 
-**Secrets / variables**: `CODECOV_TOKEN` (secret), `DISCORD_RELEASES_WEBHOOK` (secret), `DISCORD_RELEASE_ROLE_ID` (repository variable), and `GITHUB_TOKEN` (automatic, used for ghcr.io and the release). Image registry: `ghcr.io`.
+**Secrets / variables**: `CODECOV_TOKEN` (secret), `DISCORD_RELEASES_WEBHOOK` (optional secret), `DISCORD_RELEASE_ROLE_ID` (optional repository variable), and `GITHUB_TOKEN` (automatic, used for ghcr.io and the release). Image registry: `ghcr.io`.
 
 ### 10.5 Conventions recap
 
